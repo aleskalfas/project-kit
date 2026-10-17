@@ -16,6 +16,8 @@ The core layer supplies the machinery this needs:
 - where a project's technical documentation lives (COR-049);
 - anchors and friction, which detect when what an artefact rests on has changed (COR-050);
 - rule sets, which hold the rules a component ships, each binding at its status and only through the project's own sets (COR-051);
+- the rule-set reviewer, a core agent that judges a change against the rules that bind on it (COR-057);
+- versioned dependencies between capabilities, required or optional (COR-030);
 - artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
@@ -139,6 +141,12 @@ A project with no analysis starts with nothing anchored, so friction reads zero.
 
 The capability works with no work-tracking component and no testing component installed. When a work-tracking component is present, it may cite revalidation records from its work items, as an enrichment.
 
+**Its review contribution.** The project-management capability is one such work-tracking component. Where it is installed, this capability contributes the core rule-set reviewer to its merge gate. It does so under the gate's floor on ruled artefacts ([project-management:DEC-032-conditional-reviewer-requirements] D1).
+- **What it covers:** every artefact a change alters on which an accepted rule binds, of the analysis or not. It also covers every artefact the change brings under such a rule (COR-057 point 6).
+- **Its evidence:** the reviewer was run by hand on eleven changes, and the maintainer judged one of its sixteen settled breaks wrong. That meets the bar of at most one, which COR-057 point 8 leaves to the contributor ([project-kit#1599](https://github.com/aleskalfas/project-kit/issues/1599)).
+- **Apart from its contributions to roles (point 8):** the contribution is addressed to project-management's gate, not to a role.
+- **The dependency:** the capability declares project-management as an optional dependency, since it works without it (COR-030). The range admits no release of project-management without the floor. Without project-management, nothing reads the contribution.
+
 ### 11. Scope boundary
 
 Lifecycles on the process substrate (a planned revalidation; onboarding), further analysis artefacts (constraints and quality requirements, architecture views), executable use cases and evidence kept on the artefact itself are outside this record. Each needs its own decision when a real need arrives.
@@ -215,7 +223,7 @@ Lifecycles on the process substrate (a planned revalidation; onboarding), furthe
 
 ## Implications
 
-- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation. It also ships a type registry, and each place names a type from it.
+- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation. It also ships a type registry, and each place names a type from it. It ships its contribution of the rule-set reviewer too, with an optional dependency on project-management (point 10).
 - **Installing the capability** creates a set of the project's own that inherits `SAN`, once the record on capabilities (COR-017) lets a capability declare one. That refinement is [project-kit#1613](https://github.com/aleskalfas/project-kit/issues/1613). Until then, a project that wants `SAN` to bind writes such a set itself.
 - **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.

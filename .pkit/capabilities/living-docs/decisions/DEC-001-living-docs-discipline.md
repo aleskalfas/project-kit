@@ -20,6 +20,8 @@ The core layer supplies the machinery:
 - documentation roots by audience (COR-049);
 - anchors and friction, which detect when what a page rests on has changed (COR-050);
 - rule sets (COR-051);
+- the rule-set reviewer, a core agent that judges a change against the rules that bind on it (COR-057);
+- versioned dependencies between capabilities, required or optional (COR-030);
 - artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
@@ -157,6 +159,12 @@ Every proposal cites its evidence and passes a person's review, and moves land a
 
 The capability works without any analysis, work-tracking or testing component, and each of them can enrich it through its connection points.
 
+**Its review contribution.** The project-management capability is one such work-tracking component. Where it is installed, this capability contributes the core rule-set reviewer to its merge gate. It does so under the gate's floor on ruled artefacts ([project-management:DEC-032-conditional-reviewer-requirements] D1).
+- **What it covers:** every artefact a change alters on which an accepted rule binds, a page or not. It also covers every artefact the change brings under such a rule (COR-057 point 6).
+- **Its evidence:** the reviewer was run by hand on eleven changes, and the maintainer judged one of its sixteen settled breaks wrong. That meets the bar of at most one, which COR-057 point 8 leaves to the contributor ([project-kit#1599](https://github.com/aleskalfas/project-kit/issues/1599)).
+- **Apart from its contributions to roles (point 7):** the contribution is addressed to project-management's gate, not to a role.
+- **The dependency:** the capability declares project-management as an optional dependency, since it works without it (COR-030). The range admits no release of project-management without the floor. Without project-management, nothing reads the contribution.
+
 ## Rationale
 
 **Why spaces by audience.** A user who meets maintainers' material in navigation is lost. A maintainer who cannot find the grounds for a user page cannot keep it true. Separating by audience, and keeping each space's method in the technical space, gives both readers what they need. It also gives the writing agent a checkable boundary in place of a judgment call.
@@ -211,7 +219,7 @@ The cost falls on a page that no scoped set of the project's own reaches. No rul
 
 ## Implications
 
-- **The capability ships** its shared method rule set with the parts of it that validation enforces, a template and a declared structure per page kind, the declaration of its places, surface and connections, a type registry naming `page` and `template` with the type each of its places gives, the `source` anchor kind with its resolver and the shape of a captured source, an agent that proposes friction fixes and performs reader-review, and an onboarding guide. Its template for a space's definition carries a scope. It also ships an authoring command for a page and a space, paired with a skill (COR-005).
+- **The capability ships** its shared method rule set with the parts of it that validation enforces, a template and a declared structure per page kind, the declaration of its places, surface and connections, a type registry naming `page` and `template` with the type each of its places gives, the `source` anchor kind with its resolver and the shape of a captured source, an agent that proposes friction fixes and performs reader-review, and an onboarding guide. Its template for a space's definition carries a scope. It also ships an authoring command for a page and a space, paired with a skill (COR-005). It ships its contribution of the rule-set reviewer too, with an optional dependency on project-management (point 9).
 - **Projects** declare their spaces' locations through the documentation roots — and any further places through the friction key, assigning out-of-root ones to a space in the capability's configuration — keep each space's definition in the technical space, and wire the core friction check into their continuous integration if they want it enforced; they capture each source their pages rest on and record a new version of it when they read one, and uninstalling the capability removes the captured sources with its project tier. A project gives its out-of-root places the page type before a space's definition selects pages by type. Each space's definition carries a scope that selects the space's pages.
 - **Analysis components** can supply readers through the readers point. The capability keeps no glossary of its own; if it needs one, it takes it through a point from whatever component keeps one. **Work-tracking components** receive the capability's contribution to their documentation checks through their own point.
 
