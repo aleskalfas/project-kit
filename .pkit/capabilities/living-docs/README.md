@@ -11,7 +11,7 @@ pkit:
         - .pkit/capabilities/living-docs/templates/**
         - .pkit/capabilities/living-docs/skills/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
-      record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032"]
+      record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
       at: 2026-10-17T11:56:31Z
@@ -337,4 +337,4 @@ Shipped: the decision, the project configuration's schema, the declaration of th
 
 None required. It works without analysis, work-tracking or testing capabilities, and each can enrich it.
 
-project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (COR-030). An older release refuses that floor, so install and upgrade hold an installed project-management to the range. Without project-management, nothing reads the review contribution.
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 9). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.

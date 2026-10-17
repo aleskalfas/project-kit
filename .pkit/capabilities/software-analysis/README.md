@@ -11,7 +11,7 @@ pkit:
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
-      record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032"]
+      record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002]
     revalidated:
       at: 2026-10-17T13:18:27Z
@@ -927,4 +927,4 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 None required. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
 
-project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (COR-030). An older release refuses that floor, so install and upgrade hold an installed project-management to the range. Without project-management, nothing reads the review contribution.
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
