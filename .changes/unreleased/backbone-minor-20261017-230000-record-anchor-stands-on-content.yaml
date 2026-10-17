@@ -19,6 +19,7 @@ body: >
   record anchor, whole or on a point, on a record whose file is an artefact,
   where it found none before. A record's anchor on itself or on one of its own
   points is such a cycle. The finding sits under `anchors.record` where a record
-  anchor leads from the cycle's first member. Both checks report a record
+  anchor leads from the cycle's first member. Removing or re-pointing one
+  anchor of the cycle mends it. Both checks report a record
   before what anchors it. A path anchor, and an anchor of a registered kind,
   name files and still close no cycle.
