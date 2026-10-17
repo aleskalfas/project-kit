@@ -2,17 +2,22 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-15
+retired: 2026-10-17
+produced:
+  - https://github.com/aleskalfas/project-kit/issues/1420
+  - https://github.com/aleskalfas/project-kit/issues/1634
+  - https://github.com/aleskalfas/project-kit/issues/1635
 ---
 
 # The rule-set reviewer's trials on real changes
 
 The rule-set reviewer was run by hand on ten merged changes (#1418), then on eleven later ones (#1599). This note records how it judged them. It is the trial of the design's slicing issue 8 (#1396, PR #1390). COR-057 point 8 asks for this evidence before a component contributes the reviewer to a gate.
 
-- **The threshold:** at most one wrong `[block]` in a trial. The gate's contribution (#1420) waits on it.
-- **What the maintainer did:** he said, for each `[block]` of the first trial, whether he agrees that the passage breaks the rule ("The blocks", below). He answered through the project manager on 15 October, in the table's last column.
+- **The threshold:** at most one wrong `[block]` in a trial. The gate's contribution (#1420) waited on it.
+- **What the maintainer did:** he said, for each `[block]`, whether he agrees that the passage breaks the rule. He answered through the project manager, in each table's last column: on 15 October for the first trial ("The blocks", below), and on 17 October for the second ("Its blocks").
 - **Where the trials stand:**
   - The first trial's ten reviews are done and judged, and the threshold is not met ("The result").
-  - The second trial's eleven reviews are done. Its blocks wait for the maintainer's answers ("The second trial"). So the note stays in `active/`.
+  - The second trial's eleven reviews are done and judged, and the threshold is met ("The second result"). So the note retires into #1420.
 - **Outcomes:**
   - The first trial: 27 `[block]`, 32 `[person]` and 6 `[info]`. The reviewer withheld approval of seven changes and approved three.
   - The second trial: 16 `[block]`, 47 `[person]` and 11 `[info]`. The reviewer withheld approval of six changes and approved five.
@@ -339,8 +344,8 @@ The maintainer judged the 27 blocks on 15 October. 23 are right and 4 are wrong,
 The rule-set reviewer was run by hand again (#1599), on eleven changes merged after PR #1603 (#1596). That pull request, merged as 28f7314b, wrote the maintainer's readings of "The result" into living-docs' rules. Only changes made after it test them.
 
 - **The threshold:** at most one wrong `[block]` across the eleven, as in the first trial.
-- **What the maintainer does:** he says, for each `[block]` in "Its blocks" below, whether he agrees that the passage breaks the rule. His answer goes in the table's last column.
-- **Where it stands:** the eleven reviews are done. Their blocks wait for his answers, so the threshold is not judged yet.
+- **What the maintainer did:** he said on 17 October, for each `[block]` in "Its blocks" below, whether he agrees that the passage breaks the rule. His answer is in the table's last column.
+- **Where it stands:** the eleven reviews are done and judged. 15 blocks are right and 1 is wrong, so the threshold is met ("The second result", below).
 - **Outcome:** 16 `[block]`, 47 `[person]` and 11 `[info]`. The reviewer withheld approval of six changes and approved five.
 
 ### Its set-up
@@ -580,22 +585,22 @@ The rules the blocks cite, in the words the readings rest on:
 
 | Id | Change | Rule | The passage | The trial agent's reading | Maintainer agrees |
 |---|---|---|---|---|---|
-| B28 | #1605 | RS-LDOC-002 | The living-docs README, line 47: a part is anchored "so that a change to another point or section of it asks the page nothing". The CLI reference's `friction check` section states this in full (line 1215). | Breaks. The page neither links that section nor anchors it: "lacks the link or the anchor". Its new link goes to the schemas reference, which does not state this fact. | |
-| B29 | #1604 | RS-LDOC-002 | The software-analysis README, line 404, older: "A label or a section of your own is never reported." Lines 312 and 397, added: under `closed: true`, a label no part declares "is reported", and the check fails on it. | Breaks. "Never reported" rules out what lines 312 and 397 say, so the two "disagree". | |
-| B30 | #1615 | RS-LDOC-002 | The schemas README, line 583: "With `--preview`, it gives where rules would bind if every proposed rule were accepted". The CLI reference's `rule-sets reach` section states it in full. | Breaks. The page names the CLI reference only in plain text, for the next sentence. It anchors no section of it. | |
-| B31 | #1615 | RS-LDOC-002 | The lifecycle README's row for `rule-sets reach`, line 453: "with `--preview`, where rules would bind if every proposed rule were accepted". | Breaks, as B30. The row names the CLI reference in plain text, with no anchor. Its older rows follow the same pattern, and the rule makes no exception for a pattern (B2). | |
-| B32 | #1615 | RS-LDOC-002 | The software-analysis README, line 339: "it also reads `pkit rule-sets reach --preview`, which says where the rule would bind if every proposed rule were accepted." | Breaks, as B30. The clause gives the option's whole meaning, so it states the fact. The same run left a shorter clause on line 336 to a person. | |
-| B33 | #1619 | RS-LDOC-001 | The living-docs README, line 184: "`pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/docs-author/`." | Breaks. It rests on sync and the Claude Code adapter's `deploy-skills.sh`, which the page does not anchor. Of its anchors, COR-005 says only that an adapter deploys a harness's content. | |
-| B34 | #1619 | RS-LDOC-001 | The skills README, line 62: a capability's README describes its skills, and "An example is living-docs' `docs-author`, paired with `pkit living-docs new`." | Breaks, as B33. The page anchors core's skills, `deploy-skills.sh` and six core records. None of them names living-docs, or says what a capability's README describes. | |
-| B35 | #1619 | RS-LDOC-002 | That `docs-author` pairs with `pkit living-docs new`: the skills README, line 62, and the living-docs README, line 184. | Breaks. Neither page links or anchors the other. The living-docs README's section states the skill in full, so it is the home. The skills README's statement "lacks the link or the anchor". | |
-| B36 | #1610 | RS-LDOC-001 | The software-analysis README, line 441: a project's set goes "by default in the `rule-sets` folder under your internal documentation root (COR-049)". | Breaks. COR-049 and COR-051, both anchored, put a project's rule sets under the internal root and name no `rule-sets` folder. The backbone's discovery code and the schemas README name it, and the page anchors neither. | |
-| B37 | #1610 | RS-LDOC-001 | Line 457: "`pkit rule-sets reach` lists each rule a pin behind its set holds back." | Breaks. COR-051 point 7 says such a rule binds nothing and is reported in status, not that `reach` lists it. The anchored `backbone.py` calls `reach`, and the command's code is reached only through that call. | |
-| B38 | #1610 | RS-LDOC-002 | Line 441, B36's passage. The schemas README's "Rule-set files" states the folder in full. | Breaks: no link to it and no anchor on it. | |
-| B39 | #1610 | RS-LDOC-002 | Line 457, B37's passage. The CLI reference states the `held` rules of `reach`. | Breaks: the page links and anchors no page that states it. | |
-| B40 | #1610 | RS-LDOC-002 | Line 458: "Changing what a set inherits gives that set a new major." The schemas README's `version` row states it in full. | Breaks: no link and no anchor. The page anchors COR-051, whose point 7 states the fact, so RS-LDOC-001 holds. The rule names no exception for a fact a record also states. The maintainer may read that otherwise. | |
-| B41 | #1624 | RS-LDOC-001 | `CONTRIBUTING.md`, line 42: `check-numbers` fails on "a use case's step or variant renumbered or removed". | Breaks. The page anchors `scripts/check.sh`, which only calls the command. No record or section it anchors says what the command fails on. | |
-| B42 | #1624 | RS-LDOC-002 | B41's clause. The software-analysis README's "Steps and variants stay append-only" states the fact in full. | Breaks. `CONTRIBUTING.md` neither links that section nor anchors it. The README is the home, since a page of each space states the fact. | |
-| B43 | #1624 | RS-LDOC-001 | The software-analysis README, line 503: "Not in `pkit validate`. It reads the base, so it answers about your change rather than the tree (COR-055 point 2)." | Breaks. The sentence cites COR-055, which the page does not anchor. A citation "grounds the sentence only where the page anchors what it cites". | |
+| B28 | #1605 | RS-LDOC-002 | The living-docs README, line 47: a part is anchored "so that a change to another point or section of it asks the page nothing". The CLI reference's `friction check` section states this in full (line 1215). | Breaks. The page neither links that section nor anchors it: "lacks the link or the anchor". Its new link goes to the schemas reference, which does not state this fact. | Yes. |
+| B29 | #1604 | RS-LDOC-002 | The software-analysis README, line 404, older: "A label or a section of your own is never reported." Lines 312 and 397, added: under `closed: true`, a label no part declares "is reported", and the check fails on it. | Breaks. "Never reported" rules out what lines 312 and 397 say, so the two "disagree". | Yes. |
+| B30 | #1615 | RS-LDOC-002 | The schemas README, line 583: "With `--preview`, it gives where rules would bind if every proposed rule were accepted". The CLI reference's `rule-sets reach` section states it in full. | Breaks. The page names the CLI reference only in plain text, for the next sentence. It anchors no section of it. | Yes. |
+| B31 | #1615 | RS-LDOC-002 | The lifecycle README's row for `rule-sets reach`, line 453: "with `--preview`, where rules would bind if every proposed rule were accepted". | Breaks, as B30. The row names the CLI reference in plain text, with no anchor. Its older rows follow the same pattern, and the rule makes no exception for a pattern (B2). | Yes, as B30. |
+| B32 | #1615 | RS-LDOC-002 | The software-analysis README, line 339: "it also reads `pkit rule-sets reach --preview`, which says where the rule would bind if every proposed rule were accepted." | Breaks, as B30. The clause gives the option's whole meaning, so it states the fact. The same run left a shorter clause on line 336 to a person. | Yes. Stating another page's fact needs the link and the anchor, however short. Naming a thing needs neither. |
+| B33 | #1619 | RS-LDOC-001 | The living-docs README, line 184: "`pkit sync` deploys it with the other skills, in Claude Code as `.claude/skills/docs-author/`." | Breaks. It rests on sync and the Claude Code adapter's `deploy-skills.sh`, which the page does not anchor. Of its anchors, COR-005 says only that an adapter deploys a harness's content. | Yes. |
+| B34 | #1619 | RS-LDOC-001 | The skills README, line 62: a capability's README describes its skills, and "An example is living-docs' `docs-author`, paired with `pkit living-docs new`." | Breaks, as B33. The page anchors core's skills, `deploy-skills.sh` and six core records. None of them names living-docs, or says what a capability's README describes. | Yes, as B33. |
+| B35 | #1619 | RS-LDOC-002 | That `docs-author` pairs with `pkit living-docs new`: the skills README, line 62, and the living-docs README, line 184. | Breaks. Neither page links or anchors the other. The living-docs README's section states the skill in full, so it is the home. The skills README's statement "lacks the link or the anchor". | Yes. |
+| B36 | #1610 | RS-LDOC-001 | The software-analysis README, line 441: a project's set goes "by default in the `rule-sets` folder under your internal documentation root (COR-049)". | Breaks. COR-049 and COR-051, both anchored, put a project's rule sets under the internal root and name no `rule-sets` folder. The backbone's discovery code and the schemas README name it, and the page anchors neither. | Yes. |
+| B37 | #1610 | RS-LDOC-001 | Line 457: "`pkit rule-sets reach` lists each rule a pin behind its set holds back." | Breaks. COR-051 point 7 says such a rule binds nothing and is reported in status, not that `reach` lists it. The anchored `backbone.py` calls `reach`, and the command's code is reached only through that call. | Yes. |
+| B38 | #1610 | RS-LDOC-002 | Line 441, B36's passage. The schemas README's "Rule-set files" states the folder in full. | Breaks: no link to it and no anchor on it. | Yes. |
+| B39 | #1610 | RS-LDOC-002 | Line 457, B37's passage. The CLI reference states the `held` rules of `reach`. | Breaks: the page links and anchors no page that states it. | Yes. |
+| B40 | #1610 | RS-LDOC-002 | Line 458: "Changing what a set inherits gives that set a new major." The schemas README's `version` row states it in full. | Breaks: no link and no anchor. The page anchors COR-051, whose point 7 states the fact, so RS-LDOC-001 holds. The rule names no exception for a fact a record also states. The maintainer may read that otherwise. | No. A decision record the page anchors is the home of the facts it decides. The page may state such a fact in its own words, with no link to another page. |
+| B41 | #1624 | RS-LDOC-001 | `CONTRIBUTING.md`, line 42: `check-numbers` fails on "a use case's step or variant renumbered or removed". | Breaks. The page anchors `scripts/check.sh`, which only calls the command. No record or section it anchors says what the command fails on. | Yes. |
+| B42 | #1624 | RS-LDOC-002 | B41's clause. The software-analysis README's "Steps and variants stay append-only" states the fact in full. | Breaks. `CONTRIBUTING.md` neither links that section nor anchors it. The README is the home, since a page of each space states the fact. | Yes. |
+| B43 | #1624 | RS-LDOC-001 | The software-analysis README, line 503: "Not in `pkit validate`. It reads the base, so it answers about your change rather than the tree (COR-055 point 2)." | Breaks. The sentence cites COR-055, which the page does not anchor. A citation "grounds the sentence only where the page anchors what it cites". | Yes. |
 
 ### Its passages for a person the rules' words settle
 
@@ -610,7 +615,7 @@ The rules the blocks cite, in the words the readings rest on:
 - **Settled if B40 is right.** It states a fact that a record the page anchors also states:
   - #1615, the CLI reference, line 1394: "Accepting a rule needs a new major of its set (COR-051 point 7)", which the schemas README states.
 
-If the maintainer holds B32 wrong, its two passages were the right kind, and B32 was the wrong kind. The same goes for B40 and its passage.
+If the maintainer holds B32 wrong, its two passages were the right kind, and B32 was the wrong kind. The same goes for B40 and its passage. He held B32 right and B40 wrong ("The second result", below).
 
 ### What it shows so far
 
@@ -649,10 +654,20 @@ The first trial's list ("What the trial did not try", above) holds for this tria
 - **The analysis in depth:** one change, with eight actors relabelled.
 - **An artefact brought under a rule:** none, so the part of the reviewer #1560 added did not run. A gate would still get that part untried.
 
+## The second result
+
+The maintainer judged the 16 blocks on 17 October. 15 are right and 1 is wrong, so **the threshold, at most one wrong block, is met.**
+
+- **The fourteen blocks that apply his readings of 15 October** ("The result") are right: B28 to B31, B33 to B39 and B41 to B43.
+- **His two new readings:**
+  - **A short statement (B32):** stating another page's fact needs a link to its home and an anchor on it, however short. Naming a thing needs nothing. So B32 is right. The two passages "Settled if B32 is right" were the wrong kind, and should have been blocks. The threshold does not count them.
+  - **A fact a record decides (B40):** a decision record the page anchors is the home of the facts it decides. A page that anchors the record may state such a fact in its own words, with no link to another page. So B40 is wrong, and the passage "Settled if B40 is right" was the right kind.
+- **The follow-ups:**
+  - **#1634:** living-docs' rule states the two new readings.
+  - **#1635:** the fifteen breaks are mended in the pages. So are the four passages his readings settle: the two "Settled on the rules' words alone" and the two "Settled if B32 is right".
+  - **#1420:** living-docs and software-analysis contribute the rule-set reviewer to the gate. It waited for this threshold.
+
 ## Still to do
 
-- **The second trial's blocks** wait for the maintainer's answers, in its table "Its blocks".
-  - If at most one block is wrong, the threshold is met, and the note retires into #1420.
-  - If more are wrong, the note names what the reviewer judged wrong, and the next follow-up is filed.
-  - The note stays in `active/` at least until he answers.
+- **The follow-ups** of "The second result" carry what remains: #1634, #1635 and #1420. This note is retired into them.
 - **The full reviews** of both trials were left in the trials' agent workspaces, which are never committed. This note is the record that remains of them.
