@@ -24,7 +24,7 @@ Five terms recur. The **revalidation point** of an artefact is the commit where 
 - for another artefact, that artefact's content, or what one of its sections or its lead stands on, where the anchor names it (point 5)
 - for a registered kind, the files its resolver names (point 2)
 
-A record's content is read as an artefact's is, whether or not a place holds the record. Nothing in the methodology's container counts (COR-053 point 10). Where the record has no front matter that parses to a mapping at a state, its content there is its whole file.
+A record's content is read as an artefact's is, whether or not a place holds the record. Nothing in the methodology's container (COR-053 point 10) counts. Where the record has no front matter that parses to a mapping at a state, its content there is its whole file.
 
 **The diff** of a pull request is the set of paths changed between its up-to-date base and its head, and the parsed before-and-after of every artefact in a declared place. For each record a record anchor names, it holds the record's text at the base and at the head too.
 
@@ -242,7 +242,7 @@ A change to any of them can change what a point means without touching its text,
 
 **Why cycles and truth-chain order follow a record anchor to a record that is an artefact.** A record a place holds is revalidated as any artefact is, so it takes a place in the order of revalidation. An artefact depends on it whether an artefact anchor or a record anchor names it. Read through artefact anchors alone, a cycle through a record anchor would go unseen, and the record could be reported after what rests on it. A record no place holds carries no anchors the checks read, so no cycle passes through it.
 
-A path anchor, or one of a registered kind, names files, and may reach an artefact's file by where it sits. It declares no dependency on that artefact. Followed, every broad glob over a folder of documents would make cycles that fail validation.
+A path anchor, or one of a registered kind, names files, and may reach an artefact's file by where it sits. It declares no dependency on that artefact. Followed, a broad glob over a folder of documents would fail validation for cycles nobody declared.
 
 **Why some part anchors are refused.** Each refused anchor names text that has a name already, or text that is no unit of its own.
 - **A collection file's** entries are artefacts, each named by its id. A slug on the file would name an entry a second way, by a heading that can be renamed.
@@ -264,7 +264,7 @@ The cost is that a heading rename which leaves an anchor dead fails validation i
 
 **Why a record anchor stands on the record's content.** A record a place holds is an artefact, so it may carry a friction block of its own. Each revalidation of the record writes that block. Were the block part of what a whole anchor stands on, a revalidation that keeps the record's content would still flag every such anchor. A point anchor does not stand on the container either, since a point stands on nothing in it.
 
-The record is read so whether or not a place holds it. A record a project receives by sync sits in no place there, yet may carry the block its source writes. Read by its whole file, it would flag the receiving project's anchors at each sync that brings a revalidation. Read one way in a place and another outside, a record moved across that line would flag its anchors, its text unchanged.
+A record is read this way whether or not a place holds it. A record a project receives by sync sits in no place there, yet may carry the block its source writes. Read by its whole file, it would flag the receiving project's anchors at each sync that brings a revalidation. Read one way in a place and another outside, a record moved across that line would flag its anchors, its text unchanged.
 
 A record resolves by its file, so an anchor on a record with no front matter that parses to a mapping stays live. Its whole file is compared there, so the anchor is judged, never skipped.
 
