@@ -274,10 +274,11 @@ runs_on_capabilities:
 
 A range can come to exclude the version the tree already carries for the
 capability it names. A branch written before a major merges after it, or a
-merge bypasses the queue. No declaration fixes that, since the release does
-not move a capability the tree already carries, so every release refuses
-until the range admits it. A branch corrects the range by hand (PRJ-002 D1):
-the version it then admits has shipped, so the branch predicts no number.
+merge bypasses the queue. While no pending changeset moves the capability,
+no declaration fixes that: the release reads the version the tree carries,
+so every such release refuses until the range admits it. A branch corrects
+the range by hand (PRJ-002 D1): the version it then admits has shipped, so
+the branch predicts no number.
 
 ```yaml
 requires_capabilities:
@@ -292,11 +293,14 @@ requires_capabilities:
   falls to that version exactly. The other bound stays as it is. A bound past
   the next major claims a major the tree does not carry, and a floor below the
   carried version claims versions nothing in the tree vouches for.
-- **The carried version is the base's**: the one the branch's base carries
-  for that capability, read as the release reads it, from the capability's
-  manifest where the project registers it, else from its `package.yaml`.
-- **The range is one entry**, `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, before and
-  after.
+- **The carried version is the merge base's**: the one the tree carries for
+  that capability where the branch left its base, read as the release reads
+  it, from the capability's manifest where the project registers it, else
+  from its `package.yaml`.
+- **The correction writes one entry**, `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`.
+  The range it corrects is one `>=` floor and at most one `<` upper bound,
+  however spelled. Where the base lists the capability twice, the
+  correction lists it once.
 - **The edit touches the dependent's tree**, so the pull request carries a
   changeset for the dependent, as for any change there. Whether it moves the
   dependent's version is a surface judgment (PRJ-002 D2).
@@ -304,8 +308,9 @@ requires_capabilities:
 `pkit release check` refuses every other edit to the range of an entry the
 base already holds, with or without the `skip-changeset` label. A release
 diff's own range writes pass when it consumes a changeset of the dependent
-that declares that capability's floor or upper bound. Adding an entry, or
-removing one, is no edit to a range.
+that declares that capability's floor or upper bound. Adding a capability's
+entry, or removing it, is no edit to a range, and neither is dropping one of
+two entries for it.
 
 ### Authoring a changeset
 
@@ -1110,8 +1115,9 @@ diff, the guard reads each package file a component's tree changes, at the
 merge base and at HEAD, and fails a PR that edits the range of a
 `requires_capabilities` entry the base already holds. It passes the one
 correction D1 allows, and a release's own writes ("Correcting a range that
-excludes a carried version" above). A range is read as YAML reads it, so a
-re-quoting is no edit. No escape hatch waives this check either.
+excludes a carried version" above). Ranges are compared as version ranges,
+so a re-quoting or a respelling of the same range is no edit. No escape
+hatch waives this check either.
 
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
