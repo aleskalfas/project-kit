@@ -5,6 +5,14 @@ component:
   version: 0.1.0
 description: Living documentation — documentation spaces by audience, every page anchored to what makes it true, drift detected as friction and fixed by reviewed proposals.
 requires_backbone: ">=1.149.0,<2.0.0"
+# The review contribution (`review-contributions.yaml`, DEC-001 point 9) names
+# project-management's floor on ruled artefacts, which an older release
+# refuses. So an installed project-management must have the floor. The
+# dependency is optional, since the capability works without it (COR-030).
+requires_capabilities:
+  - name: project-management
+    version: ">=0.55.0,<1.0.0"
+    optional: true
 
 commands:
   new:
