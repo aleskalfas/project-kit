@@ -1,0 +1,17 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `SAN` holds three judgement rules, each proposed, with DEC-001 as its
+  origin (#1577). `RS-SAN-003`: a use case's actor is the one whose goal it
+  is, and each other actor that takes part in it is one of its
+  `other-actors`. `RS-SAN-004`: a use case's goal is one of its actor's
+  needs. `RS-SAN-005`: an analysis artefact's anchors name what its
+  statements rest on. None declares a check: a reviewer, such as the
+  rule-set reviewer, judges each once it is accepted. The *How* of
+  `RS-SAN-003` and of `RS-SAN-005` names what the stamp and the check
+  already refuse whatever any rule's status, and leaves it out. Each rule
+  judges an artefact in force, never a withdrawn one. A proposed rule binds
+  nothing, so no check's result changes, and `SAN` stays at 1.0.0 (COR-051
+  point 7). The README's method rule set section lists the five rules.
