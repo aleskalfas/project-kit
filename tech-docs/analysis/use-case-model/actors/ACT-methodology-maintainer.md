@@ -17,9 +17,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-16T23:38:12Z
+      at: 2026-10-17T00:00:20Z
       outcome: unchanged
-      unchanged-because: The actor now anchors the section of CONTRIBUTING.md its Context cites, "Adding a core record (COR)", in place of the whole file. That section still sets out the methodology's disciplines, such as the axiom discipline and project-neutrality. So the Context holds.
+      unchanged-because: The actor now anchors the section of CONTRIBUTING.md its Context cites, "Adding a core record (COR)". That section sets out the methodology's disciplines, such as the axiom discipline and project-neutrality. So the Context holds.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer
