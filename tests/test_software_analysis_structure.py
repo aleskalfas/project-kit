@@ -171,17 +171,25 @@ def test_none_passes_only_where_the_part_allows_it() -> None:
         ("Export it, e.g. for the auditor.", True),
         ("Export it on 3. října.", True),
         ("Export it, e.g. Then share it.", False),
+        # A capital after a mark ends one, an abbreviation's too: such a text is reworded.
+        ("Dr. Smith exports it.", False),
+        ("Export z. B. Rechnungen.", False),
         # Several spaces, or a no-break space, count as a space; a zero-width space as
         # nothing: no character a reader cannot see moves a sentence's end.
         ("Export my report.  Then email it.", False),
         ("Export my report.\u00a0Then email it.", False),
         ("Export my report.\u200b Then email it.", False),
         ("Export my report.\u200bThen email it.", True),
+        ("Export my report. \ufe0fThen email it.", False),  # a variation selector
+        ("Export my report.\u034f Then email it.", False),  # the grapheme joiner
         # Only a capital letter after the space ends one: a digit or a quote does not.
         ("Export my report. 2 files follow.", True),
         # A script without capital letters is never split.
         ("レポートを書く。それを送る。", True),
         ("تصدير التقرير. ثم إرساله.", True),
+        # A mark before a letter of such a script ends none; before a capital, one ends.
+        ("导出报告. 文件", True),
+        ("导出报告. Excel 文件", False),
         # A mark inside a code span ends none.
         ("Run `make. Then` now.", True),
     ],
@@ -234,6 +242,9 @@ def test_a_sentence_part_is_one_text_and_holds_no_list() -> None:
     assert _found(USE_CASE.replace(goal, said)) == []
     fenced = "**Goal:** Export my report as a file.\n\n```\n> - not a list\n- nor this\n```"
     assert _found(USE_CASE.replace(goal, fenced)) == []
+    # A mark inside a fenced block ends no sentence, whatever its fence.
+    tilde = "**Goal:** Export my report as a file.\n\n~~~\nmake. Then\n~~~"
+    assert _found(USE_CASE.replace(goal, tilde)) == []
     # Without a list the part is one text, and a wrapped `2026` continues it.
     paragraph = "**Goal:** Export my report by the end of\n2026 as a file."
     assert _found(USE_CASE.replace(goal, paragraph)) == []

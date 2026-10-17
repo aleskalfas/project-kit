@@ -62,13 +62,14 @@ each with what it reads:
 - **`sentence`:** the text holds one sentence. No sentence ends before its
   last word. A sentence ends at a full stop, a question mark or an exclamation
   mark followed by white space and a capital letter, and at the text's end,
-  never inside a code span (RS-SAN-001's *How*). A character of Unicode's
-  format category, such as a zero-width space, is read as nothing. A part of
-  this form is one text, the whole of what it holds, and holds no list: an
-  item of any list in it, one inside a block quote included, breaks the
-  form, besides the item its label opens. A part that holds a list is not
-  judged as a sentence too, since a list's markers are no text. In a
-  front-matter field that holds a list, each item is one text.
+  never inside a code span or a fenced block (RS-SAN-001's *How*). A
+  character Unicode makes default-ignorable, such as a zero-width space or a
+  variation selector, is read as nothing. A part of this form is one text,
+  the whole of what it holds, and holds no Markdown list: an item of any list
+  in it, one inside a block quote included, breaks the form, besides the item
+  its label opens. A part that holds a list is not judged as a sentence too,
+  since a list's markers are no text. In a front-matter field that holds a
+  list, each item is one text.
 - **`numbered-steps`:** each item opens with its step's number, and no number
   repeats. A number is an item's own marker, `2.`, or one its text opens with,
   `2.` or `**2.**`. The numbers need not run in sequence, since steps are
@@ -527,7 +528,13 @@ def _sentence(part: Part) -> list[Breach]:
     listed = _first_item(part)
     if listed is not None:
         return [Breach(BREAKS_FORM, listed, HOLDS_A_LIST)]
-    return [] if one_sentence(part.text) else [Breach(NOT_A_SENTENCE, part.line)]
+    rows = ((part.lead,) if part.lead else ()) + part.rows
+    text = "\n".join(_FENCED if row.fence else row.text for row in rows)
+    return [] if one_sentence(text) else [Breach(NOT_A_SENTENCE, part.line)]
+
+
+#: What a fenced block's line reads as in a `sentence` part: code, which ends no sentence.
+_FENCED = "code"
 
 
 def _first_item(part: Part) -> int | None:
@@ -1019,15 +1026,41 @@ def one_sentence(text: str) -> bool:
     ends at a full stop, a question mark or an exclamation mark followed by white space
     and a capital letter, and at the text's end; a mark inside a code span ends none
     (RS-SAN-001's *How*). White space is any a reader sees as a space, a line end and a
-    no-break space included, and a character of Unicode's format category, such as a
-    zero-width space, is read as nothing. So "e.g. for" and "3. října" end none, and a
-    text in a script without capital letters is one sentence."""
-    seen = "".join(c for c in text if unicodedata.category(c) != "Cf")
+    no-break space included, and a character Unicode makes default-ignorable, such as a
+    zero-width space, is read as nothing (`_ignorable`). So "e.g. for" and "3. října" end
+    none, and a text in a script without capital letters is one sentence."""
+    seen = "".join(c for c in text if not _ignorable(c))
     plain = _CODE_SPAN.sub("code", seen)
     return not any(
         end.end() < len(plain) and _capital(plain[end.end()])
         for end in _SENTENCE_END.finditer(plain)
     )
+
+
+#: The code points Unicode makes default-ignorable that are no format character
+#: (`Default_Ignorable_Code_Point`, DerivedCoreProperties.txt): the combining grapheme
+#: joiner, the Hangul fillers, the Khmer inherent vowels, the Mongolian variation
+#: selectors and vowel separator, the variation selectors, and the tags plane.
+_IGNORABLE = (
+    (0x034F, 0x034F),
+    (0x115F, 0x1160),
+    (0x17B4, 0x17B5),
+    (0x180B, 0x180F),
+    (0x3164, 0x3164),
+    (0xFE00, 0xFE0F),
+    (0xFFA0, 0xFFA0),
+    (0xE0000, 0xE0FFF),
+)
+
+
+def _ignorable(character: str) -> bool:
+    """Whether a reader sees nothing of `character`: a format character, such as a
+    zero-width space or a soft hyphen, or another code point Unicode makes
+    default-ignorable, such as a variation selector."""
+    if unicodedata.category(character) == "Cf":
+        return True
+    point = ord(character)
+    return any(first <= point <= last for first, last in _IGNORABLE)
 
 
 def _capital(character: str) -> bool:

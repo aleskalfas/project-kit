@@ -7,10 +7,11 @@ body: >
   17 October (#1370). A full stop, a question mark or an exclamation mark
   ends a sentence only where a space and a capital letter follow it, and the
   text's end ends one. So "e.g. for" and "3. října" end none, and a text in
-  a script without capital letters is never split. A line end or a no-break
-  space counts as a space, and a zero-width character as nothing. A body
-  part of the form, such as a use case's *Goal*, is one text and holds no
-  list, not even inside a block quote: `pkit analysis validate` fails on a
+  a script without capital letters is never split. Any white space counts
+  as a space, a character a reader cannot see as nothing, and a mark inside
+  a fenced block ends none. A body part of the form, such as a use case's
+  *Goal*, is one text and holds no Markdown list, not even inside a block
+  quote: `pkit analysis validate` fails on a
   list there, at its first item, where it held each item to one sentence
   before. An actor's `needs` stays one text per item. `SAN` holds a second
   rule, proposed: `RS-SAN-002`, a use case's steps and variants keep their

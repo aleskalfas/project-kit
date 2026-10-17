@@ -124,13 +124,15 @@ def test_the_how_says_where_a_sentence_ends_citing_no_project_s_rule() -> None:
         "followed by a space and a capital letter, and at the end of the text."
     ) in section
     assert (
-        "A line end, several spaces or a no-break space counts as a space. A character a "
-        "reader cannot see, such as a zero-width space, counts as nothing."
+        "Any white space counts as a space, such as a line end, several spaces or a no-break "
+        "space. A character a reader cannot see, such as a zero-width space, counts as nothing."
     ) in section
     assert '"e.g. for" or "3. října", ends no sentence.' in section
-    assert "**A script without capital letters,** such as Chinese or Arabic, is never split." in (
-        section
-    )
+    assert '"Dr. Smith" or "z. B. Rechnungen", so a writer rewords such a text.' in section
+    assert (
+        "**A script without capital letters,** such as Chinese or Arabic: a mark followed by "
+        "one of its letters ends no sentence. So a text in such a script is never split."
+    ) in section
     # Its own words: the only rule it names is itself, and no project's set.
     assert re.findall(r"RS-[A-Z][A-Z0-9]*-\d{3}", _section(body, RULE)) == [RULE]
     assert not re.search(r"\b(?:WRITE|ANA)\b", body)
@@ -146,7 +148,7 @@ def test_the_how_refuses_a_list_in_a_part_of_the_sentence_form() -> None:
     assert "Each text of this form, such as an actor's need, holds one sentence" in section
     assert (
         "**One text.** A body part of this form, such as a use case's *Goal*, is one text, "
-        "and holds no list, not even inside a block quote. In a front-matter field that "
+        "and holds no Markdown list, not even inside a block quote. In a front-matter field that "
         "holds a list, such as an actor's `needs`, each item is one text."
     ) in section
     forms = section.split("**Forms.**", 1)[1].split("**Hints.**", 1)[0]
@@ -175,7 +177,10 @@ def test_the_append_only_rule_ships_proposed_from_dec_001_point_3() -> None:
     statement = section.split("\n\n")[1]
     assert statement == "A use case's steps and variants keep their numbers and letters."
     flat = " ".join(section.split())
-    assert "It is never renumbered or removed." in flat
+    assert "A change renumbers no step its use case held before the change, and removes none." in (
+        flat
+    )
+    assert "A new step takes a number past the last of its use case" in flat
     assert re.findall(r"RS-[A-Z][A-Z0-9]*-\d{3}", section) == [STEPS_RULE]
 
 
@@ -188,8 +193,8 @@ def test_the_append_only_rule_declares_check_numbers_as_its_check() -> None:
     assert declared["check"] == "software-analysis:check-numbers"
     part = " ".join(declared["part"].split())
     assert part.startswith(
-        "Each step and each variant that a use case held where the change left its base is "
-        "neither renumbered nor removed."
+        "Each step and each variant that a use case held where the change left its base, of a "
+        "use case the working tree still holds, is neither renumbered nor removed."
     )
     assert "left to whoever judges the rest of the rule" in part
     assert [c["check"] for c in data["checks"][RULE]] == ["software-analysis:validate"]
