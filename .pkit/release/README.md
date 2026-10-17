@@ -17,7 +17,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-17T17:18:34Z
+      at: 2026-10-17T21:42:28Z
       outcome: updated
 ---
 
