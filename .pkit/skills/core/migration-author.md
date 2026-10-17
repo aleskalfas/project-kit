@@ -1,13 +1,16 @@
 ---
 name: migration-author
-description: Author a new migration script (backbone, bundle, or adapter tier) per the COR-010 contract. Use when a version bump needs to bridge installed projects' state to the new version.
+description: Author a new migration script (backbone, adapter, or capability tier) per the COR-010 contract. Use when a version bump needs to bridge installed projects' state to the new version.
 metadata:
   wraps_command: pkit new migration
 gates:
   - COR-005
   - COR-008
   - COR-010
+  - COR-017
 reads:
+  records:
+    - COR-027
   paths:
     - .pkit/cli/README.md
     - .pkit/lifecycle/README.md
@@ -17,7 +20,7 @@ reads:
 
 # Authoring a migration
 
-This skill walks through adding a new **migration script** per COR-010's lifecycle contract. A migration bridges installed projects' state across a version transition — adding labels, renaming files, restructuring manifests, etc. Migrations are versioned (tied to a `<major>.<minor>.0/` directory), idempotent (safe to re-run), and scoped to one tier (backbone, bundle, or adapter).
+This skill walks through adding a new **migration script** per COR-010's lifecycle contract. A migration bridges installed projects' state across a version transition — adding labels, renaming files, restructuring manifests, etc. Migrations are versioned (tied to a `<major>.<minor>.0/` directory), idempotent (safe to re-run), and scoped to one tier (backbone, adapter, or capability).
 
 ## Acceptance gate (run first)
 
@@ -25,9 +28,10 @@ Per `.pkit/decisions/README.md`'s acceptance gate: verify every record in `gates
 
 The current dependencies:
 
-- **COR-005** — the bundle/adapter pattern; identifies the tier scopes that own migration trees.
+- **COR-005** — the adapter pattern; an adapter owns its migration tree. Its bundle half is retired (COR-027).
 - **COR-008** — git workflow conventions; the commit step.
 - **COR-010** — resource lifecycle; fixes the migration framework (tiers, scopes, directory layout, idempotence contract).
+- **COR-017** — the capability pattern; a capability owns its migration tree.
 
 ## Procedure
 
@@ -36,17 +40,17 @@ The current dependencies:
 The migration lives in one of three trees, picked by the resource it affects:
 
 - **`backbone`** — the migration affects backbone-level state (decision records, rules, the CLI surface, backbone-wide directory shapes). Lives under `.pkit/migrations/backbone/<X.Y.0>/`.
-- **`bundle`** — the migration affects one specific bundle's state (labels, templates, primitives for that bundle). Lives under `.pkit/<area>/bundles/<name>/migrations/<X.Y.0>/`.
 - **`adapter`** — the migration affects one specific adapter's state (settings, deployed paths, hooks for that harness). Lives under `.pkit/adapters/<name>/migrations/<X.Y.0>/`.
+- **`capability`** — the migration affects one specific capability's state (its project-side files, labels, templates, configuration). Lives under `.pkit/capabilities/<name>/migrations/<X.Y.0>/`.
 
-Pick the most specific tier that covers the change. A bundle's internal change → bundle tier (not backbone), even if the change is conceptually "across the methodology's bundles".
+Pick the most specific tier that covers the change. A capability's internal change → capability tier (not backbone), even if the change is conceptually "across the methodology's capabilities".
 
 ### 2. Pick the scope
 
 Each tier has three scopes that determine the script's role and execution order within a version's directory (per COR-010 / `.pkit/lifecycle/README.md`'s "Three scopes per tier"):
 
 - **`manifest-schema`** — bridges a manifest format change. Runs **first** in any upgrade flow that needs it, before any structural or resource-scoped migration of the same target version.
-- **`structural`** — affects the tier's directory shape (a backbone-wide rename; a bundle's internal restructure within the bundle). Runs **before** resource-scoped migrations of the same target version.
+- **`structural`** — affects the tier's directory shape (a backbone-wide rename; a capability's internal restructure within the capability). Runs **before** resource-scoped migrations of the same target version.
 - **`resource`** — affects one specific resource (a label, a setting key, a template). The most common scope.
 
 ### 3. Pick the target version
@@ -71,7 +75,7 @@ pkit new migration --tier <tier> [--component <name>] [--version <X.Y.0>] --name
 ```
 
 - `--tier` is required.
-- `--component` is required when `--tier` is `bundle` or `adapter`.
+- `--component` is required when `--tier` is `adapter` or `capability`.
 - `--version` defaults to the tier's current version: `.pkit/VERSION` for the backbone, a component's `package.yaml` `version` field for a component. Pass step 3's target explicitly when it differs. Where a release step bumps the version, the target always differs from the default.
 - `--name` is the slug, required.
 - `--scope` defaults to `resource`. Set to `manifest-schema` or `structural` per step 2.
@@ -103,7 +107,7 @@ Open the stamped script and replace the TODO body with the actual change. Four r
   - Read what the backbone computes through its reading commands, and apply the answer in the script.
   - Never run a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. Examples are `sync`, `upgrade`, `pin` and `capabilities install`. The lifecycle spec's "Script contract" lists them, and review holds the rule.
 
-Use only the dependencies the project ships with — `bash`, standard UNIX tools, `pkit`, `git`, `gh`, `yq` if YAML manipulation is needed.
+Use only the dependencies the project ships with — `bash`, standard UNIX tools, `pkit`, `python3` with its standard library only, `git`, `gh`, `yq` if YAML manipulation is needed.
 
 ### 7. Self-check
 
@@ -121,7 +125,7 @@ Test the script locally if practical: on a fresh checkout and, for a backbone mi
 
 ### 8. Commit
 
-Per COR-008, conventional-commits format. Type is typically `feat` (a new migration is new behaviour at the target version); scope is the tier (or component name for bundle/adapter migrations):
+Per COR-008, conventional-commits format. Type is typically `feat` (a new migration is new behaviour at the target version); scope is the tier (or the component's name for an adapter or capability migration):
 
 ```
 feat(<scope>): add migration <X.Y.0>/<slug>
