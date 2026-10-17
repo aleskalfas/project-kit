@@ -18,9 +18,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-17T00:00:22Z
+      at: 2026-10-17T12:14:25Z
       outcome: unchanged
-      unchanged-because: The actor now anchors the section of CONTRIBUTING.md its Note cites, "Running checks". That section calls whoever applies the repository's settings, its required status and its merge queue, the operator. So the Note holds.
+      unchanged-because: "This change adds to the prose lint's description in Running checks: how it counts a code span, a list's levels and an artefact's whole file. The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds."
 ---
 
 # ACT-operator — Operator
