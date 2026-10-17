@@ -73,8 +73,8 @@ Beside it, the comparison runs a second check against the same base: each use
 case's steps and variants against the same use case where this branch left the
 base, reporting a step or a variant renumbered or removed (`_lib/append_only.py`).
 Both guard one promise, that a number, once given, never changes meaning. That
-check binds where the format rule, RS-SAN-001, binds and at its status, and a
-preview shows it under a proposed rule, so `preview` reaches it alone. It needs
+check binds where the append-only rule, RS-SAN-002, binds and at its status, and
+a preview shows it under a proposed rule, so `preview` reaches it alone. It needs
 the base whenever a use case is numbered here, and fails as this one does when
 it has none.
 """
@@ -149,8 +149,8 @@ def compare(root: Path, ref: str | None = None, *, preview: bool = False) -> Com
     """Compare the numbers in the working tree at `root` with the base `ref` — without
     one, the base the backbone names: `$PKIT_CHECK_BASE`, else the default branch
     (COR-054) — and each use case's steps and variants with the same use case where this
-    branch left the base (`_lib/append_only.py`), with `preview` where the format rule
-    would bind if it were accepted. Raises CannotCompare when it cannot answer."""
+    branch left the base (`_lib/append_only.py`), with `preview` where the append-only
+    rule would bind if it were accepted. Raises CannotCompare when it cannot answer."""
     try:
         analysis = backbone.read_analysis(root)
     except Unreadable as exc:

@@ -3,21 +3,21 @@ kind: minor
 custom:
   category: Added
 body: >
-  `pkit analysis validate` holds each part and front-matter field to the form
-  its kind's structure gives it (DEC-001 point 1, #1365). A use case's *Main
-  path* is numbered steps, no number twice. A use case's and a journey's
-  *Variants* read `None.`, or each opens with a step's number and a letter,
-  such as `2a.`. A journey's *Steps* hold one line for each of its `steps`,
-  `<id> — <title>` with the use case's title, and each hand-over under a step
-  names an earlier step, or a use case its `relies-on` lists, a field the
-  journey's schema does not take until #1507 lands. A record's
+  `pkit analysis validate` holds each part and front-matter field to the
+  form its kind's structure gives it (DEC-001 point 1, #1365). A use case's
+  *Main path* is numbered steps, no number twice. A use case's and a
+  journey's *Variants* read `None.`, or each opens with a step's number and
+  a letter, such as `2a.`. A journey's *Steps* hold one line for each of its
+  `steps`, `<id> — <title>` with the use case's title, and each hand-over
+  under a step names an earlier step, or a use case its `relies-on` lists, a
+  field the journey's schema does not take until #1507 lands. A record's
   *Outcomes* follow its `outcomes`, in order, and its *Gaps* name each
-  `code-regressed` or `gap-found` artefact with a `**Resolution:**`. A term's
-  `definition` is a phrase with no article first, no full stop last, and no
-  word of its name. A part's list is read as Markdown reads one, and a form
-  that reads a list judges only its items, so a line a writer adds outside
-  them passes. A `sentence` part written as a list holds one sentence in each
-  item. A withdrawn artefact is never failed for a form. An artefact's forms
-  bind at the status of the format rule, RS-SAN-001, which is proposed, so the
-  normal check reports none of them, and `pkit analysis validate --preview`
-  lists each breach. A revalidation record's bind always.
+  `code-regressed` or `gap-found` artefact with a `**Resolution:**`. A
+  term's `definition` is a phrase with no article first, no full stop last,
+  and no word of its name. A part's list is read as Markdown reads one, and
+  a form that reads a list judges only its items, so a line a writer adds
+  outside them passes. A withdrawn artefact is never failed for a form. An
+  artefact's forms bind at the status of the format rule, RS-SAN-001: while
+  it is proposed, the normal check reports none of them, and `pkit analysis
+  validate --preview` lists each breach. A revalidation record's bind
+  always.

@@ -52,12 +52,12 @@ How a body departs from its kind's structure:
 - **`None.` refused:** a part whose content is `None.` and nothing else, where
   its element does not allow it.
 - **not one sentence:** text of the `sentence` form, in a part or in a
-  front-matter field, in which a sentence ends before its last word. In a
-  list, each item holds it, and so does the rest of the part, taken as one
-  text.
+  front-matter field, in which a sentence ends before its last word. A part
+  is one text, and each item of a front-matter list is one.
 - **breaks its form:** a part or a front-matter field that does not hold any
-  other form its element names, such as `numbered-steps` or `definition`. Each
-  breach is its own departure, at the line of the item it is in.
+  other form its element names, such as `numbered-steps` or `definition`, and
+  a part of the `sentence` form that holds a list. Each breach is its own
+  departure, at the line of the item it is in.
 - **an undeclared label:** where a project's rule closes the kind's list of
   labels (`Kind.closed`, `_lib/project_structure.py`), a bold run ending in a
   colon that opens a line or a top-level list item, and that no element

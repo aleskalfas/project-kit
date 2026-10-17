@@ -89,15 +89,19 @@ def beside_record_bodies(found: list[tuple[str, str]]) -> list[tuple[str, str]]:
 #: artefacts: a report, at the analysis, since no rule of the method set binds on any of
 #: them (DEC-001 point 1).
 def unbound(n: int) -> dict[str, str]:
+    """The warning that no rule of `SAN` binds on any of the analysis's `n` artefacts: its
+    rules are accepted, and no set of these repositories' own inherits it."""
     return {
-        "severity": "report",
+        "severity": "warning",
         "location": "tech-docs/analysis",
         "message": (
-            f"no rule of software-analysis:SAN binds on any of the analysis's {n} artefact(s): "
-            f"none is accepted, so none binds whatever the project's rule sets say (COR-051 "
-            f"point 4). Once one is, it binds only through a set of the project's own whose "
-            f"scope selects the analysis, such as by the capability's types, and that "
-            f"inherits software-analysis:SAN (COR-051 point 7; DEC-001 point 1)"
+            f"no rule of software-analysis:SAN binds on any of the analysis's {n} artefact(s), "
+            f"as `pkit rule-sets reach` reads it, so none is held to its structure: no set of "
+            f"the project's own whose scope selects them inherits software-analysis:SAN, or a "
+            f"pin behind its set holds it back (COR-051 point 7). Write a set of your own "
+            f"whose scope selects the analysis, such as by the capability's types, and that "
+            f"inherits software-analysis:SAN at its current major, or review the new major "
+            f"and update the pin (DEC-001 point 1)"
         ),
     }
 
@@ -195,12 +199,14 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
         "summary": [
             "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
             "1 journey(s); 0 revalidation record(s).",
-            # The format rule is proposed, so no body is held to its kind's structure yet,
-            # and no rule of `SAN` binds on any artefact: the check says so, as a report.
-            "structure (RS-SAN-001, proposed): not checked — the rule binds nothing until it "
-            "is accepted (COR-051 point 4); `pkit analysis validate --preview` shows what it "
-            "would report. No rule of software-analysis:SAN binds on any of the 7 "
-            "artefact(s), since none is accepted.",
+            # The format rule is accepted, yet no set of this repository's own inherits
+            # `SAN`, so no body is held to its kind's structure: the check says so, as a
+            # warning.
+            "structure (RS-SAN-001, accepted): 0 artefact(s) and file head(s) checked, where "
+            "the rule binds, against the structure their kind declares in "
+            ".pkit/capabilities/software-analysis/schemas/artefact-kinds.yaml; 0 of them "
+            "departing from it. No rule of software-analysis:SAN binds on 7 of the 7 "
+            "artefact(s).",
         ],
         "findings": [unbound(7)],
     }
@@ -252,9 +258,10 @@ def test_a_field_s_hint_is_never_judged_against_its_form(seeded: AdopterRepo) ->
 
 
 def test_a_hint_left_in_is_refused_with_no_rule_needed(seeded: AdopterRepo) -> None:
-    """A hint left in a body is an error while the format rule is still proposed, as any
-    placeholder is (DEC-001 point 1). Its mark is matched outside code spans and fenced
-    code, so a body may quote it (#1366)."""
+    """A hint left in a body is an error where the format rule binds on nothing, as any
+    placeholder is (DEC-001 point 1): here no set of the project's own inherits `SAN`.
+    Its mark is matched outside code spans and fenced code, so a body may quote it
+    (#1366)."""
     rel = f"{USE_CASES}/UC-001-run-suite.md"
     quoted = (seeded.root / rel).read_text(encoding="utf-8") + (
         "\nThe stamp writes `<!-- pkit:hint … -->` where a part goes.\n\n"
@@ -263,7 +270,9 @@ def test_a_hint_left_in_is_refused_with_no_rule_needed(seeded: AdopterRepo) -> N
     seeded.write({rel: quoted})
     document = check(seeded)
     assert errors(document) == []
-    assert "structure (RS-SAN-001, proposed): not checked" in document["summary"][1]
+    assert document["summary"][1].startswith(
+        "structure (RS-SAN-001, accepted): 0 artefact(s) and file head(s) checked"
+    )
     left = quoted.replace("**Trigger:** ", "**Trigger:** <!-- pkit:hint The event. --> ", 1)
     seeded.write({rel: left})
     line = left.splitlines().index(next(t for t in left.splitlines() if "The event." in t)) + 1

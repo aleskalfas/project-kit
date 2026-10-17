@@ -7,7 +7,7 @@ use case and the number or letter. One added, and a use case new in the change,
 pass. The check reads the base as the number check does (COR-054), so a shallow
 clone that lacks it fails rather than passing. It is `check-numbers`' second
 check, never run by `pkit analysis validate` (COR-055 point 2), and binds where the
-format rule, RS-SAN-001, binds, with the structure check's preview.
+append-only rule, RS-SAN-002, binds, with a preview as the structure check's (#1370).
 """
 
 from __future__ import annotations
@@ -37,6 +37,7 @@ from tests.analysis_repo import (
     prepare,
     run_script,
     stamped,
+    with_status,
 )
 
 RUN = f"{USE_CASES}/UC-001-run-suite.md"
@@ -74,7 +75,7 @@ def with_steps(
 
 def _on_main(repo: AdopterRepo) -> None:
     """`prepare`, then an actor and UC-001 with three steps and two variants on main, the
-    format rule accepted and bound through a set of the project's own, and the branch
+    rules of `SAN` accepted and bound through a set of the project's own, and the branch
     `topic` leaving main there."""
     prepare(repo)
     stamped(repo, "actor", "tester")
@@ -145,8 +146,8 @@ def test_a_renumbered_step_or_variant_fails_naming_the_use_case_and_its_number(
     assert answer["findings"][0]["message"] == (
         f"UC-001's step 2, as main held it where this branch left it ({fork}), now stands as "
         f"step 3, at line {line + 1}: journeys and evidence cite a step by its number, so it is "
-        "never renumbered or removed — give it back its number, and number a new step past the "
-        "last (DEC-001 point 3)"
+        "never renumbered or removed — give it back its number, and number a new step higher "
+        "than every number of its use case (DEC-001 point 3)"
     )
     moved = [
         re.sub(r", at line \d+", "", f["message"]).split(":", 1)[0] for f in answer["findings"]
@@ -159,7 +160,7 @@ def test_a_renumbered_step_or_variant_fails_naming_the_use_case_and_its_number(
         f"UC-001's variant 3a, {held} now stands as variant 4a",
     ]
     assert steps_line(answer) == (
-        f"steps (RS-SAN-001, accepted): 1 use case(s) where the rule binds, compared with main "
+        f"steps (RS-SAN-002, accepted): 1 use case(s) where the rule binds, compared with main "
         f"where this branch left it ({fork}); 0 new in this change, and 1 renumbering or "
         "removing a step or a variant."
     )
@@ -176,12 +177,12 @@ def test_a_removed_step_or_variant_fails(branched: AdopterRepo) -> None:
     assert [f["message"] for f in document(completed)["findings"]] == [
         f"UC-001's step 3, as main held it where this branch left it ({fork}), is gone: "
         "journeys and evidence cite a step by its number, so it is never renumbered or "
-        "removed — put it back under its number, marked withdrawn if it no longer happens "
+        "removed — put it back under its number, even if it no longer happens "
         "(DEC-001 point 3)",
         f"UC-001's variant 3a, as main held it where this branch left it ({fork}), is gone: "
         "journeys and evidence cite a variant by its step and letter, so it is never "
-        "renumbered or removed — put it back under its label, marked withdrawn if it no "
-        "longer happens (DEC-001 point 3)",
+        "renumbered or removed — put it back under its label, even if it no longer happens "
+        "(DEC-001 point 3)",
     ]
 
 
@@ -284,18 +285,21 @@ def test_validate_does_not_run_it(branched: AdopterRepo) -> None:
     assert numbers(branched, "--base", MAIN).returncode == 1
 
 
-def test_it_binds_under_the_format_rule_s_status_with_its_preview(branched: AdopterRepo) -> None:
-    """The format rule proposed: nothing compared, and the summary says so, unless the
-    preview is asked for, whose findings are reports that never fail."""
+def test_it_binds_under_the_append_only_rule_s_status_with_its_preview(
+    branched: AdopterRepo,
+) -> None:
+    """The append-only rule proposed, the format rule accepted: nothing compared, and the
+    summary says so, unless the preview is asked for, whose findings are reports that
+    never fail. The format rule's status gates the structure alone (#1370)."""
     rewrite(branched, SWAPPED, VARIANTS)
     san = (branched.root / SAN_REL).read_text(encoding="utf-8")
-    branched.write({SAN_REL: san.replace("status: accepted", "status: proposed", 1)})
+    branched.write({SAN_REL: with_status(san, "RS-SAN-002", "proposed")})
     completed = numbers(branched, "--base", MAIN, "--json")
     assert completed.returncode == 0, completed.stdout + completed.stderr
     answer = document(completed)
     assert answer["findings"] == []
     assert steps_line(answer) == (
-        "steps (RS-SAN-001, proposed): not checked — the rule binds nothing until it is "
+        "steps (RS-SAN-002, proposed): not checked — the rule binds nothing until it is "
         "accepted (COR-051 point 4); `pkit analysis check-numbers --preview` shows what it "
         "would report."
     )
@@ -305,14 +309,31 @@ def test_it_binds_under_the_format_rule_s_status_with_its_preview(branched: Adop
     assert [f["severity"] for f in findings] == ["report", "report"]
     assert all(f["message"].startswith("preview: UC-001's step ") for f in findings)
     assert steps_line(document(previewed)).startswith(
-        "steps (RS-SAN-001, proposed, previewed as accepted): 1 use case(s) where the rule "
+        "steps (RS-SAN-002, proposed, previewed as accepted): 1 use case(s) where the rule "
         "would bind, as `pkit rule-sets reach --preview` reads it,"
     )
     assert numbers(branched, "--base", MAIN, "--preview").returncode == 0
 
 
+def test_it_binds_where_the_append_only_rule_binds_whatever_the_format_rule(
+    branched: AdopterRepo,
+) -> None:
+    """The append-only rule accepted and the format rule proposed: steps are compared,
+    and a renumbering fails, since the append-only rule alone gates it (#1370)."""
+    rewrite(branched, SWAPPED, VARIANTS)
+    san = (branched.root / SAN_REL).read_text(encoding="utf-8")
+    branched.write({SAN_REL: with_status(san, "RS-SAN-001", "proposed")})
+    completed = numbers(branched, "--base", MAIN, "--json")
+    assert completed.returncode == 1, completed.stdout + completed.stderr
+    answer = document(completed)
+    assert [f["severity"] for f in answer["findings"]] == ["error", "error"]
+    assert steps_line(answer).startswith(
+        "steps (RS-SAN-002, accepted): 1 use case(s) where the rule binds,"
+    )
+
+
 def test_it_binds_only_through_a_set_of_the_project_s_own(branched: AdopterRepo) -> None:
-    """The format rule accepted, and no set of the project's own: it binds on no use case,
+    """The append-only rule accepted, and no set of the project's own: it binds on no use case,
     so nothing is compared, and the summary says so."""
     rewrite(branched, SWAPPED, VARIANTS)
     branched.write({ANALYSIS_SET: None})
@@ -321,7 +342,7 @@ def test_it_binds_only_through_a_set_of_the_project_s_own(branched: AdopterRepo)
     answer = document(completed)
     assert answer["findings"] == []
     assert steps_line(answer) == (
-        "steps (RS-SAN-001, accepted): nothing compared. The rule does not bind on 1 of the 1 "
+        "steps (RS-SAN-002, accepted): nothing compared. The rule does not bind on 1 of the 1 "
         "use case(s) here, so they are not compared."
     )
 
@@ -336,7 +357,7 @@ def test_project_structures_it_cannot_read_fail_rather_than_pass(branched: Adopt
     answer = document(completed)
     assert [(f["severity"], f["location"]) for f in answer["findings"]] == [("error", STRUCTURES)]
     assert steps_line(answer).startswith(
-        f"steps (RS-SAN-001, accepted): not checked — the project's own structures, {STRUCTURES}, "
+        f"steps (RS-SAN-002, accepted): not checked — the project's own structures, {STRUCTURES}, "
         "cannot be read;"
     )
 
