@@ -1793,34 +1793,20 @@ def test_a_registry_that_does_not_read_leaves_the_release_planning(tmp_path: Pat
     assert plan.versions.writes == {"project-management": "0.54.1"}
 
 
-@pytest.mark.xfail(
-    strict=True,
-    raises=AssertionError,
-    reason=(
-        "PRJ-007's gap: `release apply` rewrites the self-host backbone manifest but not a "
-        "capability's legacy receipt, so validation reads project-management at the version "
-        "the receipt records, below a floor the release raised to its new version."
-    ),
-)
 def test_the_release_commit_validates_after_a_release_floor_rises_on_project_management(
     tmp_path: Path,
 ) -> None:
-    """The architect's check on PR #1639: project-management's version of record in
-    this repository is its legacy receipt (`project/manifest.yaml`), which `apply`
-    does not rewrite. After a release raises a dependent's floor to the
-    project-management it writes, validation must still read the pair in range."""
+    """A tree shaped like project-kit's source: project-management registered
+    kit-shipped with no manifest (ADR-059), living-docs incubated. Validation reads
+    project-management from the `package.yaml` whose `version:` line the release
+    writes (PRJ-007 point 1, ADR-065 point 2). So after a release raises living-docs'
+    floor to the project-management it writes, validation still reads the pair in
+    range."""
     from project_kit import connections
 
     source_kit = _make_kit(tmp_path, backbone="1.5.0")
-    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
-    _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.54.0,<1.0.0")
-    receipt = source_kit / "capabilities" / "project-management" / "project" / "manifest.yaml"
-    receipt.parent.mkdir(parents=True)
-    receipt.write_text(
-        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
-        "  version: 0.54.0\n",
-        encoding="utf-8",
-    )
+    pm = _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.54.0,<1.0.0")
     (source_kit / "manifest.yaml").write_text(
         "schema_version: 1\nbackbone_version: 1.5.0\ncomponents:\n"
         "  - kind: capability\n    name: project-management\n"
@@ -1838,9 +1824,13 @@ def test_the_release_commit_validates_after_a_release_floor_rises_on_project_man
 
     release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
 
-    assert 'version: ">=0.55.0,<1.0.0"' in (
-        source_kit / "capabilities" / "living-docs" / "package.yaml"
-    ).read_text(encoding="utf-8")
+    assert "  version: 0.55.0\n" in pm.read_text(encoding="utf-8")
+    assert 'version: ">=0.55.0,<1.0.0"' in dependent.read_text(encoding="utf-8")
+    capabilities = source_kit / "capabilities"
+    assert not [
+        *capabilities.glob("*/manifest.yaml"),
+        *capabilities.glob("*/project/manifest.yaml"),
+    ]
     assert connections.versions_outcome(tmp_path).errors == ()
 
 

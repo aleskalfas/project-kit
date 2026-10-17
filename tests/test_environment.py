@@ -78,6 +78,50 @@ def test_collect_environment_reads_a_capabilitys_manifest_as_its_record_is_read(
     assert ("project-management", "0.53.0") in collect_environment(tmp_path).capabilities
 
 
+def test_collect_environment_reads_a_capability_with_no_manifest_from_its_package(
+    tmp_path: Path,
+) -> None:
+    """A shipped capability with no manifest, as in the methodology's source (ADR-059),
+    reports its installed package's version, the last place every reader of its record
+    looks (ADR-065 point 2). With no package either, it reports "unknown"."""
+    _stage(tmp_path)
+    cap_dir = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (cap_dir / "project" / "manifest.yaml").unlink()
+    assert ("project-management", "unknown") in collect_environment(tmp_path).capabilities
+
+    (cap_dir / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+        "  version: 0.54.0\n",
+        encoding="utf-8",
+    )
+    env = collect_environment(tmp_path)
+    assert ("project-management", "0.54.0") in env.capabilities
+    assert "project-management 0.54.0" in render_environment_block(env)
+
+
+def test_collect_environment_reads_past_a_manifest_or_package_that_does_not_read(
+    tmp_path: Path,
+) -> None:
+    """A report never fails on a corrupt record: a manifest that does not parse falls
+    back to the package, and a package that does not read either reports "unknown"."""
+    _stage(tmp_path)
+    cap_dir = tmp_path / ".pkit" / "capabilities" / "project-management"
+    (cap_dir / "project" / "manifest.yaml").write_text("component: [unclosed\n", encoding="utf-8")
+    package = cap_dir / "package.yaml"
+    package.write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+        "  version: 0.54.0\n",
+        encoding="utf-8",
+    )
+    assert ("project-management", "0.54.0") in collect_environment(tmp_path).capabilities
+
+    package.write_text(
+        package.read_text(encoding="utf-8").replace("schema_version: 1", "schema_version: x"),
+        encoding="utf-8",
+    )
+    assert ("project-management", "unknown") in collect_environment(tmp_path).capabilities
+
+
 def test_collect_environment_include_private(tmp_path: Path) -> None:
     _stage(tmp_path)
     env = collect_environment(tmp_path, include_private=True)

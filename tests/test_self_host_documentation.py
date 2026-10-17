@@ -84,7 +84,6 @@ SURFACE_TREES = (
 NOT_SURFACE: dict[str, str] = {
     "**/migrations/**": "one-off upgrade steps, each describing itself",
     "**/package.yaml": "component metadata whose version the release step rewrites",
-    "**/manifest.yaml": "install state the capability lifecycle writes",
     ".pkit/capabilities/*/project/**": "the project's own configuration of a capability",
     ".pkit/capabilities/*/README.md": "the page itself",
     ".pkit/adapters/README.md": "the page itself",

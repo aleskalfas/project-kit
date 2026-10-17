@@ -98,7 +98,7 @@ The code behind `pkit sync` splits in two: a propagation step, and the sync comm
 - **A capability's manifest moves under its `project/`.** Every ownership predicate already treats that folder as the project's, so no copy deletes the manifest there.
   - **Who moves it:** a transition, before its copy. The transition of the backbone moves every root manifest in step 2, right after the target is recorded, and rewrites each registry path. A transition of one capability moves its own after its refusals (point 4).
   - **Who never moves it:** sync, which writes a project-owned path only through merge delivery (COR-059 point 2). A sync that meets a root manifest skips that capability (point 1). The guard stops sync anyway until the project's first transition under this release.
-  - **The shipped tree:** project-kit's own root manifest of project-management moves, unchanged, under that capability's `project/`. So the bundle ships no capability manifest.
+  - **The shipped tree:** project-kit's own source holds no capability manifest, since nothing there stamps one (ADR-059). Each capability there is read from its `package.yaml`, which the release step writes. So the bundle ships no capability manifest.
   - **So no copy writes or removes a recorded version** (COR-059 point 1), and the move needs no migration script.
 - **Both places at once:** the root manifest wins, and the move replaces the one under `project/` with it. A root manifest sits beside one under `project/` only after one of these:
   - an interrupted move, which leaves two equal copies
