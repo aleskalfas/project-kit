@@ -1826,7 +1826,11 @@ def test_the_release_commit_validates_after_a_release_floor_rises_on_project_man
 
     assert "  version: 0.55.0\n" in pm.read_text(encoding="utf-8")
     assert 'version: ">=0.55.0,<1.0.0"' in dependent.read_text(encoding="utf-8")
-    assert not list((source_kit / "capabilities").glob("*/project/manifest.yaml"))
+    capabilities = source_kit / "capabilities"
+    assert not [
+        *capabilities.glob("*/manifest.yaml"),
+        *capabilities.glob("*/project/manifest.yaml"),
+    ]
     assert connections.versions_outcome(tmp_path).errors == ()
 
 

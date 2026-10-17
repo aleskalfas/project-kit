@@ -2148,6 +2148,10 @@ def _read_package_yaml(path: Path) -> CapabilityPackage | None:
     version = component.get("version")
     if not isinstance(name, str) or not isinstance(version, str):
         return None
+    try:
+        schema_version = int(raw.get("schema_version", 1))
+    except (TypeError, ValueError):
+        return None
     description = raw.get("description", "")
     requires_backbone = raw.get("requires_backbone", "")
     requires_capabilities = _parse_requires_capabilities(raw.get("requires_capabilities"))
@@ -2157,7 +2161,7 @@ def _read_package_yaml(path: Path) -> CapabilityPackage | None:
         description=str(description),
         requires_backbone=str(requires_backbone),
         requires_capabilities=requires_capabilities,
-        schema_version=int(raw.get("schema_version", 1)),
+        schema_version=schema_version,
     )
 
 
