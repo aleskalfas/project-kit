@@ -489,6 +489,8 @@ def capability_versions(
     else its package's; `connections.installed_versions`), so a floor bounded by
     it is one validation reads as met. A component the project does not register
     carries its package's version. A name no component takes is left out."""
+    from ruamel.yaml.error import YAMLError
+
     from project_kit.connections import installed_versions
 
     writes: dict[str, str] = {}
@@ -498,7 +500,12 @@ def capability_versions(
         if name == BACKBONE or component is None or top is None or top == "none":
             continue
         writes[name] = versioning.next_version(component.version, cast("versioning.Segment", top))
-    installed = installed_versions(source_kit.parent)
+    try:
+        installed = installed_versions(source_kit.parent)
+    except (YAMLError, KeyError, TypeError, ValueError):
+        # A registry that does not read leaves each package's version: `pkit
+        # validate` reports the registry, and the release still plans.
+        installed = {}
     others = {name: c for name, c in components.items() if name != BACKBONE}
     return CapabilityVersions(
         writes=writes,

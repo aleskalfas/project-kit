@@ -882,3 +882,30 @@ def test_a_key_mentioned_in_a_comment_opens_no_block() -> None:
         'requires_backbone: ">=1.0.0"\n'
     )
     assert versioning.requires_capabilities_entries(text) == []
+
+
+def test_a_lone_dash_item_and_a_column_zero_item_are_read_and_their_writes_admitted() -> None:
+    """Under a `-` alone on its line the keys sit at their own indent, and a list
+    may sit at the key's column: each is read and raised, and the line the raise
+    rewrites is one the changeset guard admits in a release."""
+    text = (
+        "requires_capabilities:\n"
+        "-\n"
+        "  name: project-management\n"
+        '  version: ">=0.54.0,<1.0.0"\n'
+        '- version: ">=0.1.0"\n'
+        "  name: living-docs\n"
+    )
+
+    assert [(e.name, e.floor) for e in versioning.requires_capabilities_entries(text)] == [
+        ("project-management", "0.54.0"),
+        ("living-docs", "0.1.0"),
+    ]
+    for capability, version, line in (
+        ("project-management", "0.55.0", '  version: ">=0.55.0,<1.0.0"'),
+        ("living-docs", "0.2.0", '- version: ">=0.2.0"'),
+    ):
+        raised = versioning.raise_requires_capability_floor(text, capability, version)
+        assert raised is not None
+        assert line in raised[0].splitlines()
+        assert versioning.REQUIRES_CAPABILITIES_RELEASE_LINE.match(line)

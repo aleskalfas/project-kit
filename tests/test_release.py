@@ -1775,6 +1775,24 @@ def test_an_explicit_capability_floor_is_bounded_by_the_installed_version(
     assert floor.new_floor == "0.53.0"
 
 
+def test_a_registry_that_does_not_read_leaves_the_release_planning(tmp_path: Path) -> None:
+    """The release reads the registry only for the versions the tree carries. A
+    registry entry it cannot read leaves each package's version, as before this
+    read, and validation reports the registry."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    (source_kit / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.5.0\ncomponents:\n  - kind: capability\n",
+        encoding="utf-8",
+    )
+    _add(source_kit, "project-management", "patch", "A fix.", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+
+    assert plan.versions.carries["project-management"] == "0.54.0"
+    assert plan.versions.writes == {"project-management": "0.54.1"}
+
+
 @pytest.mark.xfail(
     strict=True,
     raises=AssertionError,

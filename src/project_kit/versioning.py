@@ -134,7 +134,7 @@ _CAPABILITY_RANGE_RE = re.compile(r'"(>=(\d+\.\d+\.\d+)(?:,<\d+\.\d+\.\d+)?)"')
 # leaves it. The changeset guard admits such a changed line in a release's
 # package.yaml by this pattern (`release.release_writes`).
 REQUIRES_CAPABILITIES_RELEASE_LINE: re.Pattern[str] = re.compile(
-    r'^[ \t]+(?:-[ \t]+)?version:[ \t]*">=\d+\.\d+\.\d+(?:,<\d+\.\d+\.\d+)?"[ \t]*(?:#.*)?$'
+    r'^(?:[ \t]+|[ \t]*-[ \t]+)version:[ \t]*">=\d+\.\d+\.\d+(?:,<\d+\.\d+\.\d+)?"[ \t]*(?:#.*)?$'
 )
 
 
@@ -590,14 +590,17 @@ def requires_capabilities_entries(package_text: str) -> list[CapabilityEntry]:
     `requires_capabilities:` key, in order; empty when there is no such block.
 
     An item's `name:` and `version:` are read on the `- ` line or on lines of
-    their own at the item's key indent. A flow list, or a value spread over
-    several lines, is not read: the release raises no floor in it."""
+    their own at the item's key indent: the column after the `- `, or, under a
+    `-` alone on its line, the indent of the item's first key. A flow list, or
+    a value spread over several lines, is not read: the release raises no floor
+    in it."""
     key = _REQUIRES_CAPABILITIES_KEY_RE.search(package_text)
     if key is None:
         return []
     entries: list[CapabilityEntry] = []
     item: dict[str, tuple[str, int]] | None = None
-    key_indent = -1
+    item_indent = -1  # the column of the item's `-`
+    key_indent: int | None = None  # None under a `-` alone, until its first key
     offset = key.end() + 1
     for line in package_text[offset:].splitlines(keepends=True):
         start = offset
@@ -610,12 +613,18 @@ def requires_capabilities_entries(package_text: str) -> list[CapabilityEntry]:
         indent = len(body) - len(body.lstrip(" \t"))
         if indent == 0 and listed is None:
             break  # the next top-level key ends the block
-        if listed is not None and (item is None or len(listed.group(1)) < key_indent):
+        if listed is not None and (item is None or len(listed.group(1)) <= item_indent):
             if item is not None:
                 entries.append(_capability_entry(package_text, item))
             item = {}
+            item_indent = len(listed.group(1))
+            if not body[listed.end() :].strip():
+                key_indent = None  # a `-` alone: its keys are on the lines below
+                continue
             key_indent = listed.end()
             column = listed.end()
+        elif item is not None and key_indent is None and indent > item_indent:
+            key_indent = column = indent
         elif item is not None and indent == key_indent:
             column = indent
         else:
