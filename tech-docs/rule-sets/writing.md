@@ -1,6 +1,6 @@
 ---
 rule-set: WRITE
-version: 1.1.0
+version: 2.0.0
 rules:
   RS-WRITE-001:
     status: accepted
@@ -17,7 +17,7 @@ rules:
     origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Side matter interrupted each role's description. Moved last under Note, it left the description shorter with nothing dropped (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-005:
     status: accepted
-    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "Short sentences are easier for every reader. That is the maintainer's view, not a trial finding, since the trial tested no readers. The trial showed that the limit can be kept. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Short sentences are easier for every reader. That is the maintainer's view, not a trial finding, since the trial tested no readers. The trial showed that the limit can be kept. The original had ten body sentences over 25 words, and both rewrites brought every one to 25 or fewer (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). The maintainer accepted the rule on 5 October, and on 17 October that a code span is at most one word (#1636). On two reference pages, a quoted message in a code span filled a sentence alone. Splitting it out added sentences that carry nothing (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-006:
     status: proposed
     origin: {why: "A sentence with one idea is read once, in the maintainer's view. The trial could not show it. This rule was applied with the word limit and the labels, and their effects could not be told apart. Splitting also put meaning at risk. In the trial, a split section contradicted itself. In the core actors, two splits would have chosen a reading, and in the try-outs, splits moved pronouns away from their nouns (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
@@ -29,7 +29,7 @@ rules:
     origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A semicolon joins two sentences that read better apart. Three of the original's four semicolons split cleanly into sentences or a list. The fourth joined two citations, where a comma would be ambiguous, since a citation can hold a comma itself (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-009:
     status: accepted
-    origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English. Both are the maintainer's view, not a trial finding, since the trial tested no readers. The trial's ASD-STE100 rewrite made that clause whole (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "An elided verb, as in \"the whole-repository report the developer\", slows every reader down. It slows most a reader whose first language is not English. Both are the maintainer's view, not a trial finding, since the trial tested no readers. The trial's ASD-STE100 rewrite made that clause whole (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). The maintainer accepted the rule on 5 October, and on 17 October that a table cell may start with its verb (#1636). A table's row names what each of its cells describes, so a cell need not name it again. Many of the CLI reference's cells start with their verb, and the try-out's splits made more of them do so (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-010:
     status: accepted
     origin: {date: 2026-10-05, by: "Aleš Kalfas", why: "A reader who picks the wrong referent learns a wrong fact, and nothing warns them. In the trial, naming the harness behind \"it\" made a need clear (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
@@ -43,17 +43,17 @@ rules:
     status: proposed
     origin: {why: "Line numbers drift whenever the cited file changes, and a section name drifts when its heading is renamed. Nothing checks either. A permanent id and an anchor stay true without upkeep. In the core actors, a line-number citation had already drifted to the wrong lines (#1354)."}
   RS-WRITE-015:
-    status: proposed
-    origin: {why: "The CLI reference describes a key in three forms: \"`roots` — the documentation roots\", \"`check` (`change`)\" and \"**`span`** is the lines that part spans\" (.pkit/cli/README.md). One form lets a reader find every key the same way. A path names a key wherever it is written, as `history.cut` already does there. The try-out on two reference pages asked for one form (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "The CLI reference describes a key in three forms: \"`roots` — the documentation roots\", \"`check` (`change`)\" and \"**`span`** is the lines that part spans\" (.pkit/cli/README.md). One form lets a reader find every key the same way. A path names a key wherever it is written, as `history.cut` already does there. The try-out on two reference pages asked for one form (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-016:
-    status: proposed
-    origin: {why: "Text points at a heading or a label by its words or its place, as in (\"Resolver limits\" below). No check follows such a pointer. In the try-out on two reference pages, a move took text out from under the label The three answers, which another item points at (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
+    status: accepted
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Text points at a heading or a label by its words or its place, as in (\"Resolver limits\" below). No check follows such a pointer. In the try-out on two reference pages, a move took text out from under the label The three answers, which another item points at (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md)."}
   RS-WRITE-017:
-    status: proposed
-    origin: {why: "Deep nesting was the first cost of the try-out on two reference pages. Lists for series with detail (RS-WRITE-003) nested the `--json` key lists, and the flags of an answer's line, four levels deep (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). The CLI reference already nests a key list five levels deep (.pkit/cli/README.md). Every list in this set fits in three levels."}
+    status: accepted
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "Deep nesting was the first cost of the try-out on two reference pages. Lists for series with detail (RS-WRITE-003) nested the `--json` key lists, and the flags of an answer's line, four levels deep (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). The CLI reference already nests a key list five levels deep (.pkit/cli/README.md). Every list in this set fits in three levels."}
   RS-WRITE-018:
-    status: proposed
-    origin: {why: "In the try-out on two reference pages, an editing tool wrote a right-to-left override, U+202E, where the CLI reference names its escape. Only a scan of the bytes found it (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). A control character can move the cursor or erase a line, and a bidirectional one reorders what follows (.pkit/cli/README.md). Either way, a reader and a reviewer see text the file does not hold."}
+    status: accepted
+    origin: {date: 2026-10-17, by: "Aleš Kalfas", why: "In the try-out on two reference pages, an editing tool wrote a right-to-left override, U+202E, where the CLI reference names its escape. Only a scan of the bytes found it (.pkit/scratchpad/done/2026-10-05-writing-style-trial.md). A control character can move the cursor or erase a line, and a bidirectional one reorders what follows (.pkit/cli/README.md). Either way, a reader and a reviewer see text the file does not hold."}
 # The parts of these rules that project-kit's prose lint checks, in the text a change
 # adds or moves (COR-051 point 2). Whoever judges the rest of a rule leaves them to it.
 checks:
@@ -73,7 +73,7 @@ These are project-kit's general writing rules. `ANA`, the analysis's own set, in
 - **Where the rules apply:** everything under `tech-docs/analysis/`, software-analysis's templates, and the structures its kinds declare (software-analysis DEC-001 point 1). project-kit's operational rules send whoever writes any of them here (`.pkit/rules/project.md`). This set has no scope of its own. No scope could reach a template or a structure anyway, since neither is an artefact (ADR-055 point 3).
   - **In shipped text:** where a rule here would carry project-kit's own vocabulary or style into a template or a structure, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter.
 - **The set for the analysis:** `ANA` (`tech-docs/rule-sets/analysis.md`) inherits this set, and its scope selects the analysis by type. It holds the analysis's own rules.
-- **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). First, this set takes the items the try-out on reference pages asked for, those the maintainer accepts.
+- **The documentation spaces, next:** the spaces' definitions, `TECH` and `USER`, will inherit this set in a later change (#1350). The rules the try-out on reference pages asked for are already here, as the maintainer accepted them on 17 October (#1636). Each binds wherever this set binds, not only on pages.
 - **What an inheriting set may fill:** the list of labels for a kind of document it governs (`RS-WRITE-002#labels`). `ANA` fills it for the analysis.
 - **Where the rules come from:** a style trial in October 2026. It rewrote the core actors document by ASD-STE100 and by ISO 24495-1, and kept what helped. The rules were then tried on two reference pages, and the try-out found what such pages need. The trial, the try-out and what they left out are in `.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`.
 - **How a rule reads:** a statement, then *How*, then examples. A rule's reason is the `why` of its origin, in the front matter (COR-051 point 5).
@@ -83,11 +83,7 @@ These are project-kit's general writing rules. `ANA`, the analysis's own set, in
 - **What binds:** a rule's statement and its *How*. Both are the rule's content in the sense of COR-051 point 2, and the examples only illustrate them. Inside a *How*, a "such as" phrase and a sentence that starts "An example is" only illustrate too. The rest of the *How* binds.
 - **What a tool checks:** the `checks` in the front matter name the parts of rules that project-kit's prose lint (`scripts/prose_lint.py`) checks. It checks them in the text a change adds or moves, on the artefacts where these rules bind. A reviewer leaves those parts to the lint there, and judges them on templates and structures (COR-051 point 2).
 - **Held back:** RS-WRITE-002, on labels, and RS-WRITE-006, on one idea per sentence, stay proposed. The maintainer held both back on 5 October. RS-WRITE-006's `why` says what the trial could not show, and what splitting put at risk.
-- **Proposed:** RS-WRITE-014, on citing by permanent id, waits for the maintainer's acceptance. So do RS-WRITE-015 to RS-WRITE-018, four new rules that the try-out on reference pages asked for (#1350). Once accepted, each binds wherever this set binds, not only on pages.
-- **Proposed refinements:** three items relax accepted rules, and wait for the maintainer's answer too (#1350). Each reason moves into its rule's `why` once the item is accepted, and a refused item leaves this set first.
-  - **A code span, in RS-WRITE-005:** on two reference pages, a quoted message in a code span filled a sentence alone. Splitting it out added sentences that carry nothing (`.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`). The *How*'s opening line and the count of 30 words in its page example go with this item.
-  - **A command synopsis, in RS-WRITE-005:** a synopsis is code, not prose. One in the software-analysis README holds 29 words (`.pkit/capabilities/software-analysis/README.md`).
-  - **A table cell, in RS-WRITE-009:** a table's row names what each of its cells describes, so a cell need not name it again. Many of the CLI reference's cells start with their verb, and the try-out's splits made more of them do so (`.pkit/scratchpad/done/2026-10-05-writing-style-trial.md`).
+- **Proposed:** RS-WRITE-014, on citing by permanent id, waits for the maintainer's acceptance.
 - **A number not reused:** RS-WRITE-012 was the rule on needs and goals. It left this set, since needs and goals are the analysis's own, and its number stays unused here.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
@@ -167,13 +163,12 @@ These rules keep each sentence and paragraph short enough to read once.
 
 Keep every sentence to 25 words or fewer, and count the words in parentheses too.
 
-- **How:** count as the trial did, except for code spans and command synopses.
+- **How:** count as the trial did, except for code spans.
   - A word is a token between spaces that holds a letter or a digit, once bold marks and backticks are removed. An id, a file name or a hyphenated word is one word.
   - A code span is at most one word. It is one word where it holds a letter or a digit, and none otherwise. An example is a message the CLI reference quotes in a sentence, `` `friction.exclude` now leaves out 1 file this anchor stood on at the base (…); no change to it in this diff ``.
   - A sentence ends at a full stop, a question mark or an exclamation mark before a space or a line end. Each list item ends one too, and so does each item of a front-matter list, such as an actor's need.
   - A lead-in that ends in a colon is one sentence. Colons and semicolons end none.
   - Headings, bold labels, code blocks and quoted examples of a broken rule are not counted.
-  - A command synopsis adds no word to its sentence. It is a command with its arguments and options, written as code. An example is the synopsis that opens the software-analysis README's section on revalidation records.
 - **Breaks the rule:** a sentence of 38 words, "Core: the backbone ships no workflow, only checks made to run unattended, which bind once the project makes them a required status (COR-050 point 12), and one base a pipeline names for all of them (COR-054 point 3)."
 - **Keeps the rule:** "the backbone ships no workflow. It ships only checks made to run unattended, and one base a pipeline names for all of them (COR-054 point 3). The checks bind once the project makes them a required status (COR-050 point 12)." Unlike the plain rewrite, this keeps the two items in the sentence (RS-WRITE-003).
 - **Breaks the rule on a page:** a sentence of 30 words in the software-analysis README, "Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors."
