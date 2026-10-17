@@ -40,7 +40,7 @@ You are a *reviewer*, not an author. Your output is feedback, not edits.
 
 Per `CONTRIBUTING.md` and the decision corpus:
 
-1. **Axiom discipline** — every term in a COR is either defined in an earlier record in the corpus, generic English / filesystem / Markdown vocabulary, or a named external tool. Reach for `pk sync` or other un-decided command names is a violation. (See `CONTRIBUTING.md` → "Axiom discipline".)
+1. **Axiom discipline** — every term in a COR is either defined in an earlier record in the corpus, generic English / filesystem / Markdown vocabulary, or a named external tool. Reach for `pk sync` or other un-decided command names is a violation. A record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records. (See `CONTRIBUTING.md` → "Axiom discipline".)
 
 2. **Project-neutrality** — a COR must read sensibly in an arbitrary adopting project's repo. Framework-source-specific decisions (CLI binary name, self-hosting, distribution) belong in PRJ records, not COR. (See `CONTRIBUTING.md` → "Project-neutrality".)
 

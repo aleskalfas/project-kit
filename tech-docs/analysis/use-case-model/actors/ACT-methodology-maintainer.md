@@ -17,9 +17,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-17T17:18:31Z
+      at: 2026-10-17T21:10:15Z
       outcome: unchanged
-      unchanged-because: PRJ-002 drops stale phrases on its first version, its promotion from the hybrid and the move past 1.0, and decides nothing new. The maintainer releases the backbone from the source repository under that policy, and adopters learn what each change means from the changelog, so the actor's needs and its Core hold.
+      unchanged-because: The actor's goals and responsibilities are unchanged; the axiom discipline gains one stated exception for in-place refinements, which does not change what the maintainer does or answers for.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer
