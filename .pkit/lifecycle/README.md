@@ -30,9 +30,8 @@ pkit:
         - hatch_build.py
       record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-052, COR-053, COR-055, "COR-059#2", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-17T13:57:06Z
-      outcome: unchanged
-      unchanged-because: The change adds installed_versions, which reads each registered component's version of record through _version_of_record for the release step. The wiring resolver, the capability dependency range relation and the order the version of record is read in, which this page describes, are unchanged.
+      at: 2026-10-17T15:14:26Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -173,7 +172,7 @@ A capability's manifest sits at `.pkit/capabilities/<name>/project/manifest.yaml
   - `pkit upgrade` moves it right after recording its target, before its copy. `pkit capabilities upgrade` moves it after its checks, before its copy. A root manifest the restamp still finds came with the copy from the source, so the restamp removes it.
   - The move rewrites the registry entry's path, then removes the root file. So an interrupted move leaves two equal copies, and the next move finishes it.
   - The root manifest replaces one already under `project/`.
-- **Which one is read:** every reader of a capability's recorded version, and of its skips, reads the root manifest where one exists, then the one under `project/`, then the capability's installed `package.yaml`. The capability downgrade check, the dependency gates and the wiring resolver are among those readers. The report's environment block reads the two manifests alone, and `pkit validate`'s check of the manifests reads the one the registry entry names. Both manifests exist only after an interrupted move, or after a write that does not know the move, such as an older pkit's restamp or a rollback of `.pkit/`. Either way the root one names the content the project holds, so it wins.
+- **Which one is read:** every reader of a capability's recorded version, and of its skips, reads the root manifest where one exists, then the one under `project/`, then the capability's installed `package.yaml`. The capability downgrade check, the dependency gates and the wiring resolver are among those readers. `pkit validate`'s check of the manifests reads the one the registry entry names. Both manifests exist only after an interrupted move, or after a write that does not know the move, such as an older pkit's restamp or a rollback of `.pkit/`. Either way the root one names the content the project holds, so it wins.
 - **Read before propagation:** `pkit sync` and `pkit upgrade` read every capability's record before they copy anything, since a capability's copy replaces its installed `package.yaml`.
 - **Sync moves none:** sync never copies a capability whose manifest is still at the root, since the copy would prune the manifest there (ADR-065 point 2). One the running pkit ships at or above its recorded version is reported pending `pkit upgrade`, and the next `pkit upgrade` moves every root manifest, that of a capability it no longer ships included. `pkit capabilities upgrade` moves its own after its checks.
 

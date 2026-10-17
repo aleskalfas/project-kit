@@ -24,12 +24,7 @@ import platform
 from dataclasses import dataclass
 from pathlib import Path
 
-from project_kit.manifest import (
-    ORIGIN_KIT_SHIPPED,
-    read_backbone_manifest,
-    read_component_manifest,
-    recorded_capability_manifest,
-)
+from project_kit.manifest import ORIGIN_KIT_SHIPPED, read_backbone_manifest
 
 #: Placeholder for every project-derived field when no project root resolved
 #: (#693). Never rendered as a value — `render_environment_block` swaps the
@@ -101,10 +96,7 @@ def collect_environment(target_root: Path | None, *, include_private: bool = Fal
                 # Incubated / in-repo capability — name withheld by default.
                 private += 1
                 continue
-            # Read as every reader of a capability's record reads it (ADR-065 point 2).
-            recorded = recorded_capability_manifest(target_root, entry.name)
-            cm = read_component_manifest(recorded) if recorded is not None else None
-            caps.append((entry.name, cm.version if cm is not None else "unknown"))
+            caps.append((entry.name, _recorded_capability_version(target_root, entry.name)))
 
     return Environment(
         tool_version=_running_tool_version(),
@@ -117,6 +109,19 @@ def collect_environment(target_root: Path | None, *, include_private: bool = Fal
         python=platform.python_version(),
         project_resolved=manifest is not None,
     )
+
+
+def _recorded_capability_version(target_root: Path, name: str) -> str:
+    """The version the project records for capability *name*, read as every reader of
+    a capability's record reads it (ADR-065 point 2): the root manifest, then the one
+    under ``project/``, then the installed ``package.yaml``. A shipped capability with
+    no manifest, as in the methodology's source (ADR-059), reports its package's
+    version. "unknown" only when none of the three gives one."""
+    # Local import, as `_running_tool_version`'s: `capabilities` is heavy, and this
+    # keeps the environment module cheap to import.
+    from project_kit.capabilities import read_capability_record
+
+    return read_capability_record(target_root, name).version or "unknown"
 
 
 def _running_tool_version() -> str:

@@ -72,8 +72,9 @@ pkit:
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
     revalidated:
-      at: 2026-10-17T13:57:05Z
-      outcome: updated
+      at: 2026-10-17T15:14:32Z
+      outcome: unchanged
+      unchanged-because: The change has pkit report's environment block read a capability's version as every reader of its record does, falling back to the installed package.yaml, has a capability package.yaml whose schema_version is not a number read as unreadable, and drops the lifecycle README's sentence that the report reads the two manifests alone. This page says the block carries capability versions, redacted, and points to the lifecycle README for the order a capability's record is read in. It names no source for the block's versions and no handling of a malformed package, so it holds.
 ---
 
 # Command-line interface
