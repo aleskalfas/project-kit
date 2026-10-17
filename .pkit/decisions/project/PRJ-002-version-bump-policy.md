@@ -124,7 +124,6 @@ The changeset-file **format** and the release-step **mechanics** (changeset nami
   - refuses to leave a capability whose range excludes the version the release writes or carries for a capability it depends on
   - generates the changelog, stating each raised floor and widened bound in its component's entry
   - cuts tags via `pkit version tag --push` (PRJ-004)
-- **The declared widening and the refusal are built in #1644,** before any capability with dependents in this tree takes a major, project-management's first among them. Until then the release step warns of a range that excludes the version it writes or carries for a capability depended on, and widens no upper bound. So until then it refuses a floor raised past the bound, since that range would admit no version.
 - **Capability promotion emits a changeset too.** When a capability is promoted from adopter-incubated origin (COR-031) into kit source (EPIC #131), the promotion is a surface change like any other: it drops the promoted capability's first changeset, so the release step records that capability's initial version in kit source.
 - **`.github/PULL_REQUEST_TEMPLATE.md`** carries a checklist item: "Surface change? If yes, add a changeset (see PRJ-002)." Reviewers flag PRs that look like surface changes but shipped no changeset (or vice versa).
 - **Commits** use conventional-commits format per COR-008. Changeset-adding commits and the release PR's commit conventions are detailed in the release-flow spec (#464).

@@ -17,7 +17,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-17T13:57:04Z
+      at: 2026-10-17T16:32:26Z
       outcome: updated
 ---
 
@@ -208,18 +208,64 @@ requires_capabilities:
   depended on refuses the release before anything is written.
 - The release states the raised floor in the component's changelog entry —
   *Requires project-management >=0.55.0.* — as for a backbone floor.
-- **The upper bound** moves only on declaration too (PRJ-002 D4). A changeset
-  of the dependent says it runs on the version this release writes for the
-  capability, or a `release` floor raised above the bound says so, and the
-  release widens the bound up to the next major. The release refuses to leave a
-  capability whose range excludes the version it writes or carries for a
-  capability it depends on. #1644 builds the widening and the refusal. Until
-  it lands:
-  - the release widens no upper bound on a capability, so a floor raised past
-    the bound leaves a range that admits no version, which refuses the release
-    (the bullet above)
-  - a range that excludes the version a release writes or carries is warned
-    of, not refused ("The declared capability floor raise" below)
+- **The upper bound** moves only on declaration too (PRJ-002 D4): the next
+  section.
+
+### Declaring that a capability runs on another capability's new version
+
+A release that moves a capability past the upper bound in a dependent's entry
+for it trips that range, as COR-030 means it to: a new major may break the
+dependent. Whether the dependent runs on it is a claim only its author can make.
+The branch makes it in the dependent's changeset, and the release writes the
+bound:
+
+```yaml
+component: software-engineering
+kind: minor
+body: The reviewers run on project-management 1.0.0.
+runs_on_capabilities:
+  project-management: release   # runs on the project-management this release writes
+```
+
+- **`runs_on_capabilities`** names each capability whose new version the
+  component runs on. Each name maps to `release`, the field's only value: the
+  version this release writes for that capability. `pkit release
+  apply` widens the upper bound of that capability's entry in the component's
+  `requires_capabilities` to admit that version, up to the next major: `<2.0.0`
+  for a capability this release writes at 1.0.0, `<1.0.0` for one at 0.55.0. It
+  is widen-only: a bound that already admits the version stays, and `plan` says
+  so. Top-level or under `custom:`, added by hand like `requires_capabilities`.
+  The floor fields are named for the package key each writes. This field
+  writes the same key as `requires_capabilities`, so it is named for the claim
+  it makes.
+- **A `release` floor declares it too**, since a need on the version this
+  release writes is a claim to run on it. A `release` floor raised past the
+  bound widens it, and the changelog states both. An explicit floor names a
+  release that has shipped, so it widens nothing: a floor at or above the bound
+  the release leaves, after any widening, leaves a range that admits no
+  version, which refuses the release.
+- One changeset may carry both fields: an explicit floor on a release that has
+  shipped, and the claim to run on the major this release writes.
+- **`release` needs the release to move the capability**, as for a floor: a
+  release that does not move it writes no version to run on, so it refuses the
+  declaration. A release can overtake the declaration, as it can a `release`
+  floor. The field has no explicit form to name the version that release
+  shipped, so drop the declaration: that release widened the range, or found it
+  wide enough.
+- It belongs on a **version-moving changeset**, since a wider bound changes
+  what the component claims to run on. The component's `requires_capabilities`
+  lists that capability once, with a range `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`,
+  double-quoted. The lint, `plan` and `apply` refuse it
+  elsewhere, with any other value, and on a capability the component does not
+  list, as for `requires_capabilities`. `--no-broaden` does not skip it: it
+  was declared.
+- **The release refuses a range that excludes its dependency.** It refuses to
+  leave a capability whose range excludes the version it writes or carries
+  for a capability it depends on ("The declared upper bound and the refusal"
+  below). So a pending major of a capability holds every release until each
+  dependent in the tree declares it runs on that major, or the major waits.
+  The pull request that adds the major passes the lint: the dependents'
+  declarations can land in their own pull requests once the major is pending.
 
 ### Authoring a changeset
 
@@ -421,8 +467,8 @@ PR** a human merges — it is *not* auto-run on every merge.
 
 | Command | Writes? | What |
 |---|---|---|
-| `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). |
-| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
+| `pkit release plan` | no | Preview the computed release (which tiers move, to what, and the notes). Refuses a release `apply` would refuse. |
+| `pkit release apply` | yes | Consume changesets → compute each tier from current `main` → write versions → broaden `requires_backbone` → raise declared floors, on the backbone and on capabilities → widen declared upper bounds on capabilities → update `CHANGELOG.md` → delete consumed changesets. Confirms first (`--yes` for CI). Tagging is a separate step (below); `--tag`/`--push` opt in. |
 | `pkit release merge <pr>` | yes (merges) | Merge a release PR (the sanctioned path — below). Guarded to `release/*` heads; merges only an open, mergeable, green PR as one squash commit whose subject is the PR title — through the base's merge queue where it has one — and deletes the head branch once GitHub reports the PR merged. Does not tag. `--dry-run` reports without merging; `--no-wait` / `--wait-minutes` set how long it waits for a queue. Runs the cross-repository guard first; `--allow-foreign-repo` confirms a merge in another repository than the session's anchor's. |
 | `pkit release publish-notes <version>` | no (publishes) | Publish a **notes-only** GitHub Release for tag `v<version>`, body = that version's `CHANGELOG.md` section (below). Idempotent (updates if it exists); **no artifact**. `--dry-run` prints the notes without calling `gh`. Runs the cross-repository guard first; `--allow-foreign-repo` confirms publishing in another repository than the session's anchor's. |
 | `pkit release check` | no | The CI guard (below). |
@@ -435,11 +481,13 @@ and with it the self-host `.pkit/manifest.yaml`'s `backbone_version:` and
 and [PRJ-007](../decisions/project/PRJ-007-release-maintains-self-host-manifest.md)
 say; the `version:` line in a component's `package.yaml`); **broadens**
 `requires_backbone` (see below); **raises the declared floors**, on the
-backbone and on capabilities (below);
-prepends a `CHANGELOG.md` entry from the notes, stating each raised floor; and
-deletes the consumed changesets. `plan` shows each floor it will raise under
-the component's bump, and warns of a range on a capability that excludes the
-version the release writes or carries for it.
+backbone and on capabilities, and **widens the declared upper bounds** on
+capabilities (below); prepends a `CHANGELOG.md` entry from the notes, stating
+each raised floor and widened bound; and deletes the consumed changesets.
+`plan` shows each floor it will raise and each bound it will widen under the
+component's bump. `plan` and `apply` refuse a release that would leave a range
+on a capability excluding the version the release writes or carries for it,
+before anything is written.
 
 In project-kit's own source no capability has a manifest (ADR-059), so the
 `version:` line `apply` writes in a capability's `package.yaml` is the version
@@ -568,17 +616,9 @@ capability, and for an explicit version, that version.
   back to the capability's current version: a release that does not move the
   capability is refused before anything is written, by the lint, `plan` and
   `apply` alike.
-- **No empty range.** Before anything is written `apply` computes each raised
-  range and refuses the release if one would not admit the floor it names
-  after the raise.
-- **A range that excludes its dependency is warned of.** `plan`, and `apply`
-  before its confirmation, read each component in the tree that lists a
-  dependency. The range is taken as the release writes it, and the capability
-  it names at the version the release writes for it, or else the version the
-  tree carries. A range that excludes that version is warned of, naming both,
-  since the tag would carry the two out of range of each other. The release
-  still proceeds: PRJ-002 D4 refuses it once #1644 lands. A dependency the tree
-  carries no component of is left to validation.
+- **No empty range.** Before anything is written, `plan` and `apply` compute
+  each raised range, widened where a changeset declares it (below), and refuse
+  the release if one would not admit the floor it names after the raise.
 - **The rewrite** touches the one `>=X.Y.Z` in the entry's `version:` line, in
   place: the upper bound, `optional:` and comments survive. Only a block list
   item under the top-level `requires_capabilities:` key is read, its `name:`
@@ -594,9 +634,52 @@ capability, and for an explicit version, that version.
   `declared` version and whether the declaration that set it `names_release`,
   the capability's `version` after the release and whether it `moves`, the
   plan `lines`, and the `changelog` sentence. The release-PR workflow prints
-  the lines under the bump. It carries the warnings above, as sentences, in a
-  top-level `dependency_warnings` list, which the workflow prints in the release
-  PR's body.
+  the lines under the bump.
+
+### The declared upper bound and the refusal (PRJ-002 D4; COR-030)
+
+For each component the release moves whose changesets declare it runs on the
+version this release writes for a capability (`runs_on_capabilities`, or a
+`release` floor; "Declaring that a capability runs on another capability's new
+version" above), `apply` widens the upper bound of that capability's entry.
+
+- **Declared, never automatic, and widen-only.** The bound is computed on the entry
+  as the floor raise leaves it. Where it excludes the version this release
+  writes, it becomes the next major of that version, `<2.0.0` for 1.0.0. A
+  bound that admits the version stays. `plan` says so for a
+  `runs_on_capabilities` declaration, and says nothing of a bound only a
+  `release` floor declares and leaves as it is. `--no-broaden` skips neither the
+  widening nor the floor raise: both were declared.
+- **The rewrite** touches the `<A.B.C` of the same `version:` line the floor
+  raise rewrites, in place, so the release PR's diff stays inside what the
+  changeset guard recognises as the release's writes.
+- **In the changelog**, on the entry of the first changeset by file name that
+  declares it either way, after that capability's floor sentence:
+  *Runs on project-management <2.0.0.*
+- `pkit release plan --json` carries each under the component's release as
+  `requires_capabilities_bounds`, a list (empty when none): the `capability`,
+  the bounds `from` and `to` (null where the range has none), whether it is
+  `widened`, the `version` this release writes for the capability, the plan
+  `lines`, and the `changelog` sentence. The release-PR workflow prints the
+  lines under the bump.
+- **The refusal.** `plan` and `apply` read each component in the tree that
+  lists a dependency, with its range as the release writes it: floors raised
+  and bounds widened. They read the capability it names at the version the
+  release writes for it, or else the version the tree carries. A range that
+  excludes that version refuses the release before anything is written,
+  `plan --json` included. The refusal lists every such range, naming the
+  dependent, its range, the capability and the version. For a version the
+  release writes, it says what to declare. For a version the tree carries, no
+  declaration helps, since the release does not move that capability, and
+  `pkit validate` reports the same pair where both are installed. A dependency
+  the tree carries no component of is left to validation. The release-PR
+  workflow then fails at its plan step and opens no pull request. A release
+  that moves no version, only consuming `none` changesets, is not refused: it
+  writes nothing a range could exclude.
+- **Not the lint's.** `release lint` refuses a malformed declaration, but not a
+  range that excludes a pending major. The lint refuses a declaration until the
+  capability's change is pending, so refusing the range too would let the
+  major and its dependents' declarations land only in one pull request.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -950,8 +1033,10 @@ changeset not yet committed is not in it.
 
 **A declared floor rides on its component or a release of it (PRJ-002 D4).**
 From the same diff, the guard also fails a PR that declares a
-`requires_backbone` or `requires_capabilities` floor for a component it neither
-touches nor moves:
+`requires_backbone` or `requires_capabilities` floor, or a
+`runs_on_capabilities` upper bound, for a component it neither touches nor
+moves. A wider bound changes what the component claims to run on, so it is
+held as a floor is:
 
 - **Declares** — the PR adds or edits a changeset, and the floor it carries
   differs from the one the file held at the merge base (added, or its value or
@@ -974,8 +1059,9 @@ pull request that declared it. **No escape
 hatch waives this check**: the `skip-changeset` label and the release-PR
 exemption below both waive the surface check only, and a release diff only
 deletes changesets, so it declares no floor. A changeset whose
-`requires_capabilities` is not a mapping of capability names to single values
-cannot be read, so it fails the guard, as it fails every release command.
+`requires_capabilities` or `runs_on_capabilities` is not a mapping of
+capability names to single values cannot be read, so it fails the guard, as it
+fails every release command.
 
 **Escape hatches for the surface check** (so trivia / docs PRs aren't forced
 into ceremony):
@@ -988,8 +1074,8 @@ into ceremony):
 **Release-PR exemption (automatic, no label).** A release PR *is*
 `pkit release apply`'s output — it bumps `.pkit/VERSION` and each moving
 `package.yaml`, rewrites `requires_backbone` lines (the broaden and any declared
-floor) and the `version:` line of a `requires_capabilities` entry whose floor a
-changeset declared, moves the self-host `.pkit/manifest.yaml`'s `backbone_version` on a
+floor) and the `version:` line of a `requires_capabilities` entry whose floor or
+upper bound a changeset declared, moves the self-host `.pkit/manifest.yaml`'s `backbone_version` on a
 backbone release, prepends `CHANGELOG.md`, and **deletes** the consumed
 `.changes/unreleased/*` changesets. That diff would trip the guard (VERSION and
 `package.yaml` are surface) while the changesets it would need are exactly the
@@ -1000,7 +1086,8 @@ writes through — each file, the status the write leaves, and, for a file
 rewritten in place, the only lines it changes, through the patterns the
 writers rewrite them by (a `package.yaml`'s `version:` line and a
 `requires_backbone:` range the broaden widens or a declared floor raises, a
-`requires_capabilities` entry's `version:` range a declared floor raises, the
+`requires_capabilities` entry's `version:` range a declared floor raises or a
+declared bound widens, the
 manifest's `backbone_version:`). A diff that is *only* those writes, and more
 than the consumed changesets, is the release itself, not a new surface change,
 and passes the surface check with no `skip-changeset` label. The signal is the
@@ -1096,6 +1183,14 @@ shared aggregator (`scripts/check.sh`), which both the local pre-push hook and
    on any other value. A field that is not a mapping of names to single values
    is refused when the changeset is read, by every release command and the
    guard alike. The escape hatch does not cover it either.
+
+   A `runs_on_capabilities` field is checked the same way: for each capability
+   it names, the value must say `release`, and a pending changeset must move
+   that capability, on a version-moving changeset of a component that lists it
+   once with such a range. It fails on the same carriers, names and entries,
+   and on any other value. The escape hatch does not cover it. A range that
+   excludes a pending major is not checked here: the release refuses it ("The
+   declared upper bound and the refusal" above).
 4. **`CHANGELOG.md` structure** — release-section (`## `) headings match the
    generator's shape (`## <version> — <date>` or a date-only `## <date>`; the
    canonical KaC `## [<version>] - <date>` is also accepted), and every

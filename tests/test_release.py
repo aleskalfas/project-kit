@@ -1479,7 +1479,8 @@ def test_a_release_floor_rises_to_the_version_the_release_writes(
     )
     assert floor.names_release
     assert floor.lines == ["requires_capabilities project-management floor raised to >=0.55.0"]
-    assert release.check_dependency_ranges(plan) == []
+    assert rel.capability_bounds == ()  # the bound admits 0.55.0: nothing to say of it
+    assert release.dependency_range_problems(plan) == []
 
     release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 30))
 
@@ -1641,69 +1642,341 @@ def test_compute_refuses_a_capability_floor_it_cannot_carry(
     assert problem in err.value.message
 
 
-def test_a_capability_floor_past_the_upper_bound_refuses_the_release(tmp_path: Path) -> None:
-    """The release widens no upper bound on a capability yet (PRJ-002 D4, #1644), so
-    a `release` floor raised to a major the bound excludes would leave a range that
-    admits no version: the release is refused before anything is written."""
+def test_a_release_floor_raised_past_the_upper_bound_widens_it(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A need on the project-management this release writes is a claim to run on
+    it (PRJ-002 D4): a `release` floor raised to a major the bound excludes widens
+    the bound up to the next major, and the changelog says both."""
     source_kit = _make_kit(tmp_path, backbone="1.5.0")
-    pm = _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
     dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
     _add(source_kit, "project-management", "major", "A breaking change.", "a.yaml")
     _add_capability_floor(
         source_kit, "software-engineering", "minor", "b.yaml", {"project-management": "release"}
     )
-    before = dependent.read_text()
 
     plan = release.compute_release(source_kit)
-    with pytest.raises(click.ClickException, match="admit no version of project-management"):
-        release.apply_release(source_kit, plan, tag=False)
+    rel = next(r for r in plan.releases if r.component.name == "software-engineering")
+    (bound,) = rel.capability_bounds
+    assert (bound.old_bound, bound.new_bound, bound.version, bound.setter.path.name) == (
+        "1.0.0",
+        "2.0.0",
+        "1.0.0",
+        "b.yaml",
+    )
+    assert bound.lines == [
+        "requires_capabilities project-management upper bound widened to <2.0.0 (runs on 1.0.0)"
+    ]
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 30))
 
-    assert dependent.read_text() == before
-    assert "  version: 0.54.0\n" in pm.read_text()
-    assert not (tmp_path / "CHANGELOG.md").exists()
+    assert '    version: ">=1.0.0,<2.0.0"  # the type axis\n' in dependent.read_text()
+    assert (
+        "widened upper bound capabilities/software-engineering/package.yaml on "
+        "project-management: <1.0.0 -> <2.0.0"
+    ) in capsys.readouterr().out
+    assert (
+        "- **software-engineering 0.3.0** — Uses the new gate. Requires project-management "
+        ">=1.0.0. Runs on project-management <2.0.0.\n"
+    ) in (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
 
 
-def test_a_range_that_excludes_the_version_a_release_writes_is_warned_of(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def _add_runs_on(
+    source_kit: Path, component: str, kind: str, name: str, runs_on: dict[str, str]
 ) -> None:
-    """A project-management major the dependent's bound excludes: the release
-    warns before it writes, names both, and proceeds (PRJ-002 D4's refusal is
-    #1644's). The plan's JSON carries the warning for the release PR's body."""
+    """A changeset declaring its component runs on each capability's `value`."""
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    lines = "".join(f"  {cap}: {value}\n" for cap, value in runs_on.items())
+    (directory / name).write_text(
+        f"component: {component}\nkind: {kind}\nbody: Runs on the new major.\n"
+        f"runs_on_capabilities:\n{lines}",
+        encoding="utf-8",
+    )
+
+
+@pytest.mark.parametrize("broaden", [True, False])
+def test_a_declared_runs_on_widens_the_upper_bound_and_keeps_the_floor(
+    tmp_path: Path, broaden: bool
+) -> None:
+    """`runs_on_capabilities` widens the bound to admit the version this release
+    writes, up to the next major; the floor stays as written, and `--no-broaden`
+    does not skip it — it was declared."""
     source_kit = _make_kit(tmp_path, backbone="1.5.0")
     _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
     dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
     _add(source_kit, "project-management", "major", "A breaking change.", "a.yaml")
+    _add_runs_on(
+        source_kit, "software-engineering", "patch", "b.yaml", {"project-management": "release"}
+    )
 
     plan = release.compute_release(source_kit)
-    warning = (
-        "software-engineering: its range on project-management, '>=0.54.0,<1.0.0', excludes "
-        "project-management 1.0.0, the version this release writes for it. The tag would "
-        "carry the two out of range of each other (PRJ-002 D4)."
+    rel = next(r for r in plan.releases if r.component.name == "software-engineering")
+    assert rel.capability_floors == ()
+    (summary,) = [
+        r
+        for r in cast(
+            "list[dict[str, object]]", release.release_summary(source_kit, plan)["releases"]
+        )
+        if r["component"] == "software-engineering"
+    ]
+    assert summary["requires_capabilities_bounds"] == [
+        {
+            "capability": "project-management",
+            "from": "1.0.0",
+            "to": "2.0.0",
+            "widened": True,
+            "version": "1.0.0",
+            "lines": [
+                "requires_capabilities project-management upper bound widened to <2.0.0 "
+                "(runs on 1.0.0)"
+            ],
+            "changelog": "Runs on project-management <2.0.0.",
+        }
+    ]
+    release.apply_release(source_kit, plan, tag=False, broaden=broaden, today=date(2026, 9, 30))
+
+    assert '    version: ">=0.54.0,<2.0.0"  # the type axis\n' in dependent.read_text()
+    assert (
+        "- **software-engineering 0.2.1** — Runs on the new major. Runs on project-management "
+        "<2.0.0.\n"
+    ) in (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+
+
+def test_a_declared_runs_on_a_bound_that_admits_the_version_leaves_it(tmp_path: Path) -> None:
+    """Widen-only: a bound that admits the version this release writes stays, the
+    plan says so, and the changelog says nothing of it."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "project-management", "minor", "A new floor.", "a.yaml")
+    _add_runs_on(
+        source_kit, "software-engineering", "patch", "b.yaml", {"project-management": "release"}
     )
-    assert release.check_dependency_ranges(plan) == [warning]
-    assert release.release_summary(source_kit, plan)["dependency_warnings"] == [warning]
+    before = dependent.read_text()
+
+    plan = release.compute_release(source_kit)
+    rel = next(r for r in plan.releases if r.component.name == "software-engineering")
+    (bound,) = rel.capability_bounds
+    assert not bound.widens
+    assert bound.lines == [
+        "requires_capabilities project-management upper bound stays <1.0.0 (already admits 0.55.0)"
+    ]
+    assert bound.changelog_sentence is None
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 30))
+
+    assert dependent.read_text() == before.replace("version: 0.2.0", "version: 0.2.1")
+
+
+def test_an_explicit_floor_and_a_declared_runs_on_ride_one_changeset(tmp_path: Path) -> None:
+    """The floor names a release that has shipped, and the bound widens to the
+    major this release writes: one changeset carries both claims."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _record_component_releases(source_kit, "project-management", "0.53.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.50.0,<1.0.0")
+    _add(source_kit, "project-management", "major", "A breaking change.", "a.yaml")
+    directory = changesets.unreleased_dir(source_kit.parent)
+    (directory / "b.yaml").write_text(
+        "component: software-engineering\nkind: minor\nbody: Uses both.\n"
+        "requires_capabilities:\n  project-management: '0.53.0'\n"
+        "runs_on_capabilities:\n  project-management: release\n",
+        encoding="utf-8",
+    )
+
+    plan = release.compute_release(source_kit)
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 30))
+
+    assert 'version: ">=0.53.0,<2.0.0"' in dependent.read_text()
+    assert (
+        "Uses both. Requires project-management >=0.53.0. Runs on project-management <2.0.0.\n"
+    ) in (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize(
+    ("component", "kind", "runs_on", "problem"),
+    [
+        (
+            "backbone",
+            "minor",
+            {"project-management": "release"},
+            "the backbone has no `requires_capabilities` to widen",
+        ),
+        (
+            "software-engineering",
+            "none",
+            {"project-management": "release"},
+            "a `none` changeset moves no version",
+        ),
+        (
+            "software-engineering",
+            "minor",
+            {"evidence": "release"},
+            "but no pending changeset moves evidence",
+        ),
+        (
+            "software-engineering",
+            "minor",
+            {"project-management": "'1.0.0'"},
+            "`runs_on_capabilities.project-management` takes only `release`",
+        ),
+        (
+            "software-engineering",
+            "minor",
+            {"backbone": "release"},
+            "names 'backbone', which is the backbone",
+        ),
+        (
+            "software-engineering",
+            "minor",
+            {"wildware": "release"},
+            "which is no component this tree carries",
+        ),
+        ("living-docs", "minor", {"project-management": "release"}, "does not list"),
+        ("houseware", "minor", {"project-management": "release"}, "lists 2 times"),
+        ("oddware", "minor", {"project-management": "release"}, "the release cannot widen"),
+    ],
+)
+def test_compute_refuses_a_runs_on_it_cannot_carry(
+    tmp_path: Path, component: str, kind: str, runs_on: dict[str, str], problem: str
+) -> None:
+    """A declared widening is never dropped silently: the release refuses."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_capability(source_kit, "evidence", "0.5.0", ">=1.0.0,<2.0.0")
+    _write_capability(source_kit, "living-docs", "0.1.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.50.0,<1.0.0")
+    _write_dependent(
+        source_kit,
+        "houseware",
+        "0.1.0",
+        ">=0.50.0,<1.0.0",
+        extra='  - name: project-management\n    version: ">=0.40.0"\n',
+    )
+    odd = _write_capability(source_kit, "oddware", "0.1.0", ">=1.0.0,<2.0.0")
+    odd.write_text(
+        odd.read_text()
+        + 'requires_capabilities: [{name: project-management, version: ">=0.5.0"}]\n',
+        encoding="utf-8",
+    )
+    _add(source_kit, "project-management", "minor", "A new floor.", "a.yaml")
+    _add_runs_on(source_kit, component, kind, "b.yaml", runs_on)
+
+    with pytest.raises(
+        click.ClickException, match="cannot widen a requires_capabilities upper bound"
+    ) as err:
+        release.compute_release(source_kit)
+    assert problem in err.value.message
+
+
+def test_an_explicit_floor_past_the_upper_bound_still_refuses_the_release(tmp_path: Path) -> None:
+    """Only `release` claims to run on a version: an explicit floor at a release
+    the bound excludes widens nothing, and `plan` refuses the empty range before
+    `apply` writes anything."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _record_component_releases(source_kit, "project-management", "1.0.0")
+    _write_capability(source_kit, "project-management", "1.0.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add_capability_floor(
+        source_kit, "software-engineering", "minor", "a.yaml", {"project-management": "'1.0.0'"}
+    )
+
+    with pytest.raises(click.ClickException, match="admit no version of project-management"):
+        release.compute_release(source_kit)
+
+
+def test_a_range_that_excludes_the_version_a_release_writes_refuses_the_release(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project-management major two dependents' bounds exclude: `plan`, `plan
+    --json` and `apply` refuse before anything is written, naming each dependent,
+    its range, the capability and the version, and what to declare."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pm = _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.40.0,<1.0.0")
+    _add(source_kit, "project-management", "major", "A breaking change.", "a.yaml")
+    before = dependent.read_text()
+
+    with pytest.raises(click.ClickException) as err:
+        release.compute_release(source_kit)
+    message = err.value.message
+    assert message.startswith(
+        "cannot leave a capability whose range excludes the version of a capability it "
+        "depends on (PRJ-002 D4); nothing was written:"
+    )
+    for name, version_range in (
+        ("living-docs", ">=0.40.0,<1.0.0"),
+        ("software-engineering", ">=0.54.0,<1.0.0"),
+    ):
+        assert (
+            f"{name}: its range on project-management, {version_range!r}, excludes "
+            "project-management 1.0.0, the version this release writes for it. If "
+            f"{name} runs on project-management 1.0.0, declare it on a changeset of {name} "
+            "that moves its version — `runs_on_capabilities: {project-management: release}`"
+        ) in message
 
     monkeypatch.chdir(tmp_path)
-    result = CliRunner().invoke(main, ["release", "apply", "--yes"])
+    for args in (["release", "plan"], ["release", "plan", "--json"], ["release", "apply", "--yes"]):
+        result = CliRunner().invoke(main, args)
+        assert result.exit_code == 1, result.output
+        assert "software-engineering: its range on project-management" in result.output
 
-    assert result.exit_code == 0, result.output
-    assert f"warning: {warning}" in result.stderr
-    assert 'version: ">=0.54.0,<1.0.0"' in dependent.read_text()
+    assert dependent.read_text() == before
+    assert "  version: 0.54.0\n" in pm.read_text()
+    assert not (tmp_path / "CHANGELOG.md").exists()
+    assert len(list(changesets.unreleased_dir(tmp_path).glob("*.yaml"))) == 1
 
 
-def test_a_range_that_excludes_the_version_the_tree_carries_is_warned_of(
+def test_a_range_that_excludes_the_version_the_tree_carries_refuses_the_release(
     tmp_path: Path,
 ) -> None:
     """A dependency the release does not move is read at the version the tree
-    carries, and the warning says so."""
+    carries. No declaration answers that, so the refusal names the pair and
+    leaves the remedy to validation's report of it."""
     source_kit = _make_kit(tmp_path, backbone="1.5.0")
     _write_capability(source_kit, "project-management", "1.0.0", ">=1.0.0,<2.0.0")
     _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
     _add(source_kit, "software-engineering", "patch", "A fix.", "a.yaml")
 
-    (warning,) = release.check_dependency_ranges(release.compute_release(source_kit))
+    with pytest.raises(click.ClickException) as err:
+        release.compute_release(source_kit)
 
-    assert "excludes project-management 1.0.0, the version this release carries for it" in (warning)
+    assert (
+        "excludes project-management 1.0.0, the version this release carries for it. No "
+        "pending changeset moves project-management, so no declaration widens the range, and "
+        "`pkit validate` reports the pair out of range where both are installed."
+    ) in err.value.message
+    assert "runs_on_capabilities" not in err.value.message
+
+
+def test_a_release_that_moves_no_version_is_not_refused_for_a_range(tmp_path: Path) -> None:
+    """Only `none` changesets: the release writes no version and no tag, so a
+    range out of step with the tree is left to validation, and the sweep runs."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "1.0.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "software-engineering", "none", "Docs only.", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+
+    assert plan.is_empty
+    release.apply_release(source_kit, plan, tag=False)
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml")) == []
+
+
+def test_the_plan_json_carries_no_dependency_warnings(tmp_path: Path) -> None:
+    """A range that excludes a dependency refuses the plan, so its JSON has no
+    key for one."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _add(source_kit, "project-management", "minor", "A new floor.", "a.yaml")
+
+    summary = release.release_summary(source_kit, release.compute_release(source_kit))
+
+    assert "dependency_warnings" not in summary
+    (rel,) = cast("list[dict[str, object]]", summary["releases"])
+    assert rel["requires_capabilities_bounds"] == []
 
 
 def test_both_floors_close_the_entry_of_the_changeset_that_set_them(tmp_path: Path) -> None:
