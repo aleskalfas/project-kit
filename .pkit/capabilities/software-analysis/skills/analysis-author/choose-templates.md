@@ -8,7 +8,7 @@ Go one kind at a time, in the order you write them: the actor, the use case, the
 
 ## Before the first kind
 
-Write the rule set of your own that inherits `SAN`, as the README's "Where `SAN` binds: a set of your own" shows (COR-051). The format rule binds on an artefact only through such a set. Without it, `pkit analysis validate --preview` shows nothing of an artefact's structure. A record's structure is checked always.
+Find the rule set of your own that inherits `SAN`. Installing the capability creates one, `ANALYSIS`, where none of yours inherits `SAN` already. Where install created none, write it as the README's "Where `SAN` binds: a set of your own" shows (COR-051). The format rule binds on an artefact only through such a set. Without it, `pkit analysis validate --preview` shows nothing of an artefact's structure. A record's structure is checked always.
 
 ## 1. Review the kind's shipped parts
 

@@ -97,6 +97,20 @@ friction:
       path: revalidations
       description: The revalidation records, one file each — the record of an act, not an anchored artefact.
 
+# COR-017 — the one project rule set this capability declares. SAN takes no
+# scope, so its rules bind only through a set of the project's own that
+# inherits it (COR-051 point 7). Installing the capability creates this set,
+# where no set of the project's own inherits SAN, directly or not, pinned at
+# SAN's major then. A migration creates it for an earlier install (DEC-001,
+# Implications). Its scope selects the analysis by this capability's types,
+# wherever the analysis lies, and so never a revalidation record.
+project_rule_set:
+  name: ANALYSIS
+  inherits: SAN
+  scope:
+    types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey]
+  title: The project's rules for its analysis
+
 # COR-053 — the analysis role, the evidence point defined under it, and the
 # contributions to the documentation role's readers point and the
 # work-tracking role's use-case point (DEC-001 points 7 and 8). See the
