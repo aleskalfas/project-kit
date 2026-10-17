@@ -1,0 +1,8 @@
+component: software-analysis
+kind: none
+body: >
+  Documentation only. The head comments of the actor and journey templates say
+  what each kind is. An actor is a role, not a persona. A journey is a
+  summary-level path across one actor's use cases, not a UX journey map. The
+  head is a note on the template, which the stamp never writes, so no stamped
+  artefact, body, schema or check changes.
