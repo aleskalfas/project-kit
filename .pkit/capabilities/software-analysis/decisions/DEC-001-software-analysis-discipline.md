@@ -145,7 +145,7 @@ The capability works with no work-tracking component and no testing component in
 - **What it covers:** every artefact a change alters on which an accepted rule binds, of the analysis or not. It also covers every artefact the change brings under such a rule (COR-057 point 6).
 - **Its evidence:** the reviewer was run by hand on eleven changes, and the maintainer judged one of its sixteen settled breaks wrong. That meets the bar of at most one, which COR-057 point 8 leaves to the contributor ([project-kit#1599](https://github.com/aleskalfas/project-kit/issues/1599)).
 - **Apart from its contributions to roles (point 8):** the contribution is addressed to project-management's gate, not to a role.
-- **The dependency:** the capability declares project-management as an optional dependency, since it works without it (COR-030). The range admits no release of project-management without the floor. Without project-management, nothing reads the contribution.
+- **The dependency:** the capability declares project-management as an optional dependency, since it works without it (COR-030). In each release of the capability, the range admits no release of project-management without the gate's floor on ruled artefacts. A change cannot name a version before that version is released. So the change that adds the contribution declares that it needs the project-management release with that floor. The range's start is raised to that release when it is made ([project-kit#1640](https://github.com/aleskalfas/project-kit/issues/1640)). Without project-management, nothing reads the contribution.
 
 ### 11. Scope boundary
 
