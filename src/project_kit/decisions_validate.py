@@ -63,8 +63,9 @@ markers — a superseded-by line and a forward refinement pointer
 (`(refinement per <record>)`) — match none of the shapes. Fenced code and
 inline code are quoted material and are not read. A superseded record is
 preserved as it stood, so it is not read either. Nor is a record that arrives
-here as a synced copy — a core record, or a kit-shipped capability's, in a
-project that is not the methodology's source (`synced_record_test`, which asks
+here as a synced copy — a core record or a kit-shipped capability's, in a
+project that is not the methodology's source, or an externally-sourced
+capability's, in any project (`synced_record_test`, which asks
 `is_synced_copy` of the tree's `.pkit/lifecycle/ownership.py`): it is refined
 where it is authored, and an edit here would be overwritten by the next sync.
 A tree without that module has every record read.

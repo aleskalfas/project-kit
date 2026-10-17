@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A capability registered as `externally-sourced` is a synced copy, as a
+  `kit-shipped` one is (COR-041, COR-050 point 14). Its files outside its
+  `project/` tier are never a documentation place: a declared place that
+  matches them fails `synced-place` in `pkit validate`. `pkit decisions
+  validate` and `pkit decisions check-diff` leave its records to the
+  repository that authors them. This holds in every repository, the
+  methodology's source included, since such a capability is authored
+  elsewhere. COR-010 says that renaming or removing a section's heading in a
+  document a component ships ships no migration, since no project that
+  receives the document can anchor its sections.
