@@ -71,7 +71,7 @@ Halt if any is `proposed` or `superseded`.
 
 The kit's authoring disciplines (per `CONTRIBUTING.md`) apply when the operation involves authorial judgment:
 
-- **Axiom** — use only previously-defined terms (kit-defined, generic English, named external tools). No reaching for not-yet-decided framework-internal names. A record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
+- **Axiom** — use only previously-defined terms (kit-defined, generic English, named external tools). No reaching for not-yet-decided framework-internal names. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
 - **Project-neutrality** (for core-shipped schemas) — the rule expressed must make sense in any adopting project.
 - **Principles-not-inventory** — schemas encode rules; prose-only rationale lives in DECs, not schemas.
 
