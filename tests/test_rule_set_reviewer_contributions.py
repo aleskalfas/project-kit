@@ -158,12 +158,12 @@ def next_release():
 
 def _pm_range_after(plan, capability: str) -> str:
     """The capability's range on pm as `plan` leaves it: the tree's, its floor
-    raised as `release apply` writes it where a pending changeset of the
-    capability declares it."""
+    raised and its upper bound widened as `release apply` writes them where a
+    pending changeset of the capability declares them."""
     text = (CAPABILITIES / capability / "package.yaml").read_text("utf-8")
     for rel in plan.releases:
         if rel.component.name == capability:
-            text = release._with_capability_floors(text, rel)
+            text = release._with_capability_ranges(text, rel)
     entry = versioning.requires_capability_entry(text, PM)
     assert entry is not None and entry.range is not None, f"{capability}: no range on {PM}"
     return entry.range
