@@ -72,7 +72,7 @@ pkit:
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
     revalidated:
-      at: 2026-10-17T16:32:27Z
+      at: 2026-10-17T17:18:35Z
       outcome: updated
 ---
 
@@ -895,7 +895,7 @@ With the bounds as they stand, a dry run takes at most `98` seconds, and a landi
 
 ## Authoring commands
 
-The `new` family scaffolds first-class methodology elements — areas, adapters, capabilities, migrations — by stamping the contract their owning record fixes (COR-005 for adapters, COR-010 for the manifest layer and migrations, COR-011 for areas, COR-017 for capabilities). Every `new` command is a one-shot generator: it refuses to overwrite existing targets, and the output is a directory or file the rest of the CLI surface (`status`, `sync`, `upgrade`, etc.) recognises immediately. No manual manifest edits are needed after a scaffold call.
+The `new` family scaffolds first-class methodology elements — areas, adapters, capabilities, migrations — by stamping the contract their owning record fixes (COR-005 for adapters, COR-010 for the manifest layer and migrations, COR-011 for areas, COR-017 for capabilities). Every `new` command is a one-shot generator: it refuses to overwrite existing targets. Its output is a directory or file the rest of the CLI surface (`status`, `sync`, `upgrade`, etc.) recognises immediately, with no manual manifest edits. A capability is the exception: `new capability` registers nothing, and `capabilities register` brings the capability in once it is built.
 
 The shapes are stamped by the CLI's own scaffolding code (`src/project_kit/scaffolds.py`), which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
 

@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Documentation only. The README names the format rule and the append-only
+  rule where it said "both rules", and says that `check-pointers` gives git's
+  own reason where git cannot read the branches. Nothing you run changes.

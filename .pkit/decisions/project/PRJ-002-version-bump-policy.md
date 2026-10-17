@@ -10,13 +10,11 @@ author: Ales Kalfas <kalfas.ales@gmail.com>
 
 COR-010 fixes that backbone and components use semver, components declare `requires_backbone` ranges, and migrations land per `<major>.<minor>.0/`. What COR-010 deliberately does *not* cover — because it is project-neutral — is *when* the source kit's backbone version actually bumps and *who* performs the bump. That is a project-kit-the-project policy.
 
-`.pkit/VERSION` declares the current backbone version (`0.1.0` today). Without a bump policy, every PR creates ambiguity: should this change bump the backbone? Which segment? Per-PR with no rule risks two failure modes — version churn (every doc-fix bumps; the number stops meaning anything) or version freeze (nothing bumps; the number stops tracking reality). Either way the version stops being a useful compatibility signal for the lifecycle machinery.
-
-Mid-conversation alternatives were considered: bump on every merged PR (too noisy pre-1.0); bump only at "release moments" (requires a release concept the kit does not yet have); calver instead of semver (rejected by COR-010). This record's founding hybrid was one path; the policy has since been promoted post-1.0 to the declared, release-driven Decision below (see the Mode line).
+`.pkit/VERSION` declares the current backbone version. Without a bump policy, every PR creates ambiguity: should this change bump the backbone? Which segment? Per-PR with no rule risks two failure modes — version churn (every doc-fix bumps; the number stops meaning anything) or version freeze (nothing bumps; the number stops tracking reality). Either way the version stops being a useful compatibility signal for the lifecycle machinery.
 
 ## Decision
 
-**Mode: declared per-PR, applied release-driven, written main-only** (promoted from the pre-1.0 hybrid on 2026-07-03). A **surface change** is still what moves the version — but it is now *declared* on the PR that lands it and *applied* later, only on `main`, by a release step. Feature branches never write a version cell.
+**Mode: declared per-PR, applied release-driven, written main-only.** A **surface change** is what moves the version. It is *declared* on the PR that lands it and *applied* later, only on `main`, by a release step. Feature branches never write a version cell.
 
 A **surface change** is anything an adopter could observe, depend on, or break against:
 
@@ -40,7 +38,7 @@ A surface-changing PR drops a *changeset file* — a small, collision-free-named
 
 ### D2 — The bump segment is a human surface judgment, not a function of the commit type
 
-Which segment a change warrants — and which *tier* (backbone vs a specific component) it bumps — is a person's read of the surface impact, recorded in the changeset. It is *not* inferred from the conventional-commits type of the commit: a 20-commit analysis confirmed the CC type determines neither the segment nor which tier bumps (a `feat` may be a patch to one component or a minor to the backbone; a `fix` may be surface-breaking). Segment semantics follow semver: **patch** = backward-compatible fix to existing surface; **minor** = backward-compatible new surface; **major** = a breaking change to existing surface (available now that the kit is past 1.0).
+Which segment a change warrants — and which *tier* (backbone vs a specific component) it bumps — is a person's read of the surface impact, recorded in the changeset. It is *not* inferred from the conventional-commits type of the commit: a 20-commit analysis confirmed the CC type determines neither the segment nor which tier bumps (a `feat` may be a patch to one component or a minor to the backbone; a `fix` may be surface-breaking). Segment semantics follow semver: **patch** = backward-compatible fix to existing surface; **minor** = backward-compatible new surface; **major** = a breaking change to existing surface.
 
 ### D3 — Version numbers are written only on `main`, by a release authority
 
@@ -69,9 +67,9 @@ The changeset-file **format** and the release-step **mechanics** (changeset nami
 
 ## Rationale
 
-**Why still trigger on surface changes.** The trigger is unchanged from the hybrid: the version moves for what an adopter could break against, not for docs / cleanup / internal churn. Tying the version to surface changes (rather than to every merged PR) is what keeps the number a compatibility signal instead of a commit counter. The promotion changes *when and where* the number is written, not *what* warrants a bump.
+**Why surface changes trigger a bump.** The version moves for what an adopter could break against, not for docs / cleanup / internal churn. Tying the version to surface changes (rather than to every merged PR) is what keeps the number a compatibility signal instead of a commit counter. Declaring per PR and applying at the release decide *when and where* the number is written, not *what* warrants a bump.
 
-**Why declare-then-apply rather than bump inside the surface PR.** The hybrid put the bump commit *in* the surface PR, so every surface-changing branch wrote the same version cells (`.pkit/VERSION`, a component's `version`, `requires_backbone`). Parallel branches then collided on those cells at merge — a merge conflict on version numbers that carries no real semantic conflict (observed on PR #360). Recording *intent* in a per-PR changeset and letting a single release step compute the actual numbers removes the whole conflict class: two branches can each add their own changeset file without ever touching a shared version cell.
+**Why declare-then-apply rather than bump inside the surface PR.** Bumping inside the surface PR puts the bump commit *in* it, so every surface-changing branch writes the same version cells (`.pkit/VERSION`, a component's `version`, `requires_backbone`). Parallel branches then collide on those cells at merge — a merge conflict on version numbers that carries no real semantic conflict (observed on PR #360). Recording *intent* in a per-PR changeset and letting a single release step compute the actual numbers removes the whole conflict class: two branches can each add their own changeset file without ever touching a shared version cell.
 
 **Why version numbers are written only on `main`.** Making `main` the sole writer is the concurrency fix stated plainly: feature branches carry declarations, not numbers, so no feature branch can move the version out from under another. The release step reads the single source of truth (current `main`), computes forward from it, and writes once. This also keeps the version monotonic and auditable — every number has exactly one authoring commit, on `main`, with its changelog.
 
@@ -99,7 +97,7 @@ The changeset-file **format** and the release-step **mechanics** (changeset nami
 
 ### Alternatives considered
 
-- **Keep bumping inside the surface PR (the pre-1.0 hybrid).** Retired — parallel branches conflict on shared version cells (PR #360). Declaring intent per-PR and applying on `main` removes the conflict class.
+- **Bump inside the surface PR.** Rejected — parallel branches conflict on shared version cells (PR #360). Declaring intent per-PR and applying on `main` removes the conflict class.
 - **Per-PR bump on every merged PR.** Rejected — version stops being a compatibility signal and becomes a commit counter.
 - **Infer the segment from the conventional-commits type.** Rejected — a 20-commit analysis showed CC type determines neither the segment nor which tier bumps.
 - **Raise floors automatically on a backbone release, or let the branch write them.** Rejected — the first claims an incompatibility nobody observed; the second writes a version cell D1 bars, and for a need on backbone surface not yet released, with a number the branch cannot know.

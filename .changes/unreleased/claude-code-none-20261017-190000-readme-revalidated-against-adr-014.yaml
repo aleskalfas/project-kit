@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter's README is revalidated unchanged against ADR-014,
+  which drops its revision history. Only the README's friction block changes,
+  and nothing you run or read changes.

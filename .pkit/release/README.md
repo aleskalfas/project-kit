@@ -17,7 +17,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-17T16:32:26Z
+      at: 2026-10-17T17:18:34Z
       outcome: updated
 ---
 
@@ -183,7 +183,7 @@ requires_capabilities:
     it, else its `package.yaml`'s. So a floor the release writes is one
     validation reads as met. For a need an older release already meets.
     Quote it, as for `requires_backbone`. The changelog tags components'
-    entries from `1.140.0` on, so a need an older release meets names the
+    entries from `1.142.0` on, so a need an older release meets names the
     first release it records.
 - **A release can overtake a `release` declaration.** The lint passes it on
   the pull request while the capability's own changeset is pending. If a
