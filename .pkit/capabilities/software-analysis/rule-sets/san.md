@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-17T15:21:35Z
+          at: 2026-10-17T18:28:20Z
           outcome: unchanged
-          unchanged-because: DEC-001 changes only its Implications, which now say that installing the capability creates its project rule set, inheriting SAN. The format rule rests on point 1, which is unchanged, and it binds where a set of the project's own that inherits SAN leads, as before.
+          unchanged-because: This change adds to software-analysis DEC-001 two Context lines naming COR-057 and COR-030, a paragraph in point 10 on the review contribution, and a sentence on it in the Implications. The format rule rests on point 1 and each kind's declared structure, which the change leaves as they were, so it holds.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}

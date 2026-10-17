@@ -10,10 +10,11 @@ pkit:
         - .pkit/capabilities/software-analysis/templates/**
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
-      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053, COR-057]
+        - .pkit/capabilities/software-analysis/review-contributions.yaml
+      record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-17T15:21:04Z
+      at: 2026-10-17T18:28:14Z
       outcome: updated
 ---
 
@@ -912,9 +913,26 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 - **Empty is an answer.** A default branch nothing has been committed to, or one holding no use case yet, gives the empty list: there are none yet.
 - **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
 
+## The review contribution
+
+Where the project-management capability is installed, this capability contributes the core `rule-set-reviewer` to its merge gate (DEC-001 point 10). The reviewer judges a change against the accepted rules that bind on what it alters or brings under a rule (COR-057). The contribution is `review-contributions.yaml`, with one rule:
+
+```yaml
+contributions:
+  - floor: touches-ruled-artefact
+    reviewer: rule-set-reviewer
+```
+
+When that floor requires the reviewer, and what it reads locally, is in [project-management's README](../project-management/README.md), "Documents the rules govern" ([project-management:DEC-032-conditional-reviewer-requirements] D1).
+
+- **What it covers.** Every artefact on which an accepted rule binds, of the analysis or not, such as a page. living-docs contributes the same rule. With both installed, the reviewer is required once.
+- **Opting out.** An opt-out under `review.agents.contributed_opt_out` in project-management's configuration withdraws one capability's contribution. The reviewer stays required through any other, so list each capability that contributes it.
+- **The reviewer.** Core ships it, and `pkit sync` deploys it with the other agents. While it is not deployed, project-management refuses to resolve any pull request's reviewers.
+- **Not a connection.** The contribution names project-management's gate, not a role, so it is none of the connections above.
+
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
 
 ## Citing this capability's decisions
 
@@ -922,4 +940,6 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 ## Dependencies
 
-None. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
+None required. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
+
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
