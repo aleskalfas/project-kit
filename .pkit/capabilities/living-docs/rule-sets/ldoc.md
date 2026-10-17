@@ -90,13 +90,16 @@ A statement that rests on anything else breaks this rule until the page anchors 
 
 ## RS-LDOC-002 — Each fact has one home
 
-Each fact that pages state has one home: the one page that states it in full. A fact that only one page states has that page as its home.
+Each fact a page states has one home for that page.
 
-- **A summary on another page** links to the home. That page anchors to the home's section that states the fact. An anchor on the whole home is not that anchor.
-- **A statement of the fact on another page** that lacks the link or the anchor breaks this rule. Whether one with both summarises the home, or states the fact in full again, is a passage for a person to judge.
+- **A fact a decision record decides** has the record as its home for a page that anchors the record. The anchor may be on the whole record, or on a part that stands on what decides the fact. The page may state the fact. It needs no link to another page that states it, and no anchor on one.
+- **Every other fact a page states** has its home among the pages: the one page that states it in full, or for a decided fact, a page that states it in full. A fact that only one page states has that page as its home.
+- **A summary of a fact whose home is a page,** on another page, links to the home. That page anchors to the home's section that states the fact. An anchor on the whole home is not that anchor.
+- **A statement of such a fact on another page** that lacks the link or the anchor breaks this rule, however short it is. Words that give the fact state it, a phrase as much as a clause. Whether one with both summarises the home, or states the fact in full again, is a passage for a person to judge.
+- **A name,** such as a command's, a page's or a record's, needs no link to a home and no anchor on one. That holds where the name gives none of the named thing's facts.
 - **A fact a page states more than once,** each time in agreement, is a passage for a person to judge, not a settled break. This rule leaves to that person whether the repeat serves the page's reader, as an opening summary or a recap may.
 - **Two statements of one fact that disagree** break this rule on each page that holds one of them, on one page or on two. Two statements disagree where one says what the other rules out. A statement that leaves out detail the other gives does not disagree with it.
-- **A fact that a page of the user space and a page of the technical space both state** has its home on the user space's page, since user-facing navigation never leads into technical material.
+- **A page of the user space** never has a fact's home on a page of the technical space, since user-facing navigation never leads into technical material.
 
 ## RS-LDOC-003 — Each page names its reader
 
