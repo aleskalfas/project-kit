@@ -147,6 +147,33 @@ def test_a_link_target_is_read_as_written() -> None:
     ]
 
 
+def test_a_nested_item_is_reported_once_whatever_it_holds() -> None:
+    """Once for an item with a later block, and an item that opens with a fence is
+    reported with no quote."""
+    text = (
+        "- one\n"
+        "  - two\n"
+        "    - three\n"
+        "      - four\n\n"
+        "        More of four.\n"
+        "      - ```\n"
+        "        code\n"
+        "        ```\n"
+    )
+    assert found(text) == [
+        '4 RS-WRITE-017: a list item 4 levels deep, over 3: "four"',
+        "7 RS-WRITE-017: a list item 4 levels deep, over 3",
+    ]
+
+
+def test_a_finding_shows_a_control_character_as_its_code_point() -> None:
+    """In a count's excerpt too, so the report itself is never reordered."""
+    rlo = chr(0x202E)
+    assert found(f"Plain{rlo}; one.\n", [pl.load_entries()[1]]) == [
+        '1 RS-WRITE-008: a semicolon: "Plain<U+202E>; one."'
+    ]
+
+
 def test_nesting_is_an_entry() -> None:
     """RS-WRITE-017: each list item past level three, named with its marker's line. A
     label-only item is an item too, and an ordered list nests like any other."""
@@ -304,11 +331,21 @@ def test_write_s_page_example_of_a_long_sentence_counts_30() -> None:
         # A lazy line closes nothing, and a fence's lines close nothing.
         ("- a\n  - b\nlazy\n    - c\n", [1, 2, 3]),
         ("- a\n  ```\ncode\n  ```\n  - b\n", [1, 2]),
-        # A paragraph indented to an item's text stays in it.
-        ("- a\n\n  More of a.\n\n  - b\n", [1, 0, 2]),
-        # A tab reaches the next multiple of four, and a block quote counts afresh.
+        # A paragraph indented to an item's text stays in it, at its level.
+        ("- a\n\n  More of a.\n\n  - b\n", [1, 1, 2]),
+        # A tab reaches the next multiple of four, after a marker too.
         ("- a\n\t- b\n\t\t- c\n", [1, 2, 3]),
+        ("-\tfoo\n  - b\n", [1, 1]),
+        # A marker with nothing after it starts its text one column on.
+        ("-   \n  - b\n", [1, 2]),
+        # A block quote counts afresh. The items it sits in stay open past it, and a
+        # quote at the margin closes every item.
         ("- a\n  - b\n\n> - c\n>   - d\n", [1, 2, 1, 2]),
+        ("- a\n  > note\n  - b\n    - c\n      - d\n", [1, 0, 2, 3, 4]),
+        ("- a\n  - b\n> q\n- c\n", [1, 2, 0, 1]),
+        # A number other than 1 opens no list inside a block's text, as in CommonMark.
+        ("- a\n  - b ends in\n    2026. Then more.\n", [1, 2]),
+        ("Text in\n2026. Then more.\n\n1. one\n2. two\n", [0, 1, 1]),
         # A heading, a table and a fence at the margin close every item.
         ("- a\n  - b\n# H\n- c\n", [1, 2, 1]),
         ("- a\n  - b\n| x |\n- c\n", [1, 2, 0, 1]),
@@ -624,6 +661,15 @@ THREE = "- one\n  - two\n    - three\n"
 FOUR = "      - four\n"
 
 
+def test_text_added_to_a_later_block_of_an_item_makes_it_the_change_s(
+    repo: AdopterRepo,
+) -> None:
+    """The finding names the item's marker, not the block the text went to."""
+    start(repo, {A: page(f"{THREE}{FOUR}")})
+    repo.write({A: page(f"{THREE}{FOUR}\n        More of four, added.")})
+    assert lint(repo) == [f"{A}:10 RS-WRITE-017"]
+
+
 def test_an_item_is_the_change_s_when_it_holds_added_text_or_its_line_changed(
     repo: AdopterRepo,
 ) -> None:
@@ -659,6 +705,20 @@ def test_an_entry_s_whole_text_is_its_data_and_its_section(repo: AdopterRepo) ->
     start(repo, {ACTORS: actors()})
     repo.write({ACTORS: actors(need=f"A need{rlo}.", section=f"The first{rlo} actor.")})
     assert lint(repo) == [f"{ACTORS}#ACT-one:5 RS-WRITE-018", f"{ACTORS}#ACT-one:18 RS-WRITE-018"]
+
+
+def test_an_entry_s_whole_text_stops_before_a_comment_and_the_next_entry(
+    repo: AdopterRepo,
+) -> None:
+    """A comment between two entries belongs to neither, and a character in the next
+    entry's data is that entry's alone."""
+    rlo = chr(0x202E)
+    start(repo, {ACTORS: actors()})
+    head = actors().replace(
+        "ACT-two:\n  name: Two\n", f"# A note{rlo} between them\nACT-two:\n  name: Two{rlo}\n"
+    )
+    repo.write({ACTORS: head})
+    assert lint(repo) == [f"{ACTORS}#ACT-two:10 RS-WRITE-018"]
 
 
 def test_only_a_rule_declaring_the_lint_brings_its_entries(repo: AdopterRepo) -> None:

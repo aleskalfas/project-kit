@@ -15,7 +15,7 @@ What the lint checks:
   point 2).
 - **Which text:** a finding is the change's when its unit holds text the change
   adds or moves. The unit is a sentence or a paragraph for `count`, a list item
-  for `nesting`, and the match itself for the other types. A list item is the
+  with every block of it for `nesting`, and the match itself for the other types. A list item is the
   change's too when the change alters its marker's line, as an indent does. A
   break the change only sits beside is not the change's.
 - **Prose or the whole file:** a `forbid` entry reads the prose, or with
@@ -36,8 +36,8 @@ How it reads text follows RS-WRITE-005's *How* (`tech-docs/rule-sets/writing.md`
   is part of its link's last token. No pattern searches them.
 
 How it reads a list's levels follows RS-WRITE-017's *How*: an item of a list
-that sits in no other list is at level one. An item is inside another while it
-is indented to that item's text.
+that sits in no other list is at level one. An item, or any other block, is
+inside an item while it is indented to that item's text.
 
 `lint_text` reads a given text whole, as a test of stamped template text calls
 it. From the repository root:
@@ -297,19 +297,22 @@ def markdown_blocks(text: str) -> list[Block]:
       the same block quote or outside any. The end of a block quote closes a
       fence opened in it.
     - **Blocks:** a blank line ends a block, and so does the start of a block
-      quote. A list marker starts one. Each table cell is a block of its own,
+      quote. A list marker starts one, except a number other than 1 that
+      would open a list inside the block's own text: that line goes on from
+      the block, as CommonMark has it. Each table cell is a block of its own,
       and so is each link definition.
     - **Block quotes:** a line is read without its `>` marks, and the text of a
       block quote is quoted. An unquoted line that goes on from a quoted one
       stays in its block.
-    - **Levels:** a list item's block carries its level (`_Levels`).
+    - **Levels:** a block inside a list item carries the item's level and
+      marker (`_Levels`). An item that opens with a fence is an empty block.
     """
     blocks: list[Block] = []
     current: list[tuple[int, int]] = []
     paragraph = False  # the current block opened as a paragraph, not as a list item
     quoted = False
     levels = _Levels()
-    level, marker = 0, -1  # the current block's, when it opened as a list item
+    level, marker = 0, -1  # the current block's: those of the item it is in
 
     def flush() -> None:
         if current:
@@ -339,15 +342,16 @@ def markdown_blocks(text: str) -> list[Block]:
         opened = _FENCE_OPEN.match(rest)
         if opened is not None:
             flush()
-            if (item := _ITEM.match(rest)) is not None:
-                levels.open(item, quote is not None)  # an item that opens with a fence
+            if (item := _ITEM.match(rest)) is not None:  # an item that opens with a fence
+                at = start + column + len(item.group(1))
+                blocks.append(block_of(text, [], level=levels.open(item, quote, at), marker=at))
             else:
-                levels.start_block(rest, quote is not None)
+                levels.start_block(rest, quote)
             fence, fence_quoted = opened.group(1), quote is not None
             continue
         if rest.lstrip().startswith("<!--"):
             flush()
-            levels.start_block(rest, quote is not None)
+            levels.start_block(rest, quote)
             in_comment = "-->" not in line
             continue
         if current and quote is not None and not quoted:
@@ -356,73 +360,133 @@ def markdown_blocks(text: str) -> list[Block]:
             if _SETEXT_UNDERLINE.match(rest):
                 current.clear()  # the paragraph was a setext heading's text
                 continue
+        item = _ITEM.match(rest)
+        if item is not None and current and levels.goes_on(item, quote):
+            item = None  # a number that opens no list here: the line goes on from the block
         if not rest.strip():
             flush()
+            if quote is None:
+                levels.leave_quote()  # a blank line ends a block quote
         elif any(p.match(rest) for p in _NO_PROSE):
             flush()
-            levels.start_block(rest, quote is not None)
+            levels.start_block(rest, quote)
         elif _TABLE_ROW.match(rest):
             flush()
-            levels.start_block(rest, quote is not None)
+            levels.start_block(rest, quote)
             for cell in _table_cells(text, start + column, end):
                 blocks.append(block_of(text, [cell], quoted=quote is not None, cell=True))
         elif _LINK_DEFINITION.match(rest):
             flush()
-            levels.start_block(rest, quote is not None)
+            levels.start_block(rest, quote)
             blocks.append(block_of(text, [(start + column, end)], definition=True))
-        elif (item := _ITEM.match(rest)) is not None:
+        elif item is not None:
             flush()
-            level = levels.open(item, quote is not None)
             marker = start + column + len(item.group(1))
+            level = levels.open(item, quote, marker)
             current.append((start + column + item.end(), end))
             paragraph, quoted = False, quote is not None
         else:
             if not current:
-                levels.start_block(rest, quote is not None)
+                levels.start_block(rest, quote)
                 paragraph, quoted = True, quote is not None
-                level, marker = 0, -1
+                level, marker = levels.inside()
             current.append((start + column + len(rest) - len(rest.lstrip()), end))
     flush()
     return blocks
 
 
-def _width(indent: str) -> int:
-    """The columns a run of spaces and tabs takes, a tab reaching the next multiple of four."""
-    return len(indent.expandtabs(4))
+def _width(indent: str, column: int = 0) -> int:
+    """The columns a run of spaces and tabs takes from `column`, a tab reaching the next
+    multiple of four."""
+    end = column
+    for char in indent:
+        end = (end // 4 + 1) * 4 if char == "\t" else end + 1
+    return end - column
+
+
+def _indent(text: str) -> int:
+    return _width(text[: len(text) - len(text.lstrip())])
+
+
+@dataclass
+class _Item:
+    """An open list item: the column its text starts at, its marker's offset, its level."""
+
+    text: int
+    marker: int
+    level: int
 
 
 class _Levels:
-    """The list items open at a line, to give each new item its level (RS-WRITE-017's How).
+    """The list items open at a line, to give each block its level (RS-WRITE-017's How).
 
     - **Open items:** each keeps the column its text starts at: after its
-      marker and the spaces that follow it, or one space where more than four
-      or none follow.
+      marker and the spaces that follow it. Where more than four columns
+      follow, or nothing else on the line, the text starts one column after
+      the marker.
     - **Closing:** a line that starts a block closes each open item it is not
       indented to, as a sibling's marker does. A line that goes on from a
       block's line, as a lazy one does, closes none.
-    - **Block quotes:** a list in a block quote counts its levels afresh.
+    - **Block quotes:** a list in a block quote counts its levels afresh. The
+      quote's own indent, before its `>`, closes the items outside it, and
+      those it sits in stay open past its end.
     """
 
     def __init__(self) -> None:
-        self._texts: list[int] = []
+        self._outer: list[_Item] = []
+        self._inner: list[_Item] = []  # the items open in the current block quote
         self._quoted = False
 
-    def start_block(self, rest: str, quoted: bool) -> None:
-        """A line `rest`, read without its `>` marks, starts a block."""
-        if quoted != self._quoted:
-            self._texts.clear()
-            self._quoted = quoted
-        indent = _width(rest[: len(rest) - len(rest.lstrip())])
-        while self._texts and indent < self._texts[-1]:
-            self._texts.pop()
+    def _open_items(self) -> list[_Item]:
+        return self._inner if self._quoted else self._outer
 
-    def open(self, item: re.Match[str], quoted: bool) -> int:
-        """Open the list item `item` matched (`_ITEM`), and give its level."""
-        self.start_block(item.string, quoted)
-        gap = item.group(3)
-        spaces = len(gap) if 0 < len(gap) <= 4 and "\t" not in gap else 1
-        self._texts.append(_width(item.group(1)) + len(item.group(2)) + spaces)
-        return len(self._texts)
+    def leave_quote(self) -> None:
+        """A block quote ends, and the lists in it with it."""
+        self._inner.clear()
+        self._quoted = False
+
+    def start_block(self, rest: str, quote: re.Match[str] | None) -> None:
+        """A line starts a block: `rest` is the line without its `>` marks, which
+        `quote` matched."""
+        if quote is None:
+            self.leave_quote()
+        elif not self._quoted:
+            _close(self._outer, _indent(quote.group()))
+            self._quoted = True
+        _close(self._open_items(), _indent(rest))
+
+    def open(self, item: re.Match[str], quote: re.Match[str] | None, marker: int) -> int:
+        """Open the list item `item` matched (`_ITEM`), its marker at offset `marker`,
+        and give its level."""
+        self.start_block(item.string, quote)
+        items = self._open_items()
+        after = _width(item.group(1)) + len(item.group(2))
+        gap = _width(item.group(3), after)
+        rest_of_line = item.string[item.end() :].strip()
+        text = after + (gap if 0 < gap <= 4 and rest_of_line else 1)
+        items.append(_Item(text, marker, len(items) + 1))
+        return len(items)
+
+    def inside(self) -> tuple[int, int]:
+        """The level and marker of the innermost open item, or `(0, -1)`."""
+        items = self._open_items()
+        return (items[-1].level, items[-1].marker) if items else (0, -1)
+
+    def goes_on(self, item: re.Match[str], quote: re.Match[str] | None) -> bool:
+        """Whether a marker line goes on from the block before it: an ordered marker
+        other than 1, indented into the innermost open item's text, or at any indent
+        outside every item. Such a list could not interrupt that text in CommonMark."""
+        number = item.group(2)[:-1]
+        if not number.isdigit() or number.lstrip("0") == "1" or (quote is not None) != self._quoted:
+            return False
+        items = self._open_items()
+        return not items or _width(item.group(1)) >= items[-1].text
+
+
+def _close(items: list[_Item], indent: int) -> None:
+    """Close each open item a line at `indent` is not inside."""
+    while items and indent < items[-1].text:
+        items.pop()
 
 
 def _table_cells(text: str, start: int, end: int) -> list[tuple[int, int]]:
@@ -938,7 +1002,7 @@ Exists = Callable[[str], bool]
 def _excerpt(text: str, words: int = 8) -> str:
     """The opening words of a unit, quoted, to find it by."""
     tokens = text.split()
-    shown = " ".join(tokens[:words])
+    shown = _visible(" ".join(tokens[:words]))
     return f'"{shown}{" …" if len(tokens) > words else ""}"'
 
 
@@ -947,7 +1011,7 @@ def _context(text: str, start: int, end: int) -> str:
     before = re.search(r"(?:\S+\s+){0,4}\S*$", text[:start])
     after = re.match(r"\S*(?:\s+\S+){0,4}", text[end:])
     shown = (before.group() if before else "") + text[start:end] + (after.group() if after else "")
-    return f'"{" ".join(shown.split())}"'
+    return f'"{_visible(" ".join(shown.split()))}"'
 
 
 def check_source(
@@ -957,34 +1021,65 @@ def check_source(
     path: str,
     exists: Exists,
     location: str = "",
-    altered: bytearray | None = None,
+    marker_lines: bytearray | None = None,
 ) -> list[Finding]:
     """The findings of `entries` on one source, kept where their unit holds added text.
 
     `mask` marks the added text (`added_mask`). A finding names the line its
-    unit's first word is on. A list item is the change's too where `altered`,
-    by default `mask`, marks its marker (`altered_lines`), and its finding names
-    its marker's line. An entry that reads the whole file is not read here
+    unit's first word is on. A `nesting` entry is checked once for each list
+    item (`_nesting`). An entry that reads the whole file is not read here
     (`check_whole`).
     """
-    lines = mask if altered is None else altered
+    blocks = source.blocks()
     found: list[Finding] = []
-    for block in source.blocks():
+    for item in entries:
+        if item.type == "nesting":
+            lines = mask if marker_lines is None else marker_lines
+            found += _nesting(item, blocks, source, mask, lines, path, location)
+    for block in blocks:
         for item in entries:
-            if item.whole_file or (block.cell and "cells" in item.exceptions):
+            if item.whole_file or item.type == "nesting":
+                continue
+            if block.cell and "cells" in item.exceptions:
                 continue
             for start, end, message in _breaks(item, block, path, exists):
-                ours = any(mask[offset] for offset in block.offsets[start:end])
-                if item.type == "nesting":
-                    if ours or lines[block.marker]:
-                        line = source.line(block.marker)
-                        found.append(Finding(path, line, item.rule, message, location or path))
-                    continue
-                if not ours:
+                if not any(mask[offset] for offset in block.offsets[start:end]):
                     continue
                 first = next((i for i in range(start, end) if not block.text[i].isspace()), start)
                 line = source.line(block.offsets[first])
                 found.append(Finding(path, line, item.rule, message, location or path))
+    return found
+
+
+def _nesting(
+    item: Entry,
+    blocks: Sequence[Block],
+    source: Source,
+    mask: bytearray,
+    marker_lines: bytearray,
+    path: str,
+    location: str,
+) -> list[Finding]:
+    """Each list item past the level a `nesting` entry allows, once, at its marker's line.
+
+    The item is every block that carries its marker. It is the change's when one
+    of its blocks holds added text, or when `marker_lines` marks its marker: the
+    change altered that line, as an indent alone does (`altered_lines`). Its
+    finding quotes its first block that holds text.
+    """
+    limit: int = item.fields["max"]
+    items: dict[int, list[Block]] = {}
+    for block in blocks:
+        if block.level > limit:
+            items.setdefault(block.marker, []).append(block)
+    found: list[Finding] = []
+    for marker, held in items.items():
+        if not marker_lines[marker] and not any(mask[o] for b in held for o in b.offsets):
+            continue
+        text = next((b.text for b in held if b.text.strip()), "")
+        shown = f": {_excerpt(text)}" if text else ""
+        message = f"a list item {held[0].level} levels deep, over {limit}{shown}"
+        found.append(Finding(path, source.line(marker), item.rule, message, location or path))
     return found
 
 
@@ -1043,17 +1138,10 @@ _SPACES = re.compile(r"[ \t]+")
 def _breaks(item: Entry, block: Block, path: str, exists: Exists) -> Iterable[tuple[int, int, str]]:
     """Each break of one entry in one block: `(start, end, message)`, indexing the block.
 
-    A link definition is read by a link's check alone. A list item past the
-    level a `nesting` entry allows is a break over its whole text.
+    A link definition is read by a link's check alone.
     """
     if item.type == "link-resolves":
         yield from _links(item, block, path, exists)
-        return
-    if item.type == "nesting":
-        limit: int = item.fields["max"]
-        if block.level > limit:
-            shown = f": {_excerpt(block.text)}" if block.text.strip() else ""
-            yield 0, len(block.text), f"a list item {block.level} levels deep, over {limit}{shown}"
         return
     if block.definition:
         return
@@ -1259,9 +1347,9 @@ def lint_change(
             source: Source = getattr(head_sources, kind)
             old = None if base_sources is None else getattr(base_sources, kind).text
             mask = added_mask(old, source.text)
-            altered = altered_lines(old, source.text) if nests else None
+            marker_lines = altered_lines(old, source.text) if nests else None
             found += check_source(
-                applied, source, mask, head["path"], exists, head["location"], altered
+                applied, source, mask, head["path"], exists, head["location"], marker_lines
             )
         if any(item.whole_file for item in applied):
             whole = head_sources.whole
