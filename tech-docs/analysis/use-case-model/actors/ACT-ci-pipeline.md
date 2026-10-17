@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-16T23:29:50Z
+      at: 2026-10-17T13:57:07Z
       outcome: unchanged
-      unchanged-because: The actor now anchors PRJ-002, which its Note already cites. PRJ-002 still has a pull request declare each surface change in a changeset, which a guard checks, and the release cut the tags. So the Note's two steps hold.
+      unchanged-because: PRJ-002 now lets a changeset declare a capability's floor on another capability, and the changeset guard ties that declaration to a change or a release of its component. A pull request still declares each surface change in a changeset the guard checks, and the release still cuts the tag, so the Note's two steps hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline
