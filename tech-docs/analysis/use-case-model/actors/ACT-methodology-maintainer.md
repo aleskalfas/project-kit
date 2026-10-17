@@ -17,9 +17,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-17T13:57:08Z
+      at: 2026-10-17T17:18:31Z
       outcome: unchanged
-      unchanged-because: PRJ-002 now lets a changeset declare a capability's floor and upper bound on another capability, and has the release refuse a range that excludes a dependency. The maintainer still releases the backbone from the source repository under that release policy, and adopters still learn what each change means from the changelog, so the actor's needs and its Core hold.
+      unchanged-because: PRJ-002 drops stale phrases on its first version, its promotion from the hybrid and the move past 1.0, and decides nothing new. The maintainer releases the backbone from the source repository under that policy, and adopters learn what each change means from the changelog, so the actor's needs and its Core hold.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer

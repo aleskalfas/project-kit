@@ -98,7 +98,7 @@ The code behind `pkit sync` splits in two: a propagation step, and the sync comm
 - **A capability's manifest moves under its `project/`.** Every ownership predicate already treats that folder as the project's, so no copy deletes the manifest there.
   - **Who moves it:** a transition, before its copy. The transition of the backbone moves every root manifest in step 2, right after the target is recorded, and rewrites each registry path. A transition of one capability moves its own after its refusals (point 4).
   - **Who never moves it:** sync, which writes a project-owned path only through merge delivery (COR-059 point 2). A sync that meets a root manifest skips that capability (point 1). The guard stops sync anyway until the project's first transition under this release.
-  - **The shipped tree:** project-kit's own root manifest of project-management moves, unchanged, under that capability's `project/`. So the bundle ships no capability manifest.
+  - **The shipped tree:** project-kit's own source holds no capability manifest, since nothing there stamps one (ADR-059). Each capability there is read from its `package.yaml`, which the release step writes. So the bundle ships no capability manifest.
   - **So no copy writes or removes a recorded version** (COR-059 point 1), and the move needs no migration script.
 - **Both places at once:** the root manifest wins, and the move replaces the one under `project/` with it. A root manifest sits beside one under `project/` only after one of these:
   - an interrupted move, which leaves two equal copies
@@ -298,6 +298,7 @@ The core layer writes a project-owned path only through a writer a record names 
 | a project artefact a capability's artefact collides with | the collision flow's override, in a capability's install or a transition (COR-017) | the person's answer |
 | the seed paths below | first install, a capability's install for its own `project/` folder, and a transition of the backbone where one is missing (COR-059 point 8) | choosing the target (COR-059 point 4), or the command's own |
 | `.pkit/agents/project/overlay.yaml` | also `pkit agents reconcile --write`, where the overlay is missing (COR-013) | its own `--write` |
+| the project rule set a capability declares, in `rule-sets/` under the internal documentation root | the capability's install, once for each install, where no rule set of the project's own inherits the capability's method set, directly or not (COR-017). A migration of that capability, inside a transition and on the same condition, for a project that installed the capability before it declared the set. | the command's own, or choosing the target for the migration (COR-059 point 4) |
 | any file a migration writes | a migration, inside a transition, within what the owning record allows, such as COR-048 point 5 for the configuration file | choosing the target |
 
 - **The seed paths** are what one seeding step creates, in first install and in a transition of the backbone alike. Sync creates none. Their kinds:
@@ -305,6 +306,7 @@ The core layer writes a project-owned path only through a writer a record names 
   - the agents' overlay, `.pkit/agents/project/overlay.yaml`
   - each adapter's `settings/project/` folder and its `settings.json`
   - each shipped capability's `project/` folder
+- **The project rule set a capability declares is no seed path.** No transition creates it where it is missing, so a set the project removed stays removed (COR-017).
 - **A deleted overlay is repaired by the command that needs it.** `pkit agents reconcile --write` creates a missing overlay from the same seed. It is the one writer outside the lifecycle that the table names, since it creates a seed path. Whether it stops under a version mismatch is the open question of point 7.
 - **Other writers outside the lifecycle,** such as `pkit new` or `pkit config set`, are not listed here. A full inventory of every command's writes is outside COR-059's frame.
 - **A write with no named writer, until #1600:** a transition's copy over a project's own area that point 13's test cannot tell apart.

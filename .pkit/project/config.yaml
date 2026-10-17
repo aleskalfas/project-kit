@@ -91,8 +91,6 @@ friction:
   #   - `package.yaml` — component metadata whose version the release step
   #     rewrites on `main`: a page anchored to it would go stale on every
   #     release.
-  #   - project-management's `manifest.yaml` — install state the capability
-  #     lifecycle writes, not source.
   #   - project-management's `project/` — project-kit's own configuration of the
   #     capability, a project tier; the README describes the settings through
   #     the schemas it anchors, not the values project-kit chose.

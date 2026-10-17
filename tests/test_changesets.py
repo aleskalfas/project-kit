@@ -270,6 +270,68 @@ def test_parse_changeset_refuses_a_capability_floor_field_it_cannot_read(
         changesets.parse_changeset(path)
 
 
+@pytest.mark.parametrize(
+    ("layout", "written"),
+    [
+        (
+            "runs_on_capabilities:\n  project-management: release\n",
+            (("project-management", "release"),),
+        ),
+        (
+            "custom:\n  runs_on_capabilities:\n    project-management: release\n",
+            (("project-management", "release"),),
+        ),
+        # Another value is kept as written, for the release step to refuse.
+        (
+            "runs_on_capabilities:\n  project-management: 1.0  # a version\n",
+            (("project-management", "1.0"),),
+        ),
+        ("runs_on_capabilities:\n  project-management:\n", ()),
+    ],
+)
+def test_parse_changeset_reads_the_runs_on_field_as_written(
+    tmp_path: Path, layout: str, written: tuple[tuple[str, str], ...]
+) -> None:
+    """`runs_on_capabilities` is read as `requires_capabilities` is, and declares a
+    range but no floor."""
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        f"component: software-engineering\nkind: minor\nbody: A thing.\n{layout}",
+        encoding="utf-8",
+    )
+    cs = changesets.parse_changeset(path)
+    assert cs.runs_on_capabilities == written
+    assert cs.requires_capabilities == ()
+    assert not cs.declares_floor
+    assert cs.declares_range is bool(written)
+
+
+@pytest.mark.parametrize(
+    "layout",
+    [
+        "runs_on_capabilities: release\n",
+        "runs_on_capabilities:\n  - project-management\n",
+        "custom:\n  runs_on_capabilities:\n    project-management: {version: release}\n",
+    ],
+)
+def test_parse_changeset_refuses_a_runs_on_field_it_cannot_read(
+    tmp_path: Path, layout: str
+) -> None:
+    source_kit = _make_kit(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / "cs.yaml"
+    path.write_text(
+        f"component: software-engineering\nkind: minor\nbody: A thing.\n{layout}",
+        encoding="utf-8",
+    )
+    with pytest.raises(click.ClickException, match="runs_on_capabilities"):
+        changesets.parse_changeset(path)
+
+
 def test_parse_changeset_text_reads_a_changeset_from_another_revision(tmp_path: Path) -> None:
     cs = changesets.parse_changeset_text(
         "component: houseware\nkind: patch\nbody: Needs it.\nrequires_backbone: '1.4.0'\n",

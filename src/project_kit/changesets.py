@@ -22,11 +22,13 @@ plain `changie new` writes exactly what this parser reads):
     requires_backbone: release   # optional: raise the component's floor (see below)
     requires_capabilities:       # optional: raise its floor on another capability
       project-management: release
+    runs_on_capabilities:        # optional: widen its upper bound on another capability
+      project-management: release
 
-`category`, `pr`, `requires_backbone` and `requires_capabilities` are optional
-and read from either the top level (a hand-written changeset) or a nested
-`custom:` map (what `changie new` writes via the `custom:` block in
-`.changie.yaml`). `category` is one of
+`category`, `pr`, `requires_backbone`, `requires_capabilities` and
+`runs_on_capabilities` are optional and read from either the top level (a
+hand-written changeset) or a nested `custom:` map (what `changie new` writes via
+the `custom:` block in `.changie.yaml`). `category` is one of
 the Keep-a-Changelog groups (`Added`, `Changed`, `Fixed`, `Removed`,
 `Deprecated`, `Security`); it is **orthogonal to the `kind` segment** (a
 `patch` may be `Fixed` or `Changed`) and defaults at render time when absent.
@@ -53,6 +55,14 @@ write single values, so the field is added by hand. A field that is not a
 mapping of names to single values cannot be read, and the parser refuses it;
 each value is kept as written, as for the backbone's, for the release step to
 judge (`project_kit.release.capability_floor_problems`).
+
+`runs_on_capabilities` declares that the component runs on the version this
+release writes for another capability: a mapping of each such capability to
+`release`, its only value. The release step widens the upper bound of that
+capability's entry in the component's `requires_capabilities` to admit that
+version, up to the next major (PRJ-002 D4); a `release` floor declares the same.
+It is read and refused as `requires_capabilities` is, and judged by
+`project_kit.release.capability_bound_problems`.
 
 changie also writes a `time` field; it is ignored here. `none` is the escape
 hatch — a declared "this touched a component's tree but is not a surface
@@ -93,6 +103,12 @@ FLOOR_RELEASE = "release"
 # maps each capability to `FLOOR_RELEASE` or an explicit, already-shipped `X.Y.Z`.
 CAPABILITY_FLOOR_FIELD = "requires_capabilities"
 
+# The changeset field that widens a component's upper bound on another capability,
+# named for the claim it makes: the component runs on the version this release
+# writes for that capability (PRJ-002 D4). It maps each capability to
+# `FLOOR_RELEASE`, its only value.
+CAPABILITY_BOUND_FIELD = "runs_on_capabilities"
+
 _yaml = YAML(typ="safe")
 
 # A filesystem-safe slug for the random-suffix filename scheme.
@@ -113,6 +129,9 @@ class Changeset:
     # Each capability the component needs a version of, and the value as written,
     # in the order the changeset gives them; see CAPABILITY_FLOOR_FIELD.
     requires_capabilities: tuple[tuple[str, str], ...] = ()
+    # Each capability the component runs on the version this release writes of,
+    # and the value as written, in the changeset's order; see CAPABILITY_BOUND_FIELD.
+    runs_on_capabilities: tuple[tuple[str, str], ...] = ()
 
     @property
     def names_release(self) -> bool:
@@ -123,6 +142,12 @@ class Changeset:
     def declares_floor(self) -> bool:
         """Whether the changeset declares a floor of either kind."""
         return self.requires_backbone is not None or bool(self.requires_capabilities)
+
+    @property
+    def declares_range(self) -> bool:
+        """Whether the changeset declares a floor of either kind, or an upper bound
+        on a capability: any change to what its component requires."""
+        return self.declares_floor or bool(self.runs_on_capabilities)
 
 
 @dataclass(frozen=True)
@@ -246,7 +271,8 @@ def parse_changeset_text(text: str, path: Path) -> Changeset:
         category=str(category).strip() if category else None,
         pr=str(pr).strip() if pr else None,
         requires_backbone=_floor_field(custom, data, text),
-        requires_capabilities=_capability_floors(custom, data, text, path),
+        requires_capabilities=_capability_map(custom, data, text, path, CAPABILITY_FLOOR_FIELD),
+        runs_on_capabilities=_capability_map(custom, data, text, path, CAPABILITY_BOUND_FIELD),
     )
 
 
@@ -271,45 +297,59 @@ def _floor_field(custom: dict[str, Any], data: dict[str, Any], text: str) -> str
     return None
 
 
-def _capability_floors(
-    custom: dict[str, Any], data: dict[str, Any], text: str, path: Path
+# What each capability field maps a capability to, as its refusals word it.
+_CAPABILITY_FIELD_VALUES = {
+    CAPABILITY_FLOOR_FIELD: (
+        "maps each capability the component needs",
+        f"`{FLOOR_RELEASE}` or a version",
+    ),
+    CAPABILITY_BOUND_FIELD: (
+        "maps each capability the component runs on the version this release writes of",
+        f"`{FLOOR_RELEASE}`",
+    ),
+}
+
+
+def _capability_map(
+    custom: dict[str, Any], data: dict[str, Any], text: str, path: Path, key: str
 ) -> tuple[tuple[str, str], ...]:
-    """The capability floor field as written, under `custom:` first, then
-    top-level: each capability it names and its value, in the changeset's order.
-    Empty when neither carries the field, or the field or a value is empty.
+    """A capability field — `key`, the floor field or the bound field — as
+    written, under `custom:` first, then top-level: each capability it names and
+    its value, in the changeset's order. Empty when neither carries the field, or
+    the field or a value is empty.
 
     The field is a mapping of names to single values, or it cannot say which
-    capability needs which version, so anything else is refused here — for every
+    capability it declares what for, so anything else is refused here — for every
     release command and the changeset guard alike. A value that is not a string
-    is kept as its text in the file, as `_floor_field` keeps the backbone's."""
+    is kept as its text in the file, as `_floor_field` keeps the backbone's, for
+    the release step to judge."""
+    maps, values = _CAPABILITY_FIELD_VALUES[key]
     for source, nested in ((custom, True), (data, False)):
-        value: object = source.get(CAPABILITY_FLOOR_FIELD)
+        value: object = source.get(key)
         if value is None:
             continue
         if not isinstance(value, dict):
             raise click.ClickException(
-                f"changeset {path.name}: `{CAPABILITY_FLOOR_FIELD}` maps each capability the "
-                f"component needs to `{FLOOR_RELEASE}` or a version, one value each; got "
-                f"{value!r}."
+                f"changeset {path.name}: `{key}` {maps} to {values}, one value each; got {value!r}."
             )
-        floors: list[tuple[str, str]] = []
+        declared: list[tuple[str, str]] = []
         for raw_name, raw_value in cast("dict[object, object]", value).items():
             name = str(raw_name)
             if isinstance(raw_value, (dict, list)):
                 raise click.ClickException(
-                    f"changeset {path.name}: `{CAPABILITY_FLOOR_FIELD}` gives {name!r} "
-                    f"{raw_value!r}; give it one value, `{FLOOR_RELEASE}` or a version."
+                    f"changeset {path.name}: `{key}` gives {name!r} {raw_value!r}; give it "
+                    f"one value, {values}."
                 )
             if raw_value is None:
                 continue
             if isinstance(raw_value, str):
                 if raw_value.strip():
-                    floors.append((name, raw_value.strip()))
+                    declared.append((name, raw_value.strip()))
                 continue
-            written = _entry_as_written(text, CAPABILITY_FLOOR_FIELD, name, nested=nested)
-            floors.append((name, written or str(raw_value)))
-        if floors:
-            return tuple(floors)
+            written = _entry_as_written(text, key, name, nested=nested)
+            declared.append((name, written or str(raw_value)))
+        if declared:
+            return tuple(declared)
     return ()
 
 

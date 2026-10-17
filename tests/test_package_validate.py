@@ -1695,3 +1695,78 @@ def test_packages_pass_without_a_schema_in_the_tree_runs_repository_checks_only(
     assert result.schema_note is not None and "skipped" in result.schema_note
     assert result.warnings == 0  # no schema, no unknown-key pass
     assert [f.path for r in result.reports for f in r.errors] == ["/component/version"]
+
+
+# --- the declared project rule set (COR-017) ------------------------------------
+
+
+def _declaring(component_dir: Path, **declared: Any) -> dict[str, Any]:
+    """A package that declares a project rule set, its method set `MTH` shipped."""
+    (component_dir / "rule-sets").mkdir(exist_ok=True)
+    (component_dir / "rule-sets" / "mth.md").write_text(
+        "---\nrule-set: MTH\nversion: 2.0.0\nrules: {}\n---\n\n# MTH\n", encoding="utf-8"
+    )
+    block: dict[str, Any] = {
+        "name": "OURS",
+        "inherits": "MTH",
+        "scope": {"types": ["demo:page"]},
+        "title": "Our rules",
+    }
+    block.update(declared)
+    return _package(
+        friction={"types": {"page": {"description": "A page."}}}, project_rule_set=block
+    )
+
+
+def test_a_declared_project_rule_set_validates_clean(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    assert _validate(_declaring(component_dir), schema, component_dir) == []
+
+
+@pytest.mark.parametrize(
+    ("declared", "path", "says"),
+    [
+        ({"inherits": "NONE"}, "/project_rule_set/inherits", "no method rule set"),
+        ({"name": "MTH"}, "/project_rule_set/name", "would always find the name taken"),
+        (
+            {"scope": {"types": ["demo:page", "other:page"]}},
+            "/project_rule_set/scope/types/1",
+            "not one the capability declares",
+        ),
+        (
+            {"scope": {"types": ["demo:page"], "paths": ["docs/**"]}},
+            "/project_rule_set/scope/paths",
+            "unknown key",
+        ),
+        ({"title": ""}, "/project_rule_set/title", ""),
+    ],
+    ids=["unknown-method-set", "name-of-its-own-set", "foreign-type", "paths", "empty-title"],
+)
+def test_a_declared_project_rule_set_is_held_to_what_the_capability_ships(
+    schema: dict[str, Any], component_dir: Path, declared: dict[str, Any], path: str, says: str
+) -> None:
+    raw = _declaring(component_dir, **declared)
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert path in errors, errors
+    assert says in errors[path]
+
+
+def test_an_unreadable_method_set_version_is_an_error(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _declaring(component_dir)
+    (component_dir / "rule-sets" / "mth.md").write_text(
+        "---\nrule-set: MTH\nversion: two\nrules: {}\n---\n\n# MTH\n", encoding="utf-8"
+    )
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert "cannot pin its major" in errors["/project_rule_set/inherits"]
+
+
+def test_an_adapter_declaring_a_project_rule_set_is_refused(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    raw = _declaring(component_dir)
+    raw["component"] = {"kind": "adapter", "name": "demo", "version": "0.1.0"}
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert "only a capability's install creates one" in errors["/project_rule_set"]

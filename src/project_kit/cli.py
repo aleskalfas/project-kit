@@ -61,7 +61,6 @@ from project_kit.release import (
     ReleasePlan,
     apply_release,
     check_changesets,
-    check_dependency_ranges,
     check_raised_ranges,
     check_shareable,
     compute_release,
@@ -2124,7 +2123,11 @@ def release() -> None:
     help="Emit the computed release as JSON (for the release-PR automation).",
 )
 def release_plan(as_json: bool) -> None:
-    """Preview the release computed from pending changesets (read-only)."""
+    """Preview the release computed from pending changesets (read-only).
+
+    Refuses, as `apply` does, a release it would refuse: a declaration it cannot
+    write, or a range on a capability that would exclude the version the release
+    writes or carries for it (PRJ-002 D4)."""
     import json
 
     source_kit = _target_kit()
@@ -2134,8 +2137,6 @@ def release_plan(as_json: bool) -> None:
         return
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
-    for warning in check_dependency_ranges(plan):
-        click.echo(f"  warning: {warning}")
 
 
 @release.command("apply")
@@ -2154,7 +2155,8 @@ def release_plan(as_json: bool) -> None:
     help="Skip widening released components' requires_backbone to cover the "
     "current backbone. Default is to broaden (releasing under backbone X "
     "asserts compatibility with X); pass this to keep an upper bound as "
-    "authored. A floor a changeset declares is still raised.",
+    "authored. A floor a changeset declares is still raised, and an upper bound "
+    "on a capability a changeset declares is still widened.",
 )
 @click.option("--yes", is_flag=True, default=False, help="Skip the confirmation prompt (CI).")
 @_allow_foreign_repo_option
@@ -2181,9 +2183,13 @@ def release_apply(
     component's floor on each capability it names the same way — to the version
     this release writes for that capability for `release`, or to the
     already-shipped `X.Y.Z` it names — and a raise that would leave the entry's
-    range admitting no version refuses the release. A range on a capability that
-    excludes the version the release writes or carries for it is warned of
-    before the confirmation (PRJ-002 D4). See `.pkit/release/README.md`.
+    range admitting no version refuses the release. A changeset declaring
+    `runs_on_capabilities`, or a `release` floor, widens the entry's upper bound
+    to admit the version this release writes for that capability, up to the next
+    major; `--no-broaden` skips neither. A release that would leave a range on a
+    capability excluding the version it writes or carries for it is refused
+    before anything is written, naming both (PRJ-002 D4). See
+    `.pkit/release/README.md`.
 
     With `--tag --push` the tag's push changes the hosting service, so the
     cross-repository guard runs first, before anything is written, as for
@@ -2204,8 +2210,6 @@ def release_apply(
     # Before the confirmation: an empty raised range refuses here, and a range that
     # excludes the backbone the release ships is shown with the plan it belongs to.
     for warning in check_raised_ranges(plan, broaden=broaden):
-        click.echo(f"warning: {warning}", err=True)
-    for warning in check_dependency_ranges(plan):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
         apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
@@ -2233,7 +2237,8 @@ def release_apply(
 def release_check(base: str | None, skip: bool | None) -> None:
     """CI guard: fail if the diff touches a component's surface and adds or edits
     no changeset naming it, or the PR declares a `requires_backbone` or
-    `requires_capabilities` floor for a component it neither touches nor moves.
+    `requires_capabilities` floor, or a `runs_on_capabilities` upper bound, for a
+    component it neither touches nor moves.
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -2291,18 +2296,19 @@ def release_check(base: str | None, skip: bool | None) -> None:
         )
     if result.stray_floors:
         problems.append(
-            "a floor declared for a component this diff neither touches nor moves:\n"
+            "a floor or upper bound declared for a component this diff neither touches nor "
+            "moves:\n"
             + "\n".join(
                 f"  {cs.path.name}: {cs.component!r} (kind: {cs.segment}, "
                 + ", ".join(_declared_floors(cs))
                 + ")"
                 for cs in result.stray_floors
             )
-            + "\n  A floor changes what the component requires, so it rides on a change to "
-            "the component or on a release of it: declare it in the changeset of the pull "
-            "request that changes the component, or — for a need found after the component "
-            "shipped — on a changeset that moves its version (patch or above). The "
-            "`skip-changeset` label does not waive this — see PRJ-002 D4."
+            + "\n  A floor or bound changes what the component requires, so it rides on a "
+            "change to the component or on a release of it: declare it in the changeset of "
+            "the pull request that changes the component, or — for a need found after the "
+            "component shipped — on a changeset that moves its version (patch or above). "
+            "The `skip-changeset` label does not waive this — see PRJ-002 D4."
         )
     raise click.ClickException("\n".join(problems))
 
@@ -2312,9 +2318,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     "--skip",
     is_flag=True,
     default=None,
-    help="Escape hatch: pass the format checks unconditionally (a requires_backbone "
-    "or requires_capabilities floor field is still checked). Also honoured via the "
-    "PKIT_CHANGELOG_LINT_SKIP env var.",
+    help="Escape hatch: pass the format checks unconditionally (a requires_backbone, "
+    "requires_capabilities or runs_on_capabilities field is still checked). Also "
+    "honoured via the PKIT_CHANGELOG_LINT_SKIP env var.",
 )
 def release_lint(skip: bool | None) -> None:
     """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
@@ -2329,8 +2335,10 @@ def release_lint(skip: bool | None) -> None:
     `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, a `requires_capabilities` field names,
     for each capability the component lists once with such a range, `release` —
     when a pending changeset moves that capability — or a release of it the
-    tree records at or below the version the tree carries, and `CHANGELOG.md`
-    headings are well-formed. It does
+    tree records at or below the version the tree carries, a
+    `runs_on_capabilities` field names `release` for each such capability, on a
+    version-moving changeset, when a pending changeset moves it, and
+    `CHANGELOG.md` headings are well-formed. It does
     *not* judge plain language / jargon — that is the guide plus review. A
     reminder, not a proof; see `.pkit/release/README.md`.
 
@@ -2354,14 +2362,14 @@ def release_lint(skip: bool | None) -> None:
     shown = result.floor_violations + ([] if result.skipped else result.violations)
     detail = "\n".join(f"  {v.source}: {v.message}" for v in shown)
     advice = (
-        "\n  The escape hatch is active, but it does not cover a requires_backbone or "
-        "requires_capabilities floor field: the release refuses one it cannot raise, "
-        "which blocks every later release on main. Fix the field."
+        "\n  The escape hatch is active, but it does not cover a requires_backbone, "
+        "requires_capabilities or runs_on_capabilities field: the release refuses one it "
+        "cannot write, which blocks every later release on main. Fix the field."
         if result.skipped
         else "\n  Fix the entries above, or apply the escape hatch (--skip / "
         "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired — it does not "
-        "cover a requires_backbone or requires_capabilities floor field. See the "
-        "format guide in .pkit/release/README.md."
+        "cover a requires_backbone, requires_capabilities or runs_on_capabilities "
+        "field. See the format guide in .pkit/release/README.md."
     )
     raise click.ClickException(
         "changeset / changelog format problems (the objective subset):\n" + detail + advice
@@ -2534,10 +2542,13 @@ def _warn_migration_mismatches(source_kit: Path, plan: ReleasePlan) -> None:
 
 
 def _declared_floors(cs: Changeset) -> list[str]:
-    """The floor fields a changeset declares, as the guard names them."""
+    """The floor and bound fields a changeset declares, as the guard names them."""
     floors = [f"requires_backbone: {cs.requires_backbone}"] if cs.requires_backbone else []
     floors.extend(
         f"requires_capabilities: {name}: {value}" for name, value in cs.requires_capabilities
+    )
+    floors.extend(
+        f"runs_on_capabilities: {name}: {value}" for name, value in cs.runs_on_capabilities
     )
     return floors
 
@@ -2556,6 +2567,9 @@ def _print_release_plan(plan: ReleasePlan) -> None:
                     click.echo(f"    {line}")
             for floor in rel.capability_floors:
                 for line in floor.lines:
+                    click.echo(f"    {line}")
+            for bound in rel.capability_bounds:
+                for line in bound.lines:
                     click.echo(f"    {line}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
@@ -6064,6 +6078,39 @@ def show_capability_cmd(name: str, as_json: bool) -> None:
     click.echo(plans.to_json(view) if as_json else plans.render_show(view), nl=False)
 
 
+@capabilities.command("project-rule-set")
+@click.argument("name")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def project_rule_set_cmd(name: str, as_json: bool) -> None:
+    """Show the project rule set an installed capability declares (COR-017).
+
+    Read from the project's installed copy of the capability: the set it declares,
+    the project's own sets that inherit its method set, directly or not, and,
+    where none does, whether its install creates the set, the file and the text,
+    or why it creates none. The answer a migration of the capability reads, for a
+    project that installed it before it declared the set (ADR-057 point 1). Writes
+    nothing, and runs under any pkit: no sync guard, as `capabilities show`.
+    Exit 0 when answered, a capability that declares no set included; 1 when the
+    capability is not installed or not in this project tree.
+    """
+    from project_kit import capabilities as caps
+    from project_kit import declared_rule_sets
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    if not caps.is_installed(target_root, name):
+        raise click.ClickException(f"capability {name!r} is not installed.")
+    component_dir = target_root / ".pkit" / "capabilities" / name
+    planned = declared_rule_sets.plan(target_root, name, component_dir)
+    if as_json:
+        click.echo(declared_rule_sets.to_json(name, planned), nl=False)
+    else:
+        click.echo(declared_rule_sets.render_human(name, planned), nl=False)
+
+
 def _plan_flags(plan: bool, as_json: bool) -> None:
     """`--json` is the machine form of a plan; alone it asks for nothing."""
     if as_json and not plan:
@@ -6281,6 +6328,7 @@ def install_capability_cmd(
             f"at {installed_path.relative_to(target_root)}/{skip_note}",
         )
     )
+    _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         # Re-run installed adapter primitives so the harness picks up
@@ -6329,9 +6377,36 @@ def _install_capability_in_source(
             f"repository, the methodology's source, so nothing {copied} copied (ADR-059).",
         )
     )
+    _create_declared_rule_set(target_root, capability_source, dry_run=dry_run)
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+
+
+def _create_declared_rule_set(
+    target_root: Path, capability_source: CapabilitySource, *, dry_run: bool
+) -> None:
+    """Create the one project rule set the capability declares, once for this install
+    (COR-017): only where no set of the project's own inherits its method set,
+    directly or not, and never over a file or a name another set declares. Running
+    install is the consent. Says what it did, and why it created none. Read from the
+    copy being installed, which is the installed copy once the copy has run."""
+    from project_kit import declared_rule_sets
+
+    planned = declared_rule_sets.plan(target_root, capability_source.name, capability_source.path)
+    if planned is None:
+        return
+    failed = None
+    if planned.creates and not dry_run:
+        # The capability is installed and registered already, so a write that fails
+        # is said and the install goes on to deploy it.
+        try:
+            declared_rule_sets.create(target_root, planned)
+        except FileExistsError:
+            failed = f"{planned.path} appeared while install ran, and install never writes over it"
+        except OSError as exc:
+            failed = f"{planned.path} could not be written ({exc.strerror or exc})"
+    click.echo(declared_rule_sets.outcome_line(planned, dry_run=dry_run, failed=failed))
 
 
 def _refuse_collisions_in_place(target_root: Path, capability_source: CapabilitySource) -> None:
@@ -7521,14 +7596,13 @@ def new_schema(
 def new_capability(name: str) -> None:
     """Scaffold a new capability at .pkit/capabilities/<name>/ (per COR-017).
 
-    Stamps `package.yaml`, an adopter-facing `README.md`, and the five
-    standard subdirectories (decisions, skills, agents, scripts, schemas)
-    so the author has a complete skeleton to populate.
+    Stamps `package.yaml`, an adopter-facing `README.md`, and six empty
+    subdirectories (decisions, skills, agents, scripts, schemas,
+    migrations) so the author has a complete skeleton to populate.
 
-    Unlike `pkit new adapter`, capabilities are NOT registered
-    in the backbone manifest by the scaffolding step — they are
-    kit-shipped from the source-of-edit's perspective, and adopters
-    register them per-project via `pkit capabilities install <name>`.
+    Unlike `pkit new adapter`, it registers nothing. Once the capability is
+    built, `pkit capabilities register <name>` records it in the backbone
+    manifest with origin `incubated-in-repo` and deploys it (COR-031).
     """
     target_root = find_target_root()
     if target_root is None:

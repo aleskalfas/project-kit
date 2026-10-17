@@ -11,9 +11,9 @@ pkit:
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
     revalidated:
-      at: 2026-10-13T21:44:48Z
+      at: 2026-10-17T15:21:41Z
       outcome: unchanged
-      unchanged-because: DEC-002 and DEC-004 now write their points as headings carrying the same numbers, word for word. DEC-002's sentence after its point 3, that Layer 1 knows nothing of Layers 2 and 3 and Layer 3 depends on both, is now its point 4, with the same words. No point's text, number or citation changed, so the page's account of the three-layer seam and of the capability holds.
+      unchanged-because: COR-017 now lets a capability declare one project rule set that its install creates. demo-recording declares none, so what its install copies and does, as this page lists it, is unchanged.
 ---
 
 # demo-recording capability

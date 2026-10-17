@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-10-14T08:38:49Z
-      outcome: updated
+      at: 2026-10-17T17:18:26Z
+      outcome: unchanged
+      unchanged-because: ADR-014 loses its revision-history narration and gains pointers to ADR-027 and ADR-030. It still decides that the shared loader falls back to a stdlib YAML subset because uv panics inside macOS Seatbelt, which is what this page cites it for, so the page holds.
 ---
 
 # Permissions — decision core

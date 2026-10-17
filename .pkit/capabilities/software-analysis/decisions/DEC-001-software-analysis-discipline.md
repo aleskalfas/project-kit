@@ -224,7 +224,10 @@ Lifecycles on the process substrate (a planned revalidation; onboarding), furthe
 ## Implications
 
 - **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation. It also ships a type registry, and each place names a type from it. It ships its contribution of the rule-set reviewer too, with an optional dependency on project-management (point 10).
-- **Installing the capability** creates a set of the project's own that inherits `SAN`, once the record on capabilities (COR-017) lets a capability declare one. That refinement is [project-kit#1613](https://github.com/aleskalfas/project-kit/issues/1613). Until then, a project that wants `SAN` to bind writes such a set itself.
+- **Installing the capability** creates the project rule set it declares (COR-017). The set is the project's own. It selects the analysis by the capability's types (point 2), and inherits `SAN` at its major when the set is created.
+  - Install creates it only where no set of the project's own inherits `SAN`, directly or not. So a project that chose where `SAN` binds keeps its own set.
+  - A migration creates it, on the same condition, for a project that installed the capability before it declared the set.
+  - From then on the set's pin decides when a new major of `SAN` binds (point 1).
 - **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.
 - **History kept as it was written:** the way a record, or a withdrawn artefact, is checked against the structure in force when it was written or withdrawn comes with the first change to a kind's structure that needs it.

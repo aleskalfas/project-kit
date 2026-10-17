@@ -7,8 +7,10 @@ the version numbers, broadens kit-shipped components' `requires_backbone`
 of each component a changeset declares needs a backbone — the one the release
 ships, or an already-shipped one the changeset names (also PRJ-002 D4) — and,
 the same way, the floor of each `requires_capabilities` entry a changeset
-declares for another capability, generates the changelog, which states each
-raised floor, deletes the consumed
+declares for another capability, widens the entry's upper bound where a
+changeset declares the dependent runs on the version the release writes, refuses
+a release that would leave a range excluding a dependency's version, generates
+the changelog, which states each raised floor and widened bound, deletes the consumed
 changesets, and (for a backbone bump) cuts the tag via the existing
 `tag_version` (PRJ-004). The files it writes are one list, `release_writes`,
 which the changeset guard recognises a release diff by.
@@ -39,6 +41,7 @@ import click
 from project_kit import command_runner, pull_request_landing, session_guard, versioning
 from project_kit.changesets import (
     BACKBONE,
+    CAPABILITY_BOUND_FIELD,
     CAPABILITY_FLOOR_FIELD,
     FLOOR_FIELD,
     FLOOR_RELEASE,
@@ -170,7 +173,8 @@ def release_writes(source_kit: Path) -> tuple[ReleaseWrite, ...]:
     - each component's version file — the backbone's `VERSION` whole, a
       `package.yaml` only in its `version:` line, a `requires_backbone:` line
       of the shapes the broaden and a declared floor rewrite, and the `version:`
-      line of a `requires_capabilities` entry whose floor a changeset declared;
+      line of a `requires_capabilities` entry whose floor or upper bound a
+      changeset declared;
     - the self-host manifest's `backbone_version:` and `completed_version:`
       lines, on a backbone release (`_sync_self_host_manifest_backbone`, PRJ-007);
     - `CHANGELOG.md`, created or prepended;
@@ -302,6 +306,51 @@ class CapabilityFloorRaise:
 
 
 @dataclass(frozen=True)
+class CapabilityBoundWidening:
+    """What a declaration that a component runs on the version this release writes
+    for another capability does to the upper bound of the component's
+    `requires_capabilities` entry for it (PRJ-002 D4): `runs_on_capabilities`, or a
+    `release` floor, which declares the same."""
+
+    capability: str  # the capability depended on
+    old_bound: str | None  # the entry's `<A.B.C` once its floor is raised; None: no bound
+    new_bound: str | None  # the bound the release writes: widened, or the old one
+    version: str  # the version this release writes for the capability
+    # The changeset whose changelog entry states the widening: the first, in
+    # filename order, declaring it either way.
+    setter: Changeset
+
+    @property
+    def widens(self) -> bool:
+        """Whether the widening changes the range (it is widen-only)."""
+        return self.new_bound != self.old_bound
+
+    @property
+    def lines(self) -> list[str]:
+        """What `release plan` prints under the component's bump."""
+        if self.widens:
+            return [
+                f"requires_capabilities {self.capability} upper bound widened to "
+                f"<{self.new_bound} (runs on {self.version})"
+            ]
+        if self.old_bound is None:
+            return [
+                f"requires_capabilities {self.capability} has no upper bound "
+                f"(already admits {self.version})"
+            ]
+        return [
+            f"requires_capabilities {self.capability} upper bound stays <{self.old_bound} "
+            f"(already admits {self.version})"
+        ]
+
+    @property
+    def changelog_sentence(self) -> str | None:
+        """What the changelog entry of the setting changeset says of the widening;
+        None when the range does not change."""
+        return f"Runs on {self.capability} <{self.new_bound}." if self.widens else None
+
+
+@dataclass(frozen=True)
 class ComponentRelease:
     """A single tier's computed bump within a release."""
 
@@ -313,6 +362,9 @@ class ComponentRelease:
     floor_raise: FloorRaise | None = None  # set when a changeset declares the floor field
     # One per capability the component's changesets declare a floor on, in name order.
     capability_floors: tuple[CapabilityFloorRaise, ...] = ()
+    # One per capability whose upper bound its changesets widen, or declare that it
+    # runs on, in name order.
+    capability_bounds: tuple[CapabilityBoundWidening, ...] = ()
 
     @property
     def notes(self) -> list[str]:
@@ -335,18 +387,24 @@ class ComponentRelease:
         return floor.setter
 
     def floor_sentences(self, cs: Changeset) -> list[str]:
-        """What `cs`'s changelog entry says of the floors the release raises: the
-        backbone's, when `cs` set it, then each floor on a capability `cs` set,
-        in name order."""
+        """What `cs`'s changelog entry says of the ranges the release writes: the
+        backbone floor, when `cs` set it, then for each capability, in name order,
+        its floor and then its upper bound, each where `cs` set it."""
         sentences: list[str] = []
         floor = self.floor_raise
         if cs is self.floor_entry and floor is not None and floor.changelog_sentence:
             sentences.append(floor.changelog_sentence)
-        sentences.extend(
-            raise_.changelog_sentence
+        changes: list[tuple[str, int, str]] = [
+            (raise_.capability, 0, raise_.changelog_sentence)
             for raise_ in self.capability_floors
             if raise_.setter is cs and raise_.changelog_sentence
+        ]
+        changes.extend(
+            (bound.capability, 1, bound.changelog_sentence)
+            for bound in self.capability_bounds
+            if bound.setter is cs and bound.changelog_sentence
         )
+        sentences.extend(sentence for _, _, sentence in sorted(changes))
         return sentences
 
 
@@ -401,10 +459,14 @@ def compute_release(source_kit: Path) -> ReleasePlan:
     and computes each moving tier's new version from its current version.
     `none`-only components are consumed but do not move. Raises
     `click.ClickException` if a changeset names an unknown component, or
-    carries a floor field it cannot carry (`floor_problems`,
-    `capability_floor_problems`) — a declared floor is never dropped silently,
-    and a release that would write part of one is refused before `apply` writes
-    anything.
+    carries a floor or bound field it cannot carry (`floor_problems`,
+    `capability_floor_problems`, `capability_bound_problems`) — a declaration is
+    never dropped silently, and a release that would write part of one is
+    refused before `apply` writes anything. It also refuses a release that would
+    leave a capability whose range excludes the version it writes or carries
+    for a capability it depends on (`dependency_range_problems`, PRJ-002 D4), so
+    `plan` refuses it as `apply` does. A release that moves no version is not
+    refused for a range: it writes nothing a range could exclude.
     """
     components = {c.name: c for c in discover_components(source_kit)}
     changesets = load_changesets(source_kit.parent)
@@ -440,12 +502,21 @@ def compute_release(source_kit: Path) -> ReleasePlan:
         for cs in changesets
         for problem in capability_floor_problems(cs, components, versions, recorded)
     ]
+    refused_bounds = [
+        f"changeset {cs.path.name}: {problem}"
+        for cs in changesets
+        for problem in capability_bound_problems(cs, components, versions)
+    ]
     messages: list[str] = []
     if refused:
         messages.append("cannot raise a requires_backbone floor:\n  " + "\n  ".join(refused))
     if refused_capabilities:
         messages.append(
             "cannot raise a requires_capabilities floor:\n  " + "\n  ".join(refused_capabilities)
+        )
+    if refused_bounds:
+        messages.append(
+            "cannot widen a requires_capabilities upper bound:\n  " + "\n  ".join(refused_bounds)
         )
     if messages:
         raise click.ClickException("\n".join(messages))
@@ -459,6 +530,7 @@ def compute_release(source_kit: Path) -> ReleasePlan:
         if top is None or top == "none":
             continue  # declared no-bump; consumed only
         component = components[name]
+        floors = _capability_floor_raises(component, group, versions)
         releases.append(
             ComponentRelease(
                 component=component,
@@ -467,13 +539,24 @@ def compute_release(source_kit: Path) -> ReleasePlan:
                 new_version=versioning.next_version(component.version, top),
                 changesets=group,
                 floor_raise=_floor_raise(component, group, shipped, backbone_moves),
-                capability_floors=_capability_floor_raises(component, group, versions),
+                capability_floors=floors,
+                capability_bounds=_capability_bound_widenings(component, group, versions, floors),
             )
         )
 
-    return ReleasePlan(
+    plan = ReleasePlan(
         releases=releases, consumed=changesets, shipped_backbone=shipped, versions=versions
     )
+    _refuse_empty_capability_ranges(plan)
+    # A release that moves no version leaves nothing a range could exclude, and
+    # writes no tag: it only consumes `none` changesets.
+    excluded = [] if plan.is_empty else dependency_range_problems(plan)
+    if excluded:
+        raise click.ClickException(
+            "cannot leave a capability whose range excludes the version of a capability it "
+            "depends on (PRJ-002 D4); nothing was written:\n  " + "\n  ".join(excluded)
+        )
+    return plan
 
 
 def capability_versions(
@@ -821,6 +904,49 @@ def capability_floor_problems(
     return problems
 
 
+def _unknown_dependency_problem(
+    dependent: str, name: str, versions: CapabilityVersions, key: str
+) -> str | None:
+    """Why `name`, in the capability field `key` of a changeset of `dependent`,
+    names no capability the tree carries; None when it names one."""
+    if name != BACKBONE and name in versions.carries:
+        return None
+    what = "the backbone" if name == BACKBONE else "no component this tree carries"
+    hint = f" (for the backbone, `{FLOOR_FIELD}`)" if key == CAPABILITY_FLOOR_FIELD else ""
+    return (
+        f"names {name!r}, which is {what}: `{key}` names a capability {dependent!r} "
+        f"depends on{hint}."
+    )
+
+
+def _dependency_entry_problem(
+    dependent: str, package_text: str, name: str, *, writes: str, then: str
+) -> str | None:
+    """Why `dependent`'s `requires_capabilities` has no one entry for `name` whose
+    range the release `writes` (raises, or widens); None when it has. `then` closes
+    the remedy for an entry that is missing."""
+    listed = _listed_dependencies(package_text, name)
+    if listed == 0:
+        return (
+            f"names {name!r}, which {dependent!r} does not list in its "
+            f"`{CAPABILITY_FLOOR_FIELD}`: add the dependency, its floor no higher than the "
+            f"version the tree carries{then}"
+        )
+    if listed > 1:
+        return (
+            f"names {name!r}, which {dependent!r} lists {listed} times in its "
+            f"`{CAPABILITY_FLOOR_FIELD}`: list it once."
+        )
+    if versioning.requires_capability_entry(package_text, name) is None:
+        return (
+            f"names {name!r}, whose entry in {dependent!r}'s `{CAPABILITY_FLOOR_FIELD}` the "
+            f"release cannot {writes}: a block list item under the top-level key, its `name:` "
+            'and `version:` on lines of their own or on the `- ` line, the version ">=X.Y.Z,'
+            '<A.B.C" or ">=X.Y.Z", double-quoted.'
+        )
+    return None
+
+
 def _capability_floor_value_problems(
     dependent: str,
     package_text: str,
@@ -831,30 +957,15 @@ def _capability_floor_value_problems(
 ) -> list[str]:
     """Why one capability and value of a `requires_capabilities` field cannot
     raise `dependent`'s floor on it; empty when it can."""
-    if name == BACKBONE or name not in versions.carries:
-        what = "the backbone" if name == BACKBONE else "no component this tree carries"
-        return [
-            f"names {name!r}, which is {what}: `{CAPABILITY_FLOOR_FIELD}` names a capability "
-            f"{dependent!r} depends on (for the backbone, `{FLOOR_FIELD}`)."
-        ]
+    unknown = _unknown_dependency_problem(dependent, name, versions, CAPABILITY_FLOOR_FIELD)
+    if unknown is not None:
+        return [unknown]
     problems: list[str] = []
-    listed = _listed_dependencies(package_text, name)
-    if listed != 1:
-        problems.append(
-            f"names {name!r}, which {dependent!r} does not list in its "
-            f"`{CAPABILITY_FLOOR_FIELD}`: add the dependency, its floor no higher than the "
-            "version the tree carries, and declare the raise."
-            if listed == 0
-            else f"names {name!r}, which {dependent!r} lists {listed} times in its "
-            f"`{CAPABILITY_FLOOR_FIELD}`: list it once."
-        )
-    elif versioning.requires_capability_entry(package_text, name) is None:
-        problems.append(
-            f"names {name!r}, whose entry in {dependent!r}'s `{CAPABILITY_FLOOR_FIELD}` the "
-            "release cannot raise: a block list item under the top-level key, its `name:` "
-            'and `version:` on lines of their own or on the `- ` line, the version ">=X.Y.Z,'
-            '<A.B.C" or ">=X.Y.Z", double-quoted.'
-        )
+    entry = _dependency_entry_problem(
+        dependent, package_text, name, writes="raise", then=", and declare the raise."
+    )
+    if entry is not None:
+        problems.append(entry)
     if value == FLOOR_RELEASE:
         if name not in versions.writes:
             problems.append(
@@ -961,6 +1072,120 @@ def _capability_floor_raises(
     return tuple(raises)
 
 
+def capability_bound_problems(
+    cs: Changeset, components: Mapping[str, Component], versions: CapabilityVersions
+) -> list[str]:
+    """Why `cs`'s `runs_on_capabilities` cannot widen an upper bound; empty when it
+    can, or when the changeset carries none.
+
+    Each capability it names takes `release`, the version this release writes
+    for that capability (`versions.writes`), which a release writes only when a
+    pending changeset moves it (PRJ-002 D4). The field widens the upper bound of
+    the one entry for that capability in the component's `requires_capabilities`
+    whose range the release rewrites (`versioning.requires_capability_entry`), on
+    a changeset that moves the component's version: a wider bound changes what
+    the component claims to run on. One reader for the release step, which
+    refuses, and the lint, which reports."""
+    if not cs.runs_on_capabilities:
+        return []
+    if cs.component == BACKBONE:
+        return [
+            f"`{CAPABILITY_BOUND_FIELD}` is a capability's field: the backbone has no "
+            f"`{CAPABILITY_FLOOR_FIELD}` to widen."
+        ]
+    problems: list[str] = []
+    if cs.segment == "none":
+        problems.append(
+            f"a `none` changeset moves no version, and widening an upper bound of "
+            f"{cs.component!r} on another capability changes what it runs on — declare "
+            "patch, minor or major."
+        )
+    component = components.get(cs.component)
+    if component is None:
+        problems.append(
+            f"names unknown component {cs.component!r}, so there is no upper bound to widen. "
+            f"Known: {', '.join(sorted(components))}."
+        )
+        return problems
+    text = component.version_path.read_text(encoding="utf-8")
+    for name, value in cs.runs_on_capabilities:
+        unknown = _unknown_dependency_problem(cs.component, name, versions, CAPABILITY_BOUND_FIELD)
+        if unknown is not None:
+            problems.append(unknown)
+            continue
+        entry = _dependency_entry_problem(cs.component, text, name, writes="widen", then=".")
+        if entry is not None:
+            problems.append(entry)
+        if value != FLOOR_RELEASE:
+            problems.append(
+                f"`{CAPABILITY_BOUND_FIELD}.{name}` takes only `{FLOOR_RELEASE}`, the "
+                f"version this release writes for {name}; got {value!r}."
+            )
+        elif name not in versions.writes:
+            problems.append(
+                f"says `{FLOOR_RELEASE}` for {name!r}, but no pending changeset moves {name} "
+                "(patch or above), so this release writes no version of it to run on. If a "
+                f"release has already shipped the {name} {cs.component!r} runs on, drop the "
+                "declaration: that release widened the range, or found it wide enough."
+            )
+    return problems
+
+
+def _capability_bound_widenings(
+    component: Component,
+    group: Sequence[Changeset],
+    versions: CapabilityVersions,
+    floors: Sequence[CapabilityFloorRaise],
+) -> tuple[CapabilityBoundWidening, ...]:
+    """The upper-bound widening on each capability a moving component's changesets
+    declare it runs on the version this release writes of — `runs_on_capabilities`,
+    or a `release` floor, which declares the same (PRJ-002 D4) — in name order.
+
+    Each is computed on the entry as the floor raise leaves it, widen-only, up to
+    the next major of that version. A capability only a `release` floor declares
+    is left out when its bound already admits the version, so the plan says
+    nothing of a bound nobody asked about. Read before anything is written;
+    `capability_bound_problems` and `capability_floor_problems` have already
+    refused a declaration that names no version this release writes."""
+    declared: dict[str, Changeset] = {}
+    explicit: set[str] = set()
+    for cs in group:
+        for name, _value in cs.runs_on_capabilities:
+            declared.setdefault(name, cs)
+            explicit.add(name)
+        for name, value in cs.requires_capabilities:
+            if value == FLOOR_RELEASE:
+                declared.setdefault(name, cs)
+    if not declared:
+        return ()
+    text = _with_floors(component.version_path.read_text(encoding="utf-8"), floors)
+    bounds: list[CapabilityBoundWidening] = []
+    for name in sorted(declared):
+        version = versions.writes[name]
+        entry = versioning.requires_capability_entry(text, name)
+        if entry is None:
+            raise click.ClickException(
+                f"{component.name}: requires_capabilities has no entry for {name} whose "
+                "upper bound the release can widen"
+            )
+        widened = versioning.widen_requires_capability_bound(text, name, version)
+        if widened is None and name not in explicit:
+            continue
+        after = (
+            versioning.requires_capability_entry(widened[0], name) if widened is not None else None
+        )
+        bounds.append(
+            CapabilityBoundWidening(
+                capability=name,
+                old_bound=entry.upper,
+                new_bound=after.upper if after is not None else entry.upper,
+                version=version,
+                setter=declared[name],
+            )
+        )
+    return tuple(bounds)
+
+
 def apply_release(
     source_kit: Path,
     plan: ReleasePlan,
@@ -1009,9 +1234,13 @@ def apply_release(
     A floor on another capability rises the same way, raise-only and never
     automatic, in the moving component's `requires_capabilities` entry for it:
     to the version this release writes for that capability, for `release`, or
-    to the already-shipped one given. A raise that would leave the entry's range
-    admitting no version refuses the release first, too. No upper bound on a
-    capability widens here (PRJ-002 D4's declared widening is #1644's).
+    to the already-shipped one given. Then the entry's upper bound widens where
+    a changeset declares the component runs on the version this release writes
+    for that capability (`runs_on_capabilities`, or a `release` floor), up to
+    the next major, widen-only and never automatic; `--no-broaden` skips neither,
+    since both were declared. `compute_release` has already refused a raise that
+    would leave the entry's range admitting no version, and a range that would
+    exclude the version the release leaves for a capability it names.
 
     Tagging is **off by default** and deliberately a separate step, matching
     the codebase's anchoring principle (bump writes; `pkit version tag` tags —
@@ -1047,6 +1276,7 @@ def apply_release(
         _broaden_at_release(source_kit, plan)
     _raise_declared_floors(source_kit, plan)
     _raise_declared_capability_floors(source_kit, plan)
+    _widen_declared_capability_bounds(source_kit, plan)
 
     _write_changelog(source_kit.parent, plan, today or date.today())
     _delete_changesets(plan.consumed)
@@ -1137,13 +1367,47 @@ def _raise_declared_capability_floors(source_kit: Path, plan: ReleasePlan) -> No
                 )
 
 
-def _with_capability_floors(text: str, rel: ComponentRelease) -> str:
+def _widen_declared_capability_bounds(source_kit: Path, plan: ReleasePlan) -> None:
+    """Widen each moving component's upper bound on another capability where its
+    changesets declare it runs on the version this release writes (PRJ-002 D4).
+    Widen-only; a bound already admitting that version is reported and left."""
+    for rel in plan.releases:
+        rel_path = rel.component.version_path.relative_to(source_kit)
+        for bound in rel.capability_bounds:
+            changed = versioning.widen_component_requires_capability_bound(
+                rel.component.version_path, bound.capability, bound.version
+            )
+            if changed is None:
+                click.echo(
+                    f"  upper bound of {rel_path} on {bound.capability} already admits "
+                    f"{bound.version}"
+                )
+            else:
+                click.echo(
+                    f"  widened upper bound {rel_path} on {bound.capability}: {changed} "
+                    "(declared by a changeset)"
+                )
+
+
+def _with_floors(text: str, floors: Sequence[CapabilityFloorRaise]) -> str:
     """`text`, a moving component's package file, with each floor on a capability
-    its changesets declare raised, as `apply` writes it."""
-    for floor in rel.capability_floors:
+    in `floors` raised, as `apply` writes it."""
+    for floor in floors:
         raised = versioning.raise_requires_capability_floor(text, floor.capability, floor.declared)
         if raised is not None:
             text = raised[0]
+    return text
+
+
+def _with_capability_ranges(text: str, rel: ComponentRelease) -> str:
+    """`text`, a moving component's package file, with each floor on a capability
+    its changesets declare raised, then each upper bound they declare widened, as
+    `apply` writes it."""
+    text = _with_floors(text, rel.capability_floors)
+    for bound in rel.capability_bounds:
+        widened = versioning.widen_requires_capability_bound(text, bound.capability, bound.version)
+        if widened is not None:
+            text = widened[0]
     return text
 
 
@@ -1167,16 +1431,14 @@ def check_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> list[str]:
     backbone on purpose — but the component then ships beside a backbone its
     range refuses, which the warning says. With the broaden that cannot happen.
 
-    A floor on another capability is checked the same way: the entry's range,
-    raised in memory, must admit the floor it names, or the release is refused.
-    No upper bound on a capability widens here, so a floor raised past the bound
-    is refused (PRJ-002 D4; the declared widening is #1644's). Whether the range
-    admits the version the release leaves for that capability is
-    `check_dependency_ranges`' warning.
+    A floor on another capability is not checked here: its range does not turn
+    on the broaden, so `compute_release` refuses an empty one
+    (`_refuse_empty_capability_ranges`), and one that excludes the version the
+    release leaves for that capability (`dependency_range_problems`), before
+    `plan` prints anything.
     """
     from project_kit.connections import range_admits
 
-    _refuse_empty_capability_ranges(plan)
     shipped = plan.shipped_backbone
     warnings: list[str] = []
     for rel in plan.releases:
@@ -1218,14 +1480,17 @@ def check_raised_ranges(plan: ReleasePlan, *, broaden: bool) -> list[str]:
 
 def _refuse_empty_capability_ranges(plan: ReleasePlan) -> None:
     """Refuse, before anything is written, a floor raise on a capability that would
-    leave the entry's range admitting no version of it."""
+    leave the entry's range admitting no version of it. The range is taken as
+    `apply` writes it, raised and then widened (`_with_capability_ranges`): a
+    `release` floor widens the bound it passes, and an explicit one, at or below
+    the version the tree carries, does not (PRJ-002 D4)."""
     from project_kit.connections import range_admits
 
     for rel in plan.releases:
         if not rel.capability_floors:
             continue
         try:
-            text = _with_capability_floors(
+            text = _with_capability_ranges(
                 rel.component.version_path.read_text(encoding="utf-8"), rel
             )
         except click.ClickException as exc:
@@ -1240,30 +1505,28 @@ def _refuse_empty_capability_ranges(plan: ReleasePlan) -> None:
                     f"{rel.component.name}: a changeset raises its requires_capabilities floor "
                     f"on {floor.capability} to {floor.declared}, but the range the release "
                     f"would write, {written!r}, does not admit {floor.declared} — it would "
-                    f"admit no version of {floor.capability}. Nothing was written. The release "
-                    "widens no upper bound on a capability yet (PRJ-002 D4; #1644): hold the "
-                    f"release of {floor.capability} that passes the bound, or name a version "
-                    "below it."
+                    f"admit no version of {floor.capability}. Nothing was written; name a "
+                    "version the range's upper bound admits."
                 )
 
 
-def check_dependency_ranges(plan: ReleasePlan) -> list[str]:
-    """A warning for each component the release would leave with a
+def dependency_range_problems(plan: ReleasePlan) -> list[str]:
+    """One problem for each component the release would leave with a
     `requires_capabilities` range that excludes the version the release writes or
-    carries for the capability it names (PRJ-002 D4).
+    carries for the capability it names, naming both (PRJ-002 D4).
+    `compute_release` refuses the release on any.
 
     Every component in the tree that lists a dependency is read, its range taken
-    as the release writes it (each floor a changeset declares raised in memory),
-    and the capability it names at the version the release leaves
-    (`CapabilityVersions.after`): the one it writes, else the one the tree
-    carries. A name the tree carries no component of, and a range or version that
-    cannot be read, warn of nothing — validation reports those. PRJ-002 D4 refuses
-    such a release once the declared widening is built (#1644); until then this
-    only warns."""
+    as the release writes it (each floor a changeset declares raised and each
+    upper bound it declares widened, in memory), and the capability it names at
+    the version the release leaves (`CapabilityVersions.after`): the one it
+    writes, else the one the tree carries. A name the tree carries no component
+    of, and a range or version that cannot be read, are left to validation,
+    which reports them."""
     from project_kit.connections import range_admits
 
     moving = {rel.component.name: rel for rel in plan.releases}
-    warnings: list[str] = []
+    problems: list[str] = []
     for name in sorted(plan.versions.paths):
         rel = moving.get(name)
         path = plan.versions.paths[name]
@@ -1271,7 +1534,7 @@ def check_dependency_ranges(plan: ReleasePlan) -> list[str]:
             continue
         text = path.read_text(encoding="utf-8")
         if rel is not None:
-            text = _with_capability_floors(text, rel)
+            text = _with_capability_ranges(text, rel)
         for entry in _dependency_entries(text):
             dependency, version_range = entry.get("name"), entry.get("version")
             if not isinstance(dependency, str) or not isinstance(version_range, str):
@@ -1279,13 +1542,25 @@ def check_dependency_ranges(plan: ReleasePlan) -> list[str]:
             version = plan.versions.after(dependency)
             if version is None or range_admits(version_range, version) is not False:
                 continue
+            if dependency in plan.versions.writes:
+                remedy = (
+                    f"If {name} runs on {dependency} {version}, declare it on a changeset of "
+                    f"{name} that moves its version — `{CAPABILITY_BOUND_FIELD}: "
+                    f"{{{dependency}: {FLOOR_RELEASE}}}` — and the release widens the range; "
+                    f"else hold the change of {dependency} that takes it to {version}."
+                )
+            else:
+                remedy = (
+                    f"No pending changeset moves {dependency}, so no declaration widens the "
+                    "range, and `pkit validate` reports the pair out of range where both are "
+                    "installed."
+                )
             leaves = "writes" if dependency in plan.versions.writes else "carries"
-            warnings.append(
+            problems.append(
                 f"{name}: its range on {dependency}, {version_range!r}, excludes {dependency} "
-                f"{version}, the version this release {leaves} for it. The tag would carry the "
-                "two out of range of each other (PRJ-002 D4)."
+                f"{version}, the version this release {leaves} for it. {remedy}"
             )
-    return warnings
+    return problems
 
 
 def _write_component_version(rel: ComponentRelease) -> None:
@@ -1358,7 +1633,8 @@ def render_changelog_entry(
     component, at the end of the entry of the changeset that set it
     (`ComponentRelease.floor_entry`), so an adopter reads what the component now
     needs. A raised floor on a capability follows it, each in its own sentence,
-    in name order (`ComponentRelease.floor_sentences`). `pr` references become
+    and then the capability's widened upper bound, capabilities in name order
+    (`ComponentRelease.floor_sentences`). `pr` references become
     reference-style `([#N])` links, resolved in a
     block at the foot of the section (omitted when absent): a URL links as
     written, and a pull request's number links to that pull request of
@@ -1525,10 +1801,11 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
     Emitted as JSON by `pkit release plan --json` so the release-PR workflow
     can decide whether to open a release PR (`empty`), name the branch/tag
     (`backbone_version`), render the PR body (`releases`, each with the floor
-    raise a changeset declared for it, or null, and the floors on capabilities
-    it declared), and surface the migration-dir prediction warnings
-    (`migration_warnings`) and each range that excludes a dependency's version
-    (`dependency_warnings`, `check_dependency_ranges`).
+    raise a changeset declared for it, or null, the floors on capabilities it
+    declared, and the upper bounds on capabilities it widens or declared it runs
+    on), and surface the migration-dir prediction warnings
+    (`migration_warnings`). A range that excludes a dependency's version has no
+    key: `compute_release` refuses such a release, so `plan --json` fails.
     """
     backbone = plan.backbone
     return {
@@ -1545,12 +1822,31 @@ def release_summary(source_kit: Path, plan: ReleasePlan) -> dict[str, object]:
                 "requires_capabilities_floors": [
                     _capability_floor_summary(floor) for floor in rel.capability_floors
                 ],
+                "requires_capabilities_bounds": [
+                    _capability_bound_summary(bound) for bound in rel.capability_bounds
+                ],
             }
             for rel in plan.releases
         ],
         "changesets_consumed": len(plan.consumed),
         "migration_warnings": migration_dir_mismatches(source_kit, plan),
-        "dependency_warnings": check_dependency_ranges(plan),
+    }
+
+
+def _capability_bound_summary(bound: CapabilityBoundWidening) -> dict[str, object]:
+    """One declared upper-bound widening on a capability for `release_summary`: the
+    capability, the bounds before and after (null where the range has none),
+    whether the range changes, the version this release writes for the
+    capability, the lines `release plan` prints, and the changelog sentence (null
+    when the range does not change)."""
+    return {
+        "capability": bound.capability,
+        "from": bound.old_bound,
+        "to": bound.new_bound,
+        "widened": bound.widens,
+        "version": bound.version,
+        "lines": bound.lines,
+        "changelog": bound.changelog_sentence,
     }
 
 
@@ -1898,7 +2194,7 @@ def stray_floors(
     candidates = [
         cs
         for cs in diff_changesets(repo_root, pending, files)
-        if cs.declares_floor and cs.segment == "none" and cs.component not in touched
+        if cs.declares_range and cs.segment == "none" and cs.component not in touched
     ]
     if not candidates:
         return []
@@ -1907,7 +2203,7 @@ def stray_floors(
         cs
         for cs in candidates
         if _declaration_at(repo_root, merge_base, _repo_rel(repo_root, cs.path))
-        != (cs.component, cs.requires_backbone, cs.requires_capabilities)
+        != (cs.component, cs.requires_backbone, cs.requires_capabilities, cs.runs_on_capabilities)
     ]
 
 
@@ -1925,9 +2221,9 @@ def _merge_base(repo_root: Path, base: str) -> str:
 
 def _declaration_at(
     repo_root: Path, rev: str, path: str
-) -> tuple[str, str | None, tuple[tuple[str, str], ...]] | None:
-    """The component and floor fields of the changeset at `path` in `rev`; None
-    when `rev` has no such file or holds no changeset there."""
+) -> tuple[str, str | None, tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]] | None:
+    """The component, floor fields and bound field of the changeset at `path` in
+    `rev`; None when `rev` has no such file or holds no changeset there."""
     result = subprocess.run(
         ["git", "show", f"{rev}:{path}"],
         capture_output=True,
@@ -1941,7 +2237,7 @@ def _declaration_at(
         cs = parse_changeset_text(result.stdout, repo_root / path)
     except click.ClickException:
         return None
-    return cs.component, cs.requires_backbone, cs.requires_capabilities
+    return cs.component, cs.requires_backbone, cs.requires_capabilities, cs.runs_on_capabilities
 
 
 # --- The changeset + changelog format lint (the OBJECTIVE subset) ---------
@@ -1994,9 +2290,10 @@ class LintResult:
 
     violations: list[FormatViolation]  # the format subset the escape hatch covers
     skipped: bool  # the escape hatch was active
-    # A floor field the release refuses (`lint_floor`), which the escape hatch
-    # does not cover: it is for prose rules that mis-fire, and an invalid floor
-    # field blocks every later release on `main` until it is fixed.
+    # A floor or bound field the release refuses (`lint_floor`,
+    # `lint_capability_floor`, `lint_capability_bound`), which the escape hatch
+    # does not cover: it is for prose rules that mis-fire, and an invalid field
+    # blocks every later release on `main` until it is fixed.
     floor_violations: list[FormatViolation] = field(default_factory=lambda: [])
 
     @property
@@ -2090,6 +2387,19 @@ def lint_capability_floor(
     ]
 
 
+def lint_capability_bound(
+    cs: Changeset, components: Mapping[str, Component], versions: CapabilityVersions
+) -> list[FormatViolation]:
+    """The `runs_on_capabilities` field of one changeset: what `compute_release`
+    would refuse (`capability_bound_problems`), reported where the changeset is
+    written."""
+    where = f"changeset {cs.path.name}"
+    return [
+        FormatViolation(where, problem)
+        for problem in capability_bound_problems(cs, components, versions)
+    ]
+
+
 def lint_changelog(text: str) -> list[FormatViolation]:
     """Objective structural checks for `CHANGELOG.md`.
 
@@ -2141,8 +2451,13 @@ def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
     reported once, as a floor violation, instead of each floor. A
     `requires_capabilities` field is checked against the version the release
     would write for each component and the version the tree carries, and the
-    releases its changelog records (`lint_capability_floor`), read only when a
-    changeset carries one.
+    releases its changelog records (`lint_capability_floor`), and a
+    `runs_on_capabilities` field against the versions the release would write
+    (`lint_capability_bound`), read only when a changeset carries one. A range
+    that excludes a dependency's version is not the lint's: PRJ-002 D4 holds the
+    release on it until each dependent declares it runs on that version. The lint
+    refuses that declaration until the dependency's change is pending, so
+    refusing the range too would let the two land only in one pull request.
     """
     repo_root = source_kit.parent
     changesets = load_changesets(repo_root)
@@ -2159,15 +2474,20 @@ def lint_release_format(source_kit: Path, *, skip: bool = False) -> LintResult:
             released = recorded_backbone_releases(repo_root, components)
             for cs in changesets:
                 floor_violations.extend(lint_floor(cs, components, shipped, released))
-    if any(cs.requires_capabilities for cs in changesets):
+    if any(cs.requires_capabilities or cs.runs_on_capabilities for cs in changesets):
         components = {c.name: c for c in discover_components(source_kit)}
         grouped: dict[str, list[Changeset]] = {}
         for cs in changesets:
             grouped.setdefault(cs.component, []).append(cs)
         versions = capability_versions(source_kit, components, grouped)
-        recorded = recorded_capability_releases(repo_root)
+        recorded = (
+            recorded_capability_releases(repo_root)
+            if any(cs.requires_capabilities for cs in changesets)
+            else {}
+        )
         for cs in changesets:
             floor_violations.extend(lint_capability_floor(cs, components, versions, recorded))
+            floor_violations.extend(lint_capability_bound(cs, components, versions))
 
     violations: list[FormatViolation] = []
     for cs in changesets:

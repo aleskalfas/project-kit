@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit report`'s environment block reads a capability's version as every other
+  reader of a capability's record reads it (ADR-065 point 2): the manifest at
+  the capability's root, then the one under its `project/`, then its installed
+  `package.yaml`. A shipped capability with no manifest used to show as
+  "unknown". It now shows its installed package's version. "unknown" is left
+  for a capability none of the three gives a version for. A manifest that does
+  not parse no longer stops the report: the block reads past it. A capability
+  `package.yaml` whose `schema_version` is not a number reads as unreadable,
+  as one that does not parse does, where it raised a Python error.
