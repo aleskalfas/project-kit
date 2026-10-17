@@ -11,7 +11,11 @@ term, use case, journey, revalidation record. Held here:
 - **what it produces passes the check gate and carries the friction block** —
   the artefacts its walkthroughs stamp, an unanchored actor and a revalidation
   record included, pass `pkit analysis validate` and the core's friction pass,
-  and each carries its `friction` block.
+  and each carries its `friction` block;
+- **choosing each kind's templates works as it walks it** (#1371) — a candidate
+  stamped and filled is checked with `pkit analysis validate --preview`, and a
+  part of the project's own, under a proposed rule of its own, is previewed on
+  the candidate and written by the stamp once it is stamped again.
 """
 
 from __future__ import annotations
@@ -30,9 +34,14 @@ from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ANALYSIS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     CAPABILITY,
     NEW,
     REPO,
+    SA,
+    VALIDATE,
+    actor_at,
     fill,
     installed,
     load,
@@ -54,6 +63,10 @@ SUB_PROCEDURES = {
     "revalidation-record.md": "revalidation",
 }
 
+#: The sub-procedure a project follows as it adopts the capability: it chooses each
+#: kind's parts, and stamps through the sub-procedures above (DEC-001 point 1).
+CHOOSING = "choose-templates.md"
+
 _FENCE = re.compile(r"^```\n(?P<block>.*?)^```", re.MULTILINE | re.DOTALL)
 
 
@@ -65,12 +78,14 @@ def _front(path: Path) -> dict[str, Any]:
 # --- its shape ---------------------------------------------------------------------------------
 
 
-def test_the_skill_composes_one_sub_procedure_per_kind() -> None:
+def test_the_skill_composes_one_sub_procedure_per_kind_and_the_choice() -> None:
     front = _front(DISPATCHER)
     assert front["name"] == "analysis-author"
-    assert sorted(front["composes"]) == sorted(SUB_PROCEDURES)
-    assert sorted(p.name for p in SKILL.iterdir()) == sorted([*SUB_PROCEDURES, DISPATCHER.name])
+    assert sorted(front["composes"]) == sorted([*SUB_PROCEDURES, CHOOSING])
+    on_disk = sorted(p.name for p in SKILL.iterdir())
+    assert on_disk == sorted([*SUB_PROCEDURES, CHOOSING, DISPATCHER.name])
     assert "pkit analysis new" in front["metadata"]["wraps_commands"]
+    assert "pkit analysis validate" in front["metadata"]["wraps_commands"]
 
 
 def test_refs_find_nothing_in_the_skill() -> None:
@@ -82,7 +97,7 @@ def test_refs_find_nothing_in_the_skill() -> None:
 
 def test_the_skill_is_deployed_beside_its_sub_procedures() -> None:
     assert (DEPLOYED / "SKILL.md").resolve() == DISPATCHER.resolve()
-    for name in SUB_PROCEDURES:
+    for name in [*SUB_PROCEDURES, CHOOSING]:
         assert (DEPLOYED / name).resolve() == (SKILL / name).resolve()
 
 
@@ -174,3 +189,64 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
     ids = sorted(a["id"] for a in artefacts)
     assert ids == ["ACT-sponsor", "ACT-tester", "JRN-001", "TERM-suite", "UC-001", "UC-002"]
     assert all(a["container"] and a["friction"] for a in artefacts), artefacts
+
+
+# --- choosing each kind's templates ------------------------------------------------------------
+
+#: A rule of the project's own, in its set that inherits `SAN`, asking for a part the
+#: shipped actor lacks. It is proposed, as a rule is when first written.
+OWN_RULE = "RS-ANALYSIS-001"
+OWN_SET_TEXT = (
+    ANALYSIS_SET_TEXT.replace(
+        "rules: {}\n",
+        f"rules:\n  {OWN_RULE}:\n    status: proposed\n"
+        '    origin: {why: "A reader needs to know where the role works."}\n',
+    )
+    + f"\n## {OWN_RULE} — An actor says where the role works\n\nAn actor says where it works.\n"
+)
+STRUCTURES = f"{SA.as_posix()}/project/structures.yaml"
+STRUCTURES_TEXT = (
+    "pkit_schema: software-analysis:structures\nschema_version: 1\nkinds:\n  actor:\n"
+    f"    tighten:\n      - rule: {OWN_RULE}\n        add:\n          - id: setup\n"
+    "            label: Setup\n            after: opening\n"
+    "            hint: Where the role works.\n            example: A lab.\n"
+    "            required: true\n"
+)
+
+
+def _previewed(repo: AdopterRepo, rel: str) -> list[str]:
+    """What `pkit analysis validate --preview` says of one artefact."""
+    completed = run_script(repo, VALIDATE, "--json", "--preview")
+    assert completed.returncode == 0, completed.stderr
+    findings = json.loads(completed.stdout)["findings"]
+    return [f["message"] for f in findings if f["location"] == rel]
+
+
+# Slow by design: two stamps and three checks, each a script that starts `pkit` processes.
+def test_a_candidate_is_previewed_and_stamped_again_with_the_project_s_own_part(
+    project: AdopterRepo,
+) -> None:
+    """`choose-templates.md`: with a set of the project's own that inherits `SAN`, a
+    candidate stamped and filled is checked with the preview while the format rule is
+    proposed. A part the project adds under a proposed rule of its own is previewed on
+    the candidate, which lacks it. Stamped again, the candidate holds the part, its hint
+    naming the rule, and once filled the preview finds nothing."""
+    project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
+    candidate = ("actor", "tester", "--name", "Test author", "--path", "src/run.py")
+    stamped(project, *candidate)
+    rel = actor_at("ACT-tester")
+    fill(project)
+    assert _previewed(project, rel) == []
+
+    project.write({ANALYSIS_SET: OWN_SET_TEXT, STRUCTURES: STRUCTURES_TEXT})
+    [missing] = _previewed(project, rel)
+    assert missing.startswith("preview: `**Setup:**` is missing"), missing
+    assert OWN_RULE in missing
+
+    (project.root / rel).unlink()  # the candidate was never committed, so its id is free
+    assert stamped(project, *candidate) == "ACT-tester"
+    text = (project.root / rel).read_text(encoding="utf-8")
+    [setup] = [line for line in text.splitlines() if line.startswith("**Setup:**")]
+    assert "<!-- pkit:hint " in setup and OWN_RULE in setup, setup
+    fill(project)
+    assert _previewed(project, rel) == []
