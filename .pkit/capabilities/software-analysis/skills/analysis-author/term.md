@@ -23,12 +23,9 @@ pkit analysis new term <slug> --name "<Term>" --unanchored-because "<why nothing
 
 ## 5. Fill it
 
-The stamp writes the entry's `definition` as its hint, `<!-- pkit:hint … -->`, which says what goes there and gives an example, as each part of the section holds its own.
+The stamp writes the entry's `definition` as its hint, `<!-- pkit:hint … -->`, which says what goes there and gives an example, as each part of the section holds its own. Fill each part as its hint says, and delete the hint: the `definition` in the front matter, and each part of the entry's section.
 
-- **`definition`** — in the front matter, what the term means, in a phrase that could stand in for the term: its broader kind, then what sets it apart (DEC-001 point 1). Write it in the hint's place.
-- **The body section** — *Example* and *Distinctions*, each as its hint says, or `None.`, the hint deleted.
-
-Then run the checks in the shared framing's "After stamping".
+Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first.
 
 ## Later
 

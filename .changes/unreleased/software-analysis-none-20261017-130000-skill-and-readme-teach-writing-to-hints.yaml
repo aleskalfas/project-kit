@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  Documentation only. The analysis-author skill fills each part as its hint
+  says, and checks what it wrote with `pkit analysis validate --preview`. The
+  README shows each kind in its template's shape, filled, and describes no
+  part. No command, schema, template or check changes.
