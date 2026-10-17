@@ -1405,6 +1405,427 @@ def test_apply_writes_the_raised_floor_into_the_changelog(tmp_path: Path) -> Non
     )
 
 
+# --- The declared floor on another capability (PRJ-002 D4; COR-030) ----------
+
+
+def _write_dependent(
+    source_kit: Path, name: str, version: str, requires: str, *, extra: str = ""
+) -> Path:
+    """A capability that lists project-management in `requires_capabilities`."""
+    pkg = _write_capability(source_kit, name, version, ">=1.0.0,<2.0.0")
+    pkg.write_text(
+        pkg.read_text(encoding="utf-8")
+        + "# The panel folds through project-management's gate.\n"
+        + "requires_capabilities:\n"
+        + "  - name: project-management\n"
+        + f'    version: "{requires}"  # the type axis\n'
+        + extra,
+        encoding="utf-8",
+    )
+    return pkg
+
+
+def _add_capability_floor(
+    source_kit: Path,
+    component: str,
+    kind: str,
+    name: str,
+    floors: dict[str, str],
+    *,
+    body: str = "Uses the new gate.",
+) -> None:
+    """A changeset declaring its component needs a version of each capability."""
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    lines = "".join(f"    {cap}: {value}\n" for cap, value in floors.items())
+    (directory / name).write_text(
+        f"component: {component}\nkind: {kind}\nbody: {body}\n"
+        f"custom:\n  requires_capabilities:\n{lines}",
+        encoding="utf-8",
+    )
+
+
+def _record_component_releases(source_kit: Path, component: str, *versions: str) -> None:
+    """A `CHANGELOG.md` recording `versions` of `component` as its releases."""
+    entries = "".join(f"- **{component} {v}** — A release.\n" for v in versions)
+    (source_kit.parent / "CHANGELOG.md").write_text(
+        f"# Changelog\n\n## 2026-01-01\n\n### Added\n\n{entries}\n", encoding="utf-8"
+    )
+
+
+def test_a_release_floor_rises_to_the_version_the_release_writes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """`release` names the project-management this release writes; the floor
+    rises to it in place, its upper bound and comment kept, and the changelog
+    entry of the declaring changeset says so."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.54.0,<1.0.0")
+    silent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "project-management", "minor", "A new floor.", "a.yaml")
+    _add_capability_floor(
+        source_kit, "living-docs", "minor", "b.yaml", {"project-management": "release"}
+    )
+
+    plan = release.compute_release(source_kit)
+    rel = next(r for r in plan.releases if r.component.name == "living-docs")
+    (floor,) = rel.capability_floors
+    assert (floor.old_floor, floor.new_floor, floor.version, floor.moves) == (
+        "0.54.0",
+        "0.55.0",
+        "0.55.0",
+        True,
+    )
+    assert floor.names_release
+    assert floor.lines == ["requires_capabilities project-management floor raised to >=0.55.0"]
+    assert release.check_dependency_ranges(plan) == []
+
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 9, 30))
+
+    assert '    version: ">=0.55.0,<1.0.0"  # the type axis\n' in dependent.read_text()
+    assert "  version: 0.2.0\n" in dependent.read_text()
+    assert '    version: ">=0.54.0,<1.0.0"  # the type axis\n' in silent.read_text()
+    assert "raised floor capabilities/living-docs/package.yaml on project-management" in (
+        capsys.readouterr().out
+    )
+    changelog = (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert (
+        "- **living-docs 0.2.0** — Uses the new gate. Requires project-management >=0.55.0.\n"
+    ) in changelog
+
+
+def test_an_explicit_capability_floor_names_a_release_the_tree_records(tmp_path: Path) -> None:
+    """A need an older release meets names that release; the capability need not
+    move, and the floor rises to the version named, not to the current one."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _record_component_releases(source_kit, "project-management", "0.52.0", "0.53.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.50.0,<1.0.0")
+    _add_capability_floor(
+        source_kit, "living-docs", "patch", "a.yaml", {"project-management": '"0.53.0"'}
+    )
+
+    plan = release.compute_release(source_kit)
+    (floor,) = plan.releases[0].capability_floors
+    assert (floor.new_floor, floor.version, floor.moves, floor.names_release) == (
+        "0.53.0",
+        "0.54.0",
+        False,
+        False,
+    )
+    release.apply_release(source_kit, plan, tag=False)
+
+    assert 'version: ">=0.53.0,<1.0.0"' in dependent.read_text()
+
+
+def test_a_capability_floor_at_or_above_the_declared_version_stays(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.54.0,<1.0.0")
+    _add_capability_floor(
+        source_kit, "living-docs", "patch", "a.yaml", {"project-management": '"0.54.0"'}
+    )
+
+    plan = release.compute_release(source_kit)
+    (floor,) = plan.releases[0].capability_floors
+    assert not floor.raises
+    assert floor.lines == [
+        "requires_capabilities project-management floor stays >=0.54.0 (already at or above 0.54.0)"
+    ]
+    entry = release.render_changelog_entry(plan, date(2026, 9, 30))
+    assert "Requires project-management" not in entry
+    (summary,) = cast(
+        "list[dict[str, list[dict[str, object]]]]",
+        release.release_summary(source_kit, plan)["releases"],
+    )
+    assert summary["requires_capabilities_floors"] == [
+        {
+            "capability": "project-management",
+            "from": "0.54.0",
+            "to": "0.54.0",
+            "raised": False,
+            "declared": "0.54.0",
+            "names_release": False,
+            "version": "0.54.0",
+            "moves": False,
+            "lines": [
+                "requires_capabilities project-management floor stays >=0.54.0 "
+                "(already at or above 0.54.0)"
+            ],
+            "changelog": None,
+        }
+    ]
+
+
+@pytest.mark.parametrize(
+    ("component", "kind", "floors", "problem"),
+    [
+        (
+            "backbone",
+            "minor",
+            {"project-management": "release"},
+            "the backbone has no `requires_capabilities`",
+        ),
+        (
+            "living-docs",
+            "none",
+            {"project-management": '"0.54.0"'},
+            "a `none` changeset moves no version",
+        ),
+        (
+            "living-docs",
+            "minor",
+            {"project-management": "release"},
+            "but no pending changeset moves project-management",
+        ),
+        (
+            "living-docs",
+            "minor",
+            {"project-management": '"0.55.0"'},
+            "names project-management 0.55.0, above the version this tree carries for it (0.54.0",
+        ),
+        (
+            "living-docs",
+            "minor",
+            {"project-management": '"0.51.0"'},
+            "names project-management 0.51.0, which this tree records no release of",
+        ),
+        ("living-docs", "minor", {"project-management": "latest"}, "takes `release`"),
+        ("living-docs", "minor", {"project-management": "0.54"}, "write it in full and quoted"),
+        (
+            "living-docs",
+            "minor",
+            {"backbone": "release"},
+            "names 'backbone', which is the backbone",
+        ),
+        (
+            "living-docs",
+            "minor",
+            {"wildware": "release"},
+            "which is no component this tree carries",
+        ),
+        ("living-docs", "minor", {"evidence": '"0.5.0"'}, "which 'living-docs' does not list"),
+        ("houseware", "minor", {"project-management": '"0.54.0"'}, "lists 2 times"),
+        ("oddware", "minor", {"project-management": '"0.54.0"'}, "the release cannot raise"),
+    ],
+)
+def test_compute_refuses_a_capability_floor_it_cannot_carry(
+    tmp_path: Path, component: str, kind: str, floors: dict[str, str], problem: str
+) -> None:
+    """A declared capability floor is never dropped silently: the release refuses."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _record_component_releases(source_kit, "project-management", "0.52.0", "0.53.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_capability(source_kit, "evidence", "0.5.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.50.0,<1.0.0")
+    _write_dependent(
+        source_kit,
+        "houseware",
+        "0.1.0",
+        ">=0.50.0,<1.0.0",
+        extra='  - name: project-management\n    version: ">=0.40.0"\n',
+    )
+    odd = _write_capability(source_kit, "oddware", "0.1.0", ">=1.0.0,<2.0.0")
+    odd.write_text(
+        odd.read_text()
+        + 'requires_capabilities: [{name: project-management, version: ">=0.5.0"}]\n',
+        encoding="utf-8",
+    )
+    _add_capability_floor(source_kit, component, kind, "a.yaml", floors)
+
+    with pytest.raises(
+        click.ClickException, match="cannot raise a requires_capabilities floor"
+    ) as err:
+        release.compute_release(source_kit)
+    assert problem in err.value.message
+
+
+def test_a_capability_floor_past_the_upper_bound_refuses_the_release(tmp_path: Path) -> None:
+    """The release widens no upper bound on a capability yet (PRJ-002 D4, #1644), so
+    a `release` floor raised to a major the bound excludes would leave a range that
+    admits no version: the release is refused before anything is written."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    pm = _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "project-management", "major", "A breaking change.", "a.yaml")
+    _add_capability_floor(
+        source_kit, "software-engineering", "minor", "b.yaml", {"project-management": "release"}
+    )
+    before = dependent.read_text()
+
+    plan = release.compute_release(source_kit)
+    with pytest.raises(click.ClickException, match="admit no version of project-management"):
+        release.apply_release(source_kit, plan, tag=False)
+
+    assert dependent.read_text() == before
+    assert "  version: 0.54.0\n" in pm.read_text()
+    assert not (tmp_path / "CHANGELOG.md").exists()
+
+
+def test_a_range_that_excludes_the_version_a_release_writes_is_warned_of(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A project-management major the dependent's bound excludes: the release
+    warns before it writes, names both, and proceeds (PRJ-002 D4's refusal is
+    #1644's). The plan's JSON carries the warning for the release PR's body."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    dependent = _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "project-management", "major", "A breaking change.", "a.yaml")
+
+    plan = release.compute_release(source_kit)
+    warning = (
+        "software-engineering: its range on project-management, '>=0.54.0,<1.0.0', excludes "
+        "project-management 1.0.0, the version this release writes for it. The tag would "
+        "carry the two out of range of each other (PRJ-002 D4)."
+    )
+    assert release.check_dependency_ranges(plan) == [warning]
+    assert release.release_summary(source_kit, plan)["dependency_warnings"] == [warning]
+
+    monkeypatch.chdir(tmp_path)
+    result = CliRunner().invoke(main, ["release", "apply", "--yes"])
+
+    assert result.exit_code == 0, result.output
+    assert f"warning: {warning}" in result.stderr
+    assert 'version: ">=0.54.0,<1.0.0"' in dependent.read_text()
+
+
+def test_a_range_that_excludes_the_version_the_tree_carries_is_warned_of(
+    tmp_path: Path,
+) -> None:
+    """A dependency the release does not move is read at the version the tree
+    carries, and the warning says so."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "1.0.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
+    _add(source_kit, "software-engineering", "patch", "A fix.", "a.yaml")
+
+    (warning,) = release.check_dependency_ranges(release.compute_release(source_kit))
+
+    assert "excludes project-management 1.0.0, the version this release carries for it" in (warning)
+
+
+def test_both_floors_close_the_entry_of_the_changeset_that_set_them(tmp_path: Path) -> None:
+    """The backbone's sentence first, then each capability's, in name order."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _record_component_releases(source_kit, "evidence", "0.4.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_capability(source_kit, "evidence", "0.5.0", ">=1.0.0,<2.0.0")
+    _write_dependent(
+        source_kit,
+        "living-docs",
+        "0.1.0",
+        ">=0.50.0,<1.0.0",
+        extra='  - name: evidence\n    version: ">=0.1.0,<1.0.0"\n',
+    )
+    _add(source_kit, "project-management", "minor", "A new floor.", "a.yaml")
+    directory = changesets.unreleased_dir(source_kit.parent)
+    (directory / "b.yaml").write_text(
+        "component: living-docs\nkind: minor\nbody: Uses both.\nrequires_backbone: release\n"
+        "requires_capabilities:\n  project-management: release\n  evidence: '0.4.0'\n",
+        encoding="utf-8",
+    )
+
+    entry = release.render_changelog_entry(release.compute_release(source_kit), date(2026, 9, 30))
+
+    assert (
+        "- **living-docs 0.2.0** — Uses both. Requires backbone >=1.5.0. Requires evidence "
+        ">=0.4.0. Requires project-management >=0.55.0.\n"
+    ) in entry
+
+
+def test_an_explicit_capability_floor_is_bounded_by_the_installed_version(
+    tmp_path: Path,
+) -> None:
+    """The version the tree carries is the one validation reads: a registered
+    capability's manifest, not its package. Its package ahead of its manifest, an
+    explicit floor at the package's version is refused, and one at the
+    manifest's passes."""
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _record_component_releases(source_kit, "project-management", "0.53.0", "0.54.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.50.0,<1.0.0")
+    receipt = source_kit / "capabilities" / "project-management" / "project" / "manifest.yaml"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+        "  version: 0.53.0\n",
+        encoding="utf-8",
+    )
+    (source_kit / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.5.0\ncomponents:\n"
+        "  - kind: capability\n    name: project-management\n"
+        "    manifest: .pkit/capabilities/project-management/project/manifest.yaml\n",
+        encoding="utf-8",
+    )
+    _add_capability_floor(
+        source_kit, "living-docs", "patch", "a.yaml", {"project-management": '"0.54.0"'}
+    )
+
+    with pytest.raises(
+        click.ClickException, match=r"above the version this tree carries for it \(0\.53\.0"
+    ):
+        release.compute_release(source_kit)
+
+    _add_capability_floor(
+        source_kit, "living-docs", "patch", "a.yaml", {"project-management": '"0.53.0"'}
+    )
+    (floor,) = release.compute_release(source_kit).releases[0].capability_floors
+    assert floor.new_floor == "0.53.0"
+
+
+@pytest.mark.xfail(
+    strict=True,
+    raises=AssertionError,
+    reason=(
+        "PRJ-007's gap: `release apply` rewrites the self-host backbone manifest but not a "
+        "capability's legacy receipt, so validation reads project-management at the version "
+        "the receipt records, below a floor the release raised to its new version."
+    ),
+)
+def test_the_release_commit_validates_after_a_release_floor_rises_on_project_management(
+    tmp_path: Path,
+) -> None:
+    """The architect's check on PR #1639: project-management's version of record in
+    this repository is its legacy receipt (`project/manifest.yaml`), which `apply`
+    does not rewrite. After a release raises a dependent's floor to the
+    project-management it writes, validation must still read the pair in range."""
+    from project_kit import connections
+
+    source_kit = _make_kit(tmp_path, backbone="1.5.0")
+    _write_capability(source_kit, "project-management", "0.54.0", ">=1.0.0,<2.0.0")
+    _write_dependent(source_kit, "living-docs", "0.1.0", ">=0.54.0,<1.0.0")
+    receipt = source_kit / "capabilities" / "project-management" / "project" / "manifest.yaml"
+    receipt.parent.mkdir(parents=True)
+    receipt.write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+        "  version: 0.54.0\n",
+        encoding="utf-8",
+    )
+    (source_kit / "manifest.yaml").write_text(
+        "schema_version: 1\nbackbone_version: 1.5.0\ncomponents:\n"
+        "  - kind: capability\n    name: project-management\n"
+        "    manifest: .pkit/capabilities/project-management/project/manifest.yaml\n"
+        "  - kind: capability\n    name: living-docs\n"
+        "    manifest: .pkit/capabilities/living-docs/manifest.yaml\n"
+        "    origin: incubated-in-repo\n",
+        encoding="utf-8",
+    )
+    assert connections.versions_outcome(tmp_path).errors == ()
+    _add(source_kit, "project-management", "minor", "A new floor.", "a.yaml")
+    _add_capability_floor(
+        source_kit, "living-docs", "minor", "b.yaml", {"project-management": "release"}
+    )
+
+    release.apply_release(source_kit, release.compute_release(source_kit), tag=False)
+
+    assert 'version: ">=0.55.0,<1.0.0"' in (
+        source_kit / "capabilities" / "living-docs" / "package.yaml"
+    ).read_text(encoding="utf-8")
+    assert connections.versions_outcome(tmp_path).errors == ()
+
+
 # --- Dogfood: the release that ships the backbone-owned journal line ---------
 
 REPO_ROOT = Path(__file__).resolve().parent.parent

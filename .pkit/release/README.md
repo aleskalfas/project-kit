@@ -165,9 +165,10 @@ requires_capabilities:
   of that capability's entry in the component's `requires_capabilities` to it
   (the capability floor raise, below). Top-level or under `custom:`, like
   `requires_backbone`. changie's prompts write single values, not a mapping,
-  so add the field by hand after `changie new`. To raise an existing floor,
-  declare it rather than editing the entry, so the release states it in the
-  changelog.
+  so add the field by hand after `changie new`. Once the entry exists, its
+  floor and upper bound move only at the release, on a changeset's declaration
+  (PRJ-002 D1): to raise an existing floor, declare it, and the release states
+  it in the changelog.
   - **`release`** — the version this release writes for that capability. For
     a need on its surface that has not shipped yet — typically a change to it
     in the same pull request, or one merged beside it. The release must move
@@ -177,7 +178,10 @@ requires_capabilities:
   - **An explicit `X.Y.Z`** — a release of that capability the tree records:
     the `**<capability> X.Y.Z**` tag that opens a changelog entry in
     `CHANGELOG.md`, or the version the tree carries for it. It is at or below
-    the version the tree carries. For a need an older release already meets.
+    the version the tree carries. That version is the installed one `pkit
+    validate` reads: the capability's manifest's where the project registers
+    it, else its `package.yaml`'s. So a floor the release writes is one
+    validation reads as met. For a need an older release already meets.
     Quote it, as for `requires_backbone`. The changelog tags components'
     entries from `1.140.0` on, so a need an older release meets names the
     first release it records.
@@ -204,6 +208,18 @@ requires_capabilities:
   depended on refuses the release before anything is written.
 - The release states the raised floor in the component's changelog entry —
   *Requires project-management >=0.55.0.* — as for a backbone floor.
+- **The upper bound** moves only on declaration too (PRJ-002 D4). A changeset
+  of the dependent says it runs on the version this release writes for the
+  capability, or a `release` floor raised above the bound says so, and the
+  release widens the bound up to the next major. The release refuses to leave a
+  capability whose range excludes the version it writes or carries for a
+  capability it depends on. #1644 builds the widening and the refusal. Until
+  it lands:
+  - the release widens no upper bound on a capability, so a floor raised past
+    the bound leaves a range that admits no version, which refuses the release
+    (the bullet above)
+  - a range that excludes the version a release writes or carries is warned
+    of, not refused ("The declared capability floor raise" below)
 
 ### Authoring a changeset
 
@@ -422,7 +438,8 @@ say; the `version:` line in a component's `package.yaml`); **broadens**
 backbone and on capabilities (below);
 prepends a `CHANGELOG.md` entry from the notes, stating each raised floor; and
 deletes the consumed changesets. `plan` shows each floor it will raise under
-the component's bump.
+the component's bump, and warns of a range on a capability that excludes the
+version the release writes or carries for it.
 
 ### A replay may restore a removed default
 
@@ -550,6 +567,14 @@ capability, and for an explicit version, that version.
 - **No empty range.** Before anything is written `apply` computes each raised
   range and refuses the release if one would not admit the floor it names
   after the raise.
+- **A range that excludes its dependency is warned of.** `plan`, and `apply`
+  before its confirmation, read each component in the tree that lists a
+  dependency. The range is taken as the release writes it, and the capability
+  it names at the version the release writes for it, or else the version the
+  tree carries. A range that excludes that version is warned of, naming both,
+  since the tag would carry the two out of range of each other. The release
+  still proceeds: PRJ-002 D4 refuses it once #1644 lands. A dependency the tree
+  carries no component of is left to validation.
 - **The rewrite** touches the one `>=X.Y.Z` in the entry's `version:` line, in
   place: the upper bound, `optional:` and comments survive. Only a block list
   item under the top-level `requires_capabilities:` key is read, its `name:`
@@ -565,7 +590,9 @@ capability, and for an explicit version, that version.
   `declared` version and whether the declaration that set it `names_release`,
   the capability's `version` after the release and whether it `moves`, the
   plan `lines`, and the `changelog` sentence. The release-PR workflow prints
-  the lines under the bump.
+  the lines under the bump. It carries the warnings above, as sentences, in a
+  top-level `dependency_warnings` list, which the workflow prints in the release
+  PR's body.
 
 **Tagging is a separate, anchored step** (COR-004's each-step-its-own-command
 principle — the same reason `version bump` and `version tag` are distinct).
@@ -818,8 +845,9 @@ automation only proposes and, post-merge, tags.
   apply --yes` (versions + broaden + declared floors + `CHANGELOG.md`,
   consuming the changesets), commits `chore(release): v<new-backbone>`, pushes,
   and opens a **release PR** whose body shows the computed bumps — each with
-  the floor raise a changeset declared for it, as `plan` prints it — and the
-  generated changelog, raised floors included, for review.
+  the floor raises a changeset declared for it, on the backbone and on
+  capabilities, as `plan` prints them — any range that excludes a dependency's
+  version, and the generated changelog, raised floors included, for review.
 - Is **idempotent**: if a release PR is already open (any head under
   `release/`), it skips rather than opening a duplicate.
 - Does **not** tag — the tag must point at the *merged* release commit (PRJ-004),

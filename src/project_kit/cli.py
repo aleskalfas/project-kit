@@ -41,6 +41,7 @@ from project_kit import (
 )
 from project_kit import refs as refs_mod
 from project_kit.agents import STORYBOARD_FILE, stamp_new_agent
+from project_kit.changesets import Changeset
 from project_kit.decisions import stamp_decision
 from project_kit.dispatcher import CapabilityDispatchGroup
 from project_kit.install import (
@@ -60,6 +61,7 @@ from project_kit.release import (
     ReleasePlan,
     apply_release,
     check_changesets,
+    check_dependency_ranges,
     check_raised_ranges,
     check_shareable,
     compute_release,
@@ -2132,6 +2134,8 @@ def release_plan(as_json: bool) -> None:
         return
     _print_release_plan(plan)
     _warn_migration_mismatches(source_kit, plan)
+    for warning in check_dependency_ranges(plan):
+        click.echo(f"  warning: {warning}")
 
 
 @release.command("apply")
@@ -2173,7 +2177,13 @@ def release_apply(
     raise that would leave a range admitting no backbone refuses the release
     before anything is written, and one whose range would exclude the backbone
     the release ships (an upper bound `--no-broaden` keeps) is warned of before
-    the confirmation. See `.pkit/release/README.md`.
+    the confirmation. A changeset declaring `requires_capabilities` raises its
+    component's floor on each capability it names the same way — to the version
+    this release writes for that capability for `release`, or to the
+    already-shipped `X.Y.Z` it names — and a raise that would leave the entry's
+    range admitting no version refuses the release. A range on a capability that
+    excludes the version the release writes or carries for it is warned of
+    before the confirmation (PRJ-002 D4). See `.pkit/release/README.md`.
 
     With `--tag --push` the tag's push changes the hosting service, so the
     cross-repository guard runs first, before anything is written, as for
@@ -2194,6 +2204,8 @@ def release_apply(
     # Before the confirmation: an empty raised range refuses here, and a range that
     # excludes the backbone the release ships is shown with the plan it belongs to.
     for warning in check_raised_ranges(plan, broaden=broaden):
+        click.echo(f"warning: {warning}", err=True)
+    for warning in check_dependency_ranges(plan):
         click.echo(f"warning: {warning}", err=True)
     if plan.is_empty:
         apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
@@ -2220,8 +2232,8 @@ def release_apply(
 )
 def release_check(base: str | None, skip: bool | None) -> None:
     """CI guard: fail if the diff touches a component's surface and adds or edits
-    no changeset naming it, or the PR declares a `requires_backbone` floor for a
-    component it neither touches nor moves.
+    no changeset naming it, or the PR declares a `requires_backbone` or
+    `requires_capabilities` floor for a component it neither touches nor moves.
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -2279,11 +2291,11 @@ def release_check(base: str | None, skip: bool | None) -> None:
         )
     if result.stray_floors:
         problems.append(
-            "a requires_backbone floor declared for a component this diff neither touches "
-            "nor moves:\n"
+            "a floor declared for a component this diff neither touches nor moves:\n"
             + "\n".join(
                 f"  {cs.path.name}: {cs.component!r} (kind: {cs.segment}, "
-                f"requires_backbone: {cs.requires_backbone})"
+                + ", ".join(_declared_floors(cs))
+                + ")"
                 for cs in result.stray_floors
             )
             + "\n  A floor changes what the component requires, so it rides on a change to "
@@ -2301,8 +2313,8 @@ def release_check(base: str | None, skip: bool | None) -> None:
     is_flag=True,
     default=None,
     help="Escape hatch: pass the format checks unconditionally (a requires_backbone "
-    "floor field is still checked). Also honoured via the PKIT_CHANGELOG_LINT_SKIP "
-    "env var.",
+    "or requires_capabilities floor field is still checked). Also honoured via the "
+    "PKIT_CHANGELOG_LINT_SKIP env var.",
 )
 def release_lint(skip: bool | None) -> None:
     """Format lint: the OBJECTIVE changeset + CHANGELOG.md format subset.
@@ -2314,15 +2326,19 @@ def release_lint(skip: bool | None) -> None:
     — or names a backbone release the tree records (a `CHANGELOG.md` release
     heading, or the backbone it carries), at or below the backbone it carries,
     on a version-moving changeset of a capability or adapter whose range is
-    `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, and `CHANGELOG.md` headings are
-    well-formed. It does
+    `">=X.Y.Z,<A.B.C"` or `">=X.Y.Z"`, a `requires_capabilities` field names,
+    for each capability the component lists once with such a range, `release` —
+    when a pending changeset moves that capability — or a release of it the
+    tree records at or below the version the tree carries, and `CHANGELOG.md`
+    headings are well-formed. It does
     *not* judge plain language / jargon — that is the guide plus review. A
     reminder, not a proof; see `.pkit/release/README.md`.
 
     Reads committed files only (no PR context), so it runs in the shared check
     aggregator. Escape hatch: `--skip` or the PKIT_CHANGELOG_LINT_SKIP env var —
-    except for the floor field, which the release itself refuses: an invalid one
-    fails the lint either way, since it would block every later release on main.
+    except for the floor fields, which the release itself refuses: an invalid
+    one fails the lint either way, since it would block every later release on
+    main.
     """
     source_kit = _target_kit()
     skip_active = bool(skip) or _env_flag("PKIT_CHANGELOG_LINT_SKIP")
@@ -2338,14 +2354,14 @@ def release_lint(skip: bool | None) -> None:
     shown = result.floor_violations + ([] if result.skipped else result.violations)
     detail = "\n".join(f"  {v.source}: {v.message}" for v in shown)
     advice = (
-        "\n  The escape hatch is active, but it does not cover a requires_backbone "
-        "floor field: the release refuses one it cannot raise, which blocks every "
-        "later release on main. Fix the field."
+        "\n  The escape hatch is active, but it does not cover a requires_backbone or "
+        "requires_capabilities floor field: the release refuses one it cannot raise, "
+        "which blocks every later release on main. Fix the field."
         if result.skipped
         else "\n  Fix the entries above, or apply the escape hatch (--skip / "
         "PKIT_CHANGELOG_LINT_SKIP) if an objective rule mis-fired — it does not "
-        "cover a requires_backbone floor field. See the format guide in "
-        ".pkit/release/README.md."
+        "cover a requires_backbone or requires_capabilities floor field. See the "
+        "format guide in .pkit/release/README.md."
     )
     raise click.ClickException(
         "changeset / changelog format problems (the objective subset):\n" + detail + advice
@@ -2517,6 +2533,15 @@ def _warn_migration_mismatches(source_kit: Path, plan: ReleasePlan) -> None:
         click.echo(f"  warning: {warning}")
 
 
+def _declared_floors(cs: Changeset) -> list[str]:
+    """The floor fields a changeset declares, as the guard names them."""
+    floors = [f"requires_backbone: {cs.requires_backbone}"] if cs.requires_backbone else []
+    floors.extend(
+        f"requires_capabilities: {name}: {value}" for name, value in cs.requires_capabilities
+    )
+    return floors
+
+
 def _print_release_plan(plan: ReleasePlan) -> None:
     if plan.is_empty:
         click.echo("Release plan: no version moves.")
@@ -2528,6 +2553,9 @@ def _print_release_plan(plan: ReleasePlan) -> None:
             )
             if rel.floor_raise is not None:
                 for line in rel.floor_raise.lines:
+                    click.echo(f"    {line}")
+            for floor in rel.capability_floors:
+                for line in floor.lines:
                     click.echo(f"    {line}")
             for note in rel.notes:
                 click.echo(f"    - {note}")
