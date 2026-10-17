@@ -11,6 +11,10 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
 - both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
+- it holds three **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
+  proposed, its origin DEC-001, declaring no check: a reviewer judges each. Each
+  *How* leaves out what the stamp and the check hold always, and judges an artefact
+  in force alone. Proposed rules move no version, so the set stays at 1.0.0;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`;
@@ -33,7 +37,7 @@ from project_kit import document_parts
 from project_kit import rule_set_reading as reading
 from project_kit import rule_sets as rs
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.analysis_repo import CAPABILITY, SA, actor_at, installed
+from tests.analysis_repo import CAPABILITY, SA, actor_at, installed, with_status
 from tests.test_rule_sets import rule_set_text
 
 Kind = rs.RuleSetFindingKind
@@ -42,6 +46,31 @@ SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
 STEPS_RULE = "RS-SAN-002"
+#: The judgement rules (#1577): each statement, and the DEC-001 points it anchors to.
+JUDGEMENT_RULES = {
+    "RS-SAN-003": (
+        "A use case's actor is the one whose goal it is, and each other actor that takes "
+        "part in it is one of its `other-actors`.",
+        [
+            "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#3",
+            "software-analysis:DEC-001#4",
+        ],
+    ),
+    "RS-SAN-004": (
+        "A use case's goal is one of its actor's needs.",
+        ["software-analysis:DEC-001#1"],
+    ),
+    "RS-SAN-005": (
+        "An analysis artefact's anchors name what its statements rest on.",
+        [
+            "software-analysis:DEC-001#2",
+            "software-analysis:DEC-001#4",
+            "software-analysis:DEC-001#9",
+            "COR-050#1",
+        ],
+    ),
+}
 ACTOR = actor_at("ACT-tester")
 
 #: A set of the project's own whose scope selects the analysis's actors, inheriting
@@ -97,7 +126,7 @@ def test_the_set_ships_under_dec_001_s_name_with_no_scope() -> None:
 
 def test_the_set_holds_the_format_rule_accepted_its_origin_dec_001() -> None:
     data, body = _shipped()
-    assert list(data["rules"]) == [RULE, STEPS_RULE]
+    assert list(data["rules"]) == [RULE, STEPS_RULE, *JUDGEMENT_RULES]
     entry = data["rules"][RULE]
     assert entry["status"] == "accepted"
     assert entry["origin"] == {"decision": "software-analysis:DEC-001"}
@@ -250,6 +279,64 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     assert "validate" in package["commands"]
 
 
+def test_the_judgement_rules_ship_proposed_from_dec_001_declaring_no_check() -> None:
+    """The maintainer's three judgement rules (8 October, on #1360), proposed until he
+    accepts them (#1577). Each has DEC-001 as its origin and anchors to the points it
+    rests on. None declares a check: a reviewer judges each (COR-057). A proposed rule
+    moves no version (COR-051 point 7), so `SAN` stays at 1.0.0."""
+    data, body = _shipped()
+    assert data["version"] == "1.0.0"
+    for rule_id, (statement, anchors) in JUDGEMENT_RULES.items():
+        entry = data["rules"][rule_id]
+        assert entry["status"] == "proposed", rule_id
+        assert entry["origin"] == {"decision": "software-analysis:DEC-001"}, rule_id
+        assert entry["pkit"]["friction"]["anchors"] == {"record": anchors}, rule_id
+        assert "revalidated" not in entry["pkit"]["friction"], rule_id
+        assert rule_id not in data["checks"], rule_id
+        assert "checks" not in entry, rule_id
+        section = _section(body, rule_id)
+        assert section.split("\n\n")[1] == statement, rule_id
+        assert "- **How:**" in section, rule_id
+
+
+def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> None:
+    """What the stamp and the check refuse whatever any rule's status is no part of a
+    judgement rule: its *How* names it and leaves it out, rather than declaring a check
+    under `checks`, which binds a check only where the rule binds (COR-051 point 2).
+    The anchors rule's list of what a statement rests on is whole, so it never asks for
+    an anchor DEC-001 point 4 does not give, nor one that would close a cycle."""
+    _data, body = _shipped()
+    for rule_id in ("RS-SAN-003", "RS-SAN-005"):
+        section = " ".join(_section(body, rule_id).split())
+        assert "**What the check holds.** The " in section, rule_id
+        assert "whatever any rule's status, and this rule does not cover it." in section, rule_id
+    goal = " ".join(_section(body, "RS-SAN-004").split())
+    # Found by the part's permanent id, so a project's own label never hides it.
+    assert "The goal is the use case's part whose id is `goal`, whatever label" in goal
+    assert "a narrower want than one of them." in goal
+    assert "**What the check holds.**" not in goal  # no check holds any of it
+    anchors = " ".join(_section(body, "RS-SAN-005").split())
+    assert "This list is whole:" in anchors
+    assert "Nor does this rule ask for an anchor that would close a cycle." in anchors
+    assert "**What this rule judges.** The rest: the code and the decisions" in anchors
+    # Unanchored is a state the core reports, never a failure (DEC-001 point 4), and the
+    # rule judges it all the same. A reason for having none is a person's answer, never
+    # judged here (COR-050 point 1; COR-057 point 1).
+    assert "no check fails on it. This rule still judges what its statements rest on." in (anchors)
+    assert "is not judged under this rule. The reason is a person's answer" in anchors
+
+
+def test_each_judgement_rule_judges_an_artefact_in_force_alone() -> None:
+    """A withdrawn artefact is history (DEC-001 point 1), so no judgement rule reaches
+    back into it, and each rule names no other rule of a project's set."""
+    _data, body = _shipped()
+    for rule_id in JUDGEMENT_RULES:
+        section = " ".join(_section(body, rule_id).split())
+        assert "**History.** This rule judges " in section, rule_id
+        assert "in force. A withdrawn " in section, rule_id
+        assert set(re.findall(r"RS-[A-Z][A-Z0-9]*-\d{3}", section)) == {rule_id}, rule_id
+
+
 # --- validation and reach in an adopter (COR-051 points 4 and 7) ---------------------------
 
 
@@ -312,3 +399,33 @@ def test_accepted_the_same_rule_binds_and_its_part_is_the_check_s(project: Adopt
         RULE: [("software-analysis:validate", True)],
         STEPS_RULE: [("software-analysis:check-numbers", True)],
     }
+
+
+def test_the_judgement_rules_bind_nothing_while_proposed(project: AdopterRepo) -> None:
+    """As `SAN` ships them, on the route above: validation accepts the set, and no
+    judgement rule binds, since a proposed rule binds nothing (COR-051 point 4)."""
+    _with_an_actor_and_a_set_inheriting_san(project)
+    assert not rs.validate_rule_sets(project.root).errors
+    bound = _bound(project)
+    assert not [r for r in JUDGEMENT_RULES if "software-analysis:" + r in bound]
+
+
+def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
+    project: AdopterRepo,
+) -> None:
+    """A copy with the judgement rules accepted, a fixture and not the acceptance: each
+    binds on the route above, and the answer gives it no check's part, so a reviewer
+    judges the whole of it (COR-057 point 1)."""
+    _with_an_actor_and_a_set_inheriting_san(project)
+    text = (project.root / SAN_REL).read_text(encoding="utf-8")
+    for rule_id in JUDGEMENT_RULES:
+        text = with_status(text, rule_id, "accepted")
+    project.write({SAN_REL: text})
+    assert not rs.validate_rule_sets(project.root).errors
+    assert _bound(project) == [
+        "software-analysis:" + r for r in (RULE, STEPS_RULE, *JUDGEMENT_RULES)
+    ]
+    document = reading.reach_document(project.root)
+    (entry,) = [a for a in document["artefacts"] if a["location"] == ACTOR]
+    checks = {r["id"]: r["checks"] for r in entry["rules"]}
+    assert [checks[rule_id] for rule_id in JUDGEMENT_RULES] == [[], [], []]
