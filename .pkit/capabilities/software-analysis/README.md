@@ -37,18 +37,18 @@ Each artefact declares what makes it true — its anchors — and when it was la
 
 ## Adopting it
 
-Install it with `pkit capabilities install software-analysis`. Then, before you write the first artefact:
+Install it with `pkit capabilities install software-analysis`. Then:
 
 1. **Write a rule set of your own that inherits `SAN`.** The format rule binds on your analysis only through such a set. The preview reads it too ("Where `SAN` binds: a set of your own", below).
-2. **Choose each kind's templates.** The shipped parts are a starting point you review, never a default you skip (DEC-001 point 1). For each kind:
+2. **Choose each kind's parts,** which its template shows and the stamp writes. The shipped parts are a starting point you review, never a default you skip (DEC-001 point 1). For each kind:
    - review its shipped parts
    - fill a candidate with one of your own examples, and check it with `pkit analysis validate --preview`
-   - keep the shipped parts, or add your own in `project/structures.yaml` ("A project's own structures", below)
+   - keep the shipped parts, or change them in `project/structures.yaml` ("A project's own structures", below). You may relabel a part or replace its hint, and add parts of your own to an artefact kind.
 
-   The `analysis-author` skill walks you through it, kind by kind, in its `choose-templates.md`. A shipped part you find wrong is a change you propose to the capability.
-3. **Write the analysis** with the `analysis-author` skill: actors first, then use cases, then the journeys through them, and terms whenever a word needs pinning down. A candidate that describes your project truly can be its first artefact.
+   The `analysis-author` skill walks you through it, one kind at a time, in its `choose-templates.md`. A shipped part you find wrong is a change you propose to the capability.
+3. **Write the analysis** with the `analysis-author` skill: actors first, then use cases, then the journeys through them, and terms whenever a word needs pinning down.
 
-The analysis's location needs no step: it is recorded the first time you stamp an artefact ("Where things live", below).
+Steps 2 and 3 may interleave: choose a kind's parts before you write its first artefact, or its first record. A candidate that describes your project truly can be that first one. The analysis's location needs no step: it is recorded the first time you stamp an artefact ("Where things live", below).
 
 ## Where things live
 
@@ -706,12 +706,11 @@ The capability's skills, deployed by `pkit sync` with the others (in Claude Code
 
 | Skill | Paired with | Use it to |
 |---|---|---|
-| `analysis-author` — composite: `choose-templates`, `actor`, `term`, `use-case`, `journey`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's templates as you adopt the capability ("Adopting it", above). Write an actor, a term, a use case, a journey or a revalidation record. Choose the slug, the area, the actor and the steps, and what the artefact anchors to, or why an actor or term stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
+| `analysis-author` — composite: `choose-templates`, `actor`, `term`, `use-case`, `journey`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability ("Adopting it", above). Write an actor, a term, a use case, a journey or a revalidation record. Choose the slug, the area, the actor and the steps, and what the artefact anchors to, or why an actor or term stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
 
 The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it.
 
-- **The skill chooses each kind's templates first.** Before a kind's first artefact, `choose-templates` walks its shipped parts, a candidate filled with your own example and checked with the preview, and your choice. Each kind ends with its shipped parts kept, or with your own in `project/structures.yaml`.
-
+- **Each kind's parts come first.** Before a kind's first artefact or record, `choose-templates` walks its shipped parts, a candidate of your own checked with the preview, and your choice. Each kind ends with its shipped parts kept, or with your relabels and additions in `project/structures.yaml`.
 - **The skill lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
 - **The skill runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its `preview:` reports never fail, and the check's own findings and exit status stand ("Each body against its structure", above).
 - **One choice matters to revalidation later:** **quote the code you describe** in backticks. What an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).

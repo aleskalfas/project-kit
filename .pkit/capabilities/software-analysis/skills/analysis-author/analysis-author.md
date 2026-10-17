@@ -1,6 +1,6 @@
 ---
 name: analysis-author
-description: Author the software analysis — an actor, a glossary term, a use case, a journey, or a revalidation record — through `pkit analysis new`, choosing the slug, the area, the actor and the steps, what each artefact anchors to (code, decisions) or why an actor or term stays unanchored, and whether a revalidation leaves a record at all. Also choose each kind's templates as a project adopts the capability, from a candidate filled with its own example. Composite skill per COR-020, paired with `pkit analysis new`, with one sub-procedure per kind and one for the choice. Use when adopting software-analysis, adding to a project's analysis, or recording a revalidation that found something.
+description: Author the software analysis — an actor, a glossary term, a use case, a journey, or a revalidation record — through `pkit analysis new`, choosing the slug, the area, the actor and the steps, what each artefact anchors to (code, decisions) or why an actor or term stays unanchored, and whether a revalidation leaves a record at all. Also choose each kind's parts, the structure its template shows, as a project adopts the capability, from a candidate filled with its own example. Composite skill per COR-020, paired with `pkit analysis new`, with one sub-procedure per kind and one for the choice. Use when adopting software-analysis, adding to a project's analysis, or recording a revalidation that found something.
 metadata:
   wraps_commands:
     - pkit analysis new
@@ -18,6 +18,7 @@ gates:
   - COR-020
   - COR-049
   - COR-050
+  - COR-051
 reads:
   records:
     - COR-008
@@ -37,10 +38,11 @@ The rule is [software-analysis:DEC-001-software-analysis-discipline]; the layout
 
 Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `superseded`.
 
-- **COR-005** — skill and command pairing: every operation here writes through `pkit analysis new`, never by hand.
+- **COR-005** — skill and command pairing: every artefact and record here is written through `pkit analysis new`, never by hand.
 - **COR-020** — the composite folder form this skill follows.
 - **COR-049** — documentation roots: the analysis lives under the internal root, and its location is recorded the first time something is stamped.
 - **COR-050** — anchors and friction: the block every artefact carries, and the answers that clear friction.
+- **COR-051** — rule sets: the set of the project's own through which `SAN` binds, and the rule each part a project adds names.
 
 ## Pick the operation
 
@@ -53,7 +55,7 @@ Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `supe
 | Describe a path an actor takes across several use cases | `journey.md` | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> …` |
 | Record a revalidation that found something, or was planned | `revalidation-record.md` | `pkit analysis new revalidation <slug> …` |
 
-A kind's parts are chosen before its first artefact is written, with `choose-templates.md`. The shipped parts are a starting point the project reviews, never a default it skips (DEC-001 point 1).
+A kind's parts are chosen before its first artefact or record is written, with `choose-templates.md`. The shipped parts are a starting point the project reviews, never a default it skips (DEC-001 point 1).
 
 For a part of the product not yet described, go in that order: actors first (a use case names one), then use cases, then the journeys through them; terms whenever a word needs pinning down. Open the matching sub-procedure in this folder and follow it; the framing below applies to all of them.
 

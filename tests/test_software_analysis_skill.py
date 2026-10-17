@@ -39,7 +39,7 @@ from tests.analysis_repo import (
     CAPABILITY,
     NEW,
     REPO,
-    SA,
+    STRUCTURES,
     VALIDATE,
     actor_at,
     fill,
@@ -204,7 +204,6 @@ OWN_SET_TEXT = (
     )
     + f"\n## {OWN_RULE} — An actor says where the role works\n\nAn actor says where it works.\n"
 )
-STRUCTURES = f"{SA.as_posix()}/project/structures.yaml"
 STRUCTURES_TEXT = (
     "pkit_schema: software-analysis:structures\nschema_version: 1\nkinds:\n  actor:\n"
     f"    tighten:\n      - rule: {OWN_RULE}\n        add:\n          - id: setup\n"
@@ -214,12 +213,14 @@ STRUCTURES_TEXT = (
 )
 
 
-def _previewed(repo: AdopterRepo, rel: str) -> list[str]:
-    """What `pkit analysis validate --preview` says of one artefact."""
+def _previewed(repo: AdopterRepo, rel: str) -> tuple[str, list[tuple[str, str]]]:
+    """What `pkit analysis validate --preview` says: its summary of the structure, and
+    each finding on one artefact, with its severity."""
     completed = run_script(repo, VALIDATE, "--json", "--preview")
     assert completed.returncode == 0, completed.stderr
-    findings = json.loads(completed.stdout)["findings"]
-    return [f["message"] for f in findings if f["location"] == rel]
+    document = json.loads(completed.stdout)
+    found = [(f["severity"], f["message"]) for f in document["findings"] if f["location"] == rel]
+    return document["summary"][1], found
 
 
 # Slow by design: two stamps and three checks, each a script that starts `pkit` processes.
@@ -229,24 +230,33 @@ def test_a_candidate_is_previewed_and_stamped_again_with_the_project_s_own_part(
     """`choose-templates.md`: with a set of the project's own that inherits `SAN`, a
     candidate stamped and filled is checked with the preview while the format rule is
     proposed. A part the project adds under a proposed rule of its own is previewed on
-    the candidate, which lacks it. Stamped again, the candidate holds the part, its hint
-    naming the rule, and once filled the preview finds nothing."""
+    the candidate, which lacks it. Set aside and stamped again, the candidate keeps its id
+    and holds the part, its hint naming the rule, and once filled the preview finds
+    nothing."""
     project.write({ANALYSIS_SET: ANALYSIS_SET_TEXT})
     candidate = ("actor", "tester", "--name", "Test author", "--path", "src/run.py")
     stamped(project, *candidate)
     rel = actor_at("ACT-tester")
     fill(project)
-    assert _previewed(project, rel) == []
+    summary, found = _previewed(project, rel)
+    assert "1 artefact(s) and file head(s) checked" in summary, summary
+    assert found == []
 
     project.write({ANALYSIS_SET: OWN_SET_TEXT, STRUCTURES: STRUCTURES_TEXT})
-    [missing] = _previewed(project, rel)
+    [(severity, missing)] = _previewed(project, rel)[1]
+    assert severity == "report"  # a preview's finding never fails
     assert missing.startswith("preview: `**Setup:**` is missing"), missing
-    assert OWN_RULE in missing
+    assert f"({OWN_RULE}, RS-SAN-001)" in missing, missing
 
-    (project.root / rel).unlink()  # the candidate was never committed, so its id is free
+    # Set aside out of the analysis, for the comparison: never committed, it holds no id.
+    aside = project.root.parent / "first-candidate.md"
+    (project.root / rel).rename(aside)
     assert stamped(project, *candidate) == "ACT-tester"
+    assert "**Setup:**" not in aside.read_text(encoding="utf-8")
     text = (project.root / rel).read_text(encoding="utf-8")
     [setup] = [line for line in text.splitlines() if line.startswith("**Setup:**")]
-    assert "<!-- pkit:hint " in setup and OWN_RULE in setup, setup
+    assert (
+        setup == f"**Setup:** <!-- pkit:hint Where the role works. ({OWN_RULE}) Example: A lab. -->"
+    )
     fill(project)
-    assert _previewed(project, rel) == []
+    assert _previewed(project, rel)[1] == []
