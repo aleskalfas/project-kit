@@ -1,0 +1,8 @@
+component: project-management
+kind: none
+body: >
+  DEC-032 says that a contributor may name a reviewer that core ships and may
+  declare project-management as an optional dependency, and the README names
+  living-docs and software-analysis as contributors of the core
+  `rule-set-reviewer`. pm already resolved both, so nothing you run or
+  configure changes.
