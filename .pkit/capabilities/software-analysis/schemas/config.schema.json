@@ -26,7 +26,7 @@
       "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:config`."
     },
     "numbering": {
-      "description": "How use cases and journeys are numbered (DEC-001 point 3).",
+      "description": "How use cases, journeys and requirements are numbered (DEC-001 point 3, DEC-002 point 2).",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -55,7 +55,7 @@
           "$ref": "#/$defs/commit-id"
         },
         "ids": {
-          "description": "The use cases and journeys the commit removed whose ids are free again. Only a listed id is freed.",
+          "description": "The use cases, journeys and requirements the commit removed whose ids are free again. Only a listed id is freed.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
@@ -66,6 +66,9 @@
               },
               {
                 "$ref": "analysis.schema.json#/$defs/journey-id"
+              },
+              {
+                "$ref": "analysis.schema.json#/$defs/requirement-id"
               }
             ]
           }

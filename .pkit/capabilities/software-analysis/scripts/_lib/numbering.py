@@ -4,9 +4,10 @@ An id names one artefact for good (DEC-001 point 3). The one exception is the
 project's to declare, in the capability's settings file —
 `.pkit/capabilities/software-analysis/project/config.yaml`, apart from the
 recorded location beside it, `docs-locations.yaml` — as `numbering.freed-by`:
-each entry names a commit by its full id, and the use-case and journey ids it
-frees. Only a listed id is freed; none is inferred. The README's
-"Configuration" section states the rule for a project; this module applies it.
+each entry names a commit by its full id, and the ids of numbered artefacts it
+frees: use cases, journeys and requirements. Only a listed id is freed; none is
+inferred. The README's "Configuration" section states the rule for a project;
+this module applies it.
 The stamp and the number comparison read it here, and the history's judge
 applies it (`_lib/history.py`), so the two never disagree:
 
@@ -14,7 +15,7 @@ applies it (`_lib/history.py`), so the two never disagree:
   An entry whose commit is no commit's id here, or lies off the default
   branch's history, is a problem and frees nothing. No file is a setting naming
   none.
-- **the files a named commit can free.** A file of a use-case or journey place
+- **the files a named commit can free.** A file of a numbered kind's place
   whose name carries an id; which the commit deleted against its first parent,
   git's rename detection on over the whole tree; which the default branch lost
   last by it — the newest commit of the default branch's first-parent line at
@@ -48,7 +49,7 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import backbone, history, markdown, schemas
 from _lib.findings import ERROR, REPORT, Finding, at
-from _lib.model import JOURNEY, USE_CASE, id_in_name, number_of
+from _lib.model import NUMBERED, id_in_name, number_of
 
 #: The capability's settings file, relative to the project root.
 CONFIG = ".pkit/capabilities/software-analysis/project/config.yaml"
@@ -300,8 +301,8 @@ class _Removal:
         free."""
         if listed not in self.ids:
             return (
-                f"it deleted no use case or journey numbered {listed}; a file it moved, rather "
-                f"than deleted, keeps its id"
+                f"it deleted no use case, journey or requirement numbered {listed}; a file it "
+                f"moved, rather than deleted, keeps its id"
             )
         if listed in self.blocked:
             return self.blocked[listed]
@@ -394,7 +395,7 @@ def _brought(root: Path, commit: str, last: str) -> bool:
 
 def _of_shape(item: object) -> bool:
     """Whether an entry names a commit by its full id and lists one id or more, each a
-    use case's or a journey's — the shape its companion asks."""
+    use case's, a journey's or a requirement's — the shape its companion asks."""
     if not isinstance(item, dict):
         return False
     commit, ids = item.get("commit"), item.get("ids")
@@ -408,11 +409,11 @@ def _of_shape(item: object) -> bool:
 
 
 def _numbered(listed: str) -> bool:
-    return any(schemas.id_pattern(kind).match(listed) for kind in (USE_CASE, JOURNEY))
+    return any(schemas.id_pattern(kind).match(listed) for kind in NUMBERED)
 
 
 def _order(listed: str) -> tuple[str, int]:
-    """Journeys, then use cases, each by number."""
+    """Journeys, then requirements, then use cases, each by number."""
     return listed.split("-", 1)[0], number_of(listed)
 
 
