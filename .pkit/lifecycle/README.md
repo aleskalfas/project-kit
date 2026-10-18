@@ -32,9 +32,8 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-18T19:16:34Z
-      outcome: unchanged
-      unchanged-because: The change adds to pkit friction artefacts a list of the files of a capability's documentation location that no place or held folder of it holds. This page's row on the command summarises its document and points to the CLI README for the whole of it, and how discovery judges a held folder is unchanged, so what the page says still holds.
+      at: 2026-10-18T19:50:12Z
+      outcome: updated
 ---
 
 # Lifecycle

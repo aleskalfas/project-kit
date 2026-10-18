@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T18:27:39Z
+      at: 2026-10-18T19:50:15Z
       outcome: unchanged
-      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. Which checks a merge waits on, and how they run, is unchanged.
+      unchanged-because: This change makes pkit migrations check-diff also fail a migration script at a released version, read at the base it already compares with, and makes pkit new migration choose its version. This use case names that check only among the project's other checks, each exiting non-zero on what fails it, and how pkit validate and pkit friction check hold a merge is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks
