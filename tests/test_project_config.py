@@ -460,3 +460,249 @@ def test_a_change_the_edit_cannot_make_is_refused_and_nothing_written(
     assert "mixes line endings" in message
     assert "Nothing was written" in message
     assert path.read_bytes() == mixed.encode("utf-8")
+
+
+# --- a change of the internal root keeps the project's rule sets found (COR-051 point 6)
+
+RULE_SET = "---\nrule-set: CMN\nversion: 1.0.0\nrules: {}\n---\n\n# Rules\n"
+
+
+def _project_rule_sets(repo: AdopterRepo) -> list[str]:
+    from project_kit import rule_sets
+
+    return [s.path for s in rule_sets.discover_rule_sets(repo.root).rule_sets]
+
+
+def _places(repo: AdopterRepo) -> list:
+    return pc.read_config(repo.root).get("friction", {}).get("places", [])
+
+
+def test_changing_the_internal_root_declares_the_old_rule_set_folder(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    repo.write({"docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "tech-docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert pc.read_config(repo.root) == {
+        "docs": {"internal": "tech-docs"},
+        "friction": {"places": ["docs/rule-sets"]},
+    }
+    assert _project_rule_sets(repo) == ["docs/rule-sets/cmn.md"]
+    assert result.output.splitlines()[:3] == [
+        "set docs.internal = tech-docs  (.pkit/project/config.yaml)",
+        "recorded project rule sets = docs/rule-sets  (.pkit/project/config.yaml)",
+        "  derived from the internal root before this change, docs (default); they stay "
+        "found here. To move them: move the files under tech-docs/rule-sets, then remove "
+        "docs/rule-sets from friction.places.",
+    ]
+
+
+@pytest.mark.parametrize(
+    ("files", "config"),
+    [
+        ({"docs/rule-sets/README.md": "# Our rule sets\n"}, ""),  # no rule-set file in it
+        ({"docs/guide.md": "# Guide\n"}, ""),  # no folder at all
+        ({"docs/rule-sets/cmn.md": RULE_SET}, "friction:\n  places:\n    - docs/rule-sets\n"),
+        ({"docs/rule-sets/cmn.md": RULE_SET}, "friction:\n  places: ['**/rule-sets/**']\n"),
+    ],
+    ids=["empty", "missing", "already-declared", "declared-by-a-glob"],
+)
+def test_nothing_is_declared_where_no_rule_set_would_go_unfound(
+    make_adopter_repo: MakeAdopterRepo, files: dict[str, str], config: str
+) -> None:
+    repo = make_adopter_repo()
+    repo.write(files)
+    if config:
+        _write_raw(repo, config)
+    places_before = _places(repo)
+
+    result = _run("docs.internal", "tech-docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert "recorded project rule sets" not in result.output
+    assert _places(repo) == places_before
+    assert pc.read_config(repo.root)["docs"] == {"internal": "tech-docs"}
+
+
+def test_nothing_is_declared_where_the_new_root_s_folder_still_holds_the_old(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # The old root lies inside the new root's rule-set folder, so the location
+    # rule still claims every file of the old folder under the new root.
+    repo = make_adopter_repo()
+    _write_raw(repo, "docs:\n  internal: docs/rule-sets/legacy\n")
+    repo.write({"docs/rule-sets/legacy/rule-sets/cmn.md": RULE_SET})
+    assert _project_rule_sets(repo) == ["docs/rule-sets/legacy/rule-sets/cmn.md"]
+
+    result = _run("docs.internal", "docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert "recorded project rule sets" not in result.output
+    assert _places(repo) == []
+    assert _project_rule_sets(repo) == ["docs/rule-sets/legacy/rule-sets/cmn.md"]
+
+
+def test_the_declared_place_keeps_every_byte_of_a_commented_list(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    before = (REPO_ROOT / pc.PROJECT_CONFIG_RELPATH).read_text(encoding="utf-8")
+    internal = YAML(typ="safe").load(before)["docs"]["internal"]
+    folder = f"{internal.rstrip('/')}/rule-sets"
+    path = _write_raw(repo, before)
+    repo.write({f"{folder}/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code == 0, result.output
+    after = path.read_text(encoding="utf-8")
+    changed = _changed_lines(before, after)
+    assert changed == [
+        f"-  internal: {internal}\n",
+        "+  internal: handbook\n",
+        f"+    - {folder}\n",
+    ]
+    places = YAML(typ="safe").load(after)["friction"]["places"]
+    assert places[-1] == folder
+    assert _project_rule_sets(repo) == [f"{folder}/cmn.md"]
+
+
+def test_without_consent_neither_key_is_written(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, KEPT)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: False)
+
+    result = _run("docs.internal", "handbook")
+
+    assert result.exit_code != 0
+    assert "also adds tech-docs/rule-sets to friction.places" in result.output
+    assert "pkit config set docs.internal handbook --yes" in result.output
+    assert path.read_text(encoding="utf-8") == KEPT
+
+
+def test_the_one_prompt_names_both_changes(
+    make_adopter_repo: MakeAdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, KEPT)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+    monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
+
+    declined = _run("docs.internal", "handbook", input="n\n")
+
+    assert declined.exit_code != 0
+    assert declined.output.count("?") == 1
+    assert (
+        "Set docs.internal = 'handbook' and add tech-docs/rule-sets to friction.places in "
+        ".pkit/project/config.yaml?" in declined.output
+    )
+    assert path.read_text(encoding="utf-8") == KEPT
+
+    accepted = _run("docs.internal", "handbook", input="y\n")
+    assert accepted.exit_code == 0, accepted.output
+    assert _places(repo)[-1] == "tech-docs/rule-sets"
+
+
+@pytest.mark.parametrize(
+    "places",
+    ["places: [CONTRIBUTING.md]", "places: []"],
+    ids=["flow-list", "empty-flow-list"],
+)
+def test_a_place_that_cannot_only_be_added_refuses_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo, places: str
+) -> None:
+    repo = make_adopter_repo()
+    text = f"docs:\n  internal: tech-docs\nfriction:\n  {places}\n"
+    path = _write_raw(repo, text)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code != 0
+    assert "Nothing was written" in result.output
+    assert "  - tech-docs/rule-sets\n" in result.output
+    assert "pkit config set docs.internal handbook --yes" in result.output
+    assert path.read_text(encoding="utf-8") == text
+
+
+def test_a_configuration_the_schema_refuses_is_refused_before_the_entry_is_tried(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # A lone text is no list of places: the schema's refusal comes first, so a
+    # second run does not meet a second problem.
+    repo = make_adopter_repo()
+    text = "docs:\n  internal: tech-docs\nfriction:\n  places: CONTRIBUTING.md\n"
+    path = _write_raw(repo, text)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code != 0
+    assert "would not validate" in result.output and "/friction/places" in result.output
+    assert "cannot add" not in result.output
+    assert path.read_text(encoding="utf-8") == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "docs:\n  internal: tech-docs",
+            "docs:\n  internal: handbook\nfriction:\n  places:\n  - tech-docs/rule-sets\n",
+        ),
+        (
+            "docs:\n  internal: tech-docs\nfriction:\n  places:\n    - README.md",
+            "docs:\n  internal: handbook\nfriction:\n  places:\n    - README.md\n"
+            "    - tech-docs/rule-sets\n",
+        ),
+    ],
+    ids=["docs-last", "places-last"],
+)
+def test_a_file_whose_last_line_has_no_line_break_takes_the_entry(
+    make_adopter_repo: MakeAdopterRepo, text: str, expected: str
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, text)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert path.read_text(encoding="utf-8") == expected
+
+
+def test_an_old_root_at_the_repository_root_declares_its_rule_sets_folder(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_raw(repo, "docs:\n  internal: .\n")
+    repo.write({"rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "tech-docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert _places(repo) == ["rule-sets"]
+    assert _project_rule_sets(repo) == ["rule-sets/cmn.md"]
+    assert "derived from the internal root before this change, . (explicit)" in result.output
+
+
+def test_the_entry_keeps_a_crlf_file_s_line_endings(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    path = _config_path(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    before = KEPT.replace("\n", "\r\n").encode("utf-8")
+    path.write_bytes(before)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert path.read_bytes() == before.replace(
+        b"  internal: tech-docs/", b"  internal: handbook"
+    ).replace(b'    - "README.md"\r\n', b'    - "README.md"\r\n    - tech-docs/rule-sets\r\n')

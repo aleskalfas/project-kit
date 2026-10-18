@@ -4,7 +4,7 @@ Over the artefacts `friction_discovery` finds in the declared places, and the
 settings that declare them, this pass reports:
 
 - **a capability place the walk does not follow** — one discovery could not
-  read in the package schema's shape `{path, location?, type?, description?}`
+  read in the package schema's shape `{path, location?, type?, revisits?, description?}`
   (plain text, no `path`, a location `docs.locations` does not declare, or
   declares in another shape with nothing recorded), or one that leaves the
   repository, through a link included; reported whenever it is declared,
@@ -60,6 +60,13 @@ settings that declare them, this pass reports:
 - **a deferral repeated** — a `deferred[]` entry for an anchor an earlier
   entry already defers, by kind and value: the list holds one entry per
   anchor (COR-050 point 4), so one anchor never carries two reasons;
+- **a dangling or repeated revisit, and a link's field that lists no anchor**
+  (`_link_findings`) — read with the links the artefact's places declare
+  (`Discovery.links`): a `revisited[]` entry naming no target of them, a
+  second entry for one target, and a link's field that is no list of texts
+  or lists a value no anchor of the artefact has (COR-050 point 16). Entries
+  on an artefact whose places declare no link are a **report**, never an
+  error: the component that declared it may be uninstalled;
 - **an anchor kind nothing resolves** — a kind outside the backbone's three
   that no installed capability registers, or whose registration is refused
   (two registrants, a command without the query contract or naming no leaf),
@@ -124,7 +131,7 @@ it cannot parse or that carries a friction block.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -143,6 +150,7 @@ from project_kit.friction_check import (
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     FRICTION_KEY,
+    REVISITED_KEY,
     SKIP_OUTSIDE,
     UNANCHORED_BECAUSE_KEY,
     Anchor,
@@ -150,9 +158,12 @@ from project_kit.friction_discovery import (
     Discovery,
     FrictionSettings,
     ResolverCommand,
+    RevisitLink,
     SettingsPath,
     UnreadableFile,
     is_inside_repository,
+    link_targets,
+    link_values,
     registered_anchor_kinds,
     shared_discovery,
     synced_copy_test,
@@ -197,6 +208,11 @@ class FrictionFindingKind(Enum):
     MIXED_LINE_ENDINGS = "mixed-line-endings"  # a file written with more than one line break
     DANGLING_DEFERRAL = "dangling-deferral"
     DUPLICATE_DEFERRAL = "duplicate-deferral"  # an anchor an earlier entry already defers
+    DANGLING_REVISIT = "dangling-revisit"  # a revisit entry naming no target of a link
+    ORPHANED_REVISIT = "orphaned-revisit"  # a revisit entry where no place declares a link
+    DUPLICATE_REVISIT = "duplicate-revisit"  # a target an earlier revisit entry already names
+    MALFORMED_LINK_FIELD = "malformed-link-field"  # a link's field that is no list of texts
+    UNANCHORED_TARGET = "unanchored-target"  # a link's field listing a value no anchor has
     UNRESOLVED_KIND = "unresolved-kind"  # an anchor kind nothing installed resolves: a report
     CYCLE = "cycle"
     DEAD_POINT_ANCHOR = "dead-point-anchor"  # an anchor on a record's point that names none
@@ -305,8 +321,8 @@ def _capability_place_findings(
             kind=FrictionFindingKind.MALFORMED_PLACE,
             message=(
                 f"{place.reason}, so friction discovery walks nothing under it; a capability "
-                f"place is `{{path, location?, type?, description?}}`, its `location` naming a "
-                f"`docs.locations` entry written `{{path, root?}}` (COR-050 point 7)."
+                f"place is `{{path, location?, type?, revisits?, description?}}`, its `location` "
+                f"naming a `docs.locations` entry written `{{path, root?}}` (COR-050 point 7)."
             ),
         )
     for declared in settings.places:
@@ -567,6 +583,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
         findings.extend(_unanchored_beside_anchors(artefact))
         findings.extend(_dangling_deferrals(artefact))
         findings.extend(_duplicate_deferrals(artefact))
+        findings.extend(_link_findings(artefact, discovery.links(artefact)))
         findings.extend(_unresolved_kinds(artefact, registry))
         findings.extend(points.findings(artefact))
         findings.extend(_part_anchor_findings(artefact, discovery, record_named))
@@ -576,18 +593,24 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
 
 
 def block_findings(
-    artefact: Artefact, schema: dict | None, target_root: Path
+    artefact: Artefact,
+    schema: dict | None,
+    target_root: Path,
+    links: Sequence[RevisitLink] = (),
 ) -> tuple[FrictionFinding, ...]:
     """What this pass finds in one artefact's own block: its shape, a reason for having
-    no anchors beside anchors, dangling and repeated deferrals, and anchor kinds nothing
-    resolves.
+    no anchors beside anchors, dangling and repeated deferrals, the revisit entries and
+    link fields of the `links` its places declare, and anchor kinds nothing resolves.
 
     The per-artefact judgments `validate_friction` applies — the container
     schema and the container's rule (skipped when `schema` is `None`, as the
     pass skips them without a readable schema), then `unanchored-because`
     beside anchors, then every deferral naming no anchor of the artefact, then
-    every deferral of an anchor an earlier entry defers, then every anchor kind
-    nothing installed resolves, which is a report. The
+    every deferral of an anchor an earlier entry defers, then the links
+    (`_link_findings`), then every anchor kind nothing installed resolves, which
+    is a report. `links` are the ones discovery gives the artefact
+    (`Discovery.links`): with none, its revisit entries are one report,
+    `orphaned-revisit`, never an error. The
     cycle check spans artefacts and is not here.
     The writing commands (`friction_write`) read what they would write back
     through this, so a writer never writes a block validation would refuse —
@@ -603,6 +626,7 @@ def block_findings(
     findings.extend(_unanchored_beside_anchors(artefact))
     findings.extend(_dangling_deferrals(artefact))
     findings.extend(_duplicate_deferrals(artefact))
+    findings.extend(_link_findings(artefact, links))
     findings.extend(_unresolved_kinds(artefact, registered_anchor_kinds(target_root)))
     return tuple(findings)
 
@@ -732,6 +756,105 @@ def _duplicate_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
                 f"{anchor.kind} anchor {anchor.value!r} is deferred again: entry {earlier} "
                 f"defers it already, and the list holds one entry per anchor — keep one, with "
                 f"one reason (`pkit friction defer` writes it so) (COR-050 point 4)."
+            ),
+        )
+
+
+def _link_findings(artefact: Artefact, links: Sequence[RevisitLink]) -> Iterable[FrictionFinding]:
+    """What the links the artefact's places declare find in it (COR-050 points 12 and 16).
+
+    - **A link's field** that is no list of texts (`malformed-link-field`), or
+      that lists a value no anchor of the artefact has (`unanchored-target`),
+      once per field, however many links name it: a target the field names and
+      the anchors leave out would be skipped silently.
+    - **A revisit entry** that names no target of a link (`dangling-revisit`),
+      and an entry for a target an earlier entry already names
+      (`duplicate-revisit`). Each pointer carries the entry's index as written
+      (`Revisit.index`).
+    - **Revisit entries on an artefact whose places declare no link**
+      (`orphaned-revisit`), once for the list: a report, never an error. The
+      component that declared the link may be uninstalled, and the project
+      cannot mend a component's declarations; the entries are kept, and judged
+      again once a place declares a link.
+    """
+    values = {value for written in artefact.anchors.values() for value in written}
+    for field in dict.fromkeys(link.targets for link in links):
+        named = next(link for link in links if link.targets == field)
+        listed = link_values(artefact, named)
+        pointer = f"/{_pointer_token(field)}"
+        if listed is None:
+            yield FrictionFinding(
+                location=artefact.location,
+                pointer=pointer,
+                severity=Severity.ERROR,
+                kind=FrictionFindingKind.MALFORMED_LINK_FIELD,
+                message=(
+                    f"`{field}` lists the targets of a link that revisits them (declared at "
+                    f"{named.file}:{named.pointer}), and is no list of anchor values; write "
+                    f"each target as its anchor's value (COR-050 point 16)."
+                ),
+            )
+            continue
+        for value in listed:
+            if value in values:
+                continue
+            yield FrictionFinding(
+                location=artefact.location,
+                pointer=pointer,
+                severity=Severity.ERROR,
+                kind=FrictionFindingKind.UNANCHORED_TARGET,
+                message=(
+                    f"`{field}` lists {value!r}, which no anchor of the artefact has, so a "
+                    f"change to its trigger fields could not revisit it: add the anchor, or "
+                    f"remove the value (COR-050 point 16)."
+                ),
+            )
+    if not links:
+        if artefact.revisits:
+            count = len(artefact.revisits)
+            yield FrictionFinding(
+                location=artefact.location,
+                pointer=f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/{REVISITED_KEY}",
+                severity=Severity.REPORT,
+                kind=FrictionFindingKind.ORPHANED_REVISIT,
+                message=(
+                    f"`{REVISITED_KEY}` holds {count} entr{'y' if count == 1 else 'ies'}, and no "
+                    f"place holding the artefact declares a link that revisits its targets: "
+                    f"kept, and judged again once a place declares one (COR-050 point 16)."
+                ),
+            )
+        return
+    targets = {anchor for link in links for anchor in link_targets(artefact, link)}
+    first: dict[Anchor, int] = {}
+    for entry in artefact.revisits:
+        anchor = entry.anchor
+        pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/{REVISITED_KEY}/{entry.index}/anchor"
+        earlier = first.setdefault(anchor, entry.index)
+        if earlier != entry.index:
+            yield FrictionFinding(
+                location=artefact.location,
+                pointer=pointer,
+                severity=Severity.ERROR,
+                kind=FrictionFindingKind.DUPLICATE_REVISIT,
+                message=(
+                    f"{anchor.kind} anchor {anchor.value!r} is revisited again: entry {earlier} "
+                    f"names it already, and the list holds one entry per target — keep one "
+                    f"(COR-050 point 16)."
+                ),
+            )
+            continue
+        if anchor in targets:
+            continue
+        fields = ", ".join(f"`{f}`" for f in dict.fromkeys(link.targets for link in links))
+        why = f"no link's field ({fields}) lists it among the artefact's anchors"
+        yield FrictionFinding(
+            location=artefact.location,
+            pointer=pointer,
+            severity=Severity.ERROR,
+            kind=FrictionFindingKind.DANGLING_REVISIT,
+            message=(
+                f"revisit entry names {anchor.kind} anchor {anchor.value!r}, which is no target "
+                f"of a link: {why}; remove the entry (COR-050 point 16)."
             ),
         )
 

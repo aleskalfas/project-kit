@@ -36,8 +36,12 @@ It stops at the first step that cannot go on, and its last line says why.
           more than one open, or when gh does not say, the run stops. The
           branch read here is handed to `review-pr` and `done-work`, so the
           open PRs are read once (`_lib.issue_branch`, #1608). The PR's head
-          on GitHub is read once and pinned (`--expect-head` stops the run when
-          it is not the head named). Refused when the local branch holds
+          on GitHub is read once and pinned. `--expect-head` stops the run when
+          it is not the head named, unless the authorisation for that head
+          covers it: every change since lies inside `revalidated` blocks, a
+          clean merge of the base counting as none, as the backbone answers
+          it (`friction_answers.covers`, DEC-055 point 3). The line then says
+          so, and the run goes on at the later head. Refused when the local branch holds
           commits that head lacks (the line gives the push) or has diverged
           from it. A local branch behind the head, or a checkout on another
           branch, is noted: land-work lands the head on GitHub, never the
@@ -100,7 +104,10 @@ It stops at the first step that cannot go on, and its last line says why.
           document and which are left out of date, as information. At a
           terminal, `done-work`'s prompt asks, after the answers. A change
           with answers merges under the same authorisation as any other; a
-          run the findings to judge hold stops at `ready:`. Its gates,
+          run the findings to judge hold stops at `ready:`. So does a run at
+          a later head an earlier head's authorisation covers, where it finds
+          a finding to judge or an answer the change check did not ask for;
+          one that merges says which head and why it was covered. Its gates,
           refusals and queue handling are done-work's own; land-work decides
           on how its run ended (`done_work.run`), never on its exit code.
 
@@ -125,7 +132,7 @@ import sys
 import tempfile
 import time
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
 from pathlib import Path
 from types import ModuleType
@@ -265,6 +272,22 @@ class _Head:
     remote: str
     #: The PR's base branch as GitHub names it; empty when it named none.
     base_branch: str = ""
+    #: The earlier head `--expect-head` authorised, where its authorisation covers this
+    #: one: every change since lies inside `revalidated` blocks, a clean merge of the
+    #: base counting as none (DEC-055 point 3). Empty where the head is the one named.
+    authorised: str = ""
+
+    @property
+    def covered(self) -> str:
+        """Why the authorisation for an earlier head covers this one, as a line says
+        it, or "" where the head is the one authorised."""
+        if not self.authorised:
+            return ""
+        earlier = short_sha(self.authorised)
+        return (
+            f"the authorisation for {earlier} covers it, since every change after {earlier} "
+            f"lies inside `revalidated` blocks, a clean merge of {self.base} counting as none"
+        )
 
 
 @dataclass(frozen=True)
@@ -313,6 +336,10 @@ class _AnswersEnd:
     settings: int = 0
     #: What the `ready:` line tells, a line each (`friction_answers.told`).
     told: tuple[str, ...] = ()
+    #: How many answers the change check did not ask for: each needed the person's
+    #: acceptance, so a later head holding one is not covered by an earlier head's
+    #: authorisation (DEC-055 point 3).
+    unasked: int = 0
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -444,7 +471,9 @@ def _parser() -> argparse.ArgumentParser:
         metavar="SHA",
         help=(
             "The PR head the merge is authorised for (7 to 40 hex digits): the run "
-            "stops (exit 3) when the PR's head is another. The `ready:` line names it."
+            "stops (exit 3) when the PR's head is another, unless every change since "
+            "lies inside `revalidated` blocks, a clean merge of the base counting as "
+            "none. The `ready:` line names it."
         ),
     )
     parser.add_argument(
@@ -493,11 +522,33 @@ def _land(args: argparse.Namespace, config: dict[str, Any], capability_root: Pat
         return EXIT_MERGED
     if args.dry_run:
         return _merge(args, head, config, reading)
-    if args.yes and to_judge.held is not None:
-        return _ready(args, head, review, config, answers, to_judge, reading)
+    uncovered = _uncovered(head, to_judge, answers)
+    if args.yes and (to_judge.held is not None or uncovered):
+        return _ready(args, head, review, config, answers, to_judge, reading, uncovered)
     if not args.yes and not _interactive():
         return _ready(args, head, review, config, answers, to_judge, reading)
     return _merge(args, head, config, reading)
+
+
+def _uncovered(head: _Head, to_judge: _FindingsEnd, answers: _AnswersEnd) -> str:
+    """Why the authorisation for an earlier head does not cover the pinned head after
+    all, as the `ready:` line says it, or "": the later head holds what needs the
+    person — a finding to judge, or an answer the change check did not ask for
+    (DEC-055 point 3)."""
+    if not head.authorised:
+        return ""
+    needs: list[str] = []
+    if to_judge.count:
+        needs.append(f"{to_judge.count} finding{'' if to_judge.count == 1 else 's'} to judge")
+    if answers.unasked:
+        one = answers.unasked == 1
+        needs.append(f"{answers.unasked} answer{'' if one else 's'} this change was not asked for")
+    if not needs:
+        return ""
+    return (
+        f"; the authorisation for {short_sha(head.authorised)} covers {short_sha(head.oid)} "
+        f"only where nothing there needs a person, and it holds {' and '.join(needs)}"
+    )
 
 
 # ---- head ----------------------------------------------------------------
@@ -550,14 +601,6 @@ def _pin_head(
         )
     if not oid:
         raise _Stop(EXIT_UNREADABLE, f"head: PR #{number}'s head could not be read")
-    if args.expect_head and not oid.startswith(args.expect_head):
-        raise _Stop(
-            EXIT_HEAD_MOVED,
-            f"head: stopped — PR #{number}'s head is {short_sha(oid)}, not "
-            f"{args.expect_head[:7]}, the head the merge was authorised for: an "
-            f"authorisation is for one head. Nothing was done; `land-work {issue}` checks "
-            "and reviews the new one",
-        )
     cross = bool(pr.get("isCrossRepository"))
     head = _Head(
         issue,
@@ -568,9 +611,61 @@ def _pin_head(
         remote=_branch_remote(branch),
         base_branch=str(pr.get("baseRefName") or ""),
     )
+    if args.expect_head and not oid.startswith(args.expect_head):
+        head = _covered(head, args.expect_head, cross_repository=cross)
     notes = _local_notes(head, cross_repository=cross)
+    if head.covered:
+        notes.insert(0, head.covered)
     _say(f"head: {short_sha(oid)} (PR #{number}, {branch})" + "".join(f"; {n}" for n in notes))
     return head
+
+
+def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
+    """The pinned head, where the authorisation for the earlier head `authorised` covers
+    it: every change from that head to this one lies inside `revalidated` blocks, a
+    clean merge of the base counting as none, as the backbone answers it (DEC-055
+    point 3). Any other change, and an answer that cannot be read, stops the run
+    before anything is checked, as a head nobody authorised does."""
+    issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
+    moved = (
+        f"head: stopped — PR #{number}'s head is {sha}, not {authorised[:7]}, the head the "
+        "merge was authorised for"
+    )
+    again = f"Nothing was done; `land-work {issue}` checks and reviews the new one"
+    if not head.base_branch:
+        raise _Stop(
+            EXIT_HEAD_MOVED,
+            f"{moved}, and its base branch could not be read, so whether that authorisation "
+            f"covers it cannot be told. {again}",
+        )
+    if not _has_commit(head.oid):
+        # A PR from a fork is fetched by the ref its base repository keeps for it.
+        ref = f"refs/pull/{number}/head" if cross_repository else f"refs/heads/{head.branch}"
+        _git("fetch", "--quiet", head.remote, ref)
+    found = friction_answers.covers(authorised, head.oid, head.base_branch)
+    if found.problem is None and (found.head != head.oid or not found.since.startswith(authorised)):
+        found = replace(
+            found,
+            problem=f"the backbone answered for {found.since[:7]} to {found.head[:7]}, not "
+            f"{authorised[:7]} to {sha}",
+        )
+    if found.problem is not None:
+        raise _Stop(
+            EXIT_HEAD_MOVED,
+            f"{moved}, and whether that authorisation covers it could not be told: "
+            f"{found.problem}. {again}",
+        )
+    if not found.covered:
+        listed = "; ".join(found.outside[:3]) + (
+            f"; and {len(found.outside) - 3} more" if len(found.outside) > 3 else ""
+        )
+        raise _Stop(
+            EXIT_HEAD_MOVED,
+            f"{moved}: an authorisation covers a later head only where every change since "
+            f"lies inside `revalidated` blocks, a clean merge of {head.base} counting as none, "
+            f"and these changes do not: {listed}. {again}",
+        )
+    return replace(head, authorised=found.since)
 
 
 def _branch_remote(branch: str) -> str:
@@ -1059,6 +1154,7 @@ def _answers(
         left,
         settings=len(settings),
         told=tuple(friction_answers.told(document, settings, sentences)),
+        unasked=sum(1 for entry in derived.answers if entry.get("asked") is not True),
     )
     if friction_answers.current(body, section):
         _say(f"{STEP}: {written}, {_LISTED}")
@@ -1461,9 +1557,11 @@ def _ready(
     answers: _AnswersEnd,
     to_judge: _FindingsEnd,
     reading: issue_branch.Reading,
+    uncovered: str = "",
 ) -> int:
-    """No authorisation to merge — none given, or a `--yes` the findings to judge
-    above hold (DEC-055 point 3): run done-work's gates as a dry run on the
+    """No authorisation to merge — none given, a `--yes` the findings to judge above
+    hold, or one for an earlier head that does not cover this one after all
+    (`uncovered`, DEC-055 point 3): run done-work's gates as a dry run on the
     pinned head, and say the head is ready, with the command that merges it —
     and, where a verdict carrying a finding to judge does not stand for the head,
     the review it waits for. Above the `ready:` line, what the person who
@@ -1484,7 +1582,7 @@ def _ready(
         print(f"  {line}")
     _say(
         f"ready: {short_sha(head.oid)} — CI passed, {review.approval}{answers.phrase()}"
-        f"{to_judge.phrase()}; merge "
+        f"{to_judge.phrase()}{uncovered}; merge "
         f"with: pkit pm land-work {head.issue} --yes --expect-head {head.oid}"
     )
     return EXIT_READY
@@ -1504,6 +1602,8 @@ def _merge(
         _say("merge: (dry-run) done-work's plan is above")
         return EXIT_MERGED
     code, line = _judged(end, head, args, config)
+    if head is not None and head.authorised and code == EXIT_MERGED:
+        line = f"{line}, at {short_sha(head.oid)} — {head.covered}"
     _say(f"merge: (dry-run) {line.removeprefix('merge: ')}" if args.dry_run else line)
     return code
 

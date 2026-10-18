@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "quality-requirement.schema.json",
+  "title": "A quality requirement's own fields — software-analysis capability",
+  "description": "The front matter of one quality requirement, a file `REQ-NNN-<slug>.md` in `requirements/quality/` under the analysis location, optionally in a folder per functional area (software-analysis DEC-002 points 1 to 4): how well the system must behave, such as how fast, how reliably or how safely. Its id is one numbering across the three kinds of requirement, so a requirement moved to another kind keeps it (point 2). The obligation, its measure and where it holds are fields a tool reads. The body says what verifies it and why it is needed. These are the requirement's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). Within the analysis it anchors each actor in `actors` and each requirement in `refines`, as artefact anchors (point 6). The three kinds' schemas take the same fields. Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "status", "statement", "measure", "applies-to"],
+  "properties": {
+    "id": {
+      "description": "The requirement's id, `REQ-NNN`. It never changes, a move to another kind or another area included, and is never used again once the requirement is withdrawn (DEC-001 point 3, DEC-002 point 2).",
+      "$ref": "analysis.schema.json#/$defs/requirement-id"
+    },
+    "title": {
+      "description": "The requirement's title, in a few words. The body's heading repeats it after the id and the kind, `# REQ-NNN · Quality · <title>` (DEC-002 point 2). It may change; the id does not.",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "status": {
+      "$ref": "analysis.schema.json#/$defs/status"
+    },
+    "statement": {
+      "description": "The requirement, in one sentence: how well the system must behave (DEC-002 point 4). Its form, one sentence, is the kind's declared structure's, checked where the format rule binds.",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "measure": {
+      "description": "The value or the condition that shows the requirement is met. It reads `None.` where there is none yet, so the gap is seen (DEC-002 point 4).",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "applies-to": {
+      "description": "Where the requirement holds, in words, such as a class of commands or the whole system. It never reads `None.`, which the kind's declared structure refuses where the format rule binds. It names no use case or journey: those that must meet the requirement list it (DEC-002 points 4 and 7).",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "actors": {
+      "description": "The actors whose need the requirement meets, by id. Each is an artefact anchor of the requirement (DEC-002 point 6). Absent, or empty, where it meets no actor's need.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/actor-id" }
+    },
+    "refines": {
+      "description": "The requirements it refines, of any kind, by id. Each is an artefact anchor of the requirement, and a chain of them that comes back to it closes a cycle, which validation refuses (DEC-002 point 6; COR-050 point 5). Absent, or empty, where it refines none.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/requirement-id" }
+    }
+  }
+}

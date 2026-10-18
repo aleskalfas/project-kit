@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T13:12:06Z
+      at: 2026-10-18T15:13:42Z
       outcome: unchanged
-      unchanged-because: "COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds: its content and mode, its containers left out. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged."
+      unchanged-because: COR-050 gains point 16, a link a component declares whose source's change asks for a revisit of its targets, which only the change check asks and enforcing mode fails on. This actor's needs, unattended runs gated on their exit status, machine-readable findings and a whole-repository report that never fails, and its citation of point 12, that the checks bind once a project makes them a required status, still hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline

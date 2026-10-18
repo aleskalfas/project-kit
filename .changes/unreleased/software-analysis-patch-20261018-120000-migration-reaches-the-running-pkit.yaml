@@ -1,0 +1,14 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+  pr: "1662"
+  requires_backbone: release
+body: >
+  The 0.2.0 upgrade's migration that creates the `ANALYSIS` rule set reads its
+  answer from the pkit that runs the upgrade, the one the migration runner puts
+  first on the script's `PATH` (ADR-065 point 14). Neither your project's pin
+  nor another `pkit` on your `PATH` answers in its place. Where the answer
+  cannot be read, the migration creates nothing and warns that the command
+  failed, or that the script was run by hand under another pkit. It needs the
+  migration runner only the backbone this release ships has.

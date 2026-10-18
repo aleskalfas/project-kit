@@ -16,8 +16,8 @@
 # file is unreadable, no rule set takes the name, and nothing lies at the path.
 # The migration reads it through `pkit capabilities project-rule-set
 # software-analysis --json` and writes the text it gives, never walking the
-# rule sets itself (ADR-057 point 1). The nested pkit runs unrouted
-# (PKIT_NO_ROUTE), so it never fetches another version.
+# rule sets itself (ADR-057 point 1). The `pkit` it runs is the running pkit,
+# which the migration runner puts first on the `PATH` (ADR-065 point 14).
 #
 # It creates a set a project may have chosen not to have: the release's notes
 # say so, and the project may remove it. A capability's migrations run from the
@@ -25,8 +25,8 @@
 # completes.
 #
 # Never fails the upgrade: where pkit or python3 is missing, or the answer cannot
-# be read (a pkit too old to give it, say), it creates nothing, warns, and names
-# the command that shows the set to write.
+# be read (the command failed, or this script runs by hand under another pkit),
+# it creates nothing, warns, and names the command that shows the set to write.
 #
 # Idempotent: once a set of the project's own inherits SAN, the answer creates
 # nothing, and a file at the path is never written over.
@@ -52,11 +52,12 @@ if ! command -v python3 >/dev/null 2>&1; then
     warn_and_stop "no python3 on PATH to read the backbone's answer"
 fi
 
-answer="$(cd "$ROOT" && PKIT_NO_ROUTE=1 pkit capabilities project-rule-set "$CAPABILITY" --json 2>/dev/null)" || answer=""
+answer="$(cd "$ROOT" && pkit capabilities project-rule-set "$CAPABILITY" --json 2>/dev/null)" || answer=""
 
 # The answer is read with the standard library only: a migration acquires no
-# runtime dependency at upgrade time.
-result="$(ANSWER="$answer" python3 - "$ROOT" <<'PYEOF'
+# runtime dependency at upgrade time. `-I` keeps the project's root, the working
+# folder, off the import path, so no file there shadows a standard module.
+result="$(ANSWER="$answer" python3 -I - "$ROOT" <<'PYEOF'
 import json
 import os
 import sys
@@ -118,6 +119,6 @@ case "$result" in
         warn_and_stop "${result#BLOCKED }"
         ;;
     *)
-        warn_and_stop "the backbone's answer could not be read (a pkit older than this release gives none)"
+        warn_and_stop "the backbone's answer could not be read: the command failed, or this script runs by hand under another pkit"
         ;;
 esac

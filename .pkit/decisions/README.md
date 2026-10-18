@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-18T12:54:08Z
+      at: 2026-10-18T15:13:51Z
       outcome: unchanged
-      unchanged-because: COR-050 point 7 rewords its widening clause to what an anchor stood on in the files a widening takes, and the Decision's lead says what a path anchor stands on in a file a place holds. This page rests on point 2 for how an anchor names a record's point, and on point 7's retired-point exception, which its retired-points field and stubs serve. Neither change touches them.
+      unchanged-because: Points 2 and 7 are reached through the Decision's text outside its points, which gains a sentence on a link that asks for a revisit of its targets (point 16). This page names a record's point by its id as an anchor's value (point 2) and keeps a retired point's id with a stub (point 7), and both read as before.
 ---
 
 # Decision records

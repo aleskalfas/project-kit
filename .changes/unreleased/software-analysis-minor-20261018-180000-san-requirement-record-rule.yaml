@@ -1,0 +1,18 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `SAN` holds a new judgement rule, `RS-SAN-006`, proposed: a requirement
+  never contradicts an accepted decision record it rests on (#1695). It
+  compares the requirement's `statement`, `measure` and `applies-to` with each
+  accepted record it anchors and rests on, whole or the point its anchor
+  names. The record wins until it is changed. A conflict between two
+  requirements is no break of it, since a decision record holds such a
+  choice. Its origin is DEC-002, and it anchors DEC-002 points 4, 6 and 8.
+  `RS-SAN-005` now asks a requirement for what DEC-002 point 6 gives it: its
+  actors, the requirements it refines, the decisions it rests on or that
+  answer it, the views that realise it, the files that verify it and the code
+  that holds it. Both rules stay proposed and declare no check, so nothing
+  binds yet, and `SAN` stays at 1.0.0 (COR-051 point 7). The README's method
+  rule set section lists the rule.

@@ -1,4 +1,4 @@
-"""Stamping the analysis artefacts (DEC-001 points 1 to 4).
+"""Stamping the analysis artefacts (DEC-001 points 1 to 4, DEC-002 points 1 to 7).
 
 A stamp writes one artefact, where the capability's places put it under the
 analysis location. Its front matter comes from its kind's template in
@@ -26,16 +26,24 @@ analysis location. Its front matter comes from its kind's template in
 - a **term** is a new entry, `TERM-<slug>`, of the glossary, a collection file
   — added to its front matter, and its section to the body, each where its id
   sorts, every other byte left as it was — the file created the first time,
-  its head as the declaration gives it.
+  its head as the declaration gives it;
+- a **requirement** of each of the three kinds is a new file,
+  `REQ-NNN-<slug>.md`, in its kind's folder or an area's folder in it, headed
+  by its id, its kind and its title (DEC-002 points 2 and 3). The three kinds
+  share one numbering: its number is counted as a use case's is, over the
+  three kinds' places read as one.
 
 It writes the anchors DEC-001 point 4 asks for, beside the paths and records it
 is given: a use case's actor and each other actor it involves, written in its
 `other-actors`, and a journey's actor and the use cases of its steps and of
-its `relies-on`, those outside it that a step relies on.
-An actor or a term nothing embodies is stamped with the reason instead, its
-`unanchored-because` (point 9), written in its friction block: the key is the
-core's, which the unanchored measure reads (COR-050 points 1 and 8). A
-revalidation record is not an artefact and
+its `relies-on`, those outside it that a step relies on. A requirement's
+`actors` and `refines` are written, each an artefact anchor (DEC-002 point
+6): each actor must be in force, and each requirement it refines one of the
+three kinds, in force and not itself (point 7).
+An actor, a term or a requirement nothing embodies is stamped with the reason
+instead, its `unanchored-because` (DEC-001 point 9, DEC-002 point 6), written
+in its friction block: the key is the core's, which the unanchored measure
+reads (COR-050 points 1 and 8). A revalidation record is not an artefact and
 is stamped by `_lib/revalidation.py`.
 The body is the kind's structure as the project's own `project/structures.yaml`
 changes it: its relabels and fields' hints, and each part a group of the
@@ -43,8 +51,9 @@ project's adds whose rule is proposed or accepted, its hint naming the rule
 (`_lib/project_structure.py`). A file there that does not read refuses the
 stamp. What only a person can write the stamp leaves for them, each holding its
 hint as its placeholder (point 1): a front-matter field it does not write
-itself — an actor's needs, a term's definition — and each body part. The
-check fails each until it is written.
+itself — an actor's needs, a term's definition, a requirement's statement,
+measure and where it holds — and each body part. The check fails each until it
+is written.
 It writes a journey's step lines under *Steps*, each use case's id and title
 as the form asks, and leaves the part's hint above them for the hand-overs.
 It refuses a journey with a step that is a use case of another actor: a
@@ -71,8 +80,9 @@ named on its command line when one is — never the base a pipeline names for
 its checks — as the backbone resolves them (`pkit repository base`); one that
 resolves nowhere refuses the stamp with the backbone's reason and fix, since
 numbering without it would be a guess (point 4). Their history is read for a
-use case or journey alone, as the tree is (`_lib/history.py`): one `git log`
-per commit of the paths ever added under the kind's place, each number read
+numbered kind alone, as the tree is (`_lib/history.py`): one `git log` per
+commit of the paths ever added under the kind's place — a requirement's under
+the three kinds' places — each number read
 from the file's name, counted when the discovery at the commit that added it
 held it as a file of the place, not excluded — asked only of a number past
 the tree's and the tips'. A shallow clone's history stops early, and the
@@ -117,6 +127,7 @@ from _lib.model import (
     OTHER_ACTORS,
     PREFIX,
     RELIES_ON,
+    REQUIREMENTS,
     TERM,
     UNANCHORED_BECAUSE,
     USE_CASE,
@@ -136,7 +147,16 @@ TEMPLATE_OF = {
     JOURNEY: "journey.md",
     ACTOR: "actor.md",
     TERM: "glossary.md",
+    **{kind: f"{kind}.md" for kind in REQUIREMENTS},
 }
+
+#: A requirement's front-matter fields the stamp writes from its command line: the
+#: actors whose need it meets, and the requirements it refines (DEC-002 point 4).
+ACTORS, REFINES = "actors", "refines"
+
+#: The kinds that anchor to their actor, and a journey to its steps, so that are never
+#: unanchored (DEC-001 point 4).
+ALWAYS_ANCHORED = frozenset({USE_CASE, JOURNEY})
 
 #: A collection entry's section heading, `## <id> — <name>`.
 _SECTION = re.compile(r"^## (?P<id>\S+)")
@@ -160,7 +180,9 @@ class Request:
     area: str | None = None
     paths: tuple[str, ...] = ()
     records: tuple[str, ...] = ()
-    unanchored_because: str | None = None  # an actor's or a term's reason for no anchors
+    unanchored_because: str | None = None  # the reason an actor, term or requirement has none
+    actors: tuple[str, ...] = ()  # a requirement's actors, whose need it meets
+    refines: tuple[str, ...] = ()  # the requirements a requirement refines
 
 
 @dataclass(frozen=True)
@@ -207,6 +229,7 @@ def stamp(
     named = " and ".join(dict.fromkeys(ref for ref, _commit in tips))
     held, past, freed = _held(root, analysis, kind, branch, tips, notes)
     new_id = _new_id(kind, request.slug, held, named)
+    _check_refines(analysis, request, new_id)
     if past is not None:
         notes.append(
             f"{new_id} follows {past.id}, the number {named}'s history gave {past.path} (commit "
@@ -362,23 +385,28 @@ def _check_placeholders(request: Request) -> None:
 
 
 def _check_unanchored(request: Request) -> None:
-    """Only an actor or a term is kept unanchored with its reason, and never one
-    given anchors: the reason says why it has none (DEC-001 points 4 and 9). A use
-    case always anchors to its actor, and a journey to its actor and its steps' use
-    cases (point 4), so neither is ever unanchored, and point 9's reason never applies to them."""
+    """Only an actor, a term or a requirement is kept unanchored with its reason, and
+    never one given anchors: the reason says why it has none (DEC-001 points 4 and 9). A
+    use case always anchors to its actor, and a journey to its actor and its steps' use
+    cases (point 4), so neither is ever unanchored, and point 9's reason never applies to
+    them. A requirement with the reason has no anchor at all: no actor, no requirement
+    it refines, and nothing in the solution (DEC-002 point 6)."""
     if request.unanchored_because is None:
         return
-    if request.kind in NUMBERED:
+    if request.kind in ALWAYS_ANCHORED:
         rests_on = "its actor" if request.kind == USE_CASE else "its actor and its steps"
         raise Refused(
             f"{with_article(request.kind)} anchors to {rests_on}, so it is never unanchored"
         )
     if not request.unanchored_because.strip():
         raise Refused("--unanchored-because gives the reason it has no anchors: write it")
-    if request.paths or request.records:
+    if request.paths or request.records or request.actors or request.refines:
+        options = "--path, --record"
+        if request.kind in REQUIREMENTS:
+            options += ", --actor, --refines"
         raise Refused(
             f"{with_article(request.kind)} with anchors is not unanchored: give its anchors "
-            f"(--path, --record) or the reason it has none (--unanchored-because), not both"
+            f"({options}) or the reason it has none (--unanchored-because), not both"
         )
 
 
@@ -388,11 +416,16 @@ def _check_references(analysis: Analysis, request: Request) -> None:
     force, and the check holds it to the same rule (`Analysis.unfit`). Each of a
     journey's steps is a use case of its actor, as the check holds a journey in force
     (`Analysis.another_actor`). The other actors leave out the use case's own actor,
-    and what a journey relies on leaves out its steps, as the check holds both."""
-    if request.kind in NUMBERED:
+    and what a journey relies on leaves out its steps, as the check holds both. Each
+    actor a requirement names is in force too (DEC-002 point 7). What it refines is
+    checked once its id is known (`_check_refines`)."""
+    if request.kind in ALWAYS_ANCHORED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
         _in_force(analysis, request.actor, ACTOR)
+    if request.kind in REQUIREMENTS:
+        for actor in request.actors:
+            _in_force(analysis, actor, ACTOR)
     if request.kind == USE_CASE:
         for other in request.other_actors:
             if other == request.actor:
@@ -434,6 +467,32 @@ def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
     raise Refused(problem)
 
 
+def _check_refines(analysis: Analysis, request: Request, new_id: str) -> None:
+    """Each requirement a requirement refines is one of the analysis, of any of the three
+    kinds, and in force, since what the stamp writes is in force; and none is the
+    requirement itself, whose id is `new_id` (DEC-002 points 6 and 7). A requirement
+    refined in a circle is the core's validation to refuse (COR-050 point 5), and a new
+    requirement closes none, since nothing refines it yet."""
+    for refined in request.refines:
+        if identity(refined) == new_id:
+            raise Refused(
+                f"--refines {refined} is the id this requirement takes: a requirement never "
+                f"refines itself (DEC-002 point 6)"
+            )
+        found = analysis.find(refined)
+        if found is None or found.kind not in REQUIREMENTS:
+            kinds = ", ".join(REQUIREMENTS[:-1])
+            raise Refused(
+                f"no requirement {refined} in the analysis: stamp it first, `pkit analysis new "
+                f"<kind> <slug>`, its kind {kinds} or {REQUIREMENTS[-1]}"
+            )
+        if found.withdrawn:
+            raise Refused(
+                f"{NOUN[found.kind]} {refined} is withdrawn ({found.location}): a requirement in "
+                f"force refines only requirements in force (DEC-002 point 7)"
+            )
+
+
 # --- the id ----------------------------------------------------------------------------------
 
 
@@ -471,15 +530,16 @@ def _held(
 ) -> tuple[set[str], history.Given | None, tuple[history.Given, str] | None]:
     """Every id held, as `identity` spells it — in the working tree, and at each
     settled tip, a file's number read from its name too (`Analysis.held`) — and, for
-    a use case or journey, the number of its kind past all of them that a tip's
-    history gave a file gone since, which counts as held too (DEC-001 point 3;
+    a numbered kind, the number of its prefix past all of them that a tip's history
+    gave a file gone since, which counts as held too (DEC-001 point 3;
     `_lib/history.py`), with the highest past that the numbering setting freed, and
     the commit that freed it (`_lib/numbering.py`); refused when the setting has a
     problem — an entry that is no commit of the default branch's history, or an id it
     lists that its commit does not free — and noting each id a named commit would free
-    that no entry lists, which stays taken. An actor's or term's id is a slug a person
-    chooses, and a withdrawn one stays in its file or its entry, so no history is read
-    for one."""
+    that no entry lists, which stays taken. A requirement's history is read in the places
+    of all three kinds, which share one numbering (DEC-002 point 2). An actor's or
+    term's id is a slug a person chooses, and a withdrawn one stays in its file or its
+    entry, so no history is read for one."""
     held = analysis.held()
     named = " and ".join(ref for ref, _commit in tips)
     readings = [analysis]
@@ -505,7 +565,8 @@ def _held(
             f"stops, so a number a file was given before it is not counted; fetch the full "
             f"history (`git fetch --unshallow`) to count every one"
         )
-    folders = {state.places[kind] for state in readings if kind in state.places}
+    sharing = [k for k in NUMBERED if PREFIX[k] == PREFIX[kind]]
+    folders = {state.places[k] for state in readings for k in sharing if k in state.places}
     top = max(_numbers(kind, held), default=0)
     judge = history.Judge(root, readings, freeing.files)
     given = [number for _ref, tip in tips for number in history.given(root, tip, folders)]
@@ -519,13 +580,14 @@ def _held(
 
 
 def _numbers(kind: str, held: set[str]) -> list[int]:
-    """The numbers of `kind` among ids spelt as `identity` spells them."""
+    """The numbers of `kind` among ids spelt as `identity` spells them: a requirement's
+    of any of the three kinds, since its id's shape is theirs."""
     pattern = schemas.id_pattern(kind)
     return [number_of(i) for i in held if pattern.match(i)]
 
 
 def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
-    """The next free number for a use case or journey; `<PREFIX>-<slug>` for the rest,
+    """The next free number for a numbered kind; `<PREFIX>-<slug>` for the rest,
     refused when the working tree or the default branch holds it already. Ids are
     compared by what they stand for (`identity`), as the check compares them: a
     number spelt `UC-0007` is held as `UC-007` is."""
@@ -544,10 +606,11 @@ def _new_id(kind: str, slug: str, held: set[str], base: str) -> str:
 
 
 def _document(root: Path, kind: str, new_id: str, request: Request, analysis: Analysis) -> str:
-    """A use case's, a journey's or an actor's file: its front matter from its template,
-    with its id and its title — an actor's name — and each field a writer fills holding
-    its hint, and its body rendered from its kind's structure, headed by the id and the
-    title (`_lib/render.py`)."""
+    """A use case's, a journey's, an actor's or a requirement's file: its front matter
+    from its template, with its id and its title — an actor's name — and each field a
+    writer fills holding its hint, and its body rendered from its kind's structure,
+    headed by the id and the title, a requirement's kind between them
+    (`render.title_heading`)."""
     front, _body = _template(kind)
     structured = declared(kind, root, analysis)
     data = dict(markdown.load(front))
@@ -557,6 +620,11 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
     if kind == ACTOR:
         data["name"] = _title(request)
         anchored: list[str] = []
+    elif kind in REQUIREMENTS:
+        data["title"] = _title(request)
+        data[ACTORS] = list(dict.fromkeys(request.actors))
+        data[REFINES] = list(dict.fromkeys(request.refines))
+        anchored = list(dict.fromkeys([*request.actors, *request.refines]))
     else:
         data["title"] = _title(request)
         data["actor"] = request.actor
@@ -569,7 +637,8 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
             data[OTHER_ACTORS] = list(dict.fromkeys(request.other_actors))
             anchored = list(dict.fromkeys([str(request.actor), *request.other_actors]))
     data[CONTAINER] = _container(request, anchored)
-    body = render.body(structured, f"{new_id} — {_title(request)}", written)
+    heading = render.title_heading(structured, new_id, _title(request))
+    body = render.body(structured, heading, written)
     return f"---\n{dump(data)}---\n\n{body}"
 
 
@@ -773,8 +842,8 @@ def _section_at(text: str, body: int, kind: str, new_id: str) -> int | None:
 
 def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:
     """The methodology's container: the friction block with the anchors the stamp
-    knows, in the core schema's order — or, for an actor or a term nothing
-    embodies, the reason it has none, `unanchored-because`, which the core reads
+    knows, in the core schema's order — or, for an actor, a term or a requirement
+    nothing embodies, the reason it has none, `unanchored-because`, which the core reads
     and the unanchored measure lists apart (COR-050 points 1 and 8); an empty
     block when it knows neither."""
     anchors = {

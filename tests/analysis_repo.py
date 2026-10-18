@@ -52,6 +52,11 @@ GLOSSARY = f"{ANALYSIS}/glossary.md"
 USE_CASES = f"{ANALYSIS}/use-case-model/use-cases"
 JOURNEYS = f"{ANALYSIS}/use-case-model/journeys"
 RECORDS = f"{ANALYSIS}/revalidations"
+#: The three kinds of requirement's places, one folder each under `requirements/`, which
+#: is no place itself (software-analysis DEC-002 point 3).
+QUALITY = f"{ANALYSIS}/requirements/quality"
+FUNCTIONAL = f"{ANALYSIS}/requirements/functional"
+CONSTRAINTS = f"{ANALYSIS}/requirements/constraints"
 
 #: The branch that stands for the default branch in these repositories.
 MAIN = "main"
@@ -64,7 +69,9 @@ ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
 ANALYSIS_SET_TEXT = (
     "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
-    "software-analysis:use-case, software-analysis:journey]\nrules: {}\n---\n\n"
+    "software-analysis:use-case, software-analysis:journey, "
+    "software-analysis:quality-requirement, software-analysis:functional-requirement, "
+    "software-analysis:constraint]\nrules: {}\n---\n\n"
     "# ANALYSIS — the project's rules for its analysis\n"
 )
 

@@ -1,0 +1,23 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+  pr: "1662"
+body: >
+  A migration that runs `pkit` reaches the pkit that runs the upgrade, never
+  your project's pin and never another `pkit` on your `PATH` (ADR-065 point
+  14). The migration runner puts a `pkit` of its own first on each script's
+  `PATH`, in a fresh folder inside `.pkit/.migration-runner/`, which
+  `.pkit/.gitignore` now ignores, and removes it when the scripts end. Where
+  that folder cannot be made, or files there cannot run, the runner uses the
+  temporary folder. Before the first script it checks that its `pkit` answers
+  with its own version, and stops the upgrade, naming both folders and
+  `TMPDIR`, when neither does. The runner also sets `PKIT_MIGRATION=1` in each
+  script's environment. While it is set, `init`, `sync`, `upgrade`, `pin`,
+  `unpin`, `merge`, `agents adopt`, `agents reconcile --write`, and
+  `capabilities install`, `upgrade`, `register` and `uninstall` refuse before
+  they read or write anything, under `--dry-run` too, and the message names
+  point 14. So a migration that runs one of them stops the upgrade. Reading
+  commands and `config set` run as before. A migration you write calls `pkit`
+  by its bare name, sets no routing variable, and asks only about content,
+  never a recorded version (the lifecycle README, "Script contract").

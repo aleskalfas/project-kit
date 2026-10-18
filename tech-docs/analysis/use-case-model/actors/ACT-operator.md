@@ -18,9 +18,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-17T12:14:25Z
+      at: 2026-10-18T12:33:10Z
       outcome: unchanged
-      unchanged-because: "This change adds to the prose lint's description in Running checks: how it counts a code span, a list's levels and an artefact's whole file. The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds."
+      unchanged-because: This change adds to Running checks that the friction gate also fails on a target not revisited (COR-050 point 16). The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
 ---
 
 # ACT-operator — Operator

@@ -86,9 +86,15 @@ Whether a quoted reason truly supports its rule is judgment, left to agents and 
 ### 6. Two kinds, two owners
 
 - **Method rule sets** ship with the backbone or with a component. They are owned and versioned with it and refreshed by sync.
-- **Project rule sets** are owned by the project. They live in places the project declares, by default under its internal documentation root (COR-049). Sync never reads or writes them, and uninstall never writes them. Beside the project's own edits, they are written only by writers a record names (COR-001). A capability's install is one, creating the one project rule set the capability declares, as COR-017 sets. So is that capability's migration for an earlier install.
+- **Project rule sets** are owned by the project. They live in a folder under its internal documentation root (COR-049), the *default folder*, and in any further places the project declares. Sync never reads or writes them, and uninstall never writes them. Beside the project's own edits, they are written only by writers a record names (COR-001). A capability's install is one, creating the one project rule set the capability declares, as COR-017 sets. So is that capability's migration for an earlier install.
 
 A project never edits a method rule set; it extends it. A method rule set is cited with its component's name; a project rule set is cited bare.
+
+A change of the internal root never leaves a project rule set in the default folder unfound in silence:
+- **The default folder follows the root.** Every reader finds it through the current root. Nothing records it when a set is first placed there, though a location derived from a root is otherwise recorded then (COR-049 point 5). Install, which places a set there, records nothing either.
+- **The backbone's configuration commands declare the old folder as a place.** Such a command may change the root while a rule-set file in the old folder would go unfound under the new root. It then declares the old folder as a place of the project's (COR-050 point 14). It does so in the same write, under one consent that names both changes (COR-048 point 5).
+- **The sets stay where they are.** Moving them under the new root is the project's own explicit step (COR-049 point 6).
+- **An edit of the backbone configuration by hand declares nothing.** Validation then looks in and beneath every folder with the default folder's name, outside the folders of method rule sets. It fails on each file there that discovery does not find and whose front matter names a set. The finding names how to mend it, including for a file meant as no rule set.
 
 ### 7. Inheritance, and where rules bind
 
@@ -143,6 +149,10 @@ A project never edits a method rule set; it extends it. A method rule set is cit
 
 **Why rules cannot be relaxed by inheritors.** A project that could quietly loosen a shipped rule would make the rule meaningless for anyone reading the project's artefacts. Proposing the change upstream, or choosing not to inherit, keeps every binding rule honest about where it comes from.
 
+**Why a change of root declares the old rule-set folder as a place.** A rule-set file no place finds is no rule set, so its rules stop binding, and nothing says so. Declaring the old folder keeps every set found where it is. A location recorded on first use stays where it is in the same way (COR-049 point 6).
+- **At the change, not at the first set.** Most project rule sets are written by hand, so no first placement by a command can be relied on. The change keeps the set install placed found as well, so install need not record the folder.
+- **Validation for the change no command makes.** An edit by hand declares nothing. A failing check turns the silent loss into a finding the project mends.
+
 ### Alternatives considered
 
 - **Every rule as a full decision record.** Rejected. A standard of a dozen one-line rules becomes a dozen documents, which is exactly the weight that makes people skip writing rules down.
@@ -159,12 +169,18 @@ A project never edits a method rule set; it extends it. A method rule set is cit
 - **A silent choice between routes that disagree, such as the newest major.** Rejected. It hides which rules bind, and the newest major binds rules nobody reviewed for that artefact.
 - **A fill always binding over a set that leaves its extension point unfilled.** Rejected. Between sets that do not inherit one another, it overrides what the offering rule requires without a fill, and nothing reports it.
 - **Each check declaring the rules it covers, in its own registration.** Rejected. A project's own tool registers nothing, and a second place for the same fact drifts.
+- **Project rule sets moving with a change of root.** Rejected. A command would move the project's documents without an explicit step the project reviews (COR-049 point 6). An edit by hand would move nothing.
+- **Refusing a change of root while a project rule set would be left behind.** Rejected. It keeps the folder tied to the root, unlike every location recorded on first use (COR-049 point 5). An edit by hand escapes the refusal.
+- **A key of its own for the project's rule-set folder.** Rejected. A place the project declares already says where its rule sets live. A second way to say it would drift from the first. Changing that key by hand would leave sets behind as changing the root by hand does.
+- **Treating every folder with the default folder's name as a place of project rule sets.** Rejected. A file kept there as an example, or retired on purpose, would start binding, and nothing would say so.
+- **Catching an edit by hand in the change check alone** (COR-050). Rejected. It reports only the change that leaves a set behind, and fails it only in enforcing mode (COR-050 point 12). A set left behind by an earlier change would stay unfound.
 
 ## Implications
 
-- **The backbone ships** the rule-set schema and the checks in points 2, 3, 5 and 7, run by validation, with rule ids as a new identifier family. Rules take part in friction like any other artefact. The backbone also gives the one answer of point 7, which accepted rules bind on an artefact.
+- **The backbone ships** the rule-set schema, with rule ids as a new identifier family. Validation runs the checks in points 2, 3, 5, 6 and 7. Rules take part in friction like any other artefact. The backbone also gives the one answer of point 7, which accepted rules bind on an artefact.
 - **Components** that ship rules put their method rule sets in their own subtrees, and give them no scope. They declare the extension points they offer, and the parts their own checks enforce. A component's own check reads from the backbone where each rule binds.
 - **Projects** keep their rule sets as project-owned files, pin what they inherit, and give their sets the scopes that say where shared rules bind.
+- **The backbone's configuration commands** declare the old default folder as a place where a change of root would leave a rule-set file in it unfound (point 6).
 - **Writers and checkers** (agents, reviewers, checks) follow only the accepted rules that bind on an artefact, and cite rule ids in their findings.
 - **The decision-record specification** describes rule sets as a separate identifier family with the same guarantees as decision records: permanent ids, recorded origins, statuses and the acceptance gate. It covers the `withdrawn` status, which only rules have, and the gate as it applies to rule sets living outside the decisions folder.
 - **Rules rely on** the anchors-and-friction record's definition of a collection entry's content (its data entry together with its id-headed body section), so a rule's statement takes part in friction.

@@ -23,7 +23,10 @@ parameter: it reads the repository through the backbone and asks git nothing
 itself — whether HEAD names a commit, `head` in `pkit repository base --json`;
 HEAD and its history, through `pkit friction check --all --json`; and which
 documents are pages, from the working tree through `pkit friction artefacts
---json` — writes nothing and needs no network. Its `commands:` entry declares
+--json` — writes nothing and needs no network. None of the three readings
+depends on another, so it starts them at once and reads their answers in that
+order: the answer, and the reason when there is none, are those of reading them
+one after another, in the time of the longest. Its `commands:` entry declares
 what it reads beyond the working tree, `reads: [history]`, so the backbone's
 report names the commit HEAD was read at; it reads no settled state and no
 base — the base a pull request is compared with bounds the consumer's diff,
@@ -55,6 +58,7 @@ import argparse
 import json
 import sys
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
 
@@ -68,14 +72,24 @@ from _lib.declarations import project_root
 def reading(root: Path) -> tuple[Mapping[str, Any], list[str]] | None:
     """The whole-repository friction check and the pages, for the project at `root`;
     None when nothing is committed — no HEAD to judge, so nothing is owed. Raises
-    NoAnswer."""
-    if not doc_check.has_commit(str(root)):
-        return None
-    report = doc_check.read_friction(str(root))
-    try:
-        pages = spaces.pages(root)
-    except Unreadable as exc:
-        raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
+    NoAnswer.
+
+    The three backbone readings run at once, and their answers are read in the
+    order the answer depends on them: whether HEAD names a commit, then the
+    check, then the pages. So the first that gives no answer is the one named,
+    and with no commit the others' answers go unread, as when each waited for
+    the one before."""
+    with ThreadPoolExecutor(max_workers=3) as pool:
+        head = pool.submit(doc_check.has_commit, str(root))
+        friction = pool.submit(doc_check.read_friction, str(root))
+        places = pool.submit(spaces.pages, root)
+        if not head.result():
+            return None
+        report = friction.result()
+        try:
+            pages = places.result()
+        except Unreadable as exc:
+            raise doc_check.NoAnswer(f"the pages cannot be told: {exc}") from exc
     return report, pages
 
 

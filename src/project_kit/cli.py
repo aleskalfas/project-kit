@@ -33,6 +33,7 @@ from project_kit import (
     friction_report,
     friction_repository,
     friction_resolve,
+    friction_since,
     friction_write,
     pull_request_landing,
     router,
@@ -57,6 +58,7 @@ from project_kit.install import (
     sync_remedy,
 )
 from project_kit.merge import run_merge
+from project_kit.migrations import refuse_inside_migration
 from project_kit.release import (
     ReleasePlan,
     apply_release,
@@ -202,6 +204,8 @@ def agents_reconcile(write: bool) -> None:
     `--write`, and nothing else is written in that run: the next dry run shows
     each category the seed does not define (ADR-065 point 11).
     """
+    if write:
+        refuse_inside_migration("agents reconcile --write")
     from project_kit import agents_overlay as ao
 
     target_root = find_target_root()
@@ -254,6 +258,7 @@ def agents_adopt(agent_name: str, yes: bool) -> None:
     Idempotent: re-running on an already-adopted agent reports no changes, asks
     nothing, and re-deploys (the deploy step is itself idempotent).
     """
+    refuse_inside_migration("agents adopt")
     from project_kit import agents_overlay as ao
 
     target_root = find_target_root()
@@ -372,6 +377,9 @@ def config_set(key: str, value: str, yes: bool) -> None:
     before anything is written — an invalid value is refused. Writing needs
     consent (COR-048 point 5): an interactive confirmation, or `--yes`; a
     non-interactive run without `--yes` refuses and names the command to run.
+    Setting `docs.internal` also adds the old root's `rule-sets/` to
+    `friction.places` where a rule-set file there would go unfound under the
+    new root, in the same write and under the same consent (COR-051 point 6).
     """
     from project_kit import backbone_schemas, project_config
 
@@ -391,11 +399,17 @@ def config_set(key: str, value: str, yes: bool) -> None:
     def mutate(data: CommentedMap) -> None:
         project_config.set_value(data, resolved, typed)
 
-    if not project_config.preview_config(target_root, mutate).changes:
+    rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
+    try:
+        unchanged = not project_config.preview_config(target_root, mutate).changes
+    except project_config.RuleSetPlaceUnwritable as exc:
+        raise exc.naming(rerun) from None
+    if unchanged:
         click.echo(f"{resolved.dotted} is already {typed}; nothing to write.")
         return
-    rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
-    project_config.write_config(
+    # A change of the internal root also declares the old rule-set folder as a
+    # place, in the same write and under the same consent (COR-051 point 6).
+    change = project_config.apply_config(
         target_root,
         mutate,
         consent=project_config.Consent(yes=yes, rerun=rerun),
@@ -404,6 +418,8 @@ def config_set(key: str, value: str, yes: bool) -> None:
     click.echo(
         f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
     )
+    if change.kept_rule_sets is not None:
+        click.echo(change.kept_rule_sets.notice())
     # The `.pkit/.gitignore` render reads the configuration (the process
     # journal's ignore line, COR-033 point 7): follow the new value now rather
     # than at the next sync, naming each component entry the render now leaves out.
@@ -1393,8 +1409,9 @@ def connections_resolve(address: str, as_json: bool) -> None:
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
-    discovery finds — which never write, the writers — revalidate, defer,
-    record-status — which write one block, only with consent, and resolve,
+    discovery finds, whether what changed since a commit lies inside
+    `revalidated` blocks — which never write, the writers — revalidate, defer,
+    revisit, record-status — which write one block, only with consent, and resolve,
     which resolves a merge's conflicting revalidations as text and writes no
     answer.
 
@@ -1530,6 +1547,62 @@ def friction_defer_command(
 
     def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
         return friction_write.plan_defer(target_root, artefact, anchor=anchor, reason=reason)
+
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
+
+
+@friction.command("revisit")
+@click.argument("artefact", metavar="ARTEFACT")
+@click.option(
+    "--target",
+    metavar="ANCHOR",
+    required=True,
+    help="The target answered for: `kind:value`, or a value only one target has. It must be "
+    "an anchor a link of the artefact lists.",
+)
+@click.option(
+    "--outcome",
+    type=click.Choice(friction_write.REVISIT_OUTCOMES),
+    required=True,
+    help="`unchanged`: the target still stands against this change; `deferred`: it is left "
+    "out of date until the follow-up --reason names.",
+)
+@click.option(
+    "--reason",
+    metavar="TEXT",
+    required=True,
+    help="Why the target still stands, or the follow-up that will revisit it.",
+)
+@_friction_consent_options
+def friction_revisit_command(
+    artefact: str, target: str, outcome: str, reason: str, yes: bool, dry_run: bool
+) -> None:
+    """Answer for one target of ARTEFACT's links (COR-050 point 16): add its entry to
+    `revisited`, or rewrite the entry already there.
+
+    A link a place declares lists targets in one of ARTEFACT's own fields; when a
+    change alters its trigger fields, each target changes in the same change or
+    ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
+    it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
+    an entry is no revalidation of ARTEFACT.
+    """
+    rerun = [
+        "pkit",
+        "friction",
+        "revisit",
+        artefact,
+        "--target",
+        target,
+        "--outcome",
+        outcome,
+        "--reason",
+        reason,
+    ]
+
+    def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
+        return friction_write.plan_revisit(
+            target_root, artefact, target=target, outcome=outcome, reason=reason
+        )
 
     _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
 
@@ -1825,6 +1898,56 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:
         click.echo(friction_discovery.render_artefacts_human(document), nl=False)
+
+
+@friction.command("since")
+@click.argument("since_rev", metavar="REV")
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="The later commit. Default: HEAD. Read from git objects; the working tree is not read.",
+)
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"The base whose merges are set apart. Default: ${friction_check.BASE_ENV}, else the "
+    "default branch (`pkit repository base` shows it).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_since_command(
+    since_rev: str, head_rev: str | None, base_ref: str | None, as_json: bool
+) -> None:
+    """Whether every change from commit REV to the head, apart from merges of the base, lies
+    inside `revalidated` blocks (COR-050 point 3).
+
+    The head must descend from REV along its own line of commits. A merge of
+    the base counts only for what differs from git's clean merge of its two
+    parents, and any other commit for its own diff. A file lies inside the
+    blocks only when it is an artefact's file and its two texts are the same
+    once every `revalidated` key is taken out. Each change outside is named
+    with its commit and why. Reads git only and writes nothing. Exit 0 when
+    answered, either way; 1 when it cannot answer: a shallow clone, a name that
+    is no commit, a base that does not resolve, a git too old for `merge-tree`.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    # Read once, and said where it is read from the local branch (COR-054 point 2).
+    settled = default_branch.settled(target_root, base_ref, head_rev=head_rev or "HEAD")
+    _warn_settled(settled)
+    found = friction_since.run_since(
+        target_root, since_rev, head_rev=head_rev, base_ref=base_ref, resolved=settled.base
+    )
+    if as_json:
+        click.echo(friction_since.render_json(found), nl=False)
+    else:
+        click.echo(friction_since.render_human(found), nl=False)
 
 
 @main.group("rule-sets")
@@ -2718,6 +2841,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     workspace folder as a root, and guides rather than silently installing into a
     repository git cannot verify (issue #787).
     """
+    refuse_inside_migration("init")
     cwd = Path.cwd()
 
     if here and root is not None:
@@ -4085,6 +4209,7 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
 def sync(dry_run: bool, force: bool) -> None:
     """Reconcile the project at the version it records: copy that release's
     content, regenerate the derivable state, and move no version (COR-059)."""
+    refuse_inside_migration("sync")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4109,6 +4234,7 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     Optional TARGETS filter to specific adapter names; all installed adapters
     that ship a merge primitive run by default.
     """
+    refuse_inside_migration("merge")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4177,6 +4303,7 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     tool. Where the router could not fetch the pin and runs the installed pkit
     instead, it refuses, before it writes anything.
     """
+    refuse_inside_migration("upgrade")
     target_root = find_target_root()
     if target_root is None:
         # Outside any project: update the tool only ("just update my tool").
@@ -4232,6 +4359,7 @@ def pin(version: str | None, force: bool) -> None:
     Refused in the methodology's source repository, where the router runs the
     checkout's own code before any pin is read (ADR-059).
     """
+    refuse_inside_migration("pin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4249,6 +4377,7 @@ def unpin() -> None:
     runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
     is fine to run when no pin file is present.
     """
+    refuse_inside_migration("unpin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4398,6 +4527,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
       warning and require --force to proceed (not a hard block; a hard
       block would deadlock since cascade-upgrade is out of scope).
     """
+    refuse_inside_migration("capabilities upgrade")
     from project_kit import capabilities as caps
 
     target_root = find_target_root()
@@ -6182,6 +6312,7 @@ def install_capability_cmd(
     refused, naming the set and both files, and nothing is installed (COR-051
     point 3).
     """
+    refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
 
     _plan_flags(plan, as_json)
@@ -6501,6 +6632,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
     existing registry entry (no re-copy, no re-deploy), so `pkit sync` stops
     reconciling it against kit source.
     """
+    refuse_inside_migration("capabilities register")
     from project_kit import capabilities as caps
 
     target_root = find_target_root()
@@ -7094,6 +7226,7 @@ def uninstall_capability_cmd(
     says what it would have deleted, asks, and unregisters only; --purge is
     refused (ADR-059; #1107).
     """
+    refuse_inside_migration("capabilities uninstall")
     from project_kit import capabilities as caps
 
     _plan_flags(plan, as_json)

@@ -166,6 +166,9 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
         "use-case-model/actors",
         "use-case-model/use-cases",
         "use-case-model/journeys",
+        "requirements/quality",
+        "requirements/functional",
+        "requirements/constraints",
     )
     for place in analysis_places:
         assert f"tech-docs/analysis/{place} (software-analysis)" in lines, place
@@ -269,13 +272,13 @@ def test_living_docs_validator_passes_over_this_tree(pkit_on_path: Path) -> None
     assert summary[2].endswith("definition tech-docs/living-docs/rule-sets/technical.md.")
     # Every place is a page (#1010), each reader resolved against the readers point.
     # software-analysis contributes one reader per actor of pkit's own analysis
-    # (#1001), under the `act-` prefix: the eight core actors (#1344), beside
-    # living-docs' own two.
+    # (#1001), under the `act-` prefix: the eight core actors (#1344) and the
+    # planner (#1710), beside living-docs' own two.
     assert summary[4] == (
         "readers (pkit::documentation:readers): act-adopter, act-ai-agent, "
         "act-ci-pipeline, act-component-author, act-developer, "
         "act-merge-authoriser, act-methodology-maintainer, act-operator, "
-        "maintainer, user; "
+        "act-planner, maintainer, user; "
         f"{len(_project_places())} page reader(s) checked."
     )
 

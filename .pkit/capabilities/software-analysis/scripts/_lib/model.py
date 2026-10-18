@@ -9,9 +9,10 @@ backbone and never walks the places itself, so it reads that answer through
 the backbone's reading command, `pkit friction artefacts --json`, at the
 working tree or, with `--at`, at one commit (`backbone.read_document`).
 
-What this module decides over the answer is DEC-001's: each place of this
-capability holds one kind of artefact (point 2) — the glossary is a collection
-file, one keyed entry per term; an actor, a use case and a journey are a
+What this module decides over the answer is DEC-001's and DEC-002's: each place
+of this capability holds one kind of artefact (DEC-001 point 2, DEC-002 point
+3) — the glossary is a collection file, one keyed entry per term; an actor, a
+use case, a journey and a requirement of each of the three kinds are a
 document each — and a file in a place that holds no artefact of its kind's
 shape is a stray the check reports. The revalidation records are not
 artefacts: their folder is this capability's folder of held documents (COR-050
@@ -39,66 +40,104 @@ from typing import Any
 CAPABILITY = "software-analysis"
 LOCATION = "analysis"
 
-#: The four kinds of anchored artefact (DEC-001 point 1).
-ACTOR, TERM, USE_CASE, JOURNEY = "actor", "term", "use-case", "journey"
-KINDS = (ACTOR, TERM, USE_CASE, JOURNEY)
+#: The kinds of anchored artefact: the four DEC-001 point 1 gives, and the three kinds
+#: of requirement DEC-002 point 1 adds.
+ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT = (
+    "actor",
+    "term",
+    "use-case",
+    "journey",
+    "quality-requirement",
+    "functional-requirement",
+    "constraint",
+)
+REQUIREMENTS = (QUALITY, FUNCTIONAL, CONSTRAINT)
+KINDS = (ACTOR, TERM, USE_CASE, JOURNEY, *REQUIREMENTS)
 
 #: The kinds kept as one collection file, an entry per artefact (DEC-001 point 2):
 #: the glossary. An actor is a document of its own, so its needs, in its front
 #: matter, read beside its description.
 COLLECTIONS = frozenset({TERM})
 
-#: Each kind's id prefix (DEC-001 point 3); use cases and journeys are numbered.
-PREFIX = {ACTOR: "ACT", TERM: "TERM", USE_CASE: "UC", JOURNEY: "JRN"}
-NUMBERED = frozenset({USE_CASE, JOURNEY})
+#: Each kind's id prefix (DEC-001 point 3). The three kinds of requirement share one
+#: numbering (DEC-002 point 2).
+PREFIX = {
+    ACTOR: "ACT",
+    TERM: "TERM",
+    USE_CASE: "UC",
+    JOURNEY: "JRN",
+    **dict.fromkeys(REQUIREMENTS, "REQ"),
+}
+#: The kinds whose id is a number, `<PREFIX>-NNN`, which the stamp gives: a use case, a
+#: journey, and a requirement of each of the three kinds, which read their three places
+#: as one (DEC-002 point 2).
+NUMBERED = frozenset({USE_CASE, JOURNEY, *REQUIREMENTS})
 
 #: How each kind is named in a message, and how its id is written.
-NOUN = {ACTOR: "actor", TERM: "term", USE_CASE: "use case", JOURNEY: "journey"}
-ID_SHAPE = {ACTOR: "ACT-<slug>", TERM: "TERM-<slug>", USE_CASE: "UC-NNN", JOURNEY: "JRN-NNN"}
+NOUN = {
+    ACTOR: "actor",
+    TERM: "term",
+    USE_CASE: "use case",
+    JOURNEY: "journey",
+    QUALITY: "quality requirement",
+    FUNCTIONAL: "functional requirement",
+    CONSTRAINT: "constraint",
+}
+ID_SHAPE = {
+    ACTOR: "ACT-<slug>",
+    TERM: "TERM-<slug>",
+    USE_CASE: "UC-NNN",
+    JOURNEY: "JRN-NNN",
+    **dict.fromkeys(REQUIREMENTS, "REQ-NNN"),
+}
 
 #: The front-matter fields DEC-001 point 4 adds to what a use case and a journey name:
 #: a use case's other actors, and the use cases outside a journey that a step relies on.
 OTHER_ACTORS = "other-actors"
 RELIES_ON = "relies-on"
 
-#: A use case's or journey's id with its number in any number of digits — the
-#: spellings the id schema refuses included.
-_NUMBER = rf"(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)"
+#: A numbered kind's id with its number in any number of digits — the spellings the
+#: id schema refuses included.
+_PREFIXES = "|".join(sorted({PREFIX[kind] for kind in NUMBERED}))
+_NUMBER = rf"(?P<prefix>{_PREFIXES})-(?P<number>[0-9]+)"
 _ANY_NUMBER = re.compile(rf"^{_NUMBER}$")
 
-#: A file named after the use case or journey it holds, `UC-NNN-<slug>.md`, as the
-#: stamp names one: the number, then a hyphen or the extension.
+#: A file named after the numbered artefact it holds, `UC-NNN-<slug>.md` or
+#: `REQ-NNN-<slug>.md`, as the stamp names one: the number, then a hyphen or the
+#: extension.
 _NAMED = re.compile(rf"^{_NUMBER}(?=[-.])")
 
 
 def identity(artefact_id: str) -> str:
-    """The id `artefact_id` stands for: a use case's or journey's number in its one
-    spelling, the one the id schema admits — `UC-0007` stands for `UC-007` — any
-    other id as written. The stamp counts a number as held, and the check two
-    artefacts as sharing an id, by this, so the two never disagree."""
+    """The id `artefact_id` stands for: a numbered kind's number in its one spelling,
+    the one the id schema admits — `UC-0007` stands for `UC-007` — any other id as
+    written. The stamp counts a number as held, and the check two artefacts as sharing
+    an id, by this, so the two never disagree."""
     return number_in(artefact_id) or artefact_id
 
 
 def number_in(artefact_id: str) -> str | None:
-    """The use case's or journey's number `artefact_id` spells, as `identity` spells
-    it; `None` for an id that is no such number."""
+    """The number of a numbered kind `artefact_id` spells, as `identity` spells it;
+    `None` for an id that is no such number."""
     found = _ANY_NUMBER.match(artefact_id)
     return None if found is None else _spelt(found)
 
 
 def number_of(artefact_id: str) -> int:
-    """The number of a use case's or journey's id as `identity` spells it: 7 for `UC-007`."""
+    """The number of a numbered kind's id as `identity` spells it: 7 for `UC-007`."""
     return int(artefact_id.split("-", 1)[1])
 
 
 def kind_numbered(artefact_id: str) -> str:
-    """The kind a use case's or journey's number is of, by its prefix."""
+    """The kind a use case's or journey's number is of, by its prefix. A requirement's
+    number names none of its three kinds, and reads here as a use case's: the number
+    check's messages are to name a requirement as such (#1693)."""
     return JOURNEY if artefact_id.startswith(f"{PREFIX[JOURNEY]}-") else USE_CASE
 
 
 def id_in_name(path: str) -> str | None:
-    """The use case's or journey's id a file's name carries — `UC-007` for
-    `…/UC-007-export.md` — as `identity` spells it; `None` for a name carrying none.
+    """The numbered id a file's name carries — `UC-007` for `…/UC-007-export.md` — as
+    `identity` spells it; `None` for a name carrying none.
     The stamp names each file so, and counts the number a name carries as held
     whatever the file holds — no front matter, one that does not parse, one naming
     no id — so a number is never used again because its file cannot be read."""
@@ -118,6 +157,9 @@ KIND_OF_PLACE = {
     "use-case-model/actors": ACTOR,
     "use-case-model/use-cases": USE_CASE,
     "use-case-model/journeys": JOURNEY,
+    "requirements/quality": QUALITY,
+    "requirements/functional": FUNCTIONAL,
+    "requirements/constraints": CONSTRAINT,
 }
 
 #: The revalidation records' folder inside the analysis location. The records
@@ -274,12 +316,12 @@ class Analysis:
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
-        artefact's own id, and each number a use case or journey holds (`numbers`)."""
+        artefact's own id, and each number a numbered artefact holds (`numbers`)."""
         return {identity(a.id) for a in self.artefacts if a.id} | set(self.numbers())
 
     def numbers(self) -> dict[str, set[str]]:
-        """Each use case's or journey's number this state holds, as `identity` spells
-        it, and the files holding it: by its front matter's id, and by the number a
+        """Each number of a numbered kind this state holds, as `identity` spells it, and
+        the files holding it: by its front matter's id, and by the number a
         file's name carries (`id_in_name`) — so a file whose id cannot be read still
         holds the number its name gives it (DEC-001 point 3)."""
         found: dict[str, set[str]] = defaultdict(set)

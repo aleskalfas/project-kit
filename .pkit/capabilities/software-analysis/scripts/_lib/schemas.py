@@ -1,9 +1,11 @@
 """The capability's companion schemas: one per artefact kind, and the shapes they share.
 
 Each kind's own fields have a companion schema in `schemas/` (DEC-001 point 2):
-`actor`, `term`, `use-case`, `journey`, and `revalidation-record` for the
-records. They share `analysis.schema.json` — each kind's id, the status, a line
-of text — which is also where the commands read the id patterns from, so the
+`actor`, `term`, `use-case`, `journey`, the three kinds of requirement
+(`quality-requirement`, `functional-requirement` and `constraint`, DEC-002
+point 1), and `revalidation-record` for the records. They share
+`analysis.schema.json` — each kind's id, the status, a line of text — which
+is also where the commands read the id patterns from, so the
 stamp that gives an id and the check that judges one never disagree. A record
 copies the evidence it draws on in the evidence point's own entry shape, so
 the point's companion, `revalidation-evidence`, is loaded beside them, and so
@@ -26,7 +28,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
+from _lib.model import ACTOR, JOURNEY, REQUIREMENTS, TERM, USE_CASE
 
 #: Where the schemas are, in the capability's own tree.
 SCHEMAS = Path(__file__).resolve().parents[2] / "schemas"
@@ -41,11 +43,25 @@ CONFIG = "config"
 STRUCTURES = "structures"
 KINDS = "artefact-kinds"
 
-#: Each kind's schema, by file stem.
-SCHEMA_OF = {ACTOR: "actor", TERM: "term", USE_CASE: "use-case", JOURNEY: "journey", RECORD: RECORD}
+#: Each kind's schema, by file stem: a requirement kind's is named as its type.
+SCHEMA_OF = {
+    ACTOR: "actor",
+    TERM: "term",
+    USE_CASE: "use-case",
+    JOURNEY: "journey",
+    **{kind: kind for kind in REQUIREMENTS},
+    RECORD: RECORD,
+}
 
-#: Each kind's id, as a definition of the shared schema.
-ID_DEF = {ACTOR: "actor-id", TERM: "term-id", USE_CASE: "use-case-id", JOURNEY: "journey-id"}
+#: Each kind's id, as a definition of the shared schema. The three kinds of requirement
+#: share one, since they share one numbering (DEC-002 point 2).
+ID_DEF = {
+    ACTOR: "actor-id",
+    TERM: "term-id",
+    USE_CASE: "use-case-id",
+    JOURNEY: "journey-id",
+    **dict.fromkeys(REQUIREMENTS, "requirement-id"),
+}
 
 
 @functools.cache

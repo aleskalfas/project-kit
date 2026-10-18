@@ -19,6 +19,10 @@ This module:
 - discovers and parses every rule-set file (`discover_rule_sets`). A file
   that cannot be read, has no front matter, or whose front matter does not
   parse is kept as unreadable, so it is reported and never skipped;
+- finds each rule-set file left behind (`unfound_rule_set_files`, COR-051
+  point 6): a file in or beneath a `rule-sets` folder, outside the method
+  folders, that names a set while no place claims it — what a change of the
+  internal root by hand leaves. Validation fails on each;
 - reads a component's rule sets before it is installed (`component_rule_sets`),
   and names each whose name a project rule set already declares
   (`project_set_names_taken`, COR-051 point 3): the install refuses on it;
@@ -65,7 +69,7 @@ from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, replace
 from enum import Enum
 from functools import cached_property
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
 import click
@@ -517,6 +521,88 @@ def _read_places(
     return RuleSetDiscovery(places=places, rule_sets=tuple(rule_sets), unreadable=tuple(unreadable))
 
 
+@dataclass(frozen=True)
+class UnfoundRuleSet:
+    """A rule-set file left behind: a Markdown file that reads as a rule set where
+    no place of the location rule finds it (COR-051 point 6)."""
+
+    path: str
+    folder: str  # the nearest folder named `rule-sets` it lies in or beneath
+    name: str  # the set its front matter names, as written
+
+
+def unfound_rule_set_files(
+    target_root: Path,
+    settings: fd.FrictionSettings | None = None,
+    tree: fd.RepositoryTree | None = None,
+) -> tuple[UnfoundRuleSet, ...]:
+    """Every rule-set file left behind, in path order (COR-051 point 6).
+
+    A Markdown file of the listing discovery reads (`tree`, else the working
+    tree's one listing, so an ignored file is never read) that lies in or
+    beneath a folder named `rule-sets`, is not a folder's signpost
+    (`README.md`), lies outside the folders of method rule sets — installed or
+    not (`friction_discovery.is_method_rule_set_path`) — and that the location
+    rule does not claim (`friction_discovery.rule_set_files`). It is left
+    behind only when its front matter parses as a mapping that names a set
+    (`rule-set:`): nothing else in a file says it was meant as one. The front
+    matter only finds the file; where a file lies decides whether it is a
+    rule set (ADR-056 point 2). A change of the internal root by hand leaves
+    such files behind.
+    """
+    settings = settings if settings is not None else fd.read_friction_settings(target_root, tree)
+    listing = tree if tree is not None else fd.working_tree(target_root)
+    claimed = fd.rule_set_files(
+        target_root, fd.rule_set_places(target_root, settings, tree), listing
+    )
+    candidates = [
+        rel
+        for rel in listing.files()
+        if _rule_sets_folder_of(rel) is not None
+        and rel not in claimed
+        and not fd.is_method_rule_set_path(rel)
+    ]
+    texts = fd.document_texts(listing, candidates)
+    found: list[UnfoundRuleSet] = []
+    for rel in candidates:
+        text = texts[rel]
+        if not isinstance(text, str):
+            continue  # a link, or a file that will not read: nothing says it is a set
+        name = _named_set(text)
+        folder = _rule_sets_folder_of(rel)
+        if name is not None and folder is not None:
+            found.append(UnfoundRuleSet(path=rel, folder=folder, name=name))
+    return tuple(found)
+
+
+def _rule_sets_folder_of(rel: str) -> str | None:
+    """The nearest folder named `rule-sets` a Markdown file other than a signpost
+    lies in or beneath, or None."""
+    path = PurePosixPath(rel)
+    if path.suffix != fd.DOCUMENT_SUFFIX or path.name == fd.RULE_SETS_SIGNPOST:
+        return None
+    parents = path.parts[:-1]
+    if fd.RULE_SETS_SEGMENT not in parents:
+        return None
+    nearest = len(parents) - 1 - parents[::-1].index(fd.RULE_SETS_SEGMENT)
+    return PurePosixPath(*parents[: nearest + 1]).as_posix()
+
+
+def _named_set(text: str) -> str | None:
+    """The set a file's front matter names under `rule-set`, or None when it has
+    no front matter, the front matter does not parse as a mapping, or names none."""
+    front_matter, _body = document_parts.split_front_matter(text)
+    if front_matter is None:
+        return None
+    data, _duplicates, problem = _load_front_matter(front_matter)
+    if problem is not None or not isinstance(data, Mapping):
+        return None
+    name = cast("Mapping[Any, Any]", data).get("rule-set")
+    if name is None or not str(name).strip():
+        return None
+    return str(name)
+
+
 def component_rule_sets(component: str, component_dir: Path) -> RuleSetDiscovery:
     """A component's method rule sets, read where its files are now, before it is installed.
 
@@ -713,6 +799,7 @@ class RuleSetFindingKind(Enum):
     """What a rule-set finding is about."""
 
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable schema
+    UNFOUND = "unfound-rule-set"  # a file reading as a set that no place finds (point 6)
     UNREADABLE = "unreadable"  # no front matter, or front matter that does not parse
     SHAPE = "shape"  # a JSON Schema violation
     UNKNOWN_KEY = "unknown-key"  # a key the schema does not know
@@ -783,7 +870,8 @@ class RuleSetValidation:
 
     @property
     def is_dormant(self) -> bool:
-        """No rule-set file anywhere: nothing to judge."""
+        """No rule-set file the location rule claims: no rule set to judge. A file
+        left behind may still be a finding (`unfound_rule_set_files`)."""
         return not self.discovery.rule_sets and not self.discovery.unreadable
 
 
@@ -803,10 +891,17 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
 
     A tree without a readable rule-set schema — one recorded before the schema
     landed — skips the kind and says so, never validating against a shape the
-    tree never shipped (ADR-056 point 1).
+    tree never shipped (ADR-056 point 1). A rule-set file left behind
+    (`unfound_rule_set_files`) is an error first, whether or not any rule set
+    is found and whatever the tree's schema: it needs neither.
     """
-    discovery = discover_rule_sets(target_root)
-    result = RuleSetValidation(discovery=discovery, findings=())
+    settings = fd.read_friction_settings(target_root)
+    discovery = discover_rule_sets(target_root, settings)
+    left_behind = tuple(
+        _unfound_finding(unfound, settings)
+        for unfound in unfound_rule_set_files(target_root, settings)
+    )
+    result = RuleSetValidation(discovery=discovery, findings=left_behind)
     if result.is_dormant:
         return result
     try:
@@ -819,13 +914,14 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
             f"(run `pkit sync`; `pkit schemas validate` reports a schema that does not load)."
         )
         finding = _report(location, "", RuleSetFindingKind.SCHEMA_UNAVAILABLE, message)
-        return RuleSetValidation(discovery=discovery, findings=(finding,))
+        return RuleSetValidation(discovery=discovery, findings=(*left_behind, finding))
 
     catalogue = _Catalogue(target_root, discovery)
-    findings: list[RuleSetFinding] = [
+    findings: list[RuleSetFinding] = [*left_behind]
+    findings.extend(
         _error(u.path, "", RuleSetFindingKind.UNREADABLE, f"the rule-set file {u.problem}.")
         for u in discovery.unreadable
-    ]
+    )
     container_schema, note = _container_schema(target_root)
     if note is not None:
         findings.append(note)
@@ -850,6 +946,22 @@ def validate_rule_sets(target_root: Path) -> RuleSetValidation:
     findings.extend(_cycle_findings(catalogue))
     findings.extend(_conflict_findings(reach(fd.shared_discovery(target_root), discovery)))
     return RuleSetValidation(discovery=discovery, findings=tuple(findings))
+
+
+def _unfound_finding(unfound: UnfoundRuleSet, settings: fd.FrictionSettings) -> RuleSetFinding:
+    """A rule-set file left behind, with the three ways to mend it (COR-051 point 6)."""
+    home = (PurePosixPath(settings.internal_root) / fd.RULE_SETS_SEGMENT).as_posix()
+    return _error(
+        unfound.path,
+        "",
+        RuleSetFindingKind.UNFOUND,
+        f"the file reads as rule set {unfound.name!r} (its front matter names `rule-set:`), "
+        f"but no rule-set place finds it, so its rules bind nothing (COR-051 point 6). A "
+        f"change of the internal documentation root by hand leaves such a file behind. To "
+        f"keep it a rule set, add `{unfound.folder}` to `friction.places`, or move it under "
+        f"`{home}/`. If it is meant as no rule set, such as an example, move it out of a "
+        f"`rule-sets` folder, or remove its `rule-set:` key.",
+    )
 
 
 def _container_schema(target_root: Path) -> tuple[dict | None, RuleSetFinding | None]:
@@ -2683,8 +2795,10 @@ def summary_lines(result: RuleSetValidation) -> list[str]:
     """The count line `pkit validate` prints under its `rule-sets` heading; the
     findings follow as the member's findings."""
     d = result.discovery
-    if result.is_dormant:
+    if result.is_dormant and not result.findings:
         return ["no rule sets found."]
+    if result.is_dormant:  # only files left behind (`unfound_rule_set_files`)
+        return [f"no rule sets found; {len(result.errors)} error(s)."]
     rules = d.rules
     by_status = {status: sum(1 for rule in rules if rule.status == status) for status in STATUSES}
     statuses = ", ".join(f"{count} {status}" for status, count in by_status.items() if count)

@@ -6,6 +6,7 @@
 # An uninstalled component's lines are simply absent on the next render.
 
 **/__pycache__/
+.migration-runner/
 permissions/project/diagnose.yaml
 permissions/project/diagnose-log.jsonl
 permissions/project/sandbox-provenance.yaml
