@@ -432,7 +432,7 @@ class WrittenAnswer:
       names; `links`, the fields of the links its places declare that list the
       target at head; `fields`, the trigger fields the diff changed, where it
       triggered a link listing the target — empty otherwise. `None` and empty
-      for every other answer.
+      for every other answer, whose JSON leaves the four keys out.
     """
 
     artefact: str  # the artefact's id
@@ -452,7 +452,9 @@ class WrittenAnswer:
     fields: tuple[str, ...] = ()
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        """The entry as the JSON document gives it: a revisit adds `outcome`, `target`,
+        `links` and `fields`, which no other answer carries."""
+        document: dict[str, Any] = {
             "artefact": self.artefact,
             "location": self.location,
             "answer": self.answer,
@@ -464,11 +466,13 @@ class WrittenAnswer:
             "new": self.new,
             "put_back": self.put_back,
             "changed": [_anchor_json(anchor) for anchor in self.changed],
-            "outcome": self.outcome,
-            "target": _anchor_json(self.target),
-            "links": list(self.links),
-            "fields": list(self.fields),
         }
+        if self.answer == REVISITED:
+            document["outcome"] = self.outcome
+            document["target"] = _anchor_json(self.target)
+            document["links"] = list(self.links)
+            document["fields"] = list(self.fields)
+        return document
 
 
 @dataclass(frozen=True)

@@ -413,7 +413,7 @@ def test_a_source_under_an_excluded_path_triggers_nothing(repo: AdopterRepo) -> 
     assert _revisits(_run(repo)) == []
 
 
-def test_the_json_document_carries_the_new_keys_on_every_answer(repo: AdopterRepo) -> None:
+def test_only_a_revisit_carries_the_new_keys(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": document("guide", anchors={"path": ["src/cli/**"]})})
     repo.commit(
         "revalidate the guide",
@@ -424,12 +424,8 @@ def test_the_json_document_carries_the_new_keys_on_every_answer(repo: AdopterRep
         },
     )
     (answer,) = json.loads(fc.render_json(_run(repo)))["answers"]
-    assert (answer["outcome"], answer["target"], answer["links"], answer["fields"]) == (
-        None,
-        None,
-        [],
-        [],
-    )
+    assert answer["answer"] == "unchanged"
+    assert not {"outcome", "target", "links", "fields"} & answer.keys()
 
 
 # --- validation ----------------------------------------------------------------------
