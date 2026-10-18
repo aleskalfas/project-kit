@@ -73,8 +73,9 @@ pkit:
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
     revalidated:
-      at: 2026-10-18T13:04:51Z
-      outcome: updated
+      at: 2026-10-18T13:03:43Z
+      outcome: unchanged
+      unchanged-because: The whole-repository check now reads HEAD's files through the one object reader it already keeps for history, rather than a process per read, finds a record anchor's file without parsing every path of the listing, and scans for timestamps with a pattern that matches the same spellings faster. Every command's output is unchanged, and this page says nothing of how many processes a check starts, so it still holds.
 ---
 
 # Command-line interface

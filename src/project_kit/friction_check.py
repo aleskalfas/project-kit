@@ -817,7 +817,8 @@ def record_file(root: Path, files: Collection[str], record: str) -> str | None:
     candidates = sorted(
         rel
         for rel in files
-        if PurePosixPath(rel).parent.as_posix() == directory
+        if number in rel  # a name of either form holds the number; skip the parse
+        and PurePosixPath(rel).parent.as_posix() == directory
         and (
             PurePosixPath(rel).name == f"{number}.md"
             or fnmatchcase(PurePosixPath(rel).name, f"{number}-*.md")

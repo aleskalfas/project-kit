@@ -461,10 +461,15 @@ def resolve_record(
             directory = decisions_dir.resolve().relative_to(target_root.resolve()).as_posix()
         except (OSError, ValueError):
             return None
+        # A name the pattern matches holds `<id>-`, and a path holds its name, so a
+        # path without it is passed over unparsed: the same files, found in a listing
+        # of thousands at the cost of a substring test each.
+        named = f"{record_id}-"
         listed = sorted(
             rel
             for rel in files
-            if PurePosixPath(rel).parent.as_posix() == directory
+            if named in rel
+            and PurePosixPath(rel).parent.as_posix() == directory
             and fnmatch.fnmatchcase(PurePosixPath(rel).name, pattern)
         )
         return target_root / listed[0] if listed else None
