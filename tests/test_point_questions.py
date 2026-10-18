@@ -592,3 +592,30 @@ def test_show_names_a_points_question(repo: AdopterRepo) -> None:
 
     assert f"{GRANTS} (data v1, union, question: ask)" in result.output
     assert [p["question"] for p in document["accepts"]] == ["ask"]
+
+
+def _script_question(tmp_path: Path, body: str) -> point_questions.Question:
+    script = tmp_path / "ask.sh"
+    script.write_text(f"#!/bin/sh\n{body}\n", encoding="utf-8")
+    script.chmod(script.stat().st_mode | stat.S_IXUSR)
+    return point_questions.Question(GRANTS, "defs", "ask", script)
+
+
+@pytest.mark.parametrize(
+    "body",
+    ["kill -INT $$", "exit 130", "kill -INT $PPID"],
+    ids=["ended-by-an-interrupt", "exits-as-interrupted", "interrupt-while-it-ran"],
+)
+def test_an_interrupt_during_a_question_stops_the_questions(tmp_path: Path, body: str) -> None:
+    """The command is left to handle the interrupt, and the questions stop."""
+    with pytest.raises(KeyboardInterrupt):
+        point_questions._run(_script_question(tmp_path, body), tmp_path)  # pyright: ignore[reportPrivateUsage] -- the runner under test
+
+
+def test_an_interrupt_handler_is_put_back_after_a_question(tmp_path: Path) -> None:
+    import signal
+
+    before = signal.getsignal(signal.SIGINT)
+
+    assert point_questions._run(_script_question(tmp_path, "exit 0"), tmp_path) == 0  # pyright: ignore[reportPrivateUsage] -- the runner under test
+    assert signal.getsignal(signal.SIGINT) is before

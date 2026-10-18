@@ -746,7 +746,7 @@ def _settle_new_collisions(
         )
         click.echo()
         return CollisionAnswers()
-    if not _at_a_terminal():
+    if not at_a_terminal():
         raise click.ClickException(
             "\n       ".join(
                 [
@@ -1449,7 +1449,7 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
     # installed tool: the release just installed reports a version below its
     # tag, or a release landed during the install, so it carries on, and the
     # guard keeps it from installing.
-    handed_over = os.environ.get(_SELF_UPDATED_ENV) == "1" and _at_a_terminal()
+    handed_over = os.environ.get(_SELF_UPDATED_ENV) == "1" and at_a_terminal()
     if self_update and not dry_run and handed_over and not _running_is_installed_tool():
         _stop_failed_hand_over(
             f"a newer pkit tool (v{latest}) was installed, but the `pkit` your PATH "
@@ -1485,11 +1485,14 @@ def _self_update_allowed() -> bool:
     instruct so a network install is never forced under automation."""
     if os.environ.get(_SELF_UPDATED_ENV) == "1":
         return False
-    return _at_a_terminal()
+    return at_a_terminal()
 
 
-def _at_a_terminal() -> bool:
-    """True iff both standard input and standard output are terminals."""
+def at_a_terminal() -> bool:
+    """True iff both standard input and standard output are terminals: where a
+    person can answer (ADR-063 point 3). The one test, which the tool step, the
+    collision flow and a data point's question (`point_questions`, COR-061)
+    read."""
     return _is_tty(sys.stdin) and _is_tty(sys.stdout)
 
 

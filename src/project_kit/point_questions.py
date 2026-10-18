@@ -30,10 +30,12 @@ first question ran.
 
 from __future__ import annotations
 
-import sys
+import signal
+import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from types import FrameType
 from typing import TYPE_CHECKING
 
 import click
@@ -133,18 +135,11 @@ def _script(wiring: Wiring, definer: str, reference: str) -> Path | None:
 
 def at_a_terminal() -> bool:
     """Whether a person can answer here: standard input and standard output both
-    terminals. A stream that is absent or closed is no terminal."""
-    return _is_tty(sys.stdin) and _is_tty(sys.stdout)
+    terminals, the one test the collision flow reads too (`upgrade.at_a_terminal`,
+    ADR-063 point 3)."""
+    from project_kit.upgrade import at_a_terminal as terminal_test
 
-
-def _is_tty(stream: object) -> bool:
-    isatty = getattr(stream, "isatty", None)
-    if not callable(isatty):
-        return False
-    try:
-        return bool(isatty())
-    except (ValueError, OSError):
-        return False
+    return terminal_test()
 
 
 def ask(
@@ -214,11 +209,48 @@ def ask(
             )
 
 
+# How a shell reports a command an interrupt ended: 128 plus the signal's number.
+_INTERRUPTED_EXIT = 128 + signal.SIGINT
+
+
 def _run(question: Question, target_root: Path) -> int:
     """Start the question's command from the project root, with no argument,
     through the dispatcher's proxy run (`dispatcher.run_as_typed`): the
-    terminal's streams and no time bound. Answers its exit status."""
+    terminal's streams and no time bound. Answers its exit status.
+
+    An interrupt at the terminal reaches the command, which may save what it was
+    told before it ends. This process only notes it while the command runs, as a
+    shell does, so it never cuts the command off. A command an interrupt ended,
+    or one that ran while an interrupt came, raises `KeyboardInterrupt` here,
+    which stops the questions (`ask`)."""
     from project_kit.dispatcher import run_as_typed
 
     assert question.script is not None
-    return run_as_typed(question.script, cwd=target_root)
+    interrupted: list[int] = []
+    restore = _note_interrupts(interrupted)
+    try:
+        status = run_as_typed(question.script, cwd=target_root)
+    finally:
+        restore()
+    if interrupted or status in (-signal.SIGINT, _INTERRUPTED_EXIT):
+        raise KeyboardInterrupt
+    return status
+
+
+def _note_interrupts(noted: list[int]) -> Callable[[], None]:
+    """Note each interrupt in `noted` instead of raising it, and answer what puts
+    the previous handler back. Only the main thread may set a handler, so
+    elsewhere it changes nothing."""
+    if threading.current_thread() is not threading.main_thread():
+        return lambda: None
+    previous = signal.getsignal(signal.SIGINT)
+
+    def note(signum: int, _frame: FrameType | None) -> None:
+        noted.append(signum)
+
+    signal.signal(signal.SIGINT, note)
+
+    def restore() -> None:
+        signal.signal(signal.SIGINT, signal.SIG_DFL if previous is None else previous)
+
+    return restore
