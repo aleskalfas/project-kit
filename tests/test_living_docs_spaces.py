@@ -365,10 +365,10 @@ def test_a_signpost_declaring_a_page_kind_there_is_reported_never_failed(
     assert finding["severity"] == "report"
     assert finding["location"] == f"{SIGNPOST}:/kind"
     assert finding["message"] == (
-        f"{SIGNPOST} declares its page kind, but it lies only in project place "
-        f"'{OLD_RULE_SETS}', which {PASSED_OVER}, so it is no page and no space counts it. To "
-        f"make it a page, add `{OLD_RULE_SETS}: <space>` under `places` in {LD_CONFIG}, naming "
-        "one of ['user', 'technical'] (DEC-001 point 1)."
+        f"{SIGNPOST} declares its page kind, but it lies in no place of a space, and in project "
+        f"place '{OLD_RULE_SETS}', which {PASSED_OVER}, so it is no page and no space counts it. "
+        f"To make it a page, add `{OLD_RULE_SETS}: <space>` under `places` in {LD_CONFIG}, "
+        "naming one of ['user', 'technical'] (DEC-001 point 1)."
     )
     assert document["summary"][1].startswith("user: 2 page(s);")
 
@@ -396,7 +396,7 @@ def test_a_place_of_rule_sets_once_assigned_gives_its_space_as_any_place(
 def test_a_place_of_rule_sets_given_a_type_is_held_to_an_assignment_as_any_place(
     project: AdopterRepo,
 ) -> None:
-    """A type is the project's aim at the spaces, so nothing is set apart."""
+    """A type names what the place's documents are, so nothing is passed over."""
     typed: Any = {"path": OLD_RULE_SETS, "type": "living-docs:page"}
     declare(project, places=["README.md", typed])
     project.write(
@@ -430,13 +430,36 @@ def test_a_rule_set_folder_s_signpost_under_a_root_stays_a_page_of_its_space(
 def test_a_signpost_also_in_an_unassigned_place_of_no_rule_sets_owes_it_an_assignment(
     project: AdopterRepo,
 ) -> None:
-    """Setting the place of rule sets apart leaves every other place as it is."""
+    """Passing over the place of rule sets leaves every other place as it is."""
     declare(project, places=["README.md", "old-docs", OLD_RULE_SETS])
     project.write({f"{OLD_RULE_SETS}/old.md": OLD_SET, SIGNPOST: "# Rule sets\n"})
     location, message = only_error(run(project))
     assert location == f"{CONFIG}:/friction/places/1"
     assert "project place 'old-docs' lies outside every documentation root" in message
     assert f"({SIGNPOST})" in message
+
+
+@pytest.mark.parametrize("typed", [False, True])
+def test_a_place_of_rule_sets_passed_over_leaves_its_space_to_the_next_place(
+    project: AdopterRepo, typed: bool
+) -> None:
+    """The next of a document's places in the backbone's order gives its space."""
+    unscoped(project)
+    outer: Any = {"path": "old-docs", "type": "living-docs:page"} if typed else "old-docs"
+    declare(
+        project,
+        places=["README.md", outer, OLD_RULE_SETS],
+        assignments={"README.md": "user", "old-docs": "user"},
+    )
+    project.write(
+        {
+            f"{OLD_RULE_SETS}/old.md": OLD_SET,
+            SIGNPOST: "---\nreader: user\nkind: signpost\n---\n\n# Rule sets\n",
+        }
+    )
+    document = run(project)
+    assert errors(document) == []
+    assert document["summary"][1].startswith("user: 3 page(s);")
 
 
 @pytest.mark.parametrize(("rule_sets", "held"), [({"component": None}, True), (None, False)])
@@ -459,11 +482,22 @@ def test_a_place_holds_rule_sets_as_the_backbone_s_answer_marks_it(
     assert read.rule_sets is held
 
 
-def test_an_entry_point_in_a_place_of_rule_sets_set_apart_names_the_place(
-    project: AdopterRepo,
+@pytest.mark.parametrize(
+    ("entry", "said"),
+    [
+        (
+            SIGNPOST,
+            f"lies in no place of a space, and in project place '{OLD_RULE_SETS}', which "
+            f"{PASSED_OVER}, so no space counts it",
+        ),
+        (f"{OLD_RULE_SETS}/old.md", "is a rule-set file, an anchor target (COR-051), never a page"),
+    ],
+)
+def test_an_entry_point_in_a_place_of_rule_sets_passed_over_says_why_it_is_no_page(
+    project: AdopterRepo, entry: str, said: str
 ) -> None:
     spaces = {
-        "user": {"entry-point": SIGNPOST, "definition": f"{DEFINITIONS}/user.md"},
+        "user": {"entry-point": entry, "definition": f"{DEFINITIONS}/user.md"},
         "technical": {
             "entry-point": "tech-docs/README.md",
             "definition": f"{DEFINITIONS}/technical.md",
@@ -472,7 +506,7 @@ def test_an_entry_point_in_a_place_of_rule_sets_set_apart_names_the_place(
     _rule_sets_left_behind(project, "# Rule sets\n", spaces=spaces)
     location, message = only_error(run(project))
     assert location == f"{LD_CONFIG}:/spaces/user/entry-point"
-    assert f"lies only in project place '{OLD_RULE_SETS}', which {PASSED_OVER}" in message
+    assert said in message
 
 
 def test_an_assignment_names_a_declared_place_and_a_declared_space(project: AdopterRepo) -> None:

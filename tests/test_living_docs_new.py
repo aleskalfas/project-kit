@@ -350,9 +350,9 @@ def test_a_page_in_an_unassigned_place_of_rule_sets_outside_the_roots_is_put_bac
     message = refused(page(project, "old-docs/rule-sets/README.md", "--space", "user"))
     assert "old-docs/rule-sets/README.md would not be a page of space 'user'" in message
     assert (
-        "it lies only in project place 'old-docs/rule-sets', which is declared to hold rule "
-        "sets, gives no type, lies outside every documentation root and is assigned to no "
-        "space, so it gives no space"
+        "it lies in no place of a space, and in project place 'old-docs/rule-sets', which is "
+        "declared to hold rule sets, gives no type, lies outside every documentation root and "
+        "is assigned to no space, so no space counts it"
     ) in message
     assert snapshot(project) == before
 

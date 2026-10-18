@@ -37,7 +37,8 @@ What is checked, each against the record's words:
 - **Pages** (point 4). A document is a page when it is of the page type: the
   place that wins for it gives that type and it declares its page kind in
   `kind`. In a project place outside every root that gives no type, a document
-  of no type that declares its page kind is a page too. A page's `kind`, and
+  of no type that declares its page kind is a page too, unless the place is a
+  place of rule sets passed over (above). A page's `kind`, and
   its `reader` where RS-LDOC-003 binds on it, are validated by this
   capability's companion schema, `schemas/page.schema.json`. The friction
   block in the container is the core's, and the backbone's `friction` pass
@@ -459,10 +460,7 @@ class Checked:
         if rel in walk.untold:
             return Standing(why="its places of the spaces cannot be told apart")
         if rel in walk.apart:
-            return Standing(
-                why=f"it lies only in project place {walk.apart[rel].written!r}, which "
-                f"{SET_APART}, so it gives no space"
-            )
+            return Standing(why=f"it {_apart_why(rel, decl, walk)}")
         if rel in walk.space_of:
             return Standing(
                 why="the place that gives it its space does not give it the page type, so it "
@@ -1149,6 +1147,27 @@ def _assignment_findings(
             )
 
 
+def _apart_claim(rel: str, decl: Declarations) -> Claim | None:
+    """Whose a document recorded apart is, when another owner claims it or it is a
+    decision record: what the walk would have said of it in a place of a space."""
+    document = decl.documents[rel]
+    record = record_of(document)
+    return claim_of(rel, document, decl) or (Claim("record", record) if record else None)
+
+
+def _passed_over(place: ProjectPlace) -> str:
+    return f"lies in no place of a space, and in project place {place.written!r}, which {SET_APART}"
+
+
+def _apart_why(rel: str, decl: Declarations, walk: _Walk) -> str:
+    """Why a document recorded apart is no page of any space, as a clause: its
+    owner's claim where it has one, else the place of rule sets passed over."""
+    claim = _apart_claim(rel, decl)
+    if claim is not None:
+        return f"is {claim.described()}, never a page"
+    return f"{_passed_over(walk.apart[rel])}, so no space counts it"
+
+
 def _apart_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
     """A document that lies only in a place of rule sets set apart, that no other
     owner claims, is in no space: neither a page nor an unclassified document. One
@@ -1157,7 +1176,7 @@ def _apart_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
     spaces = known_spaces(decl)
     for rel, place in sorted(walk.apart.items()):
         document = decl.documents[rel]
-        if claim_of(rel, document, decl) is not None or record_of(document) is not None:
+        if _apart_claim(rel, decl) is not None:
             continue
         if PAGE_TYPE not in document.types and not declares_kind(document.fields):
             continue
@@ -1165,10 +1184,10 @@ def _apart_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
             Finding(
                 REPORT,
                 f"{rel}:/{KIND_FIELD}",
-                f"{rel} declares its page kind, but it lies only in project place "
-                f"{place.written!r}, which {SET_APART}, so it is no page and no space counts "
-                f"it. To make it a page, add `{place.written}: <space>` under `places` in "
-                f"{LIVING_DOCS_CONFIG}, naming one of {spaces} (DEC-001 point 1).",
+                f"{rel} declares its page kind, but it {_passed_over(place)}, so it is no page "
+                f"and no space counts it. To make it a page, add `{place.written}: <space>` "
+                f"under `places` in {LIVING_DOCS_CONFIG}, naming one of {spaces} (DEC-001 "
+                f"point 1).",
                 check="rule-set-place-unassigned",
             )
         )
@@ -1429,7 +1448,7 @@ def _entry_point_findings(
                 + (f" or of {spaces_named}" if others else "")
             )
         elif entry in walk.apart:
-            problem = f"lies only in project place {walk.apart[entry].written!r}, which {SET_APART}"
+            problem = _apart_why(entry, decl, walk)
         elif entry not in walk.space_of:
             problem = (
                 "lies in no place of any space — under neither documentation root, and in no "
