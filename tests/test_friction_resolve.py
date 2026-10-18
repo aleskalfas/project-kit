@@ -829,6 +829,24 @@ def test_a_revisited_list_conflicting_beside_the_body_is_left_with_advice(
     assert _unmerged(repo) == {REQ}
 
 
+def test_the_human_view_escapes_the_words_of_an_entry(repo: AdopterRepo) -> None:
+    """An entry's reason is the author's: a control character in it is printed escaped,
+    so it cannot hide the command printed beneath it."""
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason")),
+        _requirement(_test('"the base\'s \\e[8mreason"')),
+    )
+
+    result = _cli()
+
+    assert result.exit_code == 0, result.output
+    assert "\x1b[8m" not in result.output
+    assert "the base's \\x1b[8mreason" in result.output
+    assert REVISIT_COMMAND in result.output
+
+
 def test_a_merge_that_leaves_no_entry_is_left(repo: AdopterRepo) -> None:
     """Each side removed the other's entry: an emptied list drops every answer in it, so
     the person decides."""

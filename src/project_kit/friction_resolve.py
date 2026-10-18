@@ -92,6 +92,7 @@ from project_kit.friction_check import (
     commit_of,
     content_differs,
     parsed_at,
+    printable,
     resolve_base,
     run_git,
 )
@@ -1139,6 +1140,17 @@ def render_human(resolution: Resolution, *, dry_run: bool) -> str:
 
 
 def _file_lines(result: FileResult, dry_run: bool) -> list[str]:
+    """What the command says of one file, and, in a dry run, its diff. A path, a reason
+    and an artefact's words are the author's, so what it says is printed escaped, as the
+    change check's human view prints them (`printable`): they cannot move the cursor or
+    hide the command printed beside them."""
+    said = [printable(line) for line in _said(result, dry_run)]
+    if dry_run and result.status is FileStatus.RESOLVED:
+        said.extend("    " + line for line in _diff(result))
+    return said
+
+
+def _said(result: FileResult, dry_run: bool) -> list[str]:
     if result.status is FileStatus.SKIPPED:
         return [f"  {result.path} — skipped: {result.reason}"]
     if result.status is FileStatus.LEFT:
@@ -1163,8 +1175,6 @@ def _file_lines(result: FileResult, dry_run: bool) -> list[str]:
             "revisits it:"
         )
         lines.append(f"        {revisit.command}")
-    if dry_run:
-        lines.extend("    " + line for line in _diff(result))
     return lines
 
 
