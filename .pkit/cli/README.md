@@ -79,8 +79,9 @@ pkit:
         - .pkit/lifecycle/README.md#what-ships-a-migration
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
     revalidated:
-      at: 2026-10-18T20:35:39Z
-      outcome: updated
+      at: 2026-10-18T20:52:24Z
+      outcome: unchanged
+      unchanged-because: "ADR-027 gains one sentence: the agent runner also applies the required exclusion to a confined agent run, under ADR-027's conditions as ADR-066 point 6 walks them (refinement per ADR-066). This page documents permissions setup autonomy and sandbox exclude, and says setup's required exclusion is the only widening setup applies. That still holds. No agent runner or run command is built yet, and this reference documents the run command with the change that builds it (ADR-066, Implications)."
 ---
 
 # Command-line interface
