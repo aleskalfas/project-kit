@@ -2,7 +2,7 @@
 TERM-anchor:
   name: anchor
   status: active
-  definition: "declared link from an artefact to what makes it true: a path, a record, or another artefact"
+  definition: declared link from an artefact to what makes it true, such as a path, a record or another artefact
   pkit:
     friction:
       anchors:
@@ -14,7 +14,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement an artefact carries on a change to its anchors: a revalidation, `updated` or `unchanged` with why, or a deferral with its reason"
+  definition: "statement in an artefact's `friction` block on a change to its anchors: a revalidation with its outcome, or a deferral with its reason"
   pkit:
     friction:
       anchors:
@@ -37,7 +37,7 @@ TERM-artefact:
 TERM-base:
   name: base
   status: active
-  definition: "commit a check compares a change with: where the change's branch left the default branch, or left a reference named for one run"
+  definition: branch or other reference a check compares a change with, from the commit where the change's branch left it
   pkit:
     friction:
       anchors:
@@ -49,7 +49,7 @@ TERM-base:
 TERM-changeset:
   name: changeset
   status: active
-  definition: file naming a component, the version segment a change moves it by, and a note for the changelog
+  definition: file naming the backbone or a component, the version segment a change moves it by, and a note for the changelog
   pkit:
     friction:
       anchors:
@@ -67,12 +67,13 @@ TERM-component:
       anchors:
         path:
           - src/project_kit/manifest.py
+          - src/project_kit/changesets.py
         record:
           - COR-010
 TERM-conventions-corpus:
   name: conventions corpus
   status: active
-  definition: set of a project's own coding standards, which the producer agent reads from wherever the project's agents overlay points it
+  definition: set of a project's own coding standards, kept where the project names it, which the agents that write and review its code read
   pkit:
     friction:
       anchors:
@@ -81,11 +82,12 @@ TERM-conventions-corpus:
         record:
           - software-engineering:DEC-001#2
           - software-engineering:DEC-001#4
+          - software-engineering:DEC-002#4
           - ADR-013
 TERM-debt:
   name: debt
   status: active
-  definition: change under an artefact's anchor that the default branch carries unanswered or deferred, dated from the commit it came from
+  definition: "stale or deferred finding of the whole-repository check, dated from the commit it originates in: the change nobody answered, or the deferral"
   pkit:
     friction:
       anchors:
@@ -97,7 +99,7 @@ TERM-debt:
 TERM-friction:
   name: friction
   status: active
-  definition: finding that an anchor of an artefact changed with no answer standing for that change
+  definition: finding that something an artefact rests on changed, such as an anchor's target or the anchor list, with no answer standing for it
   pkit:
     friction:
       anchors:
@@ -108,6 +110,7 @@ TERM-friction:
           - COR-050#1
           - COR-050#5
           - COR-050#6
+          - COR-050#9
 TERM-methodology:
   name: methodology
   status: active
@@ -118,7 +121,7 @@ TERM-methodology:
 TERM-place:
   name: place
   status: active
-  definition: path or glob that the project or a component declares as holding artefacts, the only files the backbone reads for anchors
+  definition: path or glob the project or a component declares, within which the backbone looks for documents that carry anchors
   pkit:
     friction:
       anchors:
@@ -127,6 +130,19 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
+TERM-surface-change:
+  name: surface change
+  status: active
+  definition: alteration of the system that an adopter could observe, depend on or break against
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/release.py
+        record:
+          - PRJ-002#D1
+          - PRJ-002#D2
+          - COR-050#8
 TERM-system:
   name: system
   status: active
@@ -148,6 +164,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Citation:** a record or a file that a document names in its text. A change to it asks the document nothing, unless an anchor names it too.
 - **Dead anchor:** an anchor that resolves to nothing, such as a glob that matches no file. It is an error, never silence (COR-050 point 7).
+- **Registered kind:** a kind of anchor a capability adds, with the command that resolves it. The backbone resolves paths, records and artefacts itself (COR-050 point 2).
 
 ## TERM-answer — answer
 
@@ -158,10 +175,11 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Revalidation:** an answer saying the artefact was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds (COR-050 point 3).
 - **Deferral:** an answer that puts off one anchor's change, with a reason naming the follow-up that will answer it (COR-050 point 4).
 - **The list of answers:** the change check's list of every answer a change wrote, word for word, which a reviewer works from (COR-050 point 3). The answers themselves live on the artefacts.
+- **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 
 ## TERM-artefact — artefact
 
-**Example:** each use case of the analysis is an artefact, and so is each page project-kit lists in `friction.places`, such as `.pkit/cli/README.md`.
+**Example:** each use case of the analysis is an artefact, and so is each entry of this glossary, a collection file. So is each page project-kit lists in `friction.places`, such as `.pkit/cli/README.md`.
 
 **Distinctions:**
 
@@ -170,12 +188,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-base — base
 
-**Example:** CI names the pull request's target in `PKIT_CHECK_BASE`, so each check compares the change with where its branch left that target.
+**Example:** CI names the pull request's target in `PKIT_CHECK_BASE`, so that target is each check's base. Each compares the change from where its branch left the target.
 
 **Distinctions:**
 
-- **Default branch:** the branch the project's pull requests merge into. A base named for one run replaces it for that run only, and never changes it (COR-054 point 3).
-- **A pull request's base:** the hosting service's name for the branch a pull request targets. A check's base is the commit where the change's branch left that branch.
+- **Default branch:** the base of every check that names no other. A base named for one run replaces it for that run only, and never changes it (COR-054 point 3).
+- **Where the branch left it:** the commit a check measures the change from, git's merge-base of the branch and the base. The base itself may have moved on since.
+- **A pull request's base:** the hosting service's name for the branch a pull request targets. The analysis calls that branch the pull request's target, and CI names it as the checks' base.
 
 ## TERM-changeset — changeset
 
@@ -192,7 +211,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Backbone:** the core every component depends on, released as one, with a version of its own (COR-010).
+- **Backbone:** the core every component depends on. It is released as one whole, with a version of its own (COR-010).
+- **A changeset's `component`:** the field names the backbone too, as `backbone`. So a changeset names the backbone or a component.
 
 ## TERM-conventions-corpus — conventions corpus
 
@@ -201,6 +221,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **The methodology's conventions:** conventional commits, branch names and the no-shared-files invariant, which bind every project. The `convention-compliance-reviewer` checks them, and never reads the corpus (software-engineering DEC-001 point 4).
+- **The reviewers' knowledge:** what each code-review agent knows of any project. The project's own rules come from the corpus alone (software-engineering DEC-002 point 4).
 
 ## TERM-debt — debt
 
@@ -208,7 +229,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Friction:** what a change owes, and answers before it merges. Debt is what the default branch carries when nobody answered it.
+- **Friction:** a finding that a change owes an answer, which the change gives before it merges. Friction nobody answered stays on the default branch as stale debt.
 - **Stale and deferred:** stale debt is a change nobody answered, dated from that change. Deferred debt is a deferral, dated from the commit that introduced it (COR-050 point 9).
 - **Ledger:** no file lists the debt. Each run derives it from git again (COR-050 point 9).
 
@@ -218,7 +239,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Debt:** friction the default branch carries, which the whole-repository check reports with the change it came from (COR-050 point 6).
+- **Debt:** what the whole-repository check reports on the default branch. Friction nobody answered is stale debt, and a deferral is deferred debt (COR-050 point 9).
 - **The `friction` block:** the block in an artefact's front matter that holds its anchors and answers (COR-050 point 1). It is no finding.
 
 ## TERM-methodology — methodology
@@ -238,8 +259,17 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Documentation root:** where a project keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
-- **Synced tree:** files sync copies from elsewhere, such as the methodology's records. It is never a place, or each refresh would read as friction (COR-050 point 14).
+- **Synced tree:** a folder that sync copies into the project from elsewhere, such as the methodology's records. It is never a place, or each refresh would read as friction (COR-050 point 14).
 - **Held folder:** a folder a component declares for its held documents. No place reads a file in it as an artefact (COR-050 point 1).
+
+## TERM-surface-change — surface change
+
+**Example:** a new subcommand of `pkit` is a surface change, so its pull request declares it in a changeset (PRJ-002 D1).
+
+**Distinctions:**
+
+- **A component's surface paths:** the paths the changeset guard reads as a component's surface. A change to one only suggests a surface change, and a person judges it (PRJ-002 D2).
+- **Declared surface:** the paths a project or a component says its descriptions ought to cover. Those no artefact anchors are reported as uncovered (COR-050 point 8).
 
 ## TERM-system — system
 
