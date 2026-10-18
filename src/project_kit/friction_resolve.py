@@ -1,9 +1,11 @@
-"""`pkit friction resolve`: a merge's conflicting revalidation, resolved as text (COR-050 point 3).
+"""`pkit friction resolve`: a merge's conflicting answers, resolved as text (COR-050 points 3, 16).
 
 When two lines of work revalidate the same artefact, its `revalidated` block
 conflicts on merge, and the person resolving the conflict revalidates the
 combined state; nothing merges two revalidations automatically, since that
-would claim a revalidation nobody made (point 3). This command does the
+would claim a revalidation nobody made (point 3). So it is with the
+`revisited` entry two lines of work each wrote for one target: whoever
+resolves the conflict writes it again (point 16). This command does the
 mechanical half of that and none of the answer:
 
 - **Only during a merge.** The base side is the one being merged in —
@@ -17,15 +19,16 @@ mechanical half of that and none of the answer:
   differs, because the person already resolved or edited part of it, or
   because git merged it in a way this cannot reproduce, is refused and never
   overwritten.
-- **Only conflicts inside `revalidated` blocks.** The same merge, with every
-  conflict taken from this branch and again from the base side, gives git's
-  merge of everything else; a block whose text differs between the two is
-  one git conflicted on, and only those are decided. Each is replaced, in
-  both, by its decision — and the two must then be equal, which holds only
-  when every conflict region lies inside a replaced block. A conflict
-  anywhere else — the body, another field, the anchors, a line beside a
-  block — leaves the file as git left it, and says where. A block git merged
-  cleanly keeps git's merge, byte for byte.
+- **Only conflicts inside `revalidated` blocks and `revisited` lists.** The
+  same merge, with every conflict taken from this branch and again from the
+  base side, gives git's merge of everything else; a block or list whose text
+  differs between the two is one git conflicted on, and only those are
+  decided. Each is replaced, in both, by its decision — and the two must then
+  be equal, which holds only when every conflict region lies inside a
+  replaced block or list. A conflict anywhere else — the body, another field,
+  the anchors, a line beside a block — leaves the file as git left it, and
+  says where. A block or list git merged cleanly keeps git's merge, byte for
+  byte.
 - **A decision merges the answer and the deferrals apart (points 3 and 4).**
   The answer — `at`, `outcome`, `unchanged-because` — comes from the side that
   changed it. Deferrals merge three ways by anchor, so parallel deferrals are
@@ -36,6 +39,15 @@ mechanical half of that and none of the answer:
   change check as a revalidation made here, which nobody made, so the block
   is left in conflict. A block one side removed and the other changed is left
   too, and said.
+- **A `revisited` list merges by target (point 16).** Its entries merge three
+  ways by anchor, as deferrals do: an entry only one side changed is that
+  side's, so entries both sides wrote for different targets are kept, sorted
+  as the writer sorts them. Where both sides wrote the entry of one target
+  differently, the base side's is taken, under the rule for an answer both
+  sides revalidated: only when `MERGE_HEAD` is the change check's base. An
+  entry one side removed and the other changed, a list that is not one
+  well-formed entry per target on every side, and a merge that leaves no
+  entry, are left to the person.
 - **It writes no answer.** Each artefact both sides revalidated now carries
   the base side's answer as written, and owes a revalidation of the combined
   state once the merge is committed. The command names it with the outcome
@@ -43,7 +55,13 @@ mechanical half of that and none of the answer:
   `unchanged` when it does not — as the change check judges it. The check
   requires that revalidation only where an anchor of the artefact changed on
   this branch; elsewhere it is point 3's rule for people, and the command's
-  advice.
+  advice. Each target both sides wrote an entry for now carries the base
+  side's entry, and owes its entry written again for the combined state: the
+  command names the `pkit friction revisit` that writes it. The base side's
+  reason is no new reason, so the check asks for that entry where this
+  branch changed a trigger field of a link listing the target and left the
+  target as it was; elsewhere it is point 16's rule for people, and the
+  command's advice.
 - **Staging is the person's.** The resolved file is written in the working
   file's own line endings; `git add` runs only with consent — `--yes`, or a
   terminal's confirmation — and `git checkout -m -- <path>` brings the
@@ -58,7 +76,7 @@ import re
 import secrets
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
@@ -74,11 +92,13 @@ from project_kit.friction_check import (
     commit_of,
     content_differs,
     parsed_at,
+    printable,
     resolve_base,
     run_git,
 )
 from project_kit.friction_discovery import (
     FRICTION_KEY,
+    REVISITED_KEY,
     Anchor,
     Artefact,
     ArtefactKind,
@@ -94,6 +114,7 @@ from project_kit.friction_write import (
     DEFERRED,
     OUTCOMES,
     REVALIDATED,
+    REVISIT_OUTCOMES,
     UNCHANGED,
     FileNotReplaced,
     carrier_keys,
@@ -132,6 +153,13 @@ _HISTOGRAM = "--diff-algorithm=histogram"
 # An artefact across the versions: a file's one document, or an entry by id.
 _Key = tuple[ArtefactKind, str | None]
 
+# One answer of an artefact a conflict can lie in: its `revalidated` block, or its
+# `revisited` list, by the key that writes it.
+_Part = tuple[str, _Key]
+
+# What a person writes in place of a revisit entry's reason (`pkit friction revisit`).
+REVISIT_REASON = "<why the target still stands, or the follow-up that revisits it>"
+
 # A block absent from a version, so that it compares unequal to one written empty.
 _ABSENT = object()
 
@@ -144,7 +172,7 @@ RESOLVE_SCHEMA_VERSION = 1
 class FileStatus(Enum):
     """What the command did with a file. The values are the `status` field of the JSON output."""
 
-    RESOLVED = "resolved"  # every conflict lay inside `revalidated` blocks: written
+    RESOLVED = "resolved"  # every conflict lay inside `revalidated` blocks or `revisited` lists
     LEFT = "left"  # a conflict it does not settle: the file left in conflict, untouched
     SKIPPED = "skipped"  # not in conflict any more, or not an artefact's file
 
@@ -163,6 +191,19 @@ class Owed:
 
 
 @dataclass(frozen=True)
+class OwedRevisit:
+    """A target both sides wrote a `revisited` entry for: the source now carries the base
+    side's entry, and owes the entry written again for the combined state once the merge is
+    committed (COR-050 point 16)."""
+
+    artefact: str  # the source's id
+    location: str
+    target: Anchor
+    entry: Any  # the base side's entry as written: `outcome`, `reason`
+    command: str  # the entry written again, with a placeholder where a person's words go
+
+
+@dataclass(frozen=True)
 class FileResult:
     """One file the command looked at. `before` and `after` are a resolved file's text as
     the working tree holds it and as it is written."""
@@ -171,6 +212,7 @@ class FileResult:
     status: FileStatus
     reason: str | None = None
     owed: tuple[Owed, ...] = ()
+    owed_revisits: tuple[OwedRevisit, ...] = ()
     before: str = ""
     after: str = ""
 
@@ -217,8 +259,9 @@ class _Context:
     histogram: bool  # `git merge-file` takes the histogram diff (git 2.44 on)
     nonce: str
 
-    def base_side_refusal(self, location: str) -> str | None:
-        """Why the base side's answer cannot be taken for an artefact both sides revalidated,
+    def base_side_refusal(self, location: str, target: Anchor | None = None) -> str | None:
+        """Why the base side's answer cannot be taken for an artefact both sides revalidated
+        — or, given `target`, the base side's entry for a target both sides wrote one for —
         or `None` when it can: `MERGE_HEAD` is the change check's base tip."""
         if self.base_tip is not None and self.base_tip == self.merge_head:
             return None
@@ -228,6 +271,14 @@ class _Context:
             which = (
                 f"MERGE_HEAD {self.merge_head[:SHORT]} is not the change check's base "
                 f"({self.base_ref} at {self.base_tip[:SHORT]})"
+            )
+        if target is not None:
+            return (
+                f"both sides wrote the `revisited` entry of {target.kind}:{target.value} in "
+                f"{location}, and {which}: taken, the base side's entry would read in this "
+                f"branch's change check as an entry written here, which nobody wrote — resolve "
+                f"its `revisited` list by hand and write the entry again for the combined state "
+                f"once the merge is committed"
             )
         return (
             f"both sides revalidated {location}, and {which}: taken, the base side's answer "
@@ -339,9 +390,10 @@ def _file(
 
 @dataclass(frozen=True)
 class Stamp:
-    """One artefact's `revalidated` block as one version writes it: its value as written,
-    its text — the key through the end of its value — at `start` in that version, the
-    column its key starts at, and whether it sits in a mapping written in flow style."""
+    """One artefact's `revalidated` block, or its `revisited` list, as one version writes
+    it: its value as written, its text — the key through the end of its value — at `start`
+    in that version, the column its key starts at, and whether it sits in a mapping
+    written in flow style."""
 
     value: Any
     start: int
@@ -356,13 +408,19 @@ class Stamp:
 
 @dataclass(frozen=True)
 class Version:
-    """One version of a file, read with `\\n` line breaks: its artefacts, and where each
-    `revalidated` block is written in it. `pkit friction since` reads blocks through it
-    too (`friction_since`)."""
+    """One version of a file, read with `\\n` line breaks: its artefacts, where each
+    `revalidated` block is written in it (`stamps`), and where each `revisited` list is
+    (`revisits`). `pkit friction since` reads both through it too (`friction_since`)."""
 
     text: str
     artefacts: Mapping[_Key, Artefact]
     stamps: Mapping[_Key, Stamp]
+    revisits: Mapping[_Key, Stamp] = field(default_factory=dict[_Key, Stamp])
+
+    def spans(self, which: str) -> Mapping[_Key, Stamp]:
+        """Where each artefact's answer of one kind is written: its `revalidated` block,
+        or its `revisited` list, by the key that writes it."""
+        return self.revisits if which == REVISITED_KEY else self.stamps
 
 
 _NO_VERSION = Version("", {}, {})
@@ -370,12 +428,14 @@ _NO_VERSION = Version("", {}, {})
 
 @dataclass(frozen=True)
 class _Decision:
-    """A conflicted block decided: its value, its text when one side wrote exactly that
-    (`None` when it is written anew), and whether a revalidation is owed."""
+    """A conflicted block or list decided: its value, its text when one side wrote exactly
+    that (`None` when it is written anew), whether a revalidation is owed, and, for a
+    `revisited` list, each target whose entry is owed written again."""
 
     value: Any
     text: str | None
     owed: bool
+    targets: tuple[Anchor, ...] = ()
 
 
 def _left(rel: str, reason: str) -> FileResult:
@@ -431,32 +491,42 @@ def _resolve(
         reason = ours if isinstance(ours, str) else theirs
         return _left(rel, f"with each conflict taken from one side, {reason}")
 
-    conflicted = sorted(
-        (key for key in {*ours.stamps, *theirs.stamps} if _text(ours, key) != _text(theirs, key)),
-        key=lambda k: (k[0].value, k[1] or ""),
-    )
+    conflicted: list[_Part] = [
+        (which, key)
+        for which in (REVALIDATED, REVISITED_KEY)
+        for key in sorted(
+            (
+                key
+                for key in {*ours.spans(which), *theirs.spans(which)}
+                if _text(ours, which, key) != _text(theirs, which, key)
+            ),
+            key=lambda k: (k[0].value, k[1] or ""),
+        )
+    ]
     ancestor = versions.get(_ANCESTOR, _NO_VERSION)
     this, base = versions[_THIS], versions[_BASE]
-    decided: dict[_Key, _Decision | str] = {}
-    texts: dict[_Key, str] = {}
-    lopsided = False  # a conflicted block stands on one side of its conflict only
-    for n, key in enumerate(conflicted):
+    decided: dict[_Part, _Decision | str] = {}
+    texts: dict[_Part, str] = {}
+    lopsided = False  # a conflicted block or list stands on one side of its conflict only
+    for n, part in enumerate(conflicted):
+        which, key = part
         location = _location(key, base, this, ancestor, ours, theirs)
-        decision = _decide(context, key, location, ancestor, this, base)
-        if key not in ours.stamps or key not in theirs.stamps:
+        decide = _decide_revisits if which == REVISITED_KEY else _decide
+        decision = decide(context, key, location, ancestor, this, base)
+        if key not in ours.spans(which) or key not in theirs.spans(which):
             lopsided = True
             if isinstance(decision, _Decision):
                 decision = (
-                    f"the `revalidated` block of {location} stands on one side of a conflict "
-                    f"only: resolve it by hand"
+                    f"the {_named(which, location)} stands on one side of a conflict only: "
+                    f"resolve it by hand"
                 )
-        decided[key] = decision
+        decided[part] = decision
         if isinstance(decision, str):
-            texts[key] = f"@pkit-friction-resolve-{context.nonce}-{n}@"
+            texts[part] = f"@pkit-friction-resolve-{context.nonce}-{n}@"
         else:
-            target = ours.stamps[key]
-            texts[key] = decision.text or written_key(
-                REVALIDATED, decision.value, column=target.column, flow=target.flow
+            target = ours.spans(which)[key]
+            texts[part] = decision.text or written_key(
+                which, decision.value, column=target.column, flow=target.flow
             )
 
     one, other = _spliced(ours, texts), _spliced(theirs, texts)
@@ -464,72 +534,94 @@ def _resolve(
     where = None if one == other else _where(one, other, front_matter=not lopsided)
     if where is not None:
         notes = [
-            decision if isinstance(decision, str) else _advice(key, decision, ours)
-            for key, decision in decided.items()
+            decision if isinstance(decision, str) else _advice(part, decision, ours)
+            for part, decision in decided.items()
         ]
         return _left(rel, "; ".join([where, *notes]))
     if refused:
         return _left(rel, "; ".join(refused))
 
-    chosen = {k: d.value for k, d in decided.items() if isinstance(d, _Decision)}
+    chosen = {p: d.value for p, d in decided.items() if isinstance(d, _Decision)}
     artefacts = _read_back(rel, found, one, chosen)
     if artefacts is None:
         return _left(
             rel,
-            "its `revalidated` blocks would not read back as decided, so it cannot be "
-            "resolved as text",
+            "its `revalidated` blocks and `revisited` lists would not read back as decided, "
+            "so it cannot be resolved as text",
         )
     owed = tuple(
         _owed(artefacts[key], base.artefacts[key])
-        for key, decision in decided.items()
-        if isinstance(decision, _Decision) and decision.owed
+        for (which, key), decision in decided.items()
+        if which == REVALIDATED and isinstance(decision, _Decision) and decision.owed
+    )
+    owed_revisits = tuple(
+        _owed_revisit(artefacts[key], base, key, target)
+        for (which, key), decision in decided.items()
+        if which == REVISITED_KEY and isinstance(decision, _Decision)
+        for target in decision.targets
     )
     after = one if newline == "\n" else one.replace("\n", newline)
-    return FileResult(rel, FileStatus.RESOLVED, owed=owed, before=before, after=after)
+    return FileResult(
+        rel,
+        FileStatus.RESOLVED,
+        owed=owed,
+        owed_revisits=owed_revisits,
+        before=before,
+        after=after,
+    )
 
 
 def read_version(rel: str, found: DiscoveredFile, text: str) -> Version | str:
-    """One version's artefacts and where each `revalidated` block is written in it, or
-    why it cannot be read."""
+    """One version's artefacts and where each `revalidated` block and each `revisited`
+    list is written in it, or why it cannot be read."""
     artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
     if reason is not None:
         return f"its front matter does not parse ({reason})"
     front_matter, _body = split_front_matter(text)
     offset = text.find("\n") + 1  # the front matter starts after its opening line
-    stamps: dict[_Key, Stamp] = {}
+    spans: dict[str, dict[_Key, Stamp]] = {REVALIDATED: {}, REVISITED_KEY: {}}
     for artefact in artefacts:
-        present, value = _written_block(artefact)
-        if not present or front_matter is None:
-            continue
-        keys = (*carrier_keys(artefact), CONTAINER_KEY, FRICTION_KEY, REVALIDATED)
-        span = key_span(front_matter, keys)
-        if span is None:
-            return (
-                f"the `revalidated` block of {artefact.location} is not written directly "
-                f"(a YAML alias or merge key)"
-            )
-        start = offset + span.start
-        column = start - (text.rfind("\n", 0, start) + 1)
-        written = front_matter[span.start : span.end]
-        stamps[_key(artefact)] = Stamp(value, start, written, column, span.flow)
-    return Version(text, {_key(a): a for a in artefacts}, stamps)
+        for which, into in spans.items():
+            present, value = _written(artefact, which)
+            if not present or front_matter is None:
+                continue
+            keys = (*carrier_keys(artefact), CONTAINER_KEY, FRICTION_KEY, which)
+            span = key_span(front_matter, keys)
+            if span is None:
+                return (
+                    f"the {_named(which, artefact.location)} is not written directly "
+                    f"(a YAML alias or merge key)"
+                )
+            start = offset + span.start
+            column = start - (text.rfind("\n", 0, start) + 1)
+            written = front_matter[span.start : span.end]
+            into[_key(artefact)] = Stamp(value, start, written, column, span.flow)
+    return Version(text, {_key(a): a for a in artefacts}, spans[REVALIDATED], spans[REVISITED_KEY])
 
 
 def _key(artefact: Artefact) -> _Key:
     return (artefact.kind, None if artefact.kind is ArtefactKind.DOCUMENT else artefact.id)
 
 
-def _written_block(artefact: Artefact) -> tuple[bool, Any]:
-    """Whether the artefact's friction block writes `revalidated`, and its value as written."""
+def _named(which: str, location: str) -> str:
+    """An artefact's answer of one kind as a message names it."""
+    if which == REVISITED_KEY:
+        return f"`{REVISITED_KEY}` list of {location}"
+    return f"`{REVALIDATED}` block of {location}"
+
+
+def _written(artefact: Artefact, which: str = REVALIDATED) -> tuple[bool, Any]:
+    """Whether the artefact's friction block writes `which` — `revalidated`, or
+    `revisited` — and its value as written."""
     block = artefact.friction
     if not isinstance(block, Mapping):
         return False, None
     mapping = cast("Mapping[str, Any]", block)
-    return REVALIDATED in mapping, mapping.get(REVALIDATED)
+    return which in mapping, mapping.get(which)
 
 
-def _text(version: Version, key: _Key) -> str | None:
-    stamp = version.stamps.get(key)
+def _text(version: Version, which: str, key: _Key) -> str | None:
+    stamp = version.spans(which).get(key)
     return None if stamp is None else stamp.written
 
 
@@ -687,56 +779,161 @@ def _entries(version: Version, key: _Key) -> dict[Anchor, Any] | None:
     return by_anchor if len(by_anchor) == len(entries) else None
 
 
-def _spliced(version: Version, texts: Mapping[_Key, str]) -> str:
-    """The version with each block `texts` names replaced by its text."""
+def _decide_revisits(
+    context: _Context,
+    key: _Key,
+    location: str,
+    ancestor: Version,
+    this: Version,
+    base: Version,
+) -> _Decision | str:
+    """The `revisited` list a conflicted source gets, or why it is left to the person
+    (COR-050 point 16).
+
+    A list only one side changed is that side's. Where both did, the entries merge
+    three ways by target, sorted as the writer sorts them: an entry only one side
+    changed is that side's. Where both sides wrote one target's entry differently, the
+    base side's is taken, under the rule for an answer both sides revalidated
+    (`base_side_refusal`), and the entry is owed written again for the combined state.
+    """
+    a, t, b = (version.revisits.get(key) for version in (ancestor, this, base))
+    av, tv, bv = (_ABSENT if s is None else s.value for s in (a, t, b))
+    if tv in (bv, av) or bv == av:
+        stamp, side = (t, "this branch") if bv == av and tv != bv else (b, "the base side")
+        if stamp is None:
+            return (
+                f"{side} removed the `{REVISITED_KEY}` list of {location} beside a change of "
+                f"the other side's: resolve it by hand"
+            )
+        return _Decision(stamp.value, stamp.written, owed=False)
+    if t is None or b is None:
+        removed, changed = ("this branch", "the base side")
+        if b is None:
+            removed, changed = changed, removed
+        return (
+            f"{removed} removed the `{REVISITED_KEY}` list of {location} and {changed} changed "
+            f"it: keep it or remove it by hand"
+        )
+    sides = [_revisit_entries(version, key) for version in (ancestor, this, base)]
+    if any(side is None for side in sides):
+        return (
+            f"both sides changed the `{REVISITED_KEY}` list of {location}, and a side's list is "
+            f"not one well-formed entry per target: resolve it by hand"
+        )
+    a_side, t_side, b_side = cast("list[dict[Anchor, Any]]", sides)
+    merged: list[Any] = []
+    owed: list[Anchor] = []
+    for target in sorted({*a_side, *t_side, *b_side}, key=lambda x: (x.kind, x.value)):
+        ae, te, be = a_side.get(target), t_side.get(target), b_side.get(target)
+        if te in (be, ae):
+            entry = be
+        elif be == ae:
+            entry = te
+        elif te is None or be is None:
+            removed = "this branch" if te is None else "the base side"
+            return (
+                f"{removed} removed the `{REVISITED_KEY}` entry of {target.kind}:{target.value} "
+                f"in {location} and the other side changed it: keep it or remove it by hand"
+            )
+        else:
+            refusal = context.base_side_refusal(location, target)
+            if refusal is not None:
+                return refusal
+            entry = be
+            owed.append(target)
+        if entry is not None:
+            merged.append(entry)
+    if not merged:
+        return (
+            f"both sides removed entries of the `{REVISITED_KEY}` list of {location}, which "
+            f"leaves none: resolve it by hand"
+        )
+    text = t.written if merged == t.value else b.written if merged == b.value else None
+    return _Decision(merged, text, owed=bool(owed), targets=tuple(owed))
+
+
+def _revisit_entries(version: Version, key: _Key) -> dict[Anchor, Any] | None:
+    """A version's `revisited` entries of the artefact by target; `None` unless the list
+    is a list whose every entry is well-formed and names a target no other entry does."""
+    stamp = version.revisits.get(key)
+    raw = None if stamp is None else stamp.value
+    if raw is None:
+        return {}
+    artefact = version.artefacts.get(key)
+    if not isinstance(raw, list) or artefact is None:
+        return None
+    entries = cast("list[Any]", raw)
+    by_target = {r.anchor: entries[r.index] for r in artefact.revisits}
+    return by_target if len(by_target) == len(entries) else None
+
+
+def _spliced(version: Version, texts: Mapping[_Part, str]) -> str:
+    """The version with each block and list `texts` names replaced by its text."""
     text = version.text
-    stamps = [(version.stamps[key], new) for key, new in texts.items() if key in version.stamps]
+    stamps = [
+        (version.spans(which)[key], new)
+        for (which, key), new in texts.items()
+        if key in version.spans(which)
+    ]
     for stamp, new in sorted(stamps, key=lambda item: -item[0].start):
         text = text[: stamp.start] + new + text[stamp.end :]
     return text
 
 
-def _advice(key: _Key, decision: _Decision, ours: Version) -> str:
-    """What to take for a decided block, in a file left for another conflict."""
-    location = ours.artefacts[key].location
+def _advice(part: _Part, decision: _Decision, ours: Version) -> str:
+    """What to take for a decided block or list, in a file left for another conflict."""
+    which, key = part
+    named = _named(which, ours.artefacts[key].location)
+    if which == REVISITED_KEY and decision.owed:
+        targets = ", ".join(f"{t.kind}:{t.value}" for t in decision.targets)
+        return (
+            f"the {named} conflicts too: both sides wrote the entry of {targets} — take the "
+            f"base side's entry, keep each side's other entries, and write the entry again "
+            f"for the combined state once the merge is committed"
+        )
     if decision.owed:
         return (
-            f"the `revalidated` block of {location} conflicts too: both sides revalidated "
-            f"it — take the base side's answer, keep both sides' changes to `deferred`, and "
-            f"revalidate the combined state once the merge is committed"
+            f"the {named} conflicts too: both sides revalidated it — take the base side's "
+            f"answer, keep both sides' changes to `deferred`, and revalidate the combined "
+            f"state once the merge is committed"
         )
-    return f"the `revalidated` block of {location} conflicts too: keep what each side changed in it"
+    return f"the {named} conflicts too: keep what each side changed in it"
+
+
+#: Where a decided conflict may lie, as a refusal names what lies outside it.
+_ANSWERS = "the `revalidated` blocks and `revisited` lists"
 
 
 def _where(one: str, other: str, *, front_matter: bool) -> str | None:
-    """Where a file still conflicts once its decided blocks are put in: its front matter,
-    its body, or — when neither alone does — the file as a whole. Without `front_matter`
-    — a block left to the person stands on one side only, so the front matters differ
-    there anyway — only the body is told, and `None` when it does not conflict."""
+    """Where a file still conflicts once its decided blocks and lists are put in: its
+    front matter, its body, or — when neither alone does — the file as a whole. Without
+    `front_matter` — a block or list left to the person stands on one side only, so the
+    front matters differ there anyway — only the body is told, and `None` when it does
+    not conflict."""
     (fm_one, body_one), (fm_other, body_other) = split_front_matter(one), split_front_matter(other)
     found: list[str] = []
     if fm_one is not None and fm_other is not None:
         if front_matter and fm_one != fm_other:
-            found.append("the front matter, outside the `revalidated` blocks")
+            found.append(f"the front matter, outside {_ANSWERS}")
         if body_one != body_other:
             found.append("the body")
     if found:
         return "it conflicts in " + " and in ".join(found)
-    return "it conflicts outside the `revalidated` blocks" if front_matter else None
+    return f"it conflicts outside {_ANSWERS}" if front_matter else None
 
 
 def _read_back(
-    rel: str, found: DiscoveredFile, text: str, chosen: Mapping[_Key, Any]
+    rel: str, found: DiscoveredFile, text: str, chosen: Mapping[_Part, Any]
 ) -> Mapping[_Key, Artefact] | None:
-    """The resolution's artefacts — `None` unless it parses and every decided block reads
-    back as decided."""
+    """The resolution's artefacts — `None` unless it parses and every decided block and
+    list reads back as decided."""
     artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
     if reason is not None:
         return None
     by_key = {_key(a): a for a in artefacts}
-    for key, value in chosen.items():
+    for (which, key), value in chosen.items():
         artefact = by_key.get(key)
-        if artefact is None or _written_block(artefact) != (True, value):
+        if artefact is None or _written(artefact, which) != (True, value):
             return None
     return by_key
 
@@ -758,7 +955,7 @@ def _owed(resolved: Artefact, base: Artefact) -> Owed:
             "block): say why it still holds against this branch's change"
         )
         words = ("--outcome", UNCHANGED, "--because", BECAUSE)
-    block = _written_block(resolved)[1]
+    block = _written(resolved)[1]
     answer = {k: v for k, v in cast("Mapping[str, Any]", block).items() if k != DEFERRED}
     return Owed(
         artefact=resolved.id,
@@ -767,6 +964,35 @@ def _owed(resolved: Artefact, base: Artefact) -> Owed:
         outcome=outcome,
         why=why,
         command=command_line("pkit", "friction", "revalidate", resolved.location, *words),
+    )
+
+
+def _owed_revisit(resolved: Artefact, base: Version, key: _Key, target: Anchor) -> OwedRevisit:
+    """What a target both sides wrote a `revisited` entry for owes: its entry written again
+    for the combined state (COR-050 point 16), the base side's outcome named, since only
+    the person can say whether the target still stands."""
+    entries = _revisit_entries(base, key) or {}  # well-formed: the decision merged them
+    entry = cast("Mapping[str, Any]", entries.get(target, {}))
+    words = {k: v for k, v in entry.items() if k != "anchor"}
+    outcome = words.get("outcome")
+    command = command_line(
+        "pkit",
+        "friction",
+        "revisit",
+        resolved.location,
+        "--target",
+        f"{target.kind}:{target.value}",
+        "--outcome",
+        outcome if outcome in REVISIT_OUTCOMES else UNCHANGED,
+        "--reason",
+        REVISIT_REASON,
+    )
+    return OwedRevisit(
+        artefact=resolved.id,
+        location=resolved.location,
+        target=target,
+        entry=words,
+        command=command,
     )
 
 
@@ -896,6 +1122,16 @@ def render_human(resolution: Resolution, *, dry_run: bool) -> str:
             "placeholder. The change check requires it where an anchor of the artefact changed",
             "on this branch; `pkit friction check` names those, and anything else it owes.",
         ]
+    if any(result.owed_revisits for result in resolution.resolved):
+        lines += [
+            "",
+            "The person resolving the conflict writes each `revisited` entry both sides wrote",
+            "again for the combined state (COR-050 point 16): commit the merge, then run each",
+            "`pkit friction revisit` above with the outcome that holds and your words in place",
+            "of the placeholder. The base side's reason is no new reason, so the change check",
+            "asks for the entry where this branch changed a trigger field of a link listing the",
+            "target and left the target as it was; `pkit friction check` names those.",
+        ]
     if resolution.left:
         lines += ["", "Resolve the files left by hand and `git add` them before committing."]
     if dry_run and resolution.resolved:
@@ -904,6 +1140,17 @@ def render_human(resolution: Resolution, *, dry_run: bool) -> str:
 
 
 def _file_lines(result: FileResult, dry_run: bool) -> list[str]:
+    """What the command says of one file, and, in a dry run, its diff. A path, a reason
+    and an artefact's words are the author's, so what it says is printed escaped, as the
+    change check's human view prints them (`printable`): they cannot move the cursor or
+    hide the command printed beside them."""
+    said = [printable(line) for line in _said(result, dry_run)]
+    if dry_run and result.status is FileStatus.RESOLVED:
+        said.extend("    " + line for line in _diff(result))
+    return said
+
+
+def _said(result: FileResult, dry_run: bool) -> list[str]:
     if result.status is FileStatus.SKIPPED:
         return [f"  {result.path} — skipped: {result.reason}"]
     if result.status is FileStatus.LEFT:
@@ -916,8 +1163,18 @@ def _file_lines(result: FileResult, dry_run: bool) -> list[str]:
         )
         lines.append(f"      once the merge is committed, answer `{owed.outcome}` — {owed.why}:")
         lines.append(f"        {owed.command}")
-    if dry_run:
-        lines.extend("    " + line for line in _diff(result))
+    for revisit in result.owed_revisits:
+        target = f"{revisit.target.kind}:{revisit.target.value}"
+        lines.append(
+            f"    {revisit.location} now carries the base side's `{REVISITED_KEY}` entry of "
+            f"{target}: {_entry_line(revisit)}"
+        )
+        lines.append(
+            "      once the merge is committed, write it again for the combined state — "
+            "`unchanged` if the target still stands, `deferred` with the follow-up that "
+            "revisits it:"
+        )
+        lines.append(f"        {revisit.command}")
     return lines
 
 
@@ -961,6 +1218,16 @@ def _answer_line(owed: Owed) -> str:
     return f"{shown} — {because}" if isinstance(because, str) else shown
 
 
+def _entry_line(owed: OwedRevisit) -> str:
+    """The base side's revisit entry in one line: its outcome and its reason."""
+    entry: Any = owed.entry
+    words: Mapping[str, Any] = (
+        cast("Mapping[str, Any]", entry) if isinstance(entry, Mapping) else {}
+    )
+    outcome, reason = words.get("outcome"), words.get("reason")
+    return f"{outcome} — {reason}" if isinstance(reason, str) else str(outcome)
+
+
 def render_json(resolution: Resolution, *, dry_run: bool, staged: Sequence[str] = ()) -> str:
     """The stable machine-readable resolution: keys sorted, the same bytes for the same state."""
     document = {
@@ -987,6 +1254,16 @@ def render_json(resolution: Resolution, *, dry_run: bool, staged: Sequence[str] 
                     }
                     for owed in result.owed
                 ],
+                "owed_revisits": [
+                    {
+                        "artefact": owed.artefact,
+                        "location": owed.location,
+                        "target": {"kind": owed.target.kind, "value": owed.target.value},
+                        "base_entry": owed.entry,
+                        "command": owed.command,
+                    }
+                    for owed in result.owed_revisits
+                ],
             }
             for result in resolution.files
         ],
@@ -996,10 +1273,12 @@ def render_json(resolution: Resolution, *, dry_run: bool, staged: Sequence[str] 
 
 __all__ = [
     "RESOLVE_SCHEMA_VERSION",
+    "REVISIT_REASON",
     "FileResult",
     "FileStatus",
     "FrictionResolveError",
     "Owed",
+    "OwedRevisit",
     "Resolution",
     "Stamp",
     "Version",

@@ -26,6 +26,10 @@ pkit:
       artefact:
         - ACT-adopter
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-18T17:49:23Z
+      outcome: unchanged
+      unchanged-because: This change alters only the help text of the friction commands in cli.py. How pkit config set, pkit validate and pkit friction check hold a merge is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks
