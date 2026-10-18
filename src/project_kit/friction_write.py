@@ -1,6 +1,7 @@
-"""The friction writers: `revalidate`, `defer`, `record-status` (COR-050 points 3, 4, 10 and 13).
+"""The friction writers: `revalidate`, `defer`, `revisit`, `record-status` (COR-050 points 3, 4,
+10, 13 and 16).
 
-Reading never writes; writing is always one of these three explicit
+Reading never writes; writing is always one of these four explicit
 commands, each naming what it writes and writing only with consent (point 13):
 
 - `revalidate` rewrites the `revalidated` block: a fresh `at`, the outcome,
@@ -13,6 +14,11 @@ commands, each naming what it writes and writing only with consent (point 13):
   or an existing entry's reason reworded — and never touches `at`: a deferral
   is not a revalidation (point 4). An anchor the artefact does not carry is
   refused, and so is a reason that holds a placeholder left unfilled.
+- `revisit` writes the `revisited` list — the entry for one target of a link
+  the artefact's places declare, added or rewritten, with its outcome,
+  `unchanged` or `deferred`, and its reason — and never touches `at`: an
+  entry is no revalidation of the source (point 16). A target no link of the
+  artefact lists is refused, and so is a reason that holds a placeholder.
 - `record-status` writes the tool-written `last-check` block from the
   whole-repository check at HEAD, only when the state it records changes
   (point 10): `as-of` moving on alone is no change, so a status that holds is
@@ -31,7 +37,7 @@ file is written with — a `\\r\\n` file stays one, byte for byte outside the
 key; a file that mixes them is refused, since no one line break would keep
 its other bytes, and validation reports it. Entries are kept in one order — deferrals by anchor
 kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
-`revalidated`, `last-check`; `at`, `outcome`, `unchanged-because`,
+`revalidated`, `revisited`, `last-check`; `at`, `outcome`, `unchanged-because`,
 `deferred`) — so the same input always writes the same bytes.
 
 **Consent.** `--yes`; or, on a terminal, a confirmation shown with the diff;
@@ -39,8 +45,9 @@ kind, then value; keys in the schema's order (`anchors`, `unanchored-because`,
 neither refuses, writes nothing, and names the command to run — the consent
 rule of the configuration writer (COR-048 point 5), applied to the project's
 own artefacts. `record-status` names it with `--dry-run` and with `--yes`;
-`revalidate` and `defer` name only the dry run and print no ready-made `--yes`
-command: an answer on an artefact may be a person's decision (point 3).
+`revalidate`, `defer` and `revisit` name only the dry run and print no
+ready-made `--yes` command: an answer on an artefact may be a person's
+decision (point 3).
 """
 
 from __future__ import annotations
@@ -68,17 +75,20 @@ from project_kit import backbone_schemas as bs
 from project_kit import cli_render
 from project_kit import friction_repository as fr
 from project_kit.document_parts import split_front_matter
-from project_kit.friction_check import anchors_of, parsed_at
+from project_kit.friction_check import REVISIT_OUTCOMES, anchors_of, parsed_at
 from project_kit.friction_discovery import (
     FRICTION_KEY,
+    REVISITED_KEY,
     RULES_KEY,
     UNANCHORED_BECAUSE_KEY,
     Anchor,
     Artefact,
     ArtefactKind,
+    RevisitLink,
     discover_artefacts,
     held_message,
     line_break,
+    link_targets,
     parse_artefacts,
 )
 from project_kit.friction_validate import Severity, block_findings
@@ -99,7 +109,7 @@ UNCHANGED = "unchanged"
 
 # Where each key goes among its siblings: the schema's order, per parent.
 _KEY_ORDER: dict[str, tuple[str, ...]] = {
-    FRICTION_KEY: ("anchors", UNANCHORED_BECAUSE_KEY, REVALIDATED, LAST_CHECK),
+    FRICTION_KEY: ("anchors", UNANCHORED_BECAUSE_KEY, REVALIDATED, REVISITED_KEY, LAST_CHECK),
     REVALIDATED: (AT, OUTCOME, BECAUSE, DEFERRED),
 }
 
@@ -140,7 +150,13 @@ class ConsentRefused(click.ClickException):
 
 
 def find_artefact(target_root: Path, reference: str) -> Artefact:
-    """The one artefact in the declared places that `reference` names.
+    """The one artefact in the declared places that `reference` names (`locate_artefact`)."""
+    return locate_artefact(target_root, reference)[0]
+
+
+def locate_artefact(target_root: Path, reference: str) -> tuple[Artefact, tuple[RevisitLink, ...]]:
+    """The one artefact in the declared places that `reference` names, and the links its
+    places declare whose source's change revisits their targets (COR-050 point 16).
 
     Its location first — `path` for a document, `path#id` for a collection
     entry — then any identifier an artefact anchor may use (its id; a
@@ -181,7 +197,7 @@ def find_artefact(target_root: Path, reference: str) -> Artefact:
             f"no artefact in the declared places is named {reference!r} — give its location "
             f"(`path`, or `path#id` for a collection entry) or its id.{hint} Nothing was written."
         )
-    return matches[0]
+    return matches[0], discovery.links(matches[0])
 
 
 @dataclass(frozen=True)
@@ -202,13 +218,16 @@ class _Source:
     offset: int  # where the front matter's YAML starts in `text`
     front_matter: str
     artefact: Artefact
+    links: tuple[RevisitLink, ...] = ()  # the links its places declare (COR-050 point 16)
 
     def as_written(self, text: str) -> str:
         """`text`, edited with `\\n` line breaks, in the line break the file is written with."""
         return text if self.newline == "\n" else text.replace("\n", self.newline)
 
 
-def _read_source(target_root: Path, found: Artefact) -> _Source:
+def _read_source(
+    target_root: Path, found: Artefact, links: tuple[RevisitLink, ...] = ()
+) -> _Source:
     path = (target_root / found.path).resolve()
     try:
         written = path.read_bytes().decode("utf-8")
@@ -240,6 +259,7 @@ def _read_source(target_root: Path, found: Artefact) -> _Source:
         offset=text.index("\n") + 1,
         front_matter=front_matter,
         artefact=same[0],
+        links=links,
     )
 
 
@@ -298,7 +318,8 @@ def _anchor_list(anchors: Sequence[Anchor]) -> str:
 
 
 def _sort_key(entry: Any) -> tuple[str, str]:
-    """A deferral entry's place in the list: by anchor kind, then value (COR-050 point 4)."""
+    """A deferral or revisit entry's place in its list: by anchor kind, then value (COR-050
+    points 4 and 16)."""
     anchor = entry.get("anchor") if isinstance(entry, Mapping) else None
     if not isinstance(anchor, Mapping):
         return ("", "")
@@ -320,15 +341,21 @@ def _entry_reason(entry: Any) -> str:
     return reason if isinstance(reason, str) else ""
 
 
-def _in_order(entry: Mapping[str, Any]) -> dict[str, Any]:
-    """A deferral entry with its keys in the schema's order — `anchor` (`kind`, `value`), `reason` —
-    and nothing dropped: a key the schema refuses stays, for validation to name."""
+#: The keys of a deferral entry, and of a revisit entry, in the schema's order.
+DEFERRAL_KEYS: tuple[str, ...] = ("anchor", "reason")
+REVISIT_KEYS: tuple[str, ...] = ("anchor", "outcome", "reason")
+
+
+def _in_order(entry: Mapping[str, Any], keys: tuple[str, ...] = DEFERRAL_KEYS) -> dict[str, Any]:
+    """A deferral entry — or, with `REVISIT_KEYS`, a revisit entry — with its keys in the
+    schema's order, `anchor` (`kind`, `value`) first, and nothing dropped: a key the
+    schema refuses stays, for validation to name."""
 
     def ordered(mapping: Mapping[str, Any], first: tuple[str, ...]) -> dict[str, Any]:
         head = {k: mapping[k] for k in first if k in mapping}
         return head | {k: v for k, v in mapping.items() if k not in first}
 
-    out = ordered(entry, ("anchor", "reason"))
+    out = ordered(entry, keys)
     if isinstance(out.get("anchor"), Mapping):
         out["anchor"] = ordered(out["anchor"], ("kind", "value"))
     return out
@@ -407,7 +434,7 @@ def plan_revalidate(
     if justification:
         _filled(justification, "--because")
 
-    source = _read_source(target_root, find_artefact(target_root, reference))
+    source = _read_source(target_root, *locate_artefact(target_root, reference))
     artefact = source.artefact
     _friction_block(artefact)
     previous = artefact.revalidated if isinstance(artefact.revalidated, Mapping) else {}
@@ -527,7 +554,7 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
         )
     _filled(text, "--reason")
 
-    source = _read_source(target_root, find_artefact(target_root, reference))
+    source = _read_source(target_root, *locate_artefact(target_root, reference))
     artefact = source.artefact
     block = _friction_block(artefact)
     carried = anchors_of(artefact)
@@ -580,6 +607,104 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
     )
 
 
+def plan_revisit(
+    target_root: Path, reference: str, *, target: str, outcome: str, reason: str
+) -> Plan:
+    """The write of `pkit friction revisit` (COR-050 point 16).
+
+    Writes the entry for one target of a link the artefact's places declare in
+    its `revisited` list — added, or the entry already naming the target
+    rewritten — and keeps the list sorted by anchor. `at` is left byte for byte:
+    an entry is no revalidation of the source. Refused: an outcome other than
+    `unchanged` or `deferred`, an empty target or reason, a reason with a
+    placeholder left unfilled, and a target no link of the artefact lists. An
+    entry already written with this outcome and reason writes nothing: an entry
+    answers only the change that writes it, so a later change needs new words.
+    """
+    if outcome not in REVISIT_OUTCOMES:
+        raise FrictionWriteError(
+            f"a revisit's outcome is `unchanged` (the target still stands) or `deferred` (a "
+            f"follow-up revisits it), not {outcome!r}; a target that changed needs no entry. "
+            f"Nothing was written."
+        )
+    target_text = target.strip()
+    text = reason.strip()
+    if not target_text:
+        raise FrictionWriteError(
+            "a revisit names the target it answers for: give `--target`. Nothing was written."
+        )
+    if not text:
+        raise FrictionWriteError(
+            "a revisit carries its reason: give `--reason`. Nothing was written."
+        )
+    _filled(text, "--reason")
+
+    source = _read_source(target_root, *locate_artefact(target_root, reference))
+    artefact = source.artefact
+    block = _friction_block(artefact)
+    targets = list(dict.fromkeys(a for link in source.links for a in link_targets(artefact, link)))
+    if not source.links:
+        raise FrictionWriteError(
+            f"no place holding {artefact.location} declares a link that revisits its targets, "
+            f"so it has no target to answer for (COR-050 point 16). Nothing was written."
+        )
+    named = _named_anchor(target_text, targets, "target")
+    if named is None:
+        fields = ", ".join(f"`{f}`" for f in dict.fromkeys(link.targets for link in source.links))
+        raise FrictionWriteError(
+            f"{artefact.location} has no target {target_text!r}: a target is an anchor its "
+            f"links' fields ({fields}) list (its targets: {_anchor_list(targets)}) (COR-050 "
+            f"point 16). Nothing was written."
+        )
+
+    raw = block.get(REVISITED_KEY)
+    if raw is not None and not isinstance(raw, list):
+        raise FrictionWriteError(
+            f"{artefact.location}: its `{REVISITED_KEY}` is not a list; fix it first — "
+            f"`pkit validate` reports it. Nothing was written."
+        )
+    entries: list[Any] = list(cast(list[Any], raw or []))
+    existing = [e for e in entries if _entry_anchor(e) == named]
+    label = f"{named.kind}:{named.value}"
+    if (
+        len(existing) == 1
+        and _entry_outcome(existing[0]) == outcome
+        and _fold(_entry_reason(existing[0])) == _fold(text)
+    ):
+        return _unchanged(
+            "revisit",
+            source,
+            _target((FRICTION_KEY,), REVISITED_KEY),
+            f"{label} is already revisited `{outcome}` with this reason; an entry answers only "
+            f"the change that writes it, so a later change needs new words",
+        )
+    others = [
+        _in_order(cast(Mapping[str, Any], e), REVISIT_KEYS) if isinstance(e, Mapping) else e
+        for e in entries
+        if _entry_anchor(e) != named
+    ]
+    new_entry = {
+        "anchor": {"kind": named.kind, "value": named.value},
+        "outcome": outcome,
+        "reason": text,
+    }
+    value = sorted([*others, new_entry], key=_sort_key)
+    verb = "rewrites the revisit entry of" if existing else "adds revisit entry"
+    items = (
+        f"{verb} {label}: {outcome} — {text}",
+        "at: not changed — an entry is no revalidation of the source",
+    )
+    return _plan(target_root, "revisit", source, (FRICTION_KEY,), REVISITED_KEY, value, items)
+
+
+def _entry_outcome(entry: Any) -> str | None:
+    """A revisit entry's outcome as written, when it is text."""
+    if not isinstance(entry, Mapping):
+        return None
+    outcome = cast(Mapping[str, Any], entry).get("outcome")
+    return outcome if isinstance(outcome, str) else None
+
+
 def plan_record_status(target_root: Path, reference: str) -> Plan:
     """The write of `pkit friction record-status` (COR-050 point 10).
 
@@ -592,7 +717,7 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
     lie beyond a shallow clone's history, or an anchor of it cannot be
     resolved: a status is a judgment, and neither is one.
     """
-    source = _read_source(target_root, find_artefact(target_root, reference))
+    source = _read_source(target_root, *locate_artefact(target_root, reference))
     artefact = source.artefact
     block = _friction_block(artefact)
     if not anchors_of(artefact) and not artefact.deferrals:
@@ -1076,7 +1201,7 @@ def _read_back(
     errors = [
         f
         for a in written
-        for f in block_findings(a, schema, target_root)
+        for f in block_findings(a, schema, target_root, source.links)
         if f.severity is Severity.ERROR
     ]
     if len(written) != 1 or errors:
@@ -1233,6 +1358,7 @@ def replace_file(path: Path, rel: str, before: str, after: str) -> None:
 
 __all__ = [
     "OUTCOMES",
+    "REVISIT_OUTCOMES",
     "ConsentRefused",
     "FileNotReplaced",
     "FrictionWriteError",
@@ -1245,9 +1371,11 @@ __all__ = [
     "find_artefact",
     "interactive",
     "key_span",
+    "locate_artefact",
     "plan_defer",
     "plan_record_status",
     "plan_revalidate",
+    "plan_revisit",
     "render_diff",
     "render_plan",
     "replace_file",

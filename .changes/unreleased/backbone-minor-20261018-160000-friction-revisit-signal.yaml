@@ -1,0 +1,25 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A link may ask for a revisit of its targets when its source changes (COR-050
+  point 16). A capability declares a link on one of its friction places, under
+  `revisits`: the source's own field that lists the targets by their anchors'
+  values, and the trigger fields. Nothing is on by default. When a change
+  alters a trigger field of a source, the friction change check asks after
+  each target the link lists at the base and at head. The target changed in
+  the change, or the source carries a `revisited` entry with a new reason,
+  `unchanged` (why it still stands) or `deferred` (the follow-up that revisits
+  it). A target with neither is the new finding `unrevisited`, which enforcing
+  mode fails on, and one that is answered is `revisited`. The answers list, and
+  its `--json` form, give each revisit with the new keys `outcome`, `target`,
+  `links` and `fields`, `answer` `revisited`, a target answered by its change
+  included. The new writer `pkit friction revisit <artefact> --target <anchor>
+  --outcome unchanged|deferred --reason <text>` writes one entry. `pkit
+  validate` fails a dangling or repeated entry, and a link's field that is no
+  list or names no anchor of its source. It reports entries on an artefact
+  whose places declare no link. The package schema's place gains `revisits`,
+  and the container schema's friction block gains `revisited`. Both are
+  additive, so no migration is due. A capability that declares a link needs a
+  backbone that knows the key.

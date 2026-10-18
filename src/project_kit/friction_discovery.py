@@ -207,6 +207,19 @@ TYPE_DESCRIPTION_KEY = "description"
 KIND_FIELD_KEY = "kind-field"
 PROJECT_PLACES_KEY = "project-places"
 
+# A link whose source's change revisits its targets (COR-050 point 16): the key
+# of a component's place that declares its links, the keys of one link — the
+# source's own field listing the targets, and its trigger fields — and the key of
+# the source's block that holds a reason for each target left as it was.
+REVISITS_KEY = "revisits"
+LINK_TARGETS_KEY = "targets"
+LINK_WHEN_KEY = "when"
+REVISITED_KEY = "revisited"
+
+#: An artefact's own front-matter field, as a link names one: the package schema's
+#: `own-field`, never the methodology's container.
+_OWN_FIELD = re.compile(r"[A-Za-z_][A-Za-z0-9_-]*")
+
 #: A type's name within its owner, and the whole of a bare project type: a word
 #: of lower-case letters and digits, joined by single hyphens, so it holds no
 #: `:` and no `/` (COR-056 point 1).
@@ -304,6 +317,23 @@ class PlaceLocation:
 
 
 @dataclass(frozen=True)
+class RevisitLink:
+    """One link a component's place declares whose source's change revisits its
+    targets (COR-050 point 16).
+
+    `targets` is the source's own field that lists the link's targets, each by its
+    anchor's value, and `when` the trigger fields, the source's own fields whose
+    change revisits them. `file` is the package metadata declaring it, relative to
+    the project root, and `pointer` a JSON Pointer to the link there.
+    """
+
+    targets: str
+    when: tuple[str, ...]
+    file: str
+    pointer: str
+
+
+@dataclass(frozen=True)
 class SettingsPath:
     """One path or glob a setting declares, with where it was written.
 
@@ -316,6 +346,9 @@ class SettingsPath:
     project's place as written, for a capability's place `<capability>:<name>`
     — `None` when it names none, or a value its schema refuses. Whether the
     place gives that type is the type resolution's to judge (`Types`).
+    `revisits` are the links a capability's place declares (COR-050 point 16),
+    in written order: a link the package schema refuses declares nothing, and a
+    project's place declares none.
     """
 
     value: str
@@ -325,6 +358,7 @@ class SettingsPath:
     source: str  # "project" or "capability:<name>"
     location: PlaceLocation | None = None
     type: str | None = None
+    revisits: tuple[RevisitLink, ...] = ()
 
     @property
     def is_capability(self) -> bool:
@@ -795,6 +829,11 @@ def _capability_places(
             continue
         path, pattern, location = resolved
         written_type = _mapping_or_empty(entry).get(TYPE_KEY) if key == PLACES_KEY else None
+        links = (
+            _revisit_links(_mapping_or_empty(entry).get(REVISITS_KEY), package_file, entry_pointer)
+            if key == PLACES_KEY
+            else ()
+        )
         places.append(
             SettingsPath(
                 value=path,
@@ -814,9 +853,46 @@ def _capability_places(
                     if isinstance(written_type, str) and _TYPE_NAME.fullmatch(written_type)
                     else None
                 ),
+                revisits=links,
             )
         )
     return places, malformed
+
+
+def _own_field(value: Any) -> str | None:
+    """`value` when it names an artefact's own field as a link writes one (the package
+    schema's `own-field`): a word, never the methodology's container; else `None`."""
+    if isinstance(value, str) and _OWN_FIELD.fullmatch(value) and value != CONTAINER_KEY:
+        return value
+    return None
+
+
+def _revisit_links(value: Any, package_file: str, place_pointer: str) -> tuple[RevisitLink, ...]:
+    """A capability place's `revisits` (COR-050 point 16), read forgivingly: a link
+    whose `targets` is not one own field, or whose `when` is not a list of own
+    fields with at least one, declares nothing, and the package schema refuses it.
+    A field `when` repeats is read once."""
+    if not isinstance(value, list):
+        return ()
+    links: list[RevisitLink] = []
+    for index, raw in enumerate(cast(list[Any], value)):
+        entry = _mapping_or_empty(raw)
+        targets = _own_field(entry.get(LINK_TARGETS_KEY))
+        when_raw = entry.get(LINK_WHEN_KEY)
+        if targets is None or not isinstance(when_raw, list) or not when_raw:
+            continue
+        when = [_own_field(field) for field in cast(list[Any], when_raw)]
+        if any(field is None for field in when):
+            continue
+        links.append(
+            RevisitLink(
+                targets=targets,
+                when=tuple(dict.fromkeys(field for field in when if field is not None)),
+                file=package_file,
+                pointer=f"{place_pointer}/{REVISITS_KEY}/{index}",
+            )
+        )
+    return tuple(links)
 
 
 def _resolve_capability_place(
@@ -2042,6 +2118,26 @@ class Deferral:
 
 
 @dataclass(frozen=True)
+class Revisit:
+    """One `revisited[]` entry whose anchor is written as texts (COR-050 point 16): the
+    target it names, and its outcome and reason as written, the reason whitespace
+    folded — `None` where either is no text. `index` is the entry's position in the
+    list as written, malformed entries before it counted, so a finding's JSON Pointer
+    names the right one."""
+
+    index: int
+    anchor: Anchor
+    outcome: str | None
+    reason: str | None
+
+    @property
+    def words(self) -> tuple[str | None, str | None]:
+        """What the entry answers with: its outcome and its folded reason. An entry
+        answers only where a change wrote these (COR-050 point 16)."""
+        return (self.outcome, self.reason)
+
+
+@dataclass(frozen=True)
 class Artefact:
     """One artefact found in a declared place, with its container parsed.
 
@@ -2149,6 +2245,36 @@ class Artefact:
                 found.append(Deferral(index=index, anchor=Anchor(kind=kind, value=value)))
         return tuple(found)
 
+    @property
+    def revisits(self) -> tuple[Revisit, ...]:
+        """The `revisited[]` entries whose anchor is written as texts, in written order,
+        each with its written index (COR-050 point 16)."""
+        written = _mapping_or_empty(self.friction).get(REVISITED_KEY)
+        if not isinstance(written, list):
+            return ()
+        found: list[Revisit] = []
+        for index, entry in enumerate(cast(list[Any], written)):
+            if not isinstance(entry, Mapping):
+                continue
+            fields = cast(Mapping[str, Any], entry)
+            anchor = fields.get("anchor")
+            if not isinstance(anchor, Mapping):
+                continue
+            named = cast(Mapping[str, Any], anchor)
+            kind, value = named.get("kind"), named.get("value")
+            if not (isinstance(kind, str) and isinstance(value, str)):
+                continue
+            outcome, reason = fields.get("outcome"), fields.get("reason")
+            found.append(
+                Revisit(
+                    index=index,
+                    anchor=Anchor(kind=kind, value=value),
+                    outcome=outcome if isinstance(outcome, str) else None,
+                    reason=" ".join(reason.split()) if isinstance(reason, str) else None,
+                )
+            )
+        return tuple(found)
+
     def anchors_of_kind(self, kind: str) -> tuple[str, ...]:
         return self.anchors.get(kind, ())
 
@@ -2237,6 +2363,43 @@ def deferral_reason(artefact: Artefact, anchor: Anchor) -> str:
             if reason is not None:
                 return reason
     return ""
+
+
+def own_field(artefact: Artefact, name: str) -> tuple[bool, Any]:
+    """Whether the artefact writes its own field `name`, and its value as written —
+    parsed, so a change of quoting or layout is no change (COR-050 point 16). The
+    methodology's container is never an own field."""
+    if name == CONTAINER_KEY or name not in artefact.carrier:
+        return False, None
+    return True, artefact.carrier[name]
+
+
+def link_values(artefact: Artefact, link: RevisitLink) -> tuple[str, ...] | None:
+    """The anchor values the field of `link` lists on the artefact, each once, in written
+    order (COR-050 point 16): none where the artefact does not write the field, and
+    `None` where the field is no list of texts — a validation error."""
+    present, value = own_field(artefact, link.targets)
+    if not present:
+        return ()
+    if not isinstance(value, list):
+        return None
+    items = cast(list[Any], value)
+    if not all(isinstance(item, str) for item in items):
+        return None
+    return tuple(dict.fromkeys(cast(list[str], items)))
+
+
+def link_targets(artefact: Artefact, link: RevisitLink) -> tuple[Anchor, ...]:
+    """The artefact's anchors the field of `link` lists, in the anchors' written order: a
+    value names every anchor of the artefact that has it, whatever its kind (COR-050
+    point 16). A field that is no list of texts lists none."""
+    values = frozenset(link_values(artefact, link) or ())
+    return tuple(
+        Anchor(kind, value)
+        for kind, written in artefact.anchors.items()
+        for value in written
+        if value in values
+    )
 
 
 @dataclass(frozen=True)
@@ -2333,6 +2496,26 @@ class Discovery:
     def holding(self, path: str) -> HeldFile | None:
         """The held file at the repository-relative `path`, or None."""
         return next((held for held in self.held if held.path == path), None)
+
+    @functools.cached_property
+    def places_of(self) -> Mapping[str, tuple[Place, ...]]:
+        """Every place matching each file the walk read, by path, in walk order."""
+        return {found.path: found.places for found in self.files}
+
+    def links(self, artefact: Artefact) -> tuple[RevisitLink, ...]:
+        """The links whose source's change revisits their targets that `artefact` takes
+        (COR-050 point 16): those of every capability place matching its file, each once,
+        in walk order. A project's place declares none, so a broader place of the
+        project's switches no capability's link off."""
+        places = self.places_of.get(artefact.path, (artefact.place,))
+        return tuple(
+            dict.fromkeys(
+                link
+                for place in places
+                if place.declaration.is_capability
+                for link in place.declaration.revisits
+            )
+        )
 
 
 def discover_artefacts(

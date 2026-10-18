@@ -1394,7 +1394,7 @@ def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
     discovery finds — which never write, the writers — revalidate, defer,
-    record-status — which write one block, only with consent, and resolve,
+    revisit, record-status — which write one block, only with consent, and resolve,
     which resolves a merge's conflicting revalidations as text and writes no
     answer.
 
@@ -1530,6 +1530,62 @@ def friction_defer_command(
 
     def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
         return friction_write.plan_defer(target_root, artefact, anchor=anchor, reason=reason)
+
+    _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
+
+
+@friction.command("revisit")
+@click.argument("artefact", metavar="ARTEFACT")
+@click.option(
+    "--target",
+    metavar="ANCHOR",
+    required=True,
+    help="The target answered for: `kind:value`, or a value only one target has. It must be "
+    "an anchor a link of the artefact lists.",
+)
+@click.option(
+    "--outcome",
+    type=click.Choice(friction_write.REVISIT_OUTCOMES),
+    required=True,
+    help="`unchanged`: the target still stands against this change; `deferred`: it is left "
+    "out of date until the follow-up --reason names.",
+)
+@click.option(
+    "--reason",
+    metavar="TEXT",
+    required=True,
+    help="Why the target still stands, or the follow-up that will revisit it.",
+)
+@_friction_consent_options
+def friction_revisit_command(
+    artefact: str, target: str, outcome: str, reason: str, yes: bool, dry_run: bool
+) -> None:
+    """Answer for one target of ARTEFACT's links (COR-050 point 16): add its entry to
+    `revisited`, or rewrite the entry already there.
+
+    A link a place declares lists targets in one of ARTEFACT's own fields; when a
+    change alters its trigger fields, each target changes in the same change or
+    ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
+    it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
+    an entry is no revalidation of ARTEFACT.
+    """
+    rerun = [
+        "pkit",
+        "friction",
+        "revisit",
+        artefact,
+        "--target",
+        target,
+        "--outcome",
+        outcome,
+        "--reason",
+        reason,
+    ]
+
+    def plan_of(target_root: Path, _can_ask: bool) -> friction_write.Plan:
+        return friction_write.plan_revisit(
+            target_root, artefact, target=target, outcome=outcome, reason=reason
+        )
 
     _friction_write(plan_of, yes, dry_run, rerun, writes_answer=True)
 
