@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
+  pr: "1665"
 body: >
   A project's rule sets stay found when its internal documentation root
   changes (COR-051 point 6). `pkit config set docs.internal <path>` now also
@@ -17,4 +18,4 @@ body: >
   example whose front matter has a `rule-set:` key, fails `pkit validate`
   until it declares the folder, moves the file, or removes the key. A
   configuration write that adds items at the end of a block list now keeps
-  that list's lines and comments.
+  that list's lines and comments. No migration runs.
