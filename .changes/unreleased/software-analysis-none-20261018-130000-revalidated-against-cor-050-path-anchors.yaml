@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README and rule RS-SAN-005 are revalidated unchanged against
+  COR-050, which says a path anchor and a registered kind's anchor stand on
+  the content of a file a place holds (#1661). Only their friction blocks
+  change, and nothing you run or read changes.

@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-18T17:00:35Z
-      outcome: updated
+      at: 2026-10-18T16:38:23Z
+      outcome: unchanged
+      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, and the Rationale behind it. This page cites COR-050 point 3, on who writes and who checks a change's answers, which the change leaves as it was.
 ---
 
 # software-engineering capability
