@@ -628,6 +628,52 @@ def test_dry_run_describes_the_outcome_not_the_flag(mp, monkeypatch, capsys):
     assert "remote head branch deleted" in out
 
 
+# ---- the authorisation (#1760) ------------------------------------------
+# The merge is the person's to authorise, for the head it merges (DEC-055
+# point 3): `--yes`, or a yes to a question naming that head. Off a terminal
+# with neither, nobody can be asked, so the run refuses rather than merge.
+
+
+def test_no_yes_and_no_terminal_refuses_and_merges_nothing(mp, monkeypatch, capsys):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_RED)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False, raising=False)
+
+    def no_prompt(prompt: str = "") -> str:
+        raise AssertionError(f"a run with no terminal asked: {prompt!r}")
+
+    monkeypatch.setattr("builtins.input", no_prompt)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--bypass-ci", "advisory"])
+    assert rc == 2
+    assert (calls["merged"], calls["ci_audit"], calls["order"]) == (False, False, [])
+    assert (
+        "error: no authorisation to merge PR #99 at sha-hea. This run has no --yes, and no "
+        "terminal to ask at. Nothing was posted or merged. Show the person what the PR "
+        "changes, and merge it on their authorisation with `merge-pr 99 --yes`."
+    ) in capsys.readouterr().err
+
+
+def test_a_yes_at_the_terminal_merges_the_head_the_question_names(mp, monkeypatch):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    asked: list[str] = []
+
+    def answer(prompt: str = "") -> str:
+        asked.append(prompt)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", answer)
+    assert _run_merge_main(mp, monkeypatch, ["99"]) == 0
+    assert asked == ["Squash-merge PR #99 at sha-hea and delete the head branch? [y/N] "]
+    assert calls["merge_head"] == "sha-head"
+
+
+def test_yes_off_a_terminal_merges(mp, monkeypatch):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False, raising=False)
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
+    assert calls["merged"] is True
+
+
 def test_fork_pr_merge_passes_cross_repository_to_cleanup(mp, monkeypatch):
     """merge-pr reads isCrossRepository from the PR and hands it to the local
     clean-up, so a fork PR's head name never drives a local delete; whether

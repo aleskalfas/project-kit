@@ -1,0 +1,8 @@
+component: living-docs
+kind: none
+body: >
+  The README's friction block records an unchanged revalidation against the
+  schemas README's friction-block section, which now names the artefacts
+  document's list of the files of a capability's location that no place or
+  held folder of it holds (#1724). The README's text is unchanged, so no
+  surface moves.

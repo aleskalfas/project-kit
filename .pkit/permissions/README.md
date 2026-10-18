@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-10-17T17:18:26Z
+      at: 2026-10-18T19:27:38Z
       outcome: unchanged
-      unchanged-because: ADR-014 loses its revision-history narration and gains pointers to ADR-027 and ADR-030. It still decides that the shared loader falls back to a stdlib YAML subset because uv panics inside macOS Seatbelt, which is what this page cites it for, so the page holds.
+      unchanged-because: This change routes the sandbox writer's failIfUnavailable in permissions.py and adds fail-open reports to sandbox status and overview. This README covers the decision core, the prompt diagnostics, the agent workspace, scope enforcement and capability privilege fragments, and describes neither the sandbox writer nor the flag. Its mentions of overview concern the catalog listing, which is unchanged.
 ---
 
 # Permissions — decision core
