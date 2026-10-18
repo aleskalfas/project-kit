@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-18T08:25:25Z
+      at: 2026-10-18T13:03:14Z
       outcome: unchanged
-      unchanged-because: ownership.py changes is_synced_copy, which asks a new helper whether a file is a registered externally-sourced capability's and answers yes for it, with a constant for that origin and the comments around them. The write-authority check this page describes rests on is_sync_managed and the write-carrying categories, both unchanged, and the COR-050 points it cites, 3 and 10, are unchanged too.
+      unchanged-because: "refs.py changes only how resolve_record looks a record up in a listing: a path without the record's id is passed over before it is parsed, and the same file is found. The reference graph, the rule-id and address checks and exactly-one-owner over owns, as this page describes them, report as before, so it still holds."
 ---
 
 # Agents

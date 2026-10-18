@@ -14,9 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-18T08:25:27Z
+      at: 2026-10-18T13:03:47Z
       outcome: unchanged
-      unchanged-because: COR-050 point 14 names the external source a component is pinned to as a source of synced trees, and the schemas README's friction-block section adds that a place never walks such a copy. This page links that section for how an anchor names a part, and says a synced tree declared as a place is the core's synced-place finding. Both still hold, as do the COR-050 points it cites on parts, a reason for having no anchors, answers and dead anchors.
+      unchanged-because: fill-doc-check now starts its three backbone readings at once and reads their answers in the same order as before, so its obligations, and its refusals with their reasons, are unchanged. This page says what the command reads and when it gives no answer, and nothing of the order of its readings or how long they take, so it still holds.
 ---
 
 # living-docs capability

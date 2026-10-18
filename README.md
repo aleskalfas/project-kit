@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-17T21:37:50Z
+      at: 2026-10-18T13:03:10Z
       outcome: unchanged
-      unchanged-because: decisions_validate.py changes only in its docstrings, which add an externally-sourced capability's records to the copies validation skips. This page names `pkit decisions validate` as a day-one gate for decision-id uniqueness and says nothing of which records it skips, so it still holds.
+      unchanged-because: "refs.py changes only how resolve_record looks a record up in a listing: it passes over a path that does not hold the record's id before parsing it, and finds the same file. This page names `pkit refs validate` as a day-one gate for reference-graph consistency, which reports as before, so it still holds."
 ---
 
 # project-kit
