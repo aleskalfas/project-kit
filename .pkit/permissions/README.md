@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-10-18T19:27:38Z
+      at: 2026-10-18T21:06:56Z
       outcome: unchanged
-      unchanged-because: This change routes the sandbox writer's failIfUnavailable in permissions.py and adds fail-open reports to sandbox status and overview. This README covers the decision core, the prompt diagnostics, the agent workspace, scope enforcement and capability privilege fragments, and describes neither the sandbox writer nor the flag. Its mentions of overview concern the catalog listing, which is unchanged.
+      unchanged-because: ADR-009 now names the 1.150.0 migration that untracks runtime-ignored files by its new number, 002, and decides nothing new. This page relies on its visibility and untrack rules, which read as before, and names no migration file.
 ---
 
 # Permissions — decision core

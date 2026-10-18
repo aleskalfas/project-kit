@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-18T19:27:45Z
+      at: 2026-10-18T21:06:57Z
       outcome: unchanged
-      unchanged-because: migrations.py now also fails a migration script at a version already released and picks the version a new migration targets. This page names pkit migrations check-diff as the migration-coverage check CI can run and says pkit upgrade runs any migrations automatically, which both still hold.
+      unchanged-because: migrations.py now also fails a migration script whose number another script in its folder holds. This page names pkit migrations check-diff as the migration-coverage check CI can run and says pkit upgrade runs migrations automatically, which both still hold.
 ---
 
 # project-kit

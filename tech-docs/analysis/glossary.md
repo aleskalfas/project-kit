@@ -159,6 +159,10 @@ TERM-surface-change:
           - PRJ-002#D1
           - PRJ-002#D2
           - COR-050#8
+      revalidated:
+        at: 2026-10-18T21:06:50Z
+        outcome: unchanged
+        unchanged-because: This change makes the release's migration-dir warning cover adapter and capability folders, and adds a number check to migrations check-diff. What an adopter could observe, depend on or break against, and the surface paths the changeset guard reads, are as the term says.
 TERM-system:
   name: system
   status: active

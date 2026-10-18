@@ -13,9 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-17T21:38:49Z
+      at: 2026-10-18T21:06:54Z
       outcome: unchanged
-      unchanged-because: The backbone's runtime-ignore patterns gain .pkit/.migration-runner/, a folder inside .pkit/ that lives only while migrations run. This page describes the adapter's footprint declaration and what pkit visibility routes into the per-clone exclude file, which the change does not touch.
+      unchanged-because: ADR-009 changed only the file name it gives the 1.150.0 migration that untracks runtime-ignored files, now numbered 002 so its folder numbers each script once. No decision changed, and this page names no migration file.
 ---
 
 # Claude Code adapter
