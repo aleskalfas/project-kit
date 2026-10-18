@@ -77,7 +77,10 @@ What is checked, each against the record's words:
 - **A journey's anchors match its steps and what it relies on** (point 4): the
   use cases among its artefact anchors are exactly those `steps` and
   `relies-on` list, so the friction check sees every use case it passes
-  through or relies on, and the anchors and the lists cannot drift apart.
+  through or relies on, and the anchors and the lists cannot drift apart. A
+  part anchor, such as `UC-001#`, names the use case before its last `#`
+  (COR-050 point 2), so it counts among its use-case anchors and matches no
+  entry of the lists, which name each use case whole.
 - **What a requirement names** (DEC-002 points 6 and 7): each of its `actors`
   is an actor of the analysis, and each of its `refines` a requirement of any
   of the three kinds, never itself; one in force names none withdrawn. The
@@ -925,7 +928,10 @@ def _actor_anchors(analysis: Analysis) -> list[Finding]:
 def _journey_anchors(analysis: Analysis) -> list[Finding]:
     """A journey's use-case anchors are exactly the use cases of its `steps` and its
     `relies-on` (DEC-001 point 4): the two lists are the source, and the stamp writes
-    the anchors from them."""
+    the anchors from them. An anchor on a part of a use case is an anchor on that use
+    case (`_artefact_named`), so it counts among them. It matches no entry of the
+    lists, which name each use case whole: a part anchor flags the journey only when
+    its part changes (COR-050 point 5)."""
     pattern = schemas.id_pattern(USE_CASE)
     found: list[Finding] = []
     for journey in analysis.of_kind(JOURNEY):
@@ -935,7 +941,9 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
         relies_on = journey.fields.get(RELIES_ON)
         listed = [*steps, *(relies_on if isinstance(relies_on, list) else [])]
         expected = _unique(s for s in listed if isinstance(s, str) and pattern.match(s))
-        anchored = _unique(a for a in journey.anchored_to("artefact") if pattern.match(a))
+        anchored = _unique(
+            a for a in journey.anchored_to("artefact") if pattern.match(_artefact_named(a))
+        )
         if expected and set(expected) != set(anchored):
             found.append(
                 Finding(
@@ -957,16 +965,17 @@ def _requirement_anchors(analysis: Analysis) -> list[Finding]:
     source, and the stamp writes the anchors from them, so a changed actor or a changed
     requirement it refines flags it. An artefact anchor is within the analysis when the
     artefact it names is of one of the analysis's kinds by its id: a part anchor, such as
-    `UC-001#` or `ACT-tester#needs`, names its artefact before its last `#` (COR-050
-    point 2). Compared as written, a part anchor matches no entry of the two fields,
-    which the stamp writes whole. An entry naming the requirement itself is left out of
-    what it anchors, since `_requirement_references` refuses it, and a cycle through
-    `refines` is the core's validation finding (COR-050 point 5)."""
+    `UC-001#` or `ACT-tester#needs`, names its artefact before its last `#`
+    (`_artefact_named`, COR-050 point 2). Compared as written, a part anchor matches no
+    entry of the two fields, which the stamp writes whole. An entry naming the
+    requirement itself is left out of what it anchors, since `_requirement_references`
+    refuses it, and a cycle through `refines` is the core's validation finding (COR-050
+    point 5)."""
     patterns = [schemas.id_pattern(kind) for kind in KINDS]
     actor_id, requirement_id = schemas.id_pattern(ACTOR), schemas.id_pattern(REQUIREMENTS[0])
 
     def within(anchor: str) -> bool:
-        named = anchor.rsplit("#", 1)[0]
+        named = _artefact_named(anchor)
         return any(p.match(named) for p in patterns)
 
     found: list[Finding] = []
@@ -1004,6 +1013,16 @@ def _requirement_anchors(analysis: Analysis) -> list[Finding]:
 
 def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(values))
+
+
+def _artefact_named(anchor: str) -> str:
+    """The artefact of the analysis an artefact anchor names: what comes before its last
+    `#`, or the whole anchor where it has none. After the `#`, a part anchor names a
+    section or the lead of that artefact, as `UC-001#` names the lead of UC-001 (COR-050
+    point 2). No id of the analysis holds a `#`, so none is cut short. An artefact
+    outside the analysis may hold one in its name, which COR-050 reads whole: compare
+    what this gives with the analysis's ids alone."""
+    return anchor.rsplit("#", 1)[0]
 
 
 # --- revalidation records ------------------------------------------------------------------

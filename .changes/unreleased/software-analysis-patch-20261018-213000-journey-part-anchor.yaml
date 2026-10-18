@@ -1,0 +1,13 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit analysis validate` reads a journey's part anchor on a use case, such as
+  `UC-001#`, as an anchor on that use case, the one named before its last `#`
+  (COR-050 point 2). The check that a journey's use-case anchors match its
+  `steps` and its `relies-on` now counts it, where it slipped past before. It
+  matches no entry of the two lists, which name each use case whole, since a
+  part anchor flags the journey only when its part changes. So a journey with
+  a part anchor on any use case fails the check, and the message names it
+  among the anchors (DEC-001 point 4).
