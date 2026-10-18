@@ -1,0 +1,22 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `SAN` holds a new judgement rule, `RS-SAN-007`, proposed: each goal,
+  minimal guarantee and requirement names its source (#1681). A source is an
+  accepted record the artefact anchors, a requirement's *Rationale* or a
+  constraint's *Imposed by*, code the artefact anchors that already does what
+  the item says, or a person's decision quoted in the artefact, with their
+  name and the date. A requirement's sources cover what its `statement` asks
+  and any value its `measure` sets. Its origin is the maintainer's decision
+  of 17 October. The `analysis-author` skill asks the same of what you write,
+  and the README says so. The rule declares no check and binds nothing while
+  proposed, so `SAN` stays at 1.0.0.
+  **The cost, once it is accepted:** accepting it gives `SAN` a new major.
+  Moving your set's pin to that major brings every goal, guarantee and
+  requirement under the rule, not only those a change alters. On that change,
+  each one without a source is a settled break, which withholds the rule-set
+  reviewer's approval (COR-060 point 1). Mend them in that change, or leave a
+  file out of your set's scope until it is mended. COR-060 point 2 gives the
+  other ways out.

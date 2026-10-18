@@ -105,6 +105,17 @@ An anchor says *if this changes, check me*. Anchor what makes the artefact true,
 
 The code the analysis ought to cover is the project's to declare, as the declared surface in the friction key of `.pkit/project/config.yaml`; what no artefact anchors to there is reported as uncovered surface.
 
+### Name the source of what the system must do
+
+Analysis written first lets an agent invent what the system must do, and everything built after rests on it. So each goal, minimal guarantee and requirement you write names its source, in one of these forms:
+
+- **A record:** an accepted decision record the artefact anchors with `--record`, which decides the item or was made to meet it.
+- **A requirement's reason:** its *Rationale*, or a constraint's *Imposed by*, filled rather than `None.`.
+- **Existing behaviour:** code the artefact anchors with `--path`, which already does what the item says. Code shows what the system does, never how well, so it sources no value a requirement's `measure` sets.
+- **A quoted decision:** the words of the person who decided, quoted in the artefact, with their name and the date. Quote a requirement's in its *Rationale* or *Imposed by*, and a guarantee's beside it. A goal holds one sentence, so quote its decision under a heading of your own after the last part, such as `## Sources`, and name the goal in plain words. The check never reports a heading of your own. Where the project closes the kind's labels, it reports a bold label of your own, so write none there.
+
+A source covers only what it bears out, so a requirement's sources together cover what its `statement` asks and any value its `measure` sets. Nothing else is a source: not the need a goal states, and not a proposed record. A *Rationale* or an *Imposed by* counts once it is filled, so write in it the reason the person who decides or a record gives, never one you supply. Where you find no source, do not write the item. Ask the person who decides, and quote the answer. `SAN`'s `RS-SAN-007` asks the same. While it is proposed, it binds nothing.
+
 ### An actor, a term or a requirement nothing embodies
 
 An actor, a term or a requirement with nothing to anchor is stamped with `--unanchored-because "<why nothing embodies it>"` instead of anchors. Examples are a sponsor, an outside regulator, a word of the business the software never names, and a requirement a stakeholder states. The stamp writes the reason as `unanchored-because` in the artefact's friction block, the core's key. An unanchored artefact is reported as a measure and never fails a check. The reason is what onboarding accepts, and the core's measure lists the artefact apart with it rather than counting it (`pkit friction check --all`). A use case or a journey is never unanchored: it always rests on its actor, or its steps. A requirement takes the reason only with no anchor at all: no actor, nothing it refines, and no path or record (DEC-002 point 6). The reason is a person's decision, accepted before it is written (COR-050 point 1): an agent following this skill shows the person the reason word for word and stamps only once they accept it.
