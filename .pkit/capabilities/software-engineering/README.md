@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-18T12:33:12Z
+      at: 2026-10-18T12:51:45Z
       outcome: unchanged
-      unchanged-because: "COR-050 gains point 16: a revisit entry, and a target a change revisited by changing it, join the answers a reviewer checks. This page says what docs-reviewer checks today, revalidations, deferrals and the sentences on updated documents, each as point 3 still asks. No component declares a link yet, so no change meets a revisit entry."
+      unchanged-because: DEC-055 adds when an authorisation for one head covers a later head whose only changes are answers inside revalidated blocks, and the limits that brings. This page cites point 3 for who writes and who checks a change's answers and what docs-reviewer blocks on, and point 5 for a sentence edited after the verdict, which the change leaves as they were.
 ---
 
 # software-engineering capability

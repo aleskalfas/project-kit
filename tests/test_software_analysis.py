@@ -46,9 +46,12 @@ from tests.analysis_repo import (
     ANALYSIS,
     CAPABILITY,
     CONFIG,
+    CONSTRAINTS,
+    FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
     NEW,
+    QUALITY,
     RECORDED,
     RECORDS,
     USE_CASES,
@@ -99,8 +102,10 @@ def test_the_package_declares_the_analysis_location_and_one_place_per_kind(
     assert location == dr.Location(Path(ANALYSIS), dr.Source.DERIVED)
     settings = fd.read_friction_settings(project.root)
     ours = [p.resolved for p in settings.places if p.source == "capability:software-analysis"]
-    assert ours == [GLOSSARY, ACTORS, USE_CASES, JOURNEYS]
+    assert ours == [GLOSSARY, ACTORS, USE_CASES, JOURNEYS, QUALITY, FUNCTIONAL, CONSTRAINTS]
     assert not any(RECORDS in place for place in ours)  # an act, not an anchored artefact
+    # The folder that holds the three kinds of requirement is no place (DEC-002 point 3).
+    assert f"{ANALYSIS}/requirements" not in ours
     # ... so the records' folder is held (COR-050 point 1): no place reads a record.
     assert [(h.source, h.resolved) for h in settings.held] == [
         ("capability:software-analysis", RECORDS)
@@ -193,11 +198,22 @@ def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
     """`pkit friction artefacts --json` over the shipped places (COR-056 point 6): an
     actor and a term take the type of their collection file's place, a use case or a
     journey that of its folder — a use case in a functional area's folder included —
-    and a revalidation record, held, is no artefact and takes none."""
+    a requirement that of its kind's folder, an area's included, and a revalidation
+    record, held, is no artefact and takes none. A file in the folder that holds the
+    three kinds of requirement, but in none of theirs, is in no place (DEC-002 point 3)."""
     stamped(seeded, "term", "suite")
     stamped(seeded, "use-case", "export", "--actor", "ACT-tester", "--area", "reports")
     record = f"{RECORDS}/2026-10-12-run-suite.md"
     seeded.write({record: "---\nchange: '#1'\n---\n"})
+    requirement = "---\nid: {id}\ntitle: T\nstatus: active\n---\n\n# {id} · Quality · T\n"
+    seeded.write(
+        {
+            f"{QUALITY}/REQ-004-quick.md": requirement.format(id="REQ-004"),
+            f"{FUNCTIONAL}/reports/REQ-002-approved.md": requirement.format(id="REQ-002"),
+            f"{CONSTRAINTS}/REQ-001-country.md": requirement.format(id="REQ-001"),
+            f"{ANALYSIS}/requirements/REQ-009-loose.md": requirement.format(id="REQ-009"),
+        }
+    )
     listing = CliRunner().invoke(main, ["friction", "artefacts", "--json"])
     assert listing.exit_code == 0, listing.output
     document = json.loads(listing.output)
@@ -210,9 +226,14 @@ def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
         "UC-002": "software-analysis:use-case",
         "UC-003": "software-analysis:use-case",
         "JRN-001": "software-analysis:journey",
+        "REQ-004": "software-analysis:quality-requirement",
+        "REQ-002": "software-analysis:functional-requirement",
+        "REQ-001": "software-analysis:constraint",
     }
     in_area = next(a for a in analysis if a["id"] == "UC-003")
     assert in_area["path"] == f"{USE_CASES}/reports/UC-003-export.md"
+    in_area = next(a for a in analysis if a["id"] == "REQ-002")
+    assert in_area["path"] == f"{FUNCTIONAL}/reports/REQ-002-approved.md"
     for artefact in analysis:
         given = places[artefact["type_place"]]
         assert given["source"] == "capability:software-analysis", artefact["id"]
@@ -224,7 +245,15 @@ def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
     }
     assert registry == {
         f"software-analysis:{kind}": (None, False)
-        for kind in ("actor", "use-case", "journey", "term")
+        for kind in (
+            "actor",
+            "use-case",
+            "journey",
+            "term",
+            "quality-requirement",
+            "functional-requirement",
+            "constraint",
+        )
     }
     assert [held["path"] for held in document["held_files"]] == [record]
     assert record not in {a["path"] for a in document["artefacts"]}

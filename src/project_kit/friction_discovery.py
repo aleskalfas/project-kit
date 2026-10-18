@@ -1484,6 +1484,18 @@ def _under_skipped(rel: Path | PurePosixPath) -> bool:
     return bool(rel.parts) and rel.parts[0] in _SKIPPED_TOP_LEVEL
 
 
+@functools.lru_cache(maxsize=16)
+def _documents(files: tuple[str, ...]) -> tuple[str, ...]:
+    """The Markdown files of a listing, in its order, none under a skipped top level:
+    worked out once per listing, however many places read it — a pure function of
+    the listing, so it is the same whichever place asks."""
+    return tuple(
+        f
+        for f in files
+        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX and not _under_skipped(PurePosixPath(f))
+    )
+
+
 def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
     """The Markdown files of a listing — a tree's files — that a place matches, sorted.
 
@@ -1498,13 +1510,9 @@ def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
     if not _textually_inside(place.pattern):
         return []
     pattern = os.path.normpath(place.pattern).replace(os.sep, "/")
-    documents = [
-        f
-        for f in files
-        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX and not _under_skipped(PurePosixPath(f))
-    ]
+    documents = _documents(tuple(files))
     if pattern == ".":
-        matched = documents
+        matched = list(documents)
     elif any(ch in _GLOB_CHARS for ch in pattern):
         if PurePosixPath(pattern).name == "**":
             pattern = f"{pattern}/*{DOCUMENT_SUFFIX}"
@@ -1727,6 +1735,46 @@ def rule_set_files(
             if PurePosixPath(rel).name != RULE_SETS_SIGNPOST:
                 claimed.setdefault(rel, rule_set_place)
     return claimed
+
+
+def is_method_rule_set_path(rel: str) -> bool:
+    """Whether `rel` lies in or beneath a folder the location rule names for method
+    rule sets: the backbone's `.pkit/rule-sets/`, or `.pkit/capabilities/<name>/rule-sets/`
+    of any capability, installed or not (COR-051 point 6)."""
+    parts = PurePosixPath(rel).parts
+    if parts[:2] == BACKBONE_RULE_SETS_DIR.parts:
+        return True
+    return len(parts) > 3 and parts[:2] == CAPABILITIES_DIR.parts and parts[3] == RULE_SETS_SEGMENT
+
+
+def rule_set_folder_left_behind(
+    target_root: Path, settings: FrictionSettings, new_internal_root: str
+) -> str | None:
+    """The project's default rule-set folder a change of the internal root would
+    leave behind, or None (COR-051 point 6).
+
+    The folder is `rule-sets/` under the internal root `settings` read, the
+    root before the change. It is left behind when a rule-set file in or
+    beneath it, one the location rule claims now, would be claimed by no place
+    with the internal root swapped for `new_internal_root` and every other
+    place as it stands. A change of root then declares it as a place, so the
+    location rule's declared places find its sets where they are. Nothing is
+    left behind when the root does not change, when the folder holds no
+    rule-set file, or when every file of it stays claimed: by a place the
+    project declares, or by the new root's folder, beneath which it lies.
+    Read in the working tree's one listing.
+    """
+    old = docs_roots.normalise(settings.internal_root)
+    new = docs_roots.normalise(new_internal_root)
+    if old == new:
+        return None
+    folder = (PurePosixPath(old.as_posix()) / RULE_SETS_SEGMENT).as_posix()
+    listing = working_tree(target_root)
+    before = rule_set_files(target_root, rule_set_places(target_root, settings), listing)
+    moved = replace(settings, internal_root=new.as_posix())
+    after = rule_set_files(target_root, rule_set_places(target_root, moved), listing)
+    inside = [rel for rel in before if rel.startswith(f"{folder}/")]
+    return folder if any(rel not in after for rel in inside) else None
 
 
 # --- anchor kinds and their resolvers (ADR-057 point 3) ------------------

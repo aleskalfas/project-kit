@@ -8,7 +8,9 @@ body: >
   is, and each other actor that takes part in it is one of its
   `other-actors`. `RS-SAN-004`: a use case's goal is one of its actor's
   needs. `RS-SAN-005`: an analysis artefact's anchors name what its
-  statements rest on. None declares a check: a reviewer, such as the
+  statements rest on, and a use case's anchors also name the decisions that
+  answer it and the architecture views that realise it, as DEC-001 points 4
+  and 11 give them (#1686). None declares a check: a reviewer, such as the
   rule-set reviewer, judges each once it is accepted. The *How* of
   `RS-SAN-003` and of `RS-SAN-005` names what the stamp and the check
   already refuse whatever any rule's status, and leaves it out. Each rule

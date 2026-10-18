@@ -850,6 +850,109 @@ def test_a_history_git_cannot_read_is_no_answer_and_the_filler_asks_git_nothing(
     assert outside.read_text(encoding="utf-8") == ""
 
 
+def _timed_pkit(
+    tmp_path_factory: pytest.TempPathFactory,
+    pkit_on_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    failing: tuple[str, ...] = (),
+) -> Path:
+    """A `pkit` first on PATH that logs when each reading the filler makes starts and
+    ends, then runs the real one — the reading of HEAD a second late, so a reading
+    started only after it ended shows — or, for a reading `failing` names, exits 1
+    saying so. Returns the log: one JSON line per event, `[event, reading, time]`."""
+    bin_dir = tmp_path_factory.mktemp("timed-pkit")
+    log = bin_dir / "log"
+    log.touch()
+    script = f"""#!{sys.executable}
+import json, subprocess, sys, time
+reading = " ".join(sys.argv[1:3])
+def note(event):
+    with open({str(log)!r}, "a", encoding="utf-8") as handle:
+        handle.write(json.dumps([event, reading, time.time()]) + "\\n")
+note("start")
+if reading == "repository base":
+    time.sleep(1)
+if reading in {list(failing)!r}:
+    print(f"{{reading}} failed on purpose", file=sys.stderr)
+    code = 1
+else:
+    code = subprocess.run([{str(pkit_on_path / "pkit")!r}, *sys.argv[1:]]).returncode
+note("end")
+sys.exit(code)
+"""
+    (bin_dir / "pkit").write_text(script, encoding="utf-8")
+    (bin_dir / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    return log
+
+
+def _events(log: Path) -> dict[tuple[str, str], float]:
+    """Each event of each reading, at its first time: a reading the backbone makes in
+    turn, through the same `pkit`, never moves the filler's own."""
+    events: dict[tuple[str, str], float] = {}
+    for event, reading, at in map(json.loads, log.read_text(encoding="utf-8").splitlines()):
+        events.setdefault((event, reading), at)
+    return events
+
+
+def test_the_filler_starts_its_three_readings_at_once(
+    docs_project: AdopterRepo,
+    pkit_on_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """None of the three readings waits for another: the check and the places start
+    while the reading of HEAD is still running, and the answer is the one they give."""
+    docs_project.write({"src/a.py": "A = 1\n"})
+    docs_project.commit("base")
+    alone = _fill_doc_check(docs_project.root)
+    assert alone.returncode == 0, alone.stderr
+    log = _timed_pkit(tmp_path_factory, pkit_on_path, monkeypatch)
+    timed = _fill_doc_check(docs_project.root)
+    assert (timed.returncode, timed.stdout) == (0, alone.stdout), timed.stderr
+    events = _events(log)
+    head_read = events[("end", "repository base")]
+    assert events[("start", "friction check")] < head_read
+    assert events[("start", "friction artefacts")] < head_read
+
+
+@pytest.mark.parametrize(
+    ("committed", "failing", "named"),
+    [
+        (True, ("friction check", "friction artefacts"), "`pkit friction check --all --json`"),
+        (True, ("friction artefacts",), "the pages cannot be told"),
+        (True, ("repository base", "friction check"), "`pkit repository base --json`"),
+        (False, ("friction check", "friction artefacts"), None),
+    ],
+)
+def test_the_filler_reads_its_answers_in_the_order_the_answer_depends_on_them(
+    docs_project: AdopterRepo,
+    pkit_on_path: Path,
+    tmp_path_factory: pytest.TempPathFactory,
+    monkeypatch: pytest.MonkeyPatch,
+    committed: bool,
+    failing: tuple[str, ...],
+    named: str | None,
+) -> None:
+    """Read at once, the readings are still read in order — HEAD, the check, the
+    places: the first that gives no answer is the one named, and with no commit
+    nothing is owed, whatever the others gave, as when each waited for the last."""
+    if committed:
+        docs_project.write({"src/a.py": "A = 1\n"})
+        docs_project.commit("base")
+    _timed_pkit(tmp_path_factory, pkit_on_path, monkeypatch, failing)
+    filled = _fill_doc_check(docs_project.root)
+    if named is None:
+        assert (filled.returncode, json.loads(filled.stdout)) == (
+            0,
+            {"schema_version": 1, "value": []},
+        ), filled.stderr
+        return
+    assert (filled.returncode, filled.stdout) == (1, ""), filled.stderr
+    assert filled.stderr.startswith(f"error: {named}"), filled.stderr
+    assert filled.stderr.count("failed on purpose") <= 1
+
+
 def test_the_filler_contributes_page_friction_and_uncovered_surface(
     tracked_project: AdopterRepo,
 ) -> None:

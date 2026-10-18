@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T12:33:06Z
+      at: 2026-10-18T11:43:06Z
       outcome: unchanged
-      unchanged-because: COR-050 gains point 16, a link a component declares whose source's change asks for a revisit of its targets, which only the change check asks and enforcing mode fails on. This actor's needs, unattended runs gated on their exit status, machine-readable findings and a whole-repository report that never fails, and its citation of point 12, that the checks bind once a project makes them a required status, still hold.
+      unchanged-because: PRJ-002 lets a branch correct a range that excludes the version the tree carries, and the guard admits that correction. A pull request still declares each surface change in a changeset the guard checks, and the release still cuts the tag, so the Note's two steps hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline

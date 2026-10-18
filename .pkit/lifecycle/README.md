@@ -29,10 +29,11 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-18T12:33:22Z
-      outcome: updated
+      at: 2026-10-18T13:52:23Z
+      outcome: unchanged
+      unchanged-because: "friction_discovery.py gains two readings for COR-051 point 6: whether a path lies in a folder of method rule sets, and which default rule-set folder a change of the internal root would leave behind. This page names friction discovery for held folders, the anchor-kind registry and its resolver runs, and says install creates the declared project rule set in rule-sets under the internal root, where the backbone finds it with no configuration. None of that changes, so what it says still holds."
 ---
 
 # Lifecycle
@@ -786,6 +787,20 @@ Each migration script:
 - Is **idempotent** — re-running a completed migration is a no-op. Migrations should detect already-applied state and exit cleanly.
 - **Is safe over any state, if it is a backbone migration.** It acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone. A version transition may run every backbone migration again over a project whose migration history is unknown (COR-059). A missing default the migration adds counts as a positive sign. So running it again may restore a default the project removed after it first ran, and the release's notes say so.
 - Receives `ROOT` (project root) in the environment.
+- **Calls `pkit` by its bare name, and reaches the running pkit, the one that runs its transition** ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 14). The migration runner puts a `pkit` of its own first on the script's `PATH`. That `pkit` runs the running pkit's code under the same interpreter, and never enters the router. So neither the pin nor the operator's `PATH` decides which release answers. Every process that inherits the script's `PATH` finds the same `pkit`. Its version is the `backbone_version` the manifest records while the migrations run.
+  - **Where that `pkit` lies:** in a fresh folder of its own inside `.pkit/.migration-runner/`, made for each set of scripts the runner runs, the backbone's, an adapter's or a capability's. `.pkit/.gitignore` ignores `.pkit/.migration-runner/` before the first script. Each folder is removed on every exit, and `.pkit/.migration-runner/` too once it is empty. No run reuses a folder that a killed run left behind, and such a folder is safe to delete.
+  - **When that `pkit` cannot run:** before the first script, the migration runner asks its `pkit` for its version. Where the folder in the project cannot be made or written, or its `pkit` answers with another version or not at all, the runner makes its folder in the system's temporary folder and asks again. It does the same where `.pkit/.migration-runner/` is a link or a folder another user owns or can write, and where a bare `pkit` finds another `pkit` before the runner's. When that fails too, the transition stops before the set's first script, as a failing migration does. The message names both folders, and `TMPDIR`, which chooses where the temporary folder lies. A folder that forbids running files is the usual cause.
+  - **No check needed:** a `command -v pkit` check always passes inside a transition. A script may keep one for a run outside a transition, by hand or in a test.
+  - **No routing variable:** the script sets no variable that stops the router, `PKIT_NO_ROUTE` or `PKIT_ROUTED`. Commands read them too, not only the router, so one would change what a command does.
+  - **Nothing from where `pkit` lives:** the migration runner's `pkit` lies in a folder of its own beside no install, and is gone after the run.
+  - **What it reads:** what the backbone computes, through the reading commands ("The seams back: what a script reads from the backbone", above), about content alone: the release's and the project's own. It applies the answer itself.
+    - **Never a recorded version or the completion,** as `status` shows them. While the migrations run, `backbone_version` already names the target, `completed_version` does not yet, and a component's manifest names its old version until its own migrations end. An answer built on them mixes two releases.
+    - **Which components are installed** does not move while the migrations run, so a check of it is sound. `capabilities project-rule-set` makes one before it answers.
+  - **What it never runs:** a command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes which components are installed. COR-004 makes a transition one operation, with propagation, migrations, seeding and merge as its parts. Such a command would repeat a part, or add another operation, inside it (COR-059 point 3).
+    - **Such commands:** `init`, `sync`, `upgrade`, `pin`, `unpin`, `merge`, `agents adopt`, `agents reconcile --write`, and `capabilities install`, `upgrade`, `register` and `uninstall`.
+    - **They refuse:** the migration runner sets `PKIT_MIGRATION=1` in the script's environment, and every process the script starts inherits it. Each such command checks it first, before it reads or writes anything, and under `--dry-run` too. Any value but an empty one refuses the command, and nothing overrides the refusal. So a script that runs one fails, and stops the transition. `upgrade` refuses before it looks for a project, so it updates no tool either.
+    - **The marker is the runner's:** the script never sets or unsets `PKIT_MIGRATION`. The router never reads it. It is no routing variable, since a command reads it only to refuse.
+    - **Allowed:** the reading commands, and `config set` for a key whose owning record specifies the migration that writes it (COR-048 point 5).
 - Uses `set -euo pipefail` (or the equivalent for whatever shell/language the runtime supports — settled by the build roadmap).
 - **Updates the affected resource.** For resources whose state lives in a manifest (component registry entries, opaque backend IDs), the migration updates the manifest entry. For derivable resources (files, labels, symlinks), no manifest update is needed — the transition regenerates them from the new kit-side spec at the new version.
 

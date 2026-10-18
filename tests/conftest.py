@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from project_kit import command_runner, run_cache, session_guard
+from project_kit import command_runner, migrations, run_cache, session_guard
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
@@ -47,6 +47,14 @@ def outside_any_route(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("PKIT_ROUTED", "PKIT_NO_ROUTE", "PKIT_PIN_UNRESOLVED"):
         monkeypatch.setenv(name, "")
         monkeypatch.delenv(name)
+
+
+@pytest.fixture(autouse=True)
+def outside_any_migration(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts outside any migration, whatever started the suite: no
+    migration marker, under which every command that changes the installation
+    refuses (ADR-065 point 14). A test that needs the marker sets it itself."""
+    monkeypatch.delenv(migrations.MIGRATION_ENV, raising=False)
 
 
 @pytest.fixture(autouse=True)
@@ -152,7 +160,9 @@ def pkit_on_path(tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.M
     lies outside the adopter repository."""
     bin_dir = tmp_path_factory.mktemp("pkit-bin")
     pkit = bin_dir / "pkit"
-    pkit.write_text(f'#!/bin/sh\nexec "{sys.executable}" -m project_kit "$@"\n', encoding="utf-8")
+    pkit.write_text(
+        f'#!/bin/sh\nexec "{sys.executable}" -P -m project_kit "$@"\n', encoding="utf-8"
+    )
     pkit.chmod(0o755)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}")
     return bin_dir

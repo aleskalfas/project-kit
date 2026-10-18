@@ -18,6 +18,7 @@ from click.testing import CliRunner
 
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
+from project_kit import friction_git
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import ASKED, register_kinds
@@ -2242,6 +2243,33 @@ def test_listing_discovery_agrees_with_the_filesystem(
     ]
 
 
+def _place(pattern: str) -> fd.Place:
+    declared = fd.SettingsPath(pattern, pattern, CONFIG, "/friction/places/0", "project")
+    return fd.Place(pattern, declared)
+
+
+@pytest.mark.parametrize(
+    ("pattern", "in_first", "in_second"),
+    [
+        ("docs", ["docs/a.md", "docs/sub/b.md"], ["docs/a.md", "docs/c.md"]),
+        (".", ["README.md", "docs/a.md", "docs/sub/b.md"], ["README.md", "docs/a.md", "docs/c.md"]),
+        ("docs/*.md", ["docs/a.md"], ["docs/a.md", "docs/c.md"]),
+    ],
+)
+def test_a_place_reads_each_listing_by_its_own_files(
+    pattern: str, in_first: list[str], in_second: list[str]
+) -> None:
+    """A listing's Markdown files are worked out once and kept for the places that
+    read it after: a listing read before reads the same, and one that differs — a
+    file added, one gone — by its own files, never by those of one read before.
+    Plain YAML and what lies under `.git` are no documents in either."""
+    first = ("README.md", "docs/a.md", "docs/data.yaml", "docs/sub/b.md", ".git/x.md")
+    second = ["README.md", "docs/a.md", "docs/c.md", "docs/data.yaml"]
+    assert fd.listed_files_in_place(_place(pattern), first) == in_first
+    assert fd.listed_files_in_place(_place(pattern), second) == in_second
+    assert fd.listed_files_in_place(_place(pattern), first) == in_first
+
+
 def test_a_commit_tree_reads_what_the_commit_held(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     base = repo.head()
@@ -2252,3 +2280,79 @@ def test_a_commit_tree_reads_what_the_commit_held(repo: AdopterRepo) -> None:
         "docs/guide.md": guide().encode(),
         "missing.md": None,
     }
+
+
+def test_a_commit_tree_reads_the_same_through_an_open_reader(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Through an open `BlobReader`, a commit's files read as they do one batch at a
+    time — a file, a file twice, a link (no file to read), a submodule (a commit, no
+    file), a file whose object the store lost, a path the commit does not hold — and
+    no git process is started per read."""
+    _start(
+        repo,
+        {"docs/guide.md": guide(), "docs/other.md": document("other"), "docs/lost.md": "lost\n"},
+    )
+    (repo.root / "docs" / "link.md").symlink_to("guide.md")
+    repo.git("add", "-A")
+    repo.git("update-index", "--add", "--cacheinfo", f"160000,{repo.head()},vendor/sub")
+    repo.git("commit", "-q", "-m", "a link and a submodule")
+    commit = repo.head()
+    repo.lose_object(repo.git("rev-parse", f"{commit}:docs/lost.md").stdout.strip())
+    paths = [
+        "docs/guide.md",
+        "docs/link.md",
+        "vendor/sub",
+        "docs/lost.md",
+        "missing.md",
+        "docs/other.md",
+        "docs/guide.md",
+    ]
+    expected = fc.CommitTree(repo.root, commit).read_bytes(paths)
+    assert expected == {
+        "docs/guide.md": guide().encode(),
+        "docs/link.md": None,
+        "vendor/sub": None,
+        "docs/lost.md": None,
+        "missing.md": None,
+        "docs/other.md": document("other").encode(),
+    }
+    reader = fc.BlobReader(repo.root)
+    try:
+        tree = fc.CommitTree(repo.root, commit, reader)
+        started: list[tuple[Any, ...]] = []
+        real = friction_git.run_git
+
+        def counted(*args: Any, **kwargs: Any) -> Any:
+            started.append(args[1:])
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(friction_git, "run_git", counted)
+        assert tree.read_bytes(paths) == expected
+        assert tree.read_bytes(["docs/other.md"]) == {"docs/other.md": document("other").encode()}
+        assert started == []
+    finally:
+        reader.close()
+
+
+def test_a_capability_decision_is_found_only_in_its_capability_s_decisions_folder(
+    tmp_path: Path,
+) -> None:
+    """`<capability>:DEC-NNN` names the first file of that capability's decisions
+    folder named `DEC-NNN.md` or `DEC-NNN-<slug>.md`: the number elsewhere in a path,
+    a longer number and a folder beneath are passed over."""
+    decisions = ".pkit/capabilities/pm/decisions"
+    files = [
+        "docs/DEC-001-notes/DEC-001-elsewhere.md",
+        ".pkit/capabilities/other/decisions/DEC-001-other.md",
+        f"{decisions}/DEC-0011-longer.md",
+        f"{decisions}/sub/DEC-001-beneath.md",
+        f"{decisions}/DEC-001.md",
+        f"{decisions}/DEC-001-b.md",
+        f"{decisions}/DEC-001-a.md",
+    ]
+    assert fc.record_file(tmp_path, files, "pm:DEC-001") == f"{decisions}/DEC-001-a.md"
+    assert fc.record_file(tmp_path, files[:5], "pm:DEC-001") == f"{decisions}/DEC-001.md"
+    assert fc.record_file(tmp_path, files[:4], "pm:DEC-001") is None
+    assert fc.record_file(tmp_path, files, "pm:DEC-001-b") == f"{decisions}/DEC-001-b.md"
+    assert fc.record_file(tmp_path, files, "pm:DEC-002") is None

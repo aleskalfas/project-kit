@@ -24,8 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T12:33:27Z
-      outcome: updated
+      at: 2026-10-18T11:43:11Z
+      outcome: unchanged
+      unchanged-because: checks.yml gains only a comment on the changeset guard, naming its range tie. Its steps, its triggers and the aggregator it runs stay as they were, so what this guide says CI runs, and when, holds.
 ---
 
 # Contributing to project-kit
