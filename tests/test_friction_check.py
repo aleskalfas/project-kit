@@ -2286,16 +2286,34 @@ def test_a_commit_tree_reads_the_same_through_an_open_reader(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Through an open `BlobReader`, a commit's files read as they do one batch at a
-    time — a file, a file twice, a link (no file to read), a path the commit does not
-    hold — and no git process is started per read."""
-    _start(repo, {"docs/guide.md": guide(), "docs/other.md": document("other")})
+    time — a file, a file twice, a link (no file to read), a submodule (a commit, no
+    file), a file whose object the store lost, a path the commit does not hold — and
+    no git process is started per read."""
+    _start(
+        repo,
+        {"docs/guide.md": guide(), "docs/other.md": document("other"), "docs/lost.md": "lost\n"},
+    )
     (repo.root / "docs" / "link.md").symlink_to("guide.md")
-    commit = repo.commit("a link")
-    paths = ["docs/guide.md", "docs/link.md", "missing.md", "docs/other.md", "docs/guide.md"]
+    repo.git("add", "-A")
+    repo.git("update-index", "--add", "--cacheinfo", f"160000,{repo.head()},vendor/sub")
+    repo.git("commit", "-q", "-m", "a link and a submodule")
+    commit = repo.head()
+    repo.lose_object(repo.git("rev-parse", f"{commit}:docs/lost.md").stdout.strip())
+    paths = [
+        "docs/guide.md",
+        "docs/link.md",
+        "vendor/sub",
+        "docs/lost.md",
+        "missing.md",
+        "docs/other.md",
+        "docs/guide.md",
+    ]
     expected = fc.CommitTree(repo.root, commit).read_bytes(paths)
     assert expected == {
         "docs/guide.md": guide().encode(),
         "docs/link.md": None,
+        "vendor/sub": None,
+        "docs/lost.md": None,
         "missing.md": None,
         "docs/other.md": document("other").encode(),
     }

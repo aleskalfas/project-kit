@@ -887,7 +887,12 @@ sys.exit(code)
 
 
 def _events(log: Path) -> dict[tuple[str, str], float]:
-    return {(e, r): t for e, r, t in map(json.loads, log.read_text(encoding="utf-8").splitlines())}
+    """Each event of each reading, at its first time: a reading the backbone makes in
+    turn, through the same `pkit`, never moves the filler's own."""
+    events: dict[tuple[str, str], float] = {}
+    for event, reading, at in map(json.loads, log.read_text(encoding="utf-8").splitlines()):
+        events.setdefault((event, reading), at)
+    return events
 
 
 def test_the_filler_starts_its_three_readings_at_once(
