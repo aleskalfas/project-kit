@@ -1225,8 +1225,20 @@ def test_a_file_under_requirements_outside_the_three_kinds_folders_is_refused(
     ("unplaced", "read"),
     [
         (None, None),  # a backbone that predates the key
-        ({}, ()),  # a reading that does not place the analysis location
+        ({}, None),  # no entry for the analysis location
         ({"software-analysis": {"analysis": {"files": []}}}, None),  # no path given
+        ({"software-analysis": {"analysis": {"path": "a"}}}, None),  # no list of files
+        (
+            {
+                "software-analysis": {
+                    "analysis": {
+                        "path": "x/../a/",
+                        "files": [{"path": "a/requirements/REQ-001-a.md", "excluded": False}],
+                    }
+                }
+            },
+            ("a/requirements/REQ-001-a.md",),
+        ),
         (
             {
                 "software-analysis": {
@@ -1249,7 +1261,8 @@ def test_the_files_outside_the_kinds_are_read_from_the_location_s_unplaced_files
     unplaced: dict[str, Any] | None, read: tuple[str, ...] | None
 ) -> None:
     """The model keeps the location's files under `requirements/` that are not excluded,
-    and says it has no answer when the backbone gives none (#1724)."""
+    the location's path read in its normal form, and says it has no answer when the
+    backbone's reading gives none for the location (#1724)."""
     (model,) = load_lib("model")
     document: dict[str, Any] = {"schema_version": 1}
     if unplaced is not None:
@@ -1289,9 +1302,10 @@ def test_a_backbone_that_gives_no_unplaced_files_makes_the_check_say_it_did_not_
     assert errors(check(project)) == [
         (
             "tech-docs/analysis",
-            "no file under `requirements/` outside the three kinds' folders is looked for: the "
-            "installed backbone gives no `unplaced` in `pkit friction artefacts --json` — "
-            "upgrade it (`pkit upgrade`)",
+            "no file under `requirements/` outside the three kinds' folders is looked for: "
+            "`pkit friction artefacts --json` gives no `unplaced` list of the analysis "
+            "location's files, which an installed backbone that predates it lacks — upgrade it "
+            "(`pkit upgrade`)",
         )
     ]
 

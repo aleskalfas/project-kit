@@ -377,9 +377,10 @@ def _outside_kinds(analysis: Analysis) -> list[Finding]:
             Finding(
                 ERROR,
                 analysis.location or ".",
-                f"no file under {folder} outside the three kinds' folders is looked for: the "
-                f"installed backbone gives no `{UNPLACED}` in `pkit friction artefacts --json` "
-                f"— upgrade it (`pkit upgrade`)",
+                f"no file under {folder} outside the three kinds' folders is looked for: "
+                f"`pkit friction artefacts --json` gives no `{UNPLACED}` list of the analysis "
+                f"location's files, which an installed backbone that predates it lacks — "
+                f"upgrade it (`pkit upgrade`)",
             )
         ]
     return [

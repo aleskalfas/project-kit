@@ -999,8 +999,9 @@ def test_each_capability_location_lists_the_files_no_place_or_held_folder_of_its
     """Each location an installed capability declares, by the capability and the
     location, with where it lies and the Markdown files within it that no place or
     held folder of that capability holds, each saying whether `friction.exclude` leaves
-    it out. Another component's place, or the project's, holds nothing for it. A
-    location holding none is listed with no files. A key added: the version stays."""
+    it out. Another component's place, or the project's, holds nothing for it. A link is
+    never listed, as the walk never reads one. A location holding none is listed with no
+    files. A key added: the version stays."""
     _logs_declared(adopter, "    - {location: logs, path: records}\n")
     config = adopter.root / CONFIG
     config.write_text(
@@ -1022,6 +1023,7 @@ def test_each_capability_location_lists_the_files_no_place_or_held_folder_of_its
             "handbook/guides/deep/c.md": "# Deeper than the place's glob\n",
         }
     )
+    (adopter.root / LOGS / "alias.md").symlink_to("loose.md")  # a link: never listed
     document = _document()
     assert document["schema_version"] == fd.ARTEFACTS_SCHEMA_VERSION == 1
     assert document["unplaced"] == {

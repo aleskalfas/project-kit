@@ -34,6 +34,7 @@ which a project's tightening of a structure binds (DEC-001 point 1).
 from __future__ import annotations
 
 import dataclasses
+import posixpath
 import re
 from collections import defaultdict
 from collections.abc import Mapping
@@ -322,8 +323,9 @@ class Analysis:
     `outside_kinds` are the files under `REQUIREMENTS_FOLDER` that no place or
     held folder of this capability holds, by path, less those `friction.exclude`
     leaves out: a file there outside the three kinds' folders, which no place
-    holds (DEC-002 point 3). It is `None` when the reading gives no such list,
-    from a backbone that predates it, so nothing says whether there are any.
+    holds (DEC-002 point 3). It is `None` when the reading gives no such list of
+    the analysis location, as from a backbone that predates it, so nothing says
+    whether there are any.
     `method_rules` are the statuses of the rules of this capability's method
     set, `METHOD_SET`, by id, a rule without one `proposed` (COR-051 point 4);
     `None` when the reading holds no such set. `project_rules` are the rules of
@@ -544,24 +546,27 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
 def _outside_kinds(unplaced: Any) -> tuple[str, ...] | None:
     """The files under `REQUIREMENTS_FOLDER` of the analysis location that the reading
     says no place or held folder of this capability holds, by path, less those
-    `friction.exclude` leaves out; `None` when the reading gives no `UNPLACED`, or gives
-    the location without where it lies. A reading that does not place the location lists
-    none, and then no place of this capability is in it either, so the check reads
-    nothing."""
+    `friction.exclude` leaves out. `None` when the reading cannot say: it gives no
+    `UNPLACED`, or not the analysis location in it, or the location without where it
+    lies or without its list of files. The check reads this only where the reading
+    places this capability's places in the location, so a reading without it has no
+    answer, never one of no such files."""
     if not isinstance(unplaced, Mapping):
         return None
     own = unplaced.get(CAPABILITY)
     location = own.get(LOCATION) if isinstance(own, Mapping) else None
     if not isinstance(location, Mapping):
-        return ()
-    where = _text(location.get("path"))
-    if where is None:
         return None
+    where = _text(location.get("path"))
+    files = location.get("files")
+    if where is None or not isinstance(files, list):
+        return None
+    where = posixpath.normpath(where)
     folder = REQUIREMENTS_FOLDER if where == "." else f"{where}/{REQUIREMENTS_FOLDER}"
     return tuple(
         sorted(
             path
-            for entry in _mappings(location.get("files"))
+            for entry in _mappings(files)
             if isinstance(path := entry.get("path"), str)
             and path.startswith(f"{folder}/")
             and entry.get("excluded") is not True

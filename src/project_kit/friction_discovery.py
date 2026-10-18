@@ -3832,22 +3832,23 @@ class UnplacedFile:
     excluded_by: SettingsPath | None = None
 
 
-def unplaced_files(discovery: Discovery, files: Sequence[str]) -> tuple[UnplacedFile, ...]:
+def unplaced_files(discovery: Discovery, listing: RepositoryTree) -> tuple[UnplacedFile, ...]:
     """The Markdown files of a listing that lie within a documentation location an
     installed capability declares and that no place or held folder of that
     capability holds: each location in `discovery.settings.locations` order, its
     files by path.
 
-    `files` is the listing the walk read: a commit's, or the working tree's one
-    listing (`working_tree`). So the answer agrees with discovery inside a git
-    work tree and outside one (ADR-057 point 2). A place holds every file it
+    `listing` is the state the walk read: a commit, or the working tree's one
+    listing (`working_tree`), which a run shares with the walk. So the answer
+    agrees with discovery inside a git work tree and outside one (ADR-057 point
+    2). A place holds every file it
     matches, read as the walk reads it (`listed_files_in_place`), a synced copy
     included. A held folder holds its files unless it is skipped, and a skipped
     one holds nothing (`held_folders`). Only the capability's own declarations
     count, so the backbone knows nothing of how the capability lays out its
     location, and what a file listed here means is the capability's to decide. A
     file another component's place or the project's matches is listed too. A
-    link is a file of the listing, listed as any file is and never read.
+    link is never listed, as the walk never reads one (`_is_link`).
     """
     settings = discovery.settings
     holders: dict[str, list[Place]] = {}
@@ -3857,6 +3858,7 @@ def unplaced_files(discovery: Discovery, files: Sequence[str]) -> tuple[Unplaced
     for folder in discovery.held_folders:
         if folder.skipped is None:
             holders.setdefault(folder.component, []).append(folder.place)
+    files = listing.files()
     found: list[UnplacedFile] = []
     for location in settings.locations:
         within = _documents_within(location.path, files)
@@ -3866,7 +3868,7 @@ def unplaced_files(discovery: Discovery, files: Sequence[str]) -> tuple[Unplaced
         found += [
             UnplacedFile(location, rel, settings.exclusion(rel))
             for rel in within
-            if rel not in held
+            if rel not in held and not _is_link(listing, rel)
         ]
     return tuple(found)
 
@@ -4062,7 +4064,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     types = discovery.types
     anchored_points = _AnchoredPoints(target_root, tree)
     listing = tree if tree is not None else working_tree(target_root)
-    unplaced = unplaced_files(discovery, listing.files())
+    unplaced = unplaced_files(discovery, listing)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
