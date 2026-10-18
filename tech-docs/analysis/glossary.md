@@ -11,6 +11,10 @@ TERM-anchor:
         record:
           - COR-050#2
           - COR-050#7
+      revalidated:
+        at: 2026-10-18T17:44:37Z
+        outcome: unchanged
+        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds. What an anchor is, and how discovery reads one, is unchanged.
 TERM-answer:
   name: answer
   status: active
@@ -38,6 +42,10 @@ TERM-artefact:
           - src/project_kit/friction_discovery.py
         record:
           - COR-050#1
+      revalidated:
+        at: 2026-10-18T17:44:38Z
+        outcome: unchanged
+        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds, never as artefacts. What an artefact is, and where discovery finds one, is unchanged.
 TERM-base:
   name: base
   status: active
@@ -134,6 +142,10 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
+      revalidated:
+        at: 2026-10-18T17:44:40Z
+        outcome: unchanged
+        unchanged-because: The change lists the files of a capability's documentation location that none of its places or held folders holds. What a place is, and which files it matches, is unchanged.
 TERM-surface-change:
   name: surface change
   status: active

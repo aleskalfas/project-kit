@@ -1,0 +1,16 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `pkit analysis validate` fails a Markdown file under `requirements/` that
+  lies outside the three kinds' folders (#1724, software-analysis DEC-002
+  point 3). That folder is no place, so such a file is a requirement of no
+  kind: the check held it to nothing and the stamp counted no number it
+  holds. Move it into its kind's folder, or leave it out with
+  `friction.exclude`, and the check no longer reports it. The check reads
+  these files from the new `unplaced` key of `pkit friction artefacts --json`,
+  which the backbone this release ships adds, so the capability requires that
+  backbone. A backbone without the key fails the check with a finding that
+  says it could not look.
