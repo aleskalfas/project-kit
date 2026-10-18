@@ -47,6 +47,15 @@ def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None
         ("---\n- a list\n---\nbody\n", None, None),  # front matter that is no mapping
         ("no front matter\n", None, None),
         ("---\nid: [unclosed\n---\nbody\n", None, "line 2"),
+        # A mapping as a key is refused by ruamel's own error. Held in a list, it is no
+        # key a mapping can hold either, and a date out of range or a tag on text it
+        # cannot convert builds no value: ruamel fails on these outside its own errors,
+        # which give a reason too, never an error (#1750).
+        ("---\n? {a: 1}\n: x\n---\nbody\n", None, "found unhashable key"),
+        ("---\n? [{a: 1}]\n: x\n---\nbody\n", None, "cannot build a value from it: TypeError"),
+        ("---\ndue: 2026-02-30\n---\nbody\n", None, "cannot build a value from it: ValueError"),
+        ("---\na: !!int x\n---\nbody\n", None, "cannot build a value from it: ValueError"),
+        ("---\n!!bool a: x\n---\nbody\n", None, "cannot build a value from it: KeyError"),
     ],
 )
 def test_front_matter_is_parsed_as_written(
