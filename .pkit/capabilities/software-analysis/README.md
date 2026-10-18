@@ -14,7 +14,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-18T11:44:46Z
+      at: 2026-10-18T12:26:45Z
       outcome: updated
 ---
 
@@ -539,10 +539,10 @@ Each message gives the part's hint and example. How the check reads a body:
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds five rules, each with the decision as its origin and its anchor.
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds five rules, each with the decision as its origin.
 
 - **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
-- **Three proposed judgement rules,** which declare no check. They cover a use case's actors and its goal (DEC-001 points 1 and 4), and what an artefact's anchors name (points 4 and 9).
+- **Three proposed judgement rules,** which declare no check. They cover a use case's actors and its goal (DEC-001 points 1 and 4), and what an artefact's anchors name (points 2, 4, 9 and 11).
 
 | Rule | Status | Statement |
 |---|---|---|
@@ -550,18 +550,19 @@ Each message gives the part's hint and example. How the check reads a body:
 | `RS-SAN-002` | accepted | A use case's steps and variants keep their numbers and letters. |
 | `RS-SAN-003` | proposed | A use case's actor is the one whose goal it is, and each other actor that takes part in it is one of its `other-actors`. |
 | `RS-SAN-004` | proposed | A use case's goal is one of its actor's needs. |
-| `RS-SAN-005` | proposed | An analysis artefact's anchors name what its statements rest on. |
+| `RS-SAN-005` | proposed | An analysis artefact's anchors name what its statements rest on. A use case's anchors also name the decisions that answer it and the architecture views that realise it. |
 
 - **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
 - **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
 - **What the judgement rules ask.** Each judges an artefact in force, never a withdrawn one, as its *How* says.
   - A use case's actor is the one whose goal it is. Each other actor that takes part in it is one of its `other-actors` (`RS-SAN-003`).
   - A use case's goal states one of its actor's `needs`, whole (`RS-SAN-004`).
-  - The code and the decisions an artefact's statements rest on are named by its anchors (`RS-SAN-005`).
+  - An artefact's anchors name the code and the decisions its statements rest on. For a use case, see also "How it meets your decisions", above (`RS-SAN-005`).
 - **What judges them.** They declare no check, so a reviewer judges each where it binds, such as the rule-set reviewer (COR-057). While the rules are proposed, they bind nothing, and nothing judges them.
   - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
   - **A change to anchors alone.** It alters no artefact's content, so the rule-set reviewer judges nothing there (COR-057 point 1). The friction check asks for the artefact's revalidation instead (COR-050 point 6).
+  - **A break that starts outside a use case.** A change that records a decision answering a use case, or adds a view that realises it, alters no use case. So the rule-set reviewer does not judge the use case's missing anchor there (COR-057 point 1). Add that anchor in the same change.
 - **What each gates.** The format rule gates the check of each artefact kind's structure, since that structure binds at the rule's status (DEC-001 point 1). The append-only rule gates the check that keeps a use case's steps and variants append-only. The format rule and the append-only rule are accepted, so each check fails on what it finds where its rule binds. While a rule is proposed, its check reports nothing (COR-051 point 4). `pkit analysis validate --preview` shows what the structure check would report ("Each body against its structure", above), and `pkit analysis check-numbers --preview` what the append-only check would ("Steps and variants stay append-only", below). A kind's schema checks the front matter of an artefact or a record whatever any rule's status.
 - **What the checks settle.** `SAN` declares, under `checks`, what this capability's checks enforce of the format rule and the append-only rule (COR-051 point 2). Of the format rule, `software-analysis:validate` enforces what the rule binds, above, as far as it holds it ("Each body against its structure", above). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. Of the append-only rule, `software-analysis:check-numbers` enforces that no step or variant the base held is renumbered or removed ("Steps and variants stay append-only", below). `pkit validate` never runs that command, so run it in your check gate, or that part of the rule goes unchecked ("A number keeps its meaning", below). Whoever judges the rest of a rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
 - **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
