@@ -112,7 +112,7 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
 
 Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, puts it in its place and writes the anchors it must carry. `analysis` is this capability's alias; `pkit software-analysis new` is the same command.
 
-**A requirement has no stamp yet.** The stamp of the three kinds of requirement comes next ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)). Wait for it before you write one: it gives a requirement its number across the three kinds, which nothing else gives or checks yet.
+**A requirement has no stamp yet.** The stamp of the three kinds of requirement comes next ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)). Wait for it before you write one: it gives a requirement its number across the three kinds, which nothing else gives yet, and only the duplicate-id check holds.
 
 | Command | Writes |
 |---|---|
@@ -375,7 +375,7 @@ A constraint has the same fields, and *Verified by* too. In the place of *Ration
 ```markdown
 ---
 id: REQ-001
-title: Run suites on the project's own machines
+title: Run suites on the client's machines
 status: active
 statement: The system runs every suite on a machine the client owns.
 measure: None.
@@ -389,7 +389,7 @@ pkit:
         - ADR-002
 ---
 
-# REQ-001 · Constraint · Run suites on the project's own machines
+# REQ-001 · Constraint · Run suites on the client's machines
 
 **Verified by:** None.
 
@@ -1000,7 +1000,7 @@ value:
     by: the pipeline              # optional: who or what ran it
 ```
 
-The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone, since two providers of one point are compared by that file alone (COR-053 point 5), so it carries a copy of the id and check-name shapes whose one home is `schemas/analysis.schema.json`; a test holds the copy equal to its source. A commit is written by its **full name** — 40 hexadecimal digits, or 64 under SHA-256 — and a short name such as `7898192` is refused, so a commit has one spelling and a record's copy is compared with the entry it came from exactly. `steps` is a set: for a use case, the steps and variants the run went through, by number and letter; for a journey, the use cases it passed through, by id, each once; an actor or a term has none.
+The entry's shape is `schemas/revalidation-evidence.schema.json`. It reads alone, since two providers of one point are compared by that file alone (COR-053 point 5), so it carries a copy of the id and check-name shapes whose one home is `schemas/analysis.schema.json`; a test holds the copy equal to its source. A commit is written by its **full name** — 40 hexadecimal digits, or 64 under SHA-256 — and a short name such as `7898192` is refused, so a commit has one spelling and a record's copy is compared with the entry it came from exactly. `steps` is a set: for a use case, the steps and variants the run went through, by number and letter; for a journey, the use cases it passed through, by id, each once; an actor, a term or a requirement has none.
 
 An entry is one result, keyed by three parts: the artefact, the commit and the **check** — the name its filler gives one executed check, kept from commit to commit. It is lower-case words of letters, digits and hyphens joined by dots, the first beginning with a letter; underscores, slashes, colons and capitals are refused, so a filler slugs a test's name (`tests/test_run.py::test_sandbox` → `pytest-bridge.test-run.test-sandbox`) and keeps the exact name in `ran`. A capability's checks open with the capability's own name, and yours with `project`. So two fillers' results for one artefact at one commit — one capability running the tests and another tracing the journeys, say — stand side by side, and only two that claim one check collide. One filler never supplies an id twice — the whole filler is inert if it does — so a filler gives each result its own check.
 
