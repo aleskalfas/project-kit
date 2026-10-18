@@ -402,9 +402,12 @@ def overview(target_root: Path) -> str:
         )
     # A committed fail-open reaches every clone (ADR-005 point 6): reported
     # whether this machine's box is on or off, with the step that moves it.
-    committed_fail_open = _committed_fail_open_lines(target_root)
-    if committed_fail_open:
-        sandbox_line += "\n" + "\n".join(committed_fail_open)
+    # A local one is reported while the box is off, where it lies latent.
+    fail_open_lines = _committed_fail_open_lines(target_root) + _local_fail_open_while_off_lines(
+        target_root
+    )
+    if fail_open_lines:
+        sandbox_line += "\n" + "\n".join(fail_open_lines)
 
     lines: list[str] = [
         cli_render.style("title", f"Permission catalog — {len(privileges)} privilege(s)")
@@ -1542,8 +1545,8 @@ def _sandbox_enable_macos_gated(
     sandbox. Actively write `sandbox.enabled: false` to the harness-co-owned
     local file (ADR-032 Rule B — the key the `/sandbox` panel reads) so a box a
     previous run (or a hand-edit) left ON is CORRECTED to off, then return a
-    loud, specific message naming both blockers. Idempotent: when the union is
-    already off, no write is made.
+    loud, specific message naming both blockers. Idempotent: a run that finds
+    the box off and the fail mode already routed writes nothing.
 
     Disable-not-just-skip rationale: the failure mode this task exists to fix is
     a Mac adopter whose toolchain is silently broken BY an enabled box; leaving a
@@ -1611,7 +1614,39 @@ def _sandbox_enable_macos_gated(
             "    takes effect silently if the box is turned on later (e.g. the `/sandbox`",
             "    panel). Re-run `pkit permissions sandbox enable` without the flag to remove it.",
         ]
+        lines += ["  " + line for line in _settings_local_unignored_lines(target_root)]
     return "\n".join(lines) + "\n"
+
+
+def _settings_local_unignored_lines(target_root: Path) -> list[str]:
+    """Warn when git does not ignore `.claude/settings.local.json` here.
+
+    The dangerous flag's per-machine `false` stays off every other clone only
+    while that file is never committed (ADR-005 point 6, ADR-029). pkit writes
+    the file itself, so the harness's own ignore step never runs, and the
+    `.gitignore` entry is an install step that may be missing. `git
+    check-ignore` exits 0 when the path is ignored, 1 when it is not, and 128
+    outside a repository; only 1 is a finding. Read-only; empty when the file
+    is ignored, when this is no repository, or when git is absent."""
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(target_root), "check-ignore", "-q", ".claude/settings.local.json"],
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=10,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if result.returncode != 1:
+        return []
+    return [
+        "⚠ .claude/settings.local.json is NOT ignored by git in this repository, so",
+        "  the fail-open could still be committed. Add `.claude/settings.local.json`",
+        "  to .gitignore.",
+    ]
 
 
 def _route_fail_mode(
@@ -1701,6 +1736,44 @@ def _committed_fail_open_lines(target_root: Path) -> list[str]:
         "    `pkit permissions sandbox enable --dangerously-allow-unconfined` (fail-open on",
         "    this machine only) or `pkit permissions sandbox enable` (fail-closed), then",
         "    commit .claude/settings.json.",
+        *_enable_turns_box_on_lines(target_root),
+    ]
+
+
+def _local_fail_open_while_off_lines(target_root: Path) -> list[str]:
+    """Report the flag's local `false` while this machine's box is off.
+
+    The value is inert then, but takes effect silently once the box is turned
+    on, for example through the harness's `/sandbox` panel. The fail-mode line
+    of `sandbox status` shows only while the box is on, so this line keeps the
+    operator's recorded fail-open visible. Read-only; empty when the box is on
+    or the local file holds no such value."""
+    if _sandbox_block(target_root).get("enabled") is True:
+        return []
+    local = _sandbox_block_in(
+        _read_settings_or_empty(target_root, _settings_local_path(target_root))
+    )
+    if local.get("failIfUnavailable") is not False:
+        return []
+    return [
+        "  ⚠ fail-open recorded for this machine (failIfUnavailable: false in",
+        "    settings.local.json) — inert while the box is off, it takes effect if the box",
+        "    is turned on. `pkit permissions sandbox enable` without the flag removes it.",
+        *_enable_turns_box_on_lines(target_root),
+    ]
+
+
+def _enable_turns_box_on_lines(target_root: Path) -> list[str]:
+    """Note that the `sandbox enable` step a report names also turns the box on.
+
+    Only where the box is off and `sandbox enable` would turn it on: off
+    macOS, whose gated branch never does. `sandbox disable` afterwards keeps
+    the box off and leaves the routed fail mode as it is."""
+    if _os_sandbox_unsupported_here() or _sandbox_block(target_root).get("enabled") is True:
+        return []
+    return [
+        "    `sandbox enable` also turns the box on here. To keep it off, run",
+        "    `pkit permissions sandbox disable` afterwards.",
     ]
 
 
@@ -1826,11 +1899,11 @@ def sandbox_enable(
             "⚠ DANGEROUS: failIfUnavailable is OFF on this machine — if the OS "
             "sandbox cannot start, the session silently runs UNCONFINED (the "
             "fail-open ADR-004 forbids). Per-invocation operator gesture only: "
-            "written to the gitignored settings.local.json, never to the committed "
-            "settings.json, so no other clone runs fail-open. Re-run "
-            "`pkit permissions sandbox enable` without the flag to restore the "
-            "fail-closed floor."
+            "written to the per-machine settings.local.json, never to the "
+            "committed settings.json. Re-run `pkit permissions sandbox enable` "
+            "without the flag to restore the fail-closed floor."
         )
+        lines += _settings_local_unignored_lines(target_root)
     if strict:
         lines.append(
             "strict: the unsandboxed fail-over escape hatch is locked — commands "
@@ -1949,6 +2022,7 @@ def sandbox_status(target_root: Path) -> str:
             "(prompts); run `pkit permissions sandbox enable`."
         )
         lines += committed_fail_open
+        lines += _local_fail_open_while_off_lines(target_root)
         return "\n".join(lines) + "\n"
 
     auto = sb.get("autoAllowBashIfSandboxed", True)  # harness default: true
@@ -1972,8 +2046,9 @@ def sandbox_status(target_root: Path) -> str:
     )
     # The dangerous flag's per-machine `false` is told apart from a committed
     # one: the first is this operator's own gesture, the second reaches every
-    # clone and is reported on its own lines below.
-    local_open = (
+    # clone and is reported on its own lines below. "This machine only" is
+    # said only when no committed `false` is there as well.
+    local_open = not committed_fail_open and (
         _sandbox_block_in(
             _read_settings_or_empty(target_root, _settings_local_path(target_root))
         ).get("failIfUnavailable")
@@ -4958,7 +5033,10 @@ def setup_autonomy(
         sb = _sandbox_block(target_root)
         was_on = sb.get("enabled") is True
         sealed = sb.get("allowUnsandboxedCommands") is False
-        if was_on and sb.get("failIfUnavailable") is True and sealed:
+        # A committed `false` reaches every clone even when a local `true`
+        # holds this machine fail-closed, so it is never "already" done.
+        committed_fail_open = bool(_committed_fail_open_lines(target_root))
+        if was_on and sb.get("failIfUnavailable") is True and sealed and not committed_fail_open:
             lines.append(
                 "  [3/4] confinement   ✓ already — OS sandbox enabled "
                 "(fail-closed, unsandboxed escape sealed)"
@@ -4969,6 +5047,11 @@ def setup_autonomy(
                 "  [3/4] confinement   ✓ done — OS sandbox enabled "
                 "(fail-closed, strict — unsandboxed escape sealed, credential denyRead floor)"
             )
+            if committed_fail_open:
+                lines.append(
+                    " " * 22 + "the committed settings.json carried failIfUnavailable: false — "
+                    "restored to true; commit .claude/settings.json so no clone runs fail-open"
+                )
 
     # Confinement accommodations (ADR-008 + ADR-010 host): make the box usable —
     # narrowing only, applied automatically. Rendered as a hanging-indent

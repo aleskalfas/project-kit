@@ -6,6 +6,9 @@ body: >
   `pkit permissions sandbox enable --dangerously-allow-unconfined` no longer
   writes `failIfUnavailable: false` into the committed `.claude/settings.json`.
   The fail-open goes to the gitignored `.claude/settings.local.json`, for this
-  machine only, and the committed floor stays `true`. A committed `false` that
-  an earlier version wrote is reported by `sandbox status` and `overview`, with
-  the `sandbox enable` step that moves it.
+  machine only, and the committed floor stays `true`. The run warns when the
+  repository does not ignore that file. A committed `false` that an earlier
+  version wrote is reported by `sandbox status` and `overview`, with the
+  `sandbox enable` step that moves it, and `setup autonomy` restores it. On
+  macOS, where the box is gated off, `sandbox enable` now routes the fail mode
+  too, correcting a committed value but adding none.

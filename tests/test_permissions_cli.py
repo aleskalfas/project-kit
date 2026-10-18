@@ -868,11 +868,87 @@ def test_sandbox_status_reports_a_committed_fail_open_with_the_step(tmp_path, mo
     assert "committed fail-open" in out
     assert "sandbox enable --dangerously-allow-unconfined" in out
     assert "commit .claude/settings.json" in out
-    # Box ON: reported too.
+    # The step also turns the box on here (Linux), and the report says so.
+    assert "also turns the box on" in out and "sandbox disable" in out
+    # Box ON, with a local `false` too: reported, and the fail-mode line does
+    # not call the open state "this machine only".
     _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
     _commit_fail_open(proj)
     out = _run(proj, monkeypatch, "sandbox")
     assert "ON" in out and "committed fail-open" in out
+    assert "OPEN on this machine only" not in out
+    assert "also turns the box on" not in out  # the box is already on
+
+
+def test_sandbox_status_plain_open_line_for_a_committed_fail_open(tmp_path, monkeypatch):
+    # Box ON, the committed `false` alone (no local value): the plain OPEN line.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "⚠ OPEN — if the box can't start" in out
+    assert "committed fail-open" in out
+
+
+def test_status_and_overview_report_a_local_fail_open_while_the_box_is_off(tmp_path, monkeypatch):
+    # The flag's local `false` is inert while the box is off, but takes effect
+    # once the box is on, so it stays visible.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    _run(proj, monkeypatch, "sandbox", "disable")
+    for out in (_run(proj, monkeypatch, "sandbox"), _run(proj, monkeypatch, "overview")):
+        assert "fail-open recorded for this machine" in out
+        assert "committed fail-open" not in out
+    # Failing case: nothing to report once a run without the flag removed it.
+    _run(proj, monkeypatch, "sandbox", "enable")
+    _run(proj, monkeypatch, "sandbox", "disable")
+    assert "fail-open recorded" not in _run(proj, monkeypatch, "sandbox")
+
+
+def _git_init(proj: Path, gitignore: str | None, monkeypatch) -> None:
+    """A repository at `proj`, with git's global and system configuration
+    shut out, so an operator's own global ignore file cannot answer for it."""
+    import subprocess
+
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(proj.parent / "no-global-gitconfig"))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(proj.parent / "no-xdg-config"))
+    subprocess.run(["git", "init", "-q", str(proj)], check=True)
+    if gitignore is not None:
+        (proj / ".gitignore").write_text(gitignore)
+
+
+def test_dangerous_flag_warns_when_settings_local_is_not_ignored(tmp_path, monkeypatch):
+    # The per-machine `false` stays off other clones only while git ignores the
+    # file; pkit writes it itself, so a missing ignore entry is warned about.
+    proj = _with_adapter(_setup(tmp_path))
+    _git_init(proj, gitignore=None, monkeypatch=monkeypatch)
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert "NOT ignored by git" in out
+
+
+def test_dangerous_flag_no_ignore_warning_when_settings_local_is_ignored(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _git_init(proj, gitignore=".claude/settings.local.json\n", monkeypatch=monkeypatch)
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert "NOT ignored by git" not in out
+
+
+def test_setup_autonomy_mends_a_committed_fail_open_under_a_local_true(tmp_path, monkeypatch):
+    # A local `true` holds this machine fail-closed, but the committed `false`
+    # reaches every other clone, so setup does not call it "already" done. It
+    # restores the committed floor and tells the operator to commit it.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    _commit_fail_open(proj)
+    local_path = proj / ".claude" / "settings.local.json"
+    local = json.loads(local_path.read_text())
+    local["sandbox"]["failIfUnavailable"] = True
+    local_path.write_text(json.dumps(local))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "✓ done — OS sandbox enabled" in out
+    assert "commit .claude/settings.json" in out
+    assert _sb_committed(proj)["failIfUnavailable"] is True
 
 
 def test_overview_reports_a_committed_fail_open(tmp_path, monkeypatch):
