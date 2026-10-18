@@ -200,7 +200,7 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - **The decisions that answer a use case or a requirement** are the records made to meet what it asks, such as one that names it by its id. So the decision to write a report as CSV answers a use case that must export the report as a file. Each may be a core record, a capability's record or the project's own.
     - **The views that realise a use case or a requirement** are the architecture views the project keeps to show how the system carries it out. Such a view may name it by its id.
     - **The files that verify a requirement** are the files of the tests and checks named in its part whose id is `verified-by`.
-    - **The code that holds a requirement** is narrow: never every command of the class it binds.
+    - **The code that holds a requirement** is the code that keeps it, never all the code its `applies-to` reaches.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
   - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It does so whatever any rule's status, and this rule does not cover it.
@@ -227,7 +227,7 @@ A requirement never contradicts an accepted decision record it rests on.
   - **Two requirements.** A conflict between two requirements is no break of this rule. It is a choice, so a decision record holds it.
   - **History.** This rule judges a requirement in force. A withdrawn requirement is history.
 
-## RS-SAN-007 — Each goal, guarantee and requirement names its source
+## RS-SAN-007 — Each goal, minimal guarantee and requirement names its source
 
 Each goal, minimal guarantee and requirement names its source.
 
@@ -240,7 +240,11 @@ Each goal, minimal guarantee and requirement names its source.
     - **A record.** An accepted decision record the artefact anchors, which decides the item or was made to meet it. A point another record overturns decides nothing.
     - **A requirement's reason.** Its part whose id is `rationale`, or `imposed-by` on a constraint, where the part does not read `None.`.
     - **Existing behaviour.** Code the artefact anchors, which already does what the item says. A reader judges that the code does it, never how well, so this form sources no value a `measure` sets.
-    - **A quoted decision.** The words of the person who decided, quoted in the artefact's body, with their name and the date. The quote names the item it sources, or stands beside it.
+    - **A quoted decision.** The words of the person who decided, quoted in the artefact's body, with their name and the date. The quote names the item it sources, in its text or a label beside it, or it stands beside the item.
+  - **What a source bears out.** A source names only what it bears out. So a reason that asks for speed sources no value of two seconds.
+    - A record bears out what it decides or was made to meet.
+    - A quote bears out what it decides, and code what it does.
+    - A reason bears out what it says the system needs.
   - **Nothing else.** Anything else is no source, however plausible the item reads. So the need a goal states is no source of the goal, nor is a proposed record.
   - **Where to read the anchors.** An artefact's anchors are in its friction block.
   - **A break.** An item that no source names breaks this rule, until the artefact names one.

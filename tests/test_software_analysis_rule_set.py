@@ -502,10 +502,12 @@ def test_the_anchors_rule_asks_a_requirement_for_what_dec_002_point_6_gives() ->
         "**The files that verify a requirement** are the files of the tests and checks named "
         "in its part whose id is `verified-by`."
     ) in section
+    # Narrow, in words every adopter's requirement fits: no word of one kind of system.
     assert (
-        "**The code that holds a requirement** is narrow: never every command of the class it "
-        "binds."
+        "**The code that holds a requirement** is the code that keeps it, never all the code "
+        "its `applies-to` reaches."
     ) in section
+    assert "command" not in section
     # Judged until a check holds them, and a missing one is a break.
     judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
     assert "- a requirement's anchors on its `actors` and its `refines`" in judged
@@ -578,12 +580,15 @@ def test_the_source_rule_takes_any_of_the_four_forms_the_maintainer_chose() -> N
         "constraint",
         "**Existing behaviour.** Code the artefact anchors, which already does what the item",
         "**A quoted decision.** The words of the person who decided, quoted in the artefact's "
-        "body, with their name and the date. The quote names the item it sources, or stands "
-        "beside it.",
+        "body, with their name and the date. The quote names the item it sources, in its text "
+        "or a label beside it, or it stands beside the item.",
     ):
         assert form in section, form
-    # A requirement's sources cover its statement and any value its measure sets, and
-    # code shows what the system does, never how well.
+    # A source names only what it bears out, so a requirement's sources cover its
+    # statement and any value its measure sets, and code shows what the system does,
+    # never how well.
+    assert "**What a source bears out.** A source names only what it bears out." in section
+    assert "- A reason bears out what it says the system needs." in section
     assert "Its sources together cover both." in section
     assert "so this form sources no value a `measure` sets." in section
     assert "A point another record overturns decides nothing." in section
