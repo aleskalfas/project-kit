@@ -26,6 +26,10 @@ pkit:
       artefact:
         - ACT-adopter
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-18T17:44:53Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. Which checks a merge waits on, and how they run, is unchanged.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

@@ -21,6 +21,10 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-18T17:44:51Z
+      outcome: unchanged
+      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. How a change declares its changesets and how the guard reads them is unchanged.
 ---
 
 # UC-003 — Declare what my change means for the next release
