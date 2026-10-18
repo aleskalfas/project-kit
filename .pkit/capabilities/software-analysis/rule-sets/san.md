@@ -50,9 +50,8 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T08:20:46Z
-          outcome: unchanged
-          unchanged-because: Point 4 keeps the words this rule uses, the decisions a use case relies on, and says those that answer it are among them. It adds that a use case anchors the views that realise it, which this rule's list does not ask for. The rule asks no anchor point 4 forbids, and contradicts none it gives.
+          at: 2026-10-18T11:43:02Z
+          outcome: updated
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only

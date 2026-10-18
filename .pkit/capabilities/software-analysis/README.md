@@ -14,9 +14,8 @@ pkit:
       record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-18T10:55:36Z
-      outcome: unchanged
-      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet. This page cites COR-050 on the friction block, held documents, who decides an answer, bumps, the change check, exclusions and a reason beside anchors (points 1, 3, 5, 6, 7 and 12), none of which the change alters.
+      at: 2026-10-18T11:43:10Z
+      outcome: updated
 ---
 
 # software-analysis capability
