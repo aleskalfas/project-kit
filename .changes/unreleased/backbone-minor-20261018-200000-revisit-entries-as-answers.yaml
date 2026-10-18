@@ -1,0 +1,17 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction since` reads a `revisited` list (COR-050 point 16) as it reads
+  a `revalidated` block: a change inside one lies inside. An entry rewritten,
+  added or removed lies inside the list, as a deferral does inside a block, and
+  a list removed or emptied lies outside, as a block removed does. Its `--json`
+  keeps schema version 1, with the lists among what `all_inside` and `inside`
+  count. `pkit friction resolve` resolves a conflict inside a `revisited` list.
+  Its entries merge by target. Where both sides wrote the entry of one target,
+  the base side's is taken, only when `MERGE_HEAD` is the change check's base,
+  and the command names the `pkit friction revisit` that writes the entry again
+  for the combined state. The base side's reason is no new reason, so the
+  change check asks for that entry again where the link is triggered. Its
+  `--json` gains `owed_revisits` on each file.

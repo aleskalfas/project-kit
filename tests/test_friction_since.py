@@ -1,9 +1,10 @@
-"""Tests for `pkit friction since` (#1689, COR-050 point 3; project-management DEC-055 point 3).
+"""Tests for `pkit friction since` (#1689, #1728; COR-050 points 3 and 16; project-management
+DEC-055 point 3).
 
 Every test stands up a real adopter repository: a page on `main`, a branch
 whose head was authorised, and later commits on that branch — answers given
-again, merges of `main`, other edits — so the command reads real commits and
-git's own merges.
+again, `revisited` entries written again, merges of `main`, other edits — so
+the command reads real commits and git's own merges.
 """
 
 from __future__ import annotations
@@ -42,8 +43,10 @@ def _page(
     body: str = BODY,
     deferred: str = "",
     title: str = "The guide",
+    revisited: str = "",
 ) -> str:
-    """The page in block style: its block, its own field after it, and a body."""
+    """The page in block style: its block, its `revisited` list, its own field after
+    them, and a body."""
     block = (
         f"    revalidated:\n      at: {at}\n      outcome: unchanged\n"
         f"      unchanged-because: {because}\n{deferred}"
@@ -52,8 +55,40 @@ def _page(
     )
     return (
         f"---\nid: guide\npkit:\n  friction:\n    anchors:\n      path: [src/cli/**]\n"
-        f"{block}status: draft\n---\n\n# {title}\n\n{body}"
+        f"{block}{revisited}status: draft\n---\n\n# {title}\n\n{body}"
     )
+
+
+TEST_CLI = "tests/test_cli.py"
+TEST_CORE = "tests/test_core.py"
+
+
+def _revisited(*entries: tuple[str, str, str]) -> str:
+    """A `revisited` list in block style, as `pkit friction revisit` writes it: one entry
+    per target, `(value, outcome, reason)`. `friction since` reads the entries whether
+    or not a link lists their targets."""
+    lines = "    revisited:\n"
+    for value, outcome, reason in entries:
+        lines += (
+            f"      - anchor:\n          kind: path\n          value: {value}\n"
+            f"        outcome: {outcome}\n        reason: {reason}\n"
+        )
+    return lines
+
+
+def _flow_page(*entries: tuple[str, str, str], at: str = T0) -> str:
+    """The page in flow style (JSON front matter), with a `revisited` list of `entries`
+    — none written where there are none."""
+    text = document("flow", anchors={"path": ["src/**"]}, at=at)
+    if not entries:
+        return text
+    front, body = text.split("\n---\n", 1)
+    data = json.loads(front.removeprefix("---\n"))
+    data["pkit"]["friction"]["revisited"] = [
+        {"anchor": {"kind": "path", "value": value}, "outcome": outcome, "reason": reason}
+        for value, outcome, reason in entries
+    ]
+    return f"---\n{json.dumps(data, indent=2)}\n---\n{body}"
 
 
 @pytest.fixture
@@ -174,8 +209,126 @@ def test_a_block_in_flow_style_changed_lies_inside_and_one_added_does_not(
     found = _since(repo, since)
     assert not found.all_inside
     assert [(o.path, o.why) for o in found.outside] == [
-        (flow, "it changed outside its `revalidated` blocks")
+        (flow, "it changed outside its `revalidated` blocks and `revisited` lists")
     ]
+
+
+# ---- `revisited` lists, read as blocks are (COR-050 point 16) ------------------------
+
+
+def test_a_revisit_entry_rewritten_or_added_lies_inside(repo: AdopterRepo) -> None:
+    """An entry written again with a new reason, and one added beside it, are answers
+    given again: they lie inside the list, as a block given again lies inside."""
+    first = (TEST_CLI, "unchanged", "the test asserts the old bound")
+    since = _authorised(repo, {PAGE: _page(revisited=_revisited(first))})
+    head = repo.commit(
+        "write the entries again",
+        {
+            PAGE: _page(
+                revisited=_revisited(
+                    (TEST_CLI, "deferred", "the bound is revisited in issue 9999"),
+                    (TEST_CORE, "unchanged", "the core test meets the new bound"),
+                )
+            )
+        },
+    )
+    found = _since(repo, since)
+    assert found.all_inside, found.outside
+    assert found.inside == (PAGE,)
+    assert found.steps == (fs.Step(head, merges_base=False),)
+
+
+def test_a_revisited_list_added_whole_lies_inside_in_block_style(repo: AdopterRepo) -> None:
+    """In block style the key's lines are taken out, so a list `pkit friction revisit`
+    adds whole leaves the rest of the file as it was."""
+    since = _authorised(repo)
+    repo.commit("revisit", {PAGE: _page(revisited=_revisited((TEST_CLI, "unchanged", "why")))})
+    found = _since(repo, since)
+    assert found.all_inside, found.outside
+    assert found.inside == (PAGE,)
+
+
+BOTH = _revisited(
+    (TEST_CLI, "unchanged", "the test asserts the old bound"),
+    (TEST_CORE, "unchanged", "the core test still holds"),
+)
+
+
+def test_a_revisit_entry_removed_lies_inside_the_list(repo: AdopterRepo) -> None:
+    """The list is the unit, as the block is: an entry removed from it, as a deferral
+    removed from a block, is a change inside it."""
+    since = _authorised(repo, {PAGE: _page(revisited=BOTH)})
+    repo.commit(
+        "drop an entry",
+        {PAGE: _page(revisited=_revisited((TEST_CORE, "unchanged", "the core test still holds")))},
+    )
+    found = _since(repo, since)
+    assert found.all_inside, found.outside
+    assert found.inside == (PAGE,)
+
+
+@pytest.mark.parametrize(
+    "after",
+    [_page(), _page(revisited="    revisited: []\n"), _page(revisited="    revisited:\n")],
+    ids=["removed", "emptied", "no value"],
+)
+def test_a_revisited_list_removed_lies_outside(repo: AdopterRepo, after: str) -> None:
+    """A list removed whole, or emptied, drops its answers, so it lies outside, as a
+    block removed does."""
+    since = _authorised(repo, {PAGE: _page(revisited=BOTH)})
+    removed = repo.commit("drop the list", {PAGE: after})
+    found = _since(repo, since)
+    assert [(o.path, o.commit, o.why) for o in found.outside] == [
+        (PAGE, removed, "a `revisited` list was removed from it, which drops its answers")
+    ]
+
+
+def test_a_revisited_list_in_flow_style(repo: AdopterRepo) -> None:
+    """In flow style the list's characters are replaced by a marker: an entry rewritten,
+    added or removed lies inside, and a list added where there was none lies outside, as
+    a block added there does. A list removed lies outside."""
+    flow = "docs/flow.md"
+    first = (TEST_CLI, "unchanged", "the test asserts the old bound")
+    since = _authorised(repo, {flow: _flow_page(first)})
+    repo.commit(
+        "again",
+        {
+            flow: _flow_page(
+                (TEST_CLI, "unchanged", "the test asserts a bound the change keeps"),
+                (TEST_CORE, "deferred", "the core test is revisited in #9999"),
+            )
+        },
+    )
+    assert _since(repo, since).all_inside
+    repo.commit("drop one", {flow: _flow_page(first)})
+    assert _since(repo, since).all_inside
+
+    removed = repo.commit("drop the list", {flow: _flow_page()})
+    (outside,) = _since(repo, since).outside
+    assert (outside.commit, outside.why) == (
+        removed,
+        "a `revisited` list was removed from it, which drops its answers",
+    )
+
+    since = removed  # a commit whose page has no list
+    repo.commit("a list", {flow: _flow_page(first)})
+    found = _since(repo, since)
+    assert [(o.path, o.why) for o in found.outside] == [
+        (flow, "it changed outside its `revalidated` blocks and `revisited` lists")
+    ]
+
+
+def test_a_change_beside_a_revisit_entry_lies_outside(repo: AdopterRepo) -> None:
+    """Only the entries are taken out: a field changed beside them is the author's
+    change."""
+    entries = _revisited((TEST_CLI, "unchanged", "the test asserts the old bound"))
+    since = _authorised(repo, {PAGE: _page(revisited=entries)})
+    changed = _page(revisited=entries.replace("old bound", "new bound")).replace(
+        "status: draft", "status: final"
+    )
+    repo.commit("an entry and a field", {PAGE: changed})
+    (outside,) = _since(repo, since).outside
+    assert outside.why == "it changed outside its `revalidated` blocks and `revisited` lists"
 
 
 @pytest.mark.parametrize(
@@ -273,6 +426,38 @@ def test_a_conflict_resolved_inside_the_blocks_lies_inside(repo: AdopterRepo) ->
     found = _since(repo, since)
     assert found.all_inside, found.outside
     assert found.steps == (fs.Step(merge, merges_base=True), fs.Step(head, merges_base=False))
+
+
+def test_a_conflict_resolved_inside_a_revisited_list_lies_inside(repo: AdopterRepo) -> None:
+    """Both sides wrote the entry of one target: the merge's conflict lies inside the
+    `revisited` list, taking the base side's entry lies inside it, and so does the
+    entry written again for the combined state (COR-050 point 16)."""
+
+    def entry(reason: str) -> str:
+        return _page(revisited=_revisited((TEST_CLI, "unchanged", reason)))
+
+    since = _conflicting_merge(repo, entry("this branch's reason"), entry("the base's reason"))
+    merge = _commit_merge(repo, entry("the base's reason"))
+    head = repo.commit("write the entry again", {PAGE: entry("both changes keep the bound")})
+    found = _since(repo, since)
+    assert found.all_inside, found.outside
+    assert found.steps == (fs.Step(merge, merges_base=True), fs.Step(head, merges_base=False))
+    assert found.inside == (PAGE,)
+
+
+def test_an_entry_the_base_removed_through_a_conflict_lies_inside(repo: AdopterRepo) -> None:
+    """The base removed the entry of a target this branch wrote again, as a change to
+    the link's field makes it do. Resolving the conflict as the base did removes the
+    entry inside the list, so the authorisation still covers the head."""
+    repo.commit("both entries", {PAGE: _page(revisited=BOTH)})
+    core = (TEST_CORE, "unchanged", "the core test still holds")
+    rewritten = _revisited((TEST_CLI, "unchanged", "this branch's reason"), core)
+    only_core = _page(revisited=_revisited(core))
+    since = _conflicting_merge(repo, _page(revisited=rewritten), only_core)
+    merge = _commit_merge(repo, only_core)
+    found = _since(repo, since)
+    assert found.all_inside, found.outside
+    assert found.steps == (fs.Step(merge, merges_base=True),)
 
 
 def test_a_conflict_resolved_outside_the_blocks_is_not(repo: AdopterRepo) -> None:
@@ -379,7 +564,7 @@ def test_a_change_outside_still_exits_0_and_says_why(repo: AdopterRepo) -> None:
         "place holds it" in result.stdout.splitlines()
     )
     assert result.stdout.splitlines()[-1] == (
-        "  Not all inside the blocks: a change lies outside them."
+        "  Not all inside the blocks and lists: a change lies outside them."
     )
 
 
@@ -465,6 +650,16 @@ def _resolved_inside(repo: AdopterRepo) -> str:
     return since
 
 
+def _revisit_resolved_inside(repo: AdopterRepo) -> str:
+    def entry(reason: str) -> str:
+        return _page(revisited=_revisited((TEST_CLI, "unchanged", reason)))
+
+    since = _conflicting_merge(repo, entry("this branch's"), entry("the base's"))
+    _commit_merge(repo, entry("the base's"))
+    repo.commit("write the entry again", {PAGE: entry("both hold")})
+    return since
+
+
 def _resolved_outside(repo: AdopterRepo) -> str:
     since = _conflicting_merge(
         repo, _page(T1, "this", body="This branch's.\n"), _page(T2, "base", body="Base.\n")
@@ -517,6 +712,7 @@ def _reached_through_a_merge(repo: AdopterRepo) -> str:
     [
         _answered_after_a_clean_merge,
         _resolved_inside,
+        _revisit_resolved_inside,
         _resolved_outside,
         _edited_inside_a_clean_merge,
         _merged_another_branch,

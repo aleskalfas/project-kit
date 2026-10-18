@@ -1410,10 +1410,10 @@ def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
     discovery finds, whether what changed since a commit lies inside
-    `revalidated` blocks — which never write, the writers — revalidate, defer,
-    revisit, record-status — which write one block, only with consent, and resolve,
-    which resolves a merge's conflicting revalidations as text and writes no
-    answer.
+    `revalidated` blocks and `revisited` lists — which never write, the
+    writers — revalidate, defer, revisit, record-status — which write one block,
+    only with consent, and resolve, which resolves a merge's conflicting
+    revalidations and revisit entries as text and writes no answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -1647,21 +1647,26 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
 def friction_resolve_command(
     paths: tuple[str, ...], dry_run: bool, yes: bool, as_json: bool
 ) -> None:
-    """Resolve a merge's conflicting revalidations as text (COR-050 point 3): each file in
-    conflict — every one, or each PATH — whose conflicts all lie inside `revalidated` blocks.
+    """Resolve a merge's conflicting revalidations and revisit entries as text (COR-050
+    points 3 and 16): each file in conflict — every one, or each PATH — whose conflicts all
+    lie inside `revalidated` blocks or `revisited` lists.
 
     Only git's own conflict, untouched by hand, is resolved: the file's three
     versions are read from the index and merged again, and the result must be
-    the working file. Only the blocks git conflicted on are decided: the answer
-    from the side that changed it, the deferrals merged by anchor, and where
-    both sides revalidated, the base side's answer — only when MERGE_HEAD, the
-    branch merged in, is the change check's base. Any other conflict leaves the
-    file as git left it, and says where. The file is written; it is staged only
-    with --yes or at the prompt. It writes no answer: for each artefact both
-    sides revalidated it names the revalidation owed once the merge is
+    the working file. Only the blocks and lists git conflicted on are decided:
+    the answer from the side that changed it, the deferrals merged by anchor,
+    and where both sides revalidated, the base side's answer — only when
+    MERGE_HEAD, the branch merged in, is the change check's base. A list's
+    entries merge by target, and where both sides wrote one target's entry,
+    the base side's is taken, under the same rule. Any other conflict leaves
+    the file as git left it, and says where. The file is written; it is staged
+    only with --yes or at the prompt. It writes no answer: for each artefact
+    both sides revalidated it names the revalidation owed once the merge is
     committed, `updated` or `unchanged` as its content bears out against the
-    base side's. PATH is relative to the project root. Outside a merge there is
-    nothing to resolve. Exit 1 when it leaves an artefact's file in conflict.
+    base side's, and for each target both sides wrote an entry for, the
+    `revisit` that writes it again. PATH is relative to the project root.
+    Outside a merge there is nothing to resolve. Exit 1 when it leaves an
+    artefact's file in conflict.
     """
     if yes and dry_run:
         raise click.UsageError(
@@ -1924,14 +1929,15 @@ def friction_since_command(
     since_rev: str, head_rev: str | None, base_ref: str | None, as_json: bool
 ) -> None:
     """Whether every change from commit REV to the head, apart from merges of the base, lies
-    inside `revalidated` blocks (COR-050 point 3).
+    inside `revalidated` blocks and `revisited` lists (COR-050 points 3 and 16).
 
     The head must descend from REV along its own line of commits. A merge of
     the base counts only for what differs from git's clean merge of its two
     parents, and any other commit for its own diff. A file lies inside the
-    blocks only when it is an artefact's file and its two texts are the same
-    once every `revalidated` key is taken out. Each change outside is named
-    with its commit and why. Reads git only and writes nothing. Exit 0 when
+    blocks and lists only when it is an artefact's file, its two texts are
+    the same once every `revalidated` and `revisited` key is taken out, and
+    no block or list was removed. Each change outside is named with its
+    commit and why. Reads git only and writes nothing. Exit 0 when
     answered, either way; 1 when it cannot answer: a shallow clone, a name that
     is no commit, a base that does not resolve, a git too old for `merge-tree`.
     """

@@ -6,9 +6,11 @@ A pull request's head moves when a merge of its base leaves its answers stale
 and the round that answers them again commits. A reader that must tell such a
 move from any other — the landing command of a work-tracking component, say —
 asks this command whether every change from commit `since` to the head,
-apart from merges of the base, lies inside `revalidated` blocks. It reads the
-blocks as the other friction commands read them, so no component parses them
-itself. It reads git and writes nothing.
+apart from merges of the base, lies inside the text that holds the answers:
+`revalidated` blocks (point 3) and `revisited` lists, whose entries a link
+asks of its source (point 16). It reads them as the other friction commands
+read them, so no component parses them itself. It reads git and writes
+nothing.
 
 - **The head** is commit `--head`, else HEAD, read from git objects: the
   working tree is not read. **The base** is resolved as every reader resolves
@@ -24,22 +26,26 @@ itself. It reads git and writes nothing.
     of its two parents (`git merge-tree --write-tree`). Where that merge
     conflicts, the commit is held against git's merge taking each side of
     every conflict in a file's text (`-X ours`, `-X theirs`), and must differ
-    from both only inside `revalidated` blocks. A conflict that is not in a
+    from both only inside the blocks and lists. A conflict that is not in a
     file's text — a file changed on one side and removed on the other, say —
     is a change outside them.
   - *Any other commit* contributes its own diff against its first parent: a
     merge of anything but the base included.
-- **Inside a block.** A file that differs lies inside `revalidated` blocks
-  only when it is an artefact's file at that commit, by discovery's walk of
-  its places — not a held document — on both sides a regular file of one
-  mode, UTF-8 text in one line break, with front matter that parses, and the
-  two texts are the same once every artefact's `revalidated` key is taken out
-  of each. In block style the key's lines are taken out, so a block added
-  whole lies inside. In flow style its characters are replaced by one
-  marker, so there a block added lies outside. A block removed, or emptied to
-  no value, lies outside in either style, since it drops an answer. So does front matter with a YAML
-  anchor, through which a block's text could change what an alias repeats
-  outside it. Anything else is a change outside, with why.
+- **Inside the blocks and lists.** A file that differs lies inside the
+  `revalidated` blocks and `revisited` lists only when it is an artefact's
+  file at that commit, by discovery's walk of its places — not a held
+  document — on both sides a regular file of one mode, UTF-8 text in one line
+  break, with front matter that parses, and the two texts are the same once
+  every artefact's `revalidated` and `revisited` keys are taken out of each.
+  In block style a key's lines are taken out, so a block or a list added
+  whole lies inside. In flow style its characters are replaced by a marker,
+  one for each key, so there a block or a list added lies outside. A block or
+  a list removed, or emptied, lies outside in either style, since it drops
+  its answers. An entry written, rewritten or removed within a list lies
+  inside it, as a deferral does within a block. Front matter with a YAML
+  anchor lies outside, since through it the text of a block or a list could
+  change what an alias repeats outside it. Anything else is a change outside,
+  with why.
 - **It cannot answer** — and says why, exit 1 — in a shallow clone, where the
   history between the commits may not be here, when a name is no commit or
   the base does not resolve, when an object cannot be read, as in a partial
@@ -90,8 +96,10 @@ SINCE_SCHEMA_VERSION = 1
 _FILE_MODES = frozenset({"100644", "100755"})
 # The mode a raw diff gives a side that holds no file.
 _ABSENT = "000000"
-# What a block written in flow style is replaced by, in both texts compared.
+# What a block, or a `revisited` list, written in flow style is replaced by, in both
+# texts compared: a marker for each key, so that one never stands in for the other.
 _MARKER = "\0revalidated\0"
+_LIST_MARKER = "\0revisited\0"
 # `git merge-tree` exits 0 for a clean merge and 1 for one with conflicts.
 _MERGED = (0, 1)
 # A name that reads as a commit's id, in full or abbreviated.
@@ -100,9 +108,9 @@ _HEX = re.compile(r"[0-9a-fA-F]{7,40}")
 
 @dataclass(frozen=True)
 class Outside:
-    """A change outside `revalidated` blocks: the file, the commit that made it, and why
-    it lies outside. `path` is `None` for a merge of the base whose conflict git names
-    no file of."""
+    """A change outside `revalidated` blocks and `revisited` lists: the
+    file, the commit that made it, and why it lies outside. `path` is `None` for a merge
+    of the base whose conflict git names no file of."""
 
     path: str | None
     commit: str
@@ -121,11 +129,11 @@ class Step:
 class Since:
     """What changed from `since` to `head`, apart from merges of the base.
 
-    `reason` says why no change can be set inside the blocks as a whole — the head
+    `reason` says why no change can be set inside the blocks and lists as a whole — the head
     does not descend from `since`, say — and is `None` otherwise. `inside` holds the
-    files whose changes lie only inside `revalidated` blocks, `outside` each change
-    that does not. What a reader makes of the answer — whether an authorisation for
-    `since` covers `head`, say — is the reader's."""
+    files whose changes lie only inside `revalidated` blocks and `revisited` lists,
+    `outside` each change that does not. What a reader makes of the answer — whether
+    an authorisation for `since` covers `head`, say — is the reader's."""
 
     since: str
     head: str
@@ -139,7 +147,7 @@ class Since:
     @property
     def all_inside(self) -> bool:
         """Every change since, apart from merges of the base, lies inside `revalidated`
-        blocks."""
+        blocks and `revisited` lists."""
         return self.reason is None and not self.outside
 
 
@@ -339,7 +347,7 @@ def _against(
     reading: _Reading, commit: str, expected: Sequence[str]
 ) -> list[tuple[str, str | None]]:
     """Each file `commit` holds otherwise than a tree-ish of `expected`, with why it lies
-    outside `revalidated` blocks, or `None` where it lies inside them against each."""
+    outside the blocks and lists, or `None` where it lies inside them against each."""
     diffs = [dict(_raw_diff(reading.root, tree, commit)) for tree in expected]
     paths: set[str] = set()
     for diff in diffs:
@@ -366,12 +374,13 @@ def _raw_diff(root: Path, before: str, after: str) -> Iterable[tuple[str, tuple[
 
 
 class _Unreadable(Exception):
-    """A text whose `revalidated` blocks cannot be told, and why."""
+    """A text whose `revalidated` blocks and `revisited` lists cannot be told, and why."""
 
 
 def _judge(reading: _Reading, commit: str, path: str, before: _Entry, after: _Entry) -> str | None:
-    """Why the file at `path` lies outside `revalidated` blocks between `before` and the
-    commit's `after` — or `None` where every difference lies inside them."""
+    """Why the file at `path` lies outside `revalidated` blocks and `revisited` lists
+    between `before` and the commit's `after`, or `None` where every difference lies
+    inside them."""
     (mode_b, obj_b), (mode_a, obj_a) = before, after
     if mode_b == _ABSENT:
         return "added"
@@ -407,45 +416,61 @@ def _judge(reading: _Reading, commit: str, path: str, before: _Entry, after: _En
     if len(breaks) > 1:
         return "its line endings changed"
     try:
-        (one, had), (other, has) = (
+        (one, had, held), (other, has, holds) = (
             _without_blocks(path, found, universal_newlines(text)) for text in texts
         )
     except _Unreadable as exc:
         return str(exc)
     if had - has:
         return "a `revalidated` block was removed from it, which drops an answer"
-    return None if one == other else "it changed outside its `revalidated` blocks"
+    if held - holds:
+        return "a `revisited` list was removed from it, which drops its answers"
+    if one == other:
+        return None
+    return "it changed outside its `revalidated` blocks and `revisited` lists"
 
 
-def _without_blocks(path: str, found: DiscoveredFile, text: str) -> tuple[str, frozenset[str]]:
-    """`text` with every artefact's `revalidated` key taken out — in block style its
-    lines, in flow style its characters, replaced by one marker — and the locations of
-    the artefacts that carry one. `_Unreadable` where the blocks cannot be told apart
-    from the rest: front matter that does not parse, a block not written directly, or
-    front matter with a YAML anchor, through which a block's text could change what
-    lies outside it."""
+def _without_blocks(
+    path: str, found: DiscoveredFile, text: str
+) -> tuple[str, frozenset[str], frozenset[str]]:
+    """`text` with every artefact's `revalidated` and `revisited` keys taken out — in
+    block style their lines, in flow style their characters, each replaced by its key's
+    marker — with the locations of the artefacts that carry a block, and of those that
+    carry a list. `_Unreadable` where the blocks and lists cannot be told apart from the
+    rest: front matter that does not parse, a block or list not written directly, or
+    front matter with a YAML anchor, through which their text could change what lies
+    outside them."""
     version = read_version(path, found, text)
     if isinstance(version, str):
         raise _Unreadable(version)
     if _anchored(text):
         raise _Unreadable(
             "its front matter uses a YAML anchor, through which text inside a "
-            "`revalidated` block can change what lies outside it"
+            "`revalidated` block or a `revisited` list can change what lies outside it"
         )
     # A block emptied — `revalidated:` with no value, `{}` or `null` — drops its answer
-    # as a block removed does, so it carries none.
+    # as a block removed does, so it carries none. So it is with a `revisited` list,
+    # whose entries are its answers (COR-050 point 16); an entry removed from a list, as
+    # a deferral removed from a block, is a change inside it.
     carriers = frozenset(
         version.artefacts[key].location for key, stamp in version.stamps.items() if stamp.value
     )
-    for stamp in sorted(version.stamps.values(), key=lambda s: -s.start):
+    lists = frozenset(
+        version.artefacts[key].location for key, stamp in version.revisits.items() if stamp.value
+    )
+    spans = [
+        *((stamp, _MARKER) for stamp in version.stamps.values()),
+        *((stamp, _LIST_MARKER) for stamp in version.revisits.values()),
+    ]
+    for stamp, marker in sorted(spans, key=lambda item: -item[0].start):
         start = text.rfind("\n", 0, stamp.start) + 1
         if stamp.flow or text[start : stamp.start].strip():
-            text = text[: stamp.start] + _MARKER + text[stamp.end :]
+            text = text[: stamp.start] + marker + text[stamp.end :]
             continue
         newline = text.find("\n", max(stamp.end - 1, stamp.start))
         stop = len(text) if newline == -1 else newline + 1
         text = text[:start] + text[stop:]
-    return text, carriers
+    return text, carriers, lists
 
 
 def _anchored(text: str) -> bool:
@@ -498,7 +523,8 @@ def render_json(found: Since) -> str:
 
 
 def render_human(found: Since) -> str:
-    """Whether every change since lies inside `revalidated` blocks, and each that does not.
+    """Whether every change since lies inside `revalidated` blocks and `revisited` lists,
+    and each that does not.
     A path, a reason and a parser's message quoting a file are the author's words, so each
     is printed escaped, as the change check's human view prints them (`printable`)."""
     since, head = found.since[:SHORT], found.head[:SHORT]
@@ -506,23 +532,26 @@ def render_human(found: Since) -> str:
     title = cli_render.style("title", "Friction since")
     lines = [f"{title} — {since} to {head}, apart from merges of {base}", ""]
     if found.reason is not None:
-        lines.append(f"  Not all inside the blocks: {printable(found.reason)}.")
+        lines.append(f"  Not all inside the blocks and lists: {printable(found.reason)}.")
     elif not found.steps:
         lines.append("  Nothing changed: the two commits are one.")
     else:
         merges = sum(1 for step in found.steps if step.merges_base)
         lines.append(f"  {len(found.steps)} commit(s), {merges} of them merging {base}.")
         for path in found.inside:
-            lines.append(f"  {printable(path)} — changed only inside `revalidated` blocks")
+            lines.append(
+                f"  {printable(path)} — changed only inside `revalidated` blocks and "
+                f"`revisited` lists"
+            )
         for change in found.outside:
             where = printable(change.path) if change.path else "(the merge)"
             why = printable(change.why)
             lines.append(f"  {where} — outside, in {change.commit[:SHORT]}: {why}")
         lines.append("")
         lines.append(
-            "  Every change lies inside `revalidated` blocks."
+            "  Every change lies inside `revalidated` blocks and `revisited` lists."
             if found.all_inside
-            else "  Not all inside the blocks: a change lies outside them."
+            else "  Not all inside the blocks and lists: a change lies outside them."
         )
     return "\n".join(lines) + "\n"
 
