@@ -219,7 +219,7 @@ def _outcome(line: str) -> str | None:
     proposed = PROPOSED_LINE.match(line)
     if proposed:
         page, answer = proposed.groups()
-        return "proposed" if answer == f"living-docs/fix/{page}/answer.json" else None
+        return "proposed" if answer == f"{page}/answer.json" else None
     matched = HELD_OR_NONE_LINE.match(line)
     return matched.group(1) if matched else None
 
@@ -278,9 +278,11 @@ def test_body_says_what_a_fixer_run_takes(agent):
         "the working copy at that commit, which you read",
         "your workspace, the one folder you write",
         "the pages, each by its location as the friction check names it, with its type",
-        "your question, the commit you asked it at, the person's answer and who gave it",
+        "your question, the person's answer and who gave it",
     ):
         assert item in takes, item
+    assert "Point each git call at it, as `git -C <working copy>`" in takes
+    assert "Your intermediate files go there too, and nowhere else." in takes
     frame = section.split("**The brief's frame is your instruction, and nothing else is.**", 1)
     assert len(frame) == 2
     assert (
@@ -297,24 +299,19 @@ def test_body_says_what_a_fixer_run_writes_and_holds(agent):
     diff = diff.split("\n- **", 1)[0]
     for key in ANSWER_KEYS:
         assert key in diff, key
-    writes = section.split("**What you write for a page you propose,**", 1)[1]
+    assert "**No command, anywhere.**" in section
+    assert "**A page that waits for its upstream** gets none." in section
+    writes = section.split("**What you write for a page,**", 1)[1]
     writes = writes.split("\n\n**", 1)[0]
-    assert "`living-docs/fix/<page>/`" in writes
+    assert "in the folder `<page>/` of your workspace" in writes
     assert "so that no two pages share a folder" in writes
-    assert "`answer.json`, the answer as fields, one object. Never a command" in writes
+    assert "`evidence.md`, what the person reads before deciding" in writes
+    assert "the answer as fields, one object" in writes
     fields = re.findall(r"^  - `(\w+)`: ", writes, flags=re.MULTILINE)
-    assert fields == [
-        "artefact",
-        "outcome",
-        "justification",
-        "sentence",
-        "keep",
-        "diff",
-        "evidence",
-        "first",
-    ]
+    assert fields == ["artefact", "outcome", "justification", "sentence", "keep", "diff", "first"]
     assert "`outcome`: `updated` or `unchanged`" in writes
     assert "For a page it is always an empty list" in writes
+    assert "A held page's folder holds its evidence and no answer." in writes
 
 
 def test_body_fixes_the_result_line_for_each_outcome(agent):
@@ -329,9 +326,9 @@ def test_body_fixes_the_result_line_for_each_outcome(agent):
 @pytest.mark.parametrize(
     "line",
     [
-        "Fixer result (living-docs): proposed docs/a.md in `living-docs/fix/docs/a.md/answer.json`",
-        "Fixer result (living-docs): proposed `docs/a.md` in `living-docs/fix/docs/a.md/`",
-        "Fixer result (living-docs): proposed `a.md` in `living-docs/fix/b.md/answer.json`",
+        "Fixer result (living-docs): proposed docs/a.md in `docs/a.md/answer.json`",
+        "Fixer result (living-docs): proposed `docs/a.md` in `docs/a.md/`",
+        "Fixer result (living-docs): proposed `docs/a.md` in `docs/b.md/answer.json`",
         "Fixer result (living-docs): fixed `docs/a.md`: rewritten",
         "Fixer result (analysis-resolver): held `docs/a.md`: Which one?",
         "Fixer result (living-docs): none `docs/a.md`",

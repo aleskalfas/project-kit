@@ -6,21 +6,14 @@ body: >
   living-docs declares its agent as the fixer of your pages (DEC-001 points 5
   and 7). It contributes to the work-tracking role's fixers point,
   `pkit::work-tracking:fixers`, a static value naming the `living-docs` agent
-  for the type `living-docs:page`, described as "your pages". Nothing starts the
-  agent on its own until you grant it, which project-management asks you about
-  (`pkit pm ask-fixers`) or does on `pkit pm grant-fixer living-docs`. Only
-  pages of that type are its: a page in a place that gives no type is not. The
-  agent's body and storyboard say what it takes and returns when a command
-  starts it on the pages the default branch left stale, with nobody watching.
-  It takes a brief naming the command, the commit, the working copy to read,
-  its workspace, the pages in order, and for a page it held before, its
-  question and the person's answer. It proposes friction fixes and nothing
-  else. For each page it writes, in `living-docs/fix/<page>/`, a diff of the
-  page's text and anchors, the evidence in `proposal.md`, and the answer's
-  fields in `answer.json`: `artefact`, `outcome`, `justification`, `sentence`,
-  `keep`, `diff`, `evidence` and `first`. A page whose fix needs what only a
-  person knows is held with one question that names its anchor and commit. Its
-  output ends with one line per page, and no other line starts the same way:
-  `Fixer result (living-docs):`, then `proposed`, `held` or `none`, the page,
-  and the answer file, the question or the reason. The contribution is inert
-  without a work-tracking capability.
+  for the type `living-docs:page`, described as "your pages". Only pages of
+  that type are its: a page in a place that gives no type is not. You grant
+  the fixer through project-management, by answering `pkit pm ask-fixers` or
+  running `pkit pm grant-fixer living-docs`. No command that starts granted
+  fixers ships yet, so a grant starts nothing until one does. The agent's body
+  and storyboard say what it takes from such a command and what it returns.
+  In such a run it proposes friction fixes and nothing else, each page's
+  answer written as fields rather than as a command, holds with one question
+  a page whose fix needs what only a person knows, and ends with one line per
+  page: proposed, held, or none. The contribution is inert without a
+  work-tracking capability.
