@@ -747,7 +747,7 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - a documentation refinement, an internal refactor or a behaviour-preserving fix
   - a section's heading renamed or removed in a document the methodology or a component ships. A project that receives the document cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change mends the anchors on the heading, as validation requires (COR-050 point 12).
 
-A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers.
+A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers. It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
 
 ### Directory layout
 
