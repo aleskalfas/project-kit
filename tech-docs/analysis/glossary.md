@@ -9,6 +9,7 @@ TERM-acceptance-gate:
         path:
           - .pkit/decisions/README.md
           - .pkit/rules/core.md
+          - .pkit/skills/core/decision-author.md
         record:
           - COR-025
           - COR-051#4
@@ -153,7 +154,7 @@ TERM-friction:
 TERM-head:
   name: head
   status: active
-  definition: commit a branch points at, for which a check, a verdict or an authorisation to merge stands
+  definition: latest commit of a branch, such as the one a pull request would merge
   pkit:
     friction:
       anchors:
@@ -173,7 +174,7 @@ TERM-methodology:
 TERM-page:
   name: page
   status: active
-  definition: document of a documentation space that names its one reader and anchors what grounds each statement it makes
+  definition: document of a space that declares its kind, and names the one reader it is written for
   pkit:
     friction:
       anchors:
@@ -198,7 +199,7 @@ TERM-place:
 TERM-revalidation-record:
   name: revalidation record
   status: active
-  definition: held document of the analysis logging one review of artefacts against a version of the system, kept only when the review found something
+  definition: held document logging one review of artefacts against a version of the system, kept only when the review has something to say
   pkit:
     friction:
       anchors:
@@ -273,11 +274,11 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-acceptance-gate — acceptance gate
 
-**Example:** a change would cite PRJ-003 while the record is still proposed, so its author has the record accepted first, or pauses the change.
+**Example:** a change would cite a project record that is still proposed, so the change's author has the record accepted first, or pauses the change.
 
 **Distinctions:**
 
-- **Acceptance:** the change of a record's status from `proposed` to `accepted`, in a commit of its own, once a person has reviewed it. The gate asks for it before dependent work starts.
+- **Acceptance:** the change of a record's status from `proposed` to `accepted`, in a commit of its own. The gate asks for it before dependent work starts. An agent makes it only once the person it works for approves (the `decision-author` skill).
 - **A rule's acceptance:** a rule an agent drafted binds only once a person's review accepts it (COR-051 point 4). An accepted rule rests only on accepted records (COR-051 point 5).
 
 ## TERM-anchor — anchor
@@ -364,17 +365,17 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Point:** a numbered part of a record's Decision. A point keeps its id for good, even when the record is refined in place (COR-058 points 1 and 3).
-- **Namespace:** `COR` for the core, `PRJ` for the project, `ADR` for its architecture, and `DEC` for each capability, each numbered apart (COR-025).
+- **Namespace:** where a record is numbered, apart from the others: the core's `COR`, the project's `PRJ`, its architecture's `ADR`, and each capability's `DEC` (COR-025). `pkit new decision` names one as `core`, `project`, `adr` or the capability's name.
 - **Rule:** a statement in a rule set of what must hold of an artefact. A rule's origin may name the record it rests on.
 
 ## TERM-epic — EPIC
 
-**Example:** the planner's intent to write project-kit's analysis is filed as one, with a Task for each area under it.
+**Example:** the planner's intent to write project-kit's analysis is filed as one EPIC, with a Task under the EPIC for each area.
 
 **Distinctions:**
 
 - **Milestone:** the hosting service's field that scopes issues by date. An EPIC states an outcome, not a date (project-management DEC-004).
-- **Task:** one change under an EPIC, the only type that gets a branch and a pull request (`issue-types.yaml`).
+- **Task:** the issue type for one change, the only type that gets a branch and a pull request. Its parent is an EPIC, a Feature, an Umbrella or a Milestone (`issue-types.yaml`).
 - **Who files one:** only the planner commits the project to an outcome, so the planner's authority files it (project-management DEC-008).
 
 ## TERM-friction — friction
@@ -392,8 +393,9 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **A later head:** a commit pushed after the authorised one. The authorisation covers it only where every change since lies inside `revalidated` blocks (project-management DEC-055 point 3).
-- **Base:** the branch a check compares a change with. The head is the change's own end.
+- **A later head:** a commit pushed after the authorised one, along the branch's own line. The authorisation covers it only where every change since lies inside `revalidated` blocks (project-management DEC-055 point 3). A clean merge of the target counts as no change.
+- **What stands for a head:** a check's result, a verdict and an authorisation to merge. A verdict may stay fresh across a change outside what its reviewer checks (project-management DEC-028).
+- **Base:** what a check compares a change with. The head is the change's own end.
 
 ## TERM-methodology — methodology
 
@@ -411,8 +413,9 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Unclassified document:** a document in a space's places that declares no page kind. It is none until onboarding classifies it (living-docs DEC-001 point 4).
-- **Decision record:** never one, though one may anchor a record as the home of the facts the record decides (living-docs DEC-001 points 3 and 4).
+- **Unclassified document:** a document in a space's places that declares no page kind, even one that names a reader. It is none until onboarding classifies it (living-docs DEC-001 point 4).
+- **Decision record:** never one, though a page may anchor a record as the home of the facts the record decides (living-docs DEC-001 points 3 and 4).
+- **Grounding:** a page's anchors ground each statement it makes, as a rule of `LDOC` asks. A page that breaks the rule is still a page (living-docs DEC-001 point 3).
 
 ## TERM-place — place
 
@@ -426,12 +429,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-revalidation-record — revalidation record
 
-**Example:** before a change is built, a planned one names the issue's body the developer reviewed, and the time its text was read. It names the gap a task will build too.
+**Example:** before a change is built, a planned revalidation record names the issue's body the developer reviewed, and the time its text was read. The record also names each gap, and the issue that builds the missing behaviour.
 
 **Distinctions:**
 
 - **Revalidation:** the answer on an artefact itself, which clears its friction. The held document never clears friction (software-analysis DEC-001 point 5).
-- **Planned record:** one of a review made before the code. It names the design it reviewed in `reviewed-against`, each source at its version (software-analysis DEC-001 point 6).
+- **When one is kept:** for a planned review, or for a gap or a regression found. A person's decision that an artefact was stale is kept too (software-analysis DEC-001 points 5 and 6).
+- **Planned record:** a revalidation record of a review made before the code. It names the design it reviewed in `reviewed-against`, each source at its version (software-analysis DEC-001 point 6).
 
 ## TERM-space — space
 
@@ -439,7 +443,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Documentation root:** the folder where a project keeps its documents for one audience (COR-049). The space adds the places the project assigns to it.
+- **Documentation root:** where a project keeps its documents, for users or for itself (COR-049). A space holds a root's documents, and those of the places the project assigns to it.
 - **Definition:** the rule set of the project's own that names the rules the space's pages follow (living-docs DEC-001 point 2).
 
 ## TERM-surface-change — surface change
@@ -478,6 +482,6 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Finding for a person:** a passage a reviewer tags `[person]`. It withholds no approval, and waits for the person who authorises the merge (project-management DEC-028).
+- **Finding for a person:** a passage a reviewer tags `[person]`. It withholds no approval, and waits for the merge authoriser (project-management DEC-028).
 - **Authorisation to merge:** the person's, never a reviewer's (project-management DEC-055 point 3).
-- **Merge gate:** the checks and approvals a merge waits for. A missing or unreadable judgement never satisfies it (project-management DEC-028).
+- **Merge gate:** the checks and approvals a merge waits for. A missing or unreadable verdict never satisfies it (project-management DEC-028).
