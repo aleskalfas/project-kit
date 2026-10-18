@@ -89,6 +89,7 @@ from project_kit.friction_discovery import (
     held_message,
     line_break,
     link_targets,
+    links_said,
     parse_artefacts,
 )
 from project_kit.friction_validate import Severity, block_findings
@@ -650,10 +651,9 @@ def plan_revisit(
         )
     named = _named_anchor(target_text, targets, "target")
     if named is None:
-        fields = ", ".join(f"`{f}`" for f in dict.fromkeys(link.targets for link in source.links))
         raise FrictionWriteError(
-            f"{artefact.location} has no target {target_text!r}: a target is an anchor its "
-            f"links' fields ({fields}) list (its targets: {_anchor_list(targets)}) (COR-050 "
+            f"{artefact.location} has no target {target_text!r}: its links take "
+            f"{links_said(source.links)} (its targets: {_anchor_list(targets)}) (COR-050 "
             f"point 16). Nothing was written."
         )
 

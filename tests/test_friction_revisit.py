@@ -739,3 +739,235 @@ def test_the_revisit_command_writes_with_consent(written: AdopterRepo) -> None:
     assert done.exit_code == 0, done.output
     assert "Wrote pkit.friction.revisited" in done.output
     assert _block(written)["revisited"] == [entry("unchanged", "still under 2 s")]
+
+
+# --- a link whose fields list what stays out ---------------------------------------------
+
+#: A second place of the fixture capability, `obls`, whose link takes every anchor but
+#: those its sources' `actors` and `refines` list, and asks after them when `statement`
+#: changes (COR-050 point 16, the second way).
+OBLIGATION = "obls/latency.md"
+ACTOR_DOC = "docs/act.md"
+ALL_BUT_PLACES = (
+    f"    - path: reqs\n{LINK}"
+    "    - path: obls\n"
+    "      revisits:\n"
+    "        - all-but: [actors, refines]\n"
+    "          when: [statement]\n"
+    "          description: A changed statement asks after every anchor but its actors.\n"
+)
+
+
+def obligation(
+    *,
+    statement: str = "Status answers in 2 seconds.",
+    actors: Any = ("ACT-1",),
+    revisited: list[dict[str, Any]] | None = None,
+) -> str:
+    """`OBL-1`, a source of the all-but link: anchored to the test file, the decision and
+    the actor its `actors` lists, revalidated at T1. An `actors` of `None` leaves the
+    field out."""
+    fields: dict[str, Any] = {"statement": statement}
+    if actors is not None:
+        fields["actors"] = list(actors) if isinstance(actors, tuple) else actors
+    text = document(
+        "OBL-1",
+        anchors={"path": [TEST_FILE, DECISION], "artefact": ["ACT-1"]},
+        at=T1,
+        outcome="unchanged",
+        because="the test and the decision say what the obligation says",
+        body="Why it matters.",
+        **fields,
+    )
+    if revisited is None:
+        return text
+    front, body = text.split("\n---\n", 1)
+    data = json.loads(front.removeprefix("---\n"))
+    data["pkit"]["friction"]["revisited"] = revisited
+    return f"---\n{json.dumps(data, indent=2)}\n---\n{body}"
+
+
+@pytest.fixture
+def obligations(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
+    adopter = make_adopter_repo()
+    declare_linker(adopter.root, ALL_BUT_PLACES)
+    return adopter
+
+
+def _obligation_files(**overrides: str) -> dict[str, str]:
+    """The files every all-but test starts from: the sources, the targets, the actor
+    and `OBL-1`, each replaceable by keyword (`obligation_doc`, `config`)."""
+    return {
+        CONFIG: overrides.get("config", friction_config(places=("docs",))),
+        **SOURCE,
+        TEST_FILE: "def test_latency():\n    assert answer_time() < 2\n",
+        DECISION: "Cache the status.\n",
+        ACTOR_DOC: document("ACT-1", unanchored_because="A person.", body="An actor."),
+        OBLIGATION: overrides.get("obligation_doc", obligation()),
+    }
+
+
+def _obligation_base(adopter: AdopterRepo, config: str | None = None) -> None:
+    """Commit the all-but base state on `main` and branch `feature` off it."""
+    adopter.write(_obligation_files(config=config or friction_config(places=("docs",))))
+    adopter.commit("base", files=None)
+    adopter.checkout("feature", create=True)
+
+
+def _source(adopter: AdopterRepo) -> tuple[fd.Discovery, fd.Artefact]:
+    discovery = fd.discover_artefacts(adopter.root)
+    (source,) = [a for a in discovery.artefacts if a.path == OBLIGATION]
+    return discovery, source
+
+
+def test_a_link_takes_every_anchor_its_fields_do_not_list(obligations: AdopterRepo) -> None:
+    obligations.write(_obligation_files())
+    discovery, source = _source(obligations)
+    (link,) = discovery.links(source)
+    assert (link.targets, link.all_but, link.when) == (None, ("actors", "refines"), ("statement",))
+    assert link.fields == ("actors", "refines")
+    assert fd.link_targets(source, link) == (
+        fd.Anchor("path", TEST_FILE),
+        fd.Anchor("path", DECISION),
+    )
+    assert fd.links_said([link]) == "every anchor `actors` and `refines` do not list"
+
+
+def test_a_malformed_field_listing_what_stays_out_keeps_nothing_out(
+    obligations: AdopterRepo,
+) -> None:
+    obligations.write(_obligation_files(obligation_doc=obligation(actors="ACT-1")))
+    discovery, source = _source(obligations)
+    (link,) = discovery.links(source)
+    assert fd.Anchor("artefact", "ACT-1") in fd.link_targets(source, link)
+
+
+def test_the_package_schema_takes_one_way_of_choosing_targets(repo: AdopterRepo) -> None:
+    declare_linker(
+        repo.root,
+        "    - path: reqs\n"
+        "      revisits:\n"
+        "        - {targets: verified-by, all-but: [actors], when: [statement]}\n"
+        "        - {when: [statement]}\n"
+        "        - {all-but: [], when: [statement]}\n"
+        "        - {all-but: [actors, actors], when: [statement]}\n"
+        "        - {all-but: [pkit], when: [statement]}\n"
+        "        - {all-but: [actors, refines], when: [statement]}\n",
+    )
+    repo.write({CONFIG: friction_config(places=("docs",))})
+    refused = {
+        finding.path.split("/")[5]
+        for report in pv.validate_installed_packages(repo.root).reports
+        if report.file == repo.root / ".pkit/capabilities/linker/package.yaml"
+        for finding in report.findings
+        if finding.severity is pv.Severity.ERROR and finding.path.count("/") >= 5
+    }
+    assert refused == {"0", "1", "2", "3", "4"}
+    # Read forgivingly: a link the schema refuses declares nothing, and a field it
+    # repeats is read once.
+    (place,) = [p for p in fd.read_friction_settings(repo.root).places if p.is_capability]
+    assert [(link.targets, link.all_but) for link in place.revisits] == [
+        (None, ("actors",)),
+        (None, ("actors", "refines")),
+    ]
+
+
+def test_a_changed_obligation_asks_after_every_anchor_but_its_actors(
+    obligations: AdopterRepo,
+) -> None:
+    _obligation_base(obligations, friction_config(mode="enforcing", places=("docs",)))
+    obligations.commit("tighten", {OBLIGATION: obligation(statement="Status answers in 1 s.")})
+    result = _run(obligations)
+    assert _revisits(result) == [
+        ("unrevisited", f"path:{TEST_FILE}", None),
+        ("unrevisited", f"path:{DECISION}", None),
+    ]
+    message = next(f.message for f in result.findings if f.kind is fc.FindingKind.UNREVISITED)
+    assert (
+        "its `statement` changed in this diff, and the link takes every anchor `actors` and "
+        "`refines` do not list, this target among them" in message
+    )
+    assert result.failed
+
+
+def test_a_target_of_a_link_by_what_stays_out_is_answered_and_listed(
+    obligations: AdopterRepo,
+) -> None:
+    # The changed test is also friction of `OBL-1` itself, its anchor, which this test
+    # leaves unanswered: only the revisits are judged here.
+    _obligation_base(obligations)
+    obligations.commit(
+        "tighten, and the test with it; the decision still stands",
+        {
+            OBLIGATION: obligation(
+                statement="Status answers in 1 s.",
+                revisited=[entry("unchanged", "caching still meets one second", DECISION)],
+            ),
+            TEST_FILE: "def test_latency():\n    assert answer_time() < 1\n",
+        },
+    )
+    result = _run(obligations)
+    assert _revisits(result) == [
+        ("revisited", f"path:{TEST_FILE}", "updated"),
+        ("revisited", f"path:{DECISION}", "unchanged"),
+    ]
+    answers = _revisit_answers(result)
+    assert [(a["target"]["value"], a["links"], a["fields"]) for a in answers] == [
+        (DECISION, [], ["statement"]),
+        (TEST_FILE, [], ["statement"]),
+    ]
+    human = fc.render_human(result)
+    assert (
+        f"{OBLIGATION} names {TEST_FILE}, and this change modifies its statement. "
+        f"Updated in this change" in human
+    )
+
+
+def test_a_change_to_a_field_listing_what_stays_out_alone_triggers_nothing(
+    obligations: AdopterRepo,
+) -> None:
+    _obligation_base(obligations)
+    obligations.commit("drop the actor", {OBLIGATION: obligation(actors=())})
+    assert _revisits(_run(obligations)) == []
+
+
+def test_validation_of_a_link_by_what_stays_out(obligations: AdopterRepo) -> None:
+    # A value no anchor has keeps nothing out, so it is not failed. An entry on the
+    # anchor the field keeps out names no target. A field in the wrong shape is failed.
+    obligations.write(
+        {
+            **_obligation_files(
+                obligation_doc=obligation(
+                    actors=("ACT-1", "ACT-9"),
+                    revisited=[entry("unchanged", "an actor", "ACT-1", kind="artefact")],
+                )
+            ),
+            "obls/other.md": obligation(actors="ACT-1").replace("OBL-1", "OBL-2"),
+        }
+    )
+    assert _link_findings(obligations) == [
+        ("dangling-revisit", "error", "/pkit/friction/revisited/0/anchor"),
+        ("malformed-link-field", "error", "/actors"),
+    ]
+    message = next(
+        f.message
+        for f in fv.validate_friction(obligations.root).findings
+        if f.kind is fv.FrictionFindingKind.DANGLING_REVISIT
+    )
+    assert "links take every anchor `actors` and `refines` do not list" in message
+
+
+def test_revisit_refuses_an_anchor_a_field_keeps_out(obligations: AdopterRepo) -> None:
+    obligations.write(_obligation_files())
+    with pytest.raises(fw.FrictionWriteError) as raised:
+        fw.plan_revisit(
+            obligations.root, "OBL-1", target="artefact:ACT-1", outcome="unchanged", reason="x"
+        )
+    assert "its links take every anchor `actors` and `refines` do not list" in str(raised.value)
+    fw.write(
+        fw.plan_revisit(
+            obligations.root, "OBL-1", target=TEST_FILE, outcome="unchanged", reason="still"
+        )
+    )
+    _discovery, source = _source(obligations)
+    assert source.friction["revisited"] == [entry("unchanged", "still")]

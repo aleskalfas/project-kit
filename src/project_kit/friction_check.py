@@ -106,7 +106,8 @@ and reported.
 `_revisit_findings`). A capability place may declare links of the artefacts
 it holds (`RevisitLink`, read at head from every capability place matching
 the source's file, `Discovery.links`): an own field listing the targets by
-anchor value, and trigger fields. A link is triggered where a trigger field
+anchor value, or own fields listing the anchors that stay out, every other
+anchor then a target, and trigger fields. A link is triggered where a trigger field
 differs, parsed, between a source and its base counterpart — never for a new
 source, nor one under an excluded path at head. Each target it lists at both
 sides that resolves at head is `revisited` where it changed between the base
@@ -435,8 +436,9 @@ class WrittenAnswer:
     - For a revisit entry (`answer` is `revisited`, COR-050 point 16):
       `outcome`, `unchanged` or `deferred` as written; `target`, the anchor it
       names; `links`, the fields of the links its places declare that list the
-      target at head; `fields`, the trigger fields the diff changed, where it
-      triggered a link listing the target — empty otherwise. `None` and empty
+      target at head — a link whose fields list what stays out lists none, so it
+      adds none; `fields`, the trigger fields the diff changed, where it
+      triggered a link taking the target — empty otherwise. `None` and empty
       for every other answer, whose JSON leaves the four keys out.
     """
 
@@ -1809,11 +1811,13 @@ class _Behind:
 @dataclass(frozen=True)
 class _Trigger:
     """A target a triggered link asks after (COR-050 point 16): the fields of the links
-    listing it, and the trigger fields the diff changed."""
+    listing it, the fields of the links that take it as none of their fields lists it
+    (`left_out`), and the trigger fields the diff changed."""
 
     anchor: Anchor
     links: tuple[str, ...]
     fields: tuple[str, ...]
+    left_out: tuple[str, ...] = ()
 
 
 def _triggers(
@@ -1835,7 +1839,7 @@ def _triggers(
     """
     if before is None or artefact.excluded:
         return ()
-    found: dict[Anchor, tuple[dict[str, None], dict[str, None]]] = {}
+    found: dict[Anchor, tuple[dict[str, None], dict[str, None], dict[str, None]]] = {}
     for link in links:
         changed = [f for f in link.when if own_field(artefact, f) != own_field(before, f)]
         if not changed:
@@ -1844,11 +1848,15 @@ def _triggers(
         for anchor in link_targets(artefact, link):
             if anchor not in earlier or anchor not in resolving:
                 continue
-            names, fields = found.setdefault(anchor, ({}, {}))
-            names[link.targets] = None
+            names, fields, left_out = found.setdefault(anchor, ({}, {}, {}))
+            if link.targets is not None:
+                names[link.targets] = None
+            else:
+                left_out.update(dict.fromkeys(link.all_but))
             fields.update(dict.fromkeys(changed))
     return tuple(
-        _Trigger(anchor, tuple(names), tuple(fields)) for anchor, (names, fields) in found.items()
+        _Trigger(anchor, tuple(names), tuple(fields), tuple(left_out))
+        for anchor, (names, fields, left_out) in found.items()
     )
 
 
@@ -1889,6 +1897,24 @@ def _fields_named(fields: Sequence[str]) -> str:
     return _and([f"`{field}`" for field in fields])
 
 
+def _taken(trigger: _Trigger) -> str:
+    """How the triggered links take the target, as a finding says it: `` `verified-by`
+    lists this target ``, `` the link takes every anchor `actors` and `refines` do not
+    list, this target among them ``, or both, joined by "and" (COR-050 point 16)."""
+    said: list[str] = []
+    if trigger.links:
+        lists = "lists" if len(trigger.links) == 1 else "list"
+        said.append(f"{_fields_named(trigger.links)} {lists} this target")
+    if trigger.left_out:
+        verb = "does" if len(trigger.left_out) == 1 else "do"
+        among = "it among them" if said else "this target among them"
+        said.append(
+            f"the link takes every anchor {_fields_named(trigger.left_out)} {verb} not list, "
+            f"{among}"
+        )
+    return ", and ".join(said)
+
+
 def _revisit_findings(
     artefact: Artefact,
     before: Artefact | None,
@@ -1917,11 +1943,7 @@ def _revisit_findings(
     changed: list[Anchor] = []
     for trigger in triggers:
         anchor = trigger.anchor
-        lists = "lists" if len(trigger.links) == 1 else "list"
-        subject = (
-            f"its {_fields_named(trigger.fields)} changed in this diff, and "
-            f"{_fields_named(trigger.links)} {lists} this target"
-        )
+        subject = f"its {_fields_named(trigger.fields)} changed in this diff, and {_taken(trigger)}"
         question, _note = _anchor_question(anchor, own, head, base, diff, kinds)
         entry = written.get(anchor)
         if question is not None:
@@ -2491,7 +2513,9 @@ def _written_revisits(
     listing: dict[Anchor, dict[str, None]] = {}
     for link in links:
         for anchor in link_targets(artefact, link):
-            listing.setdefault(anchor, {})[link.targets] = None
+            names = listing.setdefault(anchor, {})
+            if link.targets is not None:
+                names[link.targets] = None
 
     def revisit(
         target: Anchor, outcome: str | None, reason: str | None, status: AnswerStatus, asked: bool
