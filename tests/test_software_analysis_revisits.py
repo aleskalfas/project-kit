@@ -209,7 +209,8 @@ def test_a_changed_obligation_with_no_revisit_fails(
     project: AdopterRepo, kind: str, field: str
 ) -> None:
     _start(project, kind)
-    project.commit("tighten it", {_at(kind): requirement(kind, **{field: "Within one second."})})
+    changed: dict[str, Any] = {field: "Within one second."}
+    project.commit("tighten it", {_at(kind): requirement(kind, **changed)})
     result = fc.run_change_check(project.root, MAIN)
     assert _revisits(result) == [("unrevisited", target, None) for target in TARGETS]
     assert result.failed

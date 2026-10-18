@@ -618,7 +618,7 @@ def plan_revisit(
     rewritten — and keeps the list sorted by anchor. `at` is left byte for byte:
     an entry is no revalidation of the source. Refused: an outcome other than
     `unchanged` or `deferred`, an empty target or reason, a reason with a
-    placeholder left unfilled, and a target no link of the artefact lists. An
+    placeholder left unfilled, and a target no link of the artefact takes. An
     entry already written with this outcome and reason writes nothing: an entry
     answers only the change that writes it, so a later change needs new words.
     """

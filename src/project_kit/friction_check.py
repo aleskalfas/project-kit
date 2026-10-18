@@ -217,6 +217,7 @@ from project_kit.friction_discovery import (
     deferral_reason,
     discover_artefacts,
     entry_reason,
+    fields_named,
     link_targets,
     own_field,
     parsed_at,
@@ -1894,7 +1895,7 @@ def revisits_written(artefact: Artefact, before: Artefact | None) -> list[Writte
 
 def _fields_named(fields: Sequence[str]) -> str:
     """Trigger or link fields as a finding names them: `` `statement` and `measure` ``."""
-    return _and([f"`{field}`" for field in fields])
+    return fields_named(fields)
 
 
 def _taken(trigger: _Trigger) -> str:

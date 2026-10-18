@@ -791,7 +791,7 @@ def _link_findings(artefact: Artefact, links: Sequence[RevisitLink]) -> Iterable
         if listed is None:
             role = (
                 "the targets of a link that revisits them"
-                if named.targets == field
+                if lists_targets
                 else "the anchors that stay out of a link that revisits every other one"
             )
             yield FrictionFinding(

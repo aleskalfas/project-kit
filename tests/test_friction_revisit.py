@@ -931,6 +931,20 @@ def test_a_change_to_a_field_listing_what_stays_out_alone_triggers_nothing(
     assert _revisits(_run(obligations)) == []
 
 
+def test_an_anchor_a_change_lets_in_owes_nothing(obligations: AdopterRepo) -> None:
+    # `actors` stops listing ACT-1 as the statement changes: the anchor is a target at
+    # head only, so the change took it into the link against the new state.
+    _obligation_base(obligations)
+    obligations.commit(
+        "tighten, and drop the actor from the list",
+        {OBLIGATION: obligation(statement="Status answers in 1 s.", actors=())},
+    )
+    assert _revisits(_run(obligations)) == [
+        ("unrevisited", f"path:{TEST_FILE}", None),
+        ("unrevisited", f"path:{DECISION}", None),
+    ]
+
+
 def test_validation_of_a_link_by_what_stays_out(obligations: AdopterRepo) -> None:
     # A value no anchor has keeps nothing out, so it is not failed. An entry on the
     # anchor the field keeps out names no target. A field in the wrong shape is failed.
