@@ -9,7 +9,8 @@
 # lines, and writes it to `use-case-model/journeys/` under the analysis
 # location. `steps` and `relies-on` are the source: `pkit analysis validate`
 # requires the use-case anchors to match them, and the heading to be the id and
-# title the front matter gives.
+# title the front matter gives. `requirements` (`--requirement <REQ-id>`, each)
+# lists the requirements that bind its whole path, each anchored too.
 # Its body is rendered from the journey's declared structure
 # (`schemas/artefact-kinds.yaml`). Each part holds its hint until you write in
 # its place what it asks for. Its own fields' shape is
@@ -20,11 +21,12 @@ status: active                    # or withdrawn: the file stays and its id is n
 actor: ACT-actor                  # the actor who takes the journey
 steps: [UC-000, UC-001]           # the actor's use cases it passes through, in order
 relies-on: []                     # --relies-on: each use case outside it that a step relies on
+requirements: []                  # --requirement: each requirement that binds its whole path
 pkit:
   friction:
     anchors:
       path: ["<code at a seam between two steps>"]   # --path
-      artefact: [ACT-actor, UC-000, UC-001]          # its actor, and the use cases of steps and relies-on
+      artefact: [ACT-actor, UC-000, UC-001]          # its actor, the use cases of steps and relies-on, and its requirements
 ---
 
 # JRN-000 — <Title>

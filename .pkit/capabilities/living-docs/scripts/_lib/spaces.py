@@ -9,7 +9,12 @@ What is checked, each against the record's words:
   this capability's project configuration — its absence is an error, and so is
   an assignment naming a place the backbone configuration's `friction.places`
   does not declare, or a space nobody declares. A project place **equal to or
-  enclosing a root** is refused. Where places nest, the backbone's order
+  enclosing a root** is refused. A project place **declared to hold rule
+  sets**, as the backbone's answer marks it, that gives no type, lies outside
+  every root and is assigned to no space, is passed over: it gives no space
+  and owes no assignment. A document only it holds is in no space, and one
+  that declares a page kind is reported, never failed, naming the assignment
+  that would make it a page. Where places nest, the backbone's order
   decides (COR-056 point 3): a document's matching places come ranked in its
   answer, the first root or project place among them gives its space, and a
   file two project places claim at equal rank, ahead of every other, is an
@@ -32,7 +37,8 @@ What is checked, each against the record's words:
 - **Pages** (point 4). A document is a page when it is of the page type: the
   place that wins for it gives that type and it declares its page kind in
   `kind`. In a project place outside every root that gives no type, a document
-  of no type that declares its page kind is a page too. A page's `kind`, and
+  of no type that declares its page kind is a page too, unless the place is a
+  place of rule sets passed over (above). A page's `kind`, and
   its `reader` where RS-LDOC-003 binds on it, are validated by this
   capability's companion schema, `schemas/page.schema.json`. The friction
   block in the container is the core's, and the backbone's `friction` pass
@@ -185,6 +191,13 @@ RECORD_ID = re.compile(r"^(?:COR|PRJ|ADR|DEC)-[0-9]{3,}$")
 RULE_SETS = "rule-sets"
 
 ERROR, REPORT = "error", "report"
+
+#: What a place of rule sets passed over is, as each message about one words it
+#: (DEC-001 point 1; `_set_apart`).
+SET_APART = (
+    "is declared to hold rule sets, gives no type, lies outside every documentation root and "
+    "is assigned to no space"
+)
 
 
 @dataclass(frozen=True)
@@ -394,6 +407,11 @@ class _Walk:
     # A document that holds no artefact, which the backbone ranks no place for,
     # whose places of the spaces would tell it apart -> those places.
     untold: dict[str, list[Place]] = field(default_factory=dict)
+    # The places of rule sets that give no space: project places holding rule
+    # sets outside every root, assigned to none (DEC-001 point 1), by index.
+    set_apart: dict[int, ProjectPlace] = field(default_factory=dict)
+    # A document that lies only in such places, and in no place of a space -> the first.
+    apart: dict[str, ProjectPlace] = field(default_factory=dict)
 
 
 #: The checks whose error says that something the check reads could not be read —
@@ -441,6 +459,8 @@ class Checked:
             return Standing(why=f"it is {walk.claims[rel].described()}, never a page")
         if rel in walk.untold:
             return Standing(why="its places of the spaces cannot be told apart")
+        if rel in walk.apart:
+            return Standing(why=f"it {_apart_why(rel, decl, walk)}")
         if rel in walk.space_of:
             return Standing(
                 why="the place that gives it its space does not give it the page type, so it "
@@ -483,6 +503,7 @@ def checked(
     binding = _binding(root, walk, reach, outcome)
     _field_findings(walk, binding, outcome)
     _assignment_findings(decl, refused, walk, outcome)
+    _apart_findings(decl, walk, outcome)
     _tie_findings(decl, walk, outcome)
     _untold_findings(decl, walk, outcome)
     scope_note = _scope_findings(decl, refused, walk, outcome)
@@ -519,19 +540,22 @@ def pages(root: Path) -> list[str]:
 
 def _classify(root: Path) -> tuple[Declarations, set[int], _Walk, Outcome]:
     """The declarations, the refused project places, and the walk over every
-    document the spaces' places reach, with the findings the walk makes."""
+    document the spaces' places reach, with the findings the walk makes. A
+    refused place is no place of the spaces, and nor is a place of rule sets set
+    apart (`_set_apart`)."""
     decl = read_declarations(root, read_artefacts(root))
     outcome = Outcome()
     refused = _refused_places(decl, outcome)
+    set_apart = _set_apart(decl, refused)
     places: list[Reach] = [
         *root_places(decl),
         *(
             (frozenset({p.index}), Place(p.path, project=p))
             for p in decl.project_places
-            if p.index not in refused
+            if p.index not in refused and p.index not in set_apart
         ),
     ]
-    return decl, refused, _walk(decl, places, outcome), outcome
+    return decl, refused, _walk(decl, places, outcome, set_apart), outcome
 
 
 def _unreadable(exc: Unreadable) -> Outcome:
@@ -583,13 +607,39 @@ def _refused_places(decl: Declarations, outcome: Outcome) -> set[int]:
     return refused
 
 
-def _walk(decl: Declarations, places: Sequence[Reach], outcome: Outcome) -> _Walk:
-    """Classify every document the spaces' places reach, and validate the pages."""
-    walk = _Walk()
+def _set_apart(decl: Declarations, refused: set[int]) -> dict[int, ProjectPlace]:
+    """The project places declared to hold rule sets, as the backbone's answer marks
+    them, that give no type, lie outside every root and are assigned to no space,
+    by index: each is passed over, giving no space and owing no assignment (DEC-001
+    point 1). A place that gives a type is the project's aim at the spaces, and is
+    held to an assignment as any other. A refused place is refused first."""
+    return {
+        place.index: place
+        for place in decl.project_places
+        if place.rule_sets
+        and place.type is None
+        and place.index not in refused
+        and not in_root(place, decl)
+        and decl.assigned(place.path) is None
+    }
+
+
+def _walk(
+    decl: Declarations,
+    places: Sequence[Reach],
+    outcome: Outcome,
+    set_apart: Mapping[int, ProjectPlace],
+) -> _Walk:
+    """Classify every document the spaces' places reach, and validate the pages. A
+    document that lies only in places of rule sets set apart is recorded apart."""
+    walk = _Walk(set_apart=dict(set_apart))
     reach = {index: place for indices, place in places for index in indices}
     for rel, document in sorted(decl.documents.items()):
         ordered = _ordered(document, reach)
         if not ordered:
+            apart = next((walk.set_apart[i] for i in document.places if i in walk.set_apart), None)
+            if apart is not None:
+                walk.apart[rel] = apart
             continue
         claim = claim_of(rel, document, decl)
         if claim is not None:
@@ -1034,7 +1084,8 @@ def _assignment_findings(
     decl: Declarations, refused: set[int], walk: _Walk, outcome: Outcome
 ) -> None:
     """Every out-of-root project place holding a document nothing else claims is
-    assigned, and every assignment names a declared place and space (DEC-001 point 1)."""
+    assigned, and every assignment names a declared place and space (DEC-001 point 1).
+    A place of rule sets set apart owes none: the walk reaches nothing through it."""
     spaces = known_spaces(decl)
     for place in decl.project_places:
         if place.index in refused or in_root(place, decl) or decl.assigned(place.path) is not None:
@@ -1094,6 +1145,52 @@ def _assignment_findings(
                     check="assignment-unknown-space",
                 )
             )
+
+
+def _apart_claim(rel: str, decl: Declarations) -> Claim | None:
+    """Whose a document recorded apart is, when another owner claims it or it is a
+    decision record: what the walk would have said of it in a place of a space."""
+    document = decl.documents[rel]
+    record = record_of(document)
+    return claim_of(rel, document, decl) or (Claim("record", record) if record else None)
+
+
+def _passed_over(place: ProjectPlace) -> str:
+    return f"lies in no place of a space, and in project place {place.written!r}, which {SET_APART}"
+
+
+def _apart_why(rel: str, decl: Declarations, walk: _Walk) -> str:
+    """Why a document recorded apart is no page of any space, as a clause: its
+    owner's claim where it has one, else the place of rule sets passed over."""
+    claim = _apart_claim(rel, decl)
+    if claim is not None:
+        return f"is {claim.described()}, never a page"
+    return f"{_passed_over(walk.apart[rel])}, so no space counts it"
+
+
+def _apart_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
+    """A document that lies only in a place of rule sets set apart, that no other
+    owner claims, is in no space: neither a page nor an unclassified document. One
+    that declares a page kind is reported, never failed, naming the assignment that
+    would make it a page (DEC-001 point 1)."""
+    spaces = known_spaces(decl)
+    for rel, place in sorted(walk.apart.items()):
+        document = decl.documents[rel]
+        if _apart_claim(rel, decl) is not None:
+            continue
+        if PAGE_TYPE not in document.types and not declares_kind(document.fields):
+            continue
+        outcome.findings.append(
+            Finding(
+                REPORT,
+                f"{rel}:/{KIND_FIELD}",
+                f"{rel} declares its page kind, but it {_passed_over(place)}, so it is no page "
+                f"and no space counts it. To make it a page, add `{place.written}: <space>` "
+                f"under `places` in {LIVING_DOCS_CONFIG}, naming one of {spaces} (DEC-001 "
+                f"point 1).",
+                check="rule-set-place-unassigned",
+            )
+        )
 
 
 def _tie_findings(decl: Declarations, walk: _Walk, outcome: Outcome) -> None:
@@ -1350,6 +1447,8 @@ def _entry_point_findings(
                 else "lies only in places of no space"
                 + (f" or of {spaces_named}" if others else "")
             )
+        elif entry in walk.apart:
+            problem = _apart_why(entry, decl, walk)
         elif entry not in walk.space_of:
             problem = (
                 "lies in no place of any space — under neither documentation root, and in no "
@@ -1622,12 +1721,17 @@ def _summary(
 ) -> list[str]:
     spaces = known_spaces(decl)
     assigned = sum(1 for place in decl.project_places if decl.assigned(place.path) is not None)
+    apart = (
+        f", {len(walk.set_apart)} of rule sets outside every root in no space"
+        if walk.set_apart
+        else ""
+    )
     definitions = f"; definitions under {decl.definitions}/" if decl.definitions else ""
     config = "" if decl.config_exists else f"; no {LIVING_DOCS_CONFIG} yet"
     lines = [
         f"{len(spaces)} space(s); roots {decl.user_root}/ (user) and {decl.internal_root}/ "
         f"(internal); {len(decl.project_places)} project place(s), {assigned} assigned"
-        f"{definitions}{config}."
+        f"{apart}{definitions}{config}."
     ]
     for space in spaces:
         notes = [n for n in (entry_notes.get(space), definition_notes.get(space)) if n]
