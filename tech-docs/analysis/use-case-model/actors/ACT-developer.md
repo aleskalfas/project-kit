@@ -61,7 +61,7 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T14:15:23Z
+      at: 2026-10-18T16:12:00Z
       outcome: updated
 ---
 
