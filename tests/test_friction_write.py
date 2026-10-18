@@ -1016,3 +1016,86 @@ def test_the_read_back_reads_a_role_block_against_the_wiring(repo: AdopterRepo) 
     text = _read(repo)
     assert role_block in text
     assert "reason: the redesign" in text
+
+
+# --- where a block is written: under the keys discovery reads (#1750) -----------------
+
+
+ENTRY_PATH = ("pkit", "friction", "revisited")
+
+
+@pytest.mark.parametrize(
+    ("front_matter", "keys", "found"),
+    [
+        # Written apart, read alike: `0x1` is read as `1`, and is the key found for it.
+        ("0x1: {pkit: {friction: {revisited: [read]}}}\n", ("1", *ENTRY_PATH), "[read]"),
+        # Written alike, read apart: the key found is the one read under its text, never
+        # an earlier key written the same.
+        (
+            "true: {pkit: {friction: {revisited: [dropped]}}}\n"
+            "'true': {pkit: {friction: {revisited: [read]}}}\n'True': 0\n",
+            ("true", *ENTRY_PATH),
+            "[read]",
+        ),
+        (
+            "0x1: {pkit: {friction: {revisited: [dropped]}}}\n"
+            "'0x1': {pkit: {friction: {revisited: [read]}}}\n'1': 0\n",
+            ("0x1", *ENTRY_PATH),
+            "[read]",
+        ),
+        (
+            "!!null pkit: {friction: {revisited: [dropped]}}\n"
+            "pkit: {friction: {revisited: [read]}}\n",
+            ENTRY_PATH,
+            "[read]",
+        ),
+        (
+            "pkit:\n  friction:\n    !!null revisited: [dropped]\n    revisited: [read]\n",
+            ENTRY_PATH,
+            "[read]",
+        ),
+        # Two keys read alike off the path leave it as it is.
+        (
+            "1: one\n'1': two\npkit: {friction: {revisited: [read]}}\n",
+            ENTRY_PATH,
+            "[read]",
+        ),
+        # Two keys read alike on the path: which one holds the list cannot be told.
+        (
+            "1: {pkit: {friction: {revisited: [dropped]}}}\n"
+            "'1': {pkit: {friction: {revisited: [read]}}}\n",
+            ("1", *ENTRY_PATH),
+            "cannot be told apart: two keys on its path are read as `1`",
+        ),
+        (
+            "'1': {pkit: {friction: {revisited: [dropped]}}}\n"
+            "0x1: {pkit: {friction: {revisited: [read]}}}\n",
+            ("1", *ENTRY_PATH),
+            "cannot be told apart: two keys on its path are read as `1`",
+        ),
+        # A merge key on the path, `<<` or tagged, reads keys written elsewhere as its own.
+        (
+            "pkit:\n  friction:\n    !!merge revisited: {anchors: x, revisited: [read]}\n",
+            ENTRY_PATH,
+            "is reached through a merge key, which reads keys written elsewhere as its "
+            "mapping's own",
+        ),
+        (
+            "pkit:\n  <<: {friction: {revisited: [read]}}\n",
+            ENTRY_PATH,
+            "is reached through a merge key, which reads keys written elsewhere as its "
+            "mapping's own",
+        ),
+        ("pkit: {friction: {}}\n", ENTRY_PATH, "is not written under a key read as `revisited`"),
+    ],
+)
+def test_a_key_is_found_as_discovery_reads_it(
+    front_matter: str, keys: tuple[str, ...], found: str
+) -> None:
+    """`key_span` finds each step under the key discovery reads it by, rendered as text,
+    or says why it cannot be told (#1750)."""
+    span = fw.key_span(front_matter, keys)
+    if isinstance(span, str):
+        assert span == found
+    else:
+        assert front_matter[span.start : span.end] == f"{keys[-1]}: {found}"

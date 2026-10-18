@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-18T19:25:22Z
+      at: 2026-10-18T20:28:06Z
       outcome: updated
 ---
 
@@ -1095,6 +1095,55 @@ pm collects a declaration purely on its presence in a **manifest-registered** co
 
 **The resolution seam.** A consuming capability resolves a label's name through pm's `resolve_contributed_label(id)` accessor rather than hard-coding the text (DEC-042 D5). It ships **inert** in v1 (returns the declared `default_name`); introducing the seam before any consumer can bypass it means a future adopter override (keyed by the contribution `id`) can relocate the name without touching the contributor. Uninstalling the contributing capability stops the pre-check warning (its declaration leaves the manifest walk); the label itself is not deleted (additive).
 
+### 8. (Optional) Grant the fixers your capabilities declare
+
+A *fixer* is the agent that keeps one type of artefact true. When the default branch leaves such an artefact out of date, the fixer proposes its answer, and you decide it ([project-management:DEC-056-drift-fixers]). A capability declares its fixers in the `pkit::work-tracking:fixers` point (see "Connections" below). A fixer starts on its own only where you granted it. Nothing is granted by default.
+
+**The question.** `pkit pm ask-fixers` asks one question for each fixer nobody asked you about. Its words come from the declaration, for example:
+
+```
+living-docs can keep your pages true on its own. After each merge, its agent living-docs proposes a fix for each one that went out of date, and nothing is applied until you approve it. Turn this on? [Y/n]
+```
+
+- **At a terminal,** each answer is recorded as you give it. A yes is a grant, and a no is a refusal, so nothing asks about those types again.
+- **With nobody at a terminal,** such as in CI, nothing is granted or recorded. Each question is printed with the one command that grants its fixer.
+- **Running the command is never the consent.** Only your answer is, or your running the grant command.
+
+Install and upgrade do not ask the question yet. Until they do, run `pkit pm ask-fixers` after installing or upgrading a capability that declares a fixer. The command that starts the granted fixers will ask it too.
+
+**The grant list.** Each answer goes into `project/config.yaml`, under `fixers`, keyed by the agent:
+
+```yaml
+fixers:
+  living-docs:
+    granted:
+      - living-docs:page
+```
+
+The commands write only that block, and keep every other byte of the file. Each change shows in your diff. A grant counts once its change merges into the default branch.
+
+**Commands for advanced use:**
+
+- `pkit pm list-fixers [--json]` lists each declared fixer, its types and your answer for each: granted, refused or not asked. It also says why an entry starts no agent, and lists each grant that no entry names.
+- `pkit pm grant-fixer <agent> [--type <type>]...` grants the agent every type the point gives it, or only the types named. It refuses an agent or a type that no entry names.
+- `pkit pm revoke-fixer <agent> [--type <type>]...` records a refusal for the agent's types. It works on the grant list alone while the point does not resolve, so a grant that validation reports can always be revoked.
+
+Both write commands take `--dry-run`. All five fixer commands are exempt from the bootstrap gate, since they read and write nothing a bootstrap provides.
+
+**What validation checks.** The `project-management:fixers` member of `pkit validate` (`check-fixers`) reads the point and the grant list:
+
+- **An error:** your own entry names an agent that is not deployed, or the grant list cannot be read.
+- **A warning:** your own entry names an agent that does more than propose, or a grant names what no entry gives. A warning about a grant names the command that revokes it.
+- **A report:** a capability's entry is bad. It may name a type that is not the capability's own, or an agent the capability does not ship or has not deployed. It may come through a command filler, or name an agent that does more than propose. You cannot mend such an entry, so it fails nothing. No agent starts for it.
+
+An agent does more than propose when its deployed definition does one of these:
+
+- claims paths (`owns`)
+- holds a tool that changes existing files or starts agents
+- lists no tools, since the harness then grants it every tool
+
+A tool that writes new files is allowed, for its workspace.
+
 ## Connections
 
 The capability provides the `pkit::work-tracking` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)).
@@ -1130,6 +1179,24 @@ doc_check:
 - **Accepts** `pkit::work-tracking:use-cases`, version 1: the use cases settled on the default branch, per [project-management:DEC-054-use-case-validation]. Its shape is the companion schema `schemas/use-cases.schema.json`: each entry an `id` (`UC-` and three or more digits), a `title`, a `status` — `active` or `withdrawn` — and, optionally, the repository-relative `path` of the document that describes the use case. The point is `single`, with no default, and its inert policy is `fallback`: its readers only report, so a filler that cannot answer is a warning in `pkit validate`, never an error. What reads it, and how each state of it reads, is under "Use cases in planning and in bodies", above.
 
   **Whatever keeps your use cases fills it**: a capability that contributes to the point, or your own filler file, `docs/pkit/fillers/pkit/work-tracking/use-cases.yaml` (`schema_version: 1` and a `value` list of entries), which replaces a capability's answer whole. `pkit status` shows what fills the point. A filler holds to four things, which the point's description states: the value holds every use case that ever settled, withdrawn ones included, but not one whose id your project freed; an id, once settled, names the same use case for good, unless your project declares that nothing cites it — that use case may then leave the value, and its id may later name a different use case; the answer is complete or none — a filler that cannot read a use case gives no answer, never a shorter list; and a capability's filler declares that it reads settled state (`reads: [settled]` on its command), so the backbone does not start it where the default branch cannot be read. Anything that keeps an id is citing it. Your own filler file is your statement of your use cases: it is held to the point's shape and taken as given. With nothing filling the point, nothing in this capability mentions use cases.
+
+- **Accepts** `pkit::work-tracking:fixers`, version 1: which agent fixes the artefacts of each type, per [project-management:DEC-056-drift-fixers] point 1. Its shape is the companion schema `schemas/fixers.schema.json`. Each entry has an `id`, the artefact type, an `agent`, and a `description` of what the agent keeps true, such as "your pages". The question that asks you to grant the fixer is built from the description. The point is `union`, with no default, and its inert policy is `fail`: a filler that cannot answer leaves the point unresolved, so no fixer starts.
+
+  **A capability declares its fixers** as a static `value` in its package metadata, never through a command filler:
+
+  ```yaml
+  connections:
+    extensions:
+      contributes:
+        - point: pkit::work-tracking:fixers
+          schema_version: 1
+          value:
+            - id: living-docs:page
+              agent: living-docs
+              description: your pages
+  ```
+
+  Its entry names a type of its own type registry and an agent it ships. That agent only proposes, so its definition claims no paths and holds no tool that changes existing files or starts agents. Two capabilities that claim one type are an error naming both. **Your own filler file**, `docs/pkit/fillers/pkit/work-tracking/fixers.yaml`, may replace an entry, naming any deployed agent. How a fixer is granted, and what validation checks, is under "8. (Optional) Grant the fixers your capabilities declare", above.
 
 ## Permissions
 

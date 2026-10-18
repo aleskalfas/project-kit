@@ -232,6 +232,30 @@ commands:
   disable-default-agent:
     script: scripts/disable-default-agent.py
     help: "Deactivate the project-manager default-agent overlay; strips the agent key from .claude/settings.json, removes the live overlay file, and re-runs pkit sync (per DEC-030)."
+  list-fixers:
+    script: scripts/list-fixers.py
+    help: "List the fixers the pkit::work-tracking:fixers point declares (DEC-056 point 1) — which agent fixes the artefacts of each type — with the project's answer for each from the grant list (`fixers` in project/config.yaml): granted, refused or not asked. An entry that fails a check says why its agent starts no agent, and a grant no entry names is listed with the command that revokes it. --json prints one document. Read-only. Exit 1 when the point does not resolve or the grant list cannot be read."
+  grant-fixer:
+    script: scripts/grant-fixer.py
+    help: "Grant a fixer (DEC-056 point 2): `grant-fixer <agent> [--type <type>]...` records in the grant list that the agent may start on its own on the stale artefacts of every type the fixers point gives it, or only the types named. Running it is the person's answer yes. Refuses an agent no entry names and a type the point does not give it; notes a granted type whose entry fails a check. The change shows in the project's diff and counts once it merges into the default branch. --dry-run writes nothing."
+  revoke-fixer:
+    script: scripts/revoke-fixer.py
+    help: "Revoke a fixer (DEC-056 point 2): `revoke-fixer <agent> [--type <type>]...` records a refusal for every type the fixers point gives the agent and every type it is granted, or only the types named, so nothing asks about them again. Works on the grant list alone while the point does not resolve. --dry-run writes nothing."
+  ask-fixers:
+    script: scripts/ask-fixers.py
+    help: "Ask, for each agent of the fixers point, whether it may start on its own on the types nobody was asked about (DEC-056 point 2), in words built from the declaration. At a terminal each answer is recorded in the grant list as it is given: yes a grant, no a refusal. With nobody at a terminal nothing is granted or recorded, and each question is printed with the one command line that grants its fixer. Exempt from the bootstrap gate, so install and upgrade can ask it."
+  check-fixers:
+    script: scripts/check-fixers.py
+    help: "The project-management:fixers validator (DEC-056 points 1 and 2): each entry of the fixers point and the grant list. An error for the project's own entry naming an agent that is not deployed, and for a grant list that cannot be read; a warning for the project's own entry naming an agent that claims paths, lists no tools (so the harness grants it every tool) or holds a tool that changes existing files or starts agents, and for a grant no entry names (with the command that revokes it); a report for a capability's entry naming a type not its own, an agent it does not ship or that is not deployed, such an agent, or coming through a command filler. --json prints the document validation reads. A query: read-only, offline."
+    query-contract: true
+# The `project-management:fixers` member of `pkit validate`: a component joins
+# validation by naming a command it registers (COR-055 point 3); the block's
+# keys are ADR-058's. It checks the fixers point's entries and the grant list
+# (DEC-056 points 1 and 2).
+validators:
+  fixers:
+    command: check-fixers
+
 # Connection points (COR-053): the role this capability provides and the data
 # points it defines under it. See the README, "Connections".
 connections:
@@ -279,6 +303,24 @@ connections:
           the use cases could not be read.
         combination: single
         inert: fallback
+      pkit::work-tracking:fixers:
+        schema_version: 1
+        schema: fixers.schema.json
+        description: >-
+          Which agent fixes the artefacts of each type (DEC-056 point 1), one
+          entry per type: its id, the artefact type; the agent that proposes the
+          answers for the type's stale artefacts; and a description of what the
+          agent keeps true, in plain words, from which the question that asks
+          the person to grant the fixer is built. A capability's entry names a
+          type of its own and an agent it ships, as a static value, never
+          through a command filler. A project filler may replace an entry,
+          naming any deployed agent. Two capabilities that claim one type are an
+          error naming both. No default. A fixer starts on its own only where
+          the project granted it, in this capability's grant list, which is
+          empty by default. A filler that cannot answer leaves the point
+          unresolved, so no fixer starts.
+        combination: union
+        inert: fail
   extensions:
     contributes:
       # The point's always-included default filler: the project's code-to-doc

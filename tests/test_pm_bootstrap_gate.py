@@ -344,7 +344,9 @@ def test_the_exemption_list_is_the_decided_verbs(gate):
     """The decided set, with a reason recorded per verb: five are how you BECOME
     bootstrapped or how you DIAGNOSE why you are not; the sixth is the doc-check
     point's filler, a query the backbone runs wherever the point resolves
-    (`pkit validate` included) that reads only the doc mapping (DEC-053)."""
+    (`pkit validate` included) that reads only the doc mapping (DEC-053); the
+    last five are the fixer verbs, which read the fixers point and read or write
+    only the grant list, the question among them asked at install (DEC-056)."""
     assert set(gate.EXEMPT_VERBS) == {
         "bootstrap",
         "pre-check",
@@ -352,6 +354,11 @@ def test_the_exemption_list_is_the_decided_verbs(gate):
         "adopt-existing",
         "self-test",
         "fill-doc-check",
+        "check-fixers",
+        "ask-fixers",
+        "grant-fixer",
+        "revoke-fixer",
+        "list-fixers",
     }
     assert all(reason.strip() for reason in gate.EXEMPT_VERBS.values())
 

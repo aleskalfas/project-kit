@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-18T18:34:29Z
+      at: 2026-10-18T19:14:52Z
       outcome: unchanged
-      unchanged-because: "Core rule 20 now names the revisit entry beside the revalidation, a deferred entry's follow-up, and any other entry as a person's. This use case covers revalidations and deferrals, not revisits, and what it takes from rule 20 still holds: an answer the change does not owe waits for a person (its assumption and variant 5c)."
+      unchanged-because: "Variant 9b and step 6 still hold: friction resolve still resolves a conflicted block's text and writes no answer, and the writers write as before. This change only makes the reading both share find a block under the keys discovery reads it by, and leave in conflict a file whose keys on that path are read alike, or hold a merge key, which this use case does not describe."
 ---
 
 # UC-002 — Answer what my change made stale
