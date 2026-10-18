@@ -407,6 +407,12 @@ class _Run:
         captured = capsys.readouterr()
         return rc, captured.out, captured.err
 
+    def authorised(self, *argv: str, capsys: pytest.CaptureFixture[str]) -> tuple[int, str, str]:
+        """A run on the person's authorisation for the PR's head as it stands when
+        the run is started: `--yes --expect-head <head>`, since an authorisation
+        is for a named head (DEC-055 point 3, #1760)."""
+        return self.run("--yes", "--expect-head", self.github.head, *argv, capsys=capsys)
+
 
 def _stage_project(work: Path, *, mode: str, remote: tuple[str, ...] = ()) -> Path:
     capability = work / ".pkit" / "capabilities" / "project-management"
@@ -577,7 +583,7 @@ def _short(oid: str) -> str:
 def test_green_checks_two_reviewers_and_a_merge_one_line_each(world, capsys) -> None:
     run = world()
     head = run.github.head
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert _steps(out) == [
         f"head: {_short(head)} (PR #{PR}, {BRANCH})",
@@ -601,13 +607,60 @@ def test_green_checks_two_reviewers_and_a_merge_one_line_each(world, capsys) -> 
     assert run.sleeps == []
 
 
+# ---- the authorisation names its head (#1760) ---------------------------------
+# An authorisation to merge is for a named head (DEC-055 point 3). A `--yes` that
+# names none would merge whatever head the run finds, one the person may not have
+# been shown, so it is refused before anything is read, waited for or reviewed.
+
+
+@pytest.mark.parametrize("extra", [(), ("--dry-run",), ("--no-wait",)])
+def test_yes_without_a_named_head_is_refused_before_anything_runs(
+    world, capsys, extra: tuple[str, ...]
+) -> None:
+    run = world()
+    with pytest.raises(SystemExit) as stopped:
+        run.land.main([str(ISSUE), "--yes", *extra])
+    assert stopped.value.code == run.land.EXIT_UNREADABLE == 2
+    err = capsys.readouterr().err
+    assert err.splitlines()[-1].endswith(
+        "error: --yes needs --expect-head <sha>: an authorisation to merge is for a named "
+        f"head. Nothing was done. Run `land-work {ISSUE}` without --yes: its ready: line "
+        "names the head and the command that merges it"
+    )
+    # No command that merges is offered with a head in it.
+    assert run.github.head[:7] not in err
+    assert run.github.calls == []
+    assert run.invoked == []
+    assert run.github.merges == []
+
+
+def test_yes_with_a_named_head_merges_that_head(world, capsys) -> None:
+    run = world()
+    head = run.github.head
+    rc, out, err = run.run("--yes", "--expect-head", head[:7], capsys=capsys)
+    assert rc == 0, out + err
+    assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
+    assert [m[-1] for m in run.github.merges] == [head]
+
+
+def test_a_named_head_without_yes_stops_ready(world, capsys) -> None:
+    """`--expect-head` alone authorises nothing: off a terminal the run stops on
+    its `ready:` line, as without the flag."""
+    run = world()
+    head = run.github.head
+    rc, out, _err = run.run("--expect-head", head, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert out.splitlines()[-1].startswith(f"ready: {_short(head)} — CI passed")
+    assert run.github.merges == []
+
+
 # ---- the head -----------------------------------------------------------------
 
 
 def test_an_unpushed_local_head_is_refused_with_the_push(world, capsys) -> None:
     run = world()
     run.commit("not-pushed.txt", push=False)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     assert out.splitlines()[-1] == (
         f"head: refused — local {BRANCH} has 1 commit PR #{PR}'s head "
@@ -624,7 +677,7 @@ def test_a_local_branch_diverged_from_the_pr_is_refused(world, capsys) -> None:
     pushed = run.github.head
     _git(run.work, "reset", "-q", "--hard", "HEAD~1")
     run.commit("elsewhere.txt", push=False)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     assert out.splitlines()[-1] == (
         f"head: refused — local {BRANCH} and PR #{PR}'s head {_short(pushed)} have "
@@ -641,7 +694,7 @@ def test_a_local_branch_behind_the_pr_and_another_checkout_are_noted(world, caps
     _git(run.work, "reset", "-q", "--hard", old)
     _git(run.work, "switch", "-q", "main")
     run.github.checks[run.github.head] = [_GREEN]
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert _steps(out)[0] == (
         f"head: {_short(run.github.head)} (PR #{PR}, {BRANCH}); local {BRANCH} is "
@@ -652,7 +705,7 @@ def test_a_local_branch_behind_the_pr_and_another_checkout_are_noted(world, caps
 def test_a_draft_pr_is_refused(world, capsys) -> None:
     run = world()
     run.github.draft = True
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE == 1
     assert out.splitlines()[-1] == (
         f"head: refused — PR #{PR} is a draft; mark it ready with `review-work {ISSUE}`"
@@ -664,7 +717,7 @@ def test_a_draft_pr_is_refused(world, capsys) -> None:
 
 def test_no_run_yet_is_waited_for_then_green_goes_on(world, capsys) -> None:
     run = world(checks=[[], [], _RUNNING, _GREEN])
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     head = _short(run.github.head)
     assert f"  ci: no check has been reported for {head} yet" in out
@@ -681,7 +734,7 @@ def test_a_green_run_on_an_older_head_does_not_count(world, capsys) -> None:
     new = run.push_new_head("fix.txt")
     run.github.checks[new] = [[], _GREEN]
     assert run.github.checks[old] == [_GREEN]
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert f"  ci: no check has been reported for {_short(new)} yet" in out
     assert run.sleeps == [20.0]
@@ -691,7 +744,7 @@ def test_a_green_run_on_an_older_head_does_not_count(world, capsys) -> None:
 
 def test_a_failed_check_stops_before_the_review(world, capsys) -> None:
     run = world(checks=[_RED])
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     assert out.splitlines()[-1] == (
         f"ci: failed on {_short(run.github.head)} — checks (FAILURE) "
@@ -704,7 +757,7 @@ def test_a_failed_check_stops_before_the_review(world, capsys) -> None:
 
 def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
     run = world(checks=[[]])
-    rc, out, _err = run.run("--yes", "--wait-minutes", "1", capsys=capsys)
+    rc, out, _err = run.authorised("--wait-minutes", "1", capsys=capsys)
     assert rc == run.land.EXIT_CI_PENDING == 5
     assert sum(run.sleeps) == 60
     last = out.splitlines()[-1]
@@ -715,13 +768,16 @@ def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
         "([skip ci]), or a run from a fork awaits approval."
     )
     assert f"Run `land-work {ISSUE}` again to keep waiting" in last
-    assert f"review it with `review-pr {ISSUE}` and merge it with `done-work {ISSUE}`" in last
+    assert (
+        f"review it with `review-pr {ISSUE}` and merge it, on the person's authorisation, "
+        f"with `done-work {ISSUE} --yes`"
+    ) in last
     assert run.invoked == []
 
 
 def test_no_wait_reads_the_checks_once(world, capsys) -> None:
     run = world(checks=[_RUNNING])
-    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    rc, out, _err = run.authorised("--no-wait", capsys=capsys)
     assert rc == 5
     assert run.sleeps == []
     assert out.splitlines()[-1] == (
@@ -737,7 +793,7 @@ def test_a_head_that_moves_while_the_checks_are_awaited_stops(world, capsys) -> 
         _nth(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1], 2),
         lambda: setattr(run.github, "head", "d" * 40),
     )
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 3
     assert out.splitlines()[-1] == (
         f"ci: stopped — PR #{PR}'s head moved from {_short(pinned)} to ddddddd while its "
@@ -752,7 +808,7 @@ def test_a_head_that_moves_while_the_checks_are_awaited_stops(world, capsys) -> 
 def test_changes_requested_stops_before_the_merge_with_its_findings(world, capsys) -> None:
     run = world()
     run.answers["code-reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     lines = out.splitlines()
     assert "  [code-reviewer] [block] `land.py:10` merges a head nobody reviewed." in lines
@@ -770,9 +826,9 @@ def test_a_fresh_changes_requested_kept_from_a_run_before_also_stops(world, caps
     past it either: its findings are read from the verdict it kept."""
     run = world()
     run.answers["code-reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
-    assert run.run("--yes", capsys=capsys)[0] == 1
+    assert run.authorised(capsys=capsys)[0] == 1
     run.invoked.clear()
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     assert run.invoked == []
     assert "  [code-reviewer] [block] `land.py:10` merges a head nobody reviewed." in out
@@ -785,7 +841,7 @@ def test_changes_requested_without_a_tagged_finding_prints_its_first_lines(world
         "CHANGES_REQUESTED",
         "Please rework it.\n\nThe parser is wrong.\nSo is the printer.\nAnd the rest.",
     )
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     lines = out.splitlines()
     first = lines.index("  [reviewer] Please rework it.")
@@ -801,7 +857,7 @@ def test_changes_requested_without_a_tagged_finding_prints_its_first_lines(world
 def test_a_reviewer_that_could_not_run_stops_and_is_not_approval(world, capsys) -> None:
     run = world()
     run.answers["code-reviewer"] = None
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_REVIEW_INCOMPLETE == 6
     assert out.splitlines()[-1] == (
         "review: stopped — a reviewer could not be run, so the review is not complete "
@@ -817,7 +873,7 @@ def test_a_head_that_moves_between_the_checks_and_the_review_stops(world, capsys
     run = world()
     pinned = run.github.head
     run.github.before(_nth(_pr_list, 2), lambda: run.push_new_head("late.txt"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 3
     assert run.invoked == []
     assert out.splitlines()[-1] == (
@@ -833,7 +889,7 @@ def test_a_head_that_moves_between_the_review_and_the_merge_merges_nothing(world
     run = world()
     pinned = run.github.head
     run.github.before(_nth(_pr_list, 3), lambda: run.push_new_head("later.txt"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 3
     assert run.github.merges == []
     assert out.splitlines()[-1] == (
@@ -845,7 +901,7 @@ def test_a_head_that_moves_between_the_review_and_the_merge_merges_nothing(world
 
 def test_human_review_mode_runs_no_reviewer_and_done_work_gates(world, capsys) -> None:
     run = world(mode="human")
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 1
     assert run.invoked == []
     steps = _steps(out)
@@ -862,7 +918,7 @@ def test_human_review_mode_runs_no_reviewer_and_done_work_gates(world, capsys) -
 def test_a_queued_pr_passes_done_works_4_through(world, capsys) -> None:
     run = world()
     run.github.queue = True
-    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    rc, out, _err = run.authorised("--no-wait", capsys=capsys)
     assert rc == 4
     assert run.github.merges == [
         ["pr", "merge", str(PR), "--auto", "--match-head-commit", run.github.head]
@@ -877,7 +933,7 @@ def test_a_queued_pr_passes_done_works_4_through(world, capsys) -> None:
 def test_an_unconfirmed_merge_passes_done_works_4_through(world, capsys) -> None:
     run = world()
     run.github.unreadable_after_merge = True
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 4
     assert "[unconfirmed]" in out
     assert out.splitlines()[-1] == (
@@ -907,10 +963,10 @@ def test_a_declined_prompt_is_not_reported_merged(world, capsys, monkeypatch) ->
 
 def test_a_rerun_after_the_wait_ran_out_goes_on(world, capsys) -> None:
     run = world(checks=[[], [], _GREEN])
-    assert run.run("--yes", "--no-wait", capsys=capsys)[0] == 5
-    rc, out, err = run.run("--yes", "--no-wait", capsys=capsys)
+    assert run.authorised("--no-wait", capsys=capsys)[0] == 5
+    rc, out, err = run.authorised("--no-wait", capsys=capsys)
     assert rc == 5  # the second reading: still no run
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert run.sleeps == []
 
@@ -920,11 +976,11 @@ def test_a_rerun_waits_for_nothing_and_re_runs_no_fresh_verdict(world, capsys) -
     runs only the missing one, and waits for no check already green."""
     run = world()
     run.answers["code-reviewer"] = None
-    assert run.run("--yes", capsys=capsys)[0] == 6
+    assert run.authorised(capsys=capsys)[0] == 6
     assert sorted(run.invoked) == sorted((name, run.github.head) for name in PANEL)
     run.invoked.clear()
     del run.answers["code-reviewer"]
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert run.invoked == [("code-reviewer", run.github.head)]
     assert "review: 1 kept fresh, 1 re-run — all approved" in _steps(out)
@@ -934,12 +990,12 @@ def test_a_rerun_waits_for_nothing_and_re_runs_no_fresh_verdict(world, capsys) -
 def test_a_rerun_after_changes_requested_reviews_the_fix(world, capsys) -> None:
     run = world()
     run.answers["code-reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
-    assert run.run("--yes", capsys=capsys)[0] == 1
+    assert run.authorised(capsys=capsys)[0] == 1
     fixed = run.push_new_head("fix.txt")
     run.github.checks[fixed] = [_GREEN]
     run.answers["code-reviewer"] = ("APPROVED", "Fixed.")
     run.invoked.clear()
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     # A change since makes both verdicts stale: both review the fix.
     assert sorted(run.invoked) == sorted((name, fixed) for name in PANEL)
@@ -949,9 +1005,9 @@ def test_a_rerun_after_changes_requested_reviews_the_fix(world, capsys) -> None:
 def test_a_rerun_after_the_head_moved_lands_the_new_head(world, capsys) -> None:
     run = world()
     run.github.before(_nth(_pr_list, 2), lambda: run.push_new_head("late.txt"))
-    assert run.run("--yes", capsys=capsys)[0] == 3
+    assert run.authorised(capsys=capsys)[0] == 3
     run.github.checks[run.github.head] = [_GREEN]
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert sorted(run.invoked) == sorted((name, run.github.head) for name in PANEL)
 
@@ -959,10 +1015,10 @@ def test_a_rerun_after_the_head_moved_lands_the_new_head(world, capsys) -> None:
 def test_a_rerun_after_the_queue_merged_completes_the_issue(world, capsys) -> None:
     run = world()
     run.github.queue = True
-    assert run.run("--yes", "--no-wait", capsys=capsys)[0] == 4
+    assert run.authorised("--no-wait", capsys=capsys)[0] == 4
     run.github.state = "MERGED"
     run.github.queued = False
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert _steps(out) == [
         f"head: no open PR for {BRANCH} — done-work completes a PR that has merged already",
@@ -986,7 +1042,7 @@ def _open_pr_readings(run: _Run) -> int:
 def test_a_stale_branch_does_not_take_the_place_of_the_pr_s(world, capsys) -> None:
     run = world()
     _git(run.work, "branch", _STALE, "main")
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert _steps(out)[0] == f"head: {_short(run.github.head)} (PR #{PR}, {BRANCH})"
     assert out.splitlines()[-1] == f"merge: merged as {'c' * 7}"
@@ -998,7 +1054,7 @@ def test_several_branches_none_open_completes_a_merged_pr_from_the_issue(world, 
     run = world()
     _git(run.work, "branch", _STALE, "main")
     run.github.state = "MERGED"
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert _steps(out) == [
         f"head: no open PR on any of {_STALE}, {BRANCH} — done-work completes a PR that "
@@ -1013,7 +1069,7 @@ def test_several_branches_gh_unanswered_stops_before_anything(world, capsys) -> 
     run = world()
     _git(run.work, "branch", _STALE, "main")
     run.github.fails.append(issue_branch_support.is_open_prs_reading)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 2
     assert f"  2 local branches match `*/{ISSUE}-*` ({_STALE}, {BRANCH})" in out
     assert "could not be read: HTTP 502: Bad Gateway" in out
@@ -1048,7 +1104,7 @@ def test_a_dry_run_says_what_each_step_would_do_and_does_none(world, capsys) -> 
 
 def test_a_dry_run_with_nothing_left_to_wait_for_shows_done_works_plan(world, capsys) -> None:
     run = world()
-    assert run.run("--yes", "--no-wait", capsys=capsys)[0] == 0
+    assert run.authorised("--no-wait", capsys=capsys)[0] == 0
     run.github.state = "OPEN"  # as if the merge had not happened: replay it dry
     run.github.merges.clear()
     rc, out, err = run.run("--dry-run", capsys=capsys)
@@ -1067,7 +1123,7 @@ def test_a_dry_run_with_nothing_left_to_wait_for_shows_done_works_plan(world, ca
 def test_an_open_pr_lookup_gh_does_not_answer_stops_with_nothing_done(world, capsys) -> None:
     run = world()
     run.github.fails.append(_nth(_pr_list, 1))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE == 2
     assert out.splitlines()[-1] == (
         f"head: whether {BRANCH} has an open PR could not be read: HTTP 502: Bad Gateway. "
@@ -1083,9 +1139,9 @@ def test_an_open_pr_lookup_gh_does_not_answer_stops_with_nothing_done(world, cap
 def test_a_lookup_that_fails_then_answers_never_merges_unpinned(world, capsys) -> None:
     run = world()
     run.github.fails.append(_nth(_pr_list, 1))
-    assert run.run("--yes", capsys=capsys)[0] == 2
+    assert run.authorised(capsys=capsys)[0] == 2
     assert run.github.merges == []
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     head = run.github.head
     assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
@@ -1097,7 +1153,7 @@ def test_done_works_own_lookup_without_an_answer_merges_nothing(world, capsys) -
     — gets no answer, and done-work stops rather than look for a merged PR."""
     run = world()
     run.github.fails.append(_nth(_pr_list, 3))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 2
     assert out.splitlines()[-1] == (
         f"merge: stopped — error: whether '{BRANCH}' has an open PR could not be read: "
@@ -1116,7 +1172,7 @@ def test_with_no_open_pr_done_work_only_completes_and_refuses_a_pr_that_opened(
     run = world()
     run.github.state = "CLOSED"
     run.github.before(_nth(_pr_list, 2), lambda: setattr(run.github, "state", "OPEN"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_RETRY == 7
     assert out.splitlines()[-1] == (
         f"merge: not completed — error: PR #{PR} for '{BRANCH}' is open, and this run was "
@@ -1125,7 +1181,7 @@ def test_with_no_open_pr_done_work_only_completes_and_refuses_a_pr_that_opened(
     )
     assert run.github.merges == []
     assert run.after_merge == []
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
 
 
@@ -1137,7 +1193,7 @@ def test_a_merge_whose_commit_cannot_be_read_is_still_merged(world, capsys) -> N
     merge commit is only what the line names."""
     run = world()
     run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and a[-1] == "mergeCommit")
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert out.splitlines()[-1] == "merge: merged"
 
@@ -1160,7 +1216,7 @@ def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkey
     a completion a re-run owes."""
     run = world()
     monkeypatch.setattr(run.land.done_work, "_invoke_move_issue", lambda *a, **k: 1)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_RETRY == 7
     assert out.splitlines()[-1] == (
         f"merge: merged as {'c' * 7}, but a step after the merge failed: [warn] PR merged "
@@ -1169,7 +1225,7 @@ def test_a_step_after_the_merge_failing_is_merged_and_owed(world, capsys, monkey
         f"#{ISSUE}"
     )
     monkeypatch.setattr(run.land.done_work, "_invoke_move_issue", lambda *a, **k: 0)
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert out.splitlines()[-1] == f"merge: #{ISSUE} completed through its merged PR"
 
@@ -1196,7 +1252,7 @@ def test_a_queued_pr_seen_merged_meanwhile_is_owed_its_completion(
         run.github.state, run.github.queued = "MERGED", False
 
     _then(run, monkeypatch, merged)
-    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    rc, out, _err = run.authorised("--no-wait", capsys=capsys)
     assert rc == run.land.EXIT_RETRY
     assert out.splitlines()[-1] == (
         f"merge: merged meanwhile — run `land-work {ISSUE}` again to complete #{ISSUE}"
@@ -1211,7 +1267,7 @@ def test_a_queued_pr_seen_neither_merged_nor_queued_is_known_not_merged(
     run = world()
     run.github.queue = True
     _then(run, monkeypatch, lambda: setattr(run.github, "queued", False))
-    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    rc, out, _err = run.authorised("--no-wait", capsys=capsys)
     assert rc == run.land.EXIT_RETRY
     last = out.splitlines()[-1]
     assert last.startswith(
@@ -1229,7 +1285,7 @@ def test_an_unconfirmed_merge_seen_neither_merged_nor_queued_stays_unconfirmed(
     run = world()
     run.github.unreadable_after_merge = True
     _then(run, monkeypatch, lambda: setattr(run.github, "unreadable_after_merge", False))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == 4
     assert out.splitlines()[-1] == (
         f"merge: unconfirmed — PR #{PR} reads neither merged nor queued (not in the queue), "
@@ -1246,7 +1302,7 @@ def test_done_work_raising_still_ends_with_a_step_line(world, capsys, monkeypatc
         raise RuntimeError("boom")
 
     monkeypatch.setattr(run.land.done_work, "run", boom)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_RETRY
     # One reading after done-work raised says what it found, never "not merged":
     # a request done-work sent may still show, and the re-run reads it first.
@@ -1264,7 +1320,7 @@ def test_review_pr_raising_still_ends_with_a_step_line(world, capsys, monkeypatc
         raise RuntimeError("boom")
 
     monkeypatch.setattr(run.land.review_pr, "review", boom)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_REVIEW_INCOMPLETE
     assert out.splitlines()[-1] == (
         "review: stopped — review-pr failed (RuntimeError: boom), so the review is not "
@@ -1287,7 +1343,7 @@ def test_a_head_that_moves_during_the_reviews_posts_their_verdicts_and_stops(wor
         return argv[:2] == ["pr", "view"] and argv[-1] == "headRefOid,baseRefOid"
 
     run.github.before(_nth(tips, 2), lambda: run.push_new_head("during.txt"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
     assert sorted(run.invoked) == sorted((name, pinned) for name in PANEL)
     assert len(run.github.comments) == len(PANEL)
@@ -1311,7 +1367,7 @@ def test_verdicts_kept_fresh_at_another_head_are_not_the_pinned_heads(world, cap
         return argv[:2] == ["pr", "view"] and argv[-1].startswith("comments,")
 
     run.github.before(verdict_read, lambda: run.push_new_head("late.txt"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
     assert run.invoked == []
     assert run.github.merges == []
@@ -1331,7 +1387,7 @@ def test_a_head_that_moves_before_done_works_gate_reads_it_merges_nothing(world,
         return argv[:2] == ["pr", "view"] and argv[-1].startswith("author,comments")
 
     run.github.before(gate_read, lambda: run.push_new_head("racing.txt"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
     assert run.github.merges == []
     assert out.splitlines()[-1] == (
@@ -1353,7 +1409,7 @@ def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing
         return argv[:2] == ["pr", "view"] and argv[-1] == "statusCheckRollup"
 
     run.github.before(rollup_read, lambda: run.push_new_head("racing.txt"))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
     assert run.github.state == "OPEN"
     assert [merge[-1] for merge in run.github.merges] == [pinned]
@@ -1368,7 +1424,7 @@ def test_a_head_review_pr_cannot_read_stops_unreadable_not_moved(world, capsys) 
     run = world()
     head = run.github.head
     run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and a[-1] == "headRefOid,baseRefOid")
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE
     assert run.invoked == []
     assert out.splitlines()[-1] == (
@@ -1386,7 +1442,7 @@ def test_a_pr_that_conflicts_with_its_base_stops_at_once(world, capsys) -> None:
     base: there is nothing to wait for."""
     run = world(checks=[[]])
     run.github.mergeable = "CONFLICTING"
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE
     assert run.sleeps == []
     assert out.splitlines()[-1] == (
@@ -1400,7 +1456,7 @@ def test_a_pr_that_conflicts_with_its_base_stops_at_once(world, capsys) -> None:
 def test_checks_that_cannot_be_read_stop_unreadable(world, capsys) -> None:
     run = world()
     run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1])
-    rc, out, _err = run.run("--yes", "--no-wait", capsys=capsys)
+    rc, out, _err = run.authorised("--no-wait", capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE
     assert out.splitlines()[-1] == (
         f"ci: PR #{PR}'s checks could not be read: HTTP 502: Bad Gateway. Run "
@@ -1412,7 +1468,7 @@ def test_checks_that_cannot_be_read_stop_unreadable(world, capsys) -> None:
 def test_checks_unreadable_once_are_read_again_while_waiting(world, capsys) -> None:
     run = world()
     run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1])
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert "  ci: the checks could not be read: HTTP 502: Bad Gateway" in out
     assert run.sleeps == [20.0]
@@ -1425,7 +1481,7 @@ def test_a_block_is_reported_even_when_another_reviewer_could_not_run(world, cap
     run = world()
     run.answers["reviewer"] = ("CHANGES_REQUESTED", _BLOCKING)
     run.answers["code-reviewer"] = None
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE
     assert "  [reviewer] [block] `land.py:10` merges a head nobody reviewed." in out
     assert out.splitlines()[-1] == (
@@ -1442,7 +1498,7 @@ def test_pm_reviewers_severities_are_blocking_findings(world, capsys) -> None:
         "- `bypassable-with-audit` — the changeset has no audit comment.\n"
         "- warning: the body is long.\n",
     )
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE
     assert "  [reviewer] **hard-reject**: the title is not a conventional commit." in out
     assert "  [reviewer] `bypassable-with-audit` — the changeset has no audit comment." in out
@@ -1456,7 +1512,7 @@ def test_the_advisories_of_approvals_are_printed_in_the_review_step(world, capsy
         "Fine.\n\n- [advisory] A name could be clearer.\n"
         "- [advisory] (pre-existing: older code) A loop is slow.\n",
     )
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert "  [code-reviewer] [advisory] A name could be clearer." in out
     assert "  [code-reviewer] [advisory] (pre-existing: older code) A loop is slow." in out
@@ -1854,7 +1910,7 @@ def test_a_dry_run_writes_nothing(world, capsys) -> None:
 def test_no_answers_removes_the_list_an_earlier_head_left(world, capsys) -> None:
     run = _answers_world(world, listed=True)
     run.written = []
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert (
         f"{_STEP}: none — removed the list an earlier head left from the pull request's description"
@@ -1943,7 +1999,7 @@ def test_a_reason_quoting_the_provenance_marker_is_refused_and_never_written(wor
 def test_a_list_the_description_cannot_hold_is_refused(world, capsys) -> None:
     run = _answers_world(world)
     run.written = [_answer("docs/api.md", "x" * 70000)]
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE
     last = out.splitlines()[-1]
     assert "past the 65536 the host keeps. Shorten the description's own text, split" in last
@@ -2006,7 +2062,7 @@ def test_yes_merges_a_change_with_answers_as_any_other(world, capsys, listed) ->
     `--yes` run — naming the head or not — writes the list where it must, prints
     it, and merges in the same run."""
     run = _answers_world(world, listed=listed)
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     lines = out.splitlines()
     assert lines.index(LISTED[0]) < lines.index(f"merge: merged as {'c' * 7}")
@@ -2111,7 +2167,7 @@ def test_a_base_whose_changes_cannot_be_read_is_refused(world, capsys) -> None:
     # With no answers, an outdated base is no reason to stop.
     run.written = []
     run.github.body = _PR_BODY
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
 
 
@@ -2121,7 +2177,7 @@ def test_a_file_the_change_did_not_touch_that_cannot_be_read_is_no_reason_to_sto
     """A file the change did not touch holds no word of it."""
     run = world()
     run.unreadable = [".gitignore"]  # unreadable, and untouched by the change
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
 
 
@@ -2129,7 +2185,7 @@ def test_a_file_the_change_touches_that_cannot_be_read_is_refused(world, capsys)
     """Words on a file whose front matter does not parse cannot be listed."""
     run = world()
     run.unreadable = ["change.txt", ".gitignore"]  # the change added change.txt
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_NEEDS_CHANGE
     assert out.splitlines()[-1] == (
         f"{_STEP}: refused — front matter the change check cannot read, in 1 file "
@@ -2193,7 +2249,7 @@ def test_a_section_no_command_wrote_is_removed_where_the_change_wrote_none(
 ) -> None:
     run = world()
     run.github.body = f"{_PR_BODY}\n{_hand_written(heading)}"
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert (
         f"{_STEP}: none — removed a list written by hand from the pull request's description"
@@ -2227,7 +2283,7 @@ def test_an_earlier_list_that_cannot_be_removed_is_a_retry(world, capsys) -> Non
     run = _answers_world(world, listed=True)
     run.written = []
     run.github.fails.append(lambda argv: argv[:2] == ["pr", "edit"])
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_RETRY
     assert out.splitlines()[-1] == (
         f"{_STEP}: none, and the list an earlier head left could not be removed from PR "
@@ -2527,7 +2583,7 @@ def test_a_person_finding_this_run_posted_stops_it_ready_and_the_rerun_merges(
     run = world()
     head = run.github.head
     run.answers["code-reviewer"] = ("APPROVED", _PERSON)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_READY == 8
     lines = out.splitlines()
     at = lines.index(_person_lines("code-reviewer")[0])
@@ -2540,7 +2596,7 @@ def test_a_person_finding_this_run_posted_stops_it_ready_and_the_rerun_merges(
     assert run.github.merges == []
 
     run.invoked.clear()
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert run.invoked == []
     lines = out.splitlines()
@@ -2647,7 +2703,7 @@ def test_verdicts_that_could_not_be_read_at_the_start_hold_the_run(world, capsys
 def test_verdicts_that_cannot_be_read_for_the_findings_stop_the_run(world, capsys) -> None:
     run = world()
     run.github.fails.append(_findings_read(run))
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE
     assert out.splitlines()[-1] == (
         f"{_FINDINGS}: PR #{PR}'s verdicts could not be read: HTTP 502: Bad Gateway. Nothing "
@@ -2684,7 +2740,7 @@ def test_a_remote_person_finding_on_a_pr_whose_author_cannot_be_read_stops_the_r
     run = world(remote=("review-bot",))
     run.github.comments.append(_remote_verdict(run, "review-bot", _PERSON, sha=run.github.head))
     run.github.author = author
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_UNREADABLE
     assert out.splitlines()[-1] == (
         f"{_FINDINGS}: whose verdicts count could not be resolved (PR #{PR}'s author could "
@@ -2711,7 +2767,7 @@ def test_a_local_person_finding_on_a_pr_whose_author_cannot_be_read_holds_as_bef
     head = run.github.head
     run.github.author = author
     run.answers["code-reviewer"] = ("APPROVED", _PERSON)
-    rc, out, _err = run.run("--yes", capsys=capsys)
+    rc, out, _err = run.authorised(capsys=capsys)
     assert rc == run.land.EXIT_READY
     lines = out.splitlines()
     at = lines.index(_person_lines("code-reviewer")[0])
@@ -2723,7 +2779,7 @@ def test_a_local_person_finding_on_a_pr_whose_author_cannot_be_read_holds_as_bef
     )
     assert run.github.merges == []
 
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert [merge[-1] for merge in run.github.merges] == [head]
 
@@ -2737,7 +2793,7 @@ def test_a_person_finding_from_an_unrequired_remote_login_holds_nothing_when_the
     run = world()
     run.github.author = None
     run.github.comments.append(_remote_verdict(run, "stranger", _PERSON, sha=run.github.head))
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert "[stranger]" not in out
     assert not any(step.startswith(f"{_FINDINGS}:") for step in _steps(out))
@@ -2748,7 +2804,7 @@ def test_a_person_finding_from_a_reviewer_the_gate_does_not_require_holds_nothin
 ) -> None:
     run = world()
     run.github.comments.append(_verdict(run, "stranger", _PERSON, sha=run.github.head))
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert "[stranger]" not in out
     assert not any(step.startswith(f"{_FINDINGS}:") for step in _steps(out))
@@ -2780,7 +2836,7 @@ def test_findings_with_no_person_tag_land_as_today(world, capsys) -> None:
         "Fine.\n\n- An untagged note.\n- [advisory] A name could be clearer.\n\n"
         "```\n- [person] quoted in a fence\n```\n",
     )
-    rc, out, err = run.run("--yes", capsys=capsys)
+    rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     lines = out.splitlines()
     assert "  [code-reviewer] An untagged note." in lines
