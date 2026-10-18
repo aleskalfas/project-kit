@@ -85,6 +85,11 @@ NOUN = {
     FUNCTIONAL: "functional requirement",
     CONSTRAINT: "constraint",
 }
+
+#: How a requirement of any of the three kinds is named where its kind does not matter,
+#: such as its number, one numbering across the three (DEC-002 point 2).
+REQUIREMENT = "requirement"
+
 ID_SHAPE = {
     ACTOR: "ACT-<slug>",
     TERM: "TERM-<slug>",
@@ -136,7 +141,7 @@ def noun_numbered(artefact_id: str) -> str:
     is one numbering across them (DEC-002 point 2)."""
     prefix = artefact_id.split("-", 1)[0]
     if prefix == PREFIX[QUALITY]:
-        return "requirement"
+        return REQUIREMENT
     return NOUN[JOURNEY] if prefix == PREFIX[JOURNEY] else NOUN[USE_CASE]
 
 
@@ -375,9 +380,9 @@ class Analysis:
         is, one rule for the check and the stamp of a requirement."""
         found = self.find(artefact_id)
         if found is None or found.kind not in REQUIREMENTS:
-            return f"no requirement {artefact_id} in the analysis"
+            return f"no {REQUIREMENT} {artefact_id} in the analysis"
         if in_force and found.withdrawn:
-            return f"requirement {artefact_id} is withdrawn ({found.location})"
+            return f"{REQUIREMENT} {artefact_id} is withdrawn ({found.location})"
         return None
 
     def another_actor(self, step: str, actor: str) -> str | None:

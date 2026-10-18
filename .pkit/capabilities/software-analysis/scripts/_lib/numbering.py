@@ -14,8 +14,9 @@ applies it (`_lib/history.py`), so the two never disagree:
   An entry whose commit is no commit's id here, or lies off the default
   branch's history, is a problem and frees nothing. No file is a setting naming
   none.
-- **the files a named commit can free.** A file of a use-case or journey place
-  whose name carries an id; which the commit deleted against its first parent,
+- **the files a named commit can free.** A file of a numbered kind's place —
+  a use case's, a journey's or a requirement's — whose name carries an id; which
+  the commit deleted against its first parent,
   git's rename detection on over the whole tree; which the default branch lost
   last by it — the newest commit of the default branch's first-parent line at
   which its path was removed is the named commit, or the merge that brought it

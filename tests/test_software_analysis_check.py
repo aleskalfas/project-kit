@@ -1138,6 +1138,24 @@ def test_a_requirement_s_anchors_within_the_analysis_match_its_fields(
             f"`refines` (none): {rule} — anchor none of them (DEC-002 point 6)",
         )
     ]
+    # A part anchor names its artefact before its last `#` (COR-050 point 2): one on a use
+    # case is within the analysis, and one on an actor is no anchor on the actor whole.
+    seeded.write({QUICK: requirement(anchored=["UC-001#"])})
+    assert errors(check(seeded)) == [
+        (
+            where,
+            f"its anchors within the analysis (UC-001#) do not match its `actors` and "
+            f"`refines` (none): {rule} — anchor none of them (DEC-002 point 6)",
+        )
+    ]
+    seeded.write({QUICK: requirement(anchored=["ACT-tester#"], actors=["ACT-tester"])})
+    assert errors(check(seeded)) == [
+        (
+            where,
+            f"its anchors within the analysis (ACT-tester#) do not match its `actors` and "
+            f"`refines` (ACT-tester): {rule} — anchor exactly [ACT-tester] (DEC-002 point 6)",
+        )
+    ]
     seeded.write({QUICK: requirement(anchored=["RS-SAN-001"])})
     assert errors(check(seeded)) == []
 

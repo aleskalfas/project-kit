@@ -611,7 +611,9 @@ def _named_otherwise(analysis: Analysis) -> list[Finding]:
             continue
         if named is None and artefact.kind in REQUIREMENTS:
             name = artefact.path.rsplit("/", 1)[-1]
-            after = artefact.id if artefact.id is not None else ID_SHAPE[artefact.kind]
+            spelt = identity(artefact.id) if artefact.id is not None else ""
+            fits = schemas.id_pattern(artefact.kind).match(spelt)
+            after = spelt if fits else ID_SHAPE[artefact.kind]
             message = (
                 f"its name is {name}, which carries no number: a requirement's file is named "
                 f"after its id, `REQ-NNN-<slug>.md`, so its path shows its kind beside its id, "
@@ -907,12 +909,20 @@ def _requirement_anchors(analysis: Analysis) -> list[Finding]:
     """A requirement's anchors within the analysis are exactly the actors of its `actors`
     and the requirements of its `refines` (DEC-002 point 6): the two fields are the
     source, and the stamp writes the anchors from them, so a changed actor or a changed
-    requirement it refines flags it. An artefact anchor is within the analysis when it
-    is the id of one of the analysis's kinds. An entry naming the requirement itself is
-    left out of what it anchors, since `_requirement_references` refuses it, and a
-    cycle through `refines` is the core's validation finding (COR-050 point 5)."""
+    requirement it refines flags it. An artefact anchor is within the analysis when the
+    artefact it names is of one of the analysis's kinds by its id: a part anchor, such as
+    `UC-001#` or `ACT-tester#needs`, names its artefact before its last `#` (COR-050
+    point 2). Compared as written, a part anchor matches no entry of the two fields,
+    which the stamp writes whole. An entry naming the requirement itself is left out of
+    what it anchors, since `_requirement_references` refuses it, and a cycle through
+    `refines` is the core's validation finding (COR-050 point 5)."""
     patterns = [schemas.id_pattern(kind) for kind in KINDS]
     actor_id, requirement_id = schemas.id_pattern(ACTOR), schemas.id_pattern(REQUIREMENTS[0])
+
+    def within(anchor: str) -> bool:
+        named = anchor.rsplit("#", 1)[0]
+        return any(p.match(named) for p in patterns)
+
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         if artefact.kind not in REQUIREMENTS:
@@ -928,9 +938,7 @@ def _requirement_anchors(analysis: Analysis) -> list[Finding]:
                 ),
             ]
         )
-        anchored = _unique(
-            a for a in artefact.anchored_to("artefact") if any(p.match(a) for p in patterns)
-        )
+        anchored = _unique(a for a in artefact.anchored_to("artefact") if within(a))
         if set(expected) == set(anchored):
             continue
         write = f"anchor exactly [{', '.join(expected)}]" if expected else "anchor none of them"

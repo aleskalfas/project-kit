@@ -17,10 +17,10 @@ its three kinds' folders (DEC-002 point 2). The first to reach the default
 branch keeps the number, and a number is never used again, so this one
 renumbers before merging. An artefact is known by its id, not its path, so a
 requirement moved to another kind's folder keeps its number; a file of the
-name this branch gives the
-number is a warning — possibly its own work landed; `_lib/numbers.py` states
-the rule. An id the project's numbering setting frees is free again, as the
-stamp counts it, and each entry's are listed; an entry naming what is no
+name this branch gives the number is a warning — possibly its own work
+landed; `_lib/numbers.py` states the rule. An id the project's numbering
+setting frees is free again, as the stamp counts it, and each entry's are
+listed; an entry naming what is no
 commit of the default branch's history, or listing an id its commit does not
 free, is an error, numbered here or not (`_lib/numbering.py`).
 
