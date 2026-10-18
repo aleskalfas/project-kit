@@ -8,10 +8,10 @@
 # where it holds are fields a tool reads. Each holds its hint until you write
 # in its place what it asks for, and so does each part of the body. The body is
 # rendered from the kind's declared structure (`schemas/artefact-kinds.yaml`).
-# It anchors each actor in `actors` and each requirement in `refines`, the
-# files that verify it, and the records it rests on or that answer it. Its own
-# fields' shape is `schemas/quality-requirement.schema.json`, and the friction
-# block is the core's.
+# It anchors each actor in `actors` and each requirement in `refines`. It also
+# anchors the files that verify it, and the records it rests on or that answer
+# it. Its own fields' shape is `schemas/quality-requirement.schema.json`, and
+# the friction block is the core's.
 id: REQ-000                       # the next free number across the three kinds, never reused
 title: <Title>                    # the heading below repeats it after the id and the kind
 status: active                    # or withdrawn: the file stays and its id is never reused
@@ -30,6 +30,6 @@ pkit:
 
 # REQ-000 · Quality · <Title>
 
-**Verified by:** <!-- pkit:hint Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet. Example: A timing test opens a report of a year's figures, and fails if it takes over two seconds to show. -->
+**Verified by:** <!-- pkit:hint Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each test or check. Write `None.` when nothing verifies it yet. Example: A timing test opens a report of a year's figures, and fails if it takes over two seconds to show. -->
 
 **Rationale:** <!-- pkit:hint Why the system must meet the requirement, and whose need it serves. Write `None.` when a record it rests on gives the reason. Example: Analysts read reports during meetings, and a slow report holds the meeting up. -->

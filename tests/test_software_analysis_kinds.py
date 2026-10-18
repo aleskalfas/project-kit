@@ -11,7 +11,8 @@ round chose for each kind (#1362):
   `None.` and its form, every shipped element required;
 - **the three kinds of requirement hold DEC-002's parts** (point 4, #1691): the
   same fields on each, `statement` of the form `sentence`, `measure` the one field
-  that may read `None.`, and *Verified by* then *Rationale*, or *Imposed by* on a
+  that may read `None.` and `statement` and `applies-to` two that may not, and
+  *Verified by* then *Rationale*, or *Imposed by* on a
   constraint, each of which may read `None.`. Each is shown beside its id by its
   name, `# REQ-007 · Quality · <title>` (point 2);
 - **each part has a hint and an example**, one line each, with no semicolon and no
@@ -349,9 +350,12 @@ FIELDS: dict[str, dict[str, str | None]] = {
     **dict.fromkeys(REQUIREMENTS, REQUIREMENT_FIELDS),
 }
 
-#: The one field of any kind that may read `None.`: a requirement's measure, which a
-#: requirement found before its measure reads (DEC-002 point 4).
-FIELDS_ALLOWING_NONE = {kind: ["measure"] for kind in REQUIREMENTS}
+#: The fields that say whether they may read `None.`: a requirement's measure may, which
+#: a requirement found before its measure reads, and its statement and where it holds may
+#: not (DEC-002 point 4). Every other field says neither, so its form alone judges it.
+FIELDS_SAYING_NONE = {
+    kind: {"statement": False, "measure": True, "applies-to": False} for kind in REQUIREMENTS
+}
 
 #: How each kind shows beside its id, where it does (DEC-002 point 2).
 SHOWN_AS = {
@@ -388,8 +392,8 @@ def test_each_kind_holds_the_parts_the_round_chose(name: str) -> None:
     assert len(set(ids)) == len(ids)
     fields = kind.get("front-matter", {})
     assert {field: entry.get("form") for field, entry in fields.items()} == FIELDS[name]
-    allowing = [field for field, entry in fields.items() if entry.get("allows-none", False)]
-    assert allowing == FIELDS_ALLOWING_NONE.get(name, [])
+    saying = {f: entry["allows-none"] for f, entry in fields.items() if "allows-none" in entry}
+    assert saying == FIELDS_SAYING_NONE.get(name, {})
     assert kind.get("shown-as") == SHOWN_AS.get(name)
 
 

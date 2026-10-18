@@ -10,8 +10,8 @@
 # rendered from the kind's declared structure (`schemas/artefact-kinds.yaml`).
 # It says who or what imposes it, where a requirement of the other two kinds
 # says why it is needed. It anchors each actor in `actors` and each
-# requirement in `refines`, the files that verify it, and the records it rests
-# on or that answer it. Its own fields' shape is
+# requirement in `refines`. It also anchors the files that verify it, and the
+# records it rests on or that answer it. Its own fields' shape is
 # `schemas/constraint.schema.json`, and the friction block is the core's.
 id: REQ-000                       # the next free number across the three kinds, never reused
 title: <Title>                    # the heading below repeats it after the id and the kind
@@ -31,6 +31,6 @@ pkit:
 
 # REQ-000 · Constraint · <Title>
 
-**Verified by:** <!-- pkit:hint Each test, check or review that shows the constraint is kept, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet. Example: A review before each release checks where every store of figures lies. -->
+**Verified by:** <!-- pkit:hint Each test, check or review that shows the constraint is kept, named by what it does and never by its path. Anchor the file of each test or check. Write `None.` when nothing verifies it yet. Example: A review before each release checks where every store of figures lies. -->
 
 **Imposed by:** <!-- pkit:hint Who or what imposes the constraint, and why the design cannot choose otherwise. Write `None.` when a record it rests on says so. Example: The client's contract forbids storing its figures abroad, and no design can change the contract. -->

@@ -51,9 +51,10 @@ How a body departs from its kind's structure:
   A heading the stamp writes has no hint, and no content of its own.
 - **`None.` refused:** a part whose content is `None.` and nothing else, where
   its element does not allow it, and a front-matter field's text that is
-  `None.`, where the field does not allow it (`Field.allows_none`). A field that
-  allows it, such as a requirement's `measure`, is not judged against its form
-  while it reads `None.`.
+  `None.`, where the field refuses it (`Field.allows_none` false), such as a
+  requirement's `applies-to`. A field that allows it, such as a requirement's
+  `measure`, is not judged against its form while it reads `None.`. A field that
+  says neither is judged by its form alone.
 - **not one sentence:** text of the `sentence` form, in a part or in a
   front-matter field, in which a sentence ends before its last word. A part
   is one text, and each item of a front-matter list is one.
@@ -180,13 +181,14 @@ class Element:
 @dataclass(frozen=True)
 class Field:
     """One front-matter field a writer fills, with its hint, its example, any form, and
-    whether it may read `None.` (DEC-001 point 1; DEC-002 point 4)."""
+    whether it may read `None.` (DEC-001 point 1; DEC-002 point 4): true, it may, false,
+    it may not, and `None` where the field says neither, so its form alone judges it."""
 
     name: str
     hint: str
     example: str
     form: str | None = None
-    allows_none: bool = False
+    allows_none: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -287,7 +289,7 @@ def _kind(name: str, entry: Mapping[str, Any]) -> Kind:
                 value["hint"],
                 value["example"],
                 value.get("form"),
-                value.get("allows-none", False),
+                value.get("allows-none"),
             )
             for field, value in fields.items()
         ),
@@ -686,17 +688,18 @@ def judged(part: forms.Part, element: Element, context: forms.Context) -> list[f
 
 
 def field_departures(fields: Mapping[str, Any], kind: Kind) -> list[FieldDeparture]:
-    """Each text of a front-matter field that reads `None.` where the field does not allow
-    it, or does not hold the field's form: the field's own text, or each item of a list.
-    A field that allows `None.` and reads it is not judged against its form. A value of
-    another shape is the kind's schema's to report."""
+    """Each text of a front-matter field that reads `None.` where the field refuses it, or
+    does not hold the field's form: the field's own text, or each item of a list. A field
+    that allows `None.` and reads it is not judged against its form, and one that says
+    neither is judged by its form alone. A value of another shape is the kind's schema's
+    to report."""
     found: list[FieldDeparture] = []
     for field in kind.fields:
         value = fields.get(field.name)
         for pointer, text in _texts(field.name, value):
             if not text.strip() or hint_in(text) is not None:
                 continue  # a hint left in is the placeholder check's
-            if " ".join(text.split()) == NONE:
+            if field.allows_none is not None and " ".join(text.split()) == NONE:
                 if not field.allows_none:
                     found.append(FieldDeparture(field, NONE_REFUSED, pointer, text))
                 continue

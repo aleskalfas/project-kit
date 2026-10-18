@@ -11,7 +11,8 @@
 #   `revalidation-record`.
 # - `shown-as`: the kind's name as its artefacts show it beside their id. A
 #   requirement is headed `# REQ-007 · Quality · <title>` (DEC-002 point 2).
-#   A kind without it is headed `# <id> — <title>`, or its name.
+#   An actor, a use case and a journey show none, and are headed
+#   `# <id> — <title>`, an actor by its name.
 # - `sections`: the elements of a body, in order. Each has an `id`, permanent
 #   once shipped, and a `type`:
 #   - `heading`: a heading's `level` and, where the kind fixes it, its `text`
@@ -27,8 +28,10 @@
 #   gives. The schema's description of each form says what it reads in a
 #   part that holds a list.
 # - `front-matter`: the fields a writer fills, each with its hint, its example
-#   and any form. A field may read `None.` only where it sets `allows-none`,
-#   as a part may. The kind's companion schema checks each field's shape. Where
+#   and any form. A field that sets `allows-none` says whether it may read
+#   `None.`: true, it may, and false, it may not. A field that sets neither is
+#   judged by its form alone. The kind's companion schema checks each field's
+#   shape. Where
 #   the stamp leaves a field to fill, it writes the field's hint as its
 #   placeholder, as it writes a body part's. The template's front matter,
 #   written by hand, shows the same hint.
@@ -221,7 +224,7 @@ kinds:
         type: label
         text: Verified by
         allows-none: true
-        hint: Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet.
+        hint: Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each test or check. Write `None.` when nothing verifies it yet.
         example: A timing test opens a report of a year's figures, and fails if it takes over two seconds to show.
       - id: rationale
         type: label
@@ -232,6 +235,7 @@ kinds:
     front-matter:
       statement:
         form: sentence
+        allows-none: false
         hint: How well the system must behave, in one sentence, such as how fast, how reliably or how safely. Say what the system achieves, never how it is built.
         example: The system shows a report within two seconds of the analyst opening it.
       measure:
@@ -239,6 +243,7 @@ kinds:
         hint: The value or the condition that shows the requirement is met. Write `None.` when there is none yet.
         example: 95 of every 100 reports of a year's figures show within two seconds.
       applies-to:
+        allows-none: false
         hint: Where the requirement holds, in words, such as a class of commands or the whole system. Name no use case or journey here, since each one that must meet it lists it.
         example: Every report an analyst opens.
       actors:
@@ -259,7 +264,7 @@ kinds:
         type: label
         text: Verified by
         allows-none: true
-        hint: Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet.
+        hint: Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each test or check. Write `None.` when nothing verifies it yet.
         example: A test builds a report from approved and draft figures, and checks that each total leaves the drafts out.
       - id: rationale
         type: label
@@ -270,6 +275,7 @@ kinds:
     front-matter:
       statement:
         form: sentence
+        allows-none: false
         hint: The behaviour that holds across use cases, in one sentence, such as a business rule of the domain. Behaviour that serves one actor's goal is a use case instead.
         example: Every total in a report counts approved figures only.
       measure:
@@ -277,6 +283,7 @@ kinds:
         hint: The value or the condition that shows the requirement is met. Write `None.` when there is none yet.
         example: Each total equals the sum of the approved figures it covers.
       applies-to:
+        allows-none: false
         hint: Where the requirement holds, in words, such as a class of commands or the whole system. Name no use case or journey here, since each one that must meet it lists it.
         example: Every total the system shows or exports.
       actors:
@@ -297,7 +304,7 @@ kinds:
         type: label
         text: Verified by
         allows-none: true
-        hint: Each test, check or review that shows the constraint is kept, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet.
+        hint: Each test, check or review that shows the constraint is kept, named by what it does and never by its path. Anchor the file of each test or check. Write `None.` when nothing verifies it yet.
         example: A review before each release checks where every store of figures lies.
       - id: imposed-by
         type: label
@@ -308,6 +315,7 @@ kinds:
     front-matter:
       statement:
         form: sentence
+        allows-none: false
         hint: The limit on the solution, in one sentence, which the design takes as given.
         example: The system stores every figure inside the client's own country.
       measure:
@@ -315,11 +323,12 @@ kinds:
         hint: The value or the condition that shows the constraint is kept. Write `None.` when there is none yet.
         example: Every store of figures, backups included, lies in a data centre in that country.
       applies-to:
+        allows-none: false
         hint: Where the constraint holds, in words, such as a class of commands or the whole system. Name no use case or journey here, since each one that must meet it lists it.
         example: The whole system, its backups included.
       actors:
         hint: The actors whose need the constraint meets, each by id.
-        example: "[ACT-administrator]"
+        example: "[ACT-auditor]"
       refines:
         hint: The requirements this one refines, of any kind, each by id.
         example: "[REQ-006]"

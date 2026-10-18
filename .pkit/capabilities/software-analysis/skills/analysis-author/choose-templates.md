@@ -26,7 +26,7 @@ A template read empty hides what each part asks of a writer. So judge the parts 
 - **Stamp it and fill it** as the kind's sub-procedure says: `actor.md`, `use-case.md`, `journey.md`, `term.md` or `revalidation-record.md`. Fill each part as its hint says.
   - **A journey** needs two use cases of its actor, so stamp a second use case first. It can be your ordinary example.
   - **A revalidation record** has no hints, since its stamp writes every part from its command line. Stamp it for a revalidation of your own that has something to say, such as a change you plan to what a candidate describes.
-  - **A requirement** has no stamp yet ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)). Until it has, review each kind's shipped parts in its template, and keep them. Choose them with a candidate once the stamp ships.
+  - **A requirement** has no stamp yet ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)), so no candidate of it can be stamped. Until it has, judge each kind's parts from its template and from the README's filled examples, and choose as step 4 says. Fill a candidate once the stamp ships, and review the choice then.
 - **Commit nothing yet.** The kind's sub-procedure ends in a commit, but a candidate waits until step 6. Once committed, its id is taken for good.
 - **Check it** with `pkit analysis validate --preview`, and read what it says of your candidate. While the format rule is proposed, the preview shows an artefact against its kind's structure where the rule would bind.
 

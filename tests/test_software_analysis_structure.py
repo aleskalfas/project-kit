@@ -326,14 +326,19 @@ def test_a_requirement_s_body_and_fields_hold_its_kind_s_structure(kind: str, la
     assert (departure.pointer, departure.how) == ("/statement", "none-refused")
 
 
-def test_none_in_a_field_is_refused_where_the_field_does_not_allow_it() -> None:
-    """A field reads `None.` only where its structure allows it, as a part does (DEC-001
-    point 1). A field of another kind that allows none is refused it too, and a field
-    still holding its hint is the placeholder check's alone."""
-    (departure,) = S.field_departures({"needs": ["None."], "name": "x"}, KINDS["actor"])
-    assert (departure.pointer, departure.how) == ("/needs/0", "none-refused")
-    (departure,) = S.field_departures({"name": "None.", "definition": "d"}, KINDS["term"])
-    assert (departure.pointer, departure.how) == ("/name", "none-refused")
+def test_none_in_a_field_is_judged_as_the_field_says() -> None:
+    """A field that says it may not read `None.` is refused it, and one that says it may
+    is not judged by its form while it does (DEC-002 point 4). A field that says
+    neither, as every field of DEC-001's four kinds, is judged by its form alone, as
+    before: a need of `None.` is one sentence, and a definition of it ends with a full
+    stop. A field still holding its hint is the placeholder check's alone."""
+    assert S.field_departures({"needs": ["None."], "name": "x"}, KINDS["actor"]) == []
+    assert S.field_departures({"name": "None.", "replaces": ["None."]}, KINDS["term"]) == []
+    (departure,) = S.field_departures({"name": "x", "definition": "None."}, KINDS["term"])
+    assert (departure.pointer, departure.how) == ("/definition", "breaks-its-form")
+    # A requirement's actors and refines say neither, so the schema alone refuses `None.`.
+    listed = {**REQUIREMENT_FIELDS, "actors": ["None."], "refines": "None."}
+    assert S.field_departures(listed, KINDS["quality-requirement"]) == []
     hinted = {**REQUIREMENT_FIELDS, "applies-to": field_hint("constraint", "applies-to")}
     assert S.field_departures(hinted, KINDS["constraint"]) == []
 
