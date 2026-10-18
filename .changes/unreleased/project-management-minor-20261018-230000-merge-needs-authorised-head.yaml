@@ -1,0 +1,16 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  No merge runs without an authorisation for the head it merges (DEC-055 point
+  3, #1760). `land-work --yes` now needs `--expect-head <sha>`. Without it the
+  run is refused (exit 2) before anything is read, waited for or reviewed,
+  since a `--yes` that names no head would merge whatever head the run found.
+  Run `land-work <N>` without `--yes`: its `ready:` line names the head and the
+  command that merges it. `done-work` and `merge-pr` with no `--yes` and no
+  terminal to ask at used to merge unasked. They now run their gates and refuse
+  (exit 2), naming the head, with nothing posted, moved or merged. Pass `--yes`
+  on the person's authorisation. At a terminal, their question now names the
+  PR and the head the merge is pinned to. Completing a PR that has merged
+  already merges nothing, so it still goes on without `--yes`.
