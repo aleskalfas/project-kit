@@ -519,3 +519,184 @@ def test_the_docs_reviewer_reads_the_sentences_as_the_commands_read_them():
     # Of two items for one document, the first.
     two = heading + "- `path`: First.\n- `path`: Second.\n"
     assert answers.sentences(two) == {"path": "First."}
+
+
+# ---------------------------------------------------------------------------
+# docs-reviewer checks revisits, and software-engineer writes them
+# (COR-050 points 3 and 16, #1704)
+# ---------------------------------------------------------------------------
+
+_SE_DIR = REPO_ROOT / ".pkit" / "capabilities" / "software-engineering"
+_REVISIT_LEAD = "- **A revisit must meet the change to its document.**"
+
+
+def _sub_items(lines: list[str], lead: str) -> dict[str, str]:
+    """The nested items under the top-level item that starts with `lead`, keyed by
+    the bold label each opens with. Empty when no item starts with `lead`."""
+    items: dict[str, str] = {}
+    inside = False
+    for line in lines:
+        if line.startswith("- "):
+            inside = line.startswith(lead)
+        elif inside and line.startswith("  - **"):
+            label = line[len("  - **") :].split("**", 1)[0]
+            items[label] = line
+    return items
+
+
+def test_sub_items_reads_only_the_named_item():
+    lines = [
+        "- **Another.** Text.",
+        "  - **Elsewhere**: not this one.",
+        "- **The lead.** Text.",
+        "  - **One**: first.",
+        "  - **Two**: second.",
+        "- **After.** Text.",
+        "  - **Three**: not this one either.",
+    ]
+    assert _sub_items(lines, "- **The lead.**") == {
+        "One": "  - **One**: first.",
+        "Two": "  - **Two**: second.",
+    }
+    assert _sub_items(lines, "- **Missing.**") == {}
+
+
+def test_the_docs_reviewer_judges_each_revisit_outcome_in_the_list_s_words():
+    """The reviewer meets a revisit in the change check's list, by the words the list
+    gives its outcome (COR-050 point 16). It judges each outcome the list can give,
+    so a target revisited by changing it and an entry of either outcome are all
+    checked, and a change to those words fails here first."""
+    from project_kit import friction_check as fc
+
+    items = _sub_items(_answers_check(), _REVISIT_LEAD)
+    expected = {
+        fc.OUTCOME_WORDS[outcome][:1].upper() + fc.OUTCOME_WORDS[outcome][1:]
+        for outcome in ("updated", "unchanged", "deferred")
+    }
+    assert {label.strip('"') for label in items} == expected
+    for item in items.values():
+        assert "is a `[block]`" in item, item
+    read = [line for line in _answers_check() if line.startswith("- **Read the answers")]
+    assert f"There a revisit has `answer` `{fc.REVISITED}`" in read[0]
+    for key in ("`outcome`", "`target`", "`links`", "`fields`"):
+        assert key in read[0], key
+
+
+@pytest.mark.parametrize(
+    ("outcome", "says"),
+    [
+        (
+            "Updated in this change",
+            [
+                "a reformat included",
+                "contradicts what the modified trigger fields now say",
+                "a test that still checks the value the change replaced",
+                "contradicts nothing, yet leaves part of the change unmet, is an `[advisory]`",
+            ],
+        ),
+        (
+            "Still accurate",
+            ["why the target still stands against the change", "leaves out an edit"],
+        ),
+        (
+            "Out of date, fixed later",
+            ["name a follow-up issue that is open now", "names no issue, or names a closed one"],
+        ),
+    ],
+)
+def test_the_docs_reviewer_blocks_on_a_revisit_that_does_not_hold(outcome, says):
+    """COR-050 point 3: the reviewer checks each `unchanged` and `deferred` revisit
+    entry the change check asks for, and each target the change revisited by
+    changing it, against the change to its source (point 16)."""
+    item = _sub_items(_answers_check(), _REVISIT_LEAD)[f'"{outcome}"']
+    for words in says:
+        assert words in item, (outcome, words)
+
+
+def test_a_target_revisited_by_its_change_needs_no_sentence():
+    """Point 3 asks a sentence of each artefact revalidated as `updated`. A target
+    revisited by changing it is no revalidation, and may be no artefact at all. A
+    target the change also revalidated as `updated` still owes that sentence."""
+    (lead,) = [line for line in _answers_check() if line.startswith(_REVISIT_LEAD)]
+    for words in (
+        "A revisit line needs no sentence under `## What changed in each updated document`",
+        "since a revisit is no revalidation",
+        "still needs the sentence for that revalidation",
+        "Read what the target stands on at the head (COR-050 point 5)",
+        "Read the diff of the trigger fields the line names as modified",
+    ):
+        assert words in lead, words
+
+
+def test_a_revisit_entry_not_asked_for_is_named_not_judged():
+    """An entry the change check does not ask for is a person's decision (COR-050
+    point 16): one for a target that owes no answer, or one whose outcome alone
+    changed, which also answers nothing. The blocking rules never judge it,
+    wherever its document sits."""
+    lead = "- **Some answers are a person's decision, not yours to judge.**"
+    (item,) = [line for line in _answers_check() if line.startswith(lead)]
+    for words in (
+        'A revisit entry the list flags "not asked for by this change" is a person\'s decision,'
+        " even on a document the check asked about, and the bullets above never judge it"
+        " (COR-050 point 16)",
+        "Its target owes no answer, or only its outcome changed",
+        "An entry whose outcome alone changed also answers nothing.",
+    ):
+        assert words in item, words
+    # The revisit sentences come before the advisory instruction that covers them.
+    assert item.index("A revisit entry the list flags") < item.index("so do not block on it")
+
+
+def _friction_answers() -> str:
+    body = (_SE_DIR / "agents" / "software-engineer.md").read_text(encoding="utf-8")
+    return body.split("\n## Friction answers\n", 1)[1].split("\n## ", 1)[0]
+
+
+def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
+    """The producer may run `pkit friction revisit` for what its own change owes, as
+    the agents README's "Friction writers" lets an agent making a change (COR-050
+    points 3 and 16), and leaves any other entry to the person."""
+    section = _friction_answers()
+    for words in (
+        "`pkit friction revalidate`, `pkit friction defer` or `pkit friction revisit`",
+        "The third writes an entry in its `revisited` list",
+        "the revalidation of a combined state after you resolved a conflict (COR-050 point 3)",
+        "After you resolve a conflict in a `revisited` list, write the entry again for the"
+        " combined state (COR-050 point 16)",
+        "against the change, and each target you revisited by changing it.",
+        "Each deferral, and each `deferred` revisit entry, you write names an open follow-up",
+        "told those sentences and what is left out of date",
+        "on a target your change asks no revisit of",
+        "- **Change it**, to bring it up to your change, never by an edit made only to clear"
+        " the check.",
+        "- **Write its entry** with `pkit friction revisit`",
+        "write a `deferred` entry, naming the follow-up for its owner",
+        "write a reason new to this change",
+        "Changing only an entry's outcome answers nothing, and is not yours to write.",
+    ):
+        assert words in section, words
+
+
+def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
+    """DEC-002 D1 and the README agree on what the reviewer blocks on for a revisit,
+    on what is only advisory, and on the revisit entries that stay a person's
+    decision. The agent body applies the same tests."""
+    record = (_SE_DIR / "decisions" / "DEC-002-code-review-panel.md").read_text(encoding="utf-8")
+    readme = (_SE_DIR / "README.md").read_text(encoding="utf-8")
+    body = "\n".join(_answers_check())
+    d1 = record.split("\n### 1. The panel\n", 1)[1].split("\n### ", 1)[0]
+    shared = (
+        "for a target that owes an answer, a",
+        "entry the change writes with a new reason that does not hold against the change, or a"
+        " `deferred` one that names no open follow-up",
+        "a target the change revisited by changing it, where the target contradicts what the"
+        " trigger fields the change modified now say",
+        "contradicts nothing, yet leaves part of the change",
+        "a revisit entry the change check does not ask for: one for a target that owes no"
+        " answer, or one whose outcome alone changed",
+    )
+    for words in shared:
+        assert words.lower() in d1.lower(), ("DEC-002", words)
+        assert words.lower() in readme.lower(), ("README", words)
+    for words in ("contradicts what the modified trigger fields now say", "contradicts nothing"):
+        assert words in body, words

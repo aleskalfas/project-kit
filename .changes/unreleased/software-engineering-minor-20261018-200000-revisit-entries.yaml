@@ -1,0 +1,23 @@
+component: software-engineering
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  `docs-reviewer` checks a change's revisits of the targets of a link, as it
+  checks revalidations and deferrals (COR-050 points 3 and 16). It reads them
+  from the change check's own list, and raises a `[block]` finding on each
+  that does not hold: a target the change revisited by changing it that still
+  contradicts the fields the change modified on its source, an `unchanged`
+  revisit entry whose reason does not hold against the change, and a
+  `deferred` one whose reason does not hold or that names no open follow-up
+  issue. A changed target that contradicts nothing but leaves part of the
+  change unmet is an `[advisory]`. A target revisited by changing it needs no
+  sentence on what changed. A revisit entry the list flags as not asked for
+  by the change is a person's decision, named in an `[advisory]` finding,
+  never blocked. software-engineering DEC-002 D1 and the README say so. The
+  `software-engineer` agent may write the revisit entries its own change
+  owes with `pkit friction revisit`, each with a reason new to the change and
+  each `deferred` one naming an open follow-up issue, and names any other
+  entry for the person to decide. The writer and the list's revisits are the
+  backbone's this release ships, so the capability requires that backbone.
