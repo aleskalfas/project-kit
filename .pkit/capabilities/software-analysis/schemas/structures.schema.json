@@ -26,7 +26,7 @@
       "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:structures`."
     },
     "kinds": {
-      "description": "What the project changes of each kind's structure, keyed by a kind `artefact-kinds.yaml` declares: `actor`, `use-case`, `journey`, `term` or `revalidation-record`. A key that names no kind of the capability's is refused, since a new kind needs a decision of its own (DEC-001 point 11).",
+      "description": "What the project changes of each kind's structure, keyed by a kind `artefact-kinds.yaml` declares: `actor`, `use-case`, `journey`, `term`, `quality-requirement`, `functional-requirement`, `constraint` or `revalidation-record`. A key that names no kind of the capability's is refused, since a new kind needs a decision of its own (DEC-001 point 11).",
       "type": "object",
       "propertyNames": {
         "$ref": "artefact-kinds.schema.json#/$defs/word"

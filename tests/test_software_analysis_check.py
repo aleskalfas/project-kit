@@ -27,15 +27,21 @@ from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     CAPABILITY,
     CONFIG,
+    CONSTRAINTS,
+    FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
     MAIN,
     NEW,
+    QUALITY,
     RECORDS,
     USE_CASES,
     VALIDATE,
+    accepting_san,
     actor_at,
     fill,
     front,
@@ -114,7 +120,10 @@ def test_the_validator_is_a_member_of_pkit_validate(seeded: AdopterRepo) -> None
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "software-analysis:artefacts" in result.output
-    assert "1 actor(s), 0 term(s), 2 use case(s), 1 journey(s)" in result.output
+    assert (
+        "1 actor(s), 0 term(s), 2 use case(s), 1 journey(s), 0 quality requirement(s), "
+        "0 functional requirement(s), 0 constraint(s)" in result.output
+    )
     seeded.write({f"{USE_CASES}/UC-003-broken.md": "---\nid: UC-003\nstatus: active\n---\n"})
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 1
@@ -198,7 +207,8 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
     assert document == {
         "summary": [
             "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
-            "1 journey(s); 0 revalidation record(s).",
+            "1 journey(s), 0 quality requirement(s), 0 functional requirement(s), "
+            "0 constraint(s); 0 revalidation record(s).",
             # The format rule is accepted, yet no set of this repository's own inherits
             # `SAN`, so no body is held to its kind's structure: the check says so, as a
             # warning.
@@ -810,6 +820,125 @@ def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
         (
             f"{rel}:/outcomes/UC-009",
             "no artefact UC-009 in the analysis: a record's outcomes cite artefacts of the "
+            "analysis by id, withdrawn ones included (DEC-001 point 6)",
+        )
+    ]
+
+
+# --- the three kinds of requirement (software-analysis DEC-002, #1691) -------------------------
+
+#: Each kind of requirement: its place, its name beside its id, and its last part,
+#: *Rationale* or, on a constraint, *Imposed by* (DEC-002 points 2 to 4).
+REQUIREMENT_KINDS = {
+    "quality-requirement": (QUALITY, "Quality", "Rationale"),
+    "functional-requirement": (FUNCTIONAL, "Functional", "Rationale"),
+    "constraint": (CONSTRAINTS, "Constraint", "Imposed by"),
+}
+
+#: A set of the project's own created before the requirement kinds: its scope selects
+#: the four kinds DEC-001 gives, and none of DEC-002's.
+EARLIER_SET_TEXT = ANALYSIS_SET_TEXT.replace(
+    ", software-analysis:quality-requirement, software-analysis:functional-requirement, "
+    "software-analysis:constraint",
+    "",
+)
+
+
+def _requirement(shown: str, last: str, **fields: str | None) -> str:
+    """A requirement filled as its kind's structure asks, its front matter's `fields`
+    changed, and one set to `None` left out."""
+    front: dict[str, str | None] = {
+        "id": "REQ-004",
+        "title": "Show a run's result quickly",
+        "status": "active",
+        "statement": "The system shows a suite's result within two seconds of the run's end.",
+        "measure": "None.",
+        "applies-to": "Every run of a suite.",
+        **fields,
+    }
+    written = "".join(f"{k}: {json.dumps(v)}\n" for k, v in front.items() if v is not None)
+    return (
+        f"---\n{written}pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
+        f"# REQ-004 · {shown} · Show a run's result quickly\n\n"
+        f"**Verified by:** A timing test runs the suite and measures when its result shows.\n\n"
+        f"**{last}:** None.\n"
+    )
+
+
+@pytest.mark.parametrize("kind", sorted(REQUIREMENT_KINDS))
+def test_a_requirement_is_held_to_its_kind_s_schema_and_where_the_rule_binds_its_structure(
+    project: AdopterRepo, pkit_on_path: Path, kind: str
+) -> None:
+    """A file in each new place is held by the check's existing passes (#1691): to its
+    kind's companion schema always, and to its kind's structure where RS-SAN-001 binds,
+    through a set of the project's own whose scope selects its type. A set created before
+    the kinds selects none of them, so it holds no requirement to its structure."""
+    place, shown, last = REQUIREMENT_KINDS[kind]
+    rel = f"{place}/REQ-004-quick-result.md"
+    project.write({**accepting_san(project), rel: _requirement(shown, last)})
+    document = check(project)
+    assert errors(document) == []
+    noun = kind.replace("-", " ")
+    assert f", 1 {noun}(s)" in document["summary"][0]
+    assert document["summary"][1].startswith(
+        "structure (RS-SAN-001, accepted): 1 artefact(s) and file head(s) checked"
+    )
+    # Its schema, whatever the rule binds: an id that is no `REQ-NNN`, and no measure.
+    project.write({rel: _requirement(shown, last, id="REQ-4", measure=None)})
+    assert sorted(errors(check(project))) == [
+        (rel, "'measure' is a required property"),
+        (f"{rel}:/id", "'REQ-4' does not match '^REQ-(?:[0-9]{3}|[1-9][0-9]{3,})$'"),
+    ]
+    # Its structure, where the rule binds: its last part missing, a statement of two
+    # sentences, and where it holds reading `None.`.
+    broken = _requirement(
+        shown, last, statement="It shows the result. It does so fast.", **{"applies-to": "None."}
+    ).replace(f"\n\n**{last}:** None.", "")
+    project.write({rel: broken})
+    found = errors(check(project))
+    assert [location for location, _message in found] == [
+        rel,
+        f"{rel}:/statement",
+        f"{rel}:/applies-to",
+    ]
+    missing = f"`**{last}:**` is missing, and it comes after `**Verified by:**`"
+    assert found[0][1].startswith(missing)
+    assert found[1][1].startswith("'It shows the result. It does so fast.' is more than one")
+    assert found[2][1].startswith(
+        f"a {noun}'s `applies-to` reads `None.`, which only a field that allows it may"
+    )
+    assert all("(RS-SAN-001)" in message for _location, message in found)
+    # A set created before the kinds selects no requirement: the rule binds on none.
+    project.write({ANALYSIS_SET: EARLIER_SET_TEXT})
+    document = check(project)
+    assert errors(document) == []
+    assert document["summary"][1].endswith(
+        "No rule of software-analysis:SAN binds on 1 of the 1 artefact(s)."
+    )
+
+
+def test_a_record_cites_a_requirement_and_copies_its_evidence(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """A record's outcomes cite a requirement by its id, and an evidence entry copied for
+    one names no steps (DEC-002, Implications). An id the analysis does not hold is
+    refused, as any artefact's is."""
+    place, shown, last = REQUIREMENT_KINDS["constraint"]
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    record = record.replace("UC-007: gap-found", "REQ-004: gap-found\n  REQ-009: holds")
+    record = record.replace("UC-007", "REQ-004")
+    entry = (
+        "evidence:\n  - id: REQ-004@0000000000000000000000000000000000000000#project.check\n"
+        "    artefact: REQ-004\n    commit: '0000000000000000000000000000000000000000'\n"
+        "    check: project.check\n    result: passed\n    ran: a review of the stores\n---"
+    )
+    record = record.replace("\n---\n", f"\n{entry}\n", 1)  # the closing fence, after it
+    rel = f"{RECORDS}/2026-10-18-country.md"
+    project.write({f"{place}/REQ-004-country.md": _requirement(shown, last), rel: record})
+    assert beside_record_bodies(errors(check(project))) == [
+        (
+            f"{rel}:/outcomes/REQ-009",
+            "no artefact REQ-009 in the analysis: a record's outcomes cite artefacts of the "
             "analysis by id, withdrawn ones included (DEC-001 point 6)",
         )
     ]

@@ -10,8 +10,11 @@ template shows exactly its kind's structure.
   element declares it, one blank line between two parts. The body ends with a
   line end.
 - **The title heading** reads the id and the title or name the stamp gives,
-  such as `# UC-007 — Export the report as a file`. A heading with fixed text,
-  such as a record's `## Outcomes`, reads that text.
+  such as `# UC-007 — Export the report as a file`. A kind shown beside its id
+  puts its name between the two, such as a requirement's
+  `# REQ-004 · Quality · Show a report within two seconds` (DEC-002 point 2;
+  `title_heading`). A heading with fixed text, such as a record's
+  `## Outcomes`, reads that text.
 - **A part a writer fills** holds its hint as the placeholder: one line, a
   marked comment, `<!-- pkit:hint <hint> Example: <example> -->`. It follows a
   label on the label's line. Below a heading, and as an opening, it is a line of
@@ -22,8 +25,9 @@ template shows exactly its kind's structure.
   field's text: the same marked comment, one line, which a YAML parse reads as
   a text like any other. A field that takes a list holds one item, its hint.
   The fields are those the kind declares and its template's front matter
-  gives, less those the stamp writes itself (`STAMPED`): an actor's `needs`
-  and a term's `definition`. The template's front matter, written by hand,
+  gives, less those the stamp writes itself (`STAMPED`): an actor's `needs`, a
+  term's `definition`, and a requirement's `statement`, `measure` and
+  `applies-to`. The template's front matter, written by hand,
   shows the same hints, and a test holds the two equal.
 - **A revalidation record** carries no hints, since its stamp writes every part
   from its command line. Its template shows each part's declared example as one
@@ -52,8 +56,9 @@ _CLOSE = "-->"
 
 #: The front-matter fields the stamp writes itself, from its command line or its
 #: template, so never a writer's to fill: an artefact's id, its title or name, its
-#: status, its actor and its steps.
-STAMPED = frozenset({"id", "title", "name", "status", "actor", "steps"})
+#: status, its actor and its steps, and a requirement's actors and the requirements it
+#: refines.
+STAMPED = frozenset({"id", "title", "name", "status", "actor", "steps", "actors", "refines"})
 
 
 def hint(element: Element) -> str:
@@ -138,7 +143,16 @@ def template(kind: Kind, front: Mapping[str, Any]) -> str:
         name = entry["name"]
         return f"{head(kind)}\n{body(kind, f'{entry_id} — {name}')}"
     named = front.get("title", front.get("name"))
-    return body(kind, f"{front['id']} — {named}")
+    return body(kind, title_heading(kind, str(front["id"]), str(named)))
+
+
+def title_heading(kind: Kind, artefact_id: str, title: str) -> str:
+    """The text of a document's title heading: its id and its title or name,
+    `UC-007 — <title>`. A kind shown beside its id (`Kind.shown_as`) puts its name
+    between the two, `REQ-004 · Quality · <title>` (DEC-002 point 2)."""
+    if kind.shown_as:
+        return f"{artefact_id} · {kind.shown_as} · {title}"
+    return f"{artefact_id} — {title}"
 
 
 def _block(element: Element, title: str, written: str | None, hints: bool) -> str:
