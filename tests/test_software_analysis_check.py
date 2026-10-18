@@ -47,6 +47,7 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    load_lib,
     new,
     prepare_seeded,
     requirement,
@@ -1175,6 +1176,138 @@ def test_a_hint_left_in_a_requirement_s_field_is_refused(project: AdopterRepo) -
         if found is not None
     ]
     assert all(found is not None for found in said.values())
+
+
+#: What the check says of a file under `requirements/` outside the three kinds' folders:
+#: that folder is no place, so the file is in none (DEC-002 point 3, #1724).
+OUTSIDE_KINDS = (
+    "lies under `requirements/` outside the three kinds' folders, and `requirements/` is no "
+    "place, so it is a requirement of no kind: the check holds it to none and the stamp counts "
+    "no number it holds. A requirement lies in the folder of its kind, "
+    "`requirements/quality/`, `requirements/functional/` or `requirements/constraints/` "
+    "(DEC-002 point 3) — move it there, or leave it out with `friction.exclude`"
+)
+
+
+def test_a_file_under_requirements_outside_the_three_kinds_folders_is_refused(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """`requirements/` holds the three kinds' folders and is no place itself, so a file in
+    it outside them is no requirement of any kind (DEC-002 point 3, #1724). The check reads
+    such files from the backbone's one listing (`unplaced` in `pkit friction artefacts`),
+    and leaves out one `friction.exclude` leaves out. A file elsewhere in the analysis
+    location is no concern of this report."""
+    requirements = QUALITY.rsplit("/", 1)[0]
+    loose = f"{requirements}/REQ-007-loose.md"
+    draft = f"{requirements}/drafts/REQ-008-draft.md"
+    project.write(
+        {
+            QUICK: requirement(),
+            loose: requirement(req_id="REQ-007"),
+            draft: "# A draft\n",
+            f"{requirements}/README.md": "# Requirements\n",
+            "tech-docs/analysis/notes.md": "# Notes\n",
+            CONFIG: (
+                f"docs:\n  internal: tech-docs\nfriction:\n  exclude: [{requirements}/README.md]\n"
+            ),
+        }
+    )
+    assert errors(check(project)) == [(loose, OUTSIDE_KINDS), (draft, OUTSIDE_KINDS)]
+    # Moved into its kind's folder, it is a requirement like any other.
+    moved = f"{FUNCTIONAL}/REQ-007-loose.md"
+    project.write(
+        {loose: None, draft: None, moved: requirement("functional-requirement", req_id="REQ-007")}
+    )
+    assert errors(check(project)) == []
+
+
+@pytest.mark.parametrize(
+    ("unplaced", "read"),
+    [
+        (None, None),  # a backbone that predates the key
+        ({}, None),  # no entry for the analysis location
+        ({"software-analysis": {"analysis": {"files": []}}}, None),  # no path given
+        ({"software-analysis": {"analysis": {"path": "a"}}}, None),  # no list of files
+        (
+            {
+                "software-analysis": {
+                    "analysis": {
+                        "path": "x/../a/",
+                        "files": [{"path": "a/requirements/REQ-001-a.md", "excluded": False}],
+                    }
+                }
+            },
+            ("a/requirements/REQ-001-a.md",),
+        ),
+        (
+            {
+                "software-analysis": {
+                    "analysis": {
+                        "path": ".",
+                        "files": [
+                            {"path": "requirements/REQ-001-a.md", "excluded": False},
+                            {"path": "requirements/old/REQ-002-b.md", "excluded": True},
+                            {"path": "requirementsx/REQ-003-c.md", "excluded": False},
+                            {"path": "notes.md", "excluded": False},
+                        ],
+                    }
+                }
+            },
+            ("requirements/REQ-001-a.md",),
+        ),
+    ],
+)
+def test_the_files_outside_the_kinds_are_read_from_the_location_s_unplaced_files(
+    unplaced: dict[str, Any] | None, read: tuple[str, ...] | None
+) -> None:
+    """The model keeps the location's files under `requirements/` that are not excluded,
+    the location's path read in its normal form, and says it has no answer when the
+    backbone's reading gives none for the location (#1724)."""
+    (model,) = load_lib("model")
+    document: dict[str, Any] = {"schema_version": 1}
+    if unplaced is not None:
+        document["unplaced"] = unplaced
+    assert model.analysis_of(document).outside_kinds == read
+
+
+#: A `pkit` answering `friction artefacts` as a backbone from before the document carried
+#: `unplaced`: the real answer, with the key taken out.
+_PKIT_WITHOUT_UNPLACED = """#!{python}
+import json, subprocess, sys
+done = subprocess.run([sys.executable, "-m", "project_kit", *sys.argv[1:]],
+                      capture_output=True, text=True)
+out = done.stdout
+if sys.argv[1:3] == ["friction", "artefacts"] and done.returncode == 0:
+    document = json.loads(out)
+    del document["unplaced"]
+    out = json.dumps(document)
+sys.stdout.write(out)
+sys.stderr.write(done.stderr)
+sys.exit(done.returncode)
+"""
+
+
+def test_a_backbone_that_gives_no_unplaced_files_makes_the_check_say_it_did_not_look(
+    project: AdopterRepo, pkit_on_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Without the backbone's list, nothing says whether `requirements/` holds a file
+    outside the three kinds' folders, so the check says it could not look, and never
+    reads the silence as no such file (#1724)."""
+    older = tmp_path / "older-backbone"
+    older.mkdir()
+    (older / "pkit").write_text(_PKIT_WITHOUT_UNPLACED.format(python=sys.executable))
+    (older / "pkit").chmod(0o755)
+    monkeypatch.setenv("PATH", f"{older}{os.pathsep}{os.environ['PATH']}")
+    project.write({QUICK: requirement()})
+    assert errors(check(project)) == [
+        (
+            "tech-docs/analysis",
+            "no file under `requirements/` outside the three kinds' folders is looked for: "
+            "`pkit friction artefacts --json` gives no `unplaced` list of the analysis "
+            "location's files, which an installed backbone that predates it lacks — upgrade it "
+            "(`pkit upgrade`)",
+        )
+    ]
 
 
 # --- anchors (DEC-001 point 4) ----------------------------------------------------------------

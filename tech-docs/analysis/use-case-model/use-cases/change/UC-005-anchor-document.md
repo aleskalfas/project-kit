@@ -22,6 +22,10 @@ pkit:
         - COR-050#12
       artefact:
         - ACT-developer
+    revalidated:
+      at: 2026-10-18T17:44:49Z
+      outcome: unchanged
+      unchanged-because: The change adds to pkit friction artefacts a list of the files of a capability's documentation location that no place or held folder of it holds. How a developer declares and checks a document's anchors, and the places the command lists, are unchanged.
 ---
 
 # UC-005 — Say what my document rests on

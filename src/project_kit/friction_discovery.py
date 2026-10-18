@@ -92,8 +92,10 @@ is the one reader of those declarations and the one walker of the places:
   every artefact with its anchors, an entry's section span, the span each of
   its part anchors resolves to, its type and the rule sets whose scope covers
   it, every declared type, and the held folders,
-  declared as places are, with every file each holds — of the working tree, or
-  of a commit.
+  declared as places are, with every file each holds, and the files within
+  each capability's documentation location that no place or held folder of
+  that capability holds (`unplaced_files`) — of the working tree, or of a
+  commit.
   `pkit friction artefacts --json` prints it, and a capability's script reads
   where artefacts are through it, at head or at another state, never by
   walking the places or listing a commit itself (ADR-057 points 1 and 2).
@@ -319,6 +321,21 @@ class PlaceLocation:
 
 
 @dataclass(frozen=True)
+class CapabilityLocation:
+    """A documentation location an installed capability declares (COR-049 point 4).
+
+    `capability` is the capability's name, `name` the location's entry in its
+    `docs.locations`, and `path` where it lies, repository-relative, as
+    `docs_roots.read_capability_locations` reads it: its recorded location,
+    else its declared sub-path under the root it names (point 5).
+    """
+
+    capability: str
+    name: str
+    path: str
+
+
+@dataclass(frozen=True)
 class RevisitLink:
     """One link a component's place declares whose source's change revisits its
     targets (COR-050 point 16).
@@ -446,6 +463,10 @@ class FrictionSettings:
     point 2). `refused_types` are the project's places whose `type` the
     configuration's schema refuses, each with that value as written in
     `value`: they give no type, and a reader warns (`refused_type_warnings`).
+    `locations` are the documentation locations the installed capabilities
+    declare, each capability's by name in declaration order: those the reading
+    of a capability's locations places, since the packages pass reports a
+    declaration it cannot place.
     """
 
     mode: Any
@@ -462,6 +483,7 @@ class FrictionSettings:
     types: tuple[DeclaredType, ...] = ()
     installed: tuple[str, ...] = ()
     refused_types: tuple[SettingsPath, ...] = ()
+    locations: tuple[CapabilityLocation, ...] = ()
 
     @property
     def roots(self) -> dict[str, str]:
@@ -556,6 +578,7 @@ def read_friction_settings(
     malformed_surface: list[MalformedDeclaration] = []
     malformed_held: list[MalformedDeclaration] = []
     types: list[DeclaredType] = []
+    capability_locations: list[CapabilityLocation] = []
     installed = installed_capability_names(target_root, tree)
 
     for name in installed:
@@ -563,6 +586,11 @@ def read_friction_settings(
         package = load(package_rel)
         recorded = load(docs_roots.capability_locations_relpath(name).as_posix())
         locations = docs_roots.read_capability_locations(package, recorded, roots)
+        capability_locations.extend(
+            CapabilityLocation(capability=name, name=location, path=where.path.as_posix())
+            for location, where in locations.items()
+            if isinstance(where, docs_roots.Location)
+        )
         found, malformed = _capability_places(name, package, package_rel, locations)
         places.extend(found)
         malformed_places.extend(malformed)
@@ -589,6 +617,7 @@ def read_friction_settings(
         types=tuple(types),
         installed=tuple(installed),
         refused_types=tuple(refused_types),
+        locations=tuple(capability_locations),
     )
 
 
@@ -3784,6 +3813,79 @@ def _scope(found: DiscoveredFile) -> Scope | None:
     )
 
 
+# --- a capability's location, outside its places ---------------------------
+
+
+@dataclass(frozen=True)
+class UnplacedFile:
+    """A Markdown file within a capability's documentation location that no place
+    or held folder of that capability holds (`unplaced_files`).
+
+    `location` is the location it lies within. `excluded_by` is the
+    `friction.exclude` entry it lies under, else `None`: the decision a walked
+    file carries, so its capability leaves it out as the measures leave out an
+    excluded artefact (COR-050 point 7).
+    """
+
+    location: CapabilityLocation
+    path: str
+    excluded_by: SettingsPath | None = None
+
+
+def unplaced_files(discovery: Discovery, listing: RepositoryTree) -> tuple[UnplacedFile, ...]:
+    """The Markdown files of a listing that lie within a documentation location an
+    installed capability declares and that no place or held folder of that
+    capability holds: each location in `discovery.settings.locations` order, its
+    files by path.
+
+    `listing` is the state the walk read: a commit, or the working tree's one
+    listing (`working_tree`), which a run shares with the walk. So the answer
+    agrees with discovery inside a git work tree and outside one (ADR-057 point
+    2). A place holds every file it
+    matches, read as the walk reads it (`listed_files_in_place`), a synced copy
+    included. A held folder holds its files unless it is skipped, and a skipped
+    one holds nothing (`held_folders`). Only the capability's own declarations
+    count, so the backbone knows nothing of how the capability lays out its
+    location, and what a file listed here means is the capability's to decide. A
+    file another component's place or the project's matches is listed too. A
+    link is never listed, as the walk never reads one (`_is_link`).
+    """
+    settings = discovery.settings
+    holders: dict[str, list[Place]] = {}
+    for place in declared_places(settings):
+        if place.declaration.is_capability:
+            holders.setdefault(capability_name(place.source), []).append(place)
+    for folder in discovery.held_folders:
+        if folder.skipped is None:
+            holders.setdefault(folder.component, []).append(folder.place)
+    files = listing.files()
+    found: list[UnplacedFile] = []
+    for location in settings.locations:
+        within = _documents_within(location.path, files)
+        held: set[str] = set()
+        for holder in holders.get(location.capability, []):
+            held.update(listed_files_in_place(holder, within))
+        found += [
+            UnplacedFile(location, rel, settings.exclusion(rel))
+            for rel in within
+            if rel not in held and not _is_link(listing, rel)
+        ]
+    return tuple(found)
+
+
+def _documents_within(folder: str, files: Sequence[str]) -> list[str]:
+    """The Markdown files of a listing at or beneath the literal `folder`, sorted: none
+    for a folder outside the repository."""
+    if not _textually_inside(folder):
+        return []
+    normal = _normal(folder)
+    documents = _documents(tuple(files))
+    if normal == ".":
+        return sorted(documents)
+    prefix = normal + "/"
+    return sorted(f for f in documents if f.startswith(prefix))
+
+
 # --- the reading document: `pkit friction artefacts` ---------------------
 
 #: The version of the document `artefacts_document` returns. A change a reader
@@ -3910,6 +4012,12 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
       leaves it out (`excluded`) — its owner then counts it no more than the
       measures count an excluded artefact — its front matter's own `fields`
       and why it is `unreadable`, if it is.
+    - `unplaced`: each installed capability's documentation locations, by the
+      capability's name and then the location's (COR-049 point 4), each with
+      the `path` where it lies and the `files` within it that no place or held
+      folder of that capability holds (`unplaced_files`), each with its `path`
+      and whether `friction.exclude` leaves it out (`excluded`). Read from the
+      same listing as the walk. Added within version 1.
     """
     settings = read_friction_settings(target_root, tree)
     discovery = discover_artefacts(target_root, settings, tree)
@@ -3955,6 +4063,8 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
     in_scope_of = covering_rule_sets(discovery)
     types = discovery.types
     anchored_points = _AnchoredPoints(target_root, tree)
+    listing = tree if tree is not None else working_tree(target_root)
+    unplaced = unplaced_files(discovery, listing)
 
     return {
         "schema_version": ARTEFACTS_SCHEMA_VERSION,
@@ -4035,6 +4145,7 @@ def artefacts_document(target_root: Path, tree: RepositoryTree | None = None) ->
             }
             for held in discovery.held
         ],
+        "unplaced": _unplaced_entry(settings.locations, unplaced),
     }
 
 
@@ -4129,6 +4240,26 @@ def _malformed_held_entry(declaration: MalformedDeclaration) -> dict[str, Any]:
         "files": [],
         "skipped": {"reason": SKIP_MALFORMED, "detail": declaration.reason},
     }
+
+
+def _unplaced_entry(
+    locations: Sequence[CapabilityLocation], unplaced: Sequence[UnplacedFile]
+) -> dict[str, dict[str, Any]]:
+    """Each capability's locations by name, each with where it lies and the files no
+    place or held folder of that capability holds (`unplaced_files`). A location
+    holding none is listed with no files, so a reader tells it from one the reading
+    cannot place."""
+    entry: dict[str, dict[str, Any]] = {}
+    for location in locations:
+        entry.setdefault(location.capability, {})[location.name] = {
+            "path": location.path,
+            "files": [
+                {"path": found.path, "excluded": found.excluded_by is not None}
+                for found in unplaced
+                if found.location == location
+            ],
+        }
+    return entry
 
 
 def _part_anchors(
@@ -4319,7 +4450,9 @@ def render_artefacts_json(document: Mapping[str, Any]) -> str:
 
 def render_artefacts_human(document: Mapping[str, Any]) -> str:
     """One line per place, then the counts of files and artefacts, then — when a
-    component declares any — one line per held folder, with the files it holds."""
+    component declares any — one line per held folder, with the files it holds,
+    and — when one holds any — one line per capability location holding files no
+    place or held folder of its capability holds."""
     places = document["places"]
     lines = [f"{len(places)} place(s):"]
     for place in places:
@@ -4343,6 +4476,23 @@ def render_artefacts_human(document: Mapping[str, Any]) -> str:
     if held:
         lines.append(f"{len(held)} held folder(s), whose files no place walks:")
         lines += [_skipped(entry, _declaration_line(entry, entry["source"])) for entry in held]
+    unplaced = [
+        (capability, name, entry)
+        for capability, locations in sorted(document["unplaced"].items())
+        for name, entry in sorted(locations.items())
+        if entry["files"]
+    ]
+    if unplaced:
+        lines.append(
+            f"{len(unplaced)} capability location(s) holding files no place or held folder "
+            f"of the capability holds:"
+        )
+        lines += [
+            f"  {entry['path']}  (capability:{capability}, location {name})  "
+            f"{len(entry['files'])} file(s), {sum(1 for f in entry['files'] if f['excluded'])} "
+            f"excluded"
+            for capability, name, entry in unplaced
+        ]
     return "\n".join(lines) + "\n"
 
 
