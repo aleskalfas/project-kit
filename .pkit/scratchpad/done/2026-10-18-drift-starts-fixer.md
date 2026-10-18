@@ -16,15 +16,27 @@ The design round of #1684. When drift is found, the fixer declared for that kind
 - **Decided on 18 October** (#1684):
   - **The maintainer:** a fixer starts on its own only where the project granted it, in a list that is empty by default. Installing a capability that declares a fixer asks a plain question. The upgrade that first brings one asks once. An install without a terminal grants nothing and prints the one line to grant later. Commands list, grant and revoke for advanced use. project-kit grants both of its fixers.
   - **The project manager,** under the maintainer's delegation: the loop does not wait for #1682. Proposals wait as files in the agent workspace, and `land-work` prints their count until #1682's view lists them.
-- **This note decides nothing.** A project-management decision record states the design (#1740).
+- **This note decides nothing.** [project-management:DEC-056-drift-fixers] states the design (#1740), and governs where the two differ. "Where the record departs" lists each difference.
 
 ## In short
 
 - **A command starts the fixers, not the `Agent` tool.** A project-management command reads the declared fixers, starts each granted one headless, as `review-pr` starts reviewers, and gathers the proposals. Code fixes the set of agents, so tests can check it.
-- **The project grants, the capability declares.** A capability declares which of its agents fixes which of its types. Only the agents the project granted start, from a list that is empty by default. Install asks the person, and commands list, grant and revoke.
-- **A fixer runs confined, as far as the harness can confine it.** The command denies it every command it does not need, and the OS sandbox bounds what its shell writes. Network egress stays an honest gap. A fixer is a leaf: it starts no other agent.
+- **The project grants, the capability declares.** A capability declares which of its agents fixes which of its types. Only the agents the person granted start, from a list that is empty by default. The drift command and the project manager ask the person, and install and upgrade will once a core record lets them. Commands list, grant and revoke.
+- **A fixer runs confined, as far as the harness can confine it.** The permission model gives each run an allow list, with denies as its floor, held where they fail closed, and the OS sandbox bounds what its shell writes. A harness that cannot confine a run starts none. Network egress stays an honest gap. A fixer is a leaf: it starts no other agent.
 - **The proposal waits as files,** in one durable run folder with an index. `land-work` prints how many wait. The project manager brings the proposals to the person in one batch. Once the person accepts, the project manager applies them through an ordinary pull request.
 - **Not waiting for #1682.** When #1682's view is built, it lists proposals as a third kind beside ready merges and acceptances.
+
+## Where the record departs
+
+The critic, the architect and the methodology-reviewer reviewed the record. Their rounds changed the design below in these places, and the record holds:
+- **Who asks, and when.** The drift command asks at a terminal, and the project manager relays the question word for word. Install and upgrade ask only once a core record lets them, and that record decides whether and how. The trigger is a declared fixer type with no recorded answer, not "the upgrade that first brings a fixer".
+- **What a grant names.** An agent and the types the question named. A type added later is asked about again. A grant is written only on the person's own answer, and counts once its change merges. The landing command lists a change to the grant list.
+- **The run's rules.** An allow list, with the denies below as its floor. They are the permission model's, scoped to a fixer's run, and held where they fail closed. A harness that cannot hold them, or cannot sandbox the shell, starts no fixer. The command keeps no rule list of its own.
+- **A proposal is data:** a diff confined to its artefact's file or entry, and each answer as fields. This capability builds each writer's command from the fields, and never runs a string a fixer wrote. So "an injected command" and "its commands word for word" below read as the answers' words.
+- **Checked again** against the current default branch before a proposal is shown, and before it is applied.
+- **A refusal is remembered** in the queue, against the artefact's friction. Its lasting form is a deferral.
+- **Order:** an artefact waits too where its upstream has no granted fixer.
+- **The count line stays.** #1682's view, once built, lists the proposals beside it.
 
 ## Who may start which agent
 
@@ -116,7 +128,7 @@ A headless run cannot prompt. So a tool call no rule allows is refused, and the 
 - **Kept in the main checkout:** the command gathers every run into the main checkout's workspace, `.agent-workspace/project-manager/drift/`. It keeps an index of each artefact, its type, its fixer, its state and its proposal, and the commit it was judged at. Proposals do not depend on a worktree that is later removed.
 - **The workspace holds a queue here, not only intermediate files.** The decision says so. A run folder is kept until each of its proposals is accepted or refused, and then removed (core rule 16).
 - **Why one checkout is enough.** Dispatch is local, as the issue decides. The debt is not kept there: git holds it, and the whole-repository check recomputes it anywhere (COR-050 point 9). A proposal is work that can be done again. In a checkout that holds none, a stale artefact has no standing proposal, so the next run there dispatches it again. A view on another machine shows the debt, and marks each artefact with no proposal there.
-- **Visible:** `land-work` prints a one-line count of proposals waiting, until #1682 lists them.
+- **Visible:** `land-work` prints a one-line count of proposals waiting, and #1682's view lists them once built.
 - **One batch:** the project manager brings the proposals together, each with its commands word for word (choice 1, and "Friction writers" condition 3). The person accepts, rewords or refuses each.
 - **After yes:** the project manager files an issue, branches, applies the diffs and runs the writers the person accepted. It runs a writer only under the four conditions of "Friction writers", so its body names them. The change then passes the ordinary gate, and the person authorises its merge.
 
@@ -126,9 +138,11 @@ One place lists the proposals beside ready merges and acceptances. #1682's first
 
 ## How this reads choice 10
 
-Choice 10 says that "each kind of place declares its fixer, and the drift check dispatches it". This note reads it in two ways the maintainer should confirm:
+Choice 10 says that "each kind of place declares its fixer, and the drift check dispatches it". This note reads it in two ways, put to the maintainer to confirm:
 - **A kind of place is the type a place gives** (COR-056). A place has no id, and a type has.
 - **The drift check does not dispatch.** The checks are read-only (COR-050 point 12). A project-management command reads the check and starts the fixers, as the issue already says.
+
+**Settled by the record:** DEC-056 takes both readings, in its points 1 and 3. The project manager accepted it under the maintainer's delegation. The maintainer has not confirmed the two readings in words.
 
 ## Order of work
 
@@ -137,16 +151,18 @@ Choice 10 built the loop after #1682 and after project-kit has its analysis and 
 ## Records that change
 
 - **New, project-management:** a decision holding the point, the grant, the command and its bounds, the confinement, the hand-off and the batch. It answers the first criterion.
-- **New, ADR:** agents a command starts. Where the runner lives, its tie to the `claude` CLI, what the permission hook sees, the per-run confinement, what stays open, and the check after the run. It is accepted before the command is built.
+- **New, ADR:** agents a command starts. Where the runner lives, its tie to the `claude` CLI, what the permission hook sees, the per-run confinement and the shape the permission model gives a rule scoped to a run, what stays open, and the check after the run. It is accepted before the command is built.
+- **New, core:** whether and how install and upgrade ask the question for a point's definer. It sits with COR-017, COR-059 point 4 and COR-053 point 9 (DEC-056 point 2).
+- **Asked of the agent workspace's accounts,** core rule 16 and the permission capability's README: to name a queue as a use of the workspace (DEC-056, Implications).
 - Both name roles and commands, not this note's file and function names (COR-046).
 - **Refined in place:**
   - project-management DEC-029, "Invocation pattern": an agent a project-management command starts is no `Agent`-tool dispatch, and its set is the grant the command reads
   - software-analysis DEC-001 and living-docs DEC-001: each names its agent as the fixer of its types
-  - the agents README, "Friction writers" condition 2: not needed after all. A fixer cannot ask the person, so condition 2 already lets it run no writer, and the record's confinement denies it every writer.
   - both fixers' bodies and storyboards: the brief they take, the result line, and "a command started you"
   - the pm skill and the project manager's body: when to run the command, the batch, and applying accepted proposals
   - the dispatch note: the command route
-- **Untouched:** COR-050, COR-052, COR-053, COR-056, COR-028 and the privilege catalog. No migration: every change adds.
+- **Not refined:** the agents README, "Friction writers". A fixer cannot ask the person, so it already runs no writer, and the record's confinement denies it every writer.
+- **Untouched:** COR-050, COR-052, COR-053, COR-056 and the privilege catalog. COR-028 too, unless the ADR finds that a rule scoped to a run needs a core refinement. No migration: every change adds.
 - **Changesets:** a minor each for project-management, software-analysis and living-docs.
 - **Later:** a harness requirement (COR-047) that an agent can be started confined from a command and its files read.
 
@@ -154,8 +170,8 @@ Choice 10 built the loop after #1682 and after project-kit has its analysis and 
 
 1. **The project-management decision** (#1740). The critic, the architect and the methodology-reviewer, then acceptance. Delivers the first criterion.
 2. **The ADR,** after task 1. Delivers the runner's architecture, accepted before task 5.
-3. **The runner out of `review-pr`,** after task 2, to the home the ADR names. The architect recommends an adapter primitive, found by name as the deploy primitives are, since the record puts realisation in the adapter. Behaviour stays the same, so it needs no changeset.
-4. **The point and the grant,** after task 1. The schema, the package entry, the checks on each entry, the grant list and its commands, with tests on fixtures. Delivers the declaration and the grant. The question at install and upgrade needs the lifecycle to ask for a point's definer, a core change of its own. project-kit's own grant of both fixers lands here.
+3. **The runner out of `review-pr`,** after task 2, to the home the ADR names. The architect recommends an adapter primitive, found by name as the deploy primitives are, since the record puts the realisation of the run's rules in the adapter. Behaviour stays the same, so it needs no changeset.
+4. **The point and the grant,** after task 1. The schema, the package entry, the checks on each entry, the grant list and its commands, with tests on fixtures. Delivers the declaration and the grant. The question at install and upgrade needs the lifecycle to ask for a point's definer, a core change of its own. project-kit's own grant of both fixers lands here, as the record asks: the maintainer answers the question, worded as the record builds it, or runs the grant command.
 5. **The command,** after tasks 2, 3 and 4. The worktree, reading, order, bounds, lock, confinement, the check after the run, the index, the count line in `land-work` and `--dry-run`, tested with a stub runner. Delivers a run that proposes.
 6. **software-analysis,** after task 4. The contribution, the agent's brief and result line, its storyboard, the README and the DEC-001 refinement. Delivers its fixer, declared.
 7. **living-docs,** the same, in parallel with task 6.
