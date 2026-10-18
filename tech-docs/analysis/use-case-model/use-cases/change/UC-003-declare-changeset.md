@@ -61,7 +61,7 @@ pkit:
 - **6a.** A touched component has no changeset in the change. The guard fails with `surface change without a changeset for: <component>.`, naming the fixes. They are a changeset, a `none` changeset, or the `skip-changeset` label, and the path rejoins at step 2.
 - **6b.** Only a pending changeset that the change leaves alone names the component. It declares another pull request's change, so it does not count. The guard fails as in 6a.
 - **6c.** A changeset declares a floor or an upper bound for a component the change neither touches nor moves. The guard fails, and no escape hatch waives it (PRJ-002 D4).
-- **6d.** The change edits the range of an existing `requires_capabilities` entry, other than to correct one that excludes the version the tree carries. The guard fails, and no escape hatch waives it (PRJ-002 D1).
+- **6d.** The change edits the range of an existing `requires_capabilities` entry, other than to correct one that excludes the version the tree carries. The guard fails, and no escape hatch waives it (`release.py`).
 - **6e.** The change is only what `pkit release apply` writes. The guard reads it as a release pull request, and exempts it from the surface check.
 - **7a.** The pull request carries the `skip-changeset` label. The CI pipeline passes it to the guard as `PKIT_CHANGESET_SKIP`, which skips the surface check. The guard still checks floors, bounds and range edits.
 - **7b.** The pull request reaches a merge queue. The guard does not run on the queue's merge, which carries no labels, since it judged the pull request's diff already.

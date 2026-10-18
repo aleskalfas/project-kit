@@ -58,7 +58,7 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit friction check` on the change's branch.
-2. The system compares the working tree with where the branch left its base, the default branch unless `--base` or `PKIT_CHECK_BASE` names another. It prints the base commit.
+2. The system compares the working tree with where the branch left its base, the default branch unless `--base` or `PKIT_CHECK_BASE` names another. It prints the commit where the branch left the base.
 3. The system reports, as `friction`, each artefact with an anchor the change modified and no answer, upstream first along the anchors between artefacts.
 4. For each one, the developer or the agent making the change reads what changed under its anchors, and judges whether the artefact still holds.
 5. They update the artefact and run `pkit friction revalidate <artefact> --outcome updated`, or run it with `--outcome unchanged --because "<why it still holds>"`.
