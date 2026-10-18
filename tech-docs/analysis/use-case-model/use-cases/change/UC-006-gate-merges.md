@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T19:51:01Z
+      at: 2026-10-18T20:17:11Z
       outcome: unchanged
-      unchanged-because: This change alters only the help text of the sandbox enable command's --dangerously-allow-unconfined flag in cli.py. How pkit config set, pkit validate and pkit friction check hold a merge is untouched.
+      unchanged-because: This change makes pkit migrations check-diff also fail a migration script at a released version, read at the base it already compares with, and makes pkit new migration choose its version. This use case names that check only among the project's other checks, each exiting non-zero on what fails it, and how pkit validate and pkit friction check hold a merge is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

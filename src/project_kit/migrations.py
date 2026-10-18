@@ -22,6 +22,15 @@ Two responsibilities:
    "Migrations are mandatory on adopter-breaking surface changes"
    rule) and verifies the same diff includes a matching migration
    script. CI gates the merge; the agent uses it pre-commit.
+
+3. **Which version a migration targets** — a migration's folder names the
+   version it carries a project to, never one already released: the runner
+   runs a folder only past the version a project records. The stamp
+   (`scaffolds.stamp_migration`) allocates past the released version
+   (`migration_target`), and the check (`released_targets`) fails a script a
+   change lands at or below it. Both read the released version through
+   `recorded_version`, from a tree: the stamp from the default branch, as an
+   allocator (COR-054 point 3), the check from its base's tip.
 """
 
 from __future__ import annotations
@@ -35,14 +44,17 @@ import stat
 import subprocess
 import sys
 import tempfile
-from collections.abc import Generator
+from collections.abc import Callable, Generator, Iterable, Sequence
 from dataclasses import dataclass
-from pathlib import Path
-from typing import Literal
+from pathlib import Path, PurePosixPath
+from typing import Any, Literal, cast
 
 import click
+from ruamel.yaml import YAML
+from ruamel.yaml.error import YAMLError
 
-from project_kit import __version__, cli_render
+from project_kit import __version__, cli_render, lifecycle_ownership
+from project_kit.friction_git import SHORT, CommitTree
 
 _VERSION_DIR_RE = re.compile(r"^\d+\.\d+\.0$")
 
@@ -79,6 +91,135 @@ def parse_version_tuple(value: str) -> tuple[int, int, int]:
         return int(parts[0]), int(parts[1]), int(parts[2])
     except ValueError as exc:
         raise click.ClickException(f"version {value!r} has non-integer components.") from exc
+
+
+# --- which version a migration targets (COR-010; #1754) ---------------
+
+# A full commit id, as a pipeline names a base; a line names it shortened.
+_FULL_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+
+# A released version: `major.minor.patch`, with a pre-release or build suffix allowed.
+_RELEASE_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.+-]*)?$")
+
+# Typed `Any`: ruamel.yaml ships its loader untyped.
+_safe_yaml: Any = YAML(typ="safe")
+
+# Reads one file of a tree by its path from the project root: its bytes, or `None`
+# where the tree holds no such file.
+TreeReader = Callable[[str], bytes | None]
+
+
+def version_cell(tier: Tier, component: str | None) -> str:
+    """The file, from the project root, holding the version a tier's release writes:
+    `.pkit/VERSION` for the backbone, the component's `package.yaml` for an adapter or
+    a capability (PRJ-002 D3)."""
+    if tier == "backbone":
+        return ".pkit/VERSION"
+    folder = "adapters" if tier == "adapter" else "capabilities"
+    return f".pkit/{folder}/{component}/package.yaml"
+
+
+def tier_subject(tier: Tier, component: str | None) -> str:
+    """How a message names a tier: `backbone`, or `capability <name>`."""
+    return "backbone" if tier == "backbone" else f"{tier} {component}"
+
+
+def recorded_version(tier: Tier, component: str | None, read: TreeReader) -> str | None:
+    """The version a tree records for a tier, read through `read`, or `None` where the
+    tree holds no such file. A file that records no `major.minor.patch` version
+    refuses, naming it: whether a folder is released cannot be told without it."""
+    cell = version_cell(tier, component)
+    raw = read(cell)
+    if raw is None:
+        return None
+    text = raw.decode("utf-8", "replace")
+    value: object
+    if tier == "backbone":
+        value = text.strip()
+    else:
+        try:
+            loaded: Any = _safe_yaml.load(text)
+        except YAMLError as exc:
+            raise click.ClickException(f"{cell} cannot be read as YAML: {exc}") from exc
+        block = cast(dict[str, Any], loaded).get("component") if isinstance(loaded, dict) else None
+        value = cast(dict[str, Any], block).get("version") if isinstance(block, dict) else None
+    if not isinstance(value, str) or not _RELEASE_RE.match(value):
+        raise click.ClickException(
+            f"{cell} records no version in major.minor.patch form ({value!r})."
+        )
+    return value
+
+
+def minor_of(version: str) -> tuple[int, int]:
+    """The `(major, minor)` of a version, its patch and any suffix left out."""
+    match = _RELEASE_RE.match(version)
+    if match is None:
+        raise click.ClickException(f"version {version!r} is not in major.minor.patch form.")
+    return int(match.group(1)), int(match.group(2))
+
+
+@dataclass(frozen=True)
+class MigrationTarget:
+    """The folder a migration stamped without a version goes in (`X.Y.0`), and why."""
+
+    version: str
+    reason: str
+
+
+def migration_target(
+    subject: str,
+    released: str,
+    where: str,
+    *,
+    own: str | None = None,
+    folders: Iterable[str] = (),
+) -> MigrationTarget:
+    """The version a migration targets when none is given: never `released`'s minor or
+    one below it, since a project at `released` never runs such a folder.
+
+    It is the highest of: the next minor past `released`; the minor the working tree
+    records (`own`), where it is above `released`, as on the branch of a project whose
+    change bumps its own version; and the next major, where its folder already waits
+    among `folders`, so a script written after a pending major change runs after that
+    change's own migrations. A folder further ahead is never joined, since a change may
+    target a later release on purpose (#465). The pending major is not predicted from
+    changesets: the release computes the version (PRJ-002 D2/D3), and `release plan`
+    warns where a folder does not match it. `subject` names the tier and `where` what
+    records `released`, for the reason."""
+    major, minor = minor_of(released)
+    candidates: list[tuple[tuple[int, int], str]] = [
+        ((major, minor + 1), f"the next minor past {subject} {released}, which {where} records")
+    ]
+    if own is not None and minor_of(own) > (major, minor):
+        candidates.append(
+            (
+                minor_of(own),
+                f"the version the working tree records for {subject}, {own}, above "
+                f"{released} on {where}",
+            )
+        )
+    if f"{major + 1}.0.0" in set(folders):
+        candidates.append(
+            (
+                (major + 1, 0),
+                f"the next major past {subject} {released}, whose folder {major + 1}.0.0/ "
+                f"already waits",
+            )
+        )
+    (target_major, target_minor), reason = max(candidates, key=lambda c: c[0])
+    return MigrationTarget(f"{target_major}.{target_minor}.0", reason)
+
+
+def version_folders(files: Iterable[str], root: str) -> set[str]:
+    """The `X.Y.0` folders directly under `root` that hold a file, of the paths `files`."""
+    prefix = root.rstrip("/") + "/"
+    folders: set[str] = set()
+    for rel in files:
+        if rel.startswith(prefix):
+            first = rel[len(prefix) :].split("/", 1)[0]
+            if _VERSION_DIR_RE.match(first):
+                folders.add(first)
+    return folders
 
 
 def pending_migration_scripts(
@@ -398,10 +539,14 @@ class DiffMigration:
 
 @dataclass(frozen=True)
 class CoverageReport:
-    """Result of a `check_diff_coverage` run."""
+    """Result of a `check_diff_coverage` run.
+
+    `landed` is each migration script the diff adds, or moves in by a rename: what
+    `released_targets` judges."""
 
     triggers: tuple[DiffTrigger, ...]
     migrations: tuple[DiffMigration, ...]
+    landed: tuple[str, ...] = ()
 
     @property
     def is_covered(self) -> bool:
@@ -443,6 +588,7 @@ def check_diff_coverage(
     )
     triggers: list[DiffTrigger] = []
     migrations: list[DiffMigration] = []
+    landed: list[str] = []
     for status, path, old_path in entries:
         if status == "A" and _is_migration_path(path):
             migrations.append(
@@ -452,6 +598,11 @@ def check_diff_coverage(
                     component=_migration_path_component(path),
                 )
             )
+            landed.append(path)
+            continue
+        if status == "R" and _is_migration_path(path):
+            # A script moved into a folder lands there as an added one does.
+            landed.append(path)
             continue
         if _is_migration_path(path):
             # Renames / deletes within a migrations dir don't trigger;
@@ -486,7 +637,103 @@ def check_diff_coverage(
                     component=tier_info[1],
                 )
             )
-    return CoverageReport(triggers=tuple(triggers), migrations=tuple(migrations))
+    return CoverageReport(
+        triggers=tuple(triggers), migrations=tuple(migrations), landed=tuple(landed)
+    )
+
+
+@dataclass(frozen=True)
+class ReleasedTarget:
+    """A migration script a change lands in a folder its tier has already released, or
+    whose tier's version the base records in no readable form; `line` says which."""
+
+    path: str
+    tier: Tier
+    component: str | None
+    line: str
+
+
+def released_targets(
+    target_root: Path,
+    landed: Sequence[str],
+    *,
+    base: str,
+    tip: str,
+    head: str | None = None,
+) -> tuple[ReleasedTarget, ...]:
+    """Each script of `landed` whose folder's minor is at or below the version its tier
+    records at the base's tip `tip`, so a project already there never runs it.
+
+    The tip, not the branch point: a release that lands after the branch was cut
+    releases the folder all the same. A script in no `X.Y.0` folder has no version to
+    judge. Skipped: a script the project receives by sync (`is_synced_copy`), and one
+    the tip already holds, which the change did not bring: at its path, or under
+    another name in its folder with the same content, as a rename leaves it. A tier
+    the tip records no version for, such as a component the change adds, has nothing
+    released. The script's content is read at commit `head`, or from the working tree
+    when `head` is `None`. `base` is the base as named, for the line, a commit id
+    shortened."""
+    judged = [path for path in landed if _VERSION_DIR_RE.match(PurePosixPath(path).parent.name)]
+    if not judged:
+        return ()
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    judged = [
+        path
+        for path in judged
+        if ownership is None or not ownership.is_synced_copy(target_root, path)
+    ]
+    if not judged:
+        return ()
+    tree = CommitTree(target_root, tip)
+    held = tree.files()
+    held_set = set(held)
+    head_tree = CommitTree(target_root, head) if head is not None else None
+    if _FULL_COMMIT_RE.match(base):
+        base = base[:SHORT]
+
+    def read(rel: str) -> bytes | None:
+        return tree.read_bytes([rel])[rel]
+
+    def renamed(path: str) -> bool:
+        """The tip holds the script's very content under another name in its folder."""
+        if head_tree is not None:
+            content = head_tree.read_bytes([path])[path]
+        else:
+            file = target_root / path
+            content = file.read_bytes() if file.is_file() else None
+        folder = PurePosixPath(path).parent
+        beside = [rel for rel in held if PurePosixPath(rel).parent == folder]
+        return content is not None and content in tree.read_bytes(beside).values()
+
+    found: list[ReleasedTarget] = []
+    for path in judged:
+        if path in held_set:
+            continue
+        tier, component = _migration_path_tier(path), _migration_path_component(path)
+        folder = PurePosixPath(path).parent.name
+        label = tier + (":" + component if component else "")
+        subject = tier_subject(tier, component)
+        try:
+            released = recorded_version(tier, component, read)
+        except click.ClickException as exc:
+            said = exc.message.rstrip(".")
+            line = (
+                f"[{label}] {path}: at {base}, {said}, so whether {folder} is released "
+                f"cannot be told."
+            )
+            found.append(ReleasedTarget(path, tier, component, line))
+            continue
+        if released is None or minor_of(folder) > minor_of(released) or renamed(path):
+            continue
+        root = PurePosixPath(path).parent.parent.as_posix()
+        upcoming = migration_target(subject, released, base, folders=version_folders(held, root))
+        line = (
+            f"[{label}] {path}: targets {folder}, but {base} already records {subject} "
+            f"{released}, so a project at {released} never runs it. Move it to "
+            f"{upcoming.version}/ or a later folder."
+        )
+        found.append(ReleasedTarget(path, tier, component, line))
+    return tuple(found)
 
 
 def _git_diff_name_status(
@@ -698,4 +945,29 @@ def render_coverage_report(report: CoverageReport) -> None:
         for tier, component in report.uncovered_keys:
             tier_label = tier + (":" + component if component else "")
             click.echo(f"    - {tier_label}")
+    click.echo()
+
+
+def render_released_targets(found: Sequence[ReleasedTarget]) -> None:
+    """Render what `released_targets` found, with its own verdict; nothing when it found
+    nothing."""
+    if not found:
+        return
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong", f"{len(found)} migration script(s) in diff target a released version:"
+        )
+    )
+    for target in found:
+        click.echo(f"    {target.line}")
+    click.echo()
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong",
+            "Verdict: RELEASED. Move each script above to a version not yet released "
+            "before merging.",
+        )
+    )
     click.echo()
