@@ -190,6 +190,29 @@ def test_the_numbering_setting_frees_a_requirement_s_id(project: AdopterRepo) ->
     )
 
 
+# Slow by design: two stamps, each a script that starts several `pkit` processes.
+def test_a_requirement_moved_to_another_kind_then_deleted_is_not_freed(
+    project: AdopterRepo,
+) -> None:
+    """The name a requirement had in its first kind's folder still counts, as a use
+    case's name before a move between areas does. So an entry that lists its id under
+    the commit that deleted it is refused, and the stamp numbers past it."""
+    stamped(project, "functional-requirement", "drafts")
+    project.commit("REQ-001")
+    first, moved = f"{FUNCTIONAL}/REQ-001-drafts.md", f"{CONSTRAINTS}/REQ-001-drafts.md"
+    project.rename(first, moved)
+    removed = project.commit("REQ-001 deleted", {moved: None})
+    _freed_by(project, removed, ("REQ-001",))
+    completed = new(project, "quality-requirement", "again")
+    assert completed.returncode == 1, completed.stdout
+    assert f"REQ-001 is not freed by {removed[:SHORT]}: the history before it gave REQ-001 to " in (
+        completed.stderr
+    )
+    assert f"to {first} too (commit " in completed.stderr
+    project.write({SETTING: None})
+    assert stamped(project, "quality-requirement", "again") == "REQ-002"
+
+
 # --- its actors and what it refines ----------------------------------------------------------
 
 

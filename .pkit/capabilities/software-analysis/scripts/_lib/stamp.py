@@ -1,4 +1,4 @@
-"""Stamping the analysis artefacts (DEC-001 points 1 to 4).
+"""Stamping the analysis artefacts (DEC-001 points 1 to 4, DEC-002 points 1 to 7).
 
 A stamp writes one artefact, where the capability's places put it under the
 analysis location. Its front matter comes from its kind's template in
@@ -842,8 +842,8 @@ def _section_at(text: str, body: int, kind: str, new_id: str) -> int | None:
 
 def _container(request: Request, artefacts: Sequence[str]) -> dict[str, Any]:
     """The methodology's container: the friction block with the anchors the stamp
-    knows, in the core schema's order — or, for an actor or a term nothing
-    embodies, the reason it has none, `unanchored-because`, which the core reads
+    knows, in the core schema's order — or, for an actor, a term or a requirement
+    nothing embodies, the reason it has none, `unanchored-because`, which the core reads
     and the unanchored measure lists apart (COR-050 points 1 and 8); an empty
     block when it knows neither."""
     anchors = {

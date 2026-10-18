@@ -129,7 +129,9 @@ def number_of(artefact_id: str) -> int:
 
 
 def kind_numbered(artefact_id: str) -> str:
-    """The kind a use case's or journey's number is of, by its prefix."""
+    """The kind a use case's or journey's number is of, by its prefix. A requirement's
+    number names none of its three kinds, and reads here as a use case's: the number
+    check's messages are to name a requirement as such (#1693)."""
     return JOURNEY if artefact_id.startswith(f"{PREFIX[JOURNEY]}-") else USE_CASE
 
 
