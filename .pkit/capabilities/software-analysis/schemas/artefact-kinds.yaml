@@ -4,9 +4,14 @@
 # the front-matter fields a writer fills. Its shape is
 # `artefact-kinds.schema.json`, beside this file.
 #
-# - The kinds: `actor`, `use-case`, `journey` and `term`, keyed by the types
-#   the capability's places give. The revalidation record has no type, and is
-#   keyed `revalidation-record`.
+# - The kinds: `actor`, `use-case`, `journey` and `term` (DEC-001), and the
+#   three kinds of requirement, `quality-requirement`, `functional-requirement`
+#   and `constraint` (DEC-002), keyed by the types the capability's places
+#   give. The revalidation record has no type, and is keyed
+#   `revalidation-record`.
+# - `shown-as`: the kind's name as its artefacts show it beside their id. A
+#   requirement is headed `# REQ-007 · Quality · <title>` (DEC-002 point 2).
+#   A kind without it is headed `# <id> — <title>`, or its name.
 # - `sections`: the elements of a body, in order. Each has an `id`, permanent
 #   once shipped, and a `type`:
 #   - `heading`: a heading's `level` and, where the kind fixes it, its `text`
@@ -22,7 +27,8 @@
 #   gives. The schema's description of each form says what it reads in a
 #   part that holds a list.
 # - `front-matter`: the fields a writer fills, each with its hint, its example
-#   and any form. The kind's companion schema checks each field's shape. Where
+#   and any form. A field may read `None.` only where it sets `allows-none`,
+#   as a part may. The kind's companion schema checks each field's shape. Where
 #   the stamp leaves a field to fill, it writes the field's hint as its
 #   placeholder, as it writes a body part's. The template's front matter,
 #   written by hand, shows the same hint.
@@ -203,6 +209,120 @@ kinds:
       replaces:
         hint: The names this term was written as before, in the analysis or in an accepted record, newest first.
         example: report template
+
+  quality-requirement:
+    shown-as: Quality
+    sections:
+      - id: heading
+        type: heading
+        level: 1
+        example: "# REQ-004 · Quality · Show a report within two seconds"
+      - id: verified-by
+        type: label
+        text: Verified by
+        allows-none: true
+        hint: Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet.
+        example: A timing test opens a report of a year's figures, and fails if it takes over two seconds to show.
+      - id: rationale
+        type: label
+        text: Rationale
+        allows-none: true
+        hint: Why the system must meet the requirement, and whose need it serves. Write `None.` when a record it rests on gives the reason.
+        example: Analysts read reports during meetings, and a slow report holds the meeting up.
+    front-matter:
+      statement:
+        form: sentence
+        hint: How well the system must behave, in one sentence, such as how fast, how reliably or how safely. Say what the system achieves, never how it is built.
+        example: The system shows a report within two seconds of the analyst opening it.
+      measure:
+        allows-none: true
+        hint: The value or the condition that shows the requirement is met. Write `None.` when there is none yet.
+        example: 95 of every 100 reports of a year's figures show within two seconds.
+      applies-to:
+        hint: Where the requirement holds, in words, such as a class of commands or the whole system. Name no use case or journey here, since each one that must meet it lists it.
+        example: Every report an analyst opens.
+      actors:
+        hint: The actors whose need the requirement meets, each by id.
+        example: "[ACT-analyst]"
+      refines:
+        hint: The requirements this one refines, of any kind, each by id.
+        example: "[REQ-003]"
+
+  functional-requirement:
+    shown-as: Functional
+    sections:
+      - id: heading
+        type: heading
+        level: 1
+        example: "# REQ-002 · Functional · Count only approved figures"
+      - id: verified-by
+        type: label
+        text: Verified by
+        allows-none: true
+        hint: Each test, check or review that shows the requirement is met, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet.
+        example: A test builds a report from approved and draft figures, and checks that each total leaves the drafts out.
+      - id: rationale
+        type: label
+        text: Rationale
+        allows-none: true
+        hint: Why the system must meet the requirement, and whose need it serves. Write `None.` when a record it rests on gives the reason.
+        example: A draft figure may still change, so a total that counts it misleads the manager who reads it.
+    front-matter:
+      statement:
+        form: sentence
+        hint: The behaviour that holds across use cases, in one sentence, such as a business rule of the domain. Behaviour that serves one actor's goal is a use case instead.
+        example: Every total in a report counts approved figures only.
+      measure:
+        allows-none: true
+        hint: The value or the condition that shows the requirement is met. Write `None.` when there is none yet.
+        example: Each total equals the sum of the approved figures it covers.
+      applies-to:
+        hint: Where the requirement holds, in words, such as a class of commands or the whole system. Name no use case or journey here, since each one that must meet it lists it.
+        example: Every total the system shows or exports.
+      actors:
+        hint: The actors whose need the requirement meets, each by id.
+        example: "[ACT-manager]"
+      refines:
+        hint: The requirements this one refines, of any kind, each by id.
+        example: "[REQ-005]"
+
+  constraint:
+    shown-as: Constraint
+    sections:
+      - id: heading
+        type: heading
+        level: 1
+        example: "# REQ-001 · Constraint · Keep the figures in the client's country"
+      - id: verified-by
+        type: label
+        text: Verified by
+        allows-none: true
+        hint: Each test, check or review that shows the constraint is kept, named by what it does and never by its path. Anchor the file of each. Write `None.` when nothing verifies it yet.
+        example: A review before each release checks where every store of figures lies.
+      - id: imposed-by
+        type: label
+        text: Imposed by
+        allows-none: true
+        hint: Who or what imposes the constraint, and why the design cannot choose otherwise. Write `None.` when a record it rests on says so.
+        example: The client's contract forbids storing its figures abroad, and no design can change the contract.
+    front-matter:
+      statement:
+        form: sentence
+        hint: The limit on the solution, in one sentence, which the design takes as given.
+        example: The system stores every figure inside the client's own country.
+      measure:
+        allows-none: true
+        hint: The value or the condition that shows the constraint is kept. Write `None.` when there is none yet.
+        example: Every store of figures, backups included, lies in a data centre in that country.
+      applies-to:
+        hint: Where the constraint holds, in words, such as a class of commands or the whole system. Name no use case or journey here, since each one that must meet it lists it.
+        example: The whole system, its backups included.
+      actors:
+        hint: The actors whose need the constraint meets, each by id.
+        example: "[ACT-administrator]"
+      refines:
+        hint: The requirements this one refines, of any kind, each by id.
+        example: "[REQ-006]"
 
   revalidation-record:
     sections:

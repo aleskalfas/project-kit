@@ -3,7 +3,7 @@ component:
   kind: capability
   name: software-analysis
   version: 0.1.0
-description: Software analysis — actors, use cases, journeys and glossary kept as anchored artefacts and kept true by revalidation as the software changes.
+description: Software analysis — actors, use cases, journeys, glossary and requirements kept as anchored artefacts and kept true by revalidation as the software changes.
 requires_backbone: ">=1.149.0,<2.0.0"
 # The review contribution (`review-contributions.yaml`, DEC-001 point 10) names
 # project-management's floor on ruled artefacts, which an older release
@@ -64,7 +64,7 @@ docs:
   locations:
     analysis:
       path: analysis
-      description: The analysis (DEC-001 point 2) — the glossary, the use-case model and the revalidation records; recorded the first time an artefact is stamped (COR-049 point 5), so a later change of root moves nothing.
+      description: The analysis (DEC-001 point 2) — the glossary, the use-case model, the requirements and the revalidation records; recorded the first time an artefact is stamped (COR-049 point 5), so a later change of root moves nothing.
 
 # COR-050 point 1 — the places holding this capability's anchored artefacts,
 # and its folder of held documents: the revalidation records describe an act
@@ -73,10 +73,12 @@ docs:
 # surface: the project declares the code its analysis ought to cover.
 #
 # COR-056 point 2 — the type registry, one type per kind of anchored artefact,
-# and the type each place gives (DEC-001 point 2). No type names a kind field:
-# the check holds every file in a place to that place's kind. None admits a
-# project place (no `project-places`): the capability checks only the
-# artefacts in its own places. The held records take no type.
+# and the type each place gives (DEC-001 point 2; DEC-002 point 3 for the three
+# kinds of requirement, each in a folder of its own under `requirements`, which
+# is no place). No type names a kind field: the check holds every file in a
+# place to that place's kind. None admits a project place (no
+# `project-places`): the capability checks only the artefacts in its own
+# places. The held records take no type.
 friction:
   types:
     actor:
@@ -87,6 +89,12 @@ friction:
       description: A journey — one actor's end-to-end path across several of its use cases (DEC-001 point 1).
     term:
       description: A glossary term — a domain word, with a stable id apart from its name, and its definition (DEC-001 point 1).
+    quality-requirement:
+      description: A quality requirement — how well the system must behave, such as how fast, how reliably or how safely (DEC-002 point 1).
+    functional-requirement:
+      description: A functional requirement — behaviour that holds across use cases, such as a business rule (DEC-002 point 1).
+    constraint:
+      description: A constraint — a limit on the solution, which the design takes as given (DEC-002 point 1).
   places:
     - location: analysis
       path: glossary.md
@@ -104,6 +112,18 @@ friction:
       path: use-case-model/journeys
       type: journey
       description: The journeys, one file each.
+    - location: analysis
+      path: requirements/quality
+      type: quality-requirement
+      description: The quality requirements, one file each, in folders by functional area when the project groups them.
+    - location: analysis
+      path: requirements/functional
+      type: functional-requirement
+      description: The functional requirements, one file each, in folders by functional area when the project groups them.
+    - location: analysis
+      path: requirements/constraints
+      type: constraint
+      description: The constraints, one file each, in folders by functional area when the project groups them.
   held:
     - location: analysis
       path: revalidations
@@ -120,7 +140,7 @@ project_rule_set:
   name: ANALYSIS
   inherits: SAN
   scope:
-    types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey]
+    types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey, software-analysis:quality-requirement, software-analysis:functional-requirement, software-analysis:constraint]
   title: The project's rules for its analysis
 
 # COR-053 — the analysis role, the evidence point defined under it, and the

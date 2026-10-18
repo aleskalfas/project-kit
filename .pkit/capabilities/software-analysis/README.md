@@ -20,9 +20,9 @@ pkit:
 
 # software-analysis capability
 
-Keep a written, checkable account of **what your software must do**, and keep it true as the software changes. The account covers who uses it (actors), what they're trying to achieve and how (use cases), the end-to-end paths across several use cases (journeys), and what the words mean (glossary).
+Keep a written, checkable account of **what your software must do**, and keep it true as the software changes. The account covers who uses it (actors), what they're trying to achieve and how (use cases), the end-to-end paths across several use cases (journeys), and what the words mean (glossary). It also covers what binds many use cases at once: how well the system behaves, behaviour that holds across use cases, and limits on the solution (requirements).
 
-Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline].
+Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline], and the requirements' in [software-analysis:DEC-002-analysis-requirements].
 
 ## How it stays true
 
@@ -73,13 +73,21 @@ analysis/
 │   │   └── <area>/UC-014-<slug>.md  optional grouping by functional area
 │   └── journeys/
 │       └── JRN-001-<slug>.md
+├── requirements/                    no place: it holds the three kinds' folders
+│   ├── quality/
+│   │   ├── REQ-004-<slug>.md
+│   │   └── <area>/REQ-009-<slug>.md optional grouping by functional area
+│   ├── functional/
+│   │   └── REQ-002-<slug>.md
+│   └── constraints/
+│       └── REQ-001-<slug>.md
 └── revalidations/
     └── <date>-<subject>.md
 ```
 
 A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
-**What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the four places inside it that hold anchored artefacts — the glossary, the actors, the use cases and the journeys. The revalidation records describe an act rather than an anchored artefact, so their folder is not a place: the capability declares it as a folder of **held documents** (`friction.held`; DEC-001 point 2, COR-050 point 1). The core lists each record with this capability as its owner, and no place reads one as an artefact — not your documentation root, not another capability's place — so a record is never an unanchored artefact in the friction measures, nor a document a documentation capability asks you to classify. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
+**What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the seven places inside it that hold anchored artefacts — the glossary, the actors, the use cases, the journeys, and a folder for each kind of requirement (DEC-002 point 3). The revalidation records describe an act rather than an anchored artefact, so their folder is not a place: the capability declares it as a folder of **held documents** (`friction.held`; DEC-001 point 2, COR-050 point 1). The core lists each record with this capability as its owner, and no place reads one as an artefact — not your documentation root, not another capability's place — so a record is never an unanchored artefact in the friction measures, nor a document a documentation capability asks you to classify. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
 
 **The types its places give.** Each place names a type from the capability's type registry, `friction.types` in its package metadata (DEC-001 point 2, COR-056). So a rule set's scope selects the analysis's artefacts by what they are, without naming the folder your analysis lies in.
 
@@ -89,10 +97,14 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
 | `use-case-model/actors/` | a file | `software-analysis:actor` |
 | `use-case-model/use-cases/` | a file, one in an area's folder included | `software-analysis:use-case` |
 | `use-case-model/journeys/` | a file | `software-analysis:journey` |
+| `requirements/quality/` | a file, one in an area's folder included | `software-analysis:quality-requirement` |
+| `requirements/functional/` | a file, one in an area's folder included | `software-analysis:functional-requirement` |
+| `requirements/constraints/` | a file, one in an area's folder included | `software-analysis:constraint` |
 
 - **A scope names a type in full**, as `software-analysis:use-case`. The alias `analysis` names no type.
-- **No project place may give one.** None of the four admits a project place, since the capability checks only the artefacts in its own places. `pkit validate` fails a place in `.pkit/project/config.yaml` that gives one. While the capability is installed, it also fails a bare type of your own that takes one of their names (`actor`, `use-case`, `journey` or `term`).
+- **No project place may give one.** None of the seven admits a project place, since the capability checks only the artefacts in its own places. `pkit validate` fails a place in `.pkit/project/config.yaml` that gives one. While the capability is installed, it also fails a bare type of your own that takes one of their names: `actor`, `use-case`, `journey`, `term`, `quality-requirement`, `functional-requirement` or `constraint`. A bare `constraint` of your own is the likeliest to clash.
 - **No kind field.** The check holds every file in a place to that place's kind, so each artefact takes the place's type without declaring anything.
+- **`requirements/` is no place.** It holds the three kinds' folders. A requirement lies in the folder of its kind, and that folder gives its type (DEC-002 point 3).
 - **A revalidation record has no type.** It is a held document, not an artefact.
 - **Where to read it:** `pkit friction artefacts --json` gives each artefact its type and the place that gave it, and lists the registry under `types`.
 
@@ -293,6 +305,101 @@ pkit:
     unanchored-because: No code or decision embodies it. It funds the project.
 ```
 
+**Requirements** — what binds many use cases at once, in three kinds (DEC-002 point 1). Each kind is a file of its own in its kind's folder, `requirements/<kind's folder>/REQ-NNN-<slug>.md`, with a companion schema and a template named as its type:
+
+- **A quality requirement** (`quality-requirement`) says how well the system must behave, such as how fast, how reliably or how safely.
+- **A functional requirement** (`functional-requirement`) is behaviour that holds across use cases, such as a business rule of your domain. Behaviour that serves one actor's goal is a use case, not a functional requirement.
+- **A constraint** (`constraint`) limits the solution. The design takes it as given.
+
+Each is shown below as its template renders it, filled. A quality requirement:
+
+```markdown
+---
+id: REQ-004
+title: Show a run's result quickly
+status: active                  # or: withdrawn (file kept, id never reused)
+statement: The system shows a suite's result within two seconds of the run's end.
+measure: 95 of every 100 runs show their result within two seconds.
+applies-to: Every run of a suite.
+actors: [ACT-tester]            # each actor whose need it meets, by id
+refines: []                     # each requirement it refines, of any kind, by id
+pkit:
+  friction:
+    anchors:
+      path:
+        - tests/test_timing.py  # the test that verifies it
+      artefact:
+        - ACT-tester
+---
+
+# REQ-004 · Quality · Show a run's result quickly
+
+**Verified by:** A timing test runs the suite a hundred times and measures when each result shows.
+
+**Rationale:** A tester waits on the result before the next change.
+```
+
+A functional requirement has the same fields and the same parts:
+
+```markdown
+---
+id: REQ-002
+title: Record who started each run
+status: active
+statement: Every run records the person or the pipeline that started it.
+measure: None.
+applies-to: Every run, whichever way it starts.
+actors: [ACT-tester]
+refines: []
+pkit:
+  friction:
+    anchors:
+      path:
+        - src/run.py            # the narrow code that holds it
+        - tests/test_run.py     # the test that verifies it
+      artefact:
+        - ACT-tester
+---
+
+# REQ-002 · Functional · Record who started each run
+
+**Verified by:** A test starts a run from the command line and from the pipeline, and reads whom each run's record names.
+
+**Rationale:** A tester who finds a failed run asks who started it.
+```
+
+A constraint has the same fields and the same first part. Its second part says who or what imposes it, where a requirement of the other two kinds says why it is needed:
+
+```markdown
+---
+id: REQ-001
+title: Run suites on the project's own machines
+status: active
+statement: The system runs every suite on a machine the project owns.
+measure: None.
+applies-to: The whole system.
+actors: []
+refines: []
+pkit:
+  friction:
+    anchors:
+      record:
+        - ADR-002
+---
+
+# REQ-001 · Constraint · Run suites on the project's own machines
+
+**Verified by:** None.
+
+**Imposed by:** The client's contract forbids its test data on hosts it does not own (ADR-002).
+```
+
+- **One numbering.** A requirement's id is `REQ-NNN`, one numbering across the three kinds, so a requirement moved to another kind keeps it. The kind shows beside the id, in the folder and in the heading, `# REQ-004 · Quality · <title>` (DEC-002 point 2).
+- **Its fields.** `statement`, `measure` and `applies-to` state the obligation, so a tool reads them from the front matter (DEC-002 point 4). `measure` reads `None.` where there is none yet. `applies-to` never does. It names no use case or journey, since each one that must meet the requirement lists it.
+- **Its parts.** *Verified by* names each test, check or review by what it does, never by its path, and the file of each is a path anchor of the requirement (point 5). *Rationale* says why the requirement is needed, and a constraint's *Imposed by* says who imposes it. Each may read `None.`.
+- **Its anchors.** Each actor in `actors` and each requirement in `refines` is an artefact anchor. It also anchors the records it rests on or that answer it, the architecture views that realise it, the files that verify it and the narrow code that holds it (DEC-002 point 6).
+- **No kind field and no classification.** The folder gives the kind. A project that wants a standard's quality characteristics adds them as a part of its own.
+
 **Revalidation record** (`schemas/revalidation-record.schema.json`) — no friction block; stamped by `pkit analysis new revalidation` as `revalidations/<date>-<subject>.md` ("Revalidation records" below). Its template, `templates/revalidation-record.md`, shows a planned record whole. The stamp writes every part from its command line, with no hints. A record of drift reads:
 
 ```markdown
@@ -332,12 +439,13 @@ Evidence supports an outcome and never stands in for one: each artefact the reco
 
 Each kind's structure is declared once, as data, in `schemas/artefact-kinds.yaml` (DEC-001 point 1). It lists the parts of the kind's body in their order, and the forms and hints of the front-matter fields a writer fills. Its shape is `schemas/artefact-kinds.schema.json`, a strict superset of living-docs' `page-kinds.schema.json`.
 
-- **The kinds:** `actor`, `use-case`, `journey` and `term`, keyed by the types their places give, and `revalidation-record`, which has no type.
+- **The kinds:** `actor`, `use-case`, `journey` and `term`, and the three kinds of requirement, `quality-requirement`, `functional-requirement` and `constraint`, keyed by the types their places give, and `revalidation-record`, which has no type.
+- **A kind shown beside its id.** A requirement's kind names itself in `shown-as`, such as `Quality`, and its heading reads `# <id> · <shown-as> · <title>` (DEC-002 point 2). Every other kind is headed `# <id> — <title>`, or its name.
 - **Each element of a body** has an `id`, permanent once shipped, and a `type`. A part a kind retires is listed under its `retired` ids, never renamed, and its id is never given again. No kind has retired one yet. The types:
   - `heading`: a heading's `level` and, where the kind fixes it, its `text`
   - `label`: a bold label, such as `**Goal:**`, that opens a paragraph or a top-level list item
   - `opening`: the text before the first label, such as an actor's description
-- **Every part is required.** A part with nothing to say reads `None.`, where its element sets `allows-none: true`.
+- **Every part is required.** A part with nothing to say reads `None.`, where its element sets `allows-none: true`. A front-matter field a writer fills reads `None.` only where it sets the same, such as a requirement's `measure`.
 - **A hint and an example** go with each part and each front-matter field a writer fills, one line each. A hint says what goes there. A heading the stamp writes has an example and no hint.
 - **Forms:** a part or a front-matter field may name a form, a check on its content from a closed list. A list form, such as `numbered-steps`, judges only the part's list items. The `sentence` form judges the whole part as one text, and refuses a list in it ("Each body against its structure", below).
 - **The glossary, a collection:** the `term` kind declares each entry's section, and the file's `head`. The head is the file's heading and opening, which the stamp writes once, when it creates the file.
@@ -351,12 +459,15 @@ The parts each kind ships:
 | `journey` | the heading, *Goal*, *Steps*, *Variants*, *Postconditions*, *Minimal guarantees* | *Variants*, *Minimal guarantees* | none |
 | `term` | each entry's heading, *Example*, *Distinctions* | *Example*, *Distinctions* | `name`, `definition` of the form `definition`, and `replaces` |
 | `revalidation-record` | the heading, `## Outcomes`, `## Gaps` | *Gaps* | `reviewed-against` |
+| `quality-requirement` | the heading, *Verified by*, *Rationale* | *Verified by*, *Rationale*, and the field `measure` | `statement` of the form `sentence`, `measure`, `applies-to`, `actors` and `refines` |
+| `functional-requirement` | the heading, *Verified by*, *Rationale* | *Verified by*, *Rationale*, and the field `measure` | the same as a quality requirement's |
+| `constraint` | the heading, *Verified by*, *Imposed by* | *Verified by*, *Imposed by*, and the field `measure` | the same as a quality requirement's |
 
 The forms, each described in the schema:
 
 | Form | Where | What it holds |
 |---|---|---|
-| `sentence` | a use case's and a journey's *Goal*, and each of an actor's `needs` | one sentence, ending where the *How* of `RS-SAN-001` says |
+| `sentence` | a use case's and a journey's *Goal*, each of an actor's `needs`, and a requirement's `statement` | one sentence, ending where the *How* of `RS-SAN-001` says |
 | `numbered-steps` | a use case's *Main path* | items that each open with a number, no number twice |
 | `variants` | a use case's and a journey's *Variants* | items that each open with a step's number and a letter, such as `2a.` |
 | `steps-match-front-matter` | a journey's *Steps* | one line for each of its `steps`, in order, with each hand-over under the step that needs it |
@@ -380,7 +491,7 @@ Each kind's template in `templates/` is its structure rendered, so it shows exac
   **Goal:** <!-- pkit:hint … Example: … -->
   ```
 
-- **A front-matter field's hint is its placeholder too.** Where the stamp leaves a field for you to fill, an actor's `needs` and a term's `definition`, it writes the field's hint as the field's text: the same marked comment, with the field's example after it. A field that takes a list holds one item, its hint. A YAML parse reads the hint as text, so the front matter stays valid while you fill it. The template's front matter, written by hand, shows the same hints, and a test holds the two equal. An actor's `needs`, shortened in the same way:
+- **A front-matter field's hint is its placeholder too.** Where the stamp leaves a field for you to fill, an actor's `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`, it writes the field's hint as the field's text: the same marked comment, with the field's example after it. A field that takes a list holds one item, its hint. A YAML parse reads the hint as text, so the front matter stays valid while you fill it. The template's front matter, written by hand, shows the same hints, and a test holds the two equal. An actor's `needs`, shortened in the same way:
 
   ```yaml
   needs:
@@ -463,7 +574,7 @@ While any of these stands, none of the file applies: the check holds no body to 
 
 `pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree — and the evidence point, when a record copies evidence — so the same tree gets the same answer as long as the evidence fillers read the tree alone. A file your `friction.exclude` leaves out is no part of the analysis: the check reads nothing of it, and the stamp counts no number it holds — as friction neither counts such a file nor asks it for an answer (COR-050 point 7). The same goes for a revalidation record under an excluded path: the core still lists it as this capability's held document, marked as excluded, and the check neither counts nor checks it. It fails on:
 
-- **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary that is not a collection, an actor, use-case or journey file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the stamp counts the number a use case's or journey's name carries;
+- **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary that is not a collection, an actor, use-case, journey or requirement file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the stamp counts the number a use case's or journey's name carries;
 - **missing required parts** — an artefact's own fields against its schema, and a collection entry whose key is not its kind's id;
 - **a placeholder left unfilled** — what the stamp leaves for you to write is no part of the analysis until you write it: an own field, or an actor's or term's `unanchored-because` in its friction block, still holding a placeholder the templates or the skill's commands ever shipped (`<Title>`, or an actor's `<what this actor needs …>` and a term's `<what the term means …>`, which the stamp wrote before each field held its hint), or a body — an actor's, a use case's or a journey's, or a term's section with its heading — still holding one of the templates'. Each is matched against those texts exactly, and the capability keeps every one it ever shipped, so a reworded template never hides an old placeholder, and words of your own in angle brackets — `maps <user id> to a session`, code a body quotes — are never taken for one;
 - **a hint left in** — an own field, a body, or a term's section, still holding a hint, `<!-- pkit:hint … -->`, outside code spans and fenced code. The message names the field, or gives the body's line, and repeats the hint. Like a placeholder, it needs no rule;
@@ -504,13 +615,13 @@ Friction itself, dead anchors and the friction block's own shape are the core's 
 The check holds each body to the structure its kind declares ("Each kind's structure", above), as your own file changes it ("A project's own structures", above).
 
 - **A revalidation record's body,** always, whatever any rule's status. A record is a held document, which no rule binds on, so the capability checks it itself, as it checks the record's front matter (DEC-001 point 1). A finding on it cites the decision, not the format rule.
-- **An artefact's body:** each actor's, use case's and journey's, and each glossary entry's section, where the format rule, `RS-SAN-001`, is accepted and binds ("Where `SAN` binds: a set of your own", below). An artefact no set of yours makes the rule bind on is not checked, and the summary counts it.
+- **An artefact's body:** each actor's, use case's, journey's and requirement's, and each glossary entry's section, where the format rule, `RS-SAN-001`, is accepted and binds ("Where `SAN` binds: a set of your own", below). An artefact no set of yours makes the rule bind on is not checked, and the summary counts it.
 - **The glossary's head,** where the format rule binds on a term of its file. The head belongs to no term, but it is part of the term kind's structure.
 
 It fails on:
 
 - **a declared part that is missing, out of order or empty;**
-- **`None.` in a part that may not read it**, such as a use case's *Trigger*, which always has something to say;
+- **`None.` in a part or a front-matter field that may not read it**, such as a use case's *Trigger* or a requirement's `applies-to`, which always has something to say;
 - **text of the `sentence` form that is not one sentence**, in a part such as a use case's *Goal*, or in each of an actor's `needs`. Where a sentence ends is the rule's *How*: at `.`, `?` or `!` followed by a space and a capital letter, and at the text's end. So "e.g. for" and "3. října" end none, while "Dr. Smith" ends one: reword such a text. A text in a script without capital letters, such as Chinese or Arabic, is never split. The *How* also says what counts as a space, and that code ends no sentence.
 - **a part of the `sentence` form that holds a Markdown list**, at the list's first item: the part is one text, and holds no list, not even inside a block quote. A front-matter list, such as an actor's `needs`, is no part: each of its items is one text.
 - **a part or a field that breaks another form its structure gives it:**
@@ -578,7 +689,7 @@ rule-set: ANALYSIS
 version: 1.0.0
 inherits: [software-analysis:SAN@1]
 scope:
-  types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey]
+  types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey, software-analysis:quality-requirement, software-analysis:functional-requirement, software-analysis:constraint]
 rules: {}
 ---
 
@@ -590,6 +701,7 @@ rules: {}
 - **It is yours.** Edit it, add rules to it, or remove it. Nothing creates it again while the capability stays installed. Uninstalling refuses while it stands, since it inherits `SAN`.
 - **An earlier install.** A project that installed the capability before 0.2.0 has no set from its install. The upgrade's migration creates it, on the same conditions. `pkit capabilities project-rule-set software-analysis` shows whether install would create it, and what it would write.
 - **Its scope** selects the analysis by the capability's types, so it reaches the artefacts wherever they lie. A revalidation record has no type, and no scope selects one. The capability checks a record's structure itself.
+- **A set created before the requirement kinds** selects the four types DEC-001 gives, and none of the three DEC-002 adds. It is yours, so nothing changes it. Add `software-analysis:quality-requirement`, `software-analysis:functional-requirement` and `software-analysis:constraint` to its scope, so `SAN` binds on your requirements. Until you do, the check counts each requirement among the artefacts no rule of `SAN` binds on.
 - **Its pin,** `SAN@1`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted its format rule and its append-only rule, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
 - **A set you have already** that selects the analysis may inherit `SAN` instead, before you install, and install then creates none. Changing what a set inherits gives that set a new major.
 - **Never silent.** The check's summary counts the artefacts no rule of `SAN` binds on. Where it binds on none of the analysis, the check says so, at the analysis's folder. It reports this while no rule of `SAN` is accepted, and warns once one is. Neither fails `pkit validate`. If you choose not to inherit `SAN`, you keep the warning.
@@ -944,7 +1056,7 @@ When that floor requires the reviewer, and what it reads locally, is in [project
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Decided, and not built yet: quality requirements, functional requirements and constraints, three kinds numbered together as `REQ-NNN` and listed by the use cases and journeys that must meet them ([software-analysis:DEC-002-analysis-requirements]). Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. The check holds a requirement to its schema, and to its structure where the format rule binds. Decided, and not built yet: the stamp of a requirement, numbered as `REQ-NNN` across the three kinds; the check of its id, heading and anchors; its `requirements` list on use cases and journeys, with what meets each requirement computed; and `SAN`'s rule that a requirement never contradicts the record it rests on. Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
 
 ## Citing this capability's decisions
 

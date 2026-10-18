@@ -50,7 +50,10 @@ How a body departs from its kind's structure:
 - **empty:** a part a writer fills, one with a hint, whose content is nothing.
   A heading the stamp writes has no hint, and no content of its own.
 - **`None.` refused:** a part whose content is `None.` and nothing else, where
-  its element does not allow it.
+  its element does not allow it, and a front-matter field's text that is
+  `None.`, where the field does not allow it (`Field.allows_none`). A field that
+  allows it, such as a requirement's `measure`, is not judged against its form
+  while it reads `None.`.
 - **not one sentence:** text of the `sentence` form, in a part or in a
   front-matter field, in which a sentence ends before its last word. A part
   is one text, and each item of a front-matter list is one.
@@ -176,12 +179,14 @@ class Element:
 
 @dataclass(frozen=True)
 class Field:
-    """One front-matter field a writer fills, with its hint, its example and any form."""
+    """One front-matter field a writer fills, with its hint, its example, any form, and
+    whether it may read `None.` (DEC-001 point 1; DEC-002 point 4)."""
 
     name: str
     hint: str
     example: str
     form: str | None = None
+    allows_none: bool = False
 
 
 @dataclass(frozen=True)
@@ -189,6 +194,8 @@ class Kind:
     """One kind's declared structure: its body's elements — a collection entry's
     section's — in order, whether that order binds, a collection file's head, the
     front-matter fields a writer fills, and the ids of the elements it retired.
+    `shown_as` is the kind's name as its artefacts show it beside their id, such as a
+    requirement's `Quality` (DEC-002 point 2), `None` for a kind that shows none.
 
     A project's own structure changes it (`_lib/project_structure.py`). `closed` names
     the rules that close its list of labels. `delimiting` are the labels of parts a
@@ -206,6 +213,7 @@ class Kind:
     closed: tuple[str, ...] = ()
     delimiting: frozenset[str] = frozenset()
     as_written: bool = False
+    shown_as: str | None = None
 
     @property
     def labels(self) -> frozenset[str]:
@@ -274,10 +282,17 @@ def _kind(name: str, entry: Mapping[str, Any]) -> Kind:
         ordered=entry.get("ordered", True),
         head=tuple(_element(item, head=True) for item in entry.get("head") or ()),
         fields=tuple(
-            Field(field, value["hint"], value["example"], value.get("form"))
+            Field(
+                field,
+                value["hint"],
+                value["example"],
+                value.get("form"),
+                value.get("allows-none", False),
+            )
             for field, value in fields.items()
         ),
         retired=frozenset(entry.get("retired") or ()),
+        shown_as=entry.get("shown-as"),
     )
 
 
@@ -671,17 +686,22 @@ def judged(part: forms.Part, element: Element, context: forms.Context) -> list[f
 
 
 def field_departures(fields: Mapping[str, Any], kind: Kind) -> list[FieldDeparture]:
-    """Each text of a front-matter field that does not hold the field's form: the field's
-    own text, or each item of a list. A value of another shape is the kind's schema's
-    to report."""
+    """Each text of a front-matter field that reads `None.` where the field does not allow
+    it, or does not hold the field's form: the field's own text, or each item of a list.
+    A field that allows `None.` and reads it is not judged against its form. A value of
+    another shape is the kind's schema's to report."""
     found: list[FieldDeparture] = []
     for field in kind.fields:
-        if field.form is None:
-            continue
         value = fields.get(field.name)
         for pointer, text in _texts(field.name, value):
             if not text.strip() or hint_in(text) is not None:
                 continue  # a hint left in is the placeholder check's
+            if " ".join(text.split()) == NONE:
+                if not field.allows_none:
+                    found.append(FieldDeparture(field, NONE_REFUSED, pointer, text))
+                continue
+            if field.form is None:
+                continue
             breach = forms.field_breach(field.form, text, fields)
             if breach is not None:
                 how, detail = breach

@@ -166,6 +166,9 @@ def test_the_status_report_shows_roots_places_and_the_records_inside_the_interna
         "use-case-model/actors",
         "use-case-model/use-cases",
         "use-case-model/journeys",
+        "requirements/quality",
+        "requirements/functional",
+        "requirements/constraints",
     )
     for place in analysis_places:
         assert f"tech-docs/analysis/{place} (software-analysis)" in lines, place

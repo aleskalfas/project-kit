@@ -69,7 +69,8 @@ checks:
         save a part a withdrawn artefact lacks. A missing title heading of an
         actor, a use case or a journey is left to the heading check, which holds
         it whatever the rule's status. No shipped part a writer fills is empty,
-        and a part reads `None.` only where the structure allows it.
+        and a part or a front-matter field reads `None.` only where the
+        structure allows it.
 
         The glossary carries its head wherever the rule binds on one of its
         terms. A shipped part or front-matter field that the structure gives a
