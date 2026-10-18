@@ -1394,7 +1394,8 @@ The **debt listing** (COR-050 point 9): the debt derived from git, never kept in
   - **In flow style** (`pkit: { friction: { … } }`), a key's characters are replaced by a marker, one for each key, so a block or a list added there lies outside.
   - **A block or a list removed,** or emptied, lies outside in either style, since it drops every answer in it. So does a block turned to a value that is no mapping, or a list turned to one that is no list. An entry rewritten, added or removed within a list lies inside it, as a deferral does within a block.
   - **Front matter with a YAML anchor** lies outside: through an alias, the text of a block or a list could change a value outside it while the text outside stays the same.
-  - **Anything else** lies outside, with why: added, removed, its mode or line endings changed, not an artefact's file, front matter that does not parse, or a change outside its blocks and lists.
+  - **Keys that collide once rendered** lie outside. Discovery reads each key as text, so `1` and `"1"` are both read as `1`, and it reads only the last of the two entries. Where two keys on the path to a block or a list are read alike, the text taken out could be the other entry's, so the file gives no answer.
+  - **Anything else** lies outside, with why: added, removed, its mode or line endings changed, not an artefact's file, front matter that does not parse, or a change outside its blocks and lists. Front matter with a key no mapping can hold, such as `? [{a: 1}]`, does not parse.
 - Without `--json`, a line per file changed only inside the blocks and lists and per change outside them, with its commit and why, then whether every change lies inside.
 - With `--json`, one stable document, keys sorted:
   - `schema_version` — `1`, under the rule every reading document follows (above).

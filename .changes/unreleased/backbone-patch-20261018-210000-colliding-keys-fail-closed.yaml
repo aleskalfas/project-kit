@@ -1,0 +1,13 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit friction since` no longer counts a change as inside the `revalidated`
+  blocks and `revisited` lists where two keys on the path to a block or a list
+  are read alike once rendered as text, as `1` and `"1"` are (#1750).
+  Discovery reads the last of the two entries, while the text taken out could
+  be the other's. Such a file now lies outside, with why, and `pkit friction
+  resolve` leaves it as git left it. Front matter with a key no mapping can
+  hold, such as `? [{a: 1}]`, now reads as front matter that does not parse,
+  where it raised an error.

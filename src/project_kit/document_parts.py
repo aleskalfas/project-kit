@@ -7,6 +7,8 @@ that cuts a part of a document calls it, so they all find the same parts:
   universally (`universal_newlines`), so a file written with `\\r\\n` has the
   body the same file written with `\\n` has. `parse_front_matter` parses the
   front matter too, and says why it does not parse (`yaml_reason`).
+  `colliding_keys` finds the keys on a path that two keys are read as once
+  `parse_front_matter` renders them as text, such as `1` and `"1"`.
   `body_first_line` is the line of the text the body opens on, from which a
   part's lines are counted.
 - `Body` — a body read once: its headings outside fenced code
@@ -39,7 +41,7 @@ from __future__ import annotations
 
 import io
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -105,9 +107,61 @@ def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | 
         data = _yaml.load(io.StringIO(front_matter))
     except YAMLError as exc:
         return None, body, yaml_reason(exc)
+    except TypeError as exc:
+        return None, body, _unhashable(exc)
     if not isinstance(data, Mapping):
         return None, body, None
     return cast("Mapping[str, Any]", as_written(data)), body, None
+
+
+def _unhashable(exc: TypeError) -> str:
+    """Why YAML did not parse where ruamel raises a `TypeError`: a complex key holding a
+    mapping, `? [{a: 1}]`, is no key a mapping can hold. ruamel turns the list into a
+    tuple, which still holds the mapping, and fails on it outside its own errors."""
+    return f"found unhashable key ({exc})"
+
+
+def colliding_keys(front_matter: str, paths: Iterable[Sequence[str]]) -> dict[tuple[str, ...], str]:
+    """For each of `paths`, the first of its keys that two keys of one mapping are read as.
+
+    A path is walked from the root of `front_matter`, key by key, through mappings.
+    `parse_front_matter` renders each key as text (`backbone_schemas.as_written`), so
+    `1` and `"1"` are both read as `1`. The mapping it gives then holds the last of them
+    alone, and a reader that finds a key by its written text may find the one dropped.
+    A path where no two keys are read alike is left out. So is every path where the
+    front matter does not parse.
+    """
+    try:
+        data = _yaml.load(io.StringIO(front_matter))
+    except (YAMLError, TypeError):
+        return {}
+    # Each mapping's keys by their rendered text, built once per mapping walked.
+    rendered: dict[int, dict[str, list[Any]]] = {}
+    found: dict[tuple[str, ...], str] = {}
+    for path in paths:
+        node: Any = data
+        for step in path:
+            if not isinstance(node, Mapping):
+                break
+            mapping = cast("Mapping[Any, Any]", node)
+            if id(mapping) not in rendered:
+                by_text: dict[str, list[Any]] = {}
+                for key in mapping:
+                    by_text.setdefault(_rendered_key(key), []).append(key)
+                rendered[id(mapping)] = by_text
+            alike = rendered[id(mapping)].get(step, [])
+            if len(alike) > 1:
+                found[tuple(path)] = step
+                break
+            if not alike:
+                break
+            node = mapping[alike[0]]
+    return found
+
+
+def _rendered_key(key: Any) -> str:
+    """A key as `parse_front_matter` gives it, rendered by `as_written` itself."""
+    return next(iter(cast("Mapping[str, Any]", as_written({key: None}))))
 
 
 def yaml_reason(exc: YAMLError) -> str:

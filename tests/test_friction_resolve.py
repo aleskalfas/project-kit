@@ -972,6 +972,26 @@ def test_a_conflict_in_the_block_and_the_body_is_left_whole(repo: AdopterRepo) -
     assert _unmerged(repo) == {PAGE}
 
 
+def test_keys_that_collide_once_rendered_leave_the_file(repo: AdopterRepo) -> None:
+    """`1` and `"1"` are both read as `1` (#1750). Discovery reads the second entry, and
+    the block found by its key's written text is the first's, so which entry a conflict
+    lies in cannot be told: the file is left as git left it, and the command says why."""
+    first = (T0, "first")
+
+    def terms(dropped: tuple[str, str]) -> str:
+        return _collection(
+            _entry("1", "[src/cli/**]", dropped), _entry('"1"', "[src/cli/**]", first)
+        )
+
+    _merge(repo, {TERMS: terms(first)}, {TERMS: terms((T1, "this"))}, {TERMS: terms((T2, "base"))})
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert "are read as `1` once rendered" in result.output
+    assert _unmerged(repo) == {TERMS}
+
+
 def test_a_conflict_in_another_field_is_left(repo: AdopterRepo) -> None:
     this = THIS.replace("status: draft", "status: review")
     base = BASE.replace("status: draft", "status: final")

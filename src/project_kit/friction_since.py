@@ -45,8 +45,11 @@ nothing.
   list turned to one that is no list. An entry written, rewritten or
   removed within a list lies inside it, as a deferral does within a block.
   Front matter with a YAML anchor lies outside, since through it the text
-  of a block or a list could change what an alias repeats outside it.
-  Anything else is a change outside, with why.
+  of a block or a list could change what an alias repeats outside it. So
+  does front matter where two keys on the path to a block or a list are
+  read alike once rendered as text, as `1` and `"1"` are: discovery reads
+  one of them, and the text taken out could be the other's
+  (`read_version`). Anything else is a change outside, with why.
 - **It cannot answer** — and says why, exit 1 — in a shallow clone, where the
   history between the commits may not be here, when a name is no commit or
   the base does not resolve, when an object cannot be read, as in a partial
@@ -440,9 +443,9 @@ def _without_blocks(
     block style their lines, in flow style their characters, each replaced by its key's
     marker — with the locations of the artefacts that carry a block, and of those that
     carry a list. `_Unreadable` where the blocks and lists cannot be told apart from the
-    rest: front matter that does not parse, a block or list not written directly, or
-    front matter with a YAML anchor, through which their text could change what lies
-    outside them."""
+    rest: front matter that does not parse, a block or list not written directly, two
+    keys on its path read alike once rendered, or front matter with a YAML anchor,
+    through which their text could change what lies outside them."""
     version = read_version(path, found, text)
     if isinstance(version, str):
         raise _Unreadable(version)

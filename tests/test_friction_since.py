@@ -176,6 +176,91 @@ def test_front_matter_with_a_yaml_anchor_lies_outside(repo: AdopterRepo) -> None
     assert outside.path == PAGE and "YAML anchor" in outside.why
 
 
+COLLIDING = "docs/colliding.md"
+
+
+def _colliding(dropped: str, read: str) -> str:
+    """A collection whose two entries are keyed `1` and `"1"`, keys that collide once
+    rendered as text: discovery reads the second entry alone and drops the first.
+    `dropped` and `read` are the answers each entry's friction block carries."""
+
+    def entry(key: str, title: str, answers: str) -> str:
+        return (
+            f"{key}:\n  title: {title}\n  pkit:\n    friction:\n"
+            f"      anchors: {{path: [src/cli/**]}}\n{answers}"
+        )
+
+    second = '"1"'
+    return f"---\n{entry('1', 'dropped', dropped)}{entry(second, 'read', read)}---\n\nBody.\n"
+
+
+def _listed(reason: str) -> str:
+    """A `revisited` list of one entry, in flow style, as the repro of #1750 writes it."""
+    return (
+        f"      revisited:\n      - {{anchor: {{kind: path, value: {TEST_CLI}}}, "
+        f"outcome: unchanged, reason: {reason}}}\n"
+    )
+
+
+def _stamped(because: str) -> str:
+    """A `revalidated` block in block style."""
+    return (
+        f"      revalidated:\n        at: {T0}\n        outcome: unchanged\n"
+        f"        unchanged-because: {because}\n"
+    )
+
+
+# Text in the entry discovery drops, which no tool reads and no person is shown.
+UNSEEN = "      revisited: |\n        text no tool reads\n        status: accepted\n"
+
+
+@pytest.mark.parametrize(
+    ("before", "after"),
+    [
+        pytest.param(
+            (_listed("a"), _listed("b")), (UNSEEN, _listed("b")), id="the-dropped-entry-s-list"
+        ),
+        pytest.param(
+            (_listed("a"), _listed("b")), (_listed("a"), _listed("c")), id="the-read-entry-s-list"
+        ),
+        pytest.param(
+            (_stamped("a"), _stamped("b")),
+            (_stamped("a, rewritten"), _stamped("b")),
+            id="the-dropped-entry-s-block",
+        ),
+    ],
+)
+def test_keys_that_collide_once_rendered_lie_outside(
+    repo: AdopterRepo, before: tuple[str, str], after: tuple[str, str]
+) -> None:
+    """`1` and `"1"` are both read as `1` (#1750). Discovery reads the second entry, while
+    the key found by its written text is the first, so the block or list taken out could
+    be the one no tool reads, and a change to it would count as inside. Where two keys on
+    the path to a block or a list are read alike, the file gives no answer: it lies
+    outside, whichever entry changed."""
+    since = _authorised(repo, {COLLIDING: _colliding(*before)})
+    head = repo.commit("rewrite an entry", {COLLIDING: _colliding(*after)})
+    found = _since(repo, since)
+    assert not found.all_inside
+    (outside,) = found.outside
+    assert (outside.path, outside.commit) == (COLLIDING, head)
+    assert "are read as `1` once rendered" in outside.why
+
+
+def test_front_matter_with_a_key_no_mapping_can_hold_lies_outside(repo: AdopterRepo) -> None:
+    """A complex key holding a mapping, `? [{a: 1}]`, is no key a mapping can hold
+    (#1750). The front matter does not parse, so the file lies outside, and the command
+    answers rather than fail with an error."""
+    since = _authorised(repo)
+    complex_key = _page(T0).replace("status: draft", "? [{a: 1}]\n: x\nstatus: draft")
+    head = repo.commit("a complex key", {PAGE: complex_key})
+    (outside,) = _since(repo, since).outside
+    assert (outside.path, outside.commit) == (PAGE, head)
+    assert outside.why.startswith("its front matter does not parse (found unhashable key")
+    result = _cli(since, "--base", "main")
+    assert result.exit_code == 0, result.output
+
+
 def test_an_object_that_cannot_be_read_is_never_read_as_empty(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:
