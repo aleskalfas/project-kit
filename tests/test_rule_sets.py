@@ -199,6 +199,97 @@ def test_the_project_folder_follows_the_internal_documentation_root(adopter: Ado
     ]
 
 
+def test_a_rule_set_left_behind_by_a_hand_edit_of_the_root_fails_validation(
+    adopter: AdopterRepo,
+) -> None:
+    # The root changed by hand: nothing declared the old folder.
+    adopter.write({CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n"})
+    write_set(adopter, f"{PROJECT_SETS}/cmn.md", cmn())
+    write_set(adopter, f"{PROJECT_SETS}/nested/deep.md", cmn(**{"rule-set": "DEEP"}))
+
+    result = validate(adopter)
+
+    assert result.is_dormant
+    assert [(f.location, f.kind) for f in result.errors] == [
+        (f"{PROJECT_SETS}/cmn.md", Kind.UNFOUND),
+        (f"{PROJECT_SETS}/nested/deep.md", Kind.UNFOUND),
+    ]
+    message = result.errors[0].message
+    assert "rule set 'CMN'" in message and "COR-051 point 6" in message
+    assert f"add `{PROJECT_SETS}` to `friction.places`" in message  # the nearest folder
+    assert "move it under `tech-docs/rule-sets/`" in message
+    assert "remove its `rule-set:` key" in message
+    assert rs.summary_lines(result) == ["no rule sets found; 2 error(s)."]
+
+    outcome = rs.outcome(adopter.root)
+    assert [f.location for f in outcome.findings] == [
+        f"{PROJECT_SETS}/cmn.md",
+        f"{PROJECT_SETS}/nested/deep.md",
+    ]
+
+    # Declaring the folder mends it: the sets are found where they are.
+    declared = "friction:\n  places: [docs/rule-sets]\n"
+    adopter.write({CONFIG: f"name: adopter\ndocs:\n  internal: tech-docs\n{declared}"})
+    mended = validate(adopter)
+    assert Kind.UNFOUND not in kinds(mended)
+    assert [s.path for s in mended.discovery.rule_sets] == [
+        f"{PROJECT_SETS}/cmn.md",
+        f"{PROJECT_SETS}/nested/deep.md",
+    ]
+
+
+def test_a_left_behind_file_is_reported_beside_the_sets_that_are_found(
+    adopter: AdopterRepo,
+) -> None:
+    adopter.write({CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n"})
+    write_set(adopter, "tech-docs/rule-sets/cmn.md", cmn())
+    write_set(adopter, "handbook/rule-sets/old.md", cmn(**{"rule-set": "OLD"}))
+
+    result = validate(adopter)
+
+    assert [(f.location, f.kind) for f in result.errors] == [
+        ("handbook/rule-sets/old.md", Kind.UNFOUND)
+    ]
+    assert [s.path for s in result.discovery.rule_sets] == ["tech-docs/rule-sets/cmn.md"]
+
+
+def test_nothing_is_left_behind_that_does_not_read_as_a_set(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    adopter = make_adopter_repo(capabilities=("evidence",))
+    named = rule_set_text({"rule-set": "X", "version": "1.0.0", "rules": {}})
+    adopter.write(
+        {
+            CONFIG: "name: adopter\ndocs:\n  internal: tech-docs\n",
+            ".gitignore": "vendor/\n",
+            # an ignored copy, such as an installed package's
+            "vendor/pkg/rule-sets/copy.md": named,
+            # a folder's signpost, even one that names a set
+            f"{PROJECT_SETS}/README.md": named,
+            # front matter that names no set, or that does not parse
+            f"{PROJECT_SETS}/notes.md": "---\ntitle: Notes\n---\n\n# Notes\n",
+            f"{PROJECT_SETS}/prose.md": "# Just prose\n",
+            f"{PROJECT_SETS}/broken.md": "---\nrule-set: [unclosed\n---\n",
+            f"{PROJECT_SETS}/empty-name.md": "---\nrule-set:\n---\n",
+            # a capability's method folder, installed or not
+            ".pkit/capabilities/not-installed/rule-sets/ns.md": named,
+            # not in or beneath a folder named `rule-sets`
+            "docs/elsewhere.md": named,
+            "docs/rule-sets-old/x.md": named,
+            # not Markdown
+            f"{PROJECT_SETS}/data.yaml": "rule-set: Y\n",
+        }
+    )
+    write_set(
+        adopter,
+        ".pkit/capabilities/evidence/rule-sets/ev.md",
+        {"rule-set": "EV", "version": "1.0.0", "rules": {}},
+    )
+
+    assert rs.unfound_rule_set_files(adopter.root) == ()
+    assert Kind.UNFOUND not in kinds(validate(adopter))
+
+
 def test_a_file_in_a_rule_set_folder_without_front_matter_is_reported(
     adopter: AdopterRepo,
 ) -> None:
