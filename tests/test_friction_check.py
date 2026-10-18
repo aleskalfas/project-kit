@@ -1111,7 +1111,7 @@ def test_a_capability_place_in_the_package_schema_shape_is_checked(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     """The place is read from each side's package metadata as
-    `{path, location?, type?, description?}`."""
+    `{path, location?, type?, revisits?, description?}`."""
     repo = make_adopter_repo(capabilities=("evidence",))
     package = repo.root / ".pkit/capabilities/evidence/package.yaml"
     package.write_text(

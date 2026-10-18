@@ -4,7 +4,7 @@ Over the artefacts `friction_discovery` finds in the declared places, and the
 settings that declare them, this pass reports:
 
 - **a capability place the walk does not follow** — one discovery could not
-  read in the package schema's shape `{path, location?, type?, description?}`
+  read in the package schema's shape `{path, location?, type?, revisits?, description?}`
   (plain text, no `path`, a location `docs.locations` does not declare, or
   declares in another shape with nothing recorded), or one that leaves the
   repository, through a link included; reported whenever it is declared,
@@ -321,8 +321,8 @@ def _capability_place_findings(
             kind=FrictionFindingKind.MALFORMED_PLACE,
             message=(
                 f"{place.reason}, so friction discovery walks nothing under it; a capability "
-                f"place is `{{path, location?, type?, description?}}`, its `location` naming a "
-                f"`docs.locations` entry written `{{path, root?}}` (COR-050 point 7)."
+                f"place is `{{path, location?, type?, revisits?, description?}}`, its `location` "
+                f"naming a `docs.locations` entry written `{{path, root?}}` (COR-050 point 7)."
             ),
         )
     for declared in settings.places:
