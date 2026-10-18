@@ -4,8 +4,9 @@ An id is never used again (DEC-001 point 3), so a number a file was given
 stays held once the file is gone. The backbone reads one state at a time
 (`pkit friction artefacts [--at]`), so a history is read in two steps:
 
-- git lists each path a history added under the numbered kinds' places,
-  with the commit that added it — one `git log`, whatever the history's
+- git lists each path a history added under the places of the numbered kinds
+  it is asked about — use cases, journeys and the three kinds of requirement
+  — with the commit that added it — one `git log`, whatever the history's
   length (`backbone.added`). A rename is a removal and an addition, so every
   name a file had is there, and each carries the number its name gives
   (`id_in_name`), as the stamp names every file;

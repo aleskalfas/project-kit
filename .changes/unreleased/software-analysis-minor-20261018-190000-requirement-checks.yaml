@@ -1,0 +1,24 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit analysis validate` and `pkit analysis check-numbers` now hold a
+  requirement as they hold a use case (#1693, software-analysis DEC-002).
+  The check fails a requirement whose heading does not show its id, its kind
+  and its title, as `# REQ-004 · Quality · <title>`, and one whose file's name
+  carries no number or another than its id. It fails an id two artefacts
+  share, `REQ-0004` and `REQ-004` read as one id, and a requirement's number
+  is one across the three kinds. It fails an entry of a requirement's
+  `actors` or `refines` that the analysis does not hold, that names the
+  requirement itself, or that is withdrawn while the requirement is in force.
+  A requirement it refines may be of any kind. It also fails a requirement
+  whose anchors within the analysis do not match its `actors` and `refines`
+  exactly, and its message names the anchors to write. A hint left in a
+  requirement's `statement`, `measure` or `applies-to` is refused, as any
+  hint left in is. `pkit analysis check-numbers` counts a requirement's
+  number across the three kinds' folders: two kinds' requirements of one
+  number collide, and a requirement moved to another kind's folder keeps its
+  number and collides with nothing. `SAN`'s declared part of the format rule
+  names the three kinds among those whose missing title heading the heading
+  check holds. That part is no content of the rule, so `SAN` stays at 1.0.0.
