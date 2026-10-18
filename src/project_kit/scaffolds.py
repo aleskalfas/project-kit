@@ -20,23 +20,35 @@ from __future__ import annotations
 
 import re
 import stat
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
 import click
 
+from project_kit import default_branch
 from project_kit.capabilities import (
     refuse_name_held_by_other_kind,
     refuse_reserved_capability_name,
 )
 from project_kit.changesets import BACKBONE
 from project_kit.dispatcher import static_command_names
+from project_kit.friction_git import SHORT, CommitTree, run_git
 from project_kit.manifest import (
     ComponentRegistryEntry,
     read_backbone_manifest,
     read_kit_version,
     write_backbone_manifest,
+)
+from project_kit.migrations import (
+    MigrationTarget,
+    migration_target,
+    minor_of,
+    recorded_version,
+    tier_subject,
+    version_cell,
+    version_folders,
 )
 
 _SLUG_RE = re.compile(r"^[a-z0-9]+(-[a-z0-9]+)*$")
@@ -449,9 +461,16 @@ def stamp_adapter(target_root: Path, name: str) -> AdapterScaffoldResult:
 
 @dataclass(frozen=True)
 class MigrationScaffoldResult:
-    """Path of the stamped migration script."""
+    """Path of the stamped migration script, and, when no version was given, the version
+    the stamp chose and why."""
 
     script: Path
+    target: MigrationTarget | None = None
+
+
+def _warn(message: str) -> None:
+    """What the stamp says of the default branch, on standard error."""
+    click.echo(f"warning: {message}", err=True)
 
 
 def stamp_migration(
@@ -461,6 +480,8 @@ def stamp_migration(
     slug: str | None,
     component: str | None = None,
     scope: MigrationScope = "resource",
+    *,
+    warn: Callable[[str], None] = _warn,
 ) -> MigrationScaffoldResult:
     """Drop a numbered migration script in the right `<major>.<minor>.0/` directory.
 
@@ -475,10 +496,21 @@ def stamp_migration(
     backbone tier the contract that it be safe over any state) and made
     executable.
 
-    For component tiers, the version defaults to the component's recorded
-    version (read from `package.yaml`) when omitted. For the backbone
-    tier, version is taken from `.pkit/VERSION` when omitted. Either way,
-    a passed version overrides.
+    The version is the one the migration carries a project to, never one already
+    released: the runner runs a folder only past the version a project records.
+    The released version is the one the default branch records for the tier
+    (`.pkit/VERSION`, or the component's `package.yaml`), read from git objects,
+    as a command that allocates from settled state reads it (COR-054 point 3), or
+    the working tree's where the default branch holds none. Without `version`, the
+    stamp takes `migrations.migration_target` past it, and the result says which
+    and why. A given `version` at or below the default branch's refuses, naming
+    the version to give. The script's number is one past the highest in its
+    folder, in the working tree or on the default branch.
+
+    Where the default branch cannot be read, the stamp says so through `warn`,
+    and judges against the working tree alone (point 4). A default branch read
+    from the local branch, and a declaration read as the default, are said there
+    too (`DefaultBranch.warnings`).
     """
     pkit_dir = _require_pkit_dir(target_root)
 
@@ -486,7 +518,6 @@ def stamp_migration(
         if component is not None:
             raise click.ClickException("--component is not allowed for tier 'backbone'.")
         migrations_root = pkit_dir / "migrations" / "backbone"
-        resolved_version = version or _read_backbone_version(target_root)
     else:
         if not component:
             raise click.ClickException(f"--component <name> is required for tier '{tier}'.")
@@ -495,19 +526,65 @@ def stamp_migration(
         if not component_dir.is_dir():
             raise click.ClickException(f"{tier} '{component}' not found in this project tree.")
         migrations_root = component_dir / "migrations"
-        resolved_version = version or _read_component_version(component_dir)
 
-    _validate_minor_version(resolved_version)
+    if version is not None:
+        _validate_minor_version(version)
 
     if not slug:
         raise click.ClickException("--name <slug> is required.")
     _validate_kebab_case(slug, "migration slug")
 
+    subject = tier_subject(tier, component)
+    root_rel = migrations_root.relative_to(target_root).as_posix()
+    own = _working_tree_version(target_root, tier, component)
+    settled = _settled_tier(target_root, tier, component, root_rel, warn)
+    released, where = (
+        (settled.version, settled.where)
+        if settled.version is not None
+        else (own, "the working tree")
+    )
+    upcoming: MigrationTarget | None = None
+    if released is not None:
+        held = (
+            p.relative_to(target_root).as_posix()
+            for p in migrations_root.glob("*/*")
+            if p.is_file()
+        )
+        folders = version_folders(held, root_rel) | version_folders(settled.files, root_rel)
+        upcoming = migration_target(subject, released, where, own=own, folders=folders)
+
+    if version is None:
+        if upcoming is None:
+            raise click.ClickException(
+                f"can't resolve a {subject} version: neither the working tree nor the default "
+                f"branch holds {version_cell(tier, component)}. Pass --version <X.Y.0> explicitly."
+            )
+        resolved_version = upcoming.version
+    else:
+        if (
+            settled.version is not None
+            and upcoming is not None
+            and minor_of(version) <= minor_of(settled.version)
+        ):
+            raise click.ClickException(
+                f"--version {version} is already released: {settled.where} records {subject} "
+                f"{settled.version}, so a project at {settled.version} never runs a migration "
+                f"in {version}/. Give --version {upcoming.version}, the version the stamp "
+                f"picks without --version, or a later one."
+            )
+        resolved_version = version
+
     version_dir = migrations_root / resolved_version
     version_dir.mkdir(parents=True, exist_ok=True)
 
-    next_num = _next_migration_number(version_dir)
-    nnn = f"{next_num:03d}"
+    taken = [p.name for p in version_dir.glob("[0-9][0-9][0-9]-*.sh") if p.is_file()]
+    folder_prefix = f"{root_rel}/{resolved_version}/"
+    taken += [
+        rel[len(folder_prefix) :]
+        for rel in settled.files
+        if rel.startswith(folder_prefix) and "/" not in rel[len(folder_prefix) :]
+    ]
+    nnn = f"{_highest_migration_number(taken) + 1:03d}"
     script_path = version_dir / f"{nnn}-{slug}.sh"
 
     scope_comment = _migration_scope_comment(tier, component, resolved_version, scope, slug)
@@ -521,7 +598,86 @@ def stamp_migration(
     )
     _make_executable(script_path)
 
-    return MigrationScaffoldResult(script=script_path)
+    return MigrationScaffoldResult(script=script_path, target=upcoming if version is None else None)
+
+
+@dataclass(frozen=True)
+class _SettledTier:
+    """What the default branch holds of a tier: the version it records (`None` where it
+    holds none or was not read), how a message names the branch, and the paths of the
+    files under the tier's migrations folder, each from the project root."""
+
+    version: str | None = None
+    where: str = "the default branch"
+    files: tuple[str, ...] = ()
+
+
+def _settled_tier(
+    target_root: Path,
+    tier: MigrationTier,
+    component: str | None,
+    root_rel: str,
+    warn: Callable[[str], None],
+) -> _SettledTier:
+    """Read the tier from the default branch, at the commit the backbone resolves it to,
+    from git objects (COR-054 points 2 and 3). It is read as a standing value reads it:
+    no base reaches it, `$PKIT_CHECK_BASE` included. Where it cannot be read, `warn`
+    says why, and nothing is returned (point 4). A branch with no commit yet holds
+    nothing, which is no failure to read it."""
+    branch = default_branch.resolve(target_root, standing=True)
+    for said in branch.warnings:
+        warn(said)
+    if branch.unborn:
+        return _SettledTier()
+    alone = (
+        "The migration's version is judged against the working tree alone, so it may name "
+        "a version the default branch has released (COR-054 point 4)."
+    )
+    if branch.commit is None:
+        problem = branch.problem or f"the default branch {branch.name!r} resolves to no commit."
+        warn(f"{problem} {alone}")
+        return _SettledTier()
+    where = f"the default branch {branch.name!r}"
+    try:
+        top = Path(
+            run_git(target_root, "rev-parse", "--show-toplevel")
+            .stdout.decode("utf-8", "surrogateescape")
+            .strip()
+        ).resolve()
+        prefix = target_root.resolve().relative_to(top).as_posix()
+        tree = CommitTree(top, branch.commit)
+    except (click.ClickException, ValueError) as exc:
+        said = exc.message if isinstance(exc, click.ClickException) else str(exc)
+        warn(f"{where} ({branch.ref} at {branch.commit[:SHORT]}) could not be read: {said} {alone}")
+        return _SettledTier()
+    lead = "" if prefix == "." else f"{prefix}/"
+
+    def read(rel: str) -> bytes | None:
+        return tree.read_bytes([f"{lead}{rel}"])[f"{lead}{rel}"]
+
+    version = recorded_version(tier, component, read)
+    under = f"{lead}{root_rel}/"
+    files = tuple(rel[len(lead) :] for rel in tree.files() if rel.startswith(under))
+    return _SettledTier(version=version, where=where, files=files)
+
+
+def _working_tree_version(
+    target_root: Path, tier: MigrationTier, component: str | None
+) -> str | None:
+    """The version the working tree records for the tier, or `None` where it holds none.
+    For the backbone, a tree without `.pkit/VERSION` falls back to the backbone version
+    its manifest records."""
+
+    def read(rel: str) -> bytes | None:
+        path = target_root / rel
+        return path.read_bytes() if path.is_file() else None
+
+    version = recorded_version(tier, component, read)
+    if version is None and tier == "backbone":
+        backbone = read_backbone_manifest(target_root)
+        if backbone is not None and backbone.backbone_version:
+            version = backbone.backbone_version
+    return version
 
 
 def _migration_scope_comment(
@@ -671,51 +827,6 @@ def _read_area_variant(readme: Path) -> str | None:
     return match.group(1) if match else None
 
 
-def _read_backbone_version(target_root: Path) -> str:
-    """Resolve the recorded backbone version's `X.Y.0` form.
-
-    Prefers the project's backbone manifest; falls back to `.pkit/VERSION`
-    in the project tree. Whatever's read is truncated to `X.Y.0` (the
-    migration-directory naming rule per COR-010).
-    """
-    backbone = read_backbone_manifest(target_root)
-    if backbone is not None and backbone.backbone_version:
-        return _truncate_to_minor(backbone.backbone_version)
-    version_file = target_root / ".pkit" / "VERSION"
-    if version_file.is_file():
-        return _truncate_to_minor(read_kit_version(target_root / ".pkit"))
-    raise click.ClickException(
-        "can't resolve a backbone version (no manifest, no .pkit/VERSION). "
-        "Pass --version <X.Y.0> explicitly."
-    )
-
-
-def _read_component_version(component_dir: Path) -> str:
-    """Read a component's `version` field from its `package.yaml`, truncated to X.Y.0."""
-    package_yaml = component_dir / "package.yaml"
-    if not package_yaml.is_file():
-        raise click.ClickException(
-            f"component at {component_dir} has no package.yaml — can't infer version. "
-            f"Pass --version <X.Y.0> explicitly."
-        )
-    text = package_yaml.read_text(encoding="utf-8")
-    match = re.search(r"version:\s*([0-9]+\.[0-9]+\.[0-9]+)", text)
-    if match is None:
-        raise click.ClickException(
-            f"component's package.yaml at {package_yaml} has no version field. "
-            f"Pass --version <X.Y.0> explicitly."
-        )
-    return _truncate_to_minor(match.group(1))
-
-
-def _truncate_to_minor(version: str) -> str:
-    """`1.2.3` → `1.2.0`. Per COR-010 migration directories always end `.0`."""
-    parts = version.split(".")
-    if len(parts) < 2:
-        raise click.ClickException(f"version {version!r} is not in major.minor.patch form.")
-    return f"{parts[0]}.{parts[1]}.0"
-
-
 def _resolve_component_dir(pkit_dir: Path, tier: MigrationTier, component: str) -> Path:
     """Resolve a component name to its source directory.
 
@@ -729,19 +840,14 @@ def _resolve_component_dir(pkit_dir: Path, tier: MigrationTier, component: str) 
     raise click.ClickException(f"unknown tier '{tier}'.")
 
 
-def _next_migration_number(version_dir: Path) -> int:
-    """Highest `NNN` in `NNN-*.sh` filenames + 1, defaulting to 1."""
+def _highest_migration_number(names: list[str]) -> int:
+    """Highest `NNN` among `NNN-*.sh` file names, or 0."""
     highest = 0
-    for path in version_dir.glob("[0-9][0-9][0-9]-*.sh"):
-        if not path.is_file():
+    for name in names:
+        if not re.fullmatch(r"[0-9]{3}-.*\.sh", name):
             continue
-        try:
-            num = int(path.name.split("-", 1)[0], base=10)
-        except ValueError:
-            continue
-        if num > highest:
-            highest = num
-    return highest + 1
+        highest = max(highest, int(name[:3], base=10))
+    return highest
 
 
 def _package_yaml_for(kind: Literal["adapter"], name: str, target_root: Path) -> str:

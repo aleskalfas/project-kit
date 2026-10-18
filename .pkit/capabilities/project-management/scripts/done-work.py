@@ -15,6 +15,18 @@ goes through Review first, #1162). Per DEC-026:
                   [--skip-checkbox-gate]
                   [--bypass-reviewer <name> ... --bypass-reviewer-reason "<r>"]
 
+Authorisation (#1760): the merge is the person's to authorise
+([project-management:DEC-006-state-machine-and-cascade],
+[project-management:DEC-055-pr-lists-answers] point 3) — `--yes`, or a yes at
+the prompt a run at a terminal asks, which names the PR and the head the merge
+is pinned to. A run with neither, no `--yes` and no terminal, runs every gate
+and then refuses (exit 2), naming that head: nothing is posted, moved or
+merged. `--yes` names no head: it merges the head the gates read when the run
+starts. A merge authorised for a named head goes through `land-work --yes
+--expect-head <sha>`, which hands that head on as `run`'s `pinned_head`.
+Completing a PR that has merged already merges nothing, so that path asks at
+a terminal and goes on without one, as before.
+
 Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
   2. The PR's last non-author comment starts with `Approved`, OR
@@ -196,7 +208,8 @@ Exit codes:
   0  merged + done
   1  membership refusal / approval, checkbox or CI gate fails; a queue the
      run may not go around or through
-  2  usage error / gh failure
+  2  usage error / gh failure; a run with no `--yes` and no terminal to ask
+     at, which merges nothing
   3  the merge failed; the PR left the merge queue without merging, or was
      taken out of it because its head moved; or, called with a pinned head
      (`run(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is
@@ -206,12 +219,13 @@ Exit codes:
      enqueue got no answer back — and GitHub could not be read to confirm it
 
 One exit code covers several ends — 0 is a merge, a dry run and a declined
-prompt alike — so a verb that composes done-work (`land-work`, #1203) calls
-`run`, which returns how the run ended (`DoneWorkRun`: merged, merged with a
-step after the merge owed, queued, unconfirmed, declined, planned, head
-moved, refused — saying whether running again unchanged can help — or
-unreadable), and decides on that. The exit codes above are what `main`
-returns for each, unchanged.
+prompt alike — and one end several codes: no authorisation is 0 for a
+declined prompt and 2 for a run with no terminal to ask at. So a verb that
+composes done-work (`land-work`, #1203) calls `run`, which returns how the
+run ended (`DoneWorkRun`: merged, merged with a step after the merge owed,
+queued, unconfirmed, declined, planned, head moved, refused — saying whether
+running again unchanged can help — or unreadable), and decides on that. The
+exit codes above are what `main` returns for each.
 """
 
 from __future__ import annotations
@@ -375,7 +389,9 @@ QUEUED = "queued"
 #: Whether the PR merged, or entered the queue, could not be read after a
 #: merge request that may have been made.
 UNCONFIRMED = "unconfirmed"
-#: The confirmation prompt was declined: nothing was posted, moved or merged.
+#: No authorisation to merge: the confirmation prompt was declined, or there
+#: was no `--yes` and no terminal to ask at (#1760). Nothing was posted, moved
+#: or merged.
 DECLINED = "declined"
 #: A dry run printed what it would do.
 PLANNED = "planned"
@@ -611,7 +627,14 @@ def run(
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--yes", action="store_true")
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "The authorisation to merge. Without it, done-work asks at a terminal, and "
+            "off one it refuses (exit 2) once its gates have run, merging nothing."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args(argv)
     if branch_reading is not None and branch_reading.issue != args.issue_number:
@@ -1046,8 +1069,21 @@ def run(
         )
         return _ended(PLANNED, 0)
 
-    if not args.yes and sys.stdin.isatty():
-        question = "Enqueue + close once merged?" if queue.has_queue else "Squash-merge + close?"
+    # The merge is the person's to authorise (DEC-055 point 3): `--yes`, or a yes
+    # at the prompt. Off a terminal with no `--yes` nobody is there to ask, and a
+    # run that merged anyway would merge unasked, so it refuses (#1760).
+    # The head named is the one the merge is pinned to, so a push after the
+    # question fails the merge rather than land a head nobody named.
+    merging = gate_result.head_oid or pr_head
+    if not args.yes:
+        if not sys.stdin.isatty():
+            return _ended(DECLINED, 2, _no_authorisation(args.issue_number, pr_number, merging))
+        named = f"PR #{pr_number} at {short_sha(merging)}"
+        question = (
+            f"Enqueue {named} + close once merged?"
+            if queue.has_queue
+            else f"Squash-merge {named} + close?"
+        )
         reply = input(f"{question} [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
             return _ended(DECLINED, 0, "aborted.")
@@ -1277,6 +1313,19 @@ def _head_not_pinned(issue_number: int, pr_number: object, head: str, pinned_hea
     )
 
 
+def _no_authorisation(issue_number: int, pr_number: object, head: str) -> str:
+    """The refusal of a run with no `--yes` and no terminal to ask at (#1760): the
+    merge is the person's to authorise (DEC-055 point 3), so it is never guessed."""
+    return (
+        f"error: no authorisation to merge PR #{pr_number} at {short_sha(head)}. This run "
+        "has no --yes, and no terminal to ask at. Nothing was posted, moved or merged, "
+        f"and #{issue_number} stays where it is. Show the person what the PR changes, "
+        f"and merge it on their authorisation with `done-work {issue_number} --yes`. "
+        f"`land-work {issue_number}`, run without --yes, stops on a `ready:` line that "
+        "names the head to authorise."
+    )
+
+
 def _not_merged(
     issue_number: int, pr_number: int, base: str, landing: pr_merge.Landing
 ) -> DoneWorkRun:
@@ -1300,7 +1349,8 @@ def _not_merged(
             f"#{issue_number} stays in Review. Run `done-work {issue_number}` again once "
             f"GitHub answers: if the PR merged, it moves #{issue_number} to Done, closes and "
             "cascades the issues the PR closes, and cleans up the branch; if it did not, it "
-            "merges it."
+            "merges it on the authorisation that run is given (--yes, or a yes at a "
+            "terminal)."
         )
         return _ended(UNCONFIRMED, EXIT_ACCEPTED, reason=f"[unconfirmed] {landing.message}")
     if landing.outcome == pr_merge.REFUSED:

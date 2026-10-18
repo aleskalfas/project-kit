@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T20:04:41Z
+      at: 2026-10-18T20:17:13Z
       outcome: unchanged
-      unchanged-because: This change stops release apply writing, and release plan listing, the note of a none changeset. The use case covers declaring changesets and the guard that checks them, which this change leaves as they were.
+      unchanged-because: This change alters pkit new migration and pkit migrations check-diff in cli.py. The stamp names a migration's folder and writes no version cell, and the changeset guard and the release commands this use case describes are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

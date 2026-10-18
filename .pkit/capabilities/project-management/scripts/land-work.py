@@ -24,8 +24,13 @@ what changed and what is left out of date, as information. It prints each
 `[person]` finding whole, and a `--yes` run merges only on verdicts carrying
 them that it found when it started, standing for the head it merges.
 
-    land-work <N> [--yes [--expect-head SHA]] [--wait-minutes M | --no-wait]
+    land-work <N> [--yes --expect-head SHA] [--wait-minutes M | --no-wait]
                   [--dry-run]
+
+`--yes` is the authorisation to merge, and it is for a named head
+([project-management:DEC-055-pr-lists-answers] point 3): `--yes` without
+`--expect-head` is refused (exit 2) before anything is read, waited for or
+reviewed (#1760).
 
 Each step prints one line; the verbs it composes print their detail above it.
 It stops at the first step that cannot go on, and its last line says why.
@@ -103,7 +108,8 @@ It stops at the first step that cannot go on, and its last line says why.
           and stops with a `ready:` line naming the head and the command that
           merges it; the lines above it tell what changed in each updated
           document and which are left out of date, as information. At a
-          terminal, `done-work`'s prompt asks, after the answers. A change
+          terminal, `done-work`'s prompt asks, naming the head, after the
+          answers. A change
           with answers merges under the same authorisation as any other; a
           run the findings to judge hold stops at `ready:`. So does a run at
           a later head an earlier head's authorisation covers, where it finds
@@ -398,7 +404,20 @@ _CI_PR_MERGED = "merged"
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _parser().parse_args(argv)
+    parser = _parser()
+    args = parser.parse_args(argv)
+    if args.yes and not args.expect_head:
+        # An authorisation to merge is for a named head (DEC-055 point 3), and a
+        # `--yes` that names none would merge whatever head the run finds, one the
+        # person may not have been shown (#1760). It is refused before anything
+        # is read, waited for or reviewed. No command with a head is offered: the
+        # head to authorise is the one the `ready:` line names, once the person was
+        # shown what that line prints.
+        parser.error(
+            "--yes needs --expect-head <sha>: an authorisation to merge is for a named "
+            f"head. Nothing was done. Run `land-work {args.issue_number}` without --yes: "
+            "its ready: line names the head and the command that merges it"
+        )
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
         print(f"error: {CAPABILITY_NAME} capability not found.", file=sys.stderr)
@@ -467,11 +486,14 @@ def _parser() -> argparse.ArgumentParser:
         "--yes",
         action="store_true",
         help=(
-            "The authorisation to merge. Without it, off a terminal, land-work checks, "
-            "reviews and runs done-work's gates, then stops with a `ready:` line (exit "
-            "8); at a terminal, done-work asks. A change with friction answers merges "
-            "under it as any other does. A finding to judge stops the run at `ready:` "
-            "unless the run found its verdict when it started, standing for the head."
+            "The authorisation to merge the head --expect-head names, and refused "
+            "without it (exit 2), before anything runs. Without --yes, off a terminal, "
+            "land-work checks, reviews and runs done-work's gates, then stops with a "
+            "`ready:` line (exit 8) naming the head and the command that merges it. At "
+            "a terminal, done-work asks, naming the head. A change with friction answers "
+            "merges under it as any other does. A finding to judge stops the run at "
+            "`ready:` unless the run found its verdict when it started, standing for "
+            "the head."
         ),
     )
     parser.add_argument(
@@ -480,10 +502,10 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         metavar="SHA",
         help=(
-            "The PR head the merge is authorised for (7 to 40 hex digits): the run "
-            "stops (exit 3) when the PR's head is another, unless every change since "
-            "lies inside `revalidated` blocks or `revisited` lists, a clean merge of "
-            "the base counting as none. The `ready:` line names it."
+            "The PR head the merge is authorised for (7 to 40 hex digits), which --yes "
+            "needs: the run stops (exit 3) when the PR's head is another, unless every "
+            "change since lies inside `revalidated` blocks or `revisited` lists, a clean "
+            "merge of the base counting as none. The `ready:` line names it."
         ),
     )
     parser.add_argument(
@@ -897,8 +919,9 @@ def _ran_out(head: _Head, gate: CiGateResult, waited: float, wait_seconds: float
             "paths this PR changes, its head commit asks to skip CI ([skip ci]), or a run "
             f"from a fork awaits approval. Run `land-work {issue}` again to keep waiting. "
             "Only in a project that runs no checks on pull requests — never because a "
-            f"wait ran out — review it with `review-pr {issue}` and merge it with "
-            f"`done-work {issue}`: `done-work` does not wait for a check nobody reported"
+            f"wait ran out — review it with `review-pr {issue}` and merge it, on the "
+            f"person's authorisation, with `done-work {issue} --yes`: `done-work` does "
+            "not wait for a check nobody reported"
         )
     return (
         f"ci: still running on {sha} {after}: {', '.join(gate.running)}. "
