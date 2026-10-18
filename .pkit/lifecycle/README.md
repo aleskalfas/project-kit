@@ -31,7 +31,7 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-18T08:25:41Z
+      at: 2026-10-18T11:44:06Z
       outcome: updated
 ---
 
