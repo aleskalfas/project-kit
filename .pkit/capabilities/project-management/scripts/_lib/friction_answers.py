@@ -22,10 +22,12 @@ updated document's sentence from the change's author:
   methodology, in the words of the change check's own list: the question once
   (`QUESTION`), then each document, the anchors the change modified that it
   relies on, and whether it is still true, each answer and flag in plain words
-  (`LABELS`, `FLAGS`). The change check's own terms stay in its
-  machine-readable list (`--json`), which this module reads. Each `updated`
-  document also gives its sentence on what changed, or says its author gave
-  none.
+  (`LABELS`, `FLAGS`). A revisit entry (COR-050 point 16) names its source,
+  the target, the links that list it and the trigger fields the change
+  modified, then the outcome and its reason. The change check's own terms stay
+  in its machine-readable list (`--json`), which this module reads. Each
+  `updated` document also gives its sentence on what changed, or says its
+  author gave none.
 - `sentences(body)` reads those sentences where the change's author keeps
   them: the description's own `## What changed in each updated document`
   section (`SENTENCES_HEADING`), one list item per document, the document in
@@ -35,8 +37,9 @@ updated document's sentence from the change's author:
   a sentence takes (`SENTENCE_FORM`). `given` is the ones the list shows, and
   `with_sentences` puts them into a list already written, for an edit that
   derives nothing. `told` is what the person who authorises the merge is
-  told, as information: those sentences, the documents left out of date, and
-  the friction settings changed.
+  told, as information: those sentences, the documents and the targets of a
+  link left out of date, and the friction settings changed; `counted_told`
+  counts them.
 - `closing_reference` and `comment_delimiter` name a word of the list that
   must not be written: one that reads as a closing reference — the host's own
   parser would close an issue with it at merge, and nothing here can make that
@@ -86,7 +89,7 @@ import tempfile
 from collections.abc import Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 # Sibling _lib imports, dual-form so the module loads both as part of the `_lib`
 # package (scripts/ on sys.path) and standalone-by-path (scripts/_lib/ on
@@ -655,6 +658,12 @@ LABELS = {
 #: The answers whose words the list tells the person who authorises the merge
 #: (DEC-055 point 3): an update's sentence, and a deferral's reason.
 UPDATED, DEFERRED = "updated", "deferred"
+#: The `answer` of a revisit entry (COR-050 point 16): a source's answer for one
+#: target of its links. Its `outcome` — `updated` where the target changed in the
+#: change, else `unchanged` or `deferred` — reads as `LABELS` says it, and a
+#: `deferred` one leaves the target out of date until the follow-up its reason
+#: names.
+REVISITED = "revisited"
 #: How the list gives an `updated` document's sentence: the author's words.
 SAID = "what changed, in the words of the pull request's author"
 #: What it says where the author wrote no sentence for that document.
@@ -667,6 +676,7 @@ FLAGS = {
     "not asked": "not asked for by this change",
     "bump": "re-check date changed with nothing behind it",
     "edited": "edited without a new re-check",
+    "revisit edited": "outcome changed without a new reason, which answers nothing",
     "written back": "re-check date set back to one it had before, which answers nothing",
     "entry written back": "an entry it had before, which covers only what that one did",
     "put back": "an entry it had before, covering the anchor as it stood then",
@@ -709,7 +719,14 @@ class _Entry:
     anchors the change modified that the answer is about (the check's `changed`;
     none from a backbone that predates it). `updated`: the answer is `updated`,
     so the list gives the author's `sentence` on what changed, or says there is
-    none."""
+    none.
+
+    A revisit entry (`revisit`, COR-050 point 16) is the source's answer for one
+    target: `location` is the source, `label` its outcome, `target` the anchor it
+    names, `links` the fields that list the target, `fields` the trigger fields the
+    change modified, and `deferred` whether it leaves the target out of date. It is
+    never `updated`: a target revisited by changing it carries no author's
+    sentence, since it is no revalidation."""
 
     location: str
     label: str
@@ -720,6 +737,11 @@ class _Entry:
     changed: tuple[_Anchor, ...] = ()
     updated: bool = False
     sentence: str | None = None
+    revisit: bool = False
+    target: _Anchor | None = None
+    links: tuple[str, ...] = ()
+    fields: tuple[str, ...] = ()
+    deferred: bool = False
 
 
 def _flags(entry: Mapping[str, Any]) -> list[str]:
@@ -733,7 +755,7 @@ def _flags(entry: Mapping[str, Any]) -> list[str]:
     if status == "bump":
         flags.append(FLAGS["bump"])
     if status == "edited":
-        flags.append(FLAGS["edited"])
+        flags.append(FLAGS["revisit edited" if entry.get("answer") == REVISITED else "edited"])
     if status == "written-back":
         flags.append(FLAGS["written back" if entry.get("anchor") is None else "entry written back"])
     elif entry.get("put_back"):
@@ -753,9 +775,12 @@ def _read_entry(entry: Mapping[str, Any], sentences: Mapping[str, str] | None = 
     location = shown(str(entry.get("location") or entry.get("artefact") or "?"))
     updated = answer == UPDATED
     sentence = (sentences or {}).get(location) if updated else None
+    revisit = answer == REVISITED
+    # A revisit's outcome is what the list says of it, as an answer's is.
+    said = entry.get("outcome") if revisit else answer
     return _Entry(
         location=location,
-        label=LABELS.get(str(answer), shown(str(answer))) if answer else NO_OUTCOME,
+        label=LABELS.get(str(said), shown(str(said))) if said else NO_OUTCOME,
         anchor=_read_anchor(entry.get("anchor")),
         flags=tuple(_flags(entry)),
         reason=shown(str(reason)) if reason is not None else None,
@@ -763,7 +788,18 @@ def _read_entry(entry: Mapping[str, Any], sentences: Mapping[str, str] | None = 
         changed=tuple(anchor for anchor in relied if anchor is not None),
         updated=updated,
         sentence=shown(sentence) if sentence is not None else None,
+        revisit=revisit,
+        target=_read_anchor(entry.get("target")) if revisit else None,
+        links=_texts_of(entry.get("links")) if revisit else (),
+        fields=_texts_of(entry.get("fields")) if revisit else (),
+        deferred=revisit and said == DEFERRED,
     )
+
+
+def _texts_of(value: Any) -> tuple[str, ...]:
+    """Each text of a list of the check's, shown as the list shows it; none where it
+    is no list."""
+    return tuple(shown(str(item)) for item in value) if isinstance(value, list) else ()
 
 
 def _side(values: Sequence[str], *, code: bool) -> str:
@@ -804,8 +840,11 @@ def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
     modified that it relies on, whether it is still true, its flags and its words —
     then, for an `updated` document, the author's sentence on what changed (`SAID`)
     or that there is none (`UNSAID`), then each deferral it kept, as the change
-    check's own list says them. In Markdown the outcome is bold and every text of
-    the artefact's, and the author's sentence, is set in a code span."""
+    check's own list says them. A revisit entry names its source, the target, the
+    links that list it and the trigger fields the change modified, then the
+    outcome, its flags and its words (`_revisit`). In Markdown the outcome is bold
+    and every text of the artefact's, and the author's sentence, is set in a code
+    span."""
 
     def text(words: str, least: int = 1) -> str:
         return _code(words, least=least) if markdown else words
@@ -815,7 +854,9 @@ def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
 
     sentence = bold(entry.label[:1].upper() + entry.label[1:])
     where = text(entry.location)
-    if entry.changed:
+    if entry.revisit:
+        line = f"{number}. {_revisit(entry, markdown=markdown)}. {sentence}"
+    elif entry.changed:
         relied = _and([anchor.said(markdown=markdown) for anchor in entry.changed])
         line = f"{number}. {where} relies on {relied}, which this change modifies. {sentence}"
     elif entry.anchor is not None:
@@ -834,6 +875,31 @@ def _described(entry: _Entry, number: int, *, markdown: bool) -> list[str]:
         kept += f': "{text(words, least=2)}"' if words is not None else ""
         out.append(f"   - ({kept})" if markdown else f"   ({kept})")
     return out
+
+
+#: What a revisit entry says where the check names no target.
+A_TARGET = "a target"
+#: What follows the source on a revisit entry's line (`_revisit`), as the change
+#: check's own list says it.
+_NAMES = " names "
+
+
+def _revisit(entry: _Entry, *, markdown: bool) -> str:
+    """A revisit entry's source and target as the change check's own list says them
+    (COR-050 point 16): `<source> names <target> through <links>, and this change
+    modifies its <fields>`. Without links, or where the change triggered none, that
+    part is left out. In Markdown each text is set in a code span."""
+
+    def text(words: str) -> str:
+        return _code(words) if markdown else words
+
+    target = entry.target.said(markdown=markdown) if entry.target is not None else A_TARGET
+    line = f"{text(entry.location)}{_NAMES}{target}"
+    if entry.links:
+        line += f" through {_and([text(link) for link in entry.links])}"
+    if entry.fields:
+        line += f", and this change modifies its {_and([text(name) for name in entry.fields])}"
+    return line
 
 
 def render(
@@ -900,8 +966,10 @@ def told(
     gate (DEC-055 point 3), as a terminal shows it: what changed in each `updated`
     document, in its author's sentence or that there is none; each document left
     out of date, with the anchor and the words of each deferral the change wrote
-    or a revalidation kept, which name its follow-up; then each friction setting
-    the change alters."""
+    or a revalidation kept, which name its follow-up, and each target of a link a
+    `deferred` revisit entry leaves out of date, with the source that names it and
+    the entry's words, which name its follow-up (COR-050 points 3 and 16); then
+    each friction setting the change alters."""
     out: list[str] = []
     entries = [_read_entry(e, sentences) for e in _entries(document)]
     for entry in entries:
@@ -911,22 +979,49 @@ def told(
                 said = f'"{entry.sentence}"'
             out.append(f"What changed in {entry.location}: {said}")
     for entry in entries:
+        if entry.revisit:
+            if entry.deferred:
+                out.append(f"Left out of date: {_late_target(entry)}{_quoted(entry.reason)}")
+            continue
         late = [(entry.anchor, entry.reason)] if entry.label == LABELS[DEFERRED] else []
         for anchor, words in [*late, *entry.kept]:
             where = f", for changes to {anchor.said(markdown=False)}" if anchor else ""
-            out.append(
-                f"Left out of date: {entry.location}{where}"
-                + (f': "{words}"' if words is not None else "")
-            )
+            out.append(f"Left out of date: {entry.location}{where}{_quoted(words)}")
     for setting in settings:
         before, after = _side(setting.before, code=False), _side(setting.after, code=False)
         out.append(f"{setting.key}: {before} → {after}")
     return out
 
 
-def counted_told(document: Mapping[str, Any]) -> tuple[int, int]:
-    """How many documents the change updated, and how many it leaves out of date
-    — a deferral it wrote or a revalidation kept — each document counted once."""
+def _quoted(words: str | None) -> str:
+    """`: "<words>"`, or nothing where there are none."""
+    return f': "{words}"' if words is not None else ""
+
+
+def _late_target(entry: _Entry) -> str:
+    """A target a `deferred` revisit entry leaves out of date, as `told` names it:
+    `<target>, which <source> names through <links>`."""
+    target = entry.target.said(markdown=False) if entry.target is not None else A_TARGET
+    through = f" through {_and(list(entry.links))}" if entry.links else ""
+    return f"{target}, which {entry.location} names{through}"
+
+
+class Counted(NamedTuple):
+    """What `told` tells, counted: the documents the change updated, the documents
+    it leaves out of date — a deferral it wrote or a revalidation kept — and the
+    targets of a link it leaves out of date — a `deferred` revisit entry — each
+    counted once."""
+
+    updated: int
+    left: int
+    targets: int
+
+
+def counted_told(document: Mapping[str, Any]) -> Counted:
+    """How many documents the change updated, how many it leaves out of date, and
+    how many targets of a link it leaves out of date (`Counted`): a document by
+    its location, a target by its anchor, whatever sources name it. An entry the
+    check names no target for counts as one of its own, as `told` gives it a line."""
     entries = _entries(document)
     updated = {str(e.get("location") or "") for e in entries if e.get("answer") == UPDATED}
     late = {
@@ -934,7 +1029,14 @@ def counted_told(document: Mapping[str, Any]) -> tuple[int, int]:
         for e in entries
         if e.get("answer") == DEFERRED or e.get("kept")
     }
-    return len(updated), len(late)
+    targets: set[tuple[str, ...]] = set()
+    for index, e in enumerate(entries):
+        if e.get("answer") != REVISITED or e.get("outcome") != DEFERRED:
+            continue
+        target = _mapping(e.get("target"))
+        named = (str(target.get("kind")), str(target.get("value")))
+        targets.add(named if target else ("", str(index)))
+    return Counted(len(updated), len(late), len(targets))
 
 
 # --- the author's sentences ---------------------------------------------------
@@ -1142,9 +1244,21 @@ _UPDATED_MARK = f"**{LABELS[UPDATED]}**".lower()
 _CODE_SPAN = re.compile(r"(`+).+?\1(?!`)")
 
 
+def _is_revisit_line(line: str) -> bool:
+    """Whether an entry's line is a revisit entry's: its source's code span, then
+    `_NAMES`. Its outcome may read `updated` — a target the change revisited by
+    changing it — yet it marks no document updated, since no revalidation carries
+    a sentence there."""
+    entry = _ENTRY_LINE.match(line)
+    return entry is not None and line[entry.end() :].startswith(_NAMES)
+
+
 def _marked_updated(line: str) -> bool:
-    """Whether an entry's line gives the outcome `updated`: the bold label outside
-    every code span, so an artefact's words that quote it mark nothing."""
+    """Whether an entry's line gives the outcome `updated` of a revalidation: the
+    bold label outside every code span, so an artefact's words that quote it mark
+    nothing, on a line that is no revisit entry's (`_is_revisit_line`)."""
+    if _is_revisit_line(line):
+        return False
     return _UPDATED_MARK in _CODE_SPAN.sub("", line).lower()
 
 
@@ -1198,11 +1312,14 @@ def with_sentences(block: str, sentences_: Mapping[str, str]) -> str:
 def _texts(document: Mapping[str, Any], settings: Sequence[Setting]) -> Iterator[tuple[str, str]]:
     """Every text the section would show, as it would show it, with where it is:
     (an answer's location, or `SETTINGS_WHERE`) and the text. An anchor is read as
-    the change check names it, `kind:value`."""
+    the change check names it, `kind:value`; a revisit entry's target, links and
+    trigger fields are read too."""
     for entry in (_read_entry(e) for e in _entries(document)):
         named = entry.anchor.named if entry.anchor is not None else None
         texts: list[str | None] = [entry.location, entry.label, named, entry.reason]
         texts += [anchor.named for anchor in entry.changed]
+        texts += [entry.target.named if entry.target is not None else None]
+        texts += [*entry.links, *entry.fields]
         for anchor, words in entry.kept:
             texts += [anchor.named, words]
         for text in texts:

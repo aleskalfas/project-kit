@@ -1,0 +1,8 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050, which says a
+  path anchor and a registered kind's anchor stand on the content of a file a
+  place holds, and against the schemas README's friction-block section
+  (#1661). Only the README's friction block changes, and nothing you run or
+  read changes.
