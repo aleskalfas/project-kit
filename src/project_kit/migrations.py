@@ -54,7 +54,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from project_kit import __version__, cli_render, lifecycle_ownership
-from project_kit.friction_git import CommitTree
+from project_kit.friction_git import SHORT, CommitTree
 
 _VERSION_DIR_RE = re.compile(r"^\d+\.\d+\.0$")
 
@@ -94,6 +94,9 @@ def parse_version_tuple(value: str) -> tuple[int, int, int]:
 
 
 # --- which version a migration targets (COR-010; #1754) ---------------
+
+# A full commit id, as a pipeline names a base; a line names it shortened.
+_FULL_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 
 # A released version: `major.minor.patch`, with a pre-release or build suffix allowed.
 _RELEASE_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.+-]*)?$")
@@ -651,7 +654,12 @@ class ReleasedTarget:
 
 
 def released_targets(
-    target_root: Path, landed: Sequence[str], *, base: str, tip: str
+    target_root: Path,
+    landed: Sequence[str],
+    *,
+    base: str,
+    tip: str,
+    head: str | None = None,
 ) -> tuple[ReleasedTarget, ...]:
     """Each script of `landed` whose folder's minor is at or below the version its tier
     records at the base's tip `tip`, so a project already there never runs it.
@@ -659,9 +667,12 @@ def released_targets(
     The tip, not the branch point: a release that lands after the branch was cut
     releases the folder all the same. A script in no `X.Y.0` folder has no version to
     judge. Skipped: a script the project receives by sync (`is_synced_copy`), and one
-    the tip already holds at its path, which the change did not bring. A tier the tip
-    records no version for, such as a component the change adds, has nothing released.
-    `base` is the base as named, for the line."""
+    the tip already holds, which the change did not bring: at its path, or under
+    another name in its folder with the same content, as a rename leaves it. A tier
+    the tip records no version for, such as a component the change adds, has nothing
+    released. The script's content is read at commit `head`, or from the working tree
+    when `head` is `None`. `base` is the base as named, for the line, a commit id
+    shortened."""
     judged = [path for path in landed if _VERSION_DIR_RE.match(PurePosixPath(path).parent.name)]
     if not judged:
         return ()
@@ -676,9 +687,23 @@ def released_targets(
     tree = CommitTree(target_root, tip)
     held = tree.files()
     held_set = set(held)
+    head_tree = CommitTree(target_root, head) if head is not None else None
+    if _FULL_COMMIT_RE.match(base):
+        base = base[:SHORT]
 
     def read(rel: str) -> bytes | None:
         return tree.read_bytes([rel])[rel]
+
+    def renamed(path: str) -> bool:
+        """The tip holds the script's very content under another name in its folder."""
+        if head_tree is not None:
+            content = head_tree.read_bytes([path])[path]
+        else:
+            file = target_root / path
+            content = file.read_bytes() if file.is_file() else None
+        folder = PurePosixPath(path).parent
+        beside = [rel for rel in held if PurePosixPath(rel).parent == folder]
+        return content is not None and content in tree.read_bytes(beside).values()
 
     found: list[ReleasedTarget] = []
     for path in judged:
@@ -698,14 +723,14 @@ def released_targets(
             )
             found.append(ReleasedTarget(path, tier, component, line))
             continue
-        if released is None or minor_of(folder) > minor_of(released):
+        if released is None or minor_of(folder) > minor_of(released) or renamed(path):
             continue
         root = PurePosixPath(path).parent.parent.as_posix()
         upcoming = migration_target(subject, released, base, folders=version_folders(held, root))
         line = (
             f"[{label}] {path}: targets {folder}, but {base} already records {subject} "
             f"{released}, so a project at {released} never runs it. Move it to "
-            f"{upcoming.version}/ (`pkit new migration` without `--version` picks it)."
+            f"{upcoming.version}/ or a later folder."
         )
         found.append(ReleasedTarget(path, tier, component, line))
     return tuple(found)

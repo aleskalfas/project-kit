@@ -5106,7 +5106,8 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
     `X.Y.0` folder is at or below the version its tier records at the
     base's tip (`.pkit/VERSION`, or the component's `package.yaml`): a
     project already at that version never runs it. A script the project
-    receives by sync, or one the tip already holds, is not judged.
+    receives by sync is not judged, nor one the tip already holds, at its
+    path or renamed in its folder with the same content.
 
     Exits 0 when covered or no triggers exist and no script targets a
     released version; exits 1 when triggers exist without matching
@@ -5128,7 +5129,11 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from exc
     released = migrations_mod.released_targets(
-        target_root, report.landed, base=found.ref, tip=found.tip
+        target_root,
+        report.landed,
+        base=found.ref,
+        tip=found.tip,
+        head=None if include_working_tree else "HEAD",
     )
     migrations_mod.render_coverage_report(report)
     migrations_mod.render_released_targets(released)
