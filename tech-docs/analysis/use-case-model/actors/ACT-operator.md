@@ -18,9 +18,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-18T19:25:30Z
+      at: 2026-10-18T12:33:10Z
       outcome: unchanged
-      unchanged-because: This change says in Running checks that done-work asks at a terminal, or takes --yes on the maintainer's authorisation, and merges nothing with neither. The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds. Answering that question is one of the gates the Activities already name.
+      unchanged-because: This change adds to Running checks that the friction gate also fails on a target not revisited (COR-050 point 16). The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
 ---
 
 # ACT-operator — Operator
