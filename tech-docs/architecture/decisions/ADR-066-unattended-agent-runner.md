@@ -97,7 +97,7 @@ The points:
 **The caller gets back:**
 - how the run ended: finished with the harness's exit, could not start, stopped at its limit, or refused, with the reason
 - the agent's output, and the calls the harness refused where it reports them
-- for a confined run, the run's files, the check's verdict (point 7), and each command the run ran outside the sandbox (point 6)
+- for a confined run, the run's files as untrusted data, the check's verdict (point 7), and each command the run ran outside the sandbox (point 6)
 
 **A run is refused before it starts when:**
 - the marker of a run is set (point 8), or no runner is found, or more than one (point 1)
@@ -158,7 +158,7 @@ DEC-056 point 5 reads the run's rules as denies, and this record keeps that read
 
 ### 6. The workspace is the only folder the shell writes
 
-- **The harness starts in the run's workspace.** A sandboxed command writes its working folder, so the shell writes the workspace and nothing else of the clone. Rules of their own let the run read the clone. `--add-dir` would open the clone to writes, so it is never passed. So the shell cannot change code an excluded command later runs.
+- **The harness starts in the run's workspace.** A sandboxed command writes its working folder, so the shell writes the workspace and nothing else of the clone. Rules of their own let the run read the clone. `--add-dir` would open the clone to writes, so it is never passed.
 - **One session per run.** Each run is a harness session of its own, so its sandbox is that session's. A run starts no subagent, so confinement still never differs between the agents of one session (ADR-004 point 5).
 - **On, and failing closed.** The run's settings turn the sandbox on, and stop the harness at start when the sandbox cannot start (ADR-004 point 4). The runner checks the platform first, so a known gap is a refusal.
 - **No retry outside it.** The run's settings turn off the retry that reruns a failed command outside the sandbox, as the autonomy posture does ([ADR-028](ADR-028-seal-unsandboxed-escape-under-autonomy-posture.md)). Set there, it also stops the repository's settings from loosening the sandbox.
@@ -167,16 +167,17 @@ DEC-056 point 5 reads the run's rules as denies, and this record keeps that read
 - **Reads.** The shell reads the system's own folders, the clone, and the installed tool the run's `pkit` runs. It reads none of the person's other files. The harness's block on reads outside the working folder is on, and rules of their own open the clone and the tool.
 - **Credentials.** The credential files the project's sandbox settings deny are denied to the shell and to the file tools ([ADR-008](ADR-008-confinement-allowances.md)). No file-tool read rule reaches past the clone.
 - **What runs inside, and what cannot:**
-  - The backbone's reading commands run inside, with no `uv`. The run command puts a `pkit` first on the run's path. It runs the backbone's own code under its own interpreter, as the `pkit` of [ADR-065](ADR-065-upgrade-runs-the-transition.md) point 14 does for a migration. That `pkit` lies outside every folder the run writes.
+  - The backbone's reading commands run inside, with no `uv`. The run command puts a `pkit` first on the run's path, outside every folder the run writes. It runs the backbone's own code under its own interpreter, as the `pkit` of [ADR-065](ADR-065-upgrade-runs-the-transition.md) point 14 does for a migration.
   - A command whose work starts `uv`, such as a component's query script, writes a cache outside the clone. On macOS, `uv` cannot run inside the sandbox at all.
-  - On Linux, ADR-027 excludes nothing (its condition 2), and DEC-056 point 5 allows no second folder to write. So such a command fails inside the sandbox, and the runner reports it.
+  - On Linux, the sandbox can host `uv` once its cache is writable, so ADR-027 requires no exclusion there (its condition 2). DEC-056 point 5 allows no second folder to write. So such a command fails inside the sandbox, and the runner reports it.
   - On macOS, such a command runs under the platform's required exclusion, below.
+- **That `pkit` reads the clone, never the workspace.** Every call of it starts from the clone's root, and points git at the clone's own git folder. It starts `uv` with no configuration file, and with only the `uv` settings the runner sets. The run's rules allow it only as a bare call by name, so no call sets its own variables or reaches another `pkit`. So nothing the shell writes in the workspace becomes code or configuration that an excluded command runs.
 - **The macOS exclusion.** A run's settings exclude the allowed commands whose work starts `uv`, while ADR-027's test shows the installed `uv` still needs it. No run excludes `gh`, since no rule of a run allows it. ADR-027's seven conditions, in a run:
   - Conditions 1 and 2 hold. The need is tested for each run, and only a required command is excluded.
   - Conditions 4 and 6 hold. The exclusion lives in the run's settings alone, and nothing outlives the run to heal.
   - Condition 3 has no banner or status line in a run. The run's result names each excluded command, and the calling command shows it, as a widening must be shown (ADR-008 point 4).
   - Condition 5 cannot use the project's sandbox writer (ADR-008 point 2), since the run's settings belong to no file of the project's. The runner writes them once, for that run.
-  - Condition 7 still holds, since the sandbox still cannot host `uv`. But the threat is new: input nobody vetted, with nobody watching. So accepting this record is the person's consent to it.
+  - Condition 7 still holds, since the sandbox still cannot host `uv`. But the threat is new: input nobody vetted, with nobody watching. Accepting this record brings the widening to every adopter on macOS, with no question of its own. A person's grant of a fixer does not name it (DEC-056 point 2), so the person learns of it from each run's result (condition 3).
 
 ### 7. The run's clone, and the check after the run
 
@@ -191,7 +192,7 @@ DEC-056 point 5 reads the run's rules as denies, and this record keeps that read
 - **Git is read as hostile.** The check runs git with the clone's own configuration ignored. Any error of git's is a breach, so the check fails closed.
 - **A breach** comes back with what changed, and the caller sets the run's files aside.
 - **A check, not a boundary.** It finds a breach after it happened, and only inside the clone. There, only an excluded command can write outside the workspace. Outside the clone, an excluded command's writes go unseen (point 11).
-- **Then the files, then the removal.** The run command copies the run's files from the workspace to the folder the caller named. It copies regular files only, follows no symbolic link, refuses a file with more than one link, and bounds the total size. It never copies the temp folder. Then it removes the clone, and each confined run first removes any clone a killed run left behind.
+- **Then the files, then the removal.** The run command copies the run's files from the workspace to the folder the caller named. It copies regular files only, follows no symbolic link, refuses a file with more than one link, and bounds the total size. It refuses any entry named `.git`, and never copies the temp folder. Then it removes the clone, and each confined run first removes any clone a killed run left behind.
 
 ### 8. A run is a leaf
 
@@ -235,7 +236,7 @@ Each item says what holds the intent and what is left (COR-028 point 3).
   - The harness's own connection to its model carries what the run reads. So what the run may read, it may send.
   - A person closes this outside the harness, by running their session, and so each run, in a container or a virtual machine.
 - **Commands that start `uv`.** On macOS they run outside the sandbox, held by the run's rules alone (point 6). What is left:
-  - The code they run is committed, since neither the shell nor the file tools can change it. But a steered agent chooses their arguments.
+  - They read their code and configuration from the clone, with their root pinned (point 6). But a steered agent chooses their arguments.
   - Their writes outside the clone, and their network access, go unseen.
   - On Linux they fail, so a fixer there gets no query that starts through `uv`.
   - A `uv` release the sandbox can host closes the macOS part (ADR-014 point 4).
@@ -255,7 +256,8 @@ Before the confined form is built, a probe of the harness confirms the facts bel
 - With only the run's settings and the passed definition, the run's agent starts and the harness signs in.
 - The start report gives the mode, the tools, the MCP servers, the plugins and the hooks, and whether the sandbox started.
 - A call outside the run's settings is refused, with no prompt, and the run goes on.
-- The shell and the file tools write only the workspace, and the shell's temp folder lies there.
+- The shell and the file tools write only the workspace, and the shell's temp folder lies there. A working folder below the clone's root opens neither the clone's git folder nor the per-user temp folder to writes.
+- A call of the run's `pkit` from the workspace finds the clone as its root, and reads no git or `uv` configuration the workspace holds.
 - With auto-approval off, a sandboxed command outside the run's allows is refused.
 - A sandbox that cannot start stops the harness at start.
 - The shell reads the clone, the system's folders and the installed tool, and none of the person's other files. The allowed commands still run under that block.
@@ -287,7 +289,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 
 **Why `auto`, `acceptEdits` and sandbox auto-approval count as bypasses.** Each approves a call no rule of the run allows: by a classifier, for edits, or for every sandboxed command. Any of them would turn the run's list into a suggestion.
 
-**Why the harness starts in the workspace.** The shell's writes are bounded by its working folder, not by the path rules the file tools obey. Started at the clone's root, a steered shell could rewrite a script that an excluded command then runs with full access.
+**Why the harness starts in the workspace.** The shell's writes are bounded by its working folder, not by the path rules the file tools obey. Started at the clone's root, a steered shell could rewrite a script that an excluded command then runs with full access. The run's `pkit` pins its root to the clone, so the folder the shell does write is never read as configuration.
 
 **Why a clone that shares nothing, outside every working tree.** A linked worktree shares the repository's git folder, which the sandbox opens to writes. Shared references would also hide the run's moves among the person's own commits. A clone inside a checkout would read that checkout's `CLAUDE.md`, which may hold unmerged changes.
 
@@ -308,6 +310,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 - **Run rules in the session's grants file.** Rejected. An older permission core would misread them, and deny ordinary calls in every session.
 - **Keep the project's settings files, and add the run's denies.** Rejected. The project's hooks and MCP servers would run unwatched with full access, and a hook's allow would approve calls the run's list does not name.
 - **The harness started at the clone's root.** Rejected. The shell could then change code an excluded command runs.
+- **Refusing a run whose workspace holds a git or `uv` configuration file.** Rejected. It is a list over an open-ended set of files, and pinning the root closes the set.
 - **Trimming a definition's extra fields.** Rejected. Refusing shows the agent's owner what a run would not accept.
 - **A writable `uv` cache on Linux.** Rejected, for the reasons above.
 - **`--bare`.** Rejected. It signs in with an API key only.
