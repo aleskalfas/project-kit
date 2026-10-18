@@ -679,7 +679,11 @@ Each message gives the part's hint and example. How the check reads a body:
   - A use case's goal states one of its actor's `needs`, whole (`RS-SAN-004`).
   - An artefact's anchors name the code and the decisions its statements rest on. For a use case, see also "How it meets your decisions", above, and for a requirement, its anchors under "The artefacts", above (`RS-SAN-005`).
   - A requirement's `statement`, `measure` and `applies-to` never contradict an accepted record it rests on. The record wins until it is changed. A conflict between two requirements is no break of it, since a decision record holds that choice (`RS-SAN-006`).
-  - Each goal, minimal guarantee and requirement names its source. A source is an accepted record the artefact anchors, a requirement's *Rationale* or *Imposed by*, or anchored code that already does it. It may also be a person's decision quoted in the artefact, with their name and the date (`RS-SAN-007`).
+  - Each goal, minimal guarantee and requirement names its source. A source takes one of four forms (`RS-SAN-007`):
+    - an accepted record the artefact anchors that decides the item or was made to meet it
+    - a filled *Rationale* or *Imposed by*
+    - anchored code that already does it
+    - a person's decision quoted in the artefact, with their name and the date
 - **What judges them.** They declare no check, so a reviewer judges each where it binds, such as the rule-set reviewer (COR-057). While the rules are proposed, they bind nothing, and nothing judges them.
   - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
@@ -873,7 +877,7 @@ The command owns each file's correctness — its id, its place, the anchors the 
 - **Each kind's parts come first.** Before a kind's first artefact or record, `choose-templates` walks its shipped parts, a candidate of your own checked with the preview, and your choice. Each kind ends with its shipped parts kept, or with your relabels and additions in `project/structures.yaml`.
 - **The skill lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
 - **The skill runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its `preview:` reports never fail, and the check's own findings and exit status stand ("Each body against its structure", above).
-- **Each goal, minimal guarantee and requirement names its source.** The skill writes none it cannot source. It asks the person who decides instead, and quotes the answer, as `RS-SAN-007` asks ("The method rule set: `SAN`", above).
+- **Sources.** The skill writes no item it cannot source. It asks the person who decides instead, and quotes the answer, as `RS-SAN-007` asks ("The method rule set: `SAN`", above).
 - **One choice matters to revalidation later:** **quote the code you describe** in backticks. What an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
 
 ## Revalidation: four outcomes, two answers
