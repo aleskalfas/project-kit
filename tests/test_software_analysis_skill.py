@@ -1,7 +1,8 @@
 """software-analysis: the analysis-author skill (#888).
 
 The skill walks an author through `pkit analysis new` for each kind — actor,
-term, use case, journey, revalidation record. Held here:
+term, use case, journey, the three kinds of requirement (#1692), revalidation
+record. Held here:
 
 - **its shape** — a composite skill (COR-020) whose `composes` is exactly its
   sub-procedures, clean under `pkit refs validate`, deployed beside them;
@@ -9,9 +10,9 @@ term, use case, journey, revalidation record. Held here:
   walkthroughs give names a kind the stamp has, with flags that kind takes, so
   the skill cannot drift from the CLI unnoticed;
 - **what it produces passes the check gate and carries the friction block** —
-  the artefacts its walkthroughs stamp, an unanchored actor and a revalidation
-  record included, pass `pkit analysis validate` and the core's friction pass,
-  and each carries its `friction` block;
+  the artefacts its walkthroughs stamp, an unanchored actor, a requirement of
+  each kind and a revalidation record included, pass `pkit analysis validate`
+  and the core's friction pass, and each carries its `friction` block;
 - **choosing each kind's templates works as it walks it** (#1371) — a candidate
   stamped and filled is checked with `pkit analysis validate --preview`, and a
   part of the project's own, under a proposed rule of its own, is previewed on
@@ -54,13 +55,15 @@ SKILL = CAPABILITY / "skills" / "analysis-author"
 DISPATCHER = SKILL / "analysis-author.md"
 DEPLOYED = REPO / ".claude" / "skills" / "analysis-author"
 
-#: Each sub-procedure, and the kind of `pkit analysis new` it walks.
+#: Each sub-procedure, and the kinds of `pkit analysis new` it walks: one each, but the
+#: requirements', which walks the three kinds of requirement (#1692).
 SUB_PROCEDURES = {
-    "actor.md": "actor",
-    "term.md": "term",
-    "use-case.md": "use-case",
-    "journey.md": "journey",
-    "revalidation-record.md": "revalidation",
+    "actor.md": ("actor",),
+    "term.md": ("term",),
+    "use-case.md": ("use-case",),
+    "journey.md": ("journey",),
+    "requirement.md": ("quality-requirement", "functional-requirement", "constraint"),
+    "revalidation-record.md": ("revalidation",),
 }
 
 #: The sub-procedure a project follows as it adopts the capability: it chooses each
@@ -116,20 +119,27 @@ def _help(kind: str) -> str:
     return completed.stdout
 
 
-@pytest.mark.parametrize(("name", "kind"), sorted(SUB_PROCEDURES.items()))
-def test_every_command_the_walkthrough_gives_is_one_the_stamp_takes(name: str, kind: str) -> None:
+@pytest.mark.parametrize(("name", "kinds"), sorted(SUB_PROCEDURES.items()))
+def test_every_command_the_walkthrough_gives_is_one_the_stamp_takes(
+    name: str, kinds: tuple[str, ...]
+) -> None:
     blocks = [
         m["block"]
         for m in _FENCE.finditer((SKILL / name).read_text(encoding="utf-8"))
         if m["block"].startswith("pkit analysis new ")
     ]
     assert blocks, f"{name} gives no `pkit analysis new` command"
-    options = _help(kind)
+    options = {kind: _help(kind) for kind in kinds}
+    walked: set[str] = set()
     for block in blocks:
         for command in re.split(r"\n(?=pkit )", block.strip()):
-            assert command.split()[3] == kind, command
+            kind = command.split()[3]
+            assert kind in kinds, command
+            walked.add(kind)
             for flag in set(re.findall(r"(--[a-z][a-z-]*)", command)):
-                assert re.search(rf"(?<![\w-]){re.escape(flag)}\b", options), (name, flag)
+                assert re.search(rf"(?<![\w-]){re.escape(flag)}\b", options[kind]), (name, flag)
+    # Each kind the sub-procedure walks has a command of its own.
+    assert walked == set(kinds), name
 
 
 # --- what it produces --------------------------------------------------------------------------
@@ -142,7 +152,7 @@ def project(
     return installed(make_adopter_repo, monkeypatch)
 
 
-# Slow by design: six stamps and the check, each a script that starts `pkit` processes.
+# Slow by design: ten stamps and the check, each a script that starts `pkit` processes.
 def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_block(
     project: AdopterRepo,
 ) -> None:
@@ -154,6 +164,11 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
     stamped(project, "use-case", "read-report", "--actor", "ACT-tester", "--area", "reports")
     steps = ("--step", "UC-001", "--step", "UC-002")
     stamped(project, "journey", "first-run", "--actor", "ACT-tester", *steps)
+    quick = ("--actor", "ACT-tester", "--path", "src/run.py")
+    stamped(project, "quality-requirement", "quick-result", *quick)
+    stamped(project, "functional-requirement", "who-ran", "--refines", "REQ-001")
+    stated = ("--unanchored-because", "A stakeholder states it, and nothing embodies it yet.")
+    stamped(project, "constraint", "on-site", *stated)
     stale = (
         "revalidation",
         "report-redesign",
@@ -187,7 +202,17 @@ def test_what_the_walkthroughs_stamp_passes_the_gate_and_carries_the_friction_bl
         a for a in json.loads(listing.stdout)["artefacts"] if a["path"].startswith(f"{ANALYSIS}/")
     ]
     ids = sorted(a["id"] for a in artefacts)
-    assert ids == ["ACT-sponsor", "ACT-tester", "JRN-001", "TERM-suite", "UC-001", "UC-002"]
+    assert ids == [
+        "ACT-sponsor",
+        "ACT-tester",
+        "JRN-001",
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "TERM-suite",
+        "UC-001",
+        "UC-002",
+    ]
     assert all(a["container"] and a["friction"] for a in artefacts), artefacts
 
 
