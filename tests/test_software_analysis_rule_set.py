@@ -11,8 +11,9 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
 - both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
-- it holds three **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
-  proposed, its origin DEC-001, declaring no check: a reviewer judges each. Each
+- it holds five **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
+  with DEC-001 as its origin, and the two below, each proposed and declaring no
+  check: a reviewer judges each. Each
   *How* leaves out what the stamp and the check hold always, and judges an artefact
   in force alone. Proposed rules move no version, so the set stays at 1.0.0;
 - the **anchors rule**, `RS-SAN-005`, asks of a use case the anchors DEC-001 points
@@ -20,7 +21,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   views that realise it, beside what it rests on (#1686). It asks of a requirement
   what DEC-002 point 6 gives it (#1695);
 - the **record rule**, `RS-SAN-006`, compares a requirement's obligation with each
-  accepted record it rests on, its origin DEC-002 and its anchor point 8 (#1695);
+  accepted record it rests on, its origin DEC-002 and its anchors points 4, 6 and 8
+  (#1695);
 - the **source rule**, `RS-SAN-007`, asks each goal, minimal guarantee and
   requirement for its source, in the four forms the maintainer chose on 17 October
   (#1681). Both stay proposed with the others, so the set stays at 1.0.0;
@@ -369,6 +371,8 @@ def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> 
     assert "The goal is the use case's part whose id is `goal`, whatever label" in goal
     assert "a narrower want than one of them." in goal
     assert "**What the check holds.**" not in goal  # no check holds any of it
+    for rule_id in ("RS-SAN-006", SOURCE_RULE):  # nor any of the two that follow
+        assert "**What the check holds.**" not in _section(body, rule_id), rule_id
     anchors = " ".join(_section(body, "RS-SAN-005").split())
     assert "This list is whole:" in anchors
     assert "**What this rule judges.** The rest: - the code and the decisions" in anchors
@@ -507,7 +511,8 @@ def test_the_anchors_rule_asks_a_requirement_for_what_dec_002_point_6_gives() ->
         "**The code that holds a requirement** is the code that keeps it, never all the code "
         "its `applies-to` reaches."
     ) in section
-    assert "command" not in section
+    code = section.split("**The code that holds a requirement**", 1)[1].split("- **")[0]
+    assert "command" not in code
     # Judged until a check holds them, and a missing one is a break.
     judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
     assert "- a requirement's anchors on its `actors` and its `refines`" in judged
@@ -554,7 +559,10 @@ def test_the_record_rule_compares_the_obligation_with_the_records_it_rests_on() 
         "it accepts what the record rules out, or rules out what the record requires."
     ) in section
     assert "So a measure looser than a limit the record sets contradicts the record." in section
-    assert "a stricter one" not in section
+    # And no break: where the record is silent, the requirement adds to it.
+    assert (
+        "Where the record decides nothing of what the requirement asks, the requirement adds to it."
+    ) in section
     assert "**The record wins.**" in section
     assert "changes the requirement, or has the record changed first." in section
     assert (
@@ -594,18 +602,37 @@ def test_the_source_rule_takes_any_of_the_four_forms_the_maintainer_chose() -> N
     assert "A point another record overturns decides nothing." in section
     assert "**Nothing else.** Anything else is no source" in section
     assert "the need a goal states is no source of the goal" in section
+    # What it judges: the goal and the minimal guarantees of a use case or a journey,
+    # and a requirement's statement and measure.
+    judges = section.split("**What it judges.**", 1)[1].split("**A source.**")[0]
+    assert "- The goal of a use case or a journey: its part whose id is `goal`" in judges
+    assert (
+        "- Each minimal guarantee of a use case or a journey, as its part whose id is "
+        "`minimal-guarantees` states it."
+    ) in judges
+    assert "- Each requirement: what its `statement` asks, and what its `measure` sets" in judges
+    assert "**A break.** An item that no source names breaks this rule, until the artefact" in (
+        section
+    )
 
 
 def test_the_new_rules_name_parts_each_kind_declares() -> None:
     """The source rule and the anchors rule find a part by its permanent id, so a
-    project's own label never hides it. Each id they name is one the kinds' declared
-    structure gives the kind the rule reads it on."""
+    project's own label never hides it. Each id they name, read from their text, is one
+    the kinds' declared structure gives the kind the rule reads it on."""
     kinds = _yaml.load((CAPABILITY / "schemas" / "artefact-kinds.yaml").read_text("utf-8"))
 
     def ids(kind: str) -> set[str]:
         return {section["id"] for section in kinds["kinds"][kind]["sections"]}
 
     requirements = ("quality-requirement", "functional-requirement", "constraint")
+    _data, body = _shipped()
+    text = {rule_id: " ".join(_section(body, rule_id).split()) for rule_id in JUDGEMENT_RULES}
+    named = {rule_id: set(re.findall(r"id is `([a-z-]+)`", text[rule_id])) for rule_id in text}
+    assert named["RS-SAN-005"] == {"verified-by"}
+    assert named[SOURCE_RULE] == {"goal", "minimal-guarantees", "rationale"}
+    # `imposed-by` follows `rationale`'s "whose id is", read on a constraint.
+    assert "or `imposed-by` on a constraint" in text[SOURCE_RULE]
     for kind in ("use-case", "journey"):
         assert {"goal", "minimal-guarantees"} <= ids(kind), kind
     for kind in requirements:
@@ -726,6 +753,7 @@ def test_the_source_rule_cannot_be_accepted_without_its_why(project: AdopterRepo
     (error,) = rs.validate_rule_sets(project.root).errors
     assert error.location == f"{SAN_REL}#{SOURCE_RULE}"
     assert error.pointer == "/origin"
+    assert error.kind == Kind.INCOMPLETE_ORIGIN
     assert "lacks `why`" in error.message
     project.write({SAN_REL: _source_rule_with_its_why(text)})
     assert not rs.validate_rule_sets(project.root).errors
