@@ -400,6 +400,11 @@ def overview(target_root: Path) -> str:
             "  sandbox OFF — scripting prompts; "
             "`pkit permissions sandbox enable` for prompt-free scripting in the OS box"
         )
+    # A committed fail-open reaches every clone (ADR-005 point 6): reported
+    # whether this machine's box is on or off, with the step that moves it.
+    committed_fail_open = _committed_fail_open_lines(target_root)
+    if committed_fail_open:
+        sandbox_line += "\n" + "\n".join(committed_fail_open)
 
     lines: list[str] = [
         cli_render.style("title", f"Permission catalog — {len(privileges)} privilege(s)")
@@ -1368,8 +1373,11 @@ def disable(target_root: Path) -> str:
 # auto-allow with `failIfUnavailable: true` (session refuses if the box can't
 # start, rather than silently running unsandboxed — the harness default is
 # fail-open). The sole way to write `failIfUnavailable: false` is the loud,
-# per-invocation `--dangerously-allow-unconfined` operator gesture; it is never
-# persisted as a default — re-running `enable` without it restores the floor.
+# per-invocation `--dangerously-allow-unconfined` operator gesture, and it never
+# writes into the committed file (ADR-005 point 6): the committed floor stays
+# `true`, and the gesture's `false` goes to the gitignored `settings.local.json`,
+# where it wins on this machine alone (ADR-029, ADR-032 Rule A). Re-running
+# `enable` without it restores the floor.
 #
 # The fail-closed invariant does not rest on `allowUnsandboxedCommands: false`
 # (ADR-005 point 6): the unsandboxed *fail-over* path (a command that fails
@@ -1527,7 +1535,9 @@ def _os_sandbox_unsupported_here() -> bool:
     return _sys.platform == "darwin"
 
 
-def _sandbox_enable_macos_gated(target_root: Path) -> str:
+def _sandbox_enable_macos_gated(
+    target_root: Path, dangerously_allow_unconfined: bool = False
+) -> str:
     """The macOS branch of `sandbox_enable` (#312/#313): do NOT enable the OS
     sandbox. Actively write `sandbox.enabled: false` to the harness-co-owned
     local file (ADR-032 Rule B — the key the `/sandbox` panel reads) so a box a
@@ -1542,7 +1552,13 @@ def _sandbox_enable_macos_gated(target_root: Path) -> str:
     (excludedCommands, denyRead, …) is untouched, matching `sandbox_disable`.
     (Tension worth an architect note: this overrides an operator who may have
     hand-set `enabled: true` on macOS. On this platform that state is
-    non-functional, so correcting it is the safer default; see report.)"""
+    non-functional, so correcting it is the safer default; see report.)
+
+    The one exception is `failIfUnavailable` (ADR-005 point 6): the fail mode is
+    routed here too, through the same `_route_fail_mode` the other platforms
+    use, so a committed `false` reaches no clone and the step the status report
+    names works on a Mac. Here it corrects only an existing committed value
+    other than `true` and never adds a missing floor key."""
     changes: list[str] = []
     if _sandbox_block(target_root).get("enabled") is True:
         local = _read_settings_local(target_root)
@@ -1555,6 +1571,17 @@ def _sandbox_enable_macos_gated(target_root: Path) -> str:
         )
     else:
         changes.append("sandbox already off")
+
+    committed = _read_settings(target_root)
+    # The live committed block, or a detached {} when there is none: nothing
+    # committed to correct, and `floor_if_missing=False` never creates one.
+    committed_sb = _sandbox_block_in(committed)
+    before = dict(committed_sb)
+    changes += _route_fail_mode(
+        target_root, committed_sb, dangerously_allow_unconfined, floor_if_missing=False
+    )
+    if committed_sb != before:
+        _write_settings(target_root, committed)
 
     lines = [
         cli_render.style("title", "OS sandbox NOT enabled — unsupported on macOS (Seatbelt)"),
@@ -1576,7 +1603,105 @@ def _sandbox_enable_macos_gated(target_root: Path) -> str:
         "  `pkit permissions setup autonomy` still applies the autonomy profile;",
         "  only the OS-confinement half is skipped here.",
     ]
+    if dangerously_allow_unconfined:
+        lines += [
+            "",
+            "  ⚠ DANGEROUS: fail-open recorded for this machine only (failIfUnavailable:",
+            "    false in settings.local.json). It is inert while the box is gated off, but",
+            "    takes effect silently if the box is turned on later (e.g. the `/sandbox`",
+            "    panel). Re-run `pkit permissions sandbox enable` without the flag to remove it.",
+        ]
     return "\n".join(lines) + "\n"
+
+
+def _route_fail_mode(
+    target_root: Path,
+    committed_sb: dict[str, Any],
+    dangerously_allow_unconfined: bool,
+    *,
+    floor_if_missing: bool = True,
+) -> list[str]:
+    """Route `failIfUnavailable` for `sandbox enable` (ADR-005 point 6).
+
+    The committed floor is `true`: `committed_sb` (the caller's committed
+    `sandbox` block, written back by the caller) is set to `true` whatever it
+    held, so neither a previous dangerous run nor a hand-edit can leave every
+    clone fail-open. With `floor_if_missing=False` (the macOS gated branch,
+    which promises to leave the committed floor alone) only an existing value
+    other than `true` is corrected, and a missing key stays missing. The
+    operator's `--dangerously-allow-unconfined` gesture is per-machine (ADR-032
+    Rule A: a personal risk choice; ADR-029: a deviation), so its `false` goes
+    only to the gitignored `settings.local.json`, where the harness's local-wins
+    scalar precedence makes it this machine's fail mode. Without the gesture, a
+    local value other than `true` is removed, which restores the floor on this
+    machine too. This is the one writer of the key, routing it (ADR-029 point
+    2). Idempotent; writes the local file only on a real change.
+
+    A committed `false` (written there by an earlier `sandbox enable` before
+    this routing) is mended in the same pass: with the gesture it moves to the
+    local file, written before the committed copy is restored, so this
+    machine's fail mode never flips mid-move; without it, the floor is
+    restored. Either way the change line names it, because the mend reaches
+    every clone only once the committed file is committed.
+
+    Returns the change fragments for the caller's report line."""
+    changes: list[str] = []
+    local = _read_settings_local(target_root)
+    local_sb = _sandbox_block_in(local)
+    if dangerously_allow_unconfined:
+        if local_sb.get("failIfUnavailable") is not False:
+            local.setdefault("sandbox", {})["failIfUnavailable"] = False
+            _write_settings_local(target_root, local)
+            changes.append(
+                "FAIL-OPEN on this machine only (failIfUnavailable: false in settings.local.json)"
+            )
+    elif "failIfUnavailable" in local_sb and local_sb.get("failIfUnavailable") is not True:
+        # Removed whoever set it, a hand-edit included: ADR-005 point 6 has a
+        # run without the gesture restore the fail-closed floor. This differs
+        # on purpose from the seal, whose reversal touches only a seal pkit
+        # authored (ADR-008 rule 2): the seal tightens, this value loosens.
+        local_sb.pop("failIfUnavailable")
+        _write_settings_local(target_root, local)
+        changes.append(
+            "fail-closed restored on this machine (removed failIfUnavailable from "
+            "settings.local.json)"
+        )
+
+    committed_value = committed_sb.get("failIfUnavailable")
+    if committed_value is not True and (floor_if_missing or "failIfUnavailable" in committed_sb):
+        committed_sb["failIfUnavailable"] = True
+        if committed_value is False:
+            changes.append(
+                "the committed settings.json carried failIfUnavailable: false — "
+                + ("moved to settings.local.json" if dangerously_allow_unconfined else "removed")
+                + "; committed floor restored (failIfUnavailable: true) — commit "
+                ".claude/settings.json so no clone runs fail-open"
+            )
+        else:
+            changes.append("fail-closed (failIfUnavailable: true)")
+    return changes
+
+
+def _committed_fail_open_lines(target_root: Path) -> list[str]:
+    """Report a committed `failIfUnavailable: false` (ADR-005 point 6).
+
+    The dangerous flag is a per-machine gesture and never writes into the
+    committed `settings.json`; an earlier `sandbox enable` did, so one
+    operator's fail-open may already sit in a committed file and reach every
+    clone. Read-only; empty when the committed file holds no such value. The
+    lines name the step that moves it: `sandbox enable` routes the key on
+    every run (`_route_fail_mode`)."""
+    committed = _sandbox_block_in(_read_settings_or_empty(target_root, _settings_path(target_root)))
+    if committed.get("failIfUnavailable") is not False:
+        return []
+    return [
+        "  ⚠ committed fail-open — .claude/settings.json carries `failIfUnavailable: false`,",
+        "    so every clone runs UNCONFINED when the box can't start. The dangerous flag is",
+        "    per-machine and belongs in settings.local.json (ADR-005 point 6). To move it, run",
+        "    `pkit permissions sandbox enable --dangerously-allow-unconfined` (fail-open on",
+        "    this machine only) or `pkit permissions sandbox enable` (fail-closed), then",
+        "    commit .claude/settings.json.",
+    ]
 
 
 def sandbox_enable(
@@ -1604,7 +1729,7 @@ def sandbox_enable(
     # The intent-layer half of the autonomy posture (profile grants/denies) is
     # applied independently in `setup autonomy` step [1/4] and is unaffected.
     if _os_sandbox_unsupported_here():
-        return _sandbox_enable_macos_gated(target_root)
+        return _sandbox_enable_macos_gated(target_root, dangerously_allow_unconfined)
     # ADR-029 + ADR-032 routing: the operator-invariant floor (`autoAllowBash
     # IfSandboxed`, `failIfUnavailable`, the credential `denyRead` floor) is
     # COMMITTED → `settings.json`. Two keys route per-machine: the
@@ -1634,16 +1759,10 @@ def sandbox_enable(
         sb["autoAllowBashIfSandboxed"] = True
         changes.append("auto-allow for sandboxed Bash")
 
-    # The fail-closed invariant (ADR-004): always written, so a previous
-    # dangerous run (or a hand-edit) can't leave the floor lowered.
+    # The fail-closed invariant (ADR-004): the committed floor is always
+    # `true`, and the operator's fail-open gesture is routed per-machine.
+    changes += _route_fail_mode(target_root, sb, dangerously_allow_unconfined)
     fail_closed = not dangerously_allow_unconfined
-    if sb.get("failIfUnavailable") is not fail_closed:
-        sb["failIfUnavailable"] = fail_closed
-        changes.append(
-            "fail-closed (failIfUnavailable: true)"
-            if fail_closed
-            else "FAIL-OPEN (failIfUnavailable: false)"
-        )
 
     # The seal is a widening/deviation → routed to the per-machine local file.
     # Its current value is read from the runtime union (committed + local).
@@ -1704,9 +1823,11 @@ def sandbox_enable(
         lines.append(uv_accommodation_note)
     if dangerously_allow_unconfined:
         lines.append(
-            "⚠ DANGEROUS: failIfUnavailable is OFF — if the OS sandbox cannot "
-            "start, the session silently runs UNCONFINED (the fail-open ADR-004 "
-            "forbids). Per-invocation operator gesture only; re-run "
+            "⚠ DANGEROUS: failIfUnavailable is OFF on this machine — if the OS "
+            "sandbox cannot start, the session silently runs UNCONFINED (the "
+            "fail-open ADR-004 forbids). Per-invocation operator gesture only: "
+            "written to the gitignored settings.local.json, never to the committed "
+            "settings.json, so no other clone runs fail-open. Re-run "
             "`pkit permissions sandbox enable` without the flag to restore the "
             "fail-closed floor."
         )
@@ -1817,6 +1938,9 @@ def sandbox_status(target_root: Path) -> str:
         ),
         "",
     ]
+    # A committed fail-open reaches every clone, including those whose box is
+    # on, so it is reported whether this machine's box is on or off.
+    committed_fail_open = _committed_fail_open_lines(target_root)
     if not enabled:
         lines.append(
             "  "
@@ -1824,6 +1948,7 @@ def sandbox_status(target_root: Path) -> str:
             + " — scripting (bash / python3) rides the normal permission flow "
             "(prompts); run `pkit permissions sandbox enable`."
         )
+        lines += committed_fail_open
         return "\n".join(lines) + "\n"
 
     auto = sb.get("autoAllowBashIfSandboxed", True)  # harness default: true
@@ -1845,15 +1970,30 @@ def sandbox_status(target_root: Path) -> str:
         "  auto-allow      "
         + ("on — sandboxed Bash runs prompt-free" if auto else "off — sandboxed Bash still prompts")
     )
-    lines.append(
-        "  fail mode       "
-        + (
-            "closed — session refuses if the box can't start (the ADR-004 invariant)"
-            if fail_closed
-            else "⚠ OPEN — if the box can't start the session runs UNCONFINED; "
+    # The dangerous flag's per-machine `false` is told apart from a committed
+    # one: the first is this operator's own gesture, the second reaches every
+    # clone and is reported on its own lines below.
+    local_open = (
+        _sandbox_block_in(
+            _read_settings_or_empty(target_root, _settings_local_path(target_root))
+        ).get("failIfUnavailable")
+        is False
+    )
+    if fail_closed:
+        fail_mode = "closed — session refuses if the box can't start (the ADR-004 invariant)"
+    elif local_open:
+        fail_mode = (
+            "⚠ OPEN on this machine only (failIfUnavailable: false in settings.local.json) — "
+            "if the box can't start the session runs UNCONFINED; re-run `sandbox enable` "
+            "without the flag to restore fail-closed"
+        )
+    else:
+        fail_mode = (
+            "⚠ OPEN — if the box can't start the session runs UNCONFINED; "
             "re-run `sandbox enable` to restore fail-closed"
         )
-    )
+    lines.append("  fail mode       " + fail_mode)
+    lines += committed_fail_open
     if probe_result == "denied":
         confinement_line = (
             "  actual confinement  VERIFIED — out-of-workspace write DENIED by the OS  ✓"

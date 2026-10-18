@@ -1,0 +1,11 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit permissions sandbox enable --dangerously-allow-unconfined` no longer
+  writes `failIfUnavailable: false` into the committed `.claude/settings.json`.
+  The fail-open goes to the gitignored `.claude/settings.local.json`, for this
+  machine only, and the committed floor stays `true`. A committed `false` that
+  an earlier version wrote is reported by `sandbox status` and `overview`, with
+  the `sandbox enable` step that moves it.
