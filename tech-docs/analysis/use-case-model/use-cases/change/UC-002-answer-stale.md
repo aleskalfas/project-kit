@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-18T17:49:18Z
+      at: 2026-10-18T18:34:29Z
       outcome: unchanged
-      unchanged-because: "Variant 9b still holds: friction resolve still resolves a conflicted revalidated block's text, writes no answer and names the revalidation owed. This change adds the same for revisited lists, which this use case, on revalidations and deferrals, does not describe."
+      unchanged-because: "Core rule 20 now names the revisit entry beside the revalidation, a deferred entry's follow-up, and any other entry as a person's. This use case covers revalidations and deferrals, not revisits, and what it takes from rule 20 still holds: an answer the change does not owe waits for a person (its assumption and variant 5c)."
 ---
 
 # UC-002 — Answer what my change made stale
