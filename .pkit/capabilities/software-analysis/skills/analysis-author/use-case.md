@@ -20,8 +20,9 @@ Name each other actor who takes part with `--other-actor <ACT-id>`: one the use 
 
 ## 4. Decide what it rests on
 
-- **`--path`** — the code the use case exercises: the entry point and the files doing the behaviour its steps describe.
-- **`--record`** — the decisions its steps rely on.
+- **`--path`** — the code the use case exercises: the entry point and the files doing the behaviour its steps describe. Also the file of each architecture view that realises it, where the project keeps one. Where a place holds the view, write an artefact anchor on it instead.
+- **`--record`** — the records it rests on, and the records that answer it. Those are each record whose decision the use case rests on, and each record made to meet what it asks. That may be a project record, an architecture record, or a record a component ships.
+- **Only from the use case.** Records carry no drivers: no record anchors the use case it answers, or any other analysis artefact. What a record serves is worked out from the analysis's anchors, and never stored (DEC-001 point 11).
 
 The anchor to each actor is written by the stamp.
 

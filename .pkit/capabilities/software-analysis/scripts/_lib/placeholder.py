@@ -61,6 +61,7 @@ IN_TEMPLATES = (
     "<what the actor achieves in this use case>",
     "<what carries over, and how it could break>",
     "<the state that shows the whole path succeeded>",
+    "<record it rests on>",
 )
 
 #: Every placeholder the `analysis-author` skill's commands ever showed for a text the
