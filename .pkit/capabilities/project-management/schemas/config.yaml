@@ -82,6 +82,10 @@ has_projects_v2_board: false
 #   sources:
 #     friction: enforcing             #   advisory (default) | enforcing; never `mapping`
 #
+# fixers:                             # per DEC-056 — the grant list; empty by default
+#   living-docs:                      #   written by ask-fixers, grant-fixer, revoke-fixer
+#     granted: [living-docs:page]
+#
 # milestone_categories:               # per DEC-016 — declare before filing one
 #   milestone:
 #     title_format: "Milestone {n}: {name}"

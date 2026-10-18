@@ -141,6 +141,25 @@
         }
       }
     },
+    "fixers": {
+      "type": "object",
+      "description": "The grant list (DEC-056 point 2): each fixer the person was asked about, keyed by its agent, with the types the person granted it and the types the person refused it. Empty or absent by default, so a project that never answered starts no fixer. The question, `pkit pm ask-fixers`, records each answer here, and `pkit pm grant-fixer` and `pkit pm revoke-fixer` change it. A type appears under at most one of the two lists of an agent. A grant counts once its change is on the default branch.",
+      "propertyNames": { "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$" },
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "granted": {
+            "$ref": "#/$defs/fixer_types",
+            "description": "The types this agent may fix on its own: the person answered yes, or ran the grant command."
+          },
+          "refused": {
+            "$ref": "#/$defs/fixer_types",
+            "description": "The types the person refused this agent, by answering no or by revoking a grant. Nothing asks about them again."
+          }
+        }
+      }
+    },
     "milestone_categories": {
       "type": "object",
       "additionalProperties": {
@@ -366,6 +385,15 @@
           "description": "One-line prose stating what this category means in this project.",
           "pattern": "^[^\\n\\r]*$"
         }
+      }
+    },
+    "fixer_types": {
+      "type": "array",
+      "uniqueItems": true,
+      "description": "Artefact types (COR-056 point 1), as the fixers point names them: `<component>:<name>`, `backbone:<name>`, or a project's bare type.",
+      "items": {
+        "type": "string",
+        "pattern": "^(?:(?:[a-z]|[a-z][a-z0-9-]*[a-z0-9]):)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
       }
     }
   }

@@ -117,8 +117,12 @@ def test_every_installed_component_s_query_commands_are_found(
     repo = make_adopter_repo(capabilities=("project-management",))
     found = [(c.owner, c.reference) for c in provisioning.query_commands(repo.root)]
     assert ("project-management", "fill-doc-check") in found
-    # Only commands declaring the contract: pm registers many more leaves.
-    assert all(ref == "fill-doc-check" for owner, ref in found if owner == "project-management")
+    # Only commands declaring the contract: pm registers many more leaves. Its
+    # two queries are the doc-check point's filler and the fixers validator.
+    assert [ref for owner, ref in found if owner == "project-management"] == [
+        "fill-doc-check",
+        "check-fixers",
+    ]
 
 
 def test_a_command_without_the_declaration_is_not_provisioned(
@@ -246,9 +250,10 @@ def test_capability_install_provisions_that_capability_s_query_commands(
 
     assert result.exit_code == 0, result.output
     assert _provisioned("project-management", "fill-doc-check") in result.output
+    assert _provisioned("project-management", "check-fixers") in result.output
     assert "(cap)" not in result.output
     scoped = provisioning.query_commands(root, component="project-management")
-    assert [c.reference for c in scoped] == ["fill-doc-check"]
+    assert [c.reference for c in scoped] == ["fill-doc-check", "check-fixers"]
     assert uv.calls == ["offline", "online"] * len(scoped)
 
 
@@ -264,10 +269,12 @@ def test_capability_upgrade_provisions_the_refreshed_capability(
     result = CliRunner().invoke(main, ["capabilities", "upgrade", "project-management"])
 
     assert result.exit_code == 0, result.output
-    assert (
-        "  unchanged    query command 'fill-doc-check' (project-management) — already provisioned\n"
-    ) in result.output
-    assert uv.calls == ["offline"]
+    for reference in ("fill-doc-check", "check-fixers"):
+        assert (
+            f"  unchanged    query command '{reference}' (project-management) — already "
+            "provisioned\n"
+        ) in result.output
+    assert uv.calls == ["offline", "offline"]
 
 
 def test_register_and_an_incubated_upgrade_provision_the_capability(

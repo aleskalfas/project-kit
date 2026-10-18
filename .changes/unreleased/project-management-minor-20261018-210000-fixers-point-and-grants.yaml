@@ -1,0 +1,32 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A capability declares its fixers, and a project grants them (#1743,
+  DEC-056 points 1 and 2). The capability accepts a data point,
+  `pkit::work-tracking:fixers`: which agent fixes the artefacts of each type,
+  each entry `{id, agent, description}`, `union`, no default, inert `fail`,
+  with the companion schema `schemas/fixers.schema.json`. A capability gives
+  its entries as a static value. A fixer starts on its own only where the
+  project granted it, in the new grant list `fixers` of `project/config.yaml`,
+  which is empty by default. The new command `ask-fixers` asks one plain
+  question for each agent about the types nobody was asked about. At a
+  terminal each answer is recorded, a yes as a grant and a no as a refusal.
+  With nobody at a terminal nothing is granted, and each question is printed
+  with the command that grants its fixer. `list-fixers`, `grant-fixer` and
+  `revoke-fixer` list the declared fixers with their answers, grant one and
+  revoke one, writing only the `fixers` block. The new validator
+  `project-management:fixers` (`check-fixers`) fails on the project's own
+  entry naming an agent that is not deployed and on a grant list it cannot
+  read. It warns of a grant no entry names, with the command that revokes it.
+  It reports a capability's entry that names a type not its own, an agent it
+  does not ship or has not deployed, or an agent that does more than propose:
+  one that claims paths, lists no tools, or holds a tool that changes existing
+  files or starts agents. The five commands are
+  exempt from the bootstrap gate. Nothing starts a fixer yet, and install and
+  upgrade do not ask the question yet. The point is read through `pkit
+  connections resolve --json` and the type registries through `pkit friction
+  artefacts --json`, which come with the backbone this release ships: upgrade
+  the capability together with the backbone.
