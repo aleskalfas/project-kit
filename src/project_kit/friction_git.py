@@ -103,6 +103,7 @@ class CommitTree:
 
     def __init__(self, root: Path, commit: str, reader: BlobReader | None = None) -> None:
         self._root = root
+        self.commit = commit
         self._reader = reader
         listed = run_git(root, "ls-tree", "-r", "-z", commit).stdout
         self._entries: dict[str, TreeEntry] = {}  # path -> (mode, object), gitlinks included

@@ -52,9 +52,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T15:55:14Z
+          at: 2026-10-18T16:38:29Z
           outcome: unchanged
-          unchanged-because: Point 1 gains one sentence, that a component's place may also declare links. Points 2 and 5 are reached only through the Decision's text outside its points, which gains one on a link that asks for a revisit of its targets (point 16). RS-SAN-005 asks which anchors an artefact's kind names, a requirement's included, by which anchor kind, cycle or not. A link's targets are anchors the artefact already names, so what the rule asks is as it was.
+          unchanged-because: "COR-050 point 5 says a path anchor stands on a file's content and mode, a container of a file a place holds left out, and points 1 and 2 were reached through the Decision's lead, which says the same. This rule asks which anchors an artefact names, a requirement's included, and by which kind: a view a place holds by an artefact anchor, any other view by a path anchor on its file. What each anchor stands on is not its concern, so it still holds."
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -92,7 +92,8 @@ checks:
       part: >-
         Every part its kind ships is present, in the order the structure gives,
         save a part a withdrawn artefact lacks. A missing title heading of an
-        actor, a use case or a journey is left to the heading check, which holds
+        actor, a use case, a journey, a quality requirement, a functional
+        requirement or a constraint is left to the heading check, which holds
         it whatever the rule's status. No shipped part a writer fills is empty,
         and a part reads `None.` only where the structure allows it. A
         front-matter field the structure says may not read `None.` never does.

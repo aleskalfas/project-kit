@@ -61,8 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T16:24:07Z
-      outcome: updated
+      at: 2026-10-18T16:38:20Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 now stops the cascade at an unchanged revalidation whatever the kind of the anchors that reach the artefact's file. Point 9 dates stale debt from a change to a file's content or mode. The developer still answers what a change made stale, and resolves each debt knowing the change it came from, so the needs still hold.
 ---
 
 # ACT-developer — Developer
