@@ -905,6 +905,18 @@ def test_status_and_overview_report_a_local_fail_open_while_the_box_is_off(tmp_p
     assert "fail-open recorded" not in _run(proj, monkeypatch, "sandbox")
 
 
+def test_turns_box_on_note_printed_once_beside_both_reports(tmp_path, monkeypatch):
+    # A committed and a local `false` with the box off: both reports show, and
+    # the note that `sandbox enable` turns the box on is printed once.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    _run(proj, monkeypatch, "sandbox", "disable")
+    _commit_fail_open(proj)
+    for out in (_run(proj, monkeypatch, "sandbox"), _run(proj, monkeypatch, "overview")):
+        assert "committed fail-open" in out and "fail-open recorded for this machine" in out
+        assert out.count("also turns the box on") == 1
+
+
 def _git_init(proj: Path, gitignore: str | None, monkeypatch) -> None:
     """A repository at `proj`, with git's global and system configuration
     shut out, so an operator's own global ignore file cannot answer for it."""

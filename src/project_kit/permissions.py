@@ -1645,7 +1645,8 @@ def _settings_local_unignored_lines(target_root: Path) -> list[str]:
     return [
         "⚠ .claude/settings.local.json is NOT ignored by git in this repository, so",
         "  the fail-open could still be committed. Add `.claude/settings.local.json`",
-        "  to .gitignore.",
+        "  to .gitignore. If git already tracks it, also run",
+        "  `git rm --cached .claude/settings.local.json`.",
     ]
 
 
@@ -1759,7 +1760,12 @@ def _local_fail_open_while_off_lines(target_root: Path) -> list[str]:
         "  ⚠ fail-open recorded for this machine (failIfUnavailable: false in",
         "    settings.local.json) — inert while the box is off, it takes effect if the box",
         "    is turned on. `pkit permissions sandbox enable` without the flag removes it.",
-        *_enable_turns_box_on_lines(target_root),
+        # The committed report, shown beside this one, already carries the note.
+        *(
+            []
+            if _committed_fail_open_lines(target_root)
+            else _enable_turns_box_on_lines(target_root)
+        ),
     ]
 
 
