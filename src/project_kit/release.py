@@ -30,6 +30,7 @@ from __future__ import annotations
 import json
 import re
 import subprocess
+from collections import Counter
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass, field, replace
 from datetime import date
@@ -37,6 +38,8 @@ from pathlib import Path
 from typing import Any, cast
 
 import click
+from packaging.specifiers import InvalidSpecifier, SpecifierSet
+from packaging.version import InvalidVersion, Version
 
 from project_kit import command_runner, pull_request_landing, session_guard, versioning
 from project_kit.changesets import (
@@ -1552,8 +1555,9 @@ def dependency_range_problems(plan: ReleasePlan) -> list[str]:
             else:
                 remedy = (
                     f"No pending changeset moves {dependency}, so no declaration widens the "
-                    "range, and `pkit validate` reports the pair out of range where both are "
-                    "installed."
+                    f"range: correct it on a branch to admit {dependency} {version}, moving "
+                    f"only the bound that excludes it (PRJ-002 D1). `pkit validate` reports "
+                    "the pair out of range where both are installed."
                 )
             leaves = "writes" if dependency in plan.versions.writes else "carries"
             problems.append(
@@ -1952,6 +1956,9 @@ class GuardResult:
     # Changesets whose floor — `requires_backbone` or `requires_capabilities` — this
     # diff declares for a component it neither touches nor moves (`stray_floors`).
     stray_floors: list[Changeset] = field(default_factory=lambda: [])
+    # Each edit this diff makes to the range of an existing `requires_capabilities`
+    # entry (`range_edits`), the ones the guard refuses among them.
+    range_edits: list[RangeEdit] = field(default_factory=lambda: [])
 
     @property
     def surface_ok(self) -> bool:
@@ -1960,11 +1967,18 @@ class GuardResult:
         return self.skipped or self.release_exempt or not self.missing
 
     @property
+    def refused_ranges(self) -> list[RangeEdit]:
+        """The range edits the guard refuses: all but the correction PRJ-002 D1
+        allows and the release's own writes."""
+        return [edit for edit in self.range_edits if edit.problem is not None]
+
+    @property
     def ok(self) -> bool:
         """The escape hatch and the release exemption waive the surface check
-        only: a stray floor fails the guard either way. A release diff, which
-        only deletes changesets, declares no floor to be stray."""
-        return self.surface_ok and not self.stray_floors
+        only: a stray floor or a refused range edit fails the guard either way.
+        A release diff, which only deletes changesets, declares no floor to be
+        stray, and its range writes ride on the declarations it consumes."""
+        return self.surface_ok and not self.stray_floors and not self.refused_ranges
 
 
 def changed_files(repo_root: Path, base: str) -> list[str]:
@@ -2128,7 +2142,9 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
     here, whatever component it names. The floor tie (`stray_floors`) is waived
     by neither: it judges only a floor this diff declares, which a release diff
     never does, and an escape hatch that could pass one would let any pull
-    request raise any component's floor.
+    request raise any component's floor. Nor is the range tie (`range_edits`),
+    which refuses an edit to an existing `requires_capabilities` entry's range
+    but the correction PRJ-002 D1 allows, for the same reason.
     """
     repo_root = source_kit.parent
     components = discover_components(source_kit)
@@ -2145,6 +2161,7 @@ def check_changesets(source_kit: Path, base: str, *, skip: bool = False) -> Guar
         skipped=skip,
         release_exempt=release_exempt,
         stray_floors=stray_floors(repo_root, base, pending, files, touched),
+        range_edits=range_edits(source_kit, base, files, components),
     )
 
 
@@ -2224,6 +2241,18 @@ def _declaration_at(
 ) -> tuple[str, str | None, tuple[tuple[str, str], ...], tuple[tuple[str, str], ...]] | None:
     """The component, floor fields and bound field of the changeset at `path` in
     `rev`; None when `rev` has no such file or holds no changeset there."""
+    text = _text_at(repo_root, rev, path)
+    if text is None:
+        return None
+    try:
+        cs = parse_changeset_text(text, repo_root / path)
+    except click.ClickException:
+        return None
+    return cs.component, cs.requires_backbone, cs.requires_capabilities, cs.runs_on_capabilities
+
+
+def _text_at(repo_root: Path, rev: str, path: str) -> str | None:
+    """The file at `path` in `rev`; None when `rev` has no such file."""
     result = subprocess.run(
         ["git", "show", f"{rev}:{path}"],
         capture_output=True,
@@ -2231,13 +2260,314 @@ def _declaration_at(
         cwd=repo_root,
         check=False,
     )
-    if result.returncode != 0:
+    return result.stdout if result.returncode == 0 else None
+
+
+# --- A range a branch edits (PRJ-002 D1) ---------------------------------------
+#
+# Once a `requires_capabilities` entry exists, its floor and upper bound move at
+# the release, on a changeset's declaration (PRJ-002 D1, D4). The one edit a
+# branch makes to the range is the correction D1 allows: an entry whose range
+# excludes the version the tree carries for the capability it names is corrected
+# to admit it. The guard reads every edit the diff makes to an existing entry's
+# range and refuses all but that correction and the release's own writes. No
+# escape hatch waives it, as none waives the floor tie.
+
+# A range a correction writes, as YAML reads an entry's `version:`: `>=X.Y.Z,<A.B.C`
+# or `>=X.Y.Z`, the shapes the release raises and widens.
+_BOUNDED_RANGE_RE = re.compile(r">=\d+\.\d+\.\d+(?:,<\d+\.\d+\.\d+)?")
+
+# How a range moves once its entry exists, which a refused edit ends with.
+_DECLARE_RANGE = (
+    "Its floor and upper bound move at the release, on a changeset's declaration (PRJ-002 D1, D4)."
+)
+
+
+@dataclass(frozen=True)
+class RangeEdit:
+    """One edit a diff makes to the range of an existing `requires_capabilities`
+    entry: the component whose entry it is, the capability the entry names, and
+    the range at the merge base and at HEAD, as the message shows them."""
+
+    dependent: str
+    capability: str
+    before: str
+    after: str
+    # Why the guard refuses it; None for the correction PRJ-002 D1 allows, or a
+    # write of the release the diff is.
+    problem: str | None = None
+    corrects: bool = False  # the correction PRJ-002 D1 allows
+
+
+def range_edits(
+    source_kit: Path, base: str, files: Sequence[str], components: Sequence[Component]
+) -> list[RangeEdit]:
+    """Each edit the diff vs `base` makes to the range of a `requires_capabilities`
+    entry the merge base already holds, with why the guard refuses it.
+
+    `files` is the diff's changed paths and `components` the tree's. Each changed
+    package file of a component is read at the merge base, where git reports a
+    renamed one under its old path, and at HEAD. A capability's ranges are
+    compared as version ranges (`_range_key`), so a re-quoting or a respelling of
+    the same range is no edit. A capability the diff adds or removes is no edit
+    either: D1 lets the branch that adds a dependency write its entry. Nor is
+    dropping or reordering a capability's entries, which narrows nothing: a
+    capability listed twice is listed once by dropping one.
+
+    An edit passes in two cases. It is the correction PRJ-002 D1 allows
+    (`_correction_problem`). Or the diff is a release (`is_release_diff`) and
+    consumes a changeset of the dependent that declares the capability's floor or
+    upper bound: the release writes the range on that declaration (D4). Without
+    that tie, a diff that only rewrites a range line would read as a release."""
+    repo_root = source_kit.parent
+    changed = set(files)
+    found: list[tuple[str, str, list[object], list[object]]] = []
+    renamed: dict[str, str] | None = None
+    merge_base = ""
+    for component in components:
+        if component.name == BACKBONE:
+            continue
+        path = _repo_rel(repo_root, component.version_path)
+        if path not in changed:
+            continue
+        if renamed is None:
+            renamed = _renamed_from(repo_root, base)
+            merge_base = _merge_base(repo_root, base)
+        before_text = _text_at(repo_root, merge_base, renamed.get(path, path))
+        after_text = _text_at(repo_root, "HEAD", path)
+        if before_text is None or after_text is None:
+            continue  # a package file the base does not hold: every entry is added
+        before, after = _ranges_by_name(before_text), _ranges_by_name(after_text)
+        found.extend(
+            (component.name, name, before[name], after[name])
+            for name in sorted(before.keys() & after.keys())
+            if not Counter(map(_range_key, after[name])) <= Counter(map(_range_key, before[name]))
+        )
+    if not found:
+        return []
+    carried = _carried_at(repo_root, source_kit, merge_base)
+    consumed = (
+        _consumed_declarations(repo_root, base, merge_base)
+        if is_release_diff(source_kit, base)
+        else frozenset[tuple[str, str]]()
+    )
+    edits: list[RangeEdit] = []
+    for dependent, name, before, after in found:
+        problem = _correction_problem(dependent, name, before, after, carried.get(name))
+        written = problem is not None and (dependent, name) in consumed
+        edits.append(
+            RangeEdit(
+                dependent=dependent,
+                capability=name,
+                before=_shown(before),
+                after=_shown(after),
+                problem=None if written else problem,
+                corrects=problem is None,
+            )
+        )
+    return edits
+
+
+def _ranges_by_name(package_text: str) -> dict[str, list[object]]:
+    """The `version:` of each entry of a package file's `requires_capabilities`, by
+    the name it gives, as YAML reads them; a name listed twice keeps both."""
+    ranges: dict[str, list[object]] = {}
+    for entry in _dependency_entries(package_text):
+        name = entry.get("name")
+        if isinstance(name, str):
+            ranges.setdefault(name, []).append(entry.get("version"))
+    return ranges
+
+
+def _shown(ranges: Sequence[object]) -> str:
+    """An entry's range, or a twice-listed name's ranges, as a message shows them."""
+    return " and ".join("no range" if value is None else repr(value) for value in ranges)
+
+
+def _range_key(value: object) -> object:
+    """What a range is compared by: the version range it reads as, so a respelling
+    of the same range is the same key; the value as written when it reads as none."""
+    if isinstance(value, str):
+        try:
+            return SpecifierSet(value)
+        except InvalidSpecifier:
+            pass
+    return ("unread", repr(value))
+
+
+def _bounds(value: object) -> tuple[Version, Version | None] | None:
+    """The `>=` floor and the `<` upper bound, if any, of a range made of one `>=`
+    and at most one `<`, however spelled; None for any other value."""
+    if not isinstance(value, str):
         return None
     try:
-        cs = parse_changeset_text(result.stdout, repo_root / path)
-    except click.ClickException:
+        specifiers = list(SpecifierSet(value))
+    except InvalidSpecifier:
         return None
-    return cs.component, cs.requires_backbone, cs.requires_capabilities, cs.runs_on_capabilities
+    floors = [s.version for s in specifiers if s.operator == ">="]
+    uppers = [s.version for s in specifiers if s.operator == "<"]
+    if len(floors) != 1 or len(uppers) > 1 or len(specifiers) != len(floors) + len(uppers):
+        return None
+    try:
+        return Version(floors[0]), Version(uppers[0]) if uppers else None
+    except InvalidVersion:
+        return None
+
+
+def _correction_problem(
+    dependent: str,
+    capability: str,
+    before: Sequence[object],
+    after: Sequence[object],
+    carried: str | None,
+) -> str | None:
+    """Why an edit of `dependent`'s range on `capability` is not the correction
+    PRJ-002 D1 allows; None when it is.
+
+    The correction writes one entry for the capability, its range `>=X.Y.Z,<A.B.C`
+    or `>=X.Y.Z`. It corrects an entry of the merge base whose range excludes
+    `carried`, the version the merge base carries for the capability, and is made
+    of one `>=` floor and at most one `<` upper bound. Only the bound that
+    excludes `carried` moves, and only as far as it needs. A floor above it falls
+    to it. An upper bound at or below it rises above it, to its next major at
+    most, as the release widens a bound (`versioning.next_major`). The other bound
+    stays as it was. A bound past the next major would claim a major the tree does
+    not carry, and a floor below `carried` would claim versions nothing in the
+    tree vouches for. Where the merge base lists the capability more than once,
+    the correction may correct any one of its entries and drop the others."""
+    moved = f"{dependent}: its range on {capability} moves from {_shown(before)} to {_shown(after)}"
+    if len(after) != 1:
+        return f"{moved}, and {dependent} lists {capability} more than once: list it once."
+    if carried is None or not versioning.is_release_version(carried):
+        return (
+            f"{moved}. The tree carries no release of {capability} the range could be "
+            f"corrected to admit. {_DECLARE_RANGE}"
+        )
+    problems = [
+        _one_correction_problem(moved, capability, old, after[0], carried) for old in before
+    ]
+    if None in problems:
+        return None
+    return next(problem for problem in problems if problem is not None)
+
+
+def _one_correction_problem(
+    moved: str, capability: str, old: object, new: object, carried: str
+) -> str | None:
+    """Why `new` is not the correction of one range `old` of the merge base, for a
+    capability the merge base carries at `carried`; None when it is
+    (`_correction_problem`)."""
+    from project_kit.connections import range_admits
+
+    old_bounds = _bounds(old)
+    if old_bounds is None:
+        return (
+            f"{moved}. A correction moves a bound of a range made of one `>=` floor and at "
+            f"most one `<` upper bound, and {_shown([old])} is not one. {_DECLARE_RANGE}"
+        )
+    if range_admits(old, carried) is not False:
+        return (
+            f"{moved}. A branch corrects only a range that excludes the version the tree "
+            f"carries, and {_shown([old])} admits {capability} {carried}. {_DECLARE_RANGE}"
+        )
+    written = isinstance(new, str) and _BOUNDED_RANGE_RE.fullmatch(new) is not None
+    new_bounds = _bounds(new) if written else None
+    if new_bounds is None:
+        return f'{moved}. A correction writes a range ">=X.Y.Z,<A.B.C" or ">=X.Y.Z".'
+    version = Version(carried)
+    (old_floor, old_upper), (new_floor, new_upper) = old_bounds, new_bounds
+    if old_floor > version:
+        if new_floor == version and new_upper == old_upper:
+            return None
+        return (
+            f"{moved}. {_shown([old])} excludes {capability} {carried}, the version the "
+            f"tree carries, by its floor: a branch may lower the floor to {carried} and "
+            "change nothing else (PRJ-002 D1)."
+        )
+    ceiling = versioning.next_major(carried)
+    if new_floor == old_floor and new_upper is not None and version < new_upper <= Version(ceiling):
+        return None
+    return (
+        f"{moved}. {_shown([old])} excludes {capability} {carried}, the version the tree "
+        f"carries, by its upper bound: a branch may raise that bound above {carried}, to "
+        f"<{ceiling} at most, and change nothing else (PRJ-002 D1)."
+    )
+
+
+def _renamed_from(repo_root: Path, base: str) -> dict[str, str]:
+    """The path each file the diff vs `base` renames had at the merge base, by its
+    path at HEAD."""
+    result = subprocess.run(
+        ["git", "diff", "--name-status", "-M", f"{base}...HEAD"],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    )
+    renamed: dict[str, str] = {}
+    for line in result.stdout.splitlines():
+        parts = line.split("\t")
+        if len(parts) == 3 and parts[0].startswith("R"):
+            renamed[parts[2]] = parts[1]
+    return renamed
+
+
+def _carried_at(repo_root: Path, source_kit: Path, rev: str) -> dict[str, str]:
+    """The version the tree at `rev` carries for each component but the backbone,
+    read as `capability_versions` reads the working tree's: the backbone's version
+    and every package and manifest file under the kit, written from `rev` into a
+    temporary folder. Nothing is checked out."""
+    import tempfile
+
+    kit = _repo_rel(repo_root, source_kit)
+    listed = subprocess.run(
+        ["git", "ls-tree", "-r", "-z", "--name-only", rev, "--", kit],
+        capture_output=True,
+        text=True,
+        cwd=repo_root,
+        check=True,
+    ).stdout.split("\0")
+    wanted = [
+        path
+        for path in listed
+        if path == f"{kit}/VERSION" or Path(path).name in ("package.yaml", "manifest.yaml")
+    ]
+    with tempfile.TemporaryDirectory() as folder:
+        root = Path(folder)
+        for path in wanted:
+            text = _text_at(repo_root, rev, path)
+            if text is None:
+                continue
+            target = root / path
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(text, encoding="utf-8")
+        copy = root / kit
+        components = {c.name: c for c in discover_components(copy)}
+        return dict(capability_versions(copy, components, {}).carries)
+
+
+def _consumed_declarations(
+    repo_root: Path, base: str, merge_base: str
+) -> frozenset[tuple[str, str]]:
+    """(dependent, capability) for each floor or upper bound on a capability that a
+    changeset the diff vs `base` deletes declared at the merge base."""
+    unreleased = _repo_rel(repo_root, unreleased_dir(repo_root)) + "/"
+    declared: set[tuple[str, str]] = set()
+    for status, path in _diff_name_status(repo_root, base):
+        if status != "D" or not path.startswith(unreleased):
+            continue
+        text = _text_at(repo_root, merge_base, path)
+        if text is None:
+            continue
+        try:
+            cs = parse_changeset_text(text, repo_root / path)
+        except click.ClickException:
+            continue
+        declared.update(
+            (cs.component, name)
+            for name, _value in (*cs.requires_capabilities, *cs.runs_on_capabilities)
+        )
+    return frozenset(declared)
 
 
 # --- The changeset + changelog format lint (the OBJECTIVE subset) ---------
