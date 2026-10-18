@@ -20,6 +20,7 @@ modules cost in all (#1204).
 from __future__ import annotations
 
 import importlib
+import json
 import re
 import subprocess
 import sys
@@ -52,6 +53,11 @@ GLOSSARY = f"{ANALYSIS}/glossary.md"
 USE_CASES = f"{ANALYSIS}/use-case-model/use-cases"
 JOURNEYS = f"{ANALYSIS}/use-case-model/journeys"
 RECORDS = f"{ANALYSIS}/revalidations"
+#: The three kinds of requirement's places, one folder each under `requirements/`, which
+#: is no place itself (software-analysis DEC-002 point 3).
+QUALITY = f"{ANALYSIS}/requirements/quality"
+FUNCTIONAL = f"{ANALYSIS}/requirements/functional"
+CONSTRAINTS = f"{ANALYSIS}/requirements/constraints"
 
 #: The branch that stands for the default branch in these repositories.
 MAIN = "main"
@@ -64,7 +70,9 @@ ANALYSIS_SET = "tech-docs/rule-sets/analysis.md"
 ANALYSIS_SET_TEXT = (
     "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
-    "software-analysis:use-case, software-analysis:journey]\nrules: {}\n---\n\n"
+    "software-analysis:use-case, software-analysis:journey, "
+    "software-analysis:quality-requirement, software-analysis:functional-requirement, "
+    "software-analysis:constraint]\nrules: {}\n---\n\n"
     "# ANALYSIS — the project's rules for its analysis\n"
 )
 
@@ -222,6 +230,52 @@ def below_floor(text: str) -> list[str]:
     assert sorted(entry.rule for entry in entries) == sorted(FLOOR)
     found = pl.lint_text(_PLACEHOLDER.sub(r"\1", text), entries)
     return [f"{f.line} {f.rule}: {f.message}" for f in found]
+
+
+#: Each kind of requirement's place, its name beside its id, and its last part:
+#: *Rationale*, or *Imposed by* on a constraint (software-analysis DEC-002 points 2 to 4).
+REQUIREMENT_PLACES = {
+    "quality-requirement": (QUALITY, "Quality", "Rationale"),
+    "functional-requirement": (FUNCTIONAL, "Functional", "Rationale"),
+    "constraint": (CONSTRAINTS, "Constraint", "Imposed by"),
+}
+
+
+def requirement(
+    kind: str = "quality-requirement",
+    *,
+    req_id: str = "REQ-004",
+    title: str = "Show a run's result quickly",
+    anchored: list[str] | None = None,
+    heading: str | None = None,
+    **fields: Any,
+) -> str:
+    """A requirement of `kind`, filled as its structure asks, written by hand as no stamp
+    writes one yet: its front matter's `fields` added or changed, a field set to `None`
+    left out, each of `anchored` an artefact anchor beside its path anchor, and its
+    `heading`, the line its body opens with — its id, its kind and its title unless given,
+    none when empty."""
+    _place, shown, last = REQUIREMENT_PLACES[kind]
+    front: dict[str, Any] = {
+        "id": req_id,
+        "title": title,
+        "status": "active",
+        "statement": "The system shows a suite's result within two seconds of the run's end.",
+        "measure": "None.",
+        "applies-to": "Every run of a suite.",
+        **fields,
+    }
+    anchors: dict[str, list[str]] = {"path": ["src/run.py"]}
+    if anchored:
+        anchors["artefact"] = anchored
+    written = "".join(f"{k}: {json.dumps(v)}\n" for k, v in front.items() if v is not None)
+    head = f"# {req_id} · {shown} · {title}" if heading is None else heading
+    return (
+        f"---\n{written}pkit:\n  friction:\n    anchors: {json.dumps(anchors)}\n---\n\n"
+        + (f"{head}\n\n" if head else "")
+        + "**Verified by:** A timing test runs the suite and measures when its result shows.\n\n"
+        + f"**{last}:** None.\n"
+    )
 
 
 def fill(repo: AdopterRepo) -> None:

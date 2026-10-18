@@ -1,0 +1,33 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  The capability declares the three kinds of requirement that DEC-002 keeps:
+  quality requirements, functional requirements and constraints (#1691). Each
+  has its declared structure, its template rendered from it, its companion
+  schema, and its place under `requirements/`, which gives its type:
+  `software-analysis:quality-requirement`, `software-analysis:functional-requirement`
+  or `software-analysis:constraint`. A requirement holds its `statement`, its
+  `measure` and where it holds, `applies-to`, as front-matter fields, beside
+  `actors` and `refines`. Its body holds *Verified by*, then *Rationale*, or
+  *Imposed by* on a constraint. Its heading shows its kind between its id and
+  its title, as `# REQ-004 · Quality · <title>`. A requirement's id,
+  `REQ-NNN`, is one numbering across the three kinds, and a revalidation
+  record's outcomes and the evidence point's entries may name one. The evidence
+  point's version stays 1. `pkit analysis validate` holds a file in each new
+  place to its kind's schema, and to its kind's structure where RS-SAN-001
+  binds. A declared front-matter field may now say whether it reads `None.`,
+  as a part does: a requirement's `measure` may, and its `statement` and
+  `applies-to` may not. A field that says neither, as every field of the four
+  earlier kinds, is judged as before. The lists of requirements on use cases
+  and journeys come later.
+  **A clash of types:** while the capability is installed, `pkit validate`
+  refuses a bare type of your own that takes one of the three names (COR-056
+  point 2). A type of your own named `constraint` is the likeliest. Rename it
+  before you upgrade.
+  **Your rule set:** the set install creates now selects the three types beside
+  the four. A set of yours created before selects none of them, and nothing
+  changes it. Add `software-analysis:quality-requirement`,
+  `software-analysis:functional-requirement` and `software-analysis:constraint`
+  to its scope, so `SAN` binds on your requirements.

@@ -338,7 +338,7 @@ def _file(
 
 
 @dataclass(frozen=True)
-class _Stamp:
+class Stamp:
     """One artefact's `revalidated` block as one version writes it: its value as written,
     its text — the key through the end of its value — at `start` in that version, the
     column its key starts at, and whether it sits in a mapping written in flow style."""
@@ -355,15 +355,17 @@ class _Stamp:
 
 
 @dataclass(frozen=True)
-class _Version:
-    """One version of a file, read with `\\n` line breaks."""
+class Version:
+    """One version of a file, read with `\\n` line breaks: its artefacts, and where each
+    `revalidated` block is written in it. `pkit friction since` reads blocks through it
+    too (`friction_since`)."""
 
     text: str
     artefacts: Mapping[_Key, Artefact]
-    stamps: Mapping[_Key, _Stamp]
+    stamps: Mapping[_Key, Stamp]
 
 
-_NO_VERSION = _Version("", {}, {})
+_NO_VERSION = Version("", {}, {})
 
 
 @dataclass(frozen=True)
@@ -407,24 +409,24 @@ def _resolve(
         )
 
     blobs = {n: run_git(context.root, "cat-file", "blob", s.blob).stdout for n, s in stages.items()}
-    versions: dict[int, _Version] = {}
+    versions: dict[int, Version] = {}
     for number, blob in blobs.items():
         try:
             text = universal_newlines(blob.decode("utf-8"))
         except UnicodeDecodeError:
             return _left(rel, "a side is not UTF-8 text")
-        version = _read_version(rel, found, text)
+        version = read_version(rel, found, text)
         if isinstance(version, str):
             if number != _ANCESTOR:
                 side = "this branch" if number == _THIS else "the base side"
                 return _left(rel, f"on {side}, {version}")
-            version = _Version(text, {}, {})
+            version = Version(text, {}, {})
         versions[number] = version
 
     sides = _merge(context, blobs, before)
     if isinstance(sides, str):
         return _left(rel, sides)
-    ours, theirs = (_read_version(rel, found, side) for side in sides)
+    ours, theirs = (read_version(rel, found, side) for side in sides)
     if isinstance(ours, str) or isinstance(theirs, str):
         reason = ours if isinstance(ours, str) else theirs
         return _left(rel, f"with each conflict taken from one side, {reason}")
@@ -486,7 +488,7 @@ def _resolve(
     return FileResult(rel, FileStatus.RESOLVED, owed=owed, before=before, after=after)
 
 
-def _read_version(rel: str, found: DiscoveredFile, text: str) -> _Version | str:
+def read_version(rel: str, found: DiscoveredFile, text: str) -> Version | str:
     """One version's artefacts and where each `revalidated` block is written in it, or
     why it cannot be read."""
     artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
@@ -494,7 +496,7 @@ def _read_version(rel: str, found: DiscoveredFile, text: str) -> _Version | str:
         return f"its front matter does not parse ({reason})"
     front_matter, _body = split_front_matter(text)
     offset = text.find("\n") + 1  # the front matter starts after its opening line
-    stamps: dict[_Key, _Stamp] = {}
+    stamps: dict[_Key, Stamp] = {}
     for artefact in artefacts:
         present, value = _written_block(artefact)
         if not present or front_matter is None:
@@ -509,8 +511,8 @@ def _read_version(rel: str, found: DiscoveredFile, text: str) -> _Version | str:
         start = offset + span.start
         column = start - (text.rfind("\n", 0, start) + 1)
         written = front_matter[span.start : span.end]
-        stamps[_key(artefact)] = _Stamp(value, start, written, column, span.flow)
-    return _Version(text, {_key(a): a for a in artefacts}, stamps)
+        stamps[_key(artefact)] = Stamp(value, start, written, column, span.flow)
+    return Version(text, {_key(a): a for a in artefacts}, stamps)
 
 
 def _key(artefact: Artefact) -> _Key:
@@ -526,12 +528,12 @@ def _written_block(artefact: Artefact) -> tuple[bool, Any]:
     return REVALIDATED in mapping, mapping.get(REVALIDATED)
 
 
-def _text(version: _Version, key: _Key) -> str | None:
+def _text(version: Version, key: _Key) -> str | None:
     stamp = version.stamps.get(key)
     return None if stamp is None else stamp.written
 
 
-def _location(key: _Key, *versions: _Version) -> str:
+def _location(key: _Key, *versions: Version) -> str:
     """Where the artefact is, as the friction commands name it: from the first version
     that holds it."""
     for version in versions:
@@ -547,9 +549,9 @@ def _decide(
     context: _Context,
     key: _Key,
     location: str,
-    ancestor: _Version,
-    this: _Version,
-    base: _Version,
+    ancestor: Version,
+    this: Version,
+    base: Version,
 ) -> _Decision | str:
     """The block a conflicted artefact gets, or why it is left to the person (COR-050
     points 3 and 4).
@@ -602,7 +604,7 @@ class _Unsettled(Exception):
         self.reason = reason
 
 
-def _block(version: _Version, key: _Key) -> Mapping[str, Any]:
+def _block(version: Version, key: _Key) -> Mapping[str, Any]:
     stamp = version.stamps.get(key)
     return {} if stamp is None else cast("Mapping[str, Any]", stamp.value)
 
@@ -611,9 +613,9 @@ def _answer(
     context: _Context,
     key: _Key,
     location: str,
-    ancestor: _Version,
-    this: _Version,
-    base: _Version,
+    ancestor: Version,
+    this: Version,
+    base: Version,
 ) -> tuple[Mapping[str, Any], bool]:
     """The answer the block keeps and whether a revalidation is owed for it; `_Unsettled`
     when it is left to the person."""
@@ -638,7 +640,7 @@ def _answer(
     return ba, True
 
 
-def _deferrals(key: _Key, location: str, ancestor: _Version, this: _Version, base: _Version) -> Any:
+def _deferrals(key: _Key, location: str, ancestor: Version, this: Version, base: Version) -> Any:
     """The `deferred` the block keeps — `_ABSENT` when none is written: as the side that
     changed it writes it, or, where both did, a three-way merge by anchor, sorted as the
     writers sort it (COR-050 point 4); `_Unsettled` when it is left to the person."""
@@ -671,7 +673,7 @@ def _deferrals(key: _Key, location: str, ancestor: _Version, this: _Version, bas
     return merged or _ABSENT
 
 
-def _entries(version: _Version, key: _Key) -> dict[Anchor, Any] | None:
+def _entries(version: Version, key: _Key) -> dict[Anchor, Any] | None:
     """A version's deferrals of the artefact by anchor; `None` unless each entry is
     well-formed and names an anchor no other entry does."""
     raw = _block(version, key).get(DEFERRED)
@@ -685,7 +687,7 @@ def _entries(version: _Version, key: _Key) -> dict[Anchor, Any] | None:
     return by_anchor if len(by_anchor) == len(entries) else None
 
 
-def _spliced(version: _Version, texts: Mapping[_Key, str]) -> str:
+def _spliced(version: Version, texts: Mapping[_Key, str]) -> str:
     """The version with each block `texts` names replaced by its text."""
     text = version.text
     stamps = [(version.stamps[key], new) for key, new in texts.items() if key in version.stamps]
@@ -694,7 +696,7 @@ def _spliced(version: _Version, texts: Mapping[_Key, str]) -> str:
     return text
 
 
-def _advice(key: _Key, decision: _Decision, ours: _Version) -> str:
+def _advice(key: _Key, decision: _Decision, ours: Version) -> str:
     """What to take for a decided block, in a file left for another conflict."""
     location = ours.artefacts[key].location
     if decision.owed:
@@ -999,7 +1001,10 @@ __all__ = [
     "FrictionResolveError",
     "Owed",
     "Resolution",
+    "Stamp",
+    "Version",
     "plan_resolve",
+    "read_version",
     "render_diffs",
     "render_human",
     "render_json",

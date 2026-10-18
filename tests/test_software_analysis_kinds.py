@@ -9,6 +9,12 @@ round chose for each kind (#1362):
 - **the five kinds hold the round's parts**, keyed by the types the places give and
   by `revalidation-record`, each element with its id, its type, whether it may read
   `None.` and its form, every shipped element required;
+- **the three kinds of requirement hold DEC-002's parts** (point 4, #1691): the
+  same fields on each, `statement` of the form `sentence`, `measure` the one field
+  that may read `None.` and `statement` and `applies-to` two that may not, and
+  *Verified by* then *Rationale*, or *Imposed by* on a
+  constraint, each of which may read `None.`. Each is shown beside its id by its
+  name, `# REQ-007 · Quality · <title>` (point 2);
 - **each part has a hint and an example**, one line each, with no semicolon and no
   sentence over 25 words. A heading the stamp writes has an example and no hint;
 - **a planned record names its design's sources** in `reviewed-against`, which the
@@ -218,6 +224,15 @@ def test_the_schema_refuses_an_element_that_is_not_one(
             "any of the given",
         ),
         ({"sections": [{"level": 2}], "aside": True}, "'aside' was unexpected"),
+        (
+            {
+                "sections": [{"level": 2}],
+                "front-matter": {"measure": {"hint": "H.", "example": "E.", "allows-none": "yes"}},
+            },
+            "is not of type 'boolean'",
+        ),
+        ({"sections": [{"level": 2}], "shown-as": ""}, "does not match"),
+        ({"sections": [{"level": 2}], "shown-as": "Quality\nRequirement"}, "should not be valid"),
     ],
     ids=[
         "head-without-stamp",
@@ -226,6 +241,9 @@ def test_the_schema_refuses_an_element_that_is_not_one(
         "field-unknown-key",
         "field-unknown-form",
         "kind-unknown-key",
+        "field-allows-none-not-a-boolean",
+        "shown-as-blank",
+        "shown-as-over-two-lines",
     ],
 )
 def test_the_schema_refuses_a_head_a_field_or_a_kind_that_is_not_one(
@@ -244,8 +262,14 @@ def test_each_kind_is_keyed_by_its_type_and_the_record_by_a_key_of_its_own() -> 
     revalidation record, which has no type, keeps `revalidation-record`."""
     package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     types = sorted(package["friction"]["types"])
-    assert types == ["actor", "journey", "term", "use-case"]
+    assert types == sorted([*FOUR, *REQUIREMENTS])
     assert sorted(_kinds()["kinds"]) == sorted([*types, "revalidation-record"])
+
+
+#: DEC-001's four kinds of anchored artefact, and the three kinds of requirement DEC-002
+#: adds, each by the type its place gives.
+FOUR = ("actor", "use-case", "journey", "term")
+REQUIREMENTS = ("quality-requirement", "functional-requirement", "constraint")
 
 
 #: Each kind's body as the round chose it (#1362, each kind's "Decided" section): each
@@ -287,6 +311,33 @@ PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
         ("outcomes", "heading", "Outcomes", False, "outcomes-match-front-matter"),
         ("gaps", "heading", "Gaps", True, "gaps-match-outcomes"),
     ],
+    # DEC-002 point 4: what verifies it, then why it is needed, or on a constraint who
+    # imposes it. Each may read `None.`.
+    "quality-requirement": [
+        ("heading", "heading", None, False, None),
+        ("verified-by", "label", "Verified by", True, None),
+        ("rationale", "label", "Rationale", True, None),
+    ],
+    "functional-requirement": [
+        ("heading", "heading", None, False, None),
+        ("verified-by", "label", "Verified by", True, None),
+        ("rationale", "label", "Rationale", True, None),
+    ],
+    "constraint": [
+        ("heading", "heading", None, False, None),
+        ("verified-by", "label", "Verified by", True, None),
+        ("imposed-by", "label", "Imposed by", True, None),
+    ],
+}
+
+#: A requirement's front-matter fields, the same on each kind (DEC-002 point 4): its
+#: statement in one sentence, its measure, where it holds, its actors and what it refines.
+REQUIREMENT_FIELDS: dict[str, str | None] = {
+    "statement": "sentence",
+    "measure": None,
+    "applies-to": None,
+    "actors": None,
+    "refines": None,
 }
 
 #: Each kind's front-matter fields a writer fills, with the form of each (#1362).
@@ -296,6 +347,21 @@ FIELDS: dict[str, dict[str, str | None]] = {
     "journey": {},
     "term": {"name": None, "definition": "definition", "replaces": None},
     "revalidation-record": {"reviewed-against": None},
+    **dict.fromkeys(REQUIREMENTS, REQUIREMENT_FIELDS),
+}
+
+#: The fields that say whether they may read `None.`: a requirement's measure may, which
+#: a requirement found before its measure reads, and its statement and where it holds may
+#: not (DEC-002 point 4). Every other field says neither, so its form alone judges it.
+FIELDS_SAYING_NONE = {
+    kind: {"statement": False, "measure": True, "applies-to": False} for kind in REQUIREMENTS
+}
+
+#: How each kind shows beside its id, where it does (DEC-002 point 2).
+SHOWN_AS = {
+    "quality-requirement": "Quality",
+    "functional-requirement": "Functional",
+    "constraint": "Constraint",
 }
 
 
@@ -326,16 +392,50 @@ def test_each_kind_holds_the_parts_the_round_chose(name: str) -> None:
     assert len(set(ids)) == len(ids)
     fields = kind.get("front-matter", {})
     assert {field: entry.get("form") for field, entry in fields.items()} == FIELDS[name]
+    saying = {f: entry["allows-none"] for f, entry in fields.items() if "allows-none" in entry}
+    assert saying == FIELDS_SAYING_NONE.get(name, {})
+    assert kind.get("shown-as") == SHOWN_AS.get(name)
+
+
+def test_the_three_kinds_of_requirement_share_their_fields_and_all_parts_but_one() -> None:
+    """Every kind has the same fields and the same parts, save one part, which differs for
+    a constraint (DEC-002 point 4): *Imposed by* in the place of *Rationale*. So a
+    requirement keeps its fields when it changes kind. Each kind's companion schema
+    takes the same fields and requires the same, `statement`, `measure` and `applies-to`
+    among them, and its name is the type its place gives."""
+    kinds = _kinds()["kinds"]
+    fields = {tuple(kinds[name]["front-matter"]) for name in REQUIREMENTS}
+    assert fields == {tuple(REQUIREMENT_FIELDS)}
+    parts = {name: [e["id"] for e in kinds[name]["sections"]] for name in REQUIREMENTS}
+    assert parts["quality-requirement"] == parts["functional-requirement"]
+    assert parts["constraint"][:-1] == parts["quality-requirement"][:-1]
+    assert (parts["quality-requirement"][-1], parts["constraint"][-1]) == (
+        "rationale",
+        "imposed-by",
+    )
+    schemas = [_json(SCHEMAS / f"{name}.schema.json") for name in REQUIREMENTS]
+    assert {tuple(sorted(s["properties"])) for s in schemas} == {
+        ("actors", "applies-to", "id", "measure", "refines", "statement", "status", "title")
+    }
+    assert {tuple(s["required"]) for s in schemas} == {
+        ("id", "title", "status", "statement", "measure", "applies-to")
+    }
+    assert [s["$id"] for s in schemas] == [f"{name}.schema.json" for name in REQUIREMENTS]
 
 
 def test_the_title_heading_and_each_label_sit_where_the_round_put_them() -> None:
     """Each document kind's body opens with its title, a level-1 heading the stamp
     words from the id and the title or name, and the glossary's entry with a level-2
-    heading. The record's two parts are level-2 headings."""
+    heading. The record's two parts are level-2 headings. A requirement's title heading
+    shows its kind between its id and its title (DEC-002 point 2), and its example
+    does."""
     kinds = _kinds()["kinds"]
-    for name in ("actor", "use-case", "journey", "revalidation-record"):
+    for name in ("actor", "use-case", "journey", "revalidation-record", *REQUIREMENTS):
         assert kinds[name]["sections"][0]["level"] == 1
         assert "head" not in kinds[name]
+    for name in REQUIREMENTS:
+        example = kinds[name]["sections"][0]["example"]
+        assert re.fullmatch(rf"# REQ-[0-9]{{3}} · {SHOWN_AS[name]} · \S.*", example), example
     assert kinds["term"]["sections"][0]["level"] == 2
     assert [e["level"] for e in kinds["revalidation-record"]["sections"][1:]] == [2, 2]
 

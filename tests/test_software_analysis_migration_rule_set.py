@@ -20,6 +20,7 @@ from packaging.version import Version
 from ruamel.yaml import YAML
 
 from project_kit import declared_rule_sets as drs
+from project_kit import migrations
 from project_kit import rule_sets as rs
 from tests.adopter_repo import MakeAdopterRepo
 
@@ -65,15 +66,36 @@ def test_the_migration_creates_the_set_install_would_create(
     )
     text = (project / CREATED).read_text(encoding="utf-8")
     assert text == planned.text
-    # The set the capability declares, as DEC-001's Implications give it.
+    # The set the capability declares, as DEC-001's and DEC-002's Implications give it:
+    # it selects the three kinds of requirement beside the four.
     assert text.startswith(
         "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
         "scope:\n  types: [software-analysis:actor, software-analysis:term, "
-        "software-analysis:use-case, software-analysis:journey]\nrules: {}\n---\n\n"
+        "software-analysis:use-case, software-analysis:journey, "
+        "software-analysis:quality-requirement, software-analysis:functional-requirement, "
+        "software-analysis:constraint]\nrules: {}\n---\n\n"
         "# ANALYSIS — The project's rules for its analysis\n"
     )
     discovery = rs.discover_rule_sets(project)
     assert [s.path for s in rs.inheritors(discovery, "software-analysis", "SAN")] == [CREATED]
+
+
+def test_the_migration_run_by_the_runner_reads_the_running_pkit(
+    project: Path, tmp_path_factory: pytest.TempPathFactory, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Run by the migration runner, behind a `pkit` on the operator's `PATH` that
+    gives no answer, the migration reaches the running pkit, whose reading command
+    answers under the migration marker (ADR-065 point 14)."""
+    bin_dir = tmp_path_factory.mktemp("decoy")
+    decoy = bin_dir / "pkit"
+    decoy.write_text("#!/bin/sh\necho 'not the running pkit' >&2\nexit 2\n", encoding="utf-8")
+    decoy.chmod(0o755)
+    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+
+    migrations.execute_migration_scripts([MIGRATION], project, label="software-analysis")
+
+    assert (project / CREATED).is_file()
+    assert not (project / migrations.RUNNER_PARENT).exists()
 
 
 def test_the_migration_run_again_changes_nothing(project: Path, pkit_on_path: Path) -> None:
@@ -132,7 +154,7 @@ def test_the_migration_never_fails_the_upgrade_when_the_answer_cannot_be_read(
 ) -> None:
     bin_dir = tmp_path_factory.mktemp("bin")
     if with_pkit:
-        # A pkit too old to give the answer: the command does not exist.
+        # A pkit that gives no answer, as one run by hand from another release may.
         old = bin_dir / "pkit"
         old.write_text("#!/bin/sh\necho 'No such command' >&2\nexit 2\n", encoding="utf-8")
         old.chmod(0o755)

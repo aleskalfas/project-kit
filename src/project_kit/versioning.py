@@ -709,6 +709,14 @@ def raise_requires_capability_floor(
     return updated, f">={entry.floor} -> >={version}"
 
 
+def next_major(version: str) -> str:
+    """The first release of the major after `version`'s: `2.0.0` for `1.0.0`,
+    `1.0.0` for `0.55.0`. The highest upper bound a range on a capability is widened
+    to, by the release (`widen_requires_capability_bound`) and by a branch's
+    correction of a range that excludes the version the tree carries (PRJ-002 D1)."""
+    return f"{parse_version_tuple(version)[0] + 1}.0.0"
+
+
 def widen_requires_capability_bound(
     package_text: str, capability: str, version: str
 ) -> tuple[str, str] | None:
@@ -735,8 +743,7 @@ def widen_requires_capability_bound(
         return None
     if parse_version_tuple(entry.upper) > parse_version_tuple(version):
         return None
-    major = parse_version_tuple(version)[0]
-    upper = f"{major + 1}.0.0"
+    upper = next_major(version)
     start, end = entry.upper_span
     updated = package_text[:start] + upper + package_text[end:]
     return updated, f"<{entry.upper} -> <{upper}"

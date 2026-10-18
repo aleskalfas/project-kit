@@ -23,6 +23,12 @@
   line. A change the edit cannot make exactly is refused, and nothing is
   written. A file the backbone creates, or a blank one, is written whole,
   opening with the editor directive (ADR-056).
+- **A change of the internal root keeps the project's rule sets found**
+  (COR-051 point 6). Where the location rule would leave a rule-set file of
+  the old root's `rule-sets/` unclaimed under the new root, the same write
+  adds that folder to `friction.places`, under the same consent
+  (`KeptRuleSets`). The entry is only added; where adding it would rewrite
+  another line, nothing is written (`RuleSetPlaceUnwritable`).
 """
 
 from __future__ import annotations
@@ -32,10 +38,10 @@ import io
 import os
 import re
 import sys
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
-from pathlib import Path
-from typing import Any
+from collections.abc import Callable, Mapping, MutableMapping
+from dataclasses import dataclass, replace
+from pathlib import Path, PurePosixPath
+from typing import Any, cast
 
 import click
 from jsonschema import Draft202012Validator
@@ -159,13 +165,67 @@ class UnwritableConfig(click.ClickException):
     """The existing file cannot be preserved through a write (unparsable or not a mapping)."""
 
 
+class RuleSetPlaceUnwritable(UnwritableConfig):
+    """The old rule-set folder cannot be declared without rewriting other lines of
+    the file (COR-051 point 6); nothing was written. Names the entry to add by
+    hand, and the command to run again once `naming` has given it."""
+
+    def __init__(self, folder: str, rerun: str | None = None) -> None:
+        self.folder = folder
+        then = f"then run:\n  {rerun}" if rerun else "then run the command again."
+        super().__init__(
+            f"cannot add {folder} to friction.places without rewriting other lines of "
+            f"{PROJECT_CONFIG_RELPATH.as_posix()}; the new internal root would leave the "
+            f"project rule sets there unfound (COR-051 point 6). Nothing was written. Add it "
+            f"by hand, as an item of the list under `friction:` → `places:`:\n"
+            f"  - {folder}\n"
+            f"{then}"
+        )
+
+    def naming(self, rerun: str) -> RuleSetPlaceUnwritable:
+        """The same refusal, naming `rerun` as the command to run again."""
+        return RuleSetPlaceUnwritable(self.folder, rerun)
+
+
+@dataclass(frozen=True)
+class KeptRuleSets:
+    """The project's default rule-set folder a change of the internal root
+    declares as a place, so the sets there stay found (COR-051 point 6)."""
+
+    folder: str  # `<old root>/rule-sets`, the entry added to `friction.places`
+    old_root: str
+    old_source: str  # where the old root came from: `explicit` or `default`
+    new_root: str
+
+    def detail(self) -> str:
+        """What the write adds and why, said above the consent question and in its refusal."""
+        return (
+            f"The new internal root would leave the project rule sets in {self.folder} "
+            f"unfound, so the write also adds {self.folder} to friction.places "
+            f"(COR-051 point 6).\n"
+        )
+
+    def notice(self) -> str:
+        """What the command says once written: what it recorded and in which file,
+        then where the sets stand and how to move them — two lines."""
+        home = (PurePosixPath(self.new_root) / "rule-sets").as_posix()
+        return (
+            f"recorded project rule sets = {self.folder}  ({PROJECT_CONFIG_RELPATH.as_posix()})\n"
+            f"  derived from the internal root before this change, {self.old_root} "
+            f"({self.old_source}); they stay found here. To move them: move the files under "
+            f"{home}, then remove {self.folder} from friction.places."
+        )
+
+
 @dataclass(frozen=True)
 class ConfigChange:
-    """What a write would make of the configuration file: its text before and after."""
+    """What a write would make of the configuration file: its text before and
+    after, and the old rule-set folder it declares as a place, if any."""
 
     path: Path
     before: str  # empty when the file does not exist
     after: str
+    kept_rule_sets: KeptRuleSets | None = None
 
     @property
     def changes(self) -> bool:
@@ -193,22 +253,95 @@ def preview_config(target_root: Path, mutate: Callable[[CommentedMap], None]) ->
     mutation changed edited in place and every other byte kept (`yaml_splice`;
     a change it cannot make exactly is refused), and a file the write creates,
     or a blank one, written whole and opening with the editor directive. No
-    consent is asked: nothing is written. A command's dry run shows its diff."""
+    consent is asked: nothing is written. A command's dry run shows its diff.
+
+    A mutation that changes the internal documentation root also keeps the
+    project's rule sets in the old root's `rule-sets/` found (COR-051 point 6):
+    where the location rule would leave a rule-set file there unclaimed under
+    the new root, the same change adds that folder to `friction.places`
+    (`kept_rule_sets`). The entry is only added: where adding it would rewrite
+    any other line, `RuleSetPlaceUnwritable` is raised and nothing is to be
+    written. Every writer of the root goes through here, so each does it."""
     path = project_config_path(target_root)
     before = _read_existing(path)
     data = _load_round_trip(before)
+    unchanged = yaml_splice.plain(data)
     mutate(data)
+    kept = _kept_rule_sets(target_root, unchanged, data)
+    without = yaml_splice.plain(data)
+    if kept is not None:
+        _refuse_unless_valid(target_root, data)  # the change asked for, before the entry
+        _declare_place(data, kept.folder)
     _refuse_unless_valid(target_root, data)
     if before is None or not before.strip():
-        return ConfigChange(path=path, before=before or "", after=_fresh(data))
+        return ConfigChange(path=path, before=before or "", after=_fresh(data), kept_rule_sets=kept)
+    after = _spliced(before, data)
+    if kept is not None and not _only_added(_spliced(before, without), after):
+        raise RuleSetPlaceUnwritable(kept.folder)
+    return ConfigChange(path=path, before=before, after=after, kept_rule_sets=kept)
+
+
+def _spliced(before: str, data: Mapping[str, Any]) -> str:
     try:
-        after = yaml_splice.splice(before, data)
+        return yaml_splice.splice(before, data)
     except yaml_splice.SpliceRefused as exc:
         raise UnwritableConfig(
             f"cannot write {PROJECT_CONFIG_RELPATH.as_posix()} changing only the keys it sets: "
             f"{exc}. Nothing was written; edit the file by hand."
         ) from exc
-    return ConfigChange(path=path, before=before, after=after)
+
+
+def _kept_rule_sets(
+    target_root: Path, unchanged: Mapping[str, Any], data: Mapping[str, Any]
+) -> KeptRuleSets | None:
+    """The old default rule-set folder the mutated `data` must declare as a place,
+    or None: the internal root `unchanged` gives does not change, or no rule-set
+    file of its folder would go unfound under the new one (COR-051 point 6)."""
+    from project_kit import docs_roots  # it reads the configuration through this module
+    from project_kit import friction_discovery as fd
+
+    old = docs_roots.roots_from(unchanged.get(docs_roots.DOCS_KEY))
+    new = docs_roots.roots_from(yaml_splice.plain(data).get(docs_roots.DOCS_KEY))
+    if old.internal == new.internal:
+        return None
+    settings = fd.read_friction_settings(target_root)
+    folder = fd.rule_set_folder_left_behind(target_root, settings, new.internal.as_posix())
+    if folder is None:
+        return None
+    return KeptRuleSets(
+        folder=folder,
+        old_root=old.internal.as_posix(),
+        old_source=old.internal_source.value,
+        new_root=new.internal.as_posix(),
+    )
+
+
+def _declare_place(data: CommentedMap, folder: str) -> None:
+    """Add `folder` as the last of the project's `friction.places`, creating the
+    key, or the block, where the file lacks it. A shape it cannot add an item to
+    is refused."""
+    root = cast(MutableMapping[str, Any], data)
+    friction: Any = root.get("friction")
+    if friction is None:
+        friction = CommentedMap()
+        root["friction"] = friction
+    if not isinstance(friction, MutableMapping):
+        raise RuleSetPlaceUnwritable(folder)
+    block = cast(MutableMapping[str, Any], friction)
+    places: Any = block.get("places")
+    if places is None:
+        block["places"] = [folder]
+    elif isinstance(places, list):
+        cast(list[Any], places).append(folder)
+    else:
+        raise RuleSetPlaceUnwritable(folder)
+
+
+def _only_added(base: str, after: str) -> bool:
+    """Whether `after` is `base` with lines added and none changed or removed. A last
+    line that only gains its line break, so a line can follow it, is unchanged."""
+    matcher = difflib.SequenceMatcher(a=base.splitlines(), b=after.splitlines(), autojunk=False)
+    return all(tag in ("equal", "insert") for tag, *_ in matcher.get_opcodes())
 
 
 def write_config(
@@ -223,12 +356,33 @@ def write_config(
     Computes the result as `preview_config` does — re-read, mutate, validate
     (an invalid result is refused, nothing written) — asks `consent`, then
     writes that text atomically, byte for byte. A result that changes nothing
-    is neither asked about nor written. Returns the file's path.
+    is neither asked about nor written. Returns the file's path; `apply_config`
+    returns the change written.
     """
-    change = preview_config(target_root, mutate)
+    return apply_config(target_root, mutate, consent=consent, description=description).path
+
+
+def apply_config(
+    target_root: Path,
+    mutate: Callable[[CommentedMap], None],
+    *,
+    consent: Consent,
+    description: str = "Write the configuration",
+) -> ConfigChange:
+    """`write_config`, returning the change it wrote — or would have, when it
+    changes nothing. Where the change declares the old rule-set folder as a
+    place (`ConfigChange.kept_rule_sets`), the one consent names both changes."""
+    try:
+        change = preview_config(target_root, mutate)
+    except RuleSetPlaceUnwritable as exc:
+        raise exc.naming(consent.rerun) from None
     path = change.path
     if not change.changes:
-        return path
+        return change
+    kept = change.kept_rule_sets
+    if kept is not None:
+        consent = replace(consent, detail=consent.detail + kept.detail())
+        description = f"{description} and add {kept.folder} to friction.places"
     consent.confirm(description)
 
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -239,7 +393,7 @@ def write_config(
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)
-    return path
+    return change
 
 
 def _read_existing(path: Path) -> str | None:

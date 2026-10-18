@@ -647,9 +647,53 @@
           "description": "The type the artefacts in this place take: a name this component's `types` declares (COR-056 point 2). A name it does not declare gives no type, and validation reports it without failing (checked in Python).",
           "$ref": "#/$defs/type-name"
         },
+        "revisits": {
+          "description": "The links of the artefacts this place holds whose source's change revisits their targets (COR-050 point 16), one entry per link. Never on by default: a place without the key declares none.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/friction-link"
+          }
+        },
         "description": {
           "$ref": "#/$defs/non-empty-string"
         }
+      }
+    },
+    "friction-link": {
+      "title": "One link that revisits its targets (COR-050 point 16)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "targets",
+        "when"
+      ],
+      "properties": {
+        "targets": {
+          "description": "The source's own field that lists the link's targets, each by its anchor's value: a value names every anchor of the source that has it.",
+          "$ref": "#/$defs/own-field"
+        },
+        "when": {
+          "description": "The trigger fields: the source's own fields whose change, compared parsed between the base and the head, revisits the link's targets.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/own-field"
+          }
+        },
+        "description": {
+          "description": "What the link is, and why a change to its trigger fields asks after its targets.",
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "own-field": {
+      "description": "An artefact's own front-matter field, outside the `pkit` container (COR-053 point 10).",
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_-]*$",
+      "not": {
+        "const": "pkit"
       }
     },
     "friction-type": {

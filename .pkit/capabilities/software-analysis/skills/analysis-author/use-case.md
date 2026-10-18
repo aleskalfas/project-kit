@@ -36,7 +36,7 @@ It takes the next free number on the default branch and in the working tree.
 
 ## 6. Fill it
 
-Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. Where a step names a command, a flag, a function or a message, quote it in backticks (the shared framing's "Quote the code you describe").
+Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. Where a step names a command, a flag, a function or a message, quote it in backticks (the shared framing's "Quote the code you describe"). The goal and each minimal guarantee name their source (the shared framing's "Name the source of what the system must do").
 
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging.
 

@@ -353,8 +353,8 @@ def test_a_file_a_named_commit_renamed_keeps_its_number(piloted: AdopterRepo) ->
         not_freed(
             "UC-001",
             moved,
-            "it deleted no use case or journey numbered UC-001; a file it moved, rather than "
-            "deleted, keeps its id",
+            "it deleted no use case, journey or requirement numbered UC-001; a file it moved, "
+            "rather than deleted, keeps its id",
         ),
     )
 
@@ -594,7 +594,10 @@ def _a_root_commit(repo: AdopterRepo) -> tuple[Entry, str, str]:
 
 def _an_id_the_commit_deleted_no_file_of(repo: AdopterRepo) -> tuple[Entry, str, str]:
     three_removed = commit_of(repo, THREE_REMOVED)
-    reason = "it deleted no use case or journey numbered UC-001; a file it moved, rather than "
+    reason = (
+        "it deleted no use case, journey or requirement numbered UC-001; a file it moved, "
+        "rather than "
+    )
     return (
         (three_removed, ("UC-003", "UC-001")),
         where(0, "ids", 1),
@@ -762,5 +765,6 @@ def test_without_a_setting_or_a_number_the_number_check_reads_no_base(
     completed = run_script(piloted, NUMBERS, "--base", "origin/main", "--json")
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["summary"] == [
-        "numbers: no use case or journey is numbered here; nothing to compare, no base read."
+        "numbers: no use case, journey or requirement is numbered here; nothing to compare, "
+        "no base read."
     ]

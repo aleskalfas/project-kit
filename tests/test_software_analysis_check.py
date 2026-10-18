@@ -27,21 +27,29 @@ from project_kit.friction_check import BASE_ENV
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     ACTORS,
+    ANALYSIS_SET,
+    ANALYSIS_SET_TEXT,
     CAPABILITY,
     CONFIG,
+    CONSTRAINTS,
+    FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
     MAIN,
     NEW,
+    QUALITY,
     RECORDS,
     USE_CASES,
     VALIDATE,
+    accepting_san,
     actor_at,
+    field_hint,
     fill,
     front,
     installed,
     new,
     prepare_seeded,
+    requirement,
     run_script,
     stamped,
 )
@@ -114,7 +122,10 @@ def test_the_validator_is_a_member_of_pkit_validate(seeded: AdopterRepo) -> None
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 0, result.output
     assert "software-analysis:artefacts" in result.output
-    assert "1 actor(s), 0 term(s), 2 use case(s), 1 journey(s)" in result.output
+    assert (
+        "1 actor(s), 0 term(s), 2 use case(s), 1 journey(s), 0 quality requirement(s), "
+        "0 functional requirement(s), 0 constraint(s)" in result.output
+    )
     seeded.write({f"{USE_CASES}/UC-003-broken.md": "---\nid: UC-003\nstatus: active\n---\n"})
     result = CliRunner().invoke(main, only)
     assert result.exit_code == 1
@@ -198,7 +209,8 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
     assert document == {
         "summary": [
             "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
-            "1 journey(s); 0 revalidation record(s).",
+            "1 journey(s), 0 quality requirement(s), 0 functional requirement(s), "
+            "0 constraint(s); 0 revalidation record(s).",
             # The format rule is accepted, yet no set of this repository's own inherits
             # `SAN`, so no body is held to its kind's structure: the check says so, as a
             # warning.
@@ -815,6 +827,356 @@ def test_a_record_cites_artefacts_of_the_analysis_withdrawn_ones_included(
     ]
 
 
+# --- the three kinds of requirement (software-analysis DEC-002, #1691) -------------------------
+
+#: Each kind of requirement: its place, its name beside its id, and its last part,
+#: *Rationale* or, on a constraint, *Imposed by* (DEC-002 points 2 to 4).
+REQUIREMENT_KINDS = {
+    "quality-requirement": (QUALITY, "Quality", "Rationale"),
+    "functional-requirement": (FUNCTIONAL, "Functional", "Rationale"),
+    "constraint": (CONSTRAINTS, "Constraint", "Imposed by"),
+}
+
+#: A set of the project's own created before the requirement kinds: its scope selects
+#: the four kinds DEC-001 gives, and none of DEC-002's.
+EARLIER_SET_TEXT = ANALYSIS_SET_TEXT.replace(
+    ", software-analysis:quality-requirement, software-analysis:functional-requirement, "
+    "software-analysis:constraint",
+    "",
+)
+
+
+def _requirement(shown: str, last: str, **fields: str | None) -> str:
+    """A requirement filled as its kind's structure asks, its front matter's `fields`
+    changed, and one set to `None` left out."""
+    front: dict[str, str | None] = {
+        "id": "REQ-004",
+        "title": "Show a run's result quickly",
+        "status": "active",
+        "statement": "The system shows a suite's result within two seconds of the run's end.",
+        "measure": "None.",
+        "applies-to": "Every run of a suite.",
+        **fields,
+    }
+    written = "".join(f"{k}: {json.dumps(v)}\n" for k, v in front.items() if v is not None)
+    return (
+        f"---\n{written}pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
+        f"# REQ-004 · {shown} · Show a run's result quickly\n\n"
+        f"**Verified by:** A timing test runs the suite and measures when its result shows.\n\n"
+        f"**{last}:** None.\n"
+    )
+
+
+@pytest.mark.parametrize("kind", sorted(REQUIREMENT_KINDS))
+def test_a_requirement_is_held_to_its_kind_s_schema_and_where_the_rule_binds_its_structure(
+    project: AdopterRepo, pkit_on_path: Path, kind: str
+) -> None:
+    """A file in each new place is held by the check's existing passes (#1691): to its
+    kind's companion schema always, and to its kind's structure where RS-SAN-001 binds,
+    through a set of the project's own whose scope selects its type. A set created before
+    the kinds selects none of them, so it holds no requirement to its structure."""
+    place, shown, last = REQUIREMENT_KINDS[kind]
+    rel = f"{place}/REQ-004-quick-result.md"
+    project.write({**accepting_san(project), rel: _requirement(shown, last)})
+    document = check(project)
+    assert errors(document) == []
+    noun = kind.replace("-", " ")
+    assert f", 1 {noun}(s)" in document["summary"][0]
+    assert document["summary"][1].startswith(
+        "structure (RS-SAN-001, accepted): 1 artefact(s) and file head(s) checked"
+    )
+    # Its schema, whatever the rule binds: an id that is no `REQ-NNN`, and no measure.
+    project.write({rel: _requirement(shown, last, id="REQ-4", measure=None)})
+    assert sorted(errors(check(project))) == [
+        (rel, "'measure' is a required property"),
+        (f"{rel}:/id", "'REQ-4' does not match '^REQ-(?:[0-9]{3}|[1-9][0-9]{3,})$'"),
+    ]
+    # Its structure, where the rule binds: its last part missing, a statement of two
+    # sentences, and where it holds reading `None.`.
+    broken = _requirement(
+        shown, last, statement="It shows the result. It does so fast.", **{"applies-to": "None."}
+    ).replace(f"\n\n**{last}:** None.", "")
+    project.write({rel: broken})
+    found = errors(check(project))
+    assert [location for location, _message in found] == [
+        rel,
+        f"{rel}:/statement",
+        f"{rel}:/applies-to",
+    ]
+    missing = f"`**{last}:**` is missing, and it comes after `**Verified by:**`"
+    assert found[0][1].startswith(missing)
+    assert found[1][1].startswith("'It shows the result. It does so fast.' is more than one")
+    assert found[2][1].startswith(
+        f"a {noun}'s `applies-to` reads `None.`, which only a field that allows it may"
+    )
+    assert all("(RS-SAN-001)" in message for _location, message in found)
+    # A set created before the kinds selects no requirement: the rule binds on none.
+    project.write({ANALYSIS_SET: EARLIER_SET_TEXT})
+    document = check(project)
+    assert errors(document) == []
+    assert document["summary"][1].endswith(
+        "No rule of software-analysis:SAN binds on 1 of the 1 artefact(s)."
+    )
+
+
+def test_a_record_cites_a_requirement_and_copies_its_evidence(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """A record's outcomes cite a requirement by its id, and an evidence entry copied for
+    one names no steps (DEC-002, Implications). An id the analysis does not hold is
+    refused, as any artefact's is."""
+    place, shown, last = REQUIREMENT_KINDS["constraint"]
+    record = (CAPABILITY / "templates" / "revalidation-record.md").read_text(encoding="utf-8")
+    record = record.replace("UC-007: gap-found", "REQ-004: gap-found\n  REQ-009: holds")
+    record = record.replace("UC-007", "REQ-004")
+    entry = (
+        "evidence:\n  - id: REQ-004@0000000000000000000000000000000000000000#project.check\n"
+        "    artefact: REQ-004\n    commit: '0000000000000000000000000000000000000000'\n"
+        "    check: project.check\n    result: passed\n    ran: a review of the stores\n---"
+    )
+    record = record.replace("\n---\n", f"\n{entry}\n", 1)  # the closing fence, after it
+    rel = f"{RECORDS}/2026-10-18-country.md"
+    project.write({f"{place}/REQ-004-country.md": _requirement(shown, last), rel: record})
+    assert beside_record_bodies(errors(check(project))) == [
+        (
+            f"{rel}:/outcomes/REQ-009",
+            "no artefact REQ-009 in the analysis: a record's outcomes cite artefacts of the "
+            "analysis by id, withdrawn ones included (DEC-001 point 6)",
+        )
+    ]
+
+
+#: Where a quality requirement lies when its file is named after its id, and a constraint
+#: it refines (#1693).
+QUICK = f"{QUALITY}/REQ-004-quick-result.md"
+LOCAL = f"{CONSTRAINTS}/REQ-001-local-runs.md"
+_LOCAL_TITLE = "Run suites on the client's machines"
+
+
+def test_a_requirement_s_id_file_name_and_heading_agree(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """A requirement's id is `REQ-NNN`, its file's name carries it, and its heading shows
+    its id, its kind and its title (DEC-002 point 2, #1693). The heading is the heading
+    check's whatever the format rule binds, so the structure never reports it twice."""
+    project.write({**accepting_san(project), QUICK: requirement()})
+    assert errors(check(project)) == []
+    title = "Show a run's result quickly"
+    wanted = f"`# REQ-004 · Quality · {title}`"
+    why = (
+        "so its heading shows its kind beside its id, as its place does (DEC-002 point 2) — "
+        "write the heading, change `title`, or move the file to its kind's folder"
+    )
+    # A heading written as a use case's, with no kind.
+    project.write({QUICK: requirement(heading=f"# REQ-004 — {title}")})
+    assert errors(check(project)) == [
+        (
+            QUICK,
+            f"its heading, `# REQ-004 — {title}`, is not its id, its kind and its front "
+            f"matter's title: a quality requirement opens with {wanted}, {why}",
+        )
+    ]
+    # No heading at all: one finding, the heading check's.
+    project.write({QUICK: requirement(heading="")})
+    assert errors(check(project)) == [
+        (QUICK, f"has no heading: a quality requirement opens with {wanted}, {why}")
+    ]
+    # The file moved to another kind's place, its heading still naming the first kind.
+    moved = f"{CONSTRAINTS}/REQ-004-quick-result.md"
+    project.write(
+        {QUICK: None, moved: requirement("constraint", heading=f"# REQ-004 · Quality · {title}")}
+    )
+    assert errors(check(project)) == [
+        (
+            moved,
+            f"its heading, `# REQ-004 · Quality · {title}`, is not its id, its kind and its "
+            f"front matter's title: a constraint opens with `# REQ-004 · Constraint · "
+            f"{title}`, {why}",
+        )
+    ]
+    # A file's name that carries no number, or another than its id.
+    unnumbered = f"{QUALITY}/quick-result.md"
+    project.write({moved: None, unnumbered: requirement()})
+    assert errors(check(project)) == [
+        (
+            unnumbered,
+            "its name is quick-result.md, which carries no number: a requirement's file is "
+            "named after its id, `REQ-NNN-<slug>.md`, so its path shows its kind beside its "
+            "id, and the stamp counts the number it carries — name the file REQ-004-<slug>.md "
+            "(DEC-002 point 2)",
+        )
+    ]
+    other = f"{QUALITY}/REQ-005-quick-result.md"
+    project.write({unnumbered: None, other: requirement()})
+    assert errors(check(project)) == [
+        (
+            other,
+            "its name carries REQ-005, its front matter REQ-004: the stamp counts both as "
+            "held, and an artefact holds one id — name the file after its id, or correct `id` "
+            "(DEC-001 point 3)",
+        )
+    ]
+
+
+def test_no_two_requirements_share_an_id_across_the_three_kinds(
+    project: AdopterRepo, pkit_on_path: Path
+) -> None:
+    """One numbering across the three kinds (DEC-002 point 2): an id two requirements of
+    different kinds hold is one id twice, and so is one spelt with other zeros, which
+    the id check refuses too (#1691's advisory, #1693)."""
+    second = f"{CONSTRAINTS}/REQ-004-local-runs.md"
+    project.write({QUICK: requirement(), second: requirement("constraint", title=_LOCAL_TITLE)})
+    assert errors(check(project)) == [
+        (
+            second,
+            f"the id REQ-004 is also held by {QUICK}: no two artefacts in the analysis share "
+            f"an id, and an id is never used again (DEC-001 point 3)",
+        )
+    ]
+    spelt = f"{FUNCTIONAL}/REQ-0004-who-started.md"
+    project.write({second: None, spelt: requirement("functional-requirement", req_id="REQ-0004")})
+    assert errors(check(project)) == [
+        (f"{spelt}:/id", "'REQ-0004' does not match '^REQ-(?:[0-9]{3}|[1-9][0-9]{3,})$'"),
+        (
+            spelt,
+            f"the id REQ-0004, REQ-004 spelt otherwise, is also held by {QUICK}: no two "
+            f"artefacts in the analysis share an id, and an id is never used again (DEC-001 "
+            f"point 3)",
+        ),
+    ]
+
+
+def test_what_a_requirement_names_is_in_the_analysis_and_in_force(seeded: AdopterRepo) -> None:
+    """Each of a requirement's `actors` is an actor of the analysis, and each of its
+    `refines` a requirement of any kind, never itself. One in force names none withdrawn,
+    and a withdrawn one may: it is history (DEC-002 points 6 and 7, #1693)."""
+    local = requirement("constraint", req_id="REQ-001", title=_LOCAL_TITLE)
+    names: dict[str, Any] = {"actors": ["ACT-tester"], "refines": ["REQ-001"]}
+    seeded.write({LOCAL: local, QUICK: requirement(anchored=["ACT-tester", "REQ-001"], **names)})
+    assert errors(check(seeded)) == []
+    # An actor and a requirement the analysis does not hold, and the requirement itself.
+    unheld: dict[str, Any] = {"actors": ["ACT-nobody"], "refines": ["REQ-009", "REQ-004"]}
+    seeded.write({QUICK: requirement(anchored=["ACT-nobody", "REQ-009"], **unheld)})
+    named = "what a requirement names is in the analysis (DEC-002 point 6)"
+    assert errors(check(seeded)) == [
+        (f"{QUICK}:/actors/0", f"no actor ACT-nobody in the analysis: {named}"),
+        (f"{QUICK}:/refines/0", f"no requirement REQ-009 in the analysis: {named}"),
+        (
+            f"{QUICK}:/refines/1",
+            "`refines` names REQ-004, the requirement itself: a requirement refines others, "
+            "never itself — remove it from `refines` (DEC-002 point 6)",
+        ),
+    ]
+    # A use case is no requirement, though the analysis holds it: the schema refuses it,
+    # and the anchor on it is none a requirement may hold.
+    seeded.write({QUICK: requirement(anchored=["UC-001"], refines=["UC-001"])})
+    assert [location for location, _message in errors(check(seeded))] == [
+        f"{QUICK}:/refines/0",
+        f"{QUICK}:/pkit/friction/anchors/artefact",
+    ]
+    # Withdrawn, an actor and the requirement it refines, while it is in force.
+    stamped(seeded, "actor", "former", "--name", "Former", "--path", "src/**")
+    fill(seeded)
+    former = actor_at("ACT-former")
+    _set(seeded, former, "status: active", "status: withdrawn")
+    moved_on: dict[str, Any] = {"actors": ["ACT-former"], "refines": ["REQ-001"]}
+    on: dict[str, Any] = {"anchored": ["ACT-former", "REQ-001"], **moved_on}
+    seeded.write(
+        {
+            LOCAL: requirement(
+                "constraint", req_id="REQ-001", title=_LOCAL_TITLE, status="withdrawn"
+            ),
+            QUICK: requirement(**on),
+        }
+    )
+    rests = (
+        "a requirement in force rests only on artefacts in force — withdraw it too, or name another"
+    )
+    assert errors(check(seeded)) == [
+        (
+            f"{QUICK}:/actors/0",
+            f"actor ACT-former is withdrawn ({former}): {rests} (DEC-001 point 3)",
+        ),
+        (
+            f"{QUICK}:/refines/0",
+            f"requirement REQ-001 is withdrawn ({LOCAL}): {rests} (DEC-002 point 7)",
+        ),
+    ]
+    seeded.write({QUICK: requirement(status="withdrawn", **on)})
+    assert errors(check(seeded)) == []
+
+
+def test_a_requirement_s_anchors_within_the_analysis_match_its_fields(
+    seeded: AdopterRepo,
+) -> None:
+    """Within the analysis, a requirement anchors each of its `actors` and each of its
+    `refines`, and nothing else (DEC-002 point 6, #1693). An artefact anchor outside the
+    analysis, such as a rule, is not counted."""
+    local = requirement("constraint", req_id="REQ-001", title=_LOCAL_TITLE)
+    names: dict[str, Any] = {"actors": ["ACT-tester"], "refines": ["REQ-001"]}
+    seeded.write({LOCAL: local, QUICK: requirement(anchored=["ACT-tester"], **names)})
+    rule = (
+        "within the analysis, a requirement anchors only each actor whose need it meets and "
+        "each requirement it refines, written from the two fields, so a changed actor or "
+        "requirement flags it"
+    )
+    where = f"{QUICK}:/pkit/friction/anchors/artefact"
+    assert errors(check(seeded)) == [
+        (
+            where,
+            f"its anchors within the analysis (ACT-tester) do not match its `actors` and "
+            f"`refines` (ACT-tester, REQ-001): {rule} — anchor exactly [ACT-tester, REQ-001] "
+            f"(DEC-002 point 6)",
+        )
+    ]
+    # A use case anchored, which neither field names.
+    seeded.write({QUICK: requirement(anchored=["UC-001", "RS-SAN-001"])})
+    assert errors(check(seeded)) == [
+        (
+            where,
+            f"its anchors within the analysis (UC-001) do not match its `actors` and "
+            f"`refines` (none): {rule} — anchor none of them (DEC-002 point 6)",
+        )
+    ]
+    # A part anchor names its artefact before its last `#` (COR-050 point 2): one on a use
+    # case is within the analysis, and one on an actor is no anchor on the actor whole.
+    seeded.write({QUICK: requirement(anchored=["UC-001#"])})
+    assert errors(check(seeded)) == [
+        (
+            where,
+            f"its anchors within the analysis (UC-001#) do not match its `actors` and "
+            f"`refines` (none): {rule} — anchor none of them (DEC-002 point 6)",
+        )
+    ]
+    seeded.write({QUICK: requirement(anchored=["ACT-tester#"], actors=["ACT-tester"])})
+    assert errors(check(seeded)) == [
+        (
+            where,
+            f"its anchors within the analysis (ACT-tester#) do not match its `actors` and "
+            f"`refines` (ACT-tester): {rule} — anchor exactly [ACT-tester] (DEC-002 point 6)",
+        )
+    ]
+    seeded.write({QUICK: requirement(anchored=["RS-SAN-001"])})
+    assert errors(check(seeded)) == []
+
+
+def test_a_hint_left_in_a_requirement_s_field_is_refused(project: AdopterRepo) -> None:
+    """A requirement's statement, measure and where it holds still holding the hint its
+    template writes are refused, as any hint left in is (DEC-001 point 1, #1693)."""
+    hints: dict[str, Any] = {
+        name: field_hint("quality-requirement", name)
+        for name in ("statement", "measure", "applies-to")
+    }
+    project.write({QUICK: requirement(**hints)})
+    said = {name: re.search(r"<!-- pkit:hint (.*) -->", hint) for name, hint in hints.items()}
+    assert sorted(errors(check(project))) == [
+        (f"{QUICK}:/{name}", _field_hint_left(found[1]))
+        for name, found in sorted(said.items())
+        if found is not None
+    ]
+    assert all(found is not None for found in said.values())
+
+
 # --- anchors (DEC-001 point 4) ----------------------------------------------------------------
 
 
@@ -858,6 +1220,46 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
         }
     )
     assert errors(check(seeded)) == []
+
+
+def test_a_journey_s_part_anchor_on_a_use_case_is_an_anchor_on_that_use_case(
+    seeded: AdopterRepo,
+) -> None:
+    """A part anchor names the artefact before its last `#` (COR-050 point 2), so one on a
+    use case is among the journey's use-case anchors (#1725). It matches no entry of
+    `steps` or `relies-on`, which name each use case whole: a part anchor flags the
+    journey only when its part changes (COR-050 point 5). A part anchor on an artefact
+    that is no use case is not among them."""
+    stamped(seeded, "use-case", "third", "--actor", "ACT-tester")
+    fill(seeded)
+    where = f"{JOURNEY}:/pkit/friction/anchors/artefact"
+
+    def mismatch(anchored: str) -> list[tuple[str, str]]:
+        return [
+            (
+                where,
+                f"its use-case anchors ({anchored}) do not match its steps and the use cases "
+                f"it relies on (UC-001, UC-002): the anchors are written from `steps` and "
+                f"`relies-on`, so the friction check sees every use case it passes through or "
+                f"relies on — anchor exactly [UC-001, UC-002] (DEC-001 point 4)",
+            )
+        ]
+
+    # A match: a part anchor on the journey's actor is no use-case anchor.
+    _set(seeded, JOURNEY, "        - UC-002\n", "        - UC-002\n        - ACT-tester#\n")
+    assert errors(check(seeded)) == []
+    # A part anchor on a use case outside the lists, which slipped past before: a
+    # section, then the lead.
+    _set(seeded, JOURNEY, "        - ACT-tester#\n", "        - UC-003#main-flow\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-002, UC-003#main-flow")
+    _set(seeded, JOURNEY, "        - UC-003#main-flow\n", "        - UC-003#\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-002, UC-003#")
+    # A part anchor on a step's use case, in place of its whole anchor or beside it.
+    _set(seeded, JOURNEY, "        - UC-003#\n", "")
+    _set(seeded, JOURNEY, "        - UC-001\n", "        - UC-001#\n")
+    assert errors(check(seeded)) == mismatch("UC-001#, UC-002")
+    _set(seeded, JOURNEY, "        - UC-001#\n", "        - UC-001\n        - UC-001#\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-001#, UC-002")
 
 
 def test_a_use_case_with_another_actor_names_it_and_anchors_to_it(seeded: AdopterRepo) -> None:

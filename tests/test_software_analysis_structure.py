@@ -274,6 +274,75 @@ def test_a_front_matter_list_of_the_sentence_form_is_one_text_per_item() -> None
     assert (departure.pointer, departure.how) == ("/needs/2", "not-a-sentence")
 
 
+#: A requirement's body and fields, filled: the same for each of the three kinds save
+#: the last part, which differs for a constraint (DEC-002 point 4, #1691).
+REQUIREMENT_BODY = """\
+# REQ-004 · Quality · Show a run's result quickly
+
+**Verified by:** A timing test runs the suite and measures when its result shows.
+
+**Rationale:** None."""
+
+REQUIREMENT_FIELDS = {
+    "statement": "The system shows a suite's result within two seconds of the run's end.",
+    "measure": "None.",
+    "applies-to": "Every run of a suite.",
+    "actors": ["ACT-tester"],
+}
+
+
+@pytest.mark.parametrize(
+    ("kind", "last"),
+    [
+        ("quality-requirement", "Rationale"),
+        ("functional-requirement", "Rationale"),
+        ("constraint", "Imposed by"),
+    ],
+)
+def test_a_requirement_s_body_and_fields_hold_its_kind_s_structure(kind: str, last: str) -> None:
+    """Its title heading, *Verified by*, then *Rationale* or, on a constraint, *Imposed
+    by*, each of which may read `None.`. Its `statement` is one sentence, its `measure`
+    may read `None.`, and where it holds never does (DEC-002 point 4)."""
+    body = REQUIREMENT_BODY.replace("**Rationale:**", f"**{last}:**")
+    assert _found(body, kind) == []
+    assert S.field_departures(REQUIREMENT_FIELDS, KINDS[kind]) == []
+    # A part missing, and a part left empty.
+    assert _found(body.replace(f"\n\n**{last}:** None.", ""), kind) == [
+        ("rationale" if last == "Rationale" else "imposed-by", "missing", None)
+    ]
+    assert _found(body.replace("**Verified by:** A timing", "**Verified by:**\n\nA"), kind) == []
+    empty = body.replace("A timing test runs the suite and measures when its result shows.", "")
+    assert _found(empty, kind) == [("verified-by", "empty", 3)]
+    # The statement of two sentences, and where it holds reading `None.`.
+    two = {**REQUIREMENT_FIELDS, "statement": "The system shows a result. It does so fast."}
+    (departure,) = S.field_departures(two, KINDS[kind])
+    assert (departure.pointer, departure.how) == ("/statement", "not-a-sentence")
+    nowhere = {**REQUIREMENT_FIELDS, "applies-to": " None. "}
+    (departure,) = S.field_departures(nowhere, KINDS[kind])
+    assert (departure.pointer, departure.how) == ("/applies-to", "none-refused")
+    # A statement of `None.` is refused too: it is one sentence, and no field that allows
+    # `None.`. A measure of it is not judged against anything.
+    (departure,) = S.field_departures({**REQUIREMENT_FIELDS, "statement": "None."}, KINDS[kind])
+    assert (departure.pointer, departure.how) == ("/statement", "none-refused")
+
+
+def test_none_in_a_field_is_judged_as_the_field_says() -> None:
+    """A field that says it may not read `None.` is refused it, and one that says it may
+    is not judged by its form while it does (DEC-002 point 4). A field that says
+    neither, as every field of DEC-001's four kinds, is judged by its form alone, as
+    before: a need of `None.` is one sentence, and a definition of it ends with a full
+    stop. A field still holding its hint is the placeholder check's alone."""
+    assert S.field_departures({"needs": ["None."], "name": "x"}, KINDS["actor"]) == []
+    assert S.field_departures({"name": "None.", "replaces": ["None."]}, KINDS["term"]) == []
+    (departure,) = S.field_departures({"name": "x", "definition": "None."}, KINDS["term"])
+    assert (departure.pointer, departure.how) == ("/definition", "breaks-its-form")
+    # A requirement's actors and refines say neither, so the schema alone refuses `None.`.
+    listed = {**REQUIREMENT_FIELDS, "actors": ["None."], "refines": "None."}
+    assert S.field_departures(listed, KINDS["quality-requirement"]) == []
+    hinted = {**REQUIREMENT_FIELDS, "applies-to": field_hint("constraint", "applies-to")}
+    assert S.field_departures(hinted, KINDS["constraint"]) == []
+
+
 def test_what_a_writer_adds_inside_a_sentence_part_counts_toward_it() -> None:
     """A writer's label is content of the part it falls in, so under *Goal* it counts
     toward the one sentence; after the next declared label it is that part's."""
@@ -400,7 +469,21 @@ def test_an_unordered_kind_takes_its_parts_in_any_order() -> None:
 
 
 def test_the_declaration_is_read_whole_or_not_at_all(tmp_path: Path) -> None:
-    assert sorted(KINDS) == ["actor", "journey", "revalidation-record", "term", "use-case"]
+    assert sorted(KINDS) == [
+        "actor",
+        "constraint",
+        "functional-requirement",
+        "journey",
+        "quality-requirement",
+        "revalidation-record",
+        "term",
+        "use-case",
+    ]
+    assert {name: kind.shown_as for name, kind in KINDS.items() if kind.shown_as} == {
+        "quality-requirement": "Quality",
+        "functional-requirement": "Functional",
+        "constraint": "Constraint",
+    }
     assert KINDS["use-case"].labels >= {"goal", "main path", "minimal guarantees"}
     broken = tmp_path / "kinds.yaml"
     broken.write_text("kinds: [\n", encoding="utf-8")

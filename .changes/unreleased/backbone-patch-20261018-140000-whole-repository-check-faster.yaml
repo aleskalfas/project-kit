@@ -1,0 +1,8 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit friction check --all` takes about half the time it did on a large
+  repository, with the same answer, so a command that reads it, such as
+  living-docs' `fill-doc-check`, answers well within the 30-second bound.

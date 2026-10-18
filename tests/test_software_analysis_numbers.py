@@ -26,8 +26,11 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
     CAPABILITY,
     CONFIG,
+    CONSTRAINTS,
+    FUNCTIONAL,
     MAIN,
     NUMBERS,
+    QUALITY,
     USE_CASES,
     VALIDATE,
     fill,
@@ -35,6 +38,7 @@ from tests.analysis_repo import (
     load,
     prepare,
     prepare_seeded,
+    requirement,
     run_script,
     stamped,
 )
@@ -316,6 +320,51 @@ def test_a_number_the_default_branch_took_and_removed_since_is_still_taken(
     }
 
 
+def test_a_requirement_s_number_is_one_across_its_three_places(project: AdopterRepo) -> None:
+    """A requirement's number is one numbering across its three kinds' places (DEC-002
+    point 2, #1693). `topic` left main holding REQ-001, a quality requirement. main then
+    numbered REQ-002 as a constraint, and `topic` REQ-002 as a functional requirement: a
+    collision, though the two are of different kinds. `topic` also moved REQ-001 to the
+    constraints' place: the merge-base held it, so the move is no collision."""
+    quality = f"{QUALITY}/REQ-001-fast-result.md"
+    project.commit("REQ-001", {quality: requirement(req_id="REQ-001")})
+    project.checkout("topic", create=True)
+    project.checkout(MAIN)
+    theirs = f"{CONSTRAINTS}/REQ-002-local-runs.md"
+    project.commit("REQ-002 on main", {theirs: requirement("constraint", req_id="REQ-002")})
+    project.checkout("topic")
+    ours = f"{FUNCTIONAL}/REQ-002-who-started.md"
+    project.write({ours: requirement("functional-requirement", req_id="REQ-002")})
+    moved = f"{CONSTRAINTS}/REQ-001-fast-result.md"
+    project.rename(quality, moved)
+    completed = numbers(project, "--base", MAIN, "--json")
+    assert completed.returncode == 1, completed.stderr
+    outdated, collision = document(completed)["findings"]
+    assert outdated["severity"] == "report"
+    assert collision == {
+        "severity": "error",
+        "location": ours,
+        "message": (
+            f"REQ-002 is numbered on main too, for {theirs}, since this branch left it: the "
+            "first to reach the default branch keeps the number, so renumber this requirement "
+            "before merging — `pkit analysis new` gives the next free one (DEC-001 point 3; "
+            "DEC-002 point 2)"
+        ),
+    }
+    # Renumbered past main's, it passes, the moved requirement with it.
+    project.write(
+        {
+            ours: None,
+            f"{FUNCTIONAL}/REQ-003-who-started.md": requirement(
+                "functional-requirement", req_id="REQ-003"
+            ),
+        }
+    )
+    completed = numbers(project, "--base", MAIN, "--json")
+    assert completed.returncode == 0, completed.stdout + completed.stderr
+    assert [f["severity"] for f in document(completed)["findings"]] == ["report"]
+
+
 def test_this_branch_s_numbers_are_read_by_name_and_id_as_main_s_are(
     branched: AdopterRepo,
 ) -> None:
@@ -380,7 +429,8 @@ def test_a_working_tree_numbering_nothing_needs_no_base(project: AdopterRepo) ->
         "base": None,
         "freed": [],
         "summary": [
-            "numbers: no use case or journey is numbered here; nothing to compare, no base read."
+            "numbers: no use case, journey or requirement is numbered here; nothing to "
+            "compare, no base read."
         ],
         "findings": [],
     }

@@ -18,6 +18,7 @@ from click.testing import CliRunner
 
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
+from project_kit import friction_git
 from project_kit.cli import main
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import ASKED, register_kinds
@@ -25,6 +26,8 @@ from tests.friction_documents import (
     ADR,
     ADR_OVERLAY,
     CONFIG,
+    NOTES,
+    NOTES_HOLD,
     POINTED,
     SOURCE,
     T1,
@@ -33,6 +36,7 @@ from tests.friction_documents import (
     document,
     friction_config,
     guide,
+    notes,
     pointed_record,
 )
 
@@ -802,6 +806,201 @@ def test_excluded_paths_do_not_change_an_anchor(repo: AdopterRepo) -> None:
     assert _summary(_run(repo)) == []
 
 
+# --- a path anchor stands on the content of a file a place holds (#1661, COR-050 point 5) ----
+
+ON_NOTES = guide(anchors={"path": [NOTES]})
+
+
+def test_a_revalidation_alone_flags_no_path_anchor_on_its_file(repo: AdopterRepo) -> None:
+    """The cascade stops at an `unchanged` revalidation through a path anchor too: the
+    revalidation writes only the container, which no anchor stands on."""
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    repo.commit(
+        "the engine changed; the notes still hold",
+        {"src/core/engine.py": "ENGINE = 2\n", NOTES: NOTES_HOLD},
+    )
+    assert _summary(_run(repo)) == [("answered", NOTES, "path:src/core/**", "unchanged")]
+
+
+def test_a_deferral_alone_flags_no_path_anchor_on_its_file(repo: AdopterRepo) -> None:
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    deferring = notes(deferred=[("path", "src/core/**", "rewrite after #1")])
+    repo.commit(
+        "the engine changed; defer", {"src/core/engine.py": "ENGINE = 2\n", NOTES: deferring}
+    )
+    assert _summary(_run(repo)) == [("answered", NOTES, "path:src/core/**", "deferred")]
+
+
+@pytest.mark.parametrize(
+    "edit",
+    [
+        pytest.param({"body": "The engine splits in two."}, id="body"),
+        pytest.param({"status": "withdrawn"}, id="own-field"),
+    ],
+)
+def test_an_edit_to_the_content_of_a_placed_file_flags_a_path_anchor_on_it(
+    repo: AdopterRepo, edit: dict[str, Any]
+) -> None:
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    repo.commit("edit the notes", {NOTES: notes(at=T2, **edit)})
+    assert _summary(_run(repo)) == [
+        ("friction", "docs/guide.md", f"path:{NOTES}", None),
+        ("revalidated", NOTES, None, "updated"),
+    ]
+
+
+def test_a_reformatted_front_matter_flags_no_path_anchor_on_a_placed_file(
+    repo: AdopterRepo,
+) -> None:
+    """Its fields are compared parsed, as an artefact's are."""
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    front, body = notes().removeprefix("---\n").split("\n---\n", 1)
+    flow = json.dumps(json.loads(front))
+    repo.commit("the front matter on one line", {NOTES: f"---\n{flow}\n---\n{body}"})
+    assert _summary(_run(repo)) == []
+
+
+def test_a_mode_change_flags_a_path_anchor_on_a_placed_file(repo: AdopterRepo) -> None:
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    repo.git("update-index", "--chmod=+x", NOTES)
+    repo.git("commit", "-q", "-m", "make the notes executable")
+    (repo.root / NOTES).chmod(0o755)
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", f"path:{NOTES}", None)]
+
+
+def test_a_collection_entry_s_revalidation_alone_flags_no_path_anchor_on_its_file(
+    repo: AdopterRepo,
+) -> None:
+    def collection(at: str, outcome: str, because: str | None = None) -> str:
+        revalidated = {"at": at, "outcome": outcome}
+        if because is not None:
+            revalidated["unchanged-because"] = because
+        entry = {
+            "pkit": {"friction": {"anchors": {"path": ["src/core/**"]}, "revalidated": revalidated}}
+        }
+        front = {"TERM-a": {"name": "a", **entry}, "TERM-b": {"name": "b"}}
+        return f"---\n{json.dumps(front, indent=2)}\n---\n\n## TERM-a\n\nA.\n"
+
+    on_terms = guide(anchors={"path": ["docs/terms.md"]})
+    _start(repo, {"docs/terms.md": collection(T1, "updated"), "docs/guide.md": on_terms})
+    repo.commit(
+        "the engine changed; the term holds",
+        {
+            "src/core/engine.py": "ENGINE = 2\n",
+            "docs/terms.md": collection(T2, "unchanged", "the engine is still one module"),
+        },
+    )
+    assert _summary(_run(repo)) == [
+        ("answered", "docs/terms.md#TERM-a", "path:src/core/**", "unchanged")
+    ]
+
+
+def test_a_rule_s_revalidation_alone_flags_no_path_anchor_on_its_rule_set(
+    repo: AdopterRepo,
+) -> None:
+    """A rule keeps its container a level down, under the set's `rules`: it is left out
+    wherever it sits."""
+    rules = ".pkit/rule-sets/xs.md"
+    on_rules = guide(anchors={"path": [rules]})
+    _start(repo, {rules: BACKBONE_RULES, "docs/guide.md": on_rules})
+    reworded = BACKBONE_RULES.replace("anchored to nothing", "anchored to nothing at all")
+    repo.commit("reword the rule's reason for having no anchors", {rules: reworded})
+    assert _summary(_run(repo)) == []
+
+    repo.commit("and its statement", {rules: reworded.replace("The statement", "A statement")})
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", f"path:{rules}", None)]
+
+
+def test_a_container_edit_on_a_file_no_place_holds_flags_a_path_anchor(repo: AdopterRepo) -> None:
+    """A file no place holds is compared as stored: a template's block is what it gives each
+    artefact made from it."""
+    template = "templates/page.md"
+    on_template = guide(anchors={"path": ["templates/**"]})
+    _start(
+        repo, {template: document(None, anchors={"path": ["src/**"]}), "docs/guide.md": on_template}
+    )
+    repo.commit(
+        "the template's default anchor", {template: document(None, anchors={"path": ["lib/**"]})}
+    )
+    assert _summary(_run(repo)) == [("friction", "docs/guide.md", "path:templates/**", None)]
+
+
+def test_a_file_a_place_holds_at_either_state_is_read_by_its_content(repo: AdopterRepo) -> None:
+    """A file a change brings into a place, writing only its container, flags nothing."""
+    page = "notes/page.md"
+    on_page = guide(anchors={"path": [page]})
+    _start(repo, {page: notes(), "docs/guide.md": on_page})
+    repo.commit(
+        "bring the notes into a place and revalidate them",
+        {CONFIG: friction_config(places=("docs", "notes")), page: NOTES_HOLD},
+    )
+    assert _summary(_run(repo)) == [("answered", page, None, "new")]
+
+
+def test_a_named_head_reads_a_placed_file_by_its_content_and_mode(repo: AdopterRepo) -> None:
+    """`--head <rev>`: both states are commits, the modes read from their trees."""
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    held = repo.commit("the notes revalidated, their content as it was", {NOTES: NOTES_HOLD})
+    revalidated = ("revalidated", NOTES, None, "unchanged")
+    assert _summary(_run(repo, named=fc.named_head(repo.root, held))) == [revalidated]
+
+    repo.git("update-index", "--chmod=+x", NOTES)
+    repo.git("commit", "-q", "-m", "make the notes executable")
+    named = fc.named_head(repo.root, repo.head())
+    assert _summary(_run(repo, named=named)) == [
+        ("friction", "docs/guide.md", f"path:{NOTES}", None),
+        revalidated,
+    ]
+
+
+def test_a_front_matter_holding_only_a_container_flags_no_path_anchor(repo: AdopterRepo) -> None:
+    """A placed file with no front matter has its body and no fields: anchoring it changes
+    nothing a path anchor on it stands on."""
+    plain = "docs/plain.md"
+    _start(repo, {plain: "# Plain\n\nText.\n", "docs/guide.md": guide(anchors={"path": [plain]})})
+    anchored = document(None, anchors={"path": ["src/core/**"]}, body="# Plain\n\nText.")
+    repo.commit("anchor the plain page", {plain: anchored.replace("\n\n# Plain", "\n# Plain")})
+    assert _summary(_run(repo)) == [("answered", plain, None, "new")]
+
+
+def test_the_files_a_place_holds_are_the_walk_s_at_any_state(repo: AdopterRepo) -> None:
+    """One matching of the places: `placed_files` names, for the working tree and for a
+    commit, the files the walk reads there — a rule set's among them, a link never."""
+    rules = ".pkit/rule-sets/xs.md"
+    _start(repo, {NOTES: notes(), rules: BACKBONE_RULES, "docs/plain.md": "Plain.\n"})
+    (repo.root / "docs" / "linked.md").symlink_to("plain.md")
+    repo.commit("a link in the place", files=None)
+    walked = fd.discover_artefacts(repo.root).placed
+    assert {NOTES, rules, "docs/plain.md"} <= walked
+    assert "docs/linked.md" not in walked
+    assert fd.placed_files(repo.root) == walked
+    head = fc.CommitTree(repo.root, repo.head())
+    assert fd.placed_files(repo.root, head) == fd.discover_artefacts(repo.root, tree=head).placed
+    assert fd.placed_files(repo.root, head) == walked
+
+
+def test_placed_content_leaves_out_every_container_where_the_records_let_one_sit(
+    repo: AdopterRepo,
+) -> None:
+    """One reading of a placed file's content: a document's is its artefact's; the front
+    matter's own container, each entry's and each rule's are left out, whatever artefacts
+    the file holds, and a key of that name deeper is the artefact's own data."""
+    repo.write({CONFIG: friction_config(), NOTES: notes()})
+    found = fd.discover_artefacts(repo.root).find("notes")
+    assert found is not None
+    assert fd.placed_content(notes().encode()) == fd.content(found)
+    shapes = "---\npkit: 0\na: {pkit: 1, b: [{pkit: 2}]}\nrules: {R: {pkit: 3, s: 4}}\n---\nBody.\n"
+    assert fd.placed_content(shapes.encode()) == (
+        "Body.\n",
+        {"a": {"b": [{"pkit": 2}]}, "rules": {"R": {"s": 4}}},
+    )
+    assert fd.placed_content(b"Body.\r\n") == ("Body.\n", {})
+    assert fd.placed_content(b"---\n- a list\n---\nBody.\n") == (
+        "---\n- a list\n---\nBody.\n",
+        None,
+    )
+
+
 # --- a change to `friction.exclude` (COR-050 point 7) ---------------------------------------
 
 _GENERATED = {"src/cli/generated/table.py": "T = 1\n"}
@@ -1111,7 +1310,7 @@ def test_a_capability_place_in_the_package_schema_shape_is_checked(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
     """The place is read from each side's package metadata as
-    `{path, location?, type?, description?}`."""
+    `{path, location?, type?, revisits?, description?}`."""
     repo = make_adopter_repo(capabilities=("evidence",))
     package = repo.root / ".pkit/capabilities/evidence/package.yaml"
     package.write_text(
@@ -2242,6 +2441,33 @@ def test_listing_discovery_agrees_with_the_filesystem(
     ]
 
 
+def _place(pattern: str) -> fd.Place:
+    declared = fd.SettingsPath(pattern, pattern, CONFIG, "/friction/places/0", "project")
+    return fd.Place(pattern, declared)
+
+
+@pytest.mark.parametrize(
+    ("pattern", "in_first", "in_second"),
+    [
+        ("docs", ["docs/a.md", "docs/sub/b.md"], ["docs/a.md", "docs/c.md"]),
+        (".", ["README.md", "docs/a.md", "docs/sub/b.md"], ["README.md", "docs/a.md", "docs/c.md"]),
+        ("docs/*.md", ["docs/a.md"], ["docs/a.md", "docs/c.md"]),
+    ],
+)
+def test_a_place_reads_each_listing_by_its_own_files(
+    pattern: str, in_first: list[str], in_second: list[str]
+) -> None:
+    """A listing's Markdown files are worked out once and kept for the places that
+    read it after: a listing read before reads the same, and one that differs — a
+    file added, one gone — by its own files, never by those of one read before.
+    Plain YAML and what lies under `.git` are no documents in either."""
+    first = ("README.md", "docs/a.md", "docs/data.yaml", "docs/sub/b.md", ".git/x.md")
+    second = ["README.md", "docs/a.md", "docs/c.md", "docs/data.yaml"]
+    assert fd.listed_files_in_place(_place(pattern), first) == in_first
+    assert fd.listed_files_in_place(_place(pattern), second) == in_second
+    assert fd.listed_files_in_place(_place(pattern), first) == in_first
+
+
 def test_a_commit_tree_reads_what_the_commit_held(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": guide()})
     base = repo.head()
@@ -2252,3 +2478,79 @@ def test_a_commit_tree_reads_what_the_commit_held(repo: AdopterRepo) -> None:
         "docs/guide.md": guide().encode(),
         "missing.md": None,
     }
+
+
+def test_a_commit_tree_reads_the_same_through_an_open_reader(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Through an open `BlobReader`, a commit's files read as they do one batch at a
+    time — a file, a file twice, a link (no file to read), a submodule (a commit, no
+    file), a file whose object the store lost, a path the commit does not hold — and
+    no git process is started per read."""
+    _start(
+        repo,
+        {"docs/guide.md": guide(), "docs/other.md": document("other"), "docs/lost.md": "lost\n"},
+    )
+    (repo.root / "docs" / "link.md").symlink_to("guide.md")
+    repo.git("add", "-A")
+    repo.git("update-index", "--add", "--cacheinfo", f"160000,{repo.head()},vendor/sub")
+    repo.git("commit", "-q", "-m", "a link and a submodule")
+    commit = repo.head()
+    repo.lose_object(repo.git("rev-parse", f"{commit}:docs/lost.md").stdout.strip())
+    paths = [
+        "docs/guide.md",
+        "docs/link.md",
+        "vendor/sub",
+        "docs/lost.md",
+        "missing.md",
+        "docs/other.md",
+        "docs/guide.md",
+    ]
+    expected = fc.CommitTree(repo.root, commit).read_bytes(paths)
+    assert expected == {
+        "docs/guide.md": guide().encode(),
+        "docs/link.md": None,
+        "vendor/sub": None,
+        "docs/lost.md": None,
+        "missing.md": None,
+        "docs/other.md": document("other").encode(),
+    }
+    reader = fc.BlobReader(repo.root)
+    try:
+        tree = fc.CommitTree(repo.root, commit, reader)
+        started: list[tuple[Any, ...]] = []
+        real = friction_git.run_git
+
+        def counted(*args: Any, **kwargs: Any) -> Any:
+            started.append(args[1:])
+            return real(*args, **kwargs)
+
+        monkeypatch.setattr(friction_git, "run_git", counted)
+        assert tree.read_bytes(paths) == expected
+        assert tree.read_bytes(["docs/other.md"]) == {"docs/other.md": document("other").encode()}
+        assert started == []
+    finally:
+        reader.close()
+
+
+def test_a_capability_decision_is_found_only_in_its_capability_s_decisions_folder(
+    tmp_path: Path,
+) -> None:
+    """`<capability>:DEC-NNN` names the first file of that capability's decisions
+    folder named `DEC-NNN.md` or `DEC-NNN-<slug>.md`: the number elsewhere in a path,
+    a longer number and a folder beneath are passed over."""
+    decisions = ".pkit/capabilities/pm/decisions"
+    files = [
+        "docs/DEC-001-notes/DEC-001-elsewhere.md",
+        ".pkit/capabilities/other/decisions/DEC-001-other.md",
+        f"{decisions}/DEC-0011-longer.md",
+        f"{decisions}/sub/DEC-001-beneath.md",
+        f"{decisions}/DEC-001.md",
+        f"{decisions}/DEC-001-b.md",
+        f"{decisions}/DEC-001-a.md",
+    ]
+    assert fc.record_file(tmp_path, files, "pm:DEC-001") == f"{decisions}/DEC-001-a.md"
+    assert fc.record_file(tmp_path, files[:5], "pm:DEC-001") == f"{decisions}/DEC-001.md"
+    assert fc.record_file(tmp_path, files[:4], "pm:DEC-001") is None
+    assert fc.record_file(tmp_path, files, "pm:DEC-001-b") == f"{decisions}/DEC-001-b.md"
+    assert fc.record_file(tmp_path, files, "pm:DEC-002") is None

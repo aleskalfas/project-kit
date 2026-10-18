@@ -6,7 +6,7 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""software-analysis capability — new: stamp an artefact or a revalidation record (DEC-001).
+"""software-analysis capability — new: stamp an artefact or a revalidation record.
 
 Writes one artefact under the analysis location — the `analysis` sub-path of
 the internal documentation root, recorded the first time an artefact is placed
@@ -21,9 +21,14 @@ hint until a person writes it (DEC-001 point 1):
   from both lists, its use-case anchors;
 - an actor, `use-case-model/actors/ACT-<slug>.md`, headed by its id and name,
   with its needs in its front matter;
-- a term, the entry `TERM-<slug>` of `glossary.md`.
+- a term, the entry `TERM-<slug>` of `glossary.md`;
+- a requirement of each of the three kinds (DEC-002),
+  `requirements/<quality|functional|constraints>/[<area>/]REQ-NNN-<slug>.md`,
+  headed by its id, its kind and its title, with its actors and the
+  requirements it refines, and an anchor to each.
 
-A use case or journey takes the next free number on the default branch — every
+A use case, a journey or a requirement takes the next free number on the
+default branch — a requirement's across its three kinds' places — every
 number its history ever gave a file included, but an id the project's
 numbering setting frees (`_lib/numbering.py`) — on a base named with `--base`,
 and in the working tree; `$PKIT_CHECK_BASE`, a pipeline's base for its checks,
@@ -46,6 +51,9 @@ Usage:
       [--relies-on <UC-id>]... [--title <text>]
   pkit analysis new actor <slug> [--name <text>] [--unanchored-because <text>]
   pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]
+  pkit analysis new <quality-requirement|functional-requirement|constraint> <slug>
+      [--actor <ACT-id>]... [--refines <REQ-id>]... [--area <area>]
+      [--title <text>] [--unanchored-because <text>]
   each also: [--path <glob>]... [--record <id>]... [--base <ref>]
 
   pkit analysis new revalidation <slug> --change <ref> --trigger <trigger>
@@ -69,7 +77,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import backbone, revalidation, schemas, stamp
-from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
+from _lib.model import ACTOR, CONSTRAINT, FUNCTIONAL, JOURNEY, KINDS, QUALITY, TERM, USE_CASE
 from _lib.placeholder import unfilled
 
 #: The kind a revalidation record is stamped as.
@@ -93,7 +101,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="pkit analysis new",
         description="Stamp an analysis artefact or a revalidation record under the analysis "
-        "location (software-analysis DEC-001).",
+        "location (software-analysis DEC-001 and DEC-002).",
     )
     kinds = parser.add_subparsers(dest="kind", required=True, metavar="KIND")
 
@@ -171,6 +179,53 @@ def _parser() -> argparse.ArgumentParser:
             help=(
                 "Why nothing embodies it, so it has no anchors (instead of --path/--record): "
                 "written as `unanchored-because` in its friction block."
+            ),
+        )
+    requirements = (
+        kind(
+            QUALITY,
+            "A quality requirement: how well the system must behave, such as how fast, how "
+            "reliably or how safely.",
+            "title",
+        ),
+        kind(
+            FUNCTIONAL,
+            "A functional requirement: behaviour that holds across use cases, such as a "
+            "business rule. Behaviour that serves one actor's goal is a use case instead.",
+            "title",
+        ),
+        kind(
+            CONSTRAINT,
+            "A constraint: a limit on the solution, which the design takes as given.",
+            "title",
+        ),
+    )
+    for requirement in requirements:
+        requirement.add_argument(
+            "--actor",
+            dest="actors",
+            action="append",
+            default=[],
+            metavar="ACT-ID",
+            help="An actor whose need it meets, written in `actors` and anchored (repeatable).",
+        )
+        requirement.add_argument(
+            "--refines",
+            action="append",
+            default=[],
+            metavar="REQ-ID",
+            help="A requirement it refines, of any of the three kinds, written in `refines` and "
+            "anchored (repeatable).",
+        )
+        requirement.add_argument(
+            "--area", metavar="WORD", help="The functional area's folder to put it in."
+        )
+        requirement.add_argument(
+            "--unanchored-because",
+            metavar="TEXT",
+            help=(
+                "Why nothing embodies it, so it has no anchors (instead of --path, --record, "
+                "--actor and --refines): written as `unanchored-because` in its friction block."
             ),
         )
     help_text = (
@@ -279,8 +334,9 @@ def _gap(value: str) -> revalidation.Gap:
 
 
 def _artefact_id(text: str) -> bool:
-    """Whether `text` has the shape of an artefact's id, of any kind."""
-    return any(schemas.id_pattern(kind).match(text) for kind in (ACTOR, TERM, USE_CASE, JOURNEY))
+    """Whether `text` has the shape of an artefact's id, of any kind, a requirement's
+    included (DEC-002, Implications)."""
+    return any(schemas.id_pattern(kind).match(text) for kind in KINDS)
 
 
 def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:
@@ -313,6 +369,8 @@ def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
         paths=tuple(args.paths),
         records=tuple(args.records),
         unanchored_because=getattr(args, "unanchored_because", None),
+        actors=tuple(getattr(args, "actors", ())),
+        refines=tuple(getattr(args, "refines", ())),
     )
     return stamp.stamp(backbone.project_root(), request, args.base)
 

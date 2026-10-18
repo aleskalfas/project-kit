@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+  pr: 1707
+body: >
+  A path anchor, and an anchor of a registered kind, stand on the content and
+  mode of a file a place holds at either state compared (COR-050 point 5;
+  #1661). The content is read as an artefact's is: the body as text and the
+  front matter's fields compared parsed, with every `pkit` container left out
+  where one may sit, the front matter's own, an entry's or a rule's. A file
+  with no front matter there has its body and no fields. Any other file is
+  compared as stored, as before. So `pkit friction check`, `check --all`,
+  `debt` and `explain` flag fewer anchors. A revalidation, a deferral or a
+  status write in a document, a collection entry or a rule no longer flags a
+  path anchor on its file, and the cascade stops at an `unchanged`
+  revalidation whatever the kind of anchor. Reformatting a placed file's
+  front matter, or giving a placed page a front matter that holds only a
+  container, flags nothing either. A commit that wrote only a placed file's
+  containers no longer dates a path anchor's debt, and `explain` lists none.
+  The whole-repository check reads each state's places from that state's own
+  commit.
