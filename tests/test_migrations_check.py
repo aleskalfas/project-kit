@@ -3,18 +3,23 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
+from typing import Any
 
 import pytest
 from click.testing import CliRunner
 
 from project_kit import migrations as migrations_mod
 from project_kit.cli import main
+from project_kit.default_branch import CHECK_BASE_ENV
+from project_kit.friction_git import SHORT
 from project_kit.migrations import (
     CoverageReport,
     DiffMigration,
     DiffTrigger,
     check_diff_coverage,
 )
+from tests.adopter_repo import GitRepo
 
 
 def _make_repo(root: Path) -> None:
@@ -446,3 +451,303 @@ def test_cli_check_diff_fails_when_uncovered(
         result = runner.invoke(main, ["migrations", "check-diff", "--base", "main"])
     assert result.exit_code != 0
     assert "UNCOVERED" in result.output
+
+
+# --- a migration whose version is already released (COR-010; #1754) --------------------
+
+
+_EVIDENCE = ".pkit/capabilities/evidence/package.yaml"
+
+
+def _script(name: str) -> str:
+    """A script's text, its own: no two scripts of a test share their content."""
+    return f"#!/usr/bin/env bash\n# {name}\nset -euo pipefail\n"
+
+
+def _package(name: str, version: str) -> str:
+    return (
+        f"schema_version: 1\ncomponent:\n  kind: capability\n  name: {name}\n  version: {version}\n"
+    )
+
+
+@pytest.fixture
+def released(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> GitRepo:
+    """A repository whose `main` records backbone 1.149.0, with a migration in its
+    folder, and the evidence capability at 0.54.0; checked out on `topic`, cut from it."""
+    monkeypatch.delenv(CHECK_BASE_ENV, raising=False)
+    repo = GitRepo.init(tmp_path / "kit")
+    repo.commit(
+        "released",
+        {
+            ".pkit/VERSION": "1.149.0\n",
+            ".pkit/migrations/backbone/1.149.0/001-shipped.sh": _script(
+                ".pkit/migrations/backbone/1.149.0/001-shipped.sh"
+            ),
+            _EVIDENCE: _package("evidence", "0.54.0"),
+        },
+    )
+    repo.git("checkout", "-q", "-b", "topic")
+    monkeypatch.chdir(repo.root)
+    return repo
+
+
+def _check(*args: str) -> Any:
+    return CliRunner().invoke(main, ["migrations", "check-diff", "--base", "main", *args])
+
+
+def test_a_migration_in_a_released_folder_fails_the_check(released: GitRepo) -> None:
+    released.commit(
+        "late",
+        {
+            ".pkit/migrations/backbone/1.149.0/002-late.sh": _script(
+                ".pkit/migrations/backbone/1.149.0/002-late.sh"
+            )
+        },
+    )
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert (
+        "[backbone] .pkit/migrations/backbone/1.149.0/002-late.sh: targets 1.149.0, but main "
+        "already records backbone 1.149.0, so a project at 1.149.0 never runs it. Move it to "
+        "1.150.0/ or a later folder."
+    ) in result.output
+    assert "Verdict: RELEASED." in result.output
+    # A folder below the released one is released too.
+    released.commit(
+        "older",
+        {
+            ".pkit/migrations/backbone/1.100.0/001-older.sh": _script(
+                ".pkit/migrations/backbone/1.100.0/001-older.sh"
+            )
+        },
+    )
+    assert "targets 1.100.0, but main already records" in _check().output
+
+
+def test_a_migration_past_the_released_version_passes(released: GitRepo) -> None:
+    released.commit(
+        "next",
+        {
+            ".pkit/migrations/backbone/1.150.0/001-next.sh": _script(
+                ".pkit/migrations/backbone/1.150.0/001-next.sh"
+            )
+        },
+    )
+    result = _check()
+    assert result.exit_code == 0, result.output
+    assert "RELEASED" not in result.output
+    # Uncommitted, it is judged the same with the working tree included.
+    released.write(
+        {
+            ".pkit/migrations/backbone/1.149.0/002-late.sh": _script(
+                ".pkit/migrations/backbone/1.149.0/002-late.sh"
+            )
+        }
+    )
+    released.git("add", "-A")
+    assert _check("--include-working-tree").exit_code == 1
+    assert _check().exit_code == 0
+
+
+def test_a_release_after_the_branch_was_cut_is_read_at_the_tip(released: GitRepo) -> None:
+    """The branch point records 1.149.0, but the base's tip released 1.150.0 since: a
+    folder 1.150.0/ the branch adds never runs for a project at it."""
+    released.commit(
+        "next",
+        {
+            ".pkit/migrations/backbone/1.150.0/001-next.sh": _script(
+                ".pkit/migrations/backbone/1.150.0/001-next.sh"
+            )
+        },
+    )
+    released.git("checkout", "-q", "main")
+    released.commit("chore(release): v1.150.0", {".pkit/VERSION": "1.150.0\n"})
+    released.git("checkout", "-q", "topic")
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert "targets 1.150.0, but main already records backbone 1.150.0" in result.output
+    assert "Move it to 1.151.0/" in result.output
+
+
+def test_a_script_the_tip_already_holds_is_not_judged(released: GitRepo) -> None:
+    """The change's own script, landed on the base already, as a stacked parent's is,
+    and released since: the change did not bring it."""
+    script = {
+        ".pkit/migrations/backbone/1.150.0/001-next.sh": _script(
+            ".pkit/migrations/backbone/1.150.0/001-next.sh"
+        )
+    }
+    released.commit("next", script)
+    released.git("checkout", "-q", "main")
+    released.commit("the parent lands", script)
+    released.commit("chore(release): v1.150.0", {".pkit/VERSION": "1.150.0\n"})
+    released.git("checkout", "-q", "topic")
+    assert _check().exit_code == 0
+
+
+def test_a_component_migration_is_judged_against_its_own_version(released: GitRepo) -> None:
+    folder = ".pkit/capabilities/evidence/migrations"
+    released.commit("late", {f"{folder}/0.54.0/001-late.sh": _script("evidence 0.54.0 late")})
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert (
+        f"[capability:evidence] {folder}/0.54.0/001-late.sh: targets 0.54.0, but main "
+        "already records capability evidence 0.54.0"
+    ) in result.output
+    assert "Move it to 0.55.0/" in result.output
+    released.git("rm", "-q", f"{folder}/0.54.0/001-late.sh")
+    released.commit("moved on", {f"{folder}/0.55.0/001-late.sh": _script("evidence 0.55.0 late")})
+    assert _check().exit_code == 0
+
+
+def test_a_tier_the_tip_records_no_version_for_has_nothing_released(released: GitRepo) -> None:
+    """A capability the change adds has shipped no version, so no folder of it is
+    released."""
+    released.commit(
+        "a new capability",
+        {
+            ".pkit/capabilities/fresh/package.yaml": _package("fresh", "0.1.0"),
+            ".pkit/capabilities/fresh/migrations/0.1.0/001-first.sh": _script(
+                ".pkit/capabilities/fresh/migrations/0.1.0/001-first.sh"
+            ),
+        },
+    )
+    assert _check().exit_code == 0
+
+
+def test_a_script_moved_into_a_released_folder_fails_the_check(released: GitRepo) -> None:
+    released.git("checkout", "-q", "main")
+    released.commit(
+        "pending",
+        {
+            ".pkit/migrations/backbone/1.150.0/001-pending.sh": _script(
+                ".pkit/migrations/backbone/1.150.0/001-pending.sh"
+            )
+        },
+    )
+    released.git("checkout", "-q", "-B", "topic")
+    released.git(
+        "mv",
+        ".pkit/migrations/backbone/1.150.0/001-pending.sh",
+        ".pkit/migrations/backbone/1.149.0/002-pending.sh",
+    )
+    released.commit("moved back")
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert "1.149.0/002-pending.sh: targets 1.149.0" in result.output
+
+
+def test_a_released_script_renamed_in_its_folder_is_not_judged(released: GitRepo) -> None:
+    """A rename that keeps the script's content lands nothing new: moving it would run
+    it again for every project that ran it."""
+    shipped = ".pkit/migrations/backbone/1.149.0/001-shipped.sh"
+    released.git("mv", shipped, ".pkit/migrations/backbone/1.149.0/001-shipped-renamed.sh")
+    released.commit("renamed")
+    result = _check()
+    assert result.exit_code == 0, result.output
+    # The same rename with its content changed is judged as a script it lands.
+    released.commit(
+        "and edited",
+        {".pkit/migrations/backbone/1.149.0/001-shipped-renamed.sh": _script("edited")},
+    )
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert "1.149.0/001-shipped-renamed.sh: targets 1.149.0" in result.output
+    # Uncommitted, the working tree's content is read.
+    released.write({".pkit/migrations/backbone/1.149.0/001-shipped-renamed.sh": _script(shipped)})
+    assert _check("--include-working-tree").exit_code == 0
+    assert _check().exit_code == 1
+
+
+def test_a_base_named_by_its_commit_is_shortened_in_the_line(released: GitRepo) -> None:
+    released.commit("late", {".pkit/migrations/backbone/1.149.0/002-late.sh": _script("late")})
+    tip = released.git("rev-parse", "main").stdout.strip()
+    result = CliRunner().invoke(main, ["migrations", "check-diff", "--base", tip])
+    assert result.exit_code == 1, result.output
+    assert f"but {tip[:SHORT]} already records backbone 1.149.0" in result.output
+    assert f"but {tip} already" not in result.output
+
+
+def test_a_script_the_project_receives_by_sync_is_not_judged(
+    released: GitRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An adopter's upgrade brings the methodology's scripts as synced copies: they are
+    the methodology's, judged where it authors them."""
+    released.commit(
+        "late",
+        {
+            ".pkit/migrations/backbone/1.149.0/002-late.sh": _script(
+                ".pkit/migrations/backbone/1.149.0/002-late.sh"
+            )
+        },
+    )
+    synced = SimpleNamespace(is_synced_copy=lambda root, path: path.startswith(".pkit/migrations/"))
+    monkeypatch.setattr(migrations_mod.lifecycle_ownership, "load_ownership", lambda root: synced)
+    assert _check().exit_code == 0
+
+
+def test_a_version_the_tip_records_in_no_readable_form_fails_the_check(
+    released: GitRepo,
+) -> None:
+    released.git("checkout", "-q", "main")
+    released.commit("broken", {".pkit/VERSION": "next\n"})
+    released.git("checkout", "-q", "topic")
+    released.commit(
+        "next",
+        {
+            ".pkit/migrations/backbone/1.150.0/001-next.sh": _script(
+                ".pkit/migrations/backbone/1.150.0/001-next.sh"
+            )
+        },
+    )
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert (
+        "[backbone] .pkit/migrations/backbone/1.150.0/001-next.sh: at main, .pkit/VERSION "
+        "records no version in major.minor.patch form ('next'), so whether 1.150.0 is "
+        "released cannot be told."
+    ) in result.output
+
+
+def test_landed_holds_added_scripts_and_scripts_moved_in(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(
+        migrations_mod,
+        "_git_diff_name_status",
+        lambda root, base, **kw: [
+            ("A", ".pkit/migrations/backbone/1.150.0/001-new.sh", None),
+            (
+                "R",
+                ".pkit/migrations/backbone/1.149.0/002-moved.sh",
+                ".pkit/migrations/backbone/1.150.0/002-moved.sh",
+            ),
+            ("M", ".pkit/migrations/backbone/1.140.0/001-edited.sh", None),
+            ("D", ".pkit/migrations/backbone/1.150.0/003-gone.sh", None),
+        ],
+    )
+    report = check_diff_coverage(tmp_path, "origin/main")
+    assert report.landed == (
+        ".pkit/migrations/backbone/1.150.0/001-new.sh",
+        ".pkit/migrations/backbone/1.149.0/002-moved.sh",
+    )
+    assert report.triggers == ()
+
+
+def test_the_target_never_names_a_released_minor() -> None:
+    for released, own, folders, expected in [
+        ("1.149.0", None, (), "1.150.0"),
+        ("1.149.2", None, (), "1.150.0"),
+        ("1.149.0", "1.149.0", (), "1.150.0"),
+        ("1.149.0", "1.148.0", (), "1.150.0"),
+        ("1.149.0", "1.151.1", (), "1.151.0"),
+        ("1.149.0", None, ("1.150.0", "2.0.0"), "2.0.0"),
+        ("1.149.0", None, ("1.152.0", "3.0.0"), "1.150.0"),
+        ("0.54.0", None, ("1.0.0",), "1.0.0"),
+        ("1.150.0-rc.1", None, (), "1.151.0"),
+    ]:
+        target = migrations_mod.migration_target(
+            "backbone", released, "main", own=own, folders=folders
+        )
+        assert target.version == expected, (released, own, folders)
+        assert migrations_mod.minor_of(target.version) > migrations_mod.minor_of(released)
