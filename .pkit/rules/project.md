@@ -8,3 +8,7 @@
 ## Writing
 
 3. **Write the analysis by `ANA`, and software-analysis's templates and structures by `WRITE`.** Whoever writes the analysis under `tech-docs/analysis/` follows the accepted rules of `ANA`, project-kit's rules for its analysis (`tech-docs/rule-sets/analysis.md`), and of `WRITE`, project-kit's general writing rules (`tech-docs/rule-sets/writing.md`). Whoever writes software-analysis's templates, or the structures its kinds declare (software-analysis DEC-001 point 1), follows `WRITE` (ADR-055 point 3). Where a rule of `WRITE` would carry project-kit's own vocabulary or style into that shipped text, universal applicability wins (COR-014). Examples are project-kit's glossary terms and its labels. The shipped text stays fit for any adopter. Specific to project-kit's own writing rules, so this rule lives here rather than in core.
+
+## Commits
+
+4. **Sign every commit you make in this repository, and never switch signing off,** by a flag or by a change to git configuration. If a commit fails to sign, wait a minute before the one retry (core rule 21). Signing is project-kit's own policy, so this rule lives here rather than in core ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648)).
