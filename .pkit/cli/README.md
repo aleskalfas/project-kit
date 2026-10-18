@@ -77,7 +77,7 @@ pkit:
         - .pkit/lifecycle/README.md#what-ships-a-migration
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
     revalidated:
-      at: 2026-10-18T17:49:05Z
+      at: 2026-10-18T19:27:32Z
       outcome: updated
 ---
 
