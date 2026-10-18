@@ -71,10 +71,10 @@ pkit:
         - .pkit/lifecycle/README.md#per-component-upgrade
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
+        - .pkit/lifecycle/README.md#script-contract
     revalidated:
-      at: 2026-10-18T13:03:43Z
-      outcome: unchanged
-      unchanged-because: The whole-repository check now reads HEAD's files through the one object reader it already keeps for history, rather than a process per read, finds a record anchor's file without parsing every path of the listing, and scans for timestamps with a pattern that matches the same spellings faster. Every command's output is unchanged, and this page says nothing of how many processes a check starts, so it still holds.
+      at: 2026-10-18T13:32:41Z
+      outcome: updated
 ---
 
 # Command-line interface
@@ -232,6 +232,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `connections graph [--kind <kind>]... [--flow \| --mermaid \| --json] [--verbose]` | render the one wiring graph (COR-053 point 7): the process definitions' derived and annotated edges with the wiring resolver's data, event and offered-process edges, in the process graph's format; `--kind` narrows to `data`, `process` or `event`. See "Connections commands" | no | yes (read-only) |
 | `connections providers set <role> <capability> [--yes \| --dry-run]` | select the provider of a role: write `connections.providers.<role>` through the consent-gated writer, after checking the capability is installed and declares the role; the diff first, `--dry-run` stops there. The fix a role conflict names. See "Connections commands" | yes | yes — the same selection writes nothing |
 | `connections resolve <address> [--json]` | resolve one data point (COR-052) and print it: its value — a `single` point's answer, or the entries of a `union` or `additive` point with their origins — how it resolved or why not, and every filler considered; `--json` is the stable document a capability's own script reads, which says how the resolution ended as one value from a closed set (`outcome`). Exit 1 when the point does not resolve or nothing defines it. See "Connections commands" | no | yes (read-only) |
+
+**Inside a migration, the commands that change the installation refuse.** The migration runner sets `PKIT_MIGRATION=1` in each migration script's environment. While it is set, each command that propagates, seeds or merges, moves a recorded version, writes the pin, or changes the installed components refuses before it reads or writes anything, under `--dry-run` too, and nothing overrides the refusal. Every other command runs. [The lifecycle README, "Script contract"](../lifecycle/README.md#script-contract), lists the commands that refuse ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 14).
 
 ## Lifecycle commands
 

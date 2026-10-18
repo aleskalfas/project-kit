@@ -75,6 +75,9 @@ _BACKBONE_FOOTPRINT: tuple[str, ...] = (".pkit/",)
 _BACKBONE_RUNTIME_IGNORE: tuple[str, ...] = (
     # Backbone: Python bytecode caches anywhere under `.pkit/`.
     ".pkit/**/__pycache__/",
+    # Backbone: the folder of the migration runner's `pkit`, which lives only
+    # while a set of migrations runs (ADR-065 point 14, `migrations.RUNNER_PARENT`).
+    ".pkit/.migration-runner/",
     # Permissions surface (piggybacks this seam — no package.yaml of its own).
     ".pkit/permissions/project/diagnose.yaml",
     ".pkit/permissions/project/diagnose-log.jsonl",
