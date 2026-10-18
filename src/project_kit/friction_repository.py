@@ -1385,7 +1385,24 @@ def run_repository_check(
             "HEAD names no commit (or this is not a git repository); the whole-repository check "
             "reads history, so commit first."
         )
-    tree = CommitTree(target_root, head_sha)
+    # One `git cat-file` process serves the whole check: HEAD's files as discovery and
+    # the anchors read them, and the history's blobs — none started per file read.
+    blobs = BlobReader(target_root)
+    try:
+        return _check_head(target_root, head_sha, blobs, registry)
+    finally:
+        blobs.close()
+
+
+def _check_head(
+    target_root: Path,
+    head_sha: str,
+    blobs: BlobReader,
+    registry: Mapping[str, ResolverCommand] | None,
+) -> RepositoryCheck:
+    """The whole-repository check of the commit HEAD names, `head_sha`, its files and
+    its history's blobs read through `blobs` (`run_repository_check`)."""
+    tree = CommitTree(target_root, head_sha, blobs)
     discovery = discover_artefacts(target_root, tree=tree)
     settings = discovery.settings
     if not discovery.places:
@@ -1394,21 +1411,17 @@ def run_repository_check(
     head = Side(target_root, tree, discovery)
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
     history = read_history(target_root, head_sha)
-    blobs = BlobReader(target_root)
-    try:
-        judge = _Judge(head, tree, history, Walker(history, blobs), blobs, registry)
-        reports: list[ArtefactReport] = []
-        findings: list[RepositoryFinding] = []
-        for index in truth_chain_order(discovery, head.record_path):
-            artefact = discovery.artefacts[index]
-            if artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals):
-                report, found = _check_artefact(artefact, judge)
-                if report is not None:
-                    reports.append(report)
-                findings.extend(found)
-        findings.extend(judge.unreadable_findings())
-    finally:
-        blobs.close()
+    judge = _Judge(head, tree, history, Walker(history, blobs), blobs, registry)
+    reports: list[ArtefactReport] = []
+    findings: list[RepositoryFinding] = []
+    for index in truth_chain_order(discovery, head.record_path):
+        artefact = discovery.artefacts[index]
+        if artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals):
+            report, found = _check_artefact(artefact, judge)
+            if report is not None:
+                reports.append(report)
+            findings.extend(found)
+    findings.extend(judge.unreadable_findings())
     for unreadable in sorted(discovery.unreadable, key=lambda u: u.path):
         findings.append(
             RepositoryFinding(

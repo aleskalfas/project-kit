@@ -1,0 +1,9 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit living-docs fill-doc-check` runs its three readings at once, so with
+  the backbone of this release it answers well within the 30-second bound on a
+  large repository, with the same answer, and `pkit validate` no longer fails
+  for want of it.
