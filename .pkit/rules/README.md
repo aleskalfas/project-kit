@@ -40,14 +40,14 @@ Six categories:
 - **Communicating with the user** — one decision at a time, with a recommendation. Reference by meaning, then identifier.
 - **Working across repositories** — a session mutates only its own repository's context.
 - **Answers on artefacts** — a reviewer checks the answers your change owes, and a person decides any other answer on an artefact.
-- **When a step fails** — retry a step that failed for a cause outside your own work once, then stop and report.
+- **When a step fails** — retry once a step that failed for a cause outside your own work, then stop and report.
 
-Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale, or, where no record holds it, to the issue holding the decision. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
+Each rule is terse — one statement plus a pointer to the COR / area README that owns the rationale, or, where none does, to the issue that decided the rule. The rules file is read by every agent at session start (via `CLAUDE.md`'s `@<path>` include); it is operational, not expository.
 
 `core.md` itself follows rule 13 (the `@`-include authoring convention): no top-level heading, opens with an italic preface, sections start at H2. The host `CLAUDE.md` owns the H1 and places the `@<path>` line after its intro paragraph, so the included sections become natural sub-sections of the host. This pattern applies to any future kit-shipped file intended for `@`-include.
 
 ## What does NOT go in `core.md`
 
-- **Rationale.** That lives in the cited COR / PRJ / area README, or, where no record holds it, in the cited issue. The rules file points; it does not re-state.
+- **Rationale.** That lives in the cited COR / PRJ / area README. A rule none of them holds cites the issue that decided it. The rules file points; it does not re-state.
 - **Project-kit-internal mechanics.** Things like the project-kit's own version-bump policy (PRJ-002) belong in the project's own records and CLAUDE.md, not in the kit-shipped rules adopters receive. The rules file uses project-neutral phrasing — adopters never see project-kit-specific content there.
 - **Adopter-specific rules.** Those go in the adopter's `project.md`.

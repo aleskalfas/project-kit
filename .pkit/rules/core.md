@@ -1,4 +1,4 @@
-*Operational rules and tool hygiene shipped by the methodology core. Loaded into the host `CLAUDE.md` via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record, area README or issue. This file is operational, not expository — read the cited records when a rule's "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (rule 13 below). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
+*Operational rules and tool hygiene shipped by the methodology core. Loaded into the host `CLAUDE.md` via `@.pkit/rules/core.md`; rationale for each rule lives in the cited record or area README, and a rule neither holds cites the issue that decided it. This file is operational, not expository — read what a rule cites when its "why" is not obvious, do not violate the rule in the meantime. The file has no top-level heading by design (rule 13 below). Project-specific operational rules — those failing universal applicability per COR-014 — live in `.pkit/rules/project.md`.*
 
 ## Hard rules
 
@@ -44,7 +44,7 @@ Operational practices that keep work consistent and recoverable.
 
 How an agent talks with the user, independent of any project's tooling.
 
-17. **Discuss one decision at a time, with your recommendation.** When a choice needs the user's input, surface a single decision per turn — don't stack several open questions or unknowns into one message. Say what you recommend ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648)). A wall of simultaneous decisions forces the user to parse and re-litigate everything at once; a stepped conversation is faster and clearer. This applies to discussion and decision-making, not to summaries of work already done.
+17. **Discuss one decision at a time, with your recommendation.** When a choice needs the user's input, surface a single decision per turn, with what you recommend ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648#issuecomment-6247728164)) — don't stack several open questions or unknowns into one message. A wall of simultaneous decisions forces the user to parse and re-litigate everything at once; a stepped conversation is faster and clearer. This applies to discussion and decision-making, not to summaries of work already done.
 
 18. **Reference by meaning, then identifier.** When pointing at a rule, record, or section, state what it actually says in plain language first, then put the identifier in brackets after — "a Task must have a parent (DEC-005 P2.1)". A precise sub-locator is welcome; just write it without cryptic glyphs (no §), and never reference by bare code alone. The reader should learn the substance from the sentence, not have to chase the reference.
 
@@ -60,11 +60,11 @@ How a session relates to repos other than the one it is rooted in.
 
 ## When a step fails
 
-21. **Retry a failing step once, then stop.** When a step fails for a cause outside your own work, such as a locked signing key, a service that is down or the network, check that it did not take effect, then retry it once. If it fails again, stop your work and report what failed. Waiting on something pending is not a retry. Rationale: [project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648).
+21. **Retry once a step that failed for a cause outside your own work, then stop.** Such causes include a locked signing key, a service that is down or the network. Before the retry, check that the step did not take effect. If it fails again, stop your work and report what failed. Waiting on something pending is not a retry. Rationale: [project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648#issuecomment-6247728164).
 
 ## Where rationale lives
 
-Each rule cites the record or doc that owns its "why", or, where no record holds it, the issue holding the decision. The umbrella references:
+Each rule cites the record or doc that owns its "why", or, where none does, the issue that decided it. The umbrella references:
 
 - `.pkit/decisions/README.md` — the schema, statuses, the no-shared-files invariant, the acceptance gate.
 - `.pkit/decisions/core/COR-NNN-*.md` — accepted core records; each captures a principle with rationale.
