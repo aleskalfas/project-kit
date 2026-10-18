@@ -788,8 +788,8 @@ def test_a_script_taking_a_number_its_folder_holds_fails_the_check(released: Git
     assert result.exit_code == 1, result.output
     assert (
         f"[backbone] {_NEXT}/001-second.sh: its number 001 is also held by 001-first.sh, so "
-        "the order they run in falls to the rest of their names. Renumber it to 002, one past "
-        "the highest in its folder."
+        "the order they run in falls to the rest of their names. Renumber it to 002, a number its "
+        "folder does not hold."
     ) in result.output
     assert "1 migration script(s) in diff take a number their folder holds:" in result.output
     assert "Verdict: NUMBER TAKEN." in result.output
@@ -841,6 +841,15 @@ def test_of_two_scripts_a_change_adds_with_one_number_the_later_is_named(
     assert f"{_NEXT}/001-b.sh: its number 001 is also held by 001-a.sh," in result.output
     assert f"{_NEXT}/001-a.sh:" not in result.output
     assert "1 migration script(s) in diff take a number their folder holds:" in result.output
+
+
+def test_each_script_named_in_a_folder_is_told_a_number_of_its_own(released: GitRepo) -> None:
+    released.commit("three", _scripts("001-a.sh", "001-b.sh", "001-c.sh", "004-d.sh"))
+    output = _check().output
+    assert f"{_NEXT}/001-b.sh: its number 001 is also held by 001-a.sh and 001-c.sh," in output
+    assert "Renumber it to 005," in output
+    assert f"{_NEXT}/001-c.sh: its number 001 is also held by 001-a.sh and 001-b.sh," in output
+    assert "Renumber it to 006," in output
 
 
 def test_a_script_renamed_to_a_free_number_passes_and_onto_a_held_one_fails(

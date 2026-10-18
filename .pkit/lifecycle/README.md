@@ -772,7 +772,7 @@ Component migrations live within the component:
 Each number is used once in a folder. The runner runs a folder's scripts in the order of their names, so two scripts of one number would run in the order their slugs give, which nobody chose.
 
 - **The stamp.** `pkit new migration` numbers a script one past the highest in its folder, in the working tree or on the default branch.
-- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it, so a number another change took on the base since the branch left it counts too. The finding names the number to take, one past the highest in the folder. Of two scripts the change itself adds with one number, it names the later by name. It skips a script the project receives by sync.
+- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it, so a number another change took on the base since the branch left it counts too. The finding names a number to take, past the highest in the folder and its own to each script it names. Of two scripts the change itself adds with one number, it names the later by name. It skips a script the project receives by sync.
 - **Renumbering.** A script that must run before one already in its folder takes a lower number, and the other moves up. Renumber only in a folder no release has shipped.
 
 ### Which version a migration targets
@@ -796,7 +796,7 @@ A migration's folder names the version it carries a project to, never one alread
 
 **Resource-scoped migrations** affect a single resource type (a label is renamed, a setting key changes shape, a primitive moves).
 
-Within a single `<major>.<minor>.0/` directory, the numbers carry this order: manifest-schema scripts take the lowest, structural the next, and resource-scoped the highest. The runner reads only the numbers, so a script whose scope must run earlier is numbered earlier.
+Within a single `<major>.<minor>.0/` directory, the numbers carry this order: manifest-schema scripts take the lowest, structural the next, and resource-scoped the highest. The runner orders a folder's scripts by name, and the zero-padded number each name opens with decides that order. So a script whose scope must run earlier takes a lower number.
 
 ### Script contract
 

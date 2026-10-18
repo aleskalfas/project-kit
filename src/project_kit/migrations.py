@@ -1,6 +1,6 @@
 """Migration runtime + authoring-time coverage check (per COR-010).
 
-Two responsibilities:
+Four responsibilities:
 
 1. **Runtime execution** — a migration is a per-minor-version script
    that bridges adopter state from one version to the next. The runner
@@ -781,7 +781,8 @@ def number_clashes(
     `tip` removed since the branch point `fork`, and with those the tip added since.
     So a number another change took on the base since the branch left it clashes
     too. Of two scripts the change lands with one number and no other beside them,
-    only the later by name is named, so one renumbering mends it. Skipped: a script
+    only the later by name is named, so one renumbering mends it. Each script named
+    is told a number of its own past the folder's highest. Skipped: a script
     in no `X.Y.0` folder, a file the runner does not run, and a script the project
     receives by sync (`is_synced_copy`). `base` is the base as named, for the line, a
     commit id shortened."""
@@ -818,7 +819,10 @@ def number_clashes(
         return f"{name} ({base} took it since this branch left it)" if rel in taken_since else name
 
     found: list[NumberClash] = []
-    for path in judged:
+    # The number each folder hands out next: one past its highest, then on, so two
+    # scripts named in one folder are never told to take one number.
+    upcoming: dict[str, int] = {}
+    for path in sorted(judged):
         folder = PurePosixPath(path).parent.as_posix()
         beside = sorted(
             {*(r for r in merged if PurePosixPath(r).parent.as_posix() == folder), path}
@@ -826,13 +830,15 @@ def number_clashes(
         others = [rel for rel in beside if rel != path and number(rel) == number(path)]
         if not others or (all(rel in judged for rel in others) and path < min(others)):
             continue
+        take = upcoming.get(folder, max(number(rel) for rel in beside) + 1)
+        upcoming[folder] = take + 1
         tier, component = _migration_path_tier(path), _migration_path_component(path)
         label = tier + (":" + component if component else "")
         line = (
             f"[{label}] {path}: its number {number(path):03d} is also held by "
             f"{' and '.join(named(rel) for rel in others)}, so the order they run in falls "
-            f"to the rest of their names. Renumber it to "
-            f"{max(number(rel) for rel in beside) + 1:03d}, one past the highest in its folder."
+            f"to the rest of their names. Renumber it to {take:03d}, a number its folder "
+            f"does not hold."
         )
         found.append(NumberClash(path, tier, component, line))
     return tuple(found)
