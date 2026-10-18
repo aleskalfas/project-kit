@@ -16,8 +16,9 @@
 #   `<definitions>/rule-sets/` (DEC-001 point 2).
 # - `places` — place → space. A place inside a documentation root belongs to
 #   that root's space and needs no entry here unless the project assigns it
-#   otherwise; a place outside every root must be assigned. A mapping, so each
-#   place names exactly one space.
+#   otherwise; a place outside every root must be assigned, unless it is
+#   declared to hold rule sets and gives no type. Such a place gives no space
+#   until it is assigned. A mapping, so each place names exactly one space.
 #
 # Document-shaped: the file IS the resource. The body below is the minimal
 # reference instance — valid, the schema's self-test, and the starting point

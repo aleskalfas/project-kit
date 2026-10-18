@@ -142,6 +142,7 @@ class ProjectPlace:
     pointer: str  # into the backbone configuration
     encloses: frozenset[str]  # the audiences of the roots it reaches whole
     type: str | None = None  # the type it gives, in full, or `None` (COR-056 point 3)
+    rule_sets: bool = False  # whether it holds rule sets, as the backbone marks it
 
 
 @dataclass(frozen=True)
@@ -261,6 +262,7 @@ def _project_place(place: DeclaredPlace) -> ProjectPlace:
         pointer=place.pointer,
         encloses=place.encloses,
         type=place.type,
+        rule_sets=place.rule_sets,
     )
 
 
