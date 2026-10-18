@@ -62,7 +62,10 @@ What is checked, each against the record's words:
 - **A journey's anchors match its steps and what it relies on** (point 4): the
   use cases among its artefact anchors are exactly those `steps` and
   `relies-on` list, so the friction check sees every use case it passes
-  through or relies on, and the anchors and the lists cannot drift apart.
+  through or relies on, and the anchors and the lists cannot drift apart. A
+  part anchor, such as `UC-001#`, names the use case before its last `#`
+  (COR-050 point 2), so it counts among its use-case anchors and matches no
+  entry of the lists, which name each use case whole.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -739,7 +742,10 @@ def _actor_anchors(analysis: Analysis) -> list[Finding]:
 def _journey_anchors(analysis: Analysis) -> list[Finding]:
     """A journey's use-case anchors are exactly the use cases of its `steps` and its
     `relies-on` (DEC-001 point 4): the two lists are the source, and the stamp writes
-    the anchors from them."""
+    the anchors from them. An anchor on a part of a use case is an anchor on that use
+    case (`_artefact_named`), so it counts among them. It matches no entry of the
+    lists, which name each use case whole: a part anchor flags the journey only when
+    its part changes (COR-050 point 5)."""
     pattern = schemas.id_pattern(USE_CASE)
     found: list[Finding] = []
     for journey in analysis.of_kind(JOURNEY):
@@ -749,7 +755,9 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
         relies_on = journey.fields.get(RELIES_ON)
         listed = [*steps, *(relies_on if isinstance(relies_on, list) else [])]
         expected = _unique(s for s in listed if isinstance(s, str) and pattern.match(s))
-        anchored = _unique(a for a in journey.anchored_to("artefact") if pattern.match(a))
+        anchored = _unique(
+            a for a in journey.anchored_to("artefact") if pattern.match(_artefact_named(a))
+        )
         if expected and set(expected) != set(anchored):
             found.append(
                 Finding(
@@ -767,6 +775,14 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
 
 def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(values))
+
+
+def _artefact_named(anchor: str) -> str:
+    """The artefact an artefact anchor names: what comes before its last `#`, or the
+    whole anchor where it has none. After the `#`, a part anchor names a section or the
+    lead of that artefact, as `UC-001#` names the lead of UC-001 (COR-050 point 2). No
+    id of the analysis holds a `#`, so none is cut short."""
+    return anchor.rsplit("#", 1)[0]
 
 
 # --- revalidation records ------------------------------------------------------------------
