@@ -373,7 +373,9 @@ class ComponentRelease:
     def changelog_changesets(self) -> list[Changeset]:
         """The changesets the changelog entry is written from, in changeset
         order: every one but a `none` changeset, which moves no version and adds
-        no line to the changelog (PRJ-002)."""
+        no line to the changelog (PRJ-002). No floor or bound sentence is lost
+        with it: `compute_release` refuses a floor or a bound declared on a
+        `none` changeset, so one never sets a range."""
         return [cs for cs in self.changesets if cs.segment != "none"]
 
     @property
