@@ -128,7 +128,11 @@ Clearing friction means revalidating. *How* to revalidate belongs to the compone
 An anchor flags the artefact that carries it when what it names changes. A component may declare that some anchors work the other way too. When chosen fields of the artefact change, the change asks for a revisit of what those anchors name.
 
 - **A link, declared by a component on its place.** A component may declare a **link** on a place in its package metadata, for the artefacts the place holds. A link names two things:
-  - one of the artefact's own fields, which lists the link's **targets**: anchors of the artefact, each by its value, written as the anchor writes it. A value names every anchor of the artefact that has it. An artefact that does not write the field lists none.
+  - the own fields that choose the link's **targets**, anchors of the artefact, in one of two ways.
+    - **One field lists them.**
+    - **One or more fields list those that stay out.** The targets are every anchor of the artefact but those that the named fields list.
+
+    A field lists anchors, each by its value, written as the anchor writes it. A value names every anchor of the artefact that has it. A field the artefact does not write, or one that is no list of anchor values, lists nothing.
   - the **trigger fields**: the artefact's own fields whose change asks for a revisit of the targets.
 
   The artefact is the link's **source**. No link asks for a revisit unless a place declares it, so none does by default. A source takes the links of every place a component declares that matches its file at the head. A project declares no link on its own places.
@@ -138,20 +142,20 @@ An anchor flags the artefact that carries it when what it names changes. A compo
   - a source under an excluded path at the head, which owes no answer (point 7)
 
   A source is compared with itself across a move, so a move alone triggers nothing.
-- **Which targets owe an answer.** Each target that a triggered link lists at the base and at the head, and that resolves at the head. A target the change adds to the link was linked against the new state, so it owes nothing. A dead target, or one whose resolver gives no answer, is a finding of its own already (points 7 and 12).
+- **Which targets owe an answer.** Each target that a triggered link takes at the base and at the head, and that resolves at the head. A target the change adds to the link was linked against the new state, so it owes nothing. A dead target, or one whose resolver gives no answer, is a finding of its own already (points 7 and 12).
 - **Two answers.** A target that owes an answer is revisited when one of these holds:
   - **It changed:** what it stands on differs between the base and the head, by the rule in point 5.
   - **The source records why:** an entry in the `revisited` list of the source's block names the target, by its kind and value, with an outcome and a reason. `unchanged` says why the target still stands. `deferred` leaves the target out of date, and its reason names an open follow-up that will revisit it (point 3). An entry answers only where the change wrote its reason: the reason differs from the base's for that target.
 
   A target that owes an answer and has neither is a finding of the change check (point 12).
-- **The entries.** The list holds one entry per target, kept sorted by anchor, so parallel branches merge cleanly. One entry answers for a target whatever links list it. An entry stays until a later change rewrites it, so a later trigger needs a new reason.
+- **The entries.** The list holds one entry per target, kept sorted by anchor, so parallel branches merge cleanly. One entry answers for a target whatever links take it. An entry stays until a later change rewrites it, so a later trigger needs a new reason.
   - **No revalidation.** An entry changes no content, moves no revalidation point and flags no dependant.
   - **Conflicts.** Two lines of work may each write the entry of one target, and conflict. Whoever resolves the conflict writes it again for the combined state, as point 3 asks of a revalidation.
 - **What validation finds.** Where the source's places declare a link, validation fails:
   - an entry that names no target of those links
   - a second entry for one target
   - a link's field that is no list of anchor values
-  - a value in a link's field that no anchor of the source has
+  - a value that no anchor of the source has, in a field that lists a link's targets
 
   Where they declare none, as after the component that declared it is uninstalled, the entries are reported and kept, never failed.
 - **Who decides.** A target answered by its change is listed among the change's answers (point 12). The reviewer of point 3 checks that its change meets the change to the source. An entry for a target that owes an answer is an answer the change check asks of the change (point 3). A person decides any other entry an agent writes.
@@ -215,7 +219,8 @@ The checks are read-only.
   - a friction block in a held document
   - a dangling deferral
   - a revisit entry that names no target of a declared link, or repeats one (point 16)
-  - a link's field that is no list of anchor values, or lists a value no anchor of its source has (point 16)
+  - a link's field that is no list of anchor values (point 16)
+  - a value no anchor of its source has, in a field that lists a link's targets (point 16)
   - a cycle between artefacts
   - a part anchor that is dead, ambiguous or refused
   - an invalid mode value
@@ -266,6 +271,8 @@ Where no artefact declares anchors, the check finds nothing and demands nothing.
 **Why a link is declared, and never on by default.** Most anchors need no return visit. A guide anchors the code it explains and asks nothing of the code when the guide changes. Asked at every edit of a source, each target would draw a reason written blindly. The component that defines a kind of artefact knows which of its links bind both ways, so it declares them. A project's own places sit in the key point 14 owns, which holds no link, so a project declares none.
 
 **Why own fields name the triggers and the targets.** Only what matters should trigger a link, such as a requirement's statement and its threshold, never the wording of its rationale. A field keeps its name, while a project may reword the labels and headings of a body. A field also says which anchors belong to the link. Every anchor of one kind would not. The record anchors of a requirement may hold both the decisions it rests on and those that answer it.
+
+Fields may instead list the anchors that stay out. Where nearly every anchor of a source binds both ways, a field that lists the targets copies the anchors. An own field is content (point 5), so each anchor added or re-pointed would change the source's content and flag its dependants. Naming the few that stay out keeps the targets in the anchor list alone. The cost is that the form tells apart only the anchors its fields list. Every other anchor is a target, one added later included, whether the source rests on it or it answers the source. Still, a field can keep out any one anchor, where a kind cannot be split. A value no anchor has, in a field that lists what stays out, leaves nothing out. The check then asks more, never less, so validation does not fail it.
 
 **Why a link is declared on a place, not on a type.** A project may give a type to its own places, and a migration may rename one (point 14). On a place, a link stays where its component declared it, so retyping a place never changes what a change owes. A link is friction's own concept. So it adds no concept to places beside friction's own and types, which would move places into a functionality of their own (COR-056 point 7). A source takes the links of every place a component declares that matches its file. So a broader place of the project's does not switch a component's link off. The cost is that an artefact in a project's place, given a component's type, takes none of that component's links.
 
@@ -404,6 +411,8 @@ For a path anchor, a place decides how a file is read, not the file's shape. A p
 - **A link back from each target to its source.** Rejected. It would make a cycle, and a target such as a test file carries no anchors.
 - **Every link revisiting its targets.** Rejected. Most anchors need no return visit, and a reason asked at every edit is written blindly.
 - **A link's targets taken as every anchor of one kind.** Not taken. One kind may mix what a source rests on with what answers it.
+- **Targets always listed in a field.** Not taken. Where nearly every anchor binds both ways, the field copies the anchors, and each change to it flags the source's dependants.
+- **Targets taken as every anchor but those on what the component's own places hold.** Not taken. Point 16 would gain a notion of where a target lies. Fields that list what stays out need none.
 - **A link declared on a type.** Rejected. Friction never reads a type (point 1). A project may give a component's type to its own place, and a type may be renamed, so retyping would change what a change owes.
 - **A link declared through a connection point (COR-053).** Rejected. A connection point is declared by a component that needs something from another. A link needs nothing from another component. Its owner declares it on its own place, in the block of the functionality that reads it.
 - **A project declaring links on its own places.** Not taken. The project's places sit in the key point 14 owns, which holds no link. A project that keeps a kind of artefact whose links bind both ways can be given one there without breaking anything.
