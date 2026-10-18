@@ -1017,10 +1017,11 @@ def _listed_requirement_anchors(analysis: Analysis) -> list[Finding]:
     steps: the list is the source, and the stamp writes the anchors from it, so a
     changed requirement flags every use case and journey that lists it. A requirement
     anchor is an artefact anchor naming a requirement. A part anchor names its artefact
-    before its last `#` (COR-050 point 2), so one on a requirement counts among them. It
-    matches no entry of the list, which names each requirement whole, and would flag
-    the use case only when its part changes. A `requirements` that is no list is the
-    schema's to report, and nothing is compared until it is one."""
+    before its last `#` (`_artefact_named`, COR-050 point 2), so one on a requirement
+    counts among them. It matches no entry of the list, which names each requirement
+    whole, and would flag the use case only when its part changes. A `requirements`
+    that is no list is the schema's to report, and nothing is compared until it is
+    one."""
     requirement_id = schemas.id_pattern(REQUIREMENTS[0])
     found: list[Finding] = []
     for artefact in analysis.artefacts:
@@ -1034,7 +1035,7 @@ def _listed_requirement_anchors(analysis: Analysis) -> list[Finding]:
         anchored = _unique(
             anchor
             for anchor in artefact.anchored_to("artefact")
-            if requirement_id.match(anchor.rsplit("#", 1)[0])
+            if requirement_id.match(_artefact_named(anchor))
         )
         if set(expected) == set(anchored):
             continue
