@@ -3,7 +3,7 @@ id: ACT-planner
 name: Planner
 status: active
 needs:
-  - Plan an intent into an EPIC and the work under it, against my project's use cases, and have the EPIC and its work filed once I approve the plan.
+  - Plan an intent against my project's use cases into an EPIC and its work, which are filed once I approve the plan.
   - Define the Milestones and long-lived workstreams the work falls into, and have a date-based Milestone roll its open work forward when it closes.
 pkit:
   friction:
