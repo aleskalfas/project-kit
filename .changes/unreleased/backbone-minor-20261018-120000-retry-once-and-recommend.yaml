@@ -5,9 +5,10 @@ custom:
 body: >
   Two conduct rules join the core rules. Rule 17, "Discuss one decision at a
   time", now asks the agent to say what it recommends with each decision. A
-  new last section, "When a step fails", holds rule 21: retry a failing step
-  at most once, and only for a cause that may pass, such as a locked key, a
-  service or the network. If it fails again, the agent stops and reports what
-  failed. No existing rule is renumbered. The rules area's README lists the
-  new section, and says that a rule may cite the issue holding its decision
-  until a record does.
+  new last section, "When a step fails", holds rule 21. When a step fails for
+  a cause outside the agent's own work, such as a locked signing key, a
+  service that is down or the network, the agent checks that it did not take
+  effect and retries it once. If it fails again, the agent stops its work and
+  reports what failed. Waiting on something pending is not a retry. No
+  existing rule is renumbered. The rules file and its area's README say that
+  a rule may cite the issue holding its decision where no record holds it.
