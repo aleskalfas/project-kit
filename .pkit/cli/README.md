@@ -36,6 +36,7 @@ pkit:
         - src/project_kit/docs_roots.py
         - src/project_kit/default_branch.py
         - src/project_kit/friction_check.py
+        - src/project_kit/friction_discovery.py
         - src/project_kit/friction_git.py
         - src/project_kit/friction_history.py
         - src/project_kit/friction_repository.py
