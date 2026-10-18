@@ -1,7 +1,7 @@
 ---
 id: ADR-066
 title: Commands start agents only through the adapter's runner
-status: proposed
+status: accepted
 date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

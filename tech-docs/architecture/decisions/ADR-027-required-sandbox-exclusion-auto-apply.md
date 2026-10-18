@@ -26,7 +26,7 @@ The forcing question for this record (its producing issue, #255) is whether the 
 
 ## Decision
 
-**`pkit permissions setup autonomy` MAY auto-apply a sandbox exclusion — but only for the platform-mandatory, required-only subclass, and only after verifying the exclusion is still necessary. All other widenings stay on ADR-008 rule 4's manual, nudge-only path. The auto-applied exclusion remains loud, reported under a distinct provenance tag, applied through the real primitive, and never persisted to a committed file.** Each condition below is load-bearing; remove any one and the carve-out is not defensible.
+**`pkit permissions setup autonomy` MAY auto-apply a sandbox exclusion — but only for the platform-mandatory, required-only subclass, and only after verifying the exclusion is still necessary. All other widenings stay on ADR-008 rule 4's manual, nudge-only path. The auto-applied exclusion remains loud, reported under a distinct provenance tag, applied through the real primitive, and never persisted to a committed file.** Each condition below is load-bearing; remove any one and the carve-out is not defensible. The agent runner also applies the required exclusion, to a confined agent run, under these conditions as that record walks them (refinement per [ADR-066](ADR-066-unattended-agent-runner.md)).
 
 ### 1. Necessity-verified, not believed
 
