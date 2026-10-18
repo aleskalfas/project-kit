@@ -175,6 +175,17 @@ def test_the_scripts_know_each_place_by_the_package_s_own_words() -> None:
     assert {place["location"] for place in places} == {"analysis"}
 
 
+def test_the_scripts_know_the_folder_of_the_requirements_by_the_package_s_own_words() -> None:
+    """`_lib/model.py`'s REQUIREMENTS_FOLDER holds the three kinds' places and is none
+    itself (DEC-002 point 3): the check reports a file in it outside them (#1724)."""
+    package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    places: list[dict[str, str]] = package["friction"]["places"]
+    folder = _model_constant("REQUIREMENTS_FOLDER")
+    within = {place["type"] for place in places if place["path"].startswith(f"{folder}/")}
+    assert within == {"quality-requirement", "functional-requirement", "constraint"}
+    assert folder not in {place["path"] for place in places}
+
+
 def test_each_place_names_the_type_of_its_kind_from_the_registry() -> None:
     """One type per kind of anchored artefact, each with a description, none naming a
     kind field or admitting a project place; each place gives the type of the kind the
@@ -257,6 +268,14 @@ def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
     }
     assert [held["path"] for held in document["held_files"]] == [record]
     assert record not in {a["path"] for a in document["artefacts"]}
+    # The loose requirement is the one file of the location no place or held folder of the
+    # capability holds, and the check reads it from there (#1724).
+    assert document["unplaced"]["software-analysis"] == {
+        "analysis": {
+            "path": ANALYSIS,
+            "files": [{"path": f"{ANALYSIS}/requirements/REQ-009-loose.md", "excluded": False}],
+        }
+    }
 
 
 def test_the_scripts_know_the_records_folder_by_the_package_s_own_words() -> None:
