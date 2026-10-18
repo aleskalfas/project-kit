@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-17T22:14:47Z
+          at: 2026-10-18T11:57:54Z
           outcome: unchanged
-          unchanged-because: DEC-001 changed in its Context, points 4 and 11, Rationale and Implications, on how the analysis anchors the decisions and views of the solution. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
+          unchanged-because: DEC-001 changed only by pointers to software-analysis DEC-002 on points 2, 4 and 11, and point 11 names constraints and quality requirements as examples of further kinds. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -26,9 +26,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-17T22:14:48Z
+          at: 2026-10-18T11:58:01Z
           outcome: unchanged
-          unchanged-because: "Point 4 changed only in what a use case anchors outside the analysis: the decisions that answer it and the views that realise it. Its anchors on its actor and its other actors, which this rule rests on, read as before, and points 1 and 3 are unchanged."
+          unchanged-because: Point 4 changed only by a pointer to software-analysis DEC-002 on the lead of what each kind anchors. What a use case anchors on its actor and its other actors, which this rule rests on, reads as before, and points 1 and 3 are unchanged.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -50,8 +50,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T11:43:02Z
-          outcome: updated
+          at: 2026-10-18T11:58:03Z
+          outcome: unchanged
+          unchanged-because: Points 2 and 4 changed only by pointers to software-analysis DEC-002, on the analysis's layout, its type registry and the lead of what each kind anchors. What an actor, a term, a use case and a journey anchor, which this rule's list gives, reads as before. What a requirement rests on joins the list when the requirement kinds are built (project-kit#1695).
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
