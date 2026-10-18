@@ -15,10 +15,12 @@ its body is rendered from its kind's declared structure, each part holding its
 hint until a person writes it (DEC-001 point 1):
 
 - a use case, `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, with its
-  actor and its other actors, and an anchor to each;
-- a journey, `use-case-model/journeys/JRN-NNN-<slug>.md`, with its steps and
-  the use cases outside it that a step relies on, an anchor to its actor and,
-  from both lists, its use-case anchors;
+  actor, its other actors and the requirements it must meet, and an anchor to
+  each;
+- a journey, `use-case-model/journeys/JRN-NNN-<slug>.md`, with its steps, the
+  use cases outside it that a step relies on and the requirements that bind its
+  whole path, an anchor to its actor and to each requirement and, from the two
+  lists of use cases, its use-case anchors;
 - an actor, `use-case-model/actors/ACT-<slug>.md`, headed by its id and name,
   with its needs in its front matter;
 - a term, the entry `TERM-<slug>` of `glossary.md`;
@@ -46,9 +48,9 @@ artefacts it affects.
 
 Usage:
   pkit analysis new use-case <slug> --actor <ACT-id> [--other-actor <ACT-id>]...
-      [--area <area>] [--title <text>]
+      [--requirement <REQ-id>]... [--area <area>] [--title <text>]
   pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id>...
-      [--relies-on <UC-id>]... [--title <text>]
+      [--relies-on <UC-id>]... [--requirement <REQ-id>]... [--title <text>]
   pkit analysis new actor <slug> [--name <text>] [--unanchored-because <text>]
   pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]
   pkit analysis new <quality-requirement|functional-requirement|constraint> <slug>
@@ -147,6 +149,15 @@ def _parser() -> argparse.ArgumentParser:
         help="Another actor who takes part, written in `other-actors` and anchored (repeatable).",
     )
     use_case.add_argument(
+        "--requirement",
+        dest="requirements",
+        action="append",
+        default=[],
+        metavar="REQ-ID",
+        help="A requirement it must meet, of any of the three kinds, written in `requirements` "
+        "and anchored (repeatable).",
+    )
+    use_case.add_argument(
         "--area", metavar="WORD", help="The functional area's folder to put it in."
     )
     journey = kind(JOURNEY, "A journey: one actor's path across several use cases.", "title")
@@ -167,6 +178,16 @@ def _parser() -> argparse.ArgumentParser:
         metavar="UC-ID",
         help="A use case outside the journey that a step relies on, written in `relies-on` "
         "and anchored (repeatable).",
+    )
+    journey.add_argument(
+        "--requirement",
+        dest="requirements",
+        action="append",
+        default=[],
+        metavar="REQ-ID",
+        help="A requirement that binds the journey's whole path, of any of the three kinds, "
+        "written in `requirements` and anchored (repeatable). One that binds a single step is "
+        "that step's use case's to list.",
     )
     entries = (
         kind(ACTOR, "An actor: a named role that uses the system, and its needs.", "name"),
@@ -371,6 +392,7 @@ def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
         unanchored_because=getattr(args, "unanchored_because", None),
         actors=tuple(getattr(args, "actors", ())),
         refines=tuple(getattr(args, "refines", ())),
+        requirements=tuple(getattr(args, "requirements", ())),
     )
     return stamp.stamp(backbone.project_root(), request, args.base)
 
