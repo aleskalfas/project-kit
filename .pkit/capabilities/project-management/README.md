@@ -15,9 +15,8 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050]
     revalidated:
-      at: 2026-10-18T18:52:45Z
-      outcome: unchanged
-      unchanged-because: "The change adds DEC-056, which decides how a stale artefact's fixer starts. Nothing it decides is built yet: no fixers point, grant list, drift command or count line exists. The README describes what the capability ships, and lists no decisions one by one, so nothing in it changes. The build tasks under #1684 document the point, the grant and the command."
+      at: 2026-10-18T20:19:07Z
+      outcome: updated
 ---
 
 # project-management capability
