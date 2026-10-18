@@ -57,10 +57,12 @@ Each tier has three scopes that determine the script's role and execution order 
 
 The target version is the `<major>.<minor>.0` the migration applies *up to*. It is the version that the migration's backbone or component takes in the release that ships the change. Per COR-010, patches have no migrations — the patch segment is always `.0`, and one minor-version directory covers all patches within that line. So that release raises that version by at least a minor.
 
+It is never a version already released. A project already at that version never runs the script. The stamp and `pkit migrations check-diff` both refuse it (the lifecycle spec's "Which version a migration targets").
+
 How that version is known depends on the project's version-bump policy, which COR-010 defers to. Read the project's own record of it first. Two common shapes:
 
-- **Where the change's own branch bumps the version,** the target is the bumped version. For a backbone migration, read `.pkit/VERSION` after the bump. For a component migration, read the component's `package.yaml` `version` field after the bump.
-- **Where a release step bumps the version after the change merges,** the branch carries a version already shipped. The target is the backbone's or component's version in the next release. Predict it from its latest shipped version and the highest bump among the changes that release will ship. Check it again just before the change merges.
+- **Where the change's own branch bumps the version,** the target is the bumped version. The stamp picks it without `--version`, from `.pkit/VERSION` or the component's `package.yaml` after the bump.
+- **Where a release step bumps the version after the change merges,** the branch carries a version already shipped. The target is the backbone's or component's version in the next release. Without `--version`, the stamp picks the next minor past the version the default branch records, or the next major where its folder already waits. Where the release will be a major and no folder waits yet, pass it. Check the version again just before the change merges: `pkit migrations check-diff` fails a script whose version a release took meanwhile.
 
 ### 4. Pick the slug
 
@@ -76,11 +78,11 @@ pkit new migration --tier <tier> [--component <name>] [--version <X.Y.0>] --name
 
 - `--tier` is required.
 - `--component` is required when `--tier` is `adapter` or `capability`.
-- `--version` defaults to the tier's current version: `.pkit/VERSION` for the backbone, a component's `package.yaml` `version` field for a component. Pass step 3's target explicitly when it differs. Where a release step bumps the version, the target always differs from the default.
+- `--version` defaults to the next version past the one the default branch records for the tier: `.pkit/VERSION` for the backbone, a component's `package.yaml` `version` field for a component. The command prints the version it picked and why. Pass step 3's target explicitly when it differs. A version at or below the default branch's is refused, and the refusal names the version to give.
 - `--name` is the slug, required.
 - `--scope` defaults to `resource`. Set to `manifest-schema` or `structural` per step 2.
 
-The command stamps `<NNN>-<slug>.sh` in the right `<X.Y.0>/` directory, where `NNN` is the next zero-padded index in that directory. The script is made executable and includes the COR-010 contract boilerplate (`set -euo pipefail`, `ROOT` env consumption, idempotence pattern).
+The command stamps `<NNN>-<slug>.sh` in the right `<X.Y.0>/` directory, where `NNN` is the next zero-padded index in that directory, past the default branch's scripts there too. The script is made executable and includes the COR-010 contract boilerplate (`set -euo pipefail`, `ROOT` env consumption, idempotence pattern).
 
 ### 6. Implement the migration
 

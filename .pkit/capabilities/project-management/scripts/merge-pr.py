@@ -32,6 +32,10 @@ merge:
     merging. The CI override is deliberately its own flag, separate from
     any general `--bypass`, so overriding another gate never silently
     clears a red CI.
+  * The authorisation (#1760, DEC-055 point 3): `--yes`, or a yes to the
+    question a run at a terminal asks, which names the PR and the head the
+    merge is pinned to. A run with neither refuses once the gates have run
+    (exit 2): nothing is posted or merged.
 
 Side-effects, in order (the merge mechanic lives once in `_lib.pr_merge`,
 shared with `done-work`; #882):
@@ -105,7 +109,8 @@ Exit codes:
      now or by an earlier run from this clone
   1  membership / merge-queue / checkbox / title / CI-status refusal; a PR
      someone else merged without a queue
-  2  usage error (PR not found)
+  2  usage error (PR not found); a run with no `--yes` and no terminal to ask
+     at, which merges nothing (#1760)
   3  gh failure: the merge failed or the queue could not be read; the PR left
      the merge queue without merging, or was taken out of it because its head
      moved; or a merge or an enqueue got no answer and was not seen made on
@@ -231,7 +236,10 @@ def main() -> int:
     parser.add_argument(
         "--yes",
         action="store_true",
-        help="Skip the confirmation prompt.",
+        help=(
+            "The authorisation to merge. Without it, merge-pr asks at a terminal, and off "
+            "one it refuses (exit 2) once its gates have run, merging nothing."
+        ),
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
@@ -412,11 +420,24 @@ def main() -> int:
             "that merged, and the local checkout tidied; nothing written."
         )
         return 0
-    if not args.yes and sys.stdin.isatty():
+    # The merge is the person's to authorise, for the head it merges (DEC-055
+    # point 3): `--yes`, or a yes to a question naming the head the merge is
+    # pinned to. Off a terminal with no `--yes`, nobody can be asked (#1760).
+    named = f"PR #{args.pr_number} at {head[:7] or 'unknown'}"
+    if not args.yes:
+        if not sys.stdin.isatty():
+            print(
+                f"error: no authorisation to merge {named}. This run has no --yes, and no "
+                "terminal to ask at. Nothing was posted or merged. Show the person what the "
+                f"PR changes, and merge it on their authorisation with `merge-pr "
+                f"{args.pr_number} --yes`.",
+                file=sys.stderr,
+            )
+            return 2
         question = (
-            "Enqueue and, once merged, delete the head branch?"
+            f"Enqueue {named} and, once merged, delete the head branch?"
             if queue.has_queue
-            else "Squash-merge and delete the head branch?"
+            else f"Squash-merge {named} and delete the head branch?"
         )
         reply = input(f"{question} [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
