@@ -2323,7 +2323,7 @@ def test_upgrade_across_a_backbone_migration_directory_runs_it_and_records_the_v
     assert result.exit_code == 0, result.output
     assert "running 2 backbone migration(s) (1.149.0 -> v1.150.0)" in result.output
     assert "1.150.0/001-keep-process-journal-logging.sh" in result.output
-    assert "1.150.0/001-untrack-runtime-ignored-files.sh" in result.output
+    assert "1.150.0/002-untrack-runtime-ignored-files.sh" in result.output
     assert _recorded_version(installed_target) == "1.150.0"
     # What `keep-process-journal-logging` writes, and nothing else does.
     config = (installed_target / ".pkit" / "project" / "config.yaml").read_text(encoding="utf-8")

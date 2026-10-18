@@ -32,6 +32,11 @@
 # which drops the component's line too while the journals are committed; the
 # migration says so, and `pkit validate` names the component.
 #
+# It runs before `002-untrack-runtime-ignored-files.sh`, by its number. That
+# migration untracks what `.pkit/.gitignore` ignores. Run after it, this one
+# would find committed journals already untracked, and record them as not
+# committed.
+#
 # Idempotent: the first run writes the `process:` block, so every later run takes
 # the first branch and changes nothing; the ignore-line removal is a no-op once
 # the line is gone. A flow-style configuration is never written, so a re-run

@@ -163,7 +163,7 @@ A project already current returns after these checks, before step 1, and only wr
 9. **The completion is recorded:** `completed_version` becomes the target.
 10. **The pin,** last, as ADR-049 point 1 and ADR-064 point 1 set.
 
-- **Why the render runs twice:** `1.150.0/001-untrack-runtime-ignored-files` reads the render of the target's declarations, so the first render follows propagation. The second is part of derivable state, which COR-010's order regenerates after every migration.
+- **Why the render runs twice:** `1.150.0/002-untrack-runtime-ignored-files` reads the render of the target's declarations, so the first render follows propagation. The second is part of derivable state, which COR-010's order regenerates after every migration.
 - **Why seed paths follow the migrations:** a migration that moves a project's file to a seed path would otherwise find a fresh seed there. COR-010 left this place open.
 - **Why seed paths precede derivable state:** deploy reads `.pkit/agents/project/overlay.yaml`, and merge reads the adapter's `settings/project/settings.json`. Both are seed paths.
 - **A capability's files are copied before its migrations,** as COR-010's order sets. Project-management's `0.15.0/001` and `0.24.0/001` are fixed for this order.
@@ -197,7 +197,7 @@ A project already current returns after these checks, before step 1, and only wr
   - a hand-written `.claude/agents/orchestrator.md`, which survives
   - a `bindings.yaml` under a capability's `project/`, and one in an incubated capability's tree, which both survive
   - a project's own file under `.pkit/workflow/project/`, which survives
-- **What a replay may restore:** `1.54.0/001`, `1.150.0/001-keep-process-journal-logging` and `1.150.0/001-untrack-runtime-ignored-files` can re-add what a project removed after they ran. The changelog says so, as COR-010 requires.
+- **What a replay may restore:** `1.54.0/001`, `1.150.0/001-keep-process-journal-logging` and `1.150.0/002-untrack-runtime-ignored-files` can re-add what a project removed after they ran. The changelog says so, as COR-010 requires.
 - **The report names the replay.** It says that no completion is recorded, so every backbone migration runs once, and lists them. The dry run says the same before anything runs.
 
 ### 14. A migration that runs `pkit` reaches the running pkit
