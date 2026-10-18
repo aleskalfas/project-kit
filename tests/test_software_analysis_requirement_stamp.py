@@ -287,7 +287,7 @@ REASON = ("--unanchored-because", "A stakeholder states it.")
         (("--refines", "UC-001"), "no requirement UC-001 in the analysis"),
         (
             ("--refines", "REQ-002"),
-            "constraint REQ-002 is withdrawn (",
+            "requirement REQ-002 is withdrawn (",
         ),
         (
             ("--refines", "REQ-003"),

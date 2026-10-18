@@ -765,5 +765,6 @@ def test_without_a_setting_or_a_number_the_number_check_reads_no_base(
     completed = run_script(piloted, NUMBERS, "--base", "origin/main", "--json")
     assert completed.returncode == 0, completed.stderr
     assert json.loads(completed.stdout)["summary"] == [
-        "numbers: no use case or journey is numbered here; nothing to compare, no base read."
+        "numbers: no use case, journey or requirement is numbered here; nothing to compare, "
+        "no base read."
     ]

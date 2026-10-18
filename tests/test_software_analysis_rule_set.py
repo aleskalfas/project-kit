@@ -311,8 +311,14 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
         "form, save on a withdrawn artefact"
     ) in part
     # A missing title heading of a document kind is the heading check's, which holds it
-    # whatever the rule's status, so the part leaves it out.
-    assert "A missing title heading of an actor, a use case or a journey is left to" in part
+    # whatever the rule's status, so the part leaves it out: the three kinds of
+    # requirement's too (#1693). The part is no content of the rule, so `SAN`'s version
+    # stays (COR-051 point 2).
+    assert (
+        "A missing title heading of an actor, a use case, a journey, a quality requirement, "
+        "a functional requirement or a constraint is left to the heading check"
+    ) in part
+    assert data["version"] == "1.0.0"
     assert "record" not in part
     # It names each form an artefact kind's structure gives, and none that only a
     # record's gives: the check enforces those always, outside the rule.

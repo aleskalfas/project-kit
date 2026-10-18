@@ -472,25 +472,28 @@ def _check_refines(analysis: Analysis, request: Request, new_id: str) -> None:
     kinds, and in force, since what the stamp writes is in force; and none is the
     requirement itself, whose id is `new_id` (DEC-002 points 6 and 7). A requirement
     refined in a circle is the core's validation to refuse (COR-050 point 5), and a new
-    requirement closes none, since nothing refines it yet."""
+    requirement closes none, since nothing refines it yet. The rule is the check's
+    (`Analysis.unfit_requirement`)."""
     for refined in request.refines:
         if identity(refined) == new_id:
             raise Refused(
                 f"--refines {refined} is the id this requirement takes: a requirement never "
                 f"refines itself (DEC-002 point 6)"
             )
+        problem = analysis.unfit_requirement(refined, in_force=True)
+        if problem is None:
+            continue
         found = analysis.find(refined)
         if found is None or found.kind not in REQUIREMENTS:
             kinds = ", ".join(REQUIREMENTS[:-1])
             raise Refused(
-                f"no requirement {refined} in the analysis: stamp it first, `pkit analysis new "
-                f"<kind> <slug>`, its kind {kinds} or {REQUIREMENTS[-1]}"
+                f"{problem}: stamp it first, `pkit analysis new <kind> <slug>`, its kind "
+                f"{kinds} or {REQUIREMENTS[-1]}"
             )
-        if found.withdrawn:
-            raise Refused(
-                f"{NOUN[found.kind]} {refined} is withdrawn ({found.location}): a requirement in "
-                f"force refines only requirements in force (DEC-002 point 7)"
-            )
+        raise Refused(
+            f"{problem}: a requirement in force refines only requirements in force (DEC-002 "
+            f"point 7)"
+        )
 
 
 # --- the id ----------------------------------------------------------------------------------
