@@ -933,8 +933,23 @@ def test_a_file_a_place_holds_at_either_state_is_read_by_its_content(repo: Adopt
         "bring the notes into a place and revalidate them",
         {CONFIG: friction_config(places=("docs", "notes")), page: NOTES_HOLD},
     )
-    found = _summary(_run(repo))
-    assert ("friction", "docs/guide.md", f"path:{page}", None) not in found
+    assert _summary(_run(repo)) == [("answered", page, None, "new")]
+
+
+def test_a_named_head_reads_a_placed_file_by_its_content_and_mode(repo: AdopterRepo) -> None:
+    """`--head <rev>`: both states are commits, the modes read from their trees."""
+    _start(repo, {NOTES: notes(), "docs/guide.md": ON_NOTES})
+    held = repo.commit("the notes revalidated, their content as it was", {NOTES: NOTES_HOLD})
+    revalidated = ("revalidated", NOTES, None, "unchanged")
+    assert _summary(_run(repo, named=fc.named_head(repo.root, held))) == [revalidated]
+
+    repo.git("update-index", "--chmod=+x", NOTES)
+    repo.git("commit", "-q", "-m", "make the notes executable")
+    named = fc.named_head(repo.root, repo.head())
+    assert _summary(_run(repo, named=named)) == [
+        ("friction", "docs/guide.md", f"path:{NOTES}", None),
+        revalidated,
+    ]
 
 
 def test_a_front_matter_holding_only_a_container_flags_no_path_anchor(repo: AdopterRepo) -> None:

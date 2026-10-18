@@ -305,6 +305,32 @@ def test_a_deferral_of_a_path_anchor_lists_no_container_only_commit(timeline: Ti
     assert [c.commit.sha for c in finding.commits] == [edited]
 
 
+def test_a_merged_line_that_wrote_only_containers_makes_no_debt(timeline: Timeline) -> None:
+    """Past a merge the placed file is walked on its own lines, by its content."""
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES})
+    timeline.adopter.checkout("side", create=True)
+    timeline.commit("revalidate on a side", {NOTES: NOTES_HOLD})
+    timeline.adopter.checkout("main")
+    timeline.commit("unrelated on main", {"src/cli/main.py": "print('x')\n"})
+    timeline.merge("side")
+    assert _summary(_run(timeline)) == []
+
+
+def test_an_edit_on_a_merged_line_is_dated_from_the_edit(timeline: Timeline) -> None:
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES})
+    timeline.adopter.checkout("side", create=True)
+    timeline.commit("revalidate on a side", {NOTES: NOTES_HOLD})
+    edited = timeline.commit("edit on a side", {NOTES: notes(at=T2, body="Edited.")})
+    again = notes(at="2026-10-03T09:00:00Z", body="Edited.")
+    timeline.commit("revalidate again, the content as it is", {NOTES: again})
+    timeline.adopter.checkout("main")
+    timeline.commit("unrelated on main", {"src/cli/main.py": "print('x')\n"})
+    timeline.merge("side")
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", f"path:{NOTES}", edited)]
+    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    assert [c.commit.sha for c in finding.commits] == [edited]
+
+
 def test_a_container_edit_on_a_file_no_place_holds_is_stale_debt(timeline: Timeline) -> None:
     template = "templates/page.md"
     on_template = guide(anchors={"path": ["templates/**"]})

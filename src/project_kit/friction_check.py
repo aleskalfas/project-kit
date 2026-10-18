@@ -678,6 +678,7 @@ class Side(Listing):
         self._records: dict[str, RecordPoints | None] = {}
         self._contents: dict[str, RecordContent | None] = {}
         self._placed: dict[str, RecordContent | None] = {}
+        self._modes: dict[str, dict[str, str]] = {}
         self._paths: dict[str, str | None] = {}
         self._parts: dict[str, AnchoredPart] = {}
         self._named: dict[str, str | None] = {}
@@ -781,6 +782,31 @@ class Side(Listing):
         (`Discovery.placed`): a rule set's included, never a held document, a synced copy
         or a link, which no place walks."""
         return self.discovery.placed
+
+    def modes_since(self, commit: str) -> Mapping[str, str]:
+        """The mode of each file this state, the working tree, holds otherwise than the
+        commit `commit` does, as git reads it under the repository's own settings: one
+        `git diff --raw` per commit for the run, renames read as a removal and an
+        addition."""
+        found = self._modes.get(commit)
+        if found is None:
+            listed = run_git(
+                self.root,
+                "diff",
+                "--raw",
+                "--no-renames",
+                "-z",
+                "--no-color",
+                "--relative",
+                commit,
+                "--",
+            ).stdout
+            tokens = nul_separated(listed)
+            found = self._modes[commit] = {
+                path: meta.lstrip(":").split(" ")[1]
+                for meta, path in zip(tokens[::2], tokens[1::2], strict=False)
+            }
+        return found
 
     def placed_content(self, rel: str) -> RecordContent | None:
         """The file at `rel` here, read once as a path anchor reads a file a place holds
@@ -1084,24 +1110,10 @@ def _mode_changed(later: Side, earlier: Side, rel: str, before: str) -> bool:
     if isinstance(later.tree, CommitTree):
         now = later.tree.entry(rel)
         return then is None or now is None or then[0] != now[0]
-    listed = run_git(
-        later.root,
-        "diff",
-        "--raw",
-        "--no-renames",
-        "-z",
-        "--no-color",
-        "--relative",
-        earlier.tree.commit,
-        "--",
-        rel,
-    ).stdout
-    tokens = nul_separated(listed)
-    for meta, path in zip(tokens[::2], tokens[1::2], strict=False):
-        if path == rel:
-            mode = meta.lstrip(":").split(" ")[1]
-            return then is None or mode != then[0]
-    return False  # git lists no change to it: the working tree holds it as the commit does
+    mode = later.modes_since(earlier.tree.commit).get(rel)
+    if mode is None:
+        return False  # git lists no change to it: the working tree holds it as the commit does
+    return then is None or mode != then[0]
 
 
 def content_differs(artefact: Artefact, other: Artefact) -> bool:

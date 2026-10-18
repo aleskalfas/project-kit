@@ -2588,7 +2588,9 @@ def placed_files(target_root: Path, tree: RepositoryTree | None = None) -> froze
 
 def _is_link(tree: RepositoryTree, rel: str) -> bool:
     """Whether the file at `rel` of a state is a link, which the walk never reads: by its
-    entry's mode in a commit, on disk in the working tree."""
+    entry's mode in a commit, on disk in the working tree. Any other tree is judged as
+    the walk reads it, by whether it gives the file's bytes — so a reader that gives a
+    link's target as its bytes reads the link as a file, as the walk over it would."""
     if isinstance(tree, WorkingTree):
         return (tree.root / rel).is_symlink()
     if isinstance(tree, CommitTree):

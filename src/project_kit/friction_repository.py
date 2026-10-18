@@ -942,7 +942,7 @@ class _Judge:
                 index
                 for rel in self.matching_paths(anchor.value, point) - own
                 for index in self.history.touched(rel)
-                if index not in covered and self.wrote(index, rel, point)
+                if index not in covered and self.wrote(index, rel, self.by_content(rel, point))
             }
             moved = self.exclusion_change(anchor, point).less(own)
             for rel in moved.left_out + moved.let_in + moved.gone:
@@ -965,22 +965,38 @@ class _Judge:
                     for before, source in v.parents()
                 )
             }
+        readings = self.readings(anchor, own, point)
         return {
             v.index
             for rel in self.files_of(anchor, own)
             for v in self.history.versions(rel)
             if v.index not in covered
             and v.entry.changes_content
-            and self._wrote_version(v, self.by_content(rel, point, v.path))
+            and self._wrote_version(v, readings[rel])
         }
 
-    def wrote(self, index: int, rel: str, state: int) -> bool:
+    def readings(self, anchor: Anchor, own: frozenset[str], state: int) -> dict[str, bool]:
+        """For each path whose change a path anchor, or an anchor of a registered kind, reads,
+        whether it is read by its content against the state at `state` (`by_content`):
+        decided once per file and state, a registered kind's file under its name there,
+        and given to every name the file had — so every version between is read one way."""
+        if anchor.kind == "path":
+            paths = _paths_behind(self, anchor, own, (state,))
+            return {rel: self.by_content(rel, state) for rel in paths}
+        found: dict[str, bool] = {}
+        for rel in self.files_of(anchor, own):
+            names = self.history.names(rel)
+            content = self.by_content(rel, state, self._name_at(state, rel, names))
+            found.update(dict.fromkeys(names, content))
+        return found
+
+    def wrote(self, index: int, rel: str, content: bool) -> bool:
         """Whether the commit at `index`, which touched the path `rel`, changed what a path
-        anchor measured from the state at `state` stands on in it (COR-050 point 5): any
-        touch of a file read as stored; for one read by its content (`by_content`), only
-        an addition, a removal, or a mode and content that differ from the file's at
-        every parent — so a commit that wrote only its containers is none."""
-        if not self.by_content(rel, state):
+        anchor, or one of a registered kind, stands on in it (COR-050 point 5): any touch
+        of a file read as stored; for one read by its `content` (`readings`), only an
+        addition, a removal, a rename, or a mode and content that differ from the file's
+        at every parent — so a commit that wrote only its containers is none."""
+        if not content:
             return True
         listed = self.history.touching(index, rel)
         if listed is None or listed.path != rel or listed.status in ("A", "D", "R"):
@@ -1095,7 +1111,10 @@ class _Judge:
             return self.head.placed
         found = self._placed.get(sha)
         if found is None:
-            found = self._placed[sha] = placed_files(self.head.root, self.tree(sha))
+            # A tree read for this alone, never cached: `_placed` keeps the answer.
+            found = self._placed[sha] = placed_files(
+                self.head.root, CommitTree(self.head.root, sha)
+            )
         return found
 
     def by_content(self, rel: str, state: int, name: str | None = None) -> bool:
@@ -2104,10 +2123,14 @@ def _traced(
             changed = _changes(judge, anchor, reached, own, point)
             behind.update(index for index in changed if index in postponed)
         behind |= configured
-        files = anchor is not None and anchor.kind not in ("record", "artefact")
+        readings = (
+            [judge.readings(anchor, own, state) for state in answering]
+            if behind and anchor is not None and anchor.kind not in ("record", "artefact")
+            else []
+        )
         touched = (
             _touched_by(
-                judge, _paths_behind(judge, anchor, own, answering), behind, answering, files=files
+                judge, _paths_behind(judge, anchor, own, answering), behind, answering, readings
             )
             if behind
             else {}
@@ -2170,22 +2193,22 @@ def _touched_by(
     paths: frozenset[str],
     commits: set[int],
     states: Sequence[int],
-    *,
-    files: bool = False,
+    readings: Sequence[Mapping[str, bool]] = (),
 ) -> dict[int, set[str]]:
     """Of `paths`, those each of `commits` touched, by commit — one pass over their history
     — and, for a merge, each it took whole from one side as a change measured from one of
     the answering `states` (`_Judge.taken`), which git's combined diff does not list: never
     one it merged as it merges any file, whose side's commits carry the change. With
-    `files` — the paths of a path anchor or an anchor of a registered kind — a file read
-    by its content against every state is left out where the commit wrote only its
-    containers (`_Judge.wrote`)."""
+    `readings` — for a path anchor or an anchor of a registered kind, whether each path
+    is read by its content against each state (`_Judge.readings`) — a file read by its
+    content against every state is left out where the commit wrote only its containers
+    (`_Judge.wrote`)."""
     history = judge.history
     touched: dict[int, set[str]] = {}
     for rel in paths:
         for index in history.touched(rel):
             if index in commits and (
-                not files or any(judge.wrote(index, rel, state) for state in states)
+                not readings or any(judge.wrote(index, rel, r.get(rel, False)) for r in readings)
             ):
                 touched.setdefault(index, set()).add(rel)
     for index in commits:

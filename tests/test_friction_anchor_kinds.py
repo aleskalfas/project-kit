@@ -51,6 +51,7 @@ from click.testing import CliRunner
 from project_kit import command_runner, provisioning
 from project_kit import friction_check as fc
 from project_kit import friction_discovery as fd
+from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
 from project_kit import friction_validate as fv
 from project_kit import friction_write as fw
@@ -517,13 +518,48 @@ def test_a_registered_anchor_on_a_placed_file_stands_on_its_content(repo: Adopte
         "the engine changed; the notes hold", {"src/core/engine.py": "E = 2\n", notes: held}
     )
     assert _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR) == []
-    assert _of_anchor(fr.run_repository_check(repo.root).findings, SOURCE_ANCHOR) == []
+    whole = fr.run_repository_check(repo.root).findings
+    assert [f for f in whole if f.anchor == SOURCE_ANCHOR] == []
 
     repo.commit("edit the notes", {notes: noted(at=T2, body="Edited.")})
     [asked] = _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR)
     assert asked.message.startswith(f"changed in this diff ({notes})")
-    [stale] = _of_anchor(fr.run_repository_check(repo.root).findings, SOURCE_ANCHOR)
+    whole = fr.run_repository_check(repo.root).findings
+    [stale] = [f for f in whole if f.anchor == SOURCE_ANCHOR]
     assert stale.kind is fr.RepositoryFindingKind.STALE
+
+
+def test_a_registered_file_moved_out_of_a_place_is_read_one_way_since_the_point(
+    repo: AdopterRepo,
+) -> None:
+    """The reading is decided once per file and state, under the file's name there: a file
+    a place held at the revalidation point, moved out of it since, is read by its content
+    across every version — so neither the debt nor `explain` behind a deferral counts the
+    commit that wrote only its container."""
+    _sources(repo, ANSWERING.format({"paths": ["notes/x.md"]}))
+    anchors = {"path": ["src/cli/**"], "source": ["iso-8601"]}
+
+    def noted(**overrides: Any) -> str:
+        values: dict[str, Any] = {"anchors": {"path": ["src/core/**"]}, "at": T1}
+        values.update({"outcome": "updated", **overrides})
+        return document("notes", **values)
+
+    repo.write({CONFIG: friction_config(), **SOURCE, "docs/x.md": noted()})
+    repo.write({"docs/guide.md": guide(anchors=anchors)})
+    repo.commit("base", files=None)
+    repo.rename("docs/x.md", "notes/x.md")
+    held = noted(at=T2, outcome="unchanged", because="the engine is still one module")
+    contained = repo.commit("the notes revalidated, their content as it was", {"notes/x.md": held})
+    edited = repo.commit("edit the notes", {"notes/x.md": noted(at=T2, body="Edited.")})
+    [stale] = [f for f in fr.run_repository_check(repo.root).findings if f.anchor == SOURCE_ANCHOR]
+    assert stale.origin is not None and stale.origin.sha == edited
+
+    deferring = guide(anchors=anchors, deferred=[("source", "iso-8601", "rewrite after #1")])
+    repo.commit("defer the guide's source", {"docs/guide.md": deferring})
+    explained = frep.run_explain(repo.root, "docs/guide.md").findings
+    [behind] = [f for f in explained if f.finding.anchor == SOURCE_ANCHOR]
+    listed = [c.commit.sha for c in behind.commits]
+    assert edited in listed and contained not in listed
 
 
 def test_the_files_a_resolver_answers_are_anchored_surface(repo: AdopterRepo) -> None:
