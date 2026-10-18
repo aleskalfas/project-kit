@@ -19,9 +19,8 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-17T20:04:10Z
-      outcome: unchanged
-      unchanged-because: COR-050 points 2 and 7 were reached through the Decision's text outside its points, which says a record anchor stands on the record's content, and through point 2's added case of a record anchoring itself. This page's way of naming a point as an anchor's value, and its checks of a record's points, rest on neither, so they hold.
+      at: 2026-10-18T08:25:39Z
+      outcome: updated
 ---
 
 # Decision records
