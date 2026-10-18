@@ -51,21 +51,20 @@ Each kind has a folder of its own, and the three sit in one folder of the analys
 
 ### 4. Their parts: the fields a tool reads, and the parts a reader reads
 
-The obligation itself, and its measure, are front-matter fields, which a tool reads. The rest serves readers and the check (DEC-001 point 1). Every kind has the same fields and the same parts, save one part, which differs for a constraint. Each kind's structure gives the parts their labels.
+The obligation itself, its measure and where it holds are front-matter fields, which a tool reads. The rest serves readers and the check (DEC-001 point 1). Every kind has the same fields and the same parts, save one part, which differs for a constraint. Each kind's structure gives the parts their labels.
 - **Front-matter fields,** beside its id, title and status:
   - `statement`: the requirement or the constraint, in one sentence.
   - `measure`: the value or the condition that shows it is met. It reads `None.` where there is none.
+  - `applies-to`: where it holds, in words, such as a class of commands or the whole system. Every kind requires it, and it never reads `None.`. It names no use case or journey: those that must meet the requirement list it (point 7).
   - `actors`: the actors whose need it meets, if any.
   - `refines`: the requirements of any kind it refines, if any.
 - **Body parts:**
-  - **Where it holds,** shipped as *Applies to*. It says so in words, such as a class of commands or the whole system, and never reads `None.`. It names no use case or journey: those that must meet the requirement list it (point 7).
   - **What verifies it today,** shipped as *Verified by* (point 5). It may read `None.`.
   - **Why it is needed,** shipped as *Rationale*, on a quality or a functional requirement. On a constraint, **who or what imposes it** instead, and why the design cannot choose otherwise, shipped as *Imposed by*. Each may read `None.`.
-- **What triggers the core's signal.** The core may give a signal from a link's source to its targets ([project-kit#1667](https://github.com/aleskalfas/project-kit/issues/1667)). Where the capability declares it for these kinds, a change to the statement or the measure triggers it. This record decides which of the capability's fields trigger the signal, and nothing of its shape.
+- **What triggers the core's signal.** The core may give a signal from a link's source to its targets ([project-kit#1667](https://github.com/aleskalfas/project-kit/issues/1667)). Where the capability declares it for these kinds, a change to the statement, the measure or where it holds triggers it. A change of where it holds changes the obligation, as a change of the statement or the measure does. This record decides which of the capability's fields trigger the signal, and nothing of its shape.
 - **What the declaration leaves out:**
   - a change to a body part, such as the wording of the reason. It still flags each use case and journey that lists the requirement (point 7).
-  - a change to where it holds, though moving where a requirement holds can change what it asks.
-  - a change of kind, or a withdrawal, which leaves both fields as they were.
+  - a change of kind, or a withdrawal, which leaves the three fields as they were.
 
   Whoever makes such a change revisits what the requirement anchors.
 - **A project may ask more** by a rule of its own, such as that every part is filled.
@@ -119,9 +118,9 @@ A requirement points at the solution, and nothing in the solution points back at
 
 **Why one numbering.** The line between the kinds blurs. A property with a measure and a limit taken as given can describe one obligation, and a project's understanding of it moves. With a number per kind, moving a requirement would change its id, and everything that cites it. One numbering keeps the id, and showing the kind beside it keeps what a separate prefix would show.
 
-**Why the statement and the measure are front-matter fields.** A tool reads data from an artefact's front matter only, and a body's parts serve readers and the check (DEC-001 point 1). Should the core give a signal, it is a tool's, so the parts that trigger it are fields. The statement is the obligation, and the measure is what a solution must reach. A new reason explains the same obligation.
+**Why the statement, the measure and where it holds are front-matter fields.** A tool reads data from an artefact's front matter only, and a body's parts serve readers and the check (DEC-001 point 1). Should the core give a signal, it is a tool's, so the parts that trigger it are fields. The statement is the obligation, and the measure is what a solution must reach. Where it holds is the obligation's scope. Moving it binds code and tests it did not bind before, or frees those it did. A new reason explains the same obligation.
 
-**Why the declaration leaves the other changes out.** The fields that trigger are the two that state the obligation itself. Where a requirement holds is a body part, which no tool but the check reads. A change of kind or a withdrawal is rare, and is reviewed as a change of its own. So each leaves the revisiting to whoever makes it.
+**Why the declaration leaves the other changes out.** The fields that trigger are the three that state the obligation: what it asks, what shows it is met, and where it holds. A body part explains the obligation or says what verifies it, and changes none of it. A change of kind or a withdrawal is rare, and is reviewed as a change of its own. So each leaves the revisiting to whoever makes it.
 
 **Why a measure may read `None.`.** A requirement found before its measure is still worth keeping. `None.` says the measure was considered and is missing, so the gap is seen.
 
@@ -152,8 +151,7 @@ A requirement points at the solution, and nothing in the solution points back at
 - **A prefix for each kind, such as `QR-` and `CNS-`.** Rejected. Reclassifying would change the id, and the boundary between the kinds blurs.
 - **The kind only in the path.** Rejected. A reader of a heading, a finding or a page would not see it.
 - **One collection file, as RUP's single document.** Rejected. Each entry carries a friction block and several parts, so the file grows long and cannot be grouped by area.
-- **The statement and the measure as body parts.** Rejected. No tool but the check reads a body's parts.
-- **Where it holds as a field a declaration of the signal names too.** Not taken. It says where the obligation holds, not what it is, and it stays a part a reader reads.
+- **The statement, the measure and where it holds as body parts.** Rejected. No tool but the check reads a body's parts, so the core's signal could not follow a change to one.
 - **A change of kind or a withdrawal that a declaration of the signal names.** Not taken. Each is rare and reviewed as a change of its own, and neither changes the fields that state the obligation.
 - **Where it holds, naming the use cases it binds.** Rejected. It would store a copy of what lists the requirement, which goes stale unflagged.
 - **A test's path in the body, or in a field.** Rejected. A renamed test would flag every use case and journey that lists the requirement.
