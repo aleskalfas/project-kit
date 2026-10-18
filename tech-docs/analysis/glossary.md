@@ -28,9 +28,9 @@ TERM-answer:
           - COR-050#3
           - COR-050#4
       revalidated:
-        at: 2026-10-18T19:14:44Z
+        at: 2026-10-18T21:14:51Z
         outcome: unchanged
-        unchanged-because: "The definition still holds: this change only alters where the reading of friction since and friction resolve finds a block or list, not what an answer is or what the writers write."
+        unchanged-because: This change rewords only the revisit writer's refusal of a target no link takes, in friction_write.py. A revalidation, a deferral and the list of answers read as they did.
 TERM-artefact:
   name: artefact
   status: active
