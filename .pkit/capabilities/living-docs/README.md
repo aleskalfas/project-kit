@@ -14,8 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files"]
     revalidated:
-      at: 2026-10-18T17:13:20Z
-      outcome: updated
+      at: 2026-10-18T18:54:22Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 16, and the schemas README's paragraph on links, gain a second way for a link to choose its targets. This capability declares no link, so nothing this page says of the friction block changes.
 ---
 
 # living-docs capability

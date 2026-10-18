@@ -11,6 +11,10 @@ TERM-anchor:
         record:
           - COR-050#2
           - COR-050#7
+      revalidated:
+        at: 2026-10-18T18:53:44Z
+        outcome: unchanged
+        unchanged-because: "This change lets a link take every anchor but those some own fields list, in friction_discovery.py. It changes no anchor: what an anchor is, a dead anchor and a registered kind read as they did."
 TERM-answer:
   name: answer
   status: active
@@ -23,6 +27,10 @@ TERM-answer:
         record:
           - COR-050#3
           - COR-050#4
+      revalidated:
+        at: 2026-10-18T18:53:47Z
+        outcome: unchanged
+        unchanged-because: This change rewords only the revisit writer's refusal of a target no link takes, in friction_write.py. A revalidation, a deferral and the list of answers read as they did.
 TERM-artefact:
   name: artefact
   status: active
@@ -34,6 +42,10 @@ TERM-artefact:
           - src/project_kit/friction_discovery.py
         record:
           - COR-050#1
+      revalidated:
+        at: 2026-10-18T18:53:49Z
+        outcome: unchanged
+        unchanged-because: This change adds a second way for a link to choose its targets, in friction_discovery.py. What an artefact is, and how a decision record and a held document differ from one, is untouched.
 TERM-base:
   name: base
   status: active
@@ -84,6 +96,10 @@ TERM-conventions-corpus:
           - software-engineering:DEC-001#4
           - software-engineering:DEC-002#4
           - ADR-013
+      revalidated:
+        at: 2026-10-18T18:53:58Z
+        outcome: unchanged
+        unchanged-because: The software-engineer agent's revisit paragraph says a link takes some of an artefact's anchors as its targets. What the agent reads as the conventions corpus, and the distinctions, are untouched.
 TERM-debt:
   name: debt
   status: active
@@ -111,6 +127,10 @@ TERM-friction:
           - COR-050#5
           - COR-050#6
           - COR-050#9
+      revalidated:
+        at: 2026-10-18T18:53:52Z
+        outcome: unchanged
+        unchanged-because: This change words the change check's finding on a target that a link takes by what stays out, in friction_check.py. Friction, debt and the friction block mean what they did.
 TERM-methodology:
   name: methodology
   status: active
@@ -130,6 +150,10 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
+      revalidated:
+        at: 2026-10-18T18:53:55Z
+        outcome: unchanged
+        unchanged-because: A capability's place may declare a link of a second shape, read in friction_discovery.py. What a place is, and how it differs from a root, a synced tree and a held folder, is untouched.
 TERM-surface-change:
   name: surface change
   status: active

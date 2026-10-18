@@ -25,6 +25,10 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-ai-agent
+    revalidated:
+      at: 2026-10-18T18:54:05Z
+      outcome: unchanged
+      unchanged-because: The software-engineer agent's revisit paragraph says a link takes some of an artefact's anchors as its targets. Reading the corpus, writing to it, and handing the change on for review are untouched.
 ---
 
 # UC-001 — Build my change under my project's conventions

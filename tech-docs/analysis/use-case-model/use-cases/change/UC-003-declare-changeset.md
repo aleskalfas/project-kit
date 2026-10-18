@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T17:49:21Z
+      at: 2026-10-18T18:54:09Z
       outcome: unchanged
-      unchanged-because: This change alters only the help text of the friction, friction since and friction resolve commands in cli.py. The changeset and release commands this use case describes are untouched.
+      unchanged-because: This change alters only the help text of friction revisit in cli.py. The changeset and release commands this use case describes are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

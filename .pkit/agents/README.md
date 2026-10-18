@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-18T16:38:24Z
+      at: 2026-10-18T18:54:17Z
       outcome: unchanged
-      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, and point 10 says no anchor of any kind stands on the artefact's container. This page cites points 3, 10 and 16 for who writes answers, a revisit entry included, and that record-status is the after-merge job's, which all three still say.
+      unchanged-because: COR-050 point 16 gains a second way for a link to choose its targets. Who writes a revisit entry, and the friction writers an agent making a change may run, read as they did.
 ---
 
 # Agents

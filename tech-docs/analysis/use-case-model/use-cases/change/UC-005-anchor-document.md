@@ -22,6 +22,10 @@ pkit:
         - COR-050#12
       artefact:
         - ACT-developer
+    revalidated:
+      at: 2026-10-18T18:54:11Z
+      outcome: unchanged
+      unchanged-because: This change adds a second way for a link to choose its targets, and splits one validation bullet of COR-050 point 12. Writing anchors, and the block faults this use case says validation fails on, are untouched.
 ---
 
 # UC-005 — Say what my document rests on

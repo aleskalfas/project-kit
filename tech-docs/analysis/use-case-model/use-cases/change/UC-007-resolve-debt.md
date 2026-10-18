@@ -30,6 +30,10 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
         - ACT-ai-agent
+    revalidated:
+      at: 2026-10-18T18:54:13Z
+      outcome: unchanged
+      unchanged-because: This change words the change check's revisit finding, which the whole-repository check never reads, and splits one validation bullet of COR-050 point 12. Debt, its listing and how it is answered are untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date
