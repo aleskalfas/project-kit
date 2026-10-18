@@ -14,9 +14,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files"]
     revalidated:
-      at: 2026-10-18T16:38:28Z
-      outcome: unchanged
-      unchanged-because: COR-050 and the schemas README's friction-block section say a path anchor stands on a placed file's content and mode, its containers left out. This page links that section for how an anchor names a part, and its captured sources are YAML files no place holds, so a change to one still asks every page anchored to it, as the page says.
+      at: 2026-10-18T17:13:20Z
+      outcome: updated
 ---
 
 # living-docs capability
