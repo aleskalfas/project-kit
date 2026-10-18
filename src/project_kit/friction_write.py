@@ -1205,7 +1205,7 @@ def _read_back(
         if f.severity is Severity.ERROR
     ]
     if len(written) != 1 or errors:
-        detail = "; ".join(f"{f.pointer or '(block)'}: {f.message}" for f in errors)
+        detail = "; ".join(f"{f.pointer or '(block)'}: {f.message.rstrip('.')}" for f in errors)
         raise FrictionWriteError(
             f"{artefact.location}: the block would not validate after the write — "
             f"{detail or 'the artefact would not read back'}. Fix the block first "

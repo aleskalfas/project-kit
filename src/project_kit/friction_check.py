@@ -1805,10 +1805,9 @@ def _revisit_findings(
     base: Side,
     diff: Diff,
     kinds: AnchorKinds,
-) -> tuple[list[Finding], frozenset[Anchor], tuple[Anchor, ...]]:
+) -> tuple[list[Finding], tuple[Anchor, ...]]:
     """The findings on each target the diff asks the source to revisit (COR-050 points 12
-    and 16), the targets a revisit entry the diff wrote answered, and those the diff
-    answered by changing them.
+    and 16), and the targets the diff answered by changing them.
 
     A target is revisited when what it stands on differs between the base and
     head, by point 5's rule (`_anchor_question`, the source's own file left out),
@@ -1822,13 +1821,13 @@ def _revisit_findings(
         if found.new_reason:
             written.setdefault(found.entry.anchor, found.entry)
     findings: list[Finding] = []
-    answered: set[Anchor] = set()
     changed: list[Anchor] = []
     for trigger in triggers:
         anchor = trigger.anchor
+        lists = "lists" if len(trigger.links) == 1 else "list"
         subject = (
             f"its {_fields_named(trigger.fields)} changed in this diff, and "
-            f"{_fields_named(trigger.links)} lists this target"
+            f"{_fields_named(trigger.links)} {lists} this target"
         )
         question, _note = _anchor_question(anchor, own, head, base, diff, kinds)
         entry = written.get(anchor)
@@ -1838,7 +1837,6 @@ def _revisit_findings(
             message = f"{subject}; revisited: the target changed in this diff"
         elif entry is not None and entry.outcome in REVISIT_OUTCOMES and entry.reason:
             kind, answer = FindingKind.REVISITED, Answer(entry.outcome)
-            answered.add(anchor)
             message = f"{subject}; revisited: {entry.outcome} — {entry.reason}"
         else:
             kind, answer = FindingKind.UNREVISITED, None
@@ -1848,7 +1846,7 @@ def _revisit_findings(
                 f"follow-up revisits it (`deferred`) in `revisited`"
             )
         findings.append(Finding(kind, message, artefact.id, artefact.location, anchor, answer))
-    return findings, frozenset(answered), tuple(changed)
+    return findings, tuple(changed)
 
 
 @dataclass(frozen=True)
@@ -1860,9 +1858,8 @@ class _Judged:
     each once in the order the diff asks them. Against the base always: an `at`
     written back is judged against earlier points, whose questions can name an
     anchor this change never touched. `triggers` are the targets the diff asked
-    the source to revisit, `revisited` those a revisit entry the diff wrote
-    answered, and `changed_targets` those the diff answered by changing them
-    (COR-050 point 16)."""
+    the source to revisit, and `changed_targets` those the diff answered by
+    changing them (COR-050 point 16)."""
 
     revalidation: _Revalidation | None = None
     written_back: bool = False
@@ -1870,7 +1867,6 @@ class _Judged:
     covering: frozenset[Anchor] = frozenset()
     changed: tuple[Anchor, ...] = ()
     triggers: tuple[_Trigger, ...] = ()
-    revisited: frozenset[Anchor] = frozenset()
     changed_targets: tuple[Anchor, ...] = ()
 
 
@@ -2024,7 +2020,7 @@ def _judge(
         message = f"revalidated with no changed anchor: {_answer_text(standing, artefact)}"
         findings.append(finding(FindingKind.REVALIDATED, message, None, standing))
     triggers = _triggers(artefact, before, links, resolving)
-    revisit_findings, revisited, changed_targets = _revisit_findings(
+    revisit_findings, changed_targets = _revisit_findings(
         artefact, before, triggers, own, head, base, diff, kinds
     )
     findings.extend(revisit_findings)
@@ -2035,7 +2031,6 @@ def _judge(
         frozenset(covering),
         tuple(dict.fromkeys(q.anchor for q in against_base if q.anchor is not None)),
         triggers,
-        revisited,
         changed_targets,
     )
     return findings, questions, judged
@@ -2393,10 +2388,11 @@ def _written_revisits(
       meets it. Always asked for.
     - **A revisit entry** the change wrote — new, or its outcome or reason
       rewritten — a target written twice, validation's error, listing each entry.
-      One whose reason is new `stands`, and is asked for where it answered a
-      target the diff asked the source to revisit, the first written for that
-      target only. One whose outcome alone changed is `edited`, and answers
-      nothing.
+      One whose reason is new `stands`, and is asked for where its target owes
+      an answer — a target of a link the diff triggered, whether the entry or
+      the target's own change answered it — the first written for that target
+      only (COR-050 point 16, "Who decides"). One whose outcome alone changed is
+      `edited`, and answers nothing.
     """
     triggered = {trigger.anchor: trigger for trigger in judged.triggers}
     listing: dict[Anchor, dict[str, None]] = {}
@@ -2432,7 +2428,7 @@ def _written_revisits(
     for written in revisits_written(artefact, before):
         entry = written.entry
         target = entry.anchor
-        asked = written.new_reason and target in judged.revisited and target not in answered
+        asked = written.new_reason and target in triggered and target not in answered
         if asked:
             answered.add(target)
         status = AnswerStatus.STANDS if written.new_reason else AnswerStatus.EDITED

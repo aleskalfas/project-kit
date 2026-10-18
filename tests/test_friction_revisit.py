@@ -413,6 +413,116 @@ def test_a_source_under_an_excluded_path_triggers_nothing(repo: AdopterRepo) -> 
     assert _revisits(_run(repo)) == []
 
 
+def test_an_entry_beside_a_target_that_changed_is_asked_for(repo: AdopterRepo) -> None:
+    _start(repo)
+    repo.commit(
+        "relax the threshold, change the test, and say so on the source too",
+        {
+            SOURCE_DOC: requirement(
+                threshold="10 s", revisited=[entry("unchanged", "the new bound is asserted")]
+            ),
+            TEST_FILE: "def test_latency():\n    assert answer_time() < 10\n",
+        },
+    )
+    result = _run(repo)
+    assert ("revisited", f"path:{TEST_FILE}", "updated") in _revisits(result)
+    test_answers = [a for a in _revisit_answers(result) if a["target"]["value"] == TEST_FILE]
+    assert [(a["outcome"], a["asked"], a["status"]) for a in test_answers] == [
+        ("updated", True, "stands"),
+        ("unchanged", True, "stands"),
+    ]
+
+
+def test_a_target_two_links_list_is_asked_once(repo: AdopterRepo) -> None:
+    declare_linker(
+        repo.root,
+        f"    - path: reqs\n{LINK}        - targets: answered-by\n          when: [threshold]\n",
+    )
+    linked = {"answered-by": [DECISION]}
+    _start(repo, {SOURCE_DOC: requirement(**linked)})
+    repo.commit(
+        "relax the threshold; one reason for the decision",
+        {
+            SOURCE_DOC: requirement(
+                threshold="10 s",
+                revisited=[entry("deferred", "the cache is revisited in #9999", DECISION)],
+                **linked,
+            )
+        },
+    )
+    result = _run(repo)
+    assert _revisits(result) == [
+        ("unrevisited", f"path:{TEST_FILE}", None),
+        ("revisited", f"path:{DECISION}", "deferred"),
+    ]
+    (decision,) = [f for f in result.findings if f.anchor == fd.Anchor("path", DECISION)]
+    assert "`verified-by` and `answered-by` list this target" in decision.message
+    (answer,) = _revisit_answers(result)
+    assert (answer["links"], answer["fields"], answer["asked"]) == (
+        ["verified-by", "answered-by"],
+        ["threshold"],
+        True,
+    )
+
+
+@pytest.mark.parametrize(("threshold", "asked"), [("2 s", False), ("10 s", True)])
+def test_a_moved_source_triggers_only_by_its_fields(
+    repo: AdopterRepo, threshold: str, asked: bool
+) -> None:
+    _start(repo)
+    moved = "reqs/latency-moved.md"
+    repo.rename(SOURCE_DOC, moved)
+    repo.commit("edit it there", {moved: requirement(threshold=threshold, rationale="Moved.")})
+    found = _revisits(_run(repo))
+    assert found == (
+        [("unrevisited", f"path:{TEST_FILE}", None), ("unrevisited", f"path:{DECISION}", None)]
+        if asked
+        else []
+    )
+
+
+def collection(**entries: dict[str, Any]) -> str:
+    """A collection file under `reqs`: each entry its own fields and friction block, and
+    a section headed by its id."""
+    sections = "".join(f"## {entry_id}\n\nWhy it matters.\n\n" for entry_id in entries)
+    return f"---\n{json.dumps(entries, indent=2)}\n---\n\n{sections}"
+
+
+def collection_entry(
+    threshold: str, revisited: list[dict[str, Any]] | None = None
+) -> dict[str, Any]:
+    block: dict[str, Any] = {"anchors": {"path": [TEST_FILE]}}
+    if revisited:
+        block["revisited"] = revisited
+    return {"threshold": threshold, "verified-by": [TEST_FILE], "pkit": {"friction": block}}
+
+
+def test_a_collection_entry_is_a_source_of_its_own(repo: AdopterRepo) -> None:
+    coll = "reqs/coll.md"
+    _start(
+        repo,
+        {coll: collection(**{"RS-1": collection_entry("2 s"), "RS-2": collection_entry("5 s")})},
+    )
+    repo.commit(
+        "relax RS-1 only",
+        {coll: collection(**{"RS-1": collection_entry("10 s"), "RS-2": collection_entry("5 s")})},
+    )
+    result = _run(repo)
+    unrevisited = [f.location for f in result.findings if f.kind is fc.FindingKind.UNREVISITED]
+    assert unrevisited == [f"{coll}#RS-1"]
+    fw.write(
+        fw.plan_revisit(
+            repo.root, f"{coll}#RS-1", target=TEST_FILE, outcome="unchanged", reason="still holds"
+        )
+    )
+    (source,) = [
+        a for a in fd.discover_artefacts(repo.root).artefacts if a.location == f"{coll}#RS-1"
+    ]
+    assert source.friction["revisited"] == [entry("unchanged", "still holds")]
+    assert fv.validate_friction(repo.root).errors == ()
+    assert [kind for kind, _target, _answer in _revisits(_run(repo))] == ["revisited"]
+
+
 def test_only_a_revisit_carries_the_new_keys(repo: AdopterRepo) -> None:
     _start(repo, {"docs/guide.md": document("guide", anchors={"path": ["src/cli/**"]})})
     repo.commit(

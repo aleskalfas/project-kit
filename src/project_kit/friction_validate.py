@@ -609,7 +609,8 @@ def block_findings(
     every deferral of an anchor an earlier entry defers, then the links
     (`_link_findings`), then every anchor kind nothing installed resolves, which
     is a report. `links` are the ones discovery gives the artefact
-    (`Discovery.links`): with none, every revisit entry dangles. The
+    (`Discovery.links`): with none, its revisit entries are one report,
+    `orphaned-revisit`, never an error. The
     cycle check spans artefacts and is not here.
     The writing commands (`friction_write`) read what they would write back
     through this, so a writer never writes a block validation would refuse —
