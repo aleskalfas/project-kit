@@ -23,10 +23,9 @@ A template read empty hides what each part asks of a writer. So judge the parts 
 
 - **Choose the example.** Take a real case from your project: a role, a goal, a path or a word you would write anyway. Prefer one that gives most parts something to say, such as a use case with other actors and variants. If it is unusual, fill a second, ordinary one too.
   - **A requirement's example** is of its kind. A quality requirement says how well the system behaves, and a constraint limits the solution. A functional requirement holds across use cases: behaviour that serves one actor's goal is a use case instead (DEC-002 point 1).
-- **Stamp it and fill it** as the kind's sub-procedure says: `actor.md`, `use-case.md`, `journey.md`, `term.md` or `revalidation-record.md`. Fill each part as its hint says.
+- **Stamp it and fill it** as the kind's sub-procedure says: `actor.md`, `use-case.md`, `journey.md`, `requirement.md`, `term.md` or `revalidation-record.md`. Fill each part as its hint says.
   - **A journey** needs two use cases of its actor, so stamp a second use case first. It can be your ordinary example.
   - **A revalidation record** has no hints, since its stamp writes every part from its command line. Stamp it for a revalidation of your own that has something to say, such as a change you plan to what a candidate describes.
-  - **A requirement** has no stamp yet ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)), so no candidate of it can be stamped. Until it has, judge each kind's parts from its template and from the README's filled examples, and choose as step 4 says. Fill a candidate once the stamp ships, and review the choice then.
 - **Commit nothing yet.** The kind's sub-procedure ends in a commit, but a candidate waits until step 6. Once committed, its id is taken for good.
 - **Check it** with `pkit analysis validate --preview`, and read what it says of your candidate. While the format rule is proposed, the preview shows an artefact against its kind's structure where the rule would bind.
 
@@ -63,7 +62,7 @@ Do this if you wrote any entry in step 4.
 1. **Check the file** with `pkit validate`, and mend each error it reports on it.
 2. **Set the first candidate aside.** Move it out of the analysis, to a file you do not commit, such as one in the agent workspace. You compare the two below. Out of the analysis, a candidate never committed holds no id.
    - **A term** is an entry of the glossary. Copy the entry out, then delete it, or the glossary itself where its stamp created the file.
-3. **Stamp the candidate again**, as before. The stamp writes your parts, each added part's hint naming its rule. An actor or a term gets the same id. A use case or a journey gets the next free number.
+3. **Stamp the candidate again**, as before. The stamp writes your parts, each added part's hint naming its rule. An actor or a term gets the same id. A use case, a journey or a requirement gets the next free number.
 4. **Fill it, and check it** with `pkit analysis validate --preview`. The preview places a part whose rule is still proposed where that rule would bind.
 5. **Compare the two candidates,** filled, side by side. Keep the entries that read better, and repeat from step 1 if you change them.
 
