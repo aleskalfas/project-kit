@@ -118,6 +118,17 @@ TERM-methodology:
   pkit:
     friction:
       unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
+TERM-migration:
+  name: migration
+  status: active
+  definition: script that carries an installed project's state across a version of the backbone or of a component, run by an upgrade that crosses that version
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/migrations.py
+        record:
+          - COR-010
 TERM-place:
   name: place
   status: active
@@ -130,6 +141,45 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
+TERM-range:
+  name: range
+  status: active
+  definition: set of versions of the backbone or of another capability that a component declares it works with, from a floor to any upper bound
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/versioning.py
+        record:
+          - PRJ-002#D4
+          - COR-010
+          - COR-030
+TERM-release:
+  name: release
+  status: active
+  definition: set of new versions written at once on the default branch from the pending changesets, with their changelog entry
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/release.py
+        record:
+          - PRJ-002#D1
+          - PRJ-002#D3
+          - PRJ-004
+TERM-report:
+  name: report
+  status: active
+  definition: "issue an adopter files from the command line on the repository of the distribution they use: a bug, a change request or feedback"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/report.py
+        record:
+          - PRJ-008
+          - ADR-047#3
+          - COR-043#3
 TERM-surface-change:
   name: surface change
   status: active
@@ -252,6 +302,15 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The methodology maintainer:** an actor, "whoever maintains a distribution of the methodology" (`ACT-methodology-maintainer`). The role also works on parts of the system, such as the backbone and its releases. So its name, which the maintainer kept (PR #1374), uses the word more widely than this term.
 - **A capability's discipline:** what one capability packages, for a project to install or leave out (COR-017). A capability the system ships carries one part of the methodology, never the whole. A capability a project or its organisation writes is their own (COR-031 and COR-041).
 
+## TERM-migration — migration
+
+**Example:** project-management renamed its reviewer agent `pm-reviewer`. So its migration `0.55.0/001-pm-reviewer-agent-rename.sh` rewrites that name in each project's own settings, which sync never touches.
+
+**Distinctions:**
+
+- **Sync:** refreshes what a project receives from the methodology at the versions the project records, and runs no migration. A migration changes what sync cannot derive, such as a project's own settings (COR-010).
+- **The migration check:** `pkit migrations check-diff`, which finds the renames and removals of a change that no migration covers. It runs no migration.
+
 ## TERM-place — place
 
 **Example:** project-kit lists `.pkit/cli/README.md` in `friction.places`, so the backbone reads that page's anchors.
@@ -261,6 +320,38 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Documentation root:** where a project keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced tree:** a folder that sync copies into the project from elsewhere, such as the methodology's records. It is never a place, or each refresh would read as friction (COR-050 point 14).
 - **Held folder:** a folder a component declares for its held documents. No place reads a file in it as an artefact (COR-050 point 1).
+
+## TERM-range — range
+
+**Example:** the `software-analysis` capability declares `requires_backbone: ">=1.149.0,<2.0.0"`, a range on the backbone whose floor is 1.149.0.
+
+**Distinctions:**
+
+- **Floor:** the lowest version a range admits, its `>=X.Y.Z`. It rises only where a changeset declares that the component needs a newer version (PRJ-002 D4).
+- **Upper bound:** the version a range stops below, its `<A.B.C`. A release widens a bound on the backbone by itself, and a bound on another capability only on a changeset's declaration (PRJ-002 D4).
+- **Version:** the one number a component carries in its `package.yaml`. A range names versions of something the component depends on (COR-010 and COR-030).
+
+## TERM-release — release
+
+**Example:** the release of 24 August 2026 moved the backbone to 1.149.0 and project-management to 0.54.0. Its commit carries the tag `v1.149.0`.
+
+**Distinctions:**
+
+- **Changeset:** a change's declaration for the next release. A release consumes every changeset waiting for it (PRJ-002 D1).
+- **Release pull request:** the pull request that carries one release's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
+- **Release tag:** the annotated tag `v<version>` on the release commit. Only a release that moves the backbone gets one (PRJ-004).
+- **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
+
+## TERM-report — report
+
+**Example:** an adopter's `pkit report bug` files an issue titled `[Bug] …` on project-kit's repository, with the adopter's versions attached.
+
+**Distinctions:**
+
+- **Report target:** the one repository a distribution's reports go to, project-kit's own for project-kit. An adopter cannot name another (ADR-047 point 3).
+- **Tracked fix:** an issue the maintainer lists under a report's `## Tracked by` heading. One issue may fix several reports (PRJ-008).
+- **Reported note:** a scratchpad note sent as a report's text. Once the report is posted, the note moves to `reported/` (COR-043 point 3).
+- **The whole-repository report:** what the whole-repository check publishes for the default branch, such as project-kit's tracking issue. It is no report in this sense.
 
 ## TERM-surface-change — surface change
 
