@@ -778,6 +778,103 @@ def test_a_dry_run_and_a_declined_prompt_both_exit_0_and_are_told_apart(dw, monk
     assert calls["merged"] is False
 
 
+# ---- the authorisation (#1760) ------------------------------------------
+# The merge is the person's to authorise (DEC-055 point 3): `--yes`, or a yes at
+# the prompt. Off a terminal with neither, nobody can be asked, so the run
+# refuses rather than merge unasked.
+
+
+def _no_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: False, raising=False)
+
+    def no_prompt(prompt: str = "") -> str:
+        raise AssertionError(f"a run with no terminal asked: {prompt!r}")
+
+    monkeypatch.setattr("builtins.input", no_prompt)
+
+
+def test_no_yes_and_no_terminal_refuses_and_merges_nothing(dw, monkeypatch, capsys) -> None:
+    """Every gate passes, and still nothing is posted, moved or merged: the
+    refusal names the head and the commands that merge it on authorisation."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _no_terminal(monkeypatch)
+    run = dw.run(["42"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 2, False)
+    assert calls["merged"] is False
+    assert calls["moved"] is False
+    assert calls["order"] == []
+    err = capsys.readouterr().err
+    assert run.reason == (
+        "error: no authorisation to merge PR #496 at sha-hea. This run has no --yes, and no "
+        "terminal to ask at. Nothing was posted, moved or merged, and #42 stays where it is. "
+        "On the person's authorisation, merge it with `done-work 42 --yes`, or with "
+        "`land-work 42 --yes --expect-head sha-head`, which names the head it is for."
+    )
+    assert run.reason in err
+
+
+def test_no_yes_and_no_terminal_posts_no_bypass_audit(dw, monkeypatch) -> None:
+    """A bypass is posted only on the way to a merge, so a run refused for want
+    of an authorisation leaves no audit of an act it did not make."""
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
+    _no_terminal(monkeypatch)
+    run = dw.run(["42", "--bypass", "reviewer away", "--bypass-ci", "flaky"])
+    assert (run.kind, run.exit_code) == (dw.REFUSED, 2)
+    assert (calls["approval_audit"], calls["ci_audit"], calls["merged"]) == (False, False, False)
+
+
+def test_no_yes_and_no_terminal_names_the_head_the_agent_gate_judged(dw, monkeypatch) -> None:
+    """The head the refusal names is the one the merge would be pinned to."""
+    gate = dw._GateResult(passed=True, passed_via="stub", head_oid="sha-gate")
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent", agent_gate_result=gate)
+    _no_terminal(monkeypatch)
+    run = dw.run(["42"])
+    assert run.kind == dw.REFUSED
+    assert "PR #496 at sha-gat." in run.reason
+    assert "--expect-head sha-gate`" in run.reason
+
+
+def test_a_gate_refusal_still_comes_first_off_a_terminal(dw, monkeypatch) -> None:
+    """What would need a change is said before the missing authorisation."""
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, gate_passed=False)
+    _no_terminal(monkeypatch)
+    run = dw.run(["42"])
+    assert (run.kind, run.exit_code) == (dw.REFUSED, 1)
+    assert run.reason == "[refused] approval gate"
+
+
+def test_yes_off_a_terminal_merges(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _no_terminal(monkeypatch)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
+    assert calls["merge_head"] == "sha-head"
+
+
+def test_a_dry_run_off_a_terminal_needs_no_yes(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    _no_terminal(monkeypatch)
+    run = dw.run(["42", "--dry-run"])
+    assert (run.kind, run.exit_code) == (dw.PLANNED, 0)
+    assert calls["merged"] is False
+
+
+def test_a_yes_at_the_terminal_merges(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
+    monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
+    asked: list[str] = []
+
+    def answer(prompt: str = "") -> str:
+        asked.append(prompt)
+        return "y"
+
+    monkeypatch.setattr("builtins.input", answer)
+    run = dw.run(["42"])
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
+    assert asked == ["Squash-merge + close? [y/N] "]
+    assert calls["merged"] is True
+
+
 def test_a_step_after_the_merge_failing_is_owed_not_refused(dw, monkeypatch) -> None:
     """The merge stands; what failed after it is owed to a re-run."""
     calls = _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP)
@@ -3304,6 +3401,23 @@ def test_a_later_run_finds_the_pr_merged_and_completes_what_follows(
     assert f"  PR:      #496, merged at {_MERGED_AT}; completing what follows the merge" in out
     assert "  closes:  #42\n" in out
     assert "[ok] merged + closed #42" in out
+
+
+def test_completing_a_merged_pr_off_a_terminal_needs_no_yes(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Only a merge needs the person's authorisation (#1760): completing a PR
+    that has merged merges nothing, so a run with no terminal and no `--yes`
+    completes it, as `land-work` run again without `--yes` relies on."""
+    run = _wire_second_run(
+        dw, tmp_path, monkeypatch, issues={42: _CLOSED_BY_THE_MERGE, 43: _CLOSED_BEFORE}
+    )
+    _no_terminal(monkeypatch)
+    assert _run_main(dw, monkeypatch, ["42"]) == 0
+    assert run.merges() == []
+    assert run.calls["order"] == _AFTER_THE_MERGE
 
 
 @pytest.mark.parametrize(

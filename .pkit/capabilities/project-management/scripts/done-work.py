@@ -15,6 +15,14 @@ goes through Review first, #1162). Per DEC-026:
                   [--skip-checkbox-gate]
                   [--bypass-reviewer <name> ... --bypass-reviewer-reason "<r>"]
 
+Authorisation (#1760): the merge is the person's to authorise
+([project-management:DEC-055-pr-lists-answers] point 3) — `--yes`, or a yes at
+the prompt a run at a terminal asks. A run with neither, no `--yes` and no
+terminal, runs every gate and then refuses (exit 2), naming the head it would
+merge: nothing is posted, moved or merged. Completing a PR that has merged
+already merges nothing, so that path asks at a terminal and goes on without
+one, as before.
+
 Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
   2. The PR's last non-author comment starts with `Approved`, OR
@@ -196,7 +204,8 @@ Exit codes:
   0  merged + done
   1  membership refusal / approval, checkbox or CI gate fails; a queue the
      run may not go around or through
-  2  usage error / gh failure
+  2  usage error / gh failure; a run with no `--yes` and no terminal to ask
+     at, which merges nothing
   3  the merge failed; the PR left the merge queue without merging, or was
      taken out of it because its head moved; or, called with a pinned head
      (`run(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is
@@ -383,7 +392,8 @@ PLANNED = "planned"
 #: go because its head moved: nothing merged.
 HEAD_MOVED = "head-moved"
 #: Nothing merged: a gate, the queue, GitHub or a step before the merge said
-#: no. `DoneWorkRun.retry` tells whether running again unchanged can help.
+#: no, or no authorisation was given and there was no terminal to ask at.
+#: `DoneWorkRun.retry` tells whether running again unchanged can help.
 REFUSED = "refused"
 #: Nothing was changed: what the run needed to read could not be read, or the
 #: run could not start (no capability, an un-bootstrapped project).
@@ -611,7 +621,14 @@ def run(
         help=f"Default: <repo-root>/.pkit/capabilities/{CAPABILITY_NAME}/.",
     )
     parser.add_argument("--dry-run", action="store_true")
-    parser.add_argument("--yes", action="store_true")
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help=(
+            "The authorisation to merge. Without it, done-work asks at a terminal, and "
+            "off one it refuses (exit 2) once its gates have run, merging nothing."
+        ),
+    )
     session_guard.add_override_argument(parser)
     args = parser.parse_args(argv)
     if branch_reading is not None and branch_reading.issue != args.issue_number:
@@ -1046,7 +1063,16 @@ def run(
         )
         return _ended(PLANNED, 0)
 
-    if not args.yes and sys.stdin.isatty():
+    # The merge is the person's to authorise (DEC-055 point 3): `--yes`, or a yes
+    # at the prompt. Off a terminal with no `--yes` nobody is there to ask, and a
+    # run that merged anyway would merge unasked, so it refuses (#1760).
+    if not args.yes:
+        if not sys.stdin.isatty():
+            return _ended(
+                REFUSED,
+                2,
+                _no_authorisation(args.issue_number, pr_number, gate_result.head_oid or pr_head),
+            )
         question = "Enqueue + close once merged?" if queue.has_queue else "Squash-merge + close?"
         reply = input(f"{question} [y/N] ").strip().lower()
         if reply not in ("y", "yes"):
@@ -1274,6 +1300,23 @@ def _head_not_pinned(issue_number: int, pr_number: object, head: str, pinned_hea
         f"{short_sha(pinned_head)}, the head this run was asked to land: its checks "
         f"and review were for that head. Nothing was posted or merged, and "
         f"#{issue_number} stays where it is."
+    )
+
+
+def _no_authorisation(issue_number: int, pr_number: object, head: str) -> str:
+    """The refusal of a run with no `--yes` and no terminal to ask at (#1760): the
+    merge is the person's to authorise (DEC-055 point 3), so it is never guessed."""
+    named = (
+        f", or with `land-work {issue_number} --yes --expect-head {head}`, which names the "
+        "head it is for"
+        if head
+        else ""
+    )
+    return (
+        f"error: no authorisation to merge PR #{pr_number} at {short_sha(head)}. This run "
+        "has no --yes, and no terminal to ask at. Nothing was posted, moved or merged, "
+        f"and #{issue_number} stays where it is. On the person's authorisation, merge it "
+        f"with `done-work {issue_number} --yes`{named}."
     )
 
 
