@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T11:43:11Z
+      at: 2026-10-18T13:12:10Z
       outcome: unchanged
-      unchanged-because: checks.yml gains only a comment on the changeset guard, naming its range tie. Its steps, its triggers and the aggregator it runs stay as they were, so what this guide says CI runs, and when, holds.
+      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, its containers left out. This page cites its points 3, 4 and 12 on answers, deferrals and the required status, all unchanged.
 ---
 
 # Contributing to project-kit

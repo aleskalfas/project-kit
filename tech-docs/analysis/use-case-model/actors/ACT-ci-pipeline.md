@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T11:43:06Z
+      at: 2026-10-18T13:12:06Z
       outcome: unchanged
-      unchanged-because: PRJ-002 lets a branch correct a range that excludes the version the tree carries, and the guard admits that correction. A pull request still declares each surface change in a changeset the guard checks, and the release still cuts the tag, so the Note's two steps hold.
+      unchanged-because: "COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds: its content and mode, its containers left out. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged."
 ---
 
 # ACT-ci-pipeline — CI pipeline

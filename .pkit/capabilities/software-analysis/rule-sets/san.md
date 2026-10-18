@@ -50,8 +50,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T12:26:43Z
-          outcome: updated
+          at: 2026-10-18T13:12:13Z
+          outcome: unchanged
+          unchanged-because: COR-050 point 5 says a path anchor stands on a file's content and mode, a container of a file a place holds left out, and points 1 and 2 were reached through the Decision's lead, which says the same. This rule gives a view a place holds an artefact anchor and any other view a path anchor on its file, and its account of an artefact and its friction block still holds.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
