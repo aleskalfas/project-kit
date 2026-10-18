@@ -98,6 +98,19 @@ head owes no answer, but what it declares is checked and a change of its
 a moved one does. A base whose exclusions do not read is read under head's,
 and reported.
 
+**A link that asks for a revisit of its targets** (point 16; `_triggers`,
+`_revisit_findings`). A capability place may declare links of the artefacts
+it holds (`RevisitLink`, read at head from every capability place matching
+the source's file, `Discovery.links`): an own field listing the targets by
+anchor value, and trigger fields. A link is triggered where a trigger field
+differs, parsed, between a source and its base counterpart — never for a new
+source, nor one under an excluded path at head. Each target it lists at both
+sides that resolves at head is `revisited` where it changed between the base
+and head, by the rule above, or where a `revisited` entry the diff wrote on
+the source gives it a new reason (`revisits_written`); otherwise it is
+`unrevisited`, which enforcing mode fails on. The comparison is with the
+base, whatever the source's `at` says.
+
 **What it reports** (points 7, 11, 12): friction; answers; a bump with
 nothing behind it (`at` changed, but no answer stands); dead anchors *of the
 pull request* (resolving to nothing at head, and either added in the diff or
@@ -119,18 +132,19 @@ artefact, read from the one edge set the cycle check reads too
 (`upstream_artefacts`).
 
 **What it lists** (COR-050 point 3 and Implications): every answer the change
-wrote — each revalidation, deferral and reason for having no anchors, word for
-word — read from each head artefact carrying the block against its base
-counterpart (`_written_answers`), with whether the diff asked for it and
-whether the check accepts it (`AnswerStatus`) — `written-back` where it puts
+wrote — each revalidation, deferral, reason for having no anchors and revisit
+entry, word for word, and each target it revisited by changing it — read from
+each head artefact carrying the block against its base counterpart
+(`_written_answers`), with whether the diff asked for it and whether the
+check accepts it (`AnswerStatus`) — `written-back` where it puts
 back an `at`, or a deferral that covers nothing, the artefact carried before;
 every deferral put back is flagged `put_back`, whether it covers or not. It
 is the list the person authorising a merge is shown: derived from the
 artefacts, never composed.
 
 **Modes** (point 12): `warning` reports and exits 0; `enforcing` exits 1 on
-friction, dead anchors, unresolved kinds, a resolver's missing answer and
-bumps (`FAILING_KINDS`). An outdated base never fails. Dormant — counts only,
+friction, dead anchors, unresolved kinds, a resolver's missing answer, bumps
+and targets not revisited (`FAILING_KINDS`). An outdated base never fails. Dormant — counts only,
 exit 0 — when no place is declared or nothing in the places carries the
 container (point 15).
 
@@ -192,10 +206,14 @@ from project_kit.friction_discovery import (
     RecordContent,
     RepositoryTree,
     ResolverCommand,
+    Revisit,
+    RevisitLink,
     content,
     deferral_reason,
     discover_artefacts,
     entry_reason,
+    link_targets,
+    own_field,
     parsed_at,
     pattern_matcher,
     record_content,
@@ -280,6 +298,10 @@ class FindingKind(Enum):
     LEFT_OUT = "left-out"
     OUTDATED_BASE = "outdated-base"
     UNREADABLE = "unreadable"
+    # A target of a link the diff triggered (COR-050 point 16): changed in the diff, or
+    # answered by a revisit entry the diff wrote — and one with neither.
+    REVISITED = "revisited"
+    UNREVISITED = "unrevisited"
 
 
 #: The findings enforcing mode fails on (COR-050 point 12). An unresolved kind
@@ -299,6 +321,7 @@ FAILING_KINDS = frozenset(
         FindingKind.DEAD_ANCHOR,
         FindingKind.UNRESOLVED_KIND,
         FindingKind.NO_ANSWER,
+        FindingKind.UNREVISITED,
     }
 )
 
@@ -341,6 +364,11 @@ class Finding:
 #: The `answer` of an entry of the answers list that is a reason for having no
 #: anchors (COR-050 point 1), beside a revalidation's outcome and `deferred`.
 UNANCHORED = "unanchored"
+
+#: The `answer` of an entry of the answers list that is a revisit entry (COR-050
+#: point 16): a reason a source gives for one target of its links, its `outcome`
+#: `unchanged` or `deferred` and its `target` the anchor it names.
+REVISITED = "revisited"
 
 
 class AnswerStatus(Enum):
@@ -399,6 +427,12 @@ class WrittenAnswer:
       one of them. Read against the base even for an `at` written back, which is
       judged against earlier points. Empty for anything else, and for a new
       artefact, which nothing asks.
+    - For a revisit entry (`answer` is `revisited`, COR-050 point 16):
+      `outcome`, `unchanged` or `deferred` as written; `target`, the anchor it
+      names; `links`, the fields of the links its places declare that list the
+      target at head; `fields`, the trigger fields the diff changed, where it
+      triggered a link listing the target — empty otherwise. `None` and empty
+      for every other answer, whose JSON leaves the four keys out.
     """
 
     artefact: str  # the artefact's id
@@ -412,9 +446,15 @@ class WrittenAnswer:
     new: bool
     put_back: bool = False
     changed: tuple[Anchor, ...] = ()
+    outcome: str | None = None
+    target: Anchor | None = None
+    links: tuple[str, ...] = ()
+    fields: tuple[str, ...] = ()
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        """The entry as the JSON document gives it: a revisit adds `outcome`, `target`,
+        `links` and `fields`, which no other answer carries."""
+        document: dict[str, Any] = {
             "artefact": self.artefact,
             "location": self.location,
             "answer": self.answer,
@@ -427,6 +467,12 @@ class WrittenAnswer:
             "put_back": self.put_back,
             "changed": [_anchor_json(anchor) for anchor in self.changed],
         }
+        if self.answer == REVISITED:
+            document["outcome"] = self.outcome
+            document["target"] = _anchor_json(self.target)
+            document["links"] = list(self.links)
+            document["fields"] = list(self.fields)
+        return document
 
 
 @dataclass(frozen=True)
@@ -1669,6 +1715,142 @@ class _Behind:
 
 
 @dataclass(frozen=True)
+class _Trigger:
+    """A target a triggered link asks after (COR-050 point 16): the fields of the links
+    listing it, and the trigger fields the diff changed."""
+
+    anchor: Anchor
+    links: tuple[str, ...]
+    fields: tuple[str, ...]
+
+
+def _triggers(
+    artefact: Artefact,
+    before: Artefact | None,
+    links: Sequence[RevisitLink],
+    resolving: Collection[Anchor],
+) -> tuple[_Trigger, ...]:
+    """The targets the diff asks the source `artefact` to revisit (COR-050 point 16), in
+    the order its links and their targets are written.
+
+    A link is triggered when one of its trigger fields differs, parsed, between
+    the base counterpart `before` and head — absent at one side and present at
+    the other included. A source new in the diff triggers nothing, nor one under
+    an excluded path at head; a removed one is no head artefact. A triggered
+    link asks after each target it lists at both sides that resolves at head
+    (`resolving`): one it lists anew was linked against the new state, and a dead
+    one is a dead anchor already.
+    """
+    if before is None or artefact.excluded:
+        return ()
+    found: dict[Anchor, tuple[dict[str, None], dict[str, None]]] = {}
+    for link in links:
+        changed = [f for f in link.when if own_field(artefact, f) != own_field(before, f)]
+        if not changed:
+            continue
+        earlier = frozenset(link_targets(before, link))
+        for anchor in link_targets(artefact, link):
+            if anchor not in earlier or anchor not in resolving:
+                continue
+            names, fields = found.setdefault(anchor, ({}, {}))
+            names[link.targets] = None
+            fields.update(dict.fromkeys(changed))
+    return tuple(
+        _Trigger(anchor, tuple(names), tuple(fields)) for anchor, (names, fields) in found.items()
+    )
+
+
+#: The outcomes a revisit entry may give (COR-050 point 16): friction's own, but
+#: `updated`, which a target answers by changing in the diff.
+REVISIT_OUTCOMES: tuple[str, ...] = (Answer.UNCHANGED.value, Answer.DEFERRED.value)
+
+
+@dataclass(frozen=True)
+class WrittenRevisit:
+    """A revisit entry the diff wrote (`revisits_written`): the entry, and whether its
+    reason is new — not among the base's reasons for its target. Only an entry with a
+    new reason answers (COR-050 point 16): one whose outcome alone changed is edited."""
+
+    entry: Revisit
+    new_reason: bool
+
+
+def revisits_written(artefact: Artefact, before: Artefact | None) -> list[WrittenRevisit]:
+    """The revisit entries the diff wrote in the artefact (COR-050 point 16): every entry
+    at head whose outcome or folded reason is not the base's for its target — new, or
+    rewritten — in written order, each with whether its reason is new. Every entry of a
+    new artefact, each with a new reason."""
+    words: dict[Anchor, set[tuple[str | None, str | None]]] = {}
+    reasons: dict[Anchor, set[str | None]] = {}
+    for entry in before.revisits if before is not None else ():
+        words.setdefault(entry.anchor, set()).add(entry.words)
+        reasons.setdefault(entry.anchor, set()).add(entry.reason)
+    return [
+        WrittenRevisit(e, e.reason not in reasons.get(e.anchor, set()))
+        for e in artefact.revisits
+        if e.words not in words.get(e.anchor, set())
+    ]
+
+
+def _fields_named(fields: Sequence[str]) -> str:
+    """Trigger or link fields as a finding names them: `` `statement` and `measure` ``."""
+    return _and([f"`{field}`" for field in fields])
+
+
+def _revisit_findings(
+    artefact: Artefact,
+    before: Artefact | None,
+    triggers: Sequence[_Trigger],
+    own: frozenset[str],
+    head: Side,
+    base: Side,
+    diff: Diff,
+    kinds: AnchorKinds,
+) -> tuple[list[Finding], tuple[Anchor, ...]]:
+    """The findings on each target the diff asks the source to revisit (COR-050 points 12
+    and 16), and the targets the diff answered by changing them.
+
+    A target is revisited when what it stands on differs between the base and
+    head, by point 5's rule (`_anchor_question`, the source's own file left out),
+    or when a revisit entry the diff wrote names it with an outcome of
+    `REVISIT_OUTCOMES` and a new reason — `revisited`, never failing. A target with
+    neither is `unrevisited`, which enforcing mode fails on. An entry whose outcome
+    alone changed answers nothing: an old reason would answer a new change.
+    """
+    written: dict[Anchor, Revisit] = {}
+    for found in revisits_written(artefact, before):
+        if found.new_reason:
+            written.setdefault(found.entry.anchor, found.entry)
+    findings: list[Finding] = []
+    changed: list[Anchor] = []
+    for trigger in triggers:
+        anchor = trigger.anchor
+        lists = "lists" if len(trigger.links) == 1 else "list"
+        subject = (
+            f"its {_fields_named(trigger.fields)} changed in this diff, and "
+            f"{_fields_named(trigger.links)} {lists} this target"
+        )
+        question, _note = _anchor_question(anchor, own, head, base, diff, kinds)
+        entry = written.get(anchor)
+        if question is not None:
+            kind, answer = FindingKind.REVISITED, Answer.UPDATED
+            changed.append(anchor)
+            message = f"{subject}; revisited: the target changed in this diff"
+        elif entry is not None and entry.outcome in REVISIT_OUTCOMES and entry.reason:
+            kind, answer = FindingKind.REVISITED, Answer(entry.outcome)
+            message = f"{subject}; revisited: {entry.outcome} — {entry.reason}"
+        else:
+            kind, answer = FindingKind.UNREVISITED, None
+            message = (
+                f"{subject}, which neither changed in this diff nor carries an answer: change "
+                f"it, or record on the source why it still stands (`unchanged`) or which "
+                f"follow-up revisits it (`deferred`) in `revisited`"
+            )
+        findings.append(Finding(kind, message, artefact.id, artefact.location, anchor, answer))
+    return findings, tuple(changed)
+
+
+@dataclass(frozen=True)
 class _Judged:
     """What the answers list reads of `_judge`'s reading of one artefact: the
     revalidation as judged, whether its `at` is written back — a value it carried
@@ -1676,13 +1858,17 @@ class _Judged:
     question, and the anchors the diff from the base changed under it (`changed`),
     each once in the order the diff asks them. Against the base always: an `at`
     written back is judged against earlier points, whose questions can name an
-    anchor this change never touched."""
+    anchor this change never touched. `triggers` are the targets the diff asked
+    the source to revisit, and `changed_targets` those the diff answered by
+    changing them (COR-050 point 16)."""
 
     revalidation: _Revalidation | None = None
     written_back: bool = False
     put_back: frozenset[Anchor] = frozenset()
     covering: frozenset[Anchor] = frozenset()
     changed: tuple[Anchor, ...] = ()
+    triggers: tuple[_Trigger, ...] = ()
+    changed_targets: tuple[Anchor, ...] = ()
 
 
 def _judge(
@@ -1694,10 +1880,15 @@ def _judge(
     kinds: AnchorKinds,
     resolved_at_base: Callable[[str], bool],
     behind: _Behind,
+    links: Sequence[RevisitLink] = (),
 ) -> tuple[list[Finding], list[_Question], _Judged]:
     """The findings about one head artefact carrying the `friction` block, the questions
     the diff asked it — none for a new or an excluded one — and what the answers list
     reads of the judgement (`_written_answers`).
+
+    Last, the targets of the `links` its places declare that the diff asks it to
+    revisit (COR-050 point 16; `_triggers`, `_revisit_findings`), judged against
+    the base whatever its `at` says: the question is about this diff.
 
     An artefact under an excluded path at head owes no answer (COR-050 point
     7), as the whole-repository check never judges one stale: nothing in the
@@ -1829,12 +2020,19 @@ def _judge(
     if standing is not None and not questions:
         message = f"revalidated with no changed anchor: {_answer_text(standing, artefact)}"
         findings.append(finding(FindingKind.REVALIDATED, message, None, standing))
+    triggers = _triggers(artefact, before, links, resolving)
+    revisit_findings, changed_targets = _revisit_findings(
+        artefact, before, triggers, own, head, base, diff, kinds
+    )
+    findings.extend(revisit_findings)
     judged = _Judged(
         revalidation,
         written is not None and parsed_at(artefact) is not None,
         frozenset(anchor for anchor, back in put_backs.items() if back is not None),
         frozenset(covering),
         tuple(dict.fromkeys(q.anchor for q in against_base if q.anchor is not None)),
+        triggers,
+        changed_targets,
     )
     return findings, questions, judged
 
@@ -2035,11 +2233,13 @@ def _written_answers(
     before: Artefact | None,
     questions: Sequence[_Question],
     judged: _Judged,
+    links: Sequence[RevisitLink] = (),
 ) -> list[WrittenAnswer]:
     """The answers the change wrote in one head artefact's block, read against its base
     counterpart `before` (`None` when it has none), the `questions` the diff asked it and
-    how the check judged them (`_judge`): its revalidation, its deferrals by anchor, then
-    its reason for having no anchors (COR-050 points 1, 3 and 4).
+    how the check judged them (`_judge`): its revalidation, its deferrals by anchor, its
+    reason for having no anchors, then its revisit entries by target, read with the
+    `links` its places declare (COR-050 points 1, 3, 4 and 16; `_written_revisits`).
 
     - A **revalidation** is listed where the parsed `at`, the `outcome` or the
       folded `unchanged-because` differs — an absent one counting as a value, so
@@ -2169,7 +2369,73 @@ def _written_answers(
     unanchored = artefact.unanchored_because
     if unanchored is not None and (before is None or unanchored != before.unanchored_because):
         entries.append(entry(UNANCHORED, None, unanchored))
+    entries.extend(_written_revisits(artefact, before, judged, links))
     return entries
+
+
+def _written_revisits(
+    artefact: Artefact,
+    before: Artefact | None,
+    judged: _Judged,
+    links: Sequence[RevisitLink],
+) -> list[WrittenAnswer]:
+    """The revisits the change made on the artefact's targets (COR-050 points 12 and 16;
+    `revisits_written`), sorted by target, each with the fields of the links listing its
+    target at head, and the trigger fields the diff changed where one of them was
+    triggered:
+
+    - **A target the change answered by changing it**, outcome `updated`, with no
+      words: it leaves no mark on the artefact, so the list is where the reviewer
+      meets it. Always asked for.
+    - **A revisit entry** the change wrote — new, or its outcome or reason
+      rewritten — a target written twice, validation's error, listing each entry.
+      One whose reason is new `stands`, and is asked for where its target owes
+      an answer — a target of a link the diff triggered, whether the entry or
+      the target's own change answered it — the first written for that target
+      only (COR-050 point 16, "Who decides"). One whose outcome alone changed is
+      `edited`, and answers nothing.
+    """
+    triggered = {trigger.anchor: trigger for trigger in judged.triggers}
+    listing: dict[Anchor, dict[str, None]] = {}
+    for link in links:
+        for anchor in link_targets(artefact, link):
+            listing.setdefault(anchor, {})[link.targets] = None
+
+    def revisit(
+        target: Anchor, outcome: str | None, reason: str | None, status: AnswerStatus, asked: bool
+    ) -> WrittenAnswer:
+        trigger = triggered.get(target)
+        return WrittenAnswer(
+            artefact.id,
+            artefact.location,
+            REVISITED,
+            None,
+            reason,
+            (),
+            asked,
+            status,
+            new=before is None,
+            outcome=outcome,
+            target=target,
+            links=tuple(listing.get(target, {})),
+            fields=trigger.fields if trigger is not None else (),
+        )
+
+    found: list[tuple[Anchor, int, WrittenAnswer]] = [
+        (target, 0, revisit(target, Answer.UPDATED.value, None, AnswerStatus.STANDS, True))
+        for target in judged.changed_targets
+    ]
+    answered: set[Anchor] = set()
+    for written in revisits_written(artefact, before):
+        entry = written.entry
+        target = entry.anchor
+        asked = written.new_reason and target in triggered and target not in answered
+        if asked:
+            answered.add(target)
+        status = AnswerStatus.STANDS if written.new_reason else AnswerStatus.EDITED
+        found.append((target, 1, revisit(target, entry.outcome, entry.reason, status, asked)))
+    found.sort(key=lambda item: (item[0].kind, item[0].value, item[1]))
+    return [answer for _target, _rank, answer in found]
 
 
 # --- order ---------------------------------------------------------------------
@@ -2435,11 +2701,12 @@ def run_change_check(
             artefact = head_discovery.artefacts[index]
             if artefact.has_friction_block:
                 before = counterparts.get(index)
+                links = head_discovery.links(artefact)
                 found, questions, judgement = _judge(
-                    artefact, before, head, base, diff, kinds, resolved_at_base, behind
+                    artefact, before, head, base, diff, kinds, resolved_at_base, behind, links
                 )
                 findings.extend(found)
-                answers.extend(_written_answers(artefact, before, questions, judgement))
+                answers.extend(_written_answers(artefact, before, questions, judgement, links))
     finally:
         behind.close()
     for unreadable in sorted(head_discovery.unreadable, key=lambda u: u.path):
@@ -2573,11 +2840,19 @@ _LEGEND: dict[FindingKind, str] = {
         "`friction.exclude` took files from an anchor and the diff changes none: reported only"
     ),
     FindingKind.UNREADABLE: "front matter, or the base's `friction.exclude`, the check cannot read",
+    FindingKind.REVISITED: (
+        "a target of a link the diff triggered: it changed in the diff, or the source answers "
+        "for it"
+    ),
+    FindingKind.UNREVISITED: (
+        "a target of a link the diff triggered that neither changed nor carries an answer on "
+        "the source"
+    ),
 }
 
 _MODE_GLOSS = {
-    ENFORCING: "fails on friction, dead anchors, unresolved kinds, missing answers and bumps; an "
-    "outdated base only reports",
+    ENFORCING: "fails on friction, dead anchors, unresolved kinds, missing answers, bumps and "
+    "targets not revisited; an outdated base only reports",
     "warning": "reports and passes",
 }
 
@@ -2717,7 +2992,11 @@ def _answer_flags(answer: WrittenAnswer) -> list[str]:
     if answer.status is AnswerStatus.BUMP:
         flags.append("re-check date changed with nothing behind it")
     if answer.status is AnswerStatus.EDITED:
-        flags.append("edited without a new re-check")
+        flags.append(
+            "outcome changed without a new reason, which answers nothing"
+            if answer.answer == REVISITED
+            else "edited without a new re-check"
+        )
     if answer.status is AnswerStatus.WRITTEN_BACK:
         flags.append(
             "re-check date set back to one it had before, which answers nothing"
@@ -2736,6 +3015,8 @@ def _answer_lines(answer: WrittenAnswer) -> list[str]:
     saying the change modifies it, and an answer about no anchor reads `<location> —
     <outcome>`. Every word written, any character that is not printable escaped
     (`printable`)."""
+    if answer.answer == REVISITED:
+        return [printable(_revisit_line(answer))]
     outcome = OUTCOME_WORDS.get(answer.answer, answer.answer) if answer.answer else NO_OUTCOME
     sentence = outcome[:1].upper() + outcome[1:]
     if answer.changed:
@@ -2755,6 +3036,25 @@ def _answer_lines(answer: WrittenAnswer) -> list[str]:
         for held in answer.kept
     ]
     return [printable(text) for text in (line, *kept)]
+
+
+def _revisit_line(answer: WrittenAnswer) -> str:
+    """A revisit entry as the list says it (COR-050 point 16): `<location> names <target>
+    through <links>, and this change modifies its <fields>. <Outcome> (<flag>):
+    "<words>"`. Without links, or where the change triggered none, that part is left out:
+    the outcome is about the target, never the source."""
+    target = _anchor_named(answer.target) if answer.target is not None else "a target"
+    line = f"{answer.location} names {target}"
+    if answer.links:
+        line += f" through {_and(list(answer.links))}"
+    if answer.fields:
+        line += f", and this change modifies its {_and(list(answer.fields))}"
+    outcome = OUTCOME_WORDS.get(answer.outcome or "", answer.outcome or NO_OUTCOME)
+    line += f". {outcome[:1].upper() + outcome[1:]}"
+    line += "".join(f" ({flag})" for flag in _answer_flags(answer))
+    if answer.reason is not None:
+        line += f': "{answer.reason}"'
+    return line
 
 
 def _header_lines(result: ChangeCheck) -> list[str]:
@@ -2823,6 +3123,7 @@ def _failing_summary(result: ChangeCheck) -> str:
         (FindingKind.UNRESOLVED_KIND, "unresolved kind", "unresolved kinds"),
         (FindingKind.NO_ANSWER, "missing answer", "missing answers"),
         (FindingKind.BUMP, "bump", "bumps"),
+        (FindingKind.UNREVISITED, "target not revisited", "targets not revisited"),
     ]
     return ", ".join(
         counted(result.count(kind), one, many)
