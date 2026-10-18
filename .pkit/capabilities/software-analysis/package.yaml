@@ -79,6 +79,11 @@ docs:
 # place to that place's kind. None admits a project place (no
 # `project-places`): the capability checks only the artefacts in its own
 # places. The held records take no type.
+#
+# COR-050 point 16 — each kind of requirement's place declares the core's
+# signal (DEC-002 point 4): a change to its statement, measure or applies-to
+# asks for a revisit of every anchor but those its actors and refines list,
+# which the check holds equal to its anchors within the analysis (point 6).
 friction:
   types:
     actor:
@@ -116,14 +121,26 @@ friction:
       path: requirements/quality
       type: quality-requirement
       description: The quality requirements, one file each, in folders by functional area when the project groups them.
+      revisits:
+        - all-but: [actors, refines]
+          when: [statement, measure, applies-to]
+          description: A changed obligation asks for a revisit of every anchor outside the analysis, the records, views, tests and code it names. The anchors its actors and refines list stay out (DEC-002 point 4).
     - location: analysis
       path: requirements/functional
       type: functional-requirement
       description: The functional requirements, one file each, in folders by functional area when the project groups them.
+      revisits:
+        - all-but: [actors, refines]
+          when: [statement, measure, applies-to]
+          description: A changed obligation asks for a revisit of every anchor outside the analysis, the records, views, tests and code it names. The anchors its actors and refines list stay out (DEC-002 point 4).
     - location: analysis
       path: requirements/constraints
       type: constraint
       description: The constraints, one file each, in folders by functional area when the project groups them.
+      revisits:
+        - all-but: [actors, refines]
+          when: [statement, measure, applies-to]
+          description: A changed obligation asks for a revisit of every anchor outside the analysis, the records, views, tests and code it names. The anchors its actors and refines list stay out (DEC-002 point 4).
   held:
     - location: analysis
       path: revalidations

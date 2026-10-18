@@ -65,6 +65,12 @@ Then run the checks in the shared framing's "After stamping", `pkit analysis val
 
 ## Later
 
+- **Changing its obligation.** A change to its statement, its measure or where it holds asks for a revisit of every anchor outside the analysis: each record, view, test and file of code it names (DEC-002 point 4). Its actors and the requirements it refines stay out. In the same change, answer each such target in one of three ways:
+  - **Change it**, such as the test that checks the old measure.
+  - **Say why it still stands:** `pkit friction revisit <REQ-id> --target <kind>:<value> --outcome unchanged --reason "<why>"`.
+  - **Leave it out of date** until an open follow-up revisits it: `--outcome deferred`, its reason naming the follow-up.
+
+  `pkit friction check` lists each target still owed (COR-050 point 16). A change to a body part asks for no revisit.
 - **Changing its kind.** Move the file to the other kind's folder, and keep its id.
   - Rewrite it to that kind's structure. A constraint says who imposes it where the other two kinds say why they are needed, so that part changes.
   - The heading shows the new kind.
