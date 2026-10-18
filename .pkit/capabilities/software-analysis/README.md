@@ -14,7 +14,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-18T12:26:45Z
+      at: 2026-10-18T13:29:21Z
       outcome: updated
 ---
 
