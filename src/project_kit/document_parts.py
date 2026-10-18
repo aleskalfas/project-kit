@@ -105,9 +105,19 @@ def parse_front_matter(text: str) -> tuple[Mapping[str, Any] | None, str, str | 
         data = _yaml.load(io.StringIO(front_matter))
     except YAMLError as exc:
         return None, body, yaml_reason(exc)
+    except (TypeError, ValueError, KeyError) as exc:
+        return None, body, _unbuilt(exc)
     if not isinstance(data, Mapping):
         return None, body, None
     return cast("Mapping[str, Any]", as_written(data)), body, None
+
+
+def _unbuilt(exc: Exception) -> str:
+    """Why YAML did not parse where ruamel fails outside its own errors: a complex key
+    holding a mapping, `? [{a: 1}]`, is no key a mapping can hold (`TypeError`), and a
+    tag on text it cannot convert, `!!int x` or `!!bool x`, builds no value (`ValueError`,
+    `KeyError`)."""
+    return f"cannot build a value from it: {type(exc).__name__}: {exc}"
 
 
 def yaml_reason(exc: YAMLError) -> str:

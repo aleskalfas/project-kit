@@ -573,7 +573,11 @@ def _resolve(
 
 def read_version(rel: str, found: DiscoveredFile, text: str) -> Version | str:
     """One version's artefacts and where each `revalidated` block and each `revisited`
-    list is written in it, or why it cannot be read."""
+    list is written in it, or why it cannot be read.
+
+    Each is found under the keys discovery reads it by (`key_span`). Where those keys
+    cannot be told, as where `1` and `"1"` are both read as `1`, the text found could be
+    another entry's, so the version cannot be read."""
     artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
     if reason is not None:
         return f"its front matter does not parse ({reason})"
@@ -587,11 +591,8 @@ def read_version(rel: str, found: DiscoveredFile, text: str) -> Version | str:
                 continue
             keys = (*carrier_keys(artefact), CONTAINER_KEY, FRICTION_KEY, which)
             span = key_span(front_matter, keys)
-            if span is None:
-                return (
-                    f"the {_named(which, artefact.location)} is not written directly "
-                    f"(a YAML alias or merge key)"
-                )
+            if isinstance(span, str):
+                return f"the {_named(which, artefact.location)} {span}"
             start = offset + span.start
             column = start - (text.rfind("\n", 0, start) + 1)
             written = front_matter[span.start : span.end]

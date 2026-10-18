@@ -55,6 +55,7 @@ pkit:
         - src/project_kit/rule_set_reading.py
         - src/project_kit/rule_sets.py
         - src/project_kit/document_parts.py
+        - src/project_kit/backbone_schemas.py
         - src/project_kit/artefact_parts.py
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
@@ -78,7 +79,7 @@ pkit:
         - .pkit/lifecycle/README.md#what-ships-a-migration
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
     revalidated:
-      at: 2026-10-18T20:17:11Z
+      at: 2026-10-18T20:35:39Z
       outcome: updated
 ---
 
@@ -1411,7 +1412,9 @@ The **debt listing** (COR-050 point 9): the debt derived from git, never kept in
   - **In flow style** (`pkit: { friction: { … } }`), a key's characters are replaced by a marker, one for each key, so a block or a list added there lies outside.
   - **A block or a list removed,** or emptied, lies outside in either style, since it drops every answer in it. So does a block turned to a value that is no mapping, or a list turned to one that is no list. An entry rewritten, added or removed within a list lies inside it, as a deferral does within a block.
   - **Front matter with a YAML anchor** lies outside: through an alias, the text of a block or a list could change a value outside it while the text outside stays the same.
-  - **Anything else** lies outside, with why: added, removed, its mode or line endings changed, not an artefact's file, front matter that does not parse, or a change outside its blocks and lists.
+  - **Keys on its path that collide once rendered** lie outside. Front matter is read with each key as text, so `0x1` is read as `1` and `true` as `True`. Of two keys read alike, such as `1` and `"1"`, only the last entry is read. A block or a list is found under the keys it is read by. Where two keys on its path are read alike, the text taken out could be the other entry's, so the file lies outside.
+  - **A merge key on that path** lies outside, whether written `<<` or tagged `!!merge`. Through it, keys written in its value are read as its mapping's own.
+  - **Anything else** lies outside, with why: added, removed, its mode or line endings changed, not an artefact's file, front matter that does not parse, or a change outside its blocks and lists. Front matter holding a value YAML cannot build, such as the key `? [{a: 1}]` or the value `!!int x`, does not parse.
 - Without `--json`, a line per file changed only inside the blocks and lists and per change outside them, with its commit and why, then whether every change lies inside.
 - With `--json`, one stable document, keys sorted:
   - `schema_version` — `1`, under the rule every reading document follows (above).
