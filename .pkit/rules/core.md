@@ -44,7 +44,7 @@ Operational practices that keep work consistent and recoverable.
 
 How an agent talks with the user, independent of any project's tooling.
 
-17. **Discuss one decision at a time.** When a choice needs the user's input, surface a single decision per turn — don't stack several open questions or unknowns into one message. A wall of simultaneous decisions forces the user to parse and re-litigate everything at once; a stepped conversation is faster and clearer. This applies to discussion and decision-making, not to summaries of work already done.
+17. **Discuss one decision at a time, with your recommendation.** When a choice needs the user's input, surface a single decision per turn — don't stack several open questions or unknowns into one message. A wall of simultaneous decisions forces the user to parse and re-litigate everything at once; a stepped conversation is faster and clearer. Say what you recommend ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648)). This applies to discussion and decision-making, not to summaries of work already done.
 
 18. **Reference by meaning, then identifier.** When pointing at a rule, record, or section, state what it actually says in plain language first, then put the identifier in brackets after — "a Task must have a parent (DEC-005 P2.1)". A precise sub-locator is welcome; just write it without cryptic glyphs (no §), and never reference by bare code alone. The reader should learn the substance from the sentence, not have to chase the reference.
 
@@ -57,6 +57,10 @@ How a session relates to repos other than the one it is rooted in.
 ## Answers on artefacts
 
 20. **A reviewer checks the answers your change owes, and a person decides any other answer on an artefact.** Write the answers the change check (`pkit friction check`) asks of a change you are making, and the revalidation of a combined state you owe after resolving a conflict, without asking first. A reviewer other than you checks them, from the change check's own list, never a list you composed, and blocks the merge when an answer does not hold (COR-050 point 3). Name an open follow-up in the reason of each deferral you write. For each artefact you revalidated as `updated`, say what changed in it, in one sentence, in the pull request or, on a direct commit, to the person you work for. The reviewer blocks the merge, or the direct commit, when that sentence is missing or does not match what changed. Do not ask the person to accept these answers. The person who authorises the merge is told the sentences and the deferrals, as information, not a gate. Committing straight to the default branch, have the reviewer, where the project chose one, check before you commit, and tell the person you work for. Any other answer, on an artefact your change was not asked about, and every reason for having no anchors (COR-050 point 1), is written only after a person was shown it word for word and accepted it. If you cannot ask the person, return the commands and run none. Details: the agents README, "Friction writers".
+
+## When a step fails
+
+21. **Retry a failing step at most once.** Retry only a step that failed for a cause that may pass, such as a locked key, a service or the network. If it fails again, stop and report what failed. Rationale: [project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648).
 
 ## Where rationale lives
 

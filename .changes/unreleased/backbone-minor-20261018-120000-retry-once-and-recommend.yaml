@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  Two conduct rules join the core rules. Rule 17, "Discuss one decision at a
+  time", now asks the agent to say what it recommends with each decision. A
+  new last section, "When a step fails", holds rule 21: retry a failing step
+  at most once, and only for a cause that may pass, such as a locked key, a
+  service or the network. If it fails again, the agent stops and reports what
+  failed. No existing rule is renumbered. The rules area's README lists the
+  new section, and says that a rule may cite the issue holding its decision
+  until a record does.
