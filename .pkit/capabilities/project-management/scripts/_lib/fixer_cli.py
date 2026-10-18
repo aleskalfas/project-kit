@@ -32,7 +32,7 @@ branch.
 from __future__ import annotations
 
 import argparse
-import re
+import contextlib
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -41,7 +41,10 @@ from typing import TextIO
 from _lib import fixers, session_guard
 from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
-_TYPE = re.compile(r"(?:(?:[a-z]|[a-z][a-z0-9-]*[a-z0-9]):)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+try:  # Only where a terminal's pending input can be dropped.
+    import termios
+except ImportError:  # pragma: no cover — no such module off POSIX
+    termios = None  # type: ignore[assignment]
 
 
 def run_answer_verb(*, verb: str, answer: str, argv: Sequence[str] | None = None) -> int:
@@ -91,7 +94,7 @@ def run_answer_verb(*, verb: str, answer: str, argv: Sequence[str] | None = None
     if not fixers.AGENT_NAME.fullmatch(args.agent):
         parser.error(f"{args.agent!r} is not an agent's name")
     for artefact_type in args.types:
-        if not _TYPE.fullmatch(artefact_type):
+        if not fixers.TYPE_NAME.fullmatch(artefact_type):
             parser.error(f"{artefact_type!r} is not an artefact type's name")
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:
@@ -230,11 +233,20 @@ def _tty(stream: TextIO | None) -> bool:
 
 
 def read_line() -> str:
-    """One line a person typed. EOFError when the input has ended."""
+    """One line typed at standard input. EOFError when the input has ended."""
     line = sys.stdin.readline()
     if not line:
         raise EOFError
     return line
+
+
+def drop_typed_ahead() -> None:
+    """Drop what was typed at the terminal and not yet read, such as an Enter
+    pressed during a slow install. Called before each prompt is shown, so only
+    an answer typed to the question shown is read."""
+    if termios is not None and _tty(sys.stdin):
+        with contextlib.suppress(termios.error, OSError, ValueError):
+            termios.tcflush(sys.stdin.fileno(), termios.TCIFLUSH)
 
 
 def ask_pending(
@@ -242,7 +254,7 @@ def ask_pending(
     point: fixers.Point,
     repo_root: Path,
     config_path: Path,
-    interactive: bool,
+    interactive: bool | None = None,
     read: Callable[[], str] = read_line,
     out: TextIO | None = None,
     err: TextIO | None = None,
@@ -251,15 +263,22 @@ def ask_pending(
 ) -> int:
     """Ask each question nobody answered, where a person can answer, and record
     each answer in the grant list at `config_path` as it is given (DEC-056
-    point 2). With nobody to ask (`interactive` false), print each question with
-    the one command line that grants its fixer, and record nothing. `guard` runs
-    once before the first write; false refuses it.
+    point 2). With nobody to ask, print each question with the one command line
+    that grants its fixer, and record nothing. `guard` runs once before the
+    first write; false refuses it.
+
+    Whether a person can answer is `interactive`, and by default whether this
+    process has a terminal (`at_a_terminal`). The default reader reads standard
+    input, so with it a caller's `True` never stands without that terminal: a
+    piped `yes` is never consent.
 
     Returns 0 when nothing waits, when every question was answered, or when
     nobody was there to ask; 1 when the point does not resolve, the grant list
     cannot be read, or an answer cannot be recorded."""
     out = sys.stdout if out is None else out
     err = sys.stderr if err is None else err
+    if interactive is None or read is read_line:
+        interactive = (interactive is not False) and at_a_terminal()
     if not point.resolved:
         err.write(f"[unresolved] {fixers.POINT} does not resolve: {point.why}. Nothing is asked.\n")
         for line in point.inert:
@@ -295,7 +314,10 @@ def ask_pending(
 
     def shown_now(text: str) -> None:
         """Write and flush: a prompt has no line break, so it must reach the
-        terminal before the read blocks."""
+        terminal before the read blocks. Input typed before it is dropped first,
+        so it answers nothing (`drop_typed_ahead`)."""
+        if read is read_line:
+            drop_typed_ahead()
         out.write(text)
         out.flush()
 
@@ -361,6 +383,5 @@ def run_ask_verb(argv: Sequence[str] | None = None) -> int:
         point=point,
         repo_root=capability_root.parents[2],
         config_path=capability_root / fixers.CONFIG_RELATIVE,
-        interactive=at_a_terminal(),
         guard=lambda: bool(session_guard.enforce(override=args.allow_foreign_repo)),
     )

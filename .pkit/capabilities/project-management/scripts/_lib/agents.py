@@ -75,11 +75,21 @@ def agent_is_shipped_by(repo_root: Path, capability: str, name: str) -> bool:
 class Definition:
     """What a deployed agent's front matter declares: the tools the harness
     grants it and the paths it claims (`owns`, resolved at deploy). `problem` is
-    why the front matter could not be read; the other fields are then empty."""
+    why the front matter could not be read; the other fields are then empty.
 
-    tools: tuple[str, ...] = ()
+    `tools` is None when the definition lists no tool: the key absent, null or
+    empty. The harness then grants the agent every tool, so a reader takes None
+    as every tool, never as none."""
+
+    tools: tuple[str, ...] | None = ()
     owns: tuple[str, ...] = ()
     problem: str = ""
+
+    @property
+    def tool_names(self) -> tuple[str, ...]:
+        """Each listed tool's name, without the parameters a harness may write
+        after it in parentheses, such as `Agent(worker)`."""
+        return tuple(tool.split("(", 1)[0].strip() for tool in self.tools or ())
 
 
 def deployed_definition(repo_root: Path, name: str) -> Definition | None:
@@ -107,14 +117,24 @@ def deployed_definition(repo_root: Path, name: str) -> Definition | None:
         return Definition(problem=f"{path.name}'s front matter does not parse ({exc})")
     if not isinstance(data, dict):
         return Definition(problem=f"{path.name}'s front matter is not a mapping")
-    return Definition(tools=_strings(data.get("tools")), owns=_strings(data.get("owns")))
+    tools = _strings(data.get("tools"))
+    return Definition(tools=tools or None, owns=_strings(data.get("owns")))
 
 
 def _strings(value: Any) -> tuple[str, ...]:
     """A front-matter list as its strings: a tool list may be written as a list
-    or as one comma-separated string, as the harness reads it."""
+    or as one comma-separated string, as the harness reads it. A comma inside
+    parentheses, as in `Agent(a, b)`, separates nothing."""
     if isinstance(value, str):
-        return tuple(part.strip() for part in value.split(",") if part.strip())
+        parts: list[str] = []
+        depth, start = 0, 0
+        for index, char in enumerate(value):
+            depth += {"(": 1, ")": -1}.get(char, 0)
+            if char == "," and depth <= 0:
+                parts.append(value[start:index])
+                start = index + 1
+        parts.append(value[start:])
+        return tuple(part.strip() for part in parts if part.strip())
     if isinstance(value, list):
         return tuple(str(item).strip() for item in value if str(item).strip())
     return ()

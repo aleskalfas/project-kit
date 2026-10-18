@@ -22,8 +22,9 @@ body: >
   entry naming an agent that is not deployed and on a grant list it cannot
   read. It warns of a grant no entry names, with the command that revokes it.
   It reports a capability's entry that names a type not its own, an agent it
-  does not ship or has not deployed, or an agent that claims paths or holds a
-  tool that changes existing files or starts agents. The five commands are
+  does not ship or has not deployed, or an agent that does more than propose:
+  one that claims paths, lists no tools, or holds a tool that changes existing
+  files or starts agents. The five commands are
   exempt from the bootstrap gate. Nothing starts a fixer yet, and install and
   upgrade do not ask the question yet. The point is read through `pkit
   connections resolve --json` and the type registries through `pkit friction

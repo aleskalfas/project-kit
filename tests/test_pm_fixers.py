@@ -408,8 +408,35 @@ def test_the_project_s_entry_may_name_any_deployed_agent_and_fails_on_an_undeplo
             "tools: Read, Agent",
             f"agent {FIXER} holds Agent, a tool that starts agents, and a fixer only proposes",
         ),
+        (
+            "tools: [Read, Write, 'Agent(worker)']",
+            f"agent {FIXER} holds Agent, a tool that starts agents, and a fixer only proposes",
+        ),
+        (
+            "tools: Read, Agent(a, b), Write",
+            f"agent {FIXER} holds Agent, a tool that starts agents, and a fixer only proposes",
+        ),
+        *(
+            (
+                front_matter,
+                f"agent {FIXER} lists no tools, so the harness grants it every tool, those "
+                "that change existing files and start agents among them, and a fixer only "
+                "proposes",
+            )
+            for front_matter in ("description: Proposes.", "tools:", "tools: []", "tools: ''")
+        ),
     ],
-    ids=["claims-paths", "changes-files", "starts-agents"],
+    ids=[
+        "claims-paths",
+        "changes-files",
+        "starts-agents",
+        "a-parameterised-tool",
+        "a-parameterised-tool-in-a-string",
+        "no-tools-key",
+        "null-tools",
+        "an-empty-list",
+        "an-empty-string",
+    ],
 )
 def test_an_agent_that_does_more_than_propose_starts_no_fixer(
     tmp_path: Path, front_matter: str, problem: str
@@ -532,6 +559,22 @@ def test_a_flow_written_block_and_crlf_line_endings_are_kept_as_far_as_the_block
     )
 
 
+def test_a_byte_order_mark_is_kept(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_bytes(b"\xef\xbb\xbfschema_version: 1\nworkstreams: []\n")
+    assert fixers.record(path, FIXER, [PAGE], "granted")
+    written = path.read_bytes()
+    assert written.startswith(b"\xef\xbb\xbfschema_version: 1\nworkstreams: []\n\n# Fixers:")
+    assert written.count(b"\xef\xbb\xbf") == 1
+
+
+def test_a_config_that_is_not_utf8_is_malformed_not_a_crash(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_bytes(b"schema_version: 1\nname: \xff\n")
+    with pytest.raises(fixers.Malformed, match="cannot be read"):
+        fixers.load_config(path)
+
+
 def test_an_answer_is_refused_where_it_cannot_be_written_and_nothing_is_written(
     tmp_path: Path,
 ) -> None:
@@ -573,8 +616,10 @@ def test_one_question_per_agent_about_the_types_nobody_answered() -> None:
         (FIXER, (GUIDE,), (PAGE, GUIDE)),
         ("editor", ("handbook",), ("handbook",)),
     ]
+    # The line names each type the question named, so a type the point gives the
+    # agent later is never granted by a line printed before it.
     assert fixers.grant_line(asked[0]) == f"pkit pm grant-fixer {FIXER} --type {GUIDE}"
-    assert fixers.grant_line(asked[1]) == "pkit pm grant-fixer editor"
+    assert fixers.grant_line(asked[1]) == "pkit pm grant-fixer editor --type handbook"
 
 
 def test_the_question_is_built_from_the_capability_s_name_and_the_descriptions() -> None:
@@ -776,15 +821,20 @@ def test_with_nobody_at_a_terminal_the_question_grants_nothing_and_prints_the_li
         f"{DOCS} can keep your pages true on its own. After each merge, its agent {FIXER} "
         "proposes a fix for each one that went out of date, and nothing is applied until you "
         "approve it. Turn this on?",
-        f"  To turn it on: pkit pm grant-fixer {FIXER}",
+        f"  To turn it on: pkit pm grant-fixer {FIXER} --type {PAGE}",
         "Nothing was granted: nobody was at a terminal to answer.",
     ]
     assert (project.root / CONFIG_REL).read_text(encoding="utf-8") == CONFIG
 
 
-def _at_a_terminal(repo: AdopterRepo, typed: str) -> tuple[int, str]:
-    """`ask-fixers` with a terminal on its standard input and output, `typed` typed."""
+PROMPT = b"[Y/n] "
+
+
+def _at_a_terminal(repo: AdopterRepo, typed: str, *, ahead: str = "") -> tuple[int, str]:
+    """`ask-fixers` with a terminal on its standard input and output: `ahead` typed
+    before it starts, and `typed` once the question is shown."""
     controller, terminal = pty.openpty()
+    os.write(controller, ahead.encode())
     proc = subprocess.Popen(
         [sys.executable, str(repo.root / PM_REL / "scripts" / "ask-fixers.py")],
         cwd=repo.root,
@@ -793,8 +843,8 @@ def _at_a_terminal(repo: AdopterRepo, typed: str) -> tuple[int, str]:
         stderr=terminal,
     )
     os.close(terminal)  # the child holds the terminal now
-    os.write(controller, typed.encode())
     chunks: list[bytes] = []
+    answered = False
     deadline = time.monotonic() + 60
     try:
         while True:
@@ -809,6 +859,9 @@ def _at_a_terminal(repo: AdopterRepo, typed: str) -> tuple[int, str]:
             if not data:
                 break
             chunks.append(data)
+            if not answered and b"".join(chunks).endswith(PROMPT):
+                os.write(controller, typed.encode())
+                answered = True
     finally:
         os.close(controller)
     return proc.wait(timeout=60), b"".join(chunks).decode("utf-8", "replace").replace("\r\n", "\n")
@@ -832,8 +885,16 @@ def test_at_a_terminal_each_answer_is_recorded_as_it_is_given(
 def test_input_that_ends_unanswered_records_nothing(project: AdopterRepo) -> None:
     code, output = _at_a_terminal(project, "\x04")  # end of input, at the terminal
     assert code == 0, output
-    assert f"pkit pm grant-fixer {FIXER}" in output
+    assert f"pkit pm grant-fixer {FIXER} --type {PAGE}" in output
     assert (project.root / CONFIG_REL).read_text(encoding="utf-8") == CONFIG
+
+
+def test_input_typed_before_the_question_answers_nothing(project: AdopterRepo) -> None:
+    """An Enter pressed before the question is shown, during a slow install say, is
+    dropped: only the answer typed to the question shown counts."""
+    code, output = _at_a_terminal(project, "n\n", ahead="y\n")
+    assert code == 0, output
+    assert _answers(project) == {FIXER: {"refused": [PAGE]}}
 
 
 def test_grant_and_revoke_write_the_list_and_list_shows_each_answer(project: AdopterRepo) -> None:
@@ -986,3 +1047,122 @@ def test_the_ask_entry_point_can_be_called_by_another_command(project: AdopterRe
     assert code == 0
     assert _answers(project) == {FIXER: {"granted": [PAGE]}}
     assert f"Recorded: {FIXER} granted {PAGE}." in out.getvalue()
+
+
+def test_validation_s_document_exits_zero_whatever_its_findings(project: AdopterRepo) -> None:
+    """With `--json` the validator answers, so it exits 0 even when a finding is an
+    error: a non-zero exit would be no answer (COR-055 point 6)."""
+    (project.root / CONFIG_REL).write_text(CONFIG + "fixers: [x]\n", encoding="utf-8")
+    result = _run(project, "check-fixers", "--json")
+    assert result.returncode == 0, result.stderr
+    (finding,) = json.loads(result.stdout)["findings"]
+    assert (finding["severity"], finding["location"]) == ("error", f"{CONFIG_REL}:/fixers")
+    assert _run(project, "check-fixers").returncode == 1
+
+
+# --- the question in process: who is asked, and what is written ------------------------------
+
+
+class _Stream(io.StringIO):
+    def __init__(self, tty: bool) -> None:
+        super().__init__()
+        self.tty = tty
+
+    def isatty(self) -> bool:
+        return self.tty
+
+
+@pytest.mark.parametrize(
+    ("stdin", "stdout", "person"),
+    [(True, True, True), (False, True, False), (True, False, False), (False, False, False)],
+    ids=["both", "piped-input", "piped-output", "neither"],
+)
+def test_a_person_answers_only_with_a_terminal_on_both_ends(
+    stdin: bool, stdout: bool, person: bool
+) -> None:
+    assert fixer_cli.at_a_terminal(_Stream(stdin), _Stream(stdout)) is person
+
+
+def _repo_with_a_fixer(root: Path, *agents: str) -> tuple[fixers.Point, Path]:
+    """A repository whose point names each agent as the fixer of its own type,
+    each shipped and deployed, and the project's configuration."""
+    entries = []
+    for agent in agents:
+        _agent(root, agent, deployed=PROPOSING.format(name=agent))
+        entries.append(_entry(type=f"{DOCS}:{agent}", agent=agent))
+    config = root / "config.yaml"
+    config.write_text(CONFIG, encoding="utf-8")
+    return fixers.Point(True, entries=tuple(entries)), config
+
+
+def _ask(point: fixers.Point, root: Path, config: Path, **options: Any) -> tuple[int, str]:
+    out = io.StringIO()
+    code = fixer_cli.ask_pending(
+        point=point,
+        repo_root=root,
+        config_path=config,
+        out=out,
+        err=out,
+        types=lambda: {e.type: DOCS for e in point.entries},
+        **options,
+    )
+    return code, out.getvalue()
+
+
+def test_the_default_reader_never_takes_a_caller_s_word_for_a_terminal(tmp_path: Path) -> None:
+    """Under the test runner standard input is no terminal, so a piped `yes`
+    behind a caller's `interactive=True` is still nobody's answer."""
+    point, config = _repo_with_a_fixer(tmp_path, FIXER)
+    code, said = _ask(point, tmp_path, config, interactive=True)
+    assert code == 0
+    assert "Nothing was granted: nobody was at a terminal to answer." in said
+    assert config.read_text(encoding="utf-8") == CONFIG
+
+
+def test_a_refusing_guard_writes_nothing(tmp_path: Path) -> None:
+    point, config = _repo_with_a_fixer(tmp_path, FIXER)
+    code, _said = _ask(
+        point, tmp_path, config, interactive=True, read=lambda: "y\n", guard=lambda: False
+    )
+    assert code == 1
+    assert config.read_text(encoding="utf-8") == CONFIG
+
+
+def test_an_answer_that_cannot_be_written_stops_and_keeps_those_before_it(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    point, config = _repo_with_a_fixer(tmp_path, "first", "second")
+    record = fixers.record
+    calls: list[str] = []
+
+    def failing_second(path: Path, agent: str, types: Any, answer: str) -> bool:
+        calls.append(agent)
+        if agent == "second":
+            raise fixers.Refused("the disk is full")
+        return record(path, agent, types, answer)
+
+    monkeypatch.setattr(fixers, "record", failing_second)
+    code, said = _ask(point, tmp_path, config, interactive=True, read=lambda: "y\n")
+    assert (code, calls) == (1, ["first", "second"])
+    assert "error: the answer could not be recorded: the disk is full" in said
+    assert "Recorded: first granted docs-test:first." in said
+    assert fixers.answers_of(fixers.load_config(config)).agents == {
+        "first": {f"{DOCS}:first": "granted"}
+    }
+
+
+def test_the_schemas_name_agents_and_types_as_the_readers_do() -> None:
+    """The patterns live in two schemas and the library: they say the same."""
+    point = json.loads((CAPABILITY / "schemas" / "fixers.schema.json").read_text("utf-8"))
+    config = json.loads((CAPABILITY / "schemas" / "config.schema.json").read_text("utf-8"))
+    fixer = point["$defs"]["fixer"]["properties"]
+    assert fixer["id"]["pattern"] == f"^{fixers.TYPE_NAME.pattern}$"
+    assert fixer["agent"]["pattern"] == f"^{fixers.AGENT_NAME.pattern}$"
+    assert config["$defs"]["fixer_types"]["items"]["pattern"] == f"^{fixers.TYPE_NAME.pattern}$"
+    grants = config["properties"]["fixers"]
+    assert grants["propertyNames"]["pattern"] == f"^{fixers.AGENT_NAME.pattern}$"
+
+
+def test_a_resolved_point_with_no_entry_says_so() -> None:
+    point = fixers.point_of(_document([]))
+    assert (point.resolved, point.entries, point.why) == (True, (), "the point holds no entry")

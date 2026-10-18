@@ -24,7 +24,7 @@
         "description": {
           "description": "What the agent keeps true, in plain words a person reads, such as \"your pages\". The question that asks the person to grant the fixer is built from it, so it reads after \"keep\" and before \"true\".",
           "type": "string",
-          "minLength": 1
+          "pattern": "\\S"
         }
       }
     }

@@ -1135,7 +1135,13 @@ Both write commands take `--dry-run`. All five fixer commands are exempt from th
 - **A warning:** your own entry names an agent that does more than propose, or a grant names what no entry gives. A warning about a grant names the command that revokes it.
 - **A report:** a capability's entry is bad. It may name a type that is not the capability's own, or an agent the capability does not ship or has not deployed. It may come through a command filler, or name an agent that does more than propose. You cannot mend such an entry, so it fails nothing. No agent starts for it.
 
-An agent does more than propose when its deployed definition claims paths (`owns`), or holds a tool that changes existing files or starts agents. A tool that writes new files is allowed, for its workspace.
+An agent does more than propose when its deployed definition does one of these:
+
+- claims paths (`owns`)
+- holds a tool that changes existing files or starts agents
+- lists no tools, since the harness then grants it every tool
+
+A tool that writes new files is allowed, for its workspace.
 
 ## Connections
 

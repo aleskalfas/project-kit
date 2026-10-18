@@ -14,9 +14,10 @@ in `project/config.yaml`. Each finding says why a fixer starts no agent:
 - **error** — the project's own entry names an agent that is not deployed, or
   the grant list cannot be read. The project can mend both.
 - **warning** — the project's own entry names an agent whose deployed definition
-  claims paths, or holds a tool that changes existing files or starts agents; a
-  grant that no entry names, with the command that revokes it; a capability's
-  type that could not be checked, because the type registries could not be read.
+  claims paths, lists no tools (the harness then grants it every tool), or holds
+  a tool that changes existing files or starts agents; a grant that no entry
+  names, with the command that revokes it; a capability's type that could not be
+  checked, because the type registries could not be read.
 - **report** — a capability's entry that names a type not its own, an agent it
   does not ship or that is not deployed, an agent such as above, or that comes
   through a command filler. The project cannot mend these, so they fail nothing

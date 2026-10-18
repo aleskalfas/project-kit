@@ -25,9 +25,10 @@ the same functions:
     is reported, since the project cannot mend it.
   - an entry whose agent is not deployed. That is an error for the project's
     own entry, which the project can mend, and reported for a capability's.
-  - an entry whose deployed agent claims paths (`owns`), or holds a tool that
-    changes existing files or starts agents (`CHANGING_TOOLS`,
-    `STARTING_TOOLS`). A tool that writes new files stays, for its workspace.
+  - an entry whose deployed agent claims paths (`owns`), lists no tools (the
+    harness then grants it every tool), or holds a tool that changes existing
+    files or starts agents (`CHANGING_TOOLS`, `STARTING_TOOLS`). A tool that
+    writes new files stays, for its workspace.
 - **The grant list** (`answers_of`, `record`): each agent the person was asked
   about, the types it was granted and the types it was refused. A type has at
   most one answer for an agent. `record` writes answers into the project
@@ -39,7 +40,7 @@ the same functions:
   capability's name and the descriptions of the agent's entries. `ask` asks
   each at a terminal and hands each answer to its caller, which records it.
   With nobody to ask, `grant_line` is the one command line that grants the
-  fixer.
+  fixer the types the question named.
 - **What may start** (`startable`, `stale_grants`): the entries that pass the
   checks and are granted, and each grant that no entry names. Such a grant
   starts nothing, and validation reports it with the command that revokes it.
@@ -118,8 +119,14 @@ ERROR = "error"
 WARNING = "warning"
 REPORT = "report"
 
-#: An agent's name, as the schemas write it.
+#: An agent's name, and an artefact type's (COR-056 point 1), as the schemas
+#: write them: `fixers.schema.json` and the grant list in `config.schema.json`.
+#: A test holds the schemas' patterns to these.
 AGENT_NAME = re.compile(r"[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+TYPE_NAME = re.compile(r"(?:(?:[a-z]|[a-z][a-z0-9-]*[a-z0-9]):)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*")
+
+#: A byte-order mark: kept where a file opens with one.
+BOM = "\ufeff"
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -229,7 +236,7 @@ def point_of(document: Mapping[str, Any]) -> Point:
                 where=filler_file if project else f".pkit/capabilities/{origin}/package.yaml",
             )
         )
-    return Point(True, entries=tuple(entries))
+    return Point(True, why="" if entries else "the point holds no entry", entries=tuple(entries))
 
 
 def _inert(filler: Mapping[str, Any]) -> str:
@@ -365,11 +372,21 @@ def _problems(
                 "only proposes",
             )
         )
+    if definition.tools is None:
+        found.append(
+            Problem(
+                minor,
+                f"agent {entry.agent} lists no tools, so the harness grants it every tool, "
+                "those that change existing files and start agents among them, and a fixer "
+                "only proposes",
+            )
+        )
+        return found
     for tools, what in (
         (CHANGING_TOOLS, "changes existing files"),
         (STARTING_TOOLS, "starts agents"),
     ):
-        held = sorted(set(definition.tools) & tools)
+        held = sorted(set(definition.tool_names) & tools)
         if held:
             found.append(
                 Problem(
@@ -436,7 +453,7 @@ def load_config(path: Path) -> Mapping[str, Any]:
         raise Malformed("ruamel.yaml is not installed")
     try:
         data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
-    except (OSError, YAMLError) as exc:
+    except (OSError, UnicodeDecodeError, YAMLError) as exc:
         raise Malformed(f"{path.name} cannot be read: {exc}") from exc
     if data is None:
         return {}
@@ -508,7 +525,7 @@ def record(path: Path, agent: str, types: Iterable[str], answer: str) -> bool:
     if after == before.agents:
         return False
     text = path.read_bytes().decode("utf-8")
-    bom = "﻿" if text.startswith("﻿") else ""
+    bom = BOM if text.startswith(BOM) else ""
     text = text[len(bom) :]
     crlf = "\r\n" in text
     if crlf and text.count("\r\n") != text.count("\n"):
@@ -522,8 +539,9 @@ def record(path: Path, agent: str, types: Iterable[str], answer: str) -> bool:
     wanted = {**dict(config), CONFIG_KEY: _value(after)}
     if reads != wanted:
         raise Refused(
-            f"{path} would not read back as it is with only `{CONFIG_KEY}` changed: write "
-            f"`{CONFIG_KEY}` as a block mapping at the top level, then answer again"
+            f"{path} would not read back unchanged around the `{CONFIG_KEY}` block, so nothing "
+            f"was written: write the answer under `{CONFIG_KEY}` by hand, then check it with "
+            f"`{COMMAND} {LIST_VERB}`"
         )
     path.write_bytes((bom + (updated.replace("\n", "\r\n") if crlf else updated)).encode("utf-8"))
     return True
@@ -643,10 +661,10 @@ def _joined(parts: Sequence[str]) -> str:
 
 
 def grant_line(question: Question) -> str:
-    """The one command line that grants the fixer: the agent alone when the
-    question covers every type the point gives it, else each type it covers."""
-    narrowed = set(question.types) != set(question.all_types)
-    return _line(GRANT_VERB, question.agent, question.types if narrowed else ())
+    """The one command line that grants the fixer, naming each type the question
+    named. A type the point gives the agent later is then a question of its own,
+    never granted by a line printed before it existed (DEC-056 point 2)."""
+    return _line(GRANT_VERB, question.agent, question.types)
 
 
 def revoke_line(agent: str, types: Sequence[str] = ()) -> str:
