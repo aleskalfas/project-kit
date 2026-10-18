@@ -60,9 +60,8 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-16T23:29:48Z
-      outcome: unchanged
-      unchanged-because: The actor now anchors ADR-061 point 3, which its Core already cites. Point 3 still adopts the backbone's landing of pull requests provisionally, so the Core and the needs hold.
+      at: 2026-10-18T14:15:23Z
+      outcome: updated
 ---
 
 # ACT-developer — Developer

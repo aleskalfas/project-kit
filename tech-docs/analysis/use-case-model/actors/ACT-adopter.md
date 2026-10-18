@@ -30,9 +30,8 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-17T21:38:12Z
-      outcome: unchanged
-      unchanged-because: COR-010 gains a paragraph saying that renaming or removing a section's heading in a shipped document triggers no migration, since no project that receives it can anchor its sections. The adopter's need to upgrade like a dependency, with its migrations run for it and its own files left alone, still holds.
+      at: 2026-10-18T14:15:22Z
+      outcome: updated
 ---
 
 # ACT-adopter — Adopter
