@@ -11,6 +11,7 @@ tested on the check's document shape.
 from __future__ import annotations
 
 import importlib.util
+import json
 import re
 import shutil
 import signal
@@ -1335,3 +1336,108 @@ def test_a_sentence_the_list_must_not_hold_is_named(
     sentences = {"docs/a.md": words}
     assert fa.sentence_closing_reference(sentences) == closing
     assert fa.sentence_comment_delimiter(sentences) == delimiter
+
+
+# -- a later head an authorisation covers (DEC-055 point 3) -------------------------
+
+
+def test_the_backbone_says_a_later_head_of_answers_is_covered(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    """The real `pkit friction since`: the head after a revalidation alone is covered;
+    the head after the code change is not, and the change outside is named."""
+    repo, head = _branch_with_an_answer(make_adopter_repo)
+    changed = repo.git("rev-parse", "HEAD~1").stdout.strip()
+    found = fa.covers(changed[:9], head, "main")
+    assert found == fa.Coverage(changed, head, True, inside=1)
+    main = repo.git("rev-parse", "main").stdout.strip()
+    found = fa.covers(main, head, "main")
+    assert (found.covered, found.problem) == (False, None)
+    assert found.outside == (
+        f"src/cli/main.py ({changed[:7]}: not an artefact's file: no declared place holds it)",
+    )
+
+
+def _answering(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch, returncode: int, stdout: str
+) -> list[tuple[list[str], str | None]]:
+    """The backbone stood in for: each run's argv and whether routing was off."""
+    seen: list[tuple[list[str], str | None]] = []
+
+    def run(argv: list[str], **kwargs: Any) -> subprocess.CompletedProcess[str]:
+        seen.append((argv, kwargs["env"].get("PKIT_NO_ROUTE")))
+        return subprocess.CompletedProcess(argv, returncode, stdout, "Error: boom\n")
+
+    monkeypatch.setattr(fa.subprocess, "run", run)
+    monkeypatch.setattr(fa, "_refresh_base", lambda base: None)
+    return seen
+
+
+def _since_document(**fields: Any) -> str:
+    document = {
+        "schema_version": 1,
+        "since": MERGE_BASE,
+        "head": HEAD,
+        "all_inside": True,
+        "reason": None,
+        "inside": ["docs/guide.md"],
+        "outside": [],
+        **fields,
+    }
+    return json.dumps(document)
+
+
+def test_the_backbone_is_asked_unrouted_with_the_base_named(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("PKIT_CHECK_BASE", "elsewhere")
+    seen = _answering(fa, monkeypatch, 0, _since_document())
+    assert fa.covers("0000000", HEAD, "integration/7-x").covered
+    argv = ["pkit", "friction", "since", "0000000", "--head", HEAD, "--base", "integration/7-x"]
+    assert seen == [([*argv, "--json"], "1")]
+
+
+@pytest.mark.parametrize(
+    ("returncode", "stdout", "why"),
+    [
+        (1, "", "it exited 1: Error: boom"),
+        (0, "not json", "its answer is not JSON"),
+        (0, '{"schema_version": 2}', "not a document of version 1"),
+        (0, '{"schema_version": 1, "since": "a", "head": "b"}', "lacks what an answer needs"),
+        (0, _since_document(all_inside="yes"), "lacks what an answer needs"),
+        (0, _since_document(all_inside=False), "and the changes it names disagree"),
+        (
+            0,
+            _since_document(outside=[{"path": "a.py", "commit": HEAD, "why": "added"}]),
+            "and the changes it names disagree",
+        ),
+        (0, _since_document(reason="it was rebased"), "and the changes it names disagree"),
+    ],
+)
+def test_an_answer_that_cannot_be_read_is_never_covered(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch, returncode: int, stdout: str, why: str
+) -> None:
+    _answering(fa, monkeypatch, returncode, stdout)
+    found = fa.covers("0000000", HEAD, "main")
+    assert not found.covered
+    assert found.problem is not None and why in found.problem
+
+
+def test_a_base_that_cannot_be_fetched_is_never_covered(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    seen = _answering(fa, monkeypatch, 0, _since_document())
+    monkeypatch.setattr(fa, "_refresh_base", lambda base: "the base origin/main is gone")
+    found = fa.covers("0000000", HEAD, "main")
+    assert (found.covered, found.problem) == (False, "the base origin/main is gone")
+    assert seen == []
+
+
+def test_the_changes_outside_are_named_with_the_reason_first(
+    fa: ModuleType, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    outside = [{"path": "src/\x1b[31mx.py", "commit": HEAD, "why": "added"}]
+    document = _since_document(all_inside=False, reason="it was rebased", outside=outside)
+    _answering(fa, monkeypatch, 0, document)
+    found = fa.covers("0000000", HEAD, "main")
+    assert found.outside == ("it was rebased", f"src/\\x1b[31mx.py ({HEAD[:7]}: added)")

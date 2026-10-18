@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction since <rev> [--head <rev>] [--base <ref>] [--json]` answers
+  whether every change from one commit to a later one, apart from merges of the
+  base, lies inside `revalidated` blocks. Along the later commit's own line of
+  commits, a merge of the base counts only for what differs from git's clean
+  merge of its two parents, and where that merge conflicted, from git's merge
+  taking each side. Any other commit counts for its own diff. A file lies inside
+  only when it is an artefact's file whose two texts are the same once every
+  `revalidated` key is taken out. Each change outside is named with its commit
+  and why. A component that must tell a merge round that only answered again from
+  any other change asks it, and never reads a friction block itself. It reads git
+  and writes nothing, and it does not answer in a shallow clone.
