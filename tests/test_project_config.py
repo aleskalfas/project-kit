@@ -611,8 +611,8 @@ def test_the_one_prompt_names_both_changes(
 
 @pytest.mark.parametrize(
     "places",
-    ["places: [CONTRIBUTING.md]", "places: CONTRIBUTING.md"],
-    ids=["flow-list", "lone-text"],
+    ["places: [CONTRIBUTING.md]", "places: []"],
+    ids=["flow-list", "empty-flow-list"],
 )
 def test_a_place_that_cannot_only_be_added_refuses_and_writes_nothing(
     make_adopter_repo: MakeAdopterRepo, places: str
@@ -629,3 +629,80 @@ def test_a_place_that_cannot_only_be_added_refuses_and_writes_nothing(
     assert "  - tech-docs/rule-sets\n" in result.output
     assert "pkit config set docs.internal handbook --yes" in result.output
     assert path.read_text(encoding="utf-8") == text
+
+
+def test_a_configuration_the_schema_refuses_is_refused_before_the_entry_is_tried(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    # A lone text is no list of places: the schema's refusal comes first, so a
+    # second run does not meet a second problem.
+    repo = make_adopter_repo()
+    text = "docs:\n  internal: tech-docs\nfriction:\n  places: CONTRIBUTING.md\n"
+    path = _write_raw(repo, text)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code != 0
+    assert "would not validate" in result.output and "/friction/places" in result.output
+    assert "cannot add" not in result.output
+    assert path.read_text(encoding="utf-8") == text
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "docs:\n  internal: tech-docs",
+            "docs:\n  internal: handbook\nfriction:\n  places:\n  - tech-docs/rule-sets\n",
+        ),
+        (
+            "docs:\n  internal: tech-docs\nfriction:\n  places:\n    - README.md",
+            "docs:\n  internal: handbook\nfriction:\n  places:\n    - README.md\n"
+            "    - tech-docs/rule-sets\n",
+        ),
+    ],
+    ids=["docs-last", "places-last"],
+)
+def test_a_file_whose_last_line_has_no_line_break_takes_the_entry(
+    make_adopter_repo: MakeAdopterRepo, text: str, expected: str
+) -> None:
+    repo = make_adopter_repo()
+    path = _write_raw(repo, text)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert path.read_text(encoding="utf-8") == expected
+
+
+def test_an_old_root_at_the_repository_root_declares_its_rule_sets_folder(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo()
+    _write_raw(repo, "docs:\n  internal: .\n")
+    repo.write({"rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "tech-docs", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert _places(repo) == ["rule-sets"]
+    assert _project_rule_sets(repo) == ["rule-sets/cmn.md"]
+    assert "derived from the internal root before this change, . (explicit)" in result.output
+
+
+def test_the_entry_keeps_a_crlf_file_s_line_endings(make_adopter_repo: MakeAdopterRepo) -> None:
+    repo = make_adopter_repo()
+    path = _config_path(repo)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    before = KEPT.replace("\n", "\r\n").encode("utf-8")
+    path.write_bytes(before)
+    repo.write({"tech-docs/rule-sets/cmn.md": RULE_SET})
+
+    result = _run("docs.internal", "handbook", "--yes")
+
+    assert result.exit_code == 0, result.output
+    assert path.read_bytes() == before.replace(
+        b"  internal: tech-docs/", b"  internal: handbook"
+    ).replace(b'    - "README.md"\r\n', b'    - "README.md"\r\n    - tech-docs/rule-sets\r\n')

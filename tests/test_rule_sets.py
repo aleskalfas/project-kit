@@ -1358,6 +1358,16 @@ def test_a_tree_without_the_schema_skips_the_kind(adopter: AdopterRepo) -> None:
     assert (finding.kind, finding.severity) == (Kind.SCHEMA_UNAVAILABLE, rs.Severity.REPORT)
     assert "not validated" in finding.message
 
+    # A file left behind needs no schema: it is still an error.
+    write_set(adopter, "handbook/rule-sets/old.md", {"rule-set": "OLD"})
+    left, unavailable = validate(adopter).findings
+    assert (left.location, left.kind, left.severity) == (
+        "handbook/rule-sets/old.md",
+        Kind.UNFOUND,
+        rs.Severity.ERROR,
+    )
+    assert unavailable.kind is Kind.SCHEMA_UNAVAILABLE
+
 
 def test_the_reference_example_has_the_shipped_shape() -> None:
     """The front matter shown in the schemas README's "Rule-set files" section is valid."""

@@ -270,6 +270,7 @@ def preview_config(target_root: Path, mutate: Callable[[CommentedMap], None]) ->
     kept = _kept_rule_sets(target_root, unchanged, data)
     without = yaml_splice.plain(data)
     if kept is not None:
+        _refuse_unless_valid(target_root, data)  # the change asked for, before the entry
         _declare_place(data, kept.folder)
     _refuse_unless_valid(target_root, data)
     if before is None or not before.strip():
@@ -337,10 +338,9 @@ def _declare_place(data: CommentedMap, folder: str) -> None:
 
 
 def _only_added(base: str, after: str) -> bool:
-    """Whether `after` is `base` with lines added and none changed or removed."""
-    matcher = difflib.SequenceMatcher(
-        a=base.splitlines(keepends=True), b=after.splitlines(keepends=True), autojunk=False
-    )
+    """Whether `after` is `base` with lines added and none changed or removed. A last
+    line that only gains its line break, so a line can follow it, is unchanged."""
+    matcher = difflib.SequenceMatcher(a=base.splitlines(), b=after.splitlines(), autojunk=False)
     return all(tag in ("equal", "insert") for tag, *_ in matcher.get_opcodes())
 
 
