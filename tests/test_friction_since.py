@@ -76,11 +76,11 @@ def _revisited(*entries: tuple[str, str, str]) -> str:
     return lines
 
 
-def _flow_page(*entries: tuple[str, str, str], at: str = T0) -> str:
+def _flow_page(*entries: tuple[str, str, str], at: str = T0, empty: bool = False) -> str:
     """The page in flow style (JSON front matter), with a `revisited` list of `entries`
-    — none written where there are none."""
+    — none written where there are none, unless `empty` writes it as `[]`."""
     text = document("flow", anchors={"path": ["src/**"]}, at=at)
-    if not entries:
+    if not entries and not empty:
         return text
     front, body = text.split("\n---\n", 1)
     data = json.loads(front.removeprefix("---\n"))
@@ -147,9 +147,12 @@ def test_a_block_added_whole_lies_inside_and_one_removed_does_not(repo: AdopterR
     ]
 
 
-@pytest.mark.parametrize("emptied", ["    revalidated:\n", "    revalidated: {}\n"])
+@pytest.mark.parametrize(
+    "emptied", ["    revalidated:\n", "    revalidated: {}\n", "    revalidated: nonsense\n"]
+)
 def test_a_block_emptied_lies_outside_as_one_removed(repo: AdopterRepo, emptied: str) -> None:
-    """An emptied block drops its answer as a block removed does."""
+    """An emptied block drops its answer as a block removed does, and so does one turned
+    to a value that is no mapping."""
     since = _authorised(repo)
     block = "    revalidated:\n      at: 2026-09-01T09:00:00Z\n      outcome: unchanged\n"
     block += "      unchanged-because: the CLI is as described\n"
@@ -269,12 +272,17 @@ def test_a_revisit_entry_removed_lies_inside_the_list(repo: AdopterRepo) -> None
 
 @pytest.mark.parametrize(
     "after",
-    [_page(), _page(revisited="    revisited: []\n"), _page(revisited="    revisited:\n")],
-    ids=["removed", "emptied", "no value"],
+    [
+        _page(),
+        _page(revisited="    revisited: []\n"),
+        _page(revisited="    revisited:\n"),
+        _page(revisited="    revisited: nonsense\n"),
+    ],
+    ids=["removed", "emptied", "no value", "no list"],
 )
 def test_a_revisited_list_removed_lies_outside(repo: AdopterRepo, after: str) -> None:
-    """A list removed whole, or emptied, drops its answers, so it lies outside, as a
-    block removed does."""
+    """A list removed whole, emptied, or turned to a value that is no list, drops its
+    answers, so it lies outside, as a block removed does."""
     since = _authorised(repo, {PAGE: _page(revisited=BOTH)})
     removed = repo.commit("drop the list", {PAGE: after})
     found = _since(repo, since)
@@ -286,7 +294,7 @@ def test_a_revisited_list_removed_lies_outside(repo: AdopterRepo, after: str) ->
 def test_a_revisited_list_in_flow_style(repo: AdopterRepo) -> None:
     """In flow style the list's characters are replaced by a marker: an entry rewritten,
     added or removed lies inside, and a list added where there was none lies outside, as
-    a block added there does. A list removed lies outside."""
+    a block added there does. A list emptied lies outside."""
     flow = "docs/flow.md"
     first = (TEST_CLI, "unchanged", "the test asserts the old bound")
     since = _authorised(repo, {flow: _flow_page(first)})
@@ -303,18 +311,54 @@ def test_a_revisited_list_in_flow_style(repo: AdopterRepo) -> None:
     repo.commit("drop one", {flow: _flow_page(first)})
     assert _since(repo, since).all_inside
 
-    removed = repo.commit("drop the list", {flow: _flow_page()})
+    emptied = repo.commit("empty the list", {flow: _flow_page(empty=True)})
     (outside,) = _since(repo, since).outside
     assert (outside.commit, outside.why) == (
-        removed,
+        emptied,
         "a `revisited` list was removed from it, which drops its answers",
     )
 
-    since = removed  # a commit whose page has no list
+    since = repo.commit("drop the list", {flow: _flow_page()})
     repo.commit("a list", {flow: _flow_page(first)})
     found = _since(repo, since)
     assert [(o.path, o.why) for o in found.outside] == [
         (flow, "it changed outside its `revalidated` blocks and `revisited` lists")
+    ]
+
+
+TERMS = "docs/terms.md"
+
+
+def _terms(alpha: str | None, beta: str | None) -> str:
+    """A collection of two entries, each with its own block and, given a reason, its own
+    `revisited` list of one entry."""
+
+    def entry(name: str, reason: str | None) -> str:
+        lines = (
+            f"{name}:\n  term: {name.title()}\n  pkit:\n    friction:\n"
+            f"      anchors: {{path: [src/cli/**]}}\n      revalidated:\n"
+            f"        at: {T0}\n        outcome: unchanged\n        unchanged-because: first\n"
+        )
+        if reason is not None:
+            lines += (
+                f"      revisited:\n      - anchor: {{kind: path, value: {TEST_CLI}}}\n"
+                f"        outcome: unchanged\n        reason: {reason}\n"
+            )
+        return lines
+
+    return f"---\n{entry('alpha', alpha)}{entry('beta', beta)}---\n\n## alpha\n\nAlpha.\n"
+
+
+def test_the_lists_of_a_collections_entries(repo: AdopterRepo) -> None:
+    """Each entry of a collection carries its own list: one rewritten lies inside, and one
+    removed lies outside, as an entry's block does."""
+    since = _authorised(repo, {TERMS: _terms("alpha's reason", "beta's reason")})
+    repo.commit("rewrite alpha's", {TERMS: _terms("alpha's new reason", "beta's reason")})
+    assert _since(repo, since).all_inside
+    removed = repo.commit("drop beta's list", {TERMS: _terms("alpha's new reason", None)})
+    found = _since(repo, since)
+    assert [(o.path, o.commit, o.why) for o in found.outside] == [
+        (TERMS, removed, "a `revisited` list was removed from it, which drops its answers")
     ]
 
 

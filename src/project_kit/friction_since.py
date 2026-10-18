@@ -41,7 +41,8 @@ nothing.
   whole lies inside. In flow style its characters are replaced by a marker,
   one for each key, so there a block or a list added lies outside. A block or
   a list removed, or emptied, lies outside in either style, since it drops
-  its answers. An entry written, rewritten or removed within a list lies
+  its answers. So does a block turned to a value that is no mapping, or a
+  list turned to one that is no list. An entry written, rewritten or removed within a list lies
   inside it, as a deferral does within a block. Front matter with a YAML
   anchor lies outside, since through it the text of a block or a list could
   change what an alias repeats outside it. Anything else is a change outside,
@@ -58,7 +59,7 @@ from __future__ import annotations
 import io
 import json
 import re
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -451,14 +452,19 @@ def _without_blocks(
             "`revalidated` block or a `revisited` list can change what lies outside it"
         )
     # A block emptied — `revalidated:` with no value, `{}` or `null` — drops its answer
-    # as a block removed does, so it carries none. So it is with a `revisited` list,
-    # whose entries are its answers (COR-050 point 16); an entry removed from a list, as
-    # a deferral removed from a block, is a change inside it.
+    # as a block removed does, so it carries none, and so does one that is no mapping.
+    # So it is with a `revisited` list, whose entries are its answers (COR-050 point 16):
+    # one emptied, or no list, carries none. An entry removed from a list, as a deferral
+    # removed from a block, is a change inside it.
     carriers = frozenset(
-        version.artefacts[key].location for key, stamp in version.stamps.items() if stamp.value
+        version.artefacts[key].location
+        for key, stamp in version.stamps.items()
+        if isinstance(stamp.value, Mapping) and stamp.value
     )
     lists = frozenset(
-        version.artefacts[key].location for key, stamp in version.revisits.items() if stamp.value
+        version.artefacts[key].location
+        for key, stamp in version.revisits.items()
+        if isinstance(stamp.value, list) and stamp.value
     )
     spans = [
         *((stamp, _MARKER) for stamp in version.stamps.values()),

@@ -829,6 +829,97 @@ def test_a_revisited_list_conflicting_beside_the_body_is_left_with_advice(
     assert _unmerged(repo) == {REQ}
 
 
+def test_a_merge_that_leaves_no_entry_is_left(repo: AdopterRepo) -> None:
+    """Each side removed the other's entry: an emptied list drops every answer in it, so
+    the person decides."""
+    decision = (DECISION, "unchanged", "the decision still holds")
+    test = _test("the test still holds")
+    _merge_revisits(repo, _requirement(decision, test), _requirement(test), _requirement(decision))
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert f"both sides removed entries of the `revisited` list of {REQ}, which leaves none" in (
+        result.output
+    )
+
+
+def test_a_list_that_is_not_one_entry_per_target_is_left(repo: AdopterRepo) -> None:
+    """This branch's list names one target twice: the entries cannot be merged by target."""
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason"), _test("this branch's second reason")),
+        _requirement(_test("the base's reason")),
+    )
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert "a side's list is not one well-formed entry per target" in result.output
+
+
+def test_a_block_and_a_list_both_sides_answered_owe_each(repo: AdopterRepo) -> None:
+    """Both sides revalidated the source and wrote one target's entry: each conflict is
+    decided, and each owes its answer again."""
+
+    def source(at: str, because: str, reason: str) -> str:
+        return _requirement(_test(reason)).replace(
+            f"at: {T0}\n      outcome: unchanged\n"
+            f"      unchanged-because: the test and the decision say what it says",
+            f"at: {at}\n      outcome: unchanged\n      unchanged-because: {because}",
+        )
+
+    _merge_revisits(
+        repo,
+        source(T0, "first", "the first reason"),
+        source(T1, "this branch's", "this branch's reason"),
+        source(T2, "the base's", "the base's reason"),
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    assert _read(repo, REQ) == source(T2, "the base's", "the base's reason")
+    (file,) = json.loads(result.output)["files"]
+    assert [o["location"] for o in file["owed"]] == [REQ]
+    assert [o["target"]["value"] for o in file["owed_revisits"]] == [TEST_FILE]
+
+
+def _listed(name: str, stamp: tuple[str, str], reason: str) -> str:
+    """`_entry` with a `revisited` list of one entry after its block."""
+    return _entry(name, "[src/cli/**]", stamp) + (
+        "      revisited:\n"
+        f"      - anchor: {{kind: path, value: {TEST_FILE}}}\n"
+        f"        outcome: unchanged\n        reason: {reason}\n"
+    )
+
+
+def test_the_lists_of_a_collections_entries(repo: AdopterRepo) -> None:
+    """Each entry carries its own list: the one both sides wrote takes the base side's
+    entry and owes it, named by the entry's location; the one only this branch wrote
+    keeps this branch's."""
+    first = (T0, "first")
+
+    def terms(alpha: str, beta: str) -> str:
+        return _collection(_listed("alpha", first, alpha), _listed("beta", first, beta))
+
+    _merge(
+        repo,
+        {TERMS: terms("alpha first", "beta first")},
+        {TERMS: terms("alpha here", "beta here")},
+        {TERMS: terms("alpha there", "beta first")},
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    assert _read(repo, TERMS) == terms("alpha there", "beta here")
+    (owed,) = json.loads(result.output)["files"][0]["owed_revisits"]
+    assert owed["location"] == f"{TERMS}#alpha"
+    assert owed["command"].startswith(f"pkit friction revisit '{TERMS}#alpha' --target ")
+
+
 # --- left, skipped, nothing to do ----------------------------------------------------
 
 
