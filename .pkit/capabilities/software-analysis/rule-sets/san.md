@@ -52,7 +52,7 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T12:26:43Z
+          at: 2026-10-18T15:02:47Z
           outcome: updated
   RS-SAN-006:
     status: proposed
