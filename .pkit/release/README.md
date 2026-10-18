@@ -1041,10 +1041,14 @@ has merge authority.
 Migration dirs are named `<X.Y.0>` and authored in the same change-set as the
 surface they migrate (COR-010) — so the name *predicts* the release version
 before the release computes it. `pkit release plan` (and `apply`) warn when a
-backbone migration dir above the current `.pkit/VERSION` does **not** match the
-computed release version — an orphaned prediction (the coupling flagged on
-\#465). The warning is **non-fatal** (surface is a human judgment) and rides
-along in the release PR body via the `--json` summary's `migration_warnings`.
+migration dir above the version its tier records does **not** match the
+version the release computes for that tier — an orphaned prediction (the
+coupling flagged on \#465). That holds for the backbone's dirs, against
+`.pkit/VERSION`, and for each adapter's and capability's, against its
+`package.yaml`. A dir of a tier the release does not move warns too. The
+warning is **non-fatal** (surface is a human judgment) and rides along in the
+release PR body via the `--json` summary's `migration_warnings`, the
+backbone's first.
 
 ### Cutover — the old path still works
 

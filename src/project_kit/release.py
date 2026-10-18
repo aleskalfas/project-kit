@@ -57,7 +57,7 @@ from project_kit.changesets import (
     unreleased_dir,
 )
 from project_kit.manifest import BACKBONE_VERSION_KEY, COMPLETED_VERSION_KEY, set_state_line
-from project_kit.migrations import _VERSION_DIR_RE, parse_version_tuple
+from project_kit.migrations import _VERSION_DIR_RE, minor_of, parse_version_tuple
 
 # Repo-root-relative path prefixes whose changes count as touching the
 # backbone's surface, for the changeset guard. A heuristic — see the "Limits"
@@ -1898,45 +1898,60 @@ def _floor_summary(floor: FloorRaise | None) -> dict[str, object] | None:
 
 
 def migration_dir_mismatches(source_kit: Path, plan: ReleasePlan) -> list[str]:
-    """Backbone migration dirs whose predicted version the release won't cut.
+    """Migration dirs whose predicted version the release won't cut: the backbone's,
+    and each adapter's and capability's.
 
     Migration dirs are named `<X.Y.0>` and authored in the same change-set as
     the surface change they migrate (COR-010) — so their name *predicts* the
     release version before the release step computes it. A dir naming a version
-    above the current `.pkit/VERSION` that the computed release will NOT produce
-    is an orphaned prediction (the migration-dir-prediction coupling flagged on
-    #465). Returns human-readable warnings; empty when aligned.
+    above the version its tier records (`.pkit/VERSION`, or the component's
+    `package.yaml`) that the computed release will NOT produce for that tier is
+    an orphaned prediction (the migration-dir-prediction coupling flagged on
+    #465). Returns human-readable warnings, the backbone's first and then each
+    component's by name; empty when aligned. A component whose version is not in
+    `major.minor.patch` form has no released version to read past, so its dirs are
+    not compared.
 
     Non-fatal by design: surface is a human judgment (PRJ-002 D2) and a dir may
     legitimately target a later release, so this only warns — it never blocks.
-    Backbone-only: per-component tags/dirs are out of scope (PRJ-004).
     """
-    root = source_kit / "migrations" / "backbone"
-    if not root.is_dir():
-        return []
-
-    current = (source_kit / "VERSION").read_text(encoding="utf-8").strip()
-    current_minor = parse_version_tuple(current)[:2]
-    backbone = plan.backbone
-    computed_minor = parse_version_tuple(backbone.new_version)[:2] if backbone is not None else None
-
+    moving = {rel.component.name: rel for rel in plan.releases}
     warnings: list[str] = []
-    for entry in sorted(root.iterdir()):
-        if not (entry.is_dir() and _VERSION_DIR_RE.match(entry.name)):
+    for component in discover_components(source_kit):
+        if component.name == BACKBONE:
+            root, shown, subject = source_kit / "migrations" / "backbone", "backbone", BACKBONE
+        elif component.subtree is not None:
+            root = source_kit.parent / component.subtree / "migrations"
+            shown = root.relative_to(source_kit).as_posix()
+            subject = f"{component.kind} {component.name}"
+        else:
             continue
-        dir_minor = parse_version_tuple(entry.name)[:2]
-        if dir_minor <= current_minor:
-            continue  # at/below the released version — history, not a prediction
-        if computed_minor is None:
-            warnings.append(
-                f"migration dir backbone/{entry.name} predicts a backbone release, but "
-                f"the computed release moves no backbone version (stale prediction? see #465)."
-            )
-        elif dir_minor != computed_minor:
-            warnings.append(
-                f"migration dir backbone/{entry.name} does not match the computed backbone "
-                f"release {backbone.new_version} (stale version prediction? see #465)."
-            )
+        if not root.is_dir():
+            continue
+        try:
+            current_minor = minor_of(component.version)
+        except click.ClickException:
+            continue
+        rel = moving.get(component.name)
+        computed_minor = minor_of(rel.new_version) if rel is not None else None
+        for entry in sorted(root.iterdir()):
+            if not (entry.is_dir() and _VERSION_DIR_RE.match(entry.name)):
+                continue
+            dir_minor = minor_of(entry.name)
+            if dir_minor <= current_minor:
+                continue  # at/below the released version — history, not a prediction
+            if rel is None:
+                article = "an" if subject[0] in "aeiou" else "a"
+                warnings.append(
+                    f"migration dir {shown}/{entry.name} predicts {article} {subject} release, but "
+                    f"the computed release moves no {subject} version (stale prediction? "
+                    f"see #465)."
+                )
+            elif dir_minor != computed_minor:
+                warnings.append(
+                    f"migration dir {shown}/{entry.name} does not match the computed {subject} "
+                    f"release {rel.new_version} (stale version prediction? see #465)."
+                )
     return warnings
 
 

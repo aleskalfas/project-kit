@@ -807,6 +807,67 @@ def test_migration_dir_warns_when_release_moves_no_backbone(tmp_path: Path) -> N
     assert "backbone/1.6.0" in warnings[0]
 
 
+def _add_component_migration_dir(source_kit: Path, subtree: str, version: str) -> None:
+    (source_kit / subtree / "migrations" / version).mkdir(parents=True, exist_ok=True)
+
+
+def test_component_migration_dir_matching_its_computed_release_is_quiet(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.6.0")
+    _add(source_kit, "houseware", "minor", "house feature", "a.yaml")  # 0.3.0 -> 0.4.0
+    _add_component_migration_dir(source_kit, "capabilities/houseware", "0.4.0")
+    _add_component_migration_dir(source_kit, "capabilities/houseware", "0.3.0")  # history
+    plan = release.compute_release(source_kit)
+
+    assert release.migration_dir_mismatches(source_kit, plan) == []
+
+
+def test_component_migration_dir_warns_on_stale_prediction(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.6.0")
+    _add(source_kit, "houseware", "patch", "house fix", "a.yaml")  # 0.3.0 -> 0.3.1
+    _add_component_migration_dir(source_kit, "capabilities/houseware", "0.4.0")
+    plan = release.compute_release(source_kit)
+
+    assert release.migration_dir_mismatches(source_kit, plan) == [
+        "migration dir capabilities/houseware/migrations/0.4.0 does not match the computed "
+        "capability houseware release 0.3.1 (stale version prediction? see #465)."
+    ]
+
+
+def test_component_migration_dir_warns_when_release_moves_no_component_version(
+    tmp_path: Path,
+) -> None:
+    """The adapter's dir predicts a release no changeset makes, while the backbone moves."""
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, "backbone", "minor", "x", "a.yaml")  # 1.5.0 -> 1.6.0
+    _add_component_migration_dir(source_kit, "adapters/claude-code", "0.6.0")
+    plan = release.compute_release(source_kit)
+
+    assert release.migration_dir_mismatches(source_kit, plan) == [
+        "migration dir adapters/claude-code/migrations/0.6.0 predicts an adapter claude-code "
+        "release, but the computed release moves no adapter claude-code version (stale "
+        "prediction? see #465)."
+    ]
+
+
+def test_migration_dir_warnings_list_the_backbone_first(tmp_path: Path) -> None:
+    source_kit = _make_kit(tmp_path)
+    _write_capability(source_kit, "houseware", "0.3.0", ">=1.0.0,<1.6.0")
+    _add_component_migration_dir(source_kit, "capabilities/houseware", "0.4.0")
+    _add_migration_dir(source_kit, "1.6.0")
+    _add(source_kit, "claude-code", "patch", "adapter fix", "a.yaml")
+    plan = release.compute_release(source_kit)
+
+    warnings = release.migration_dir_mismatches(source_kit, plan)
+    assert [w.split()[2] for w in warnings] == [
+        "backbone/1.6.0",
+        "capabilities/houseware/migrations/0.4.0",
+    ]
+    summary = release.release_summary(source_kit, plan)
+    assert summary["migration_warnings"] == warnings
+
+
 # --- The declared floor raise (PRJ-002 D4) ----------------------------------
 
 
