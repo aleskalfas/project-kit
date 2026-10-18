@@ -59,7 +59,7 @@ from __future__ import annotations
 import io
 import json
 import re
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence, Sized
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
@@ -459,12 +459,12 @@ def _without_blocks(
     carriers = frozenset(
         version.artefacts[key].location
         for key, stamp in version.stamps.items()
-        if isinstance(stamp.value, Mapping) and stamp.value
+        if _holds(stamp.value, Mapping)
     )
     lists = frozenset(
         version.artefacts[key].location
         for key, stamp in version.revisits.items()
-        if isinstance(stamp.value, list) and stamp.value
+        if _holds(stamp.value, list)
     )
     spans = [
         *((stamp, _MARKER) for stamp in version.stamps.values()),
@@ -479,6 +479,12 @@ def _without_blocks(
         stop = len(text) if newline == -1 else newline + 1
         text = text[:start] + text[stop:]
     return text, carriers, lists
+
+
+def _holds(value: object, form: type) -> bool:
+    """Whether a block's or a list's `value` is of its `form` — a mapping, a list — and
+    holds something: else it carries no answer."""
+    return isinstance(value, form) and len(cast("Sized", value)) > 0
 
 
 def _anchored(text: str) -> bool:
