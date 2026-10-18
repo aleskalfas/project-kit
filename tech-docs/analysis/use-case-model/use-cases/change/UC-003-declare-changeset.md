@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T20:02:44Z
+      at: 2026-10-18T20:04:41Z
       outcome: unchanged
-      unchanged-because: This change stops release apply and release plan from writing a none changeset note to the changelog. The use case covers declaring changesets and the guard that checks them, which this change leaves as they were.
+      unchanged-because: This change stops release apply writing, and release plan listing, the note of a none changeset. The use case covers declaring changesets and the guard that checks them, which this change leaves as they were.
 ---
 
 # UC-003 — Declare what my change means for the next release
