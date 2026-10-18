@@ -1,5 +1,7 @@
 component: living-docs
 kind: none
+custom:
+  pr: "1702"
 body: >
   Internal. The README is revalidated unchanged against COR-050's point 16,
   a link that asks for a revisit of its targets, and against the schemas

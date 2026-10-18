@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Added
+  pr: "1702"
 body: >
   A link may ask for a revisit of its targets when its source changes (COR-050
   point 16). A capability declares a link on one of its friction places, under
