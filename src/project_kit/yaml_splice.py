@@ -9,9 +9,13 @@ it finds the keys whose values differ and edits those alone:
 - a key whose value stays on one line keeps its line: only the value's
   characters are replaced, so the spacing, the quoting style and a comment
   after the value stay as written;
-- a key whose value is or becomes a block collection has its lines replaced,
-  from the key through the line its value ends on, by the value laid out at
-  the key's column in the document's own mapping and list layout (`_Layout`);
+- a block list that gains items at its end keeps every line it holds: the
+  new items are inserted after its last item, in the list's own layout, so
+  its comments stay as written;
+- a key whose value is or becomes a block collection otherwise has its lines
+  replaced, from the key through the line its value ends on, by the value laid
+  out at the key's column in the document's own mapping and list layout
+  (`_Layout`);
 - a key the document does not hold yet is added after the last key of the
   mapping that gets it, in that mapping's layout — or inside its braces, in a
   mapping written in flow style — and brings the mappings it needs with it.
@@ -78,7 +82,9 @@ def splice(written: str, after: Mapping[str, Any]) -> str:
     wanted = plain(after)
     render = _Render(_Layout.of(root))
     changes = _changes(_load(text), wanted, ())
-    edited = _apply(text, [_edit(text, root, path, value, render) for path, value in changes])
+    edited = _apply(
+        text, [_edit(text, root, path, was, value, render) for path, was, value in changes]
+    )
     try:
         reread = _load(edited)
     except SpliceRefused:
@@ -105,12 +111,17 @@ def plain(value: Any) -> Any:
 # --- what changes --------------------------------------------------------------
 
 
+#: The old value of a key the document does not hold yet.
+_ABSENT: Any = object()
+
+
 def _changes(
     before: Mapping[str, Any], after: Mapping[str, Any], at: tuple[str, ...]
-) -> Iterator[tuple[tuple[str, ...], Any]]:
-    """The key path and new value of each key `after` sets differently from `before`,
-    in `after`'s order: a mapping in both is compared key by key; any other value
-    that differs is set whole. A key `after` drops is refused — a write sets keys."""
+) -> Iterator[tuple[tuple[str, ...], Any, Any]]:
+    """The key path, old value (`_ABSENT` for a new key) and new value of each key
+    `after` sets differently from `before`, in `after`'s order: a mapping in both
+    is compared key by key; any other value that differs is set whole. A key
+    `after` drops is refused — a write sets keys."""
     for key in before:
         if key not in after:
             raise SpliceRefused(f"the change removes `{'.'.join((*at, key))}`; a write sets keys")
@@ -123,7 +134,7 @@ def _changes(
                 cast(Mapping[str, Any], old), cast(Mapping[str, Any], value), (*at, key)
             )
         else:
-            yield (*at, key), value
+            yield (*at, key), before.get(key, _ABSENT), value
 
 
 # --- the text --------------------------------------------------------------------
@@ -255,10 +266,11 @@ class _Edit:
 
 
 def _edit(
-    text: str, root: _Node | None, path: tuple[str, ...], value: Any, render: _Render
+    text: str, root: _Node | None, path: tuple[str, ...], was: Any, value: Any, render: _Render
 ) -> _Edit:
-    """The edit that sets the key at `path` to `value`; every mapping before its
-    last step is one the document holds, since only the leaf of a change is new."""
+    """The edit that sets the key at `path` from `was` to `value`; every mapping
+    before its last step is one the document holds, since only the leaf of a
+    change is new."""
     *parents, key = path
     if root is None:  # nothing to add to yet: the key goes after what the text holds
         return _insertion(text, len(text), render.block(render.key(key), value, 0))
@@ -274,17 +286,25 @@ def _edit(
     existing = _pair(holder, key)
     if existing is None:
         return _add(text, holder, key, value, render)
-    return _replace(text, holder, existing, value, render)
+    return _replace(text, holder, existing, was, value, render)
 
 
 def _replace(
-    text: str, holder: _Node, existing: tuple[_Node, _Node], value: Any, render: _Render
+    text: str,
+    holder: _Node,
+    existing: tuple[_Node, _Node],
+    was: Any,
+    value: Any,
+    render: _Render,
 ) -> _Edit:
     """A key's new value: in place of the old one's characters where it fits
-    there, else in place of the key's lines with the key kept as written."""
+    there; the items a block list gains at its end after its last item; else in
+    place of the key's lines with the key kept as written."""
     key, old = existing
     if holder.flow or old.flow:
         return _Edit(old.start, old.end, render.flow_value(value))
+    if old.kind == "sequence" and old.items and _extends(was, value):
+        return _append(text, key, old, value[len(was) :], render)
     if old.kind == "scalar" and old.content_end is not None and old.style not in _BLOCK_SCALARS:
         inline = render.inline(value, old.style)
         if inline is not None:
@@ -295,6 +315,23 @@ def _replace(
     end = _through_line(text, start, _pair_end(key, old))
     lines = render.within(key, old).block(text[key.start : key.end], value, key.column)
     return _Edit(start, end, lines)
+
+
+def _extends(was: Any, value: Any) -> bool:
+    """Whether the list `value` is the list `was` with items added at its end."""
+    if not isinstance(was, list) or not isinstance(value, list):
+        return False
+    before, after = cast(list[Any], was), cast(list[Any], value)
+    return len(after) > len(before) and after[: len(before)] == before
+
+
+def _append(text: str, key: _Node, items: _Node, added: list[Any], render: _Render) -> _Edit:
+    """Items added at the end of a block list: inserted after the line its last
+    item ends on, in the list's own layout, every line it holds kept."""
+    last = items.items[-1]
+    at = _through_line(text, _line_start(text, last.start), _content_end(last))
+    lines = render.within(key, items).block(text[key.start : key.end], added, key.column)
+    return _insertion(text, at, lines.split("\n", 1)[1])
 
 
 def _add(text: str, holder: _Node, key: str, value: Any, render: _Render) -> _Edit:

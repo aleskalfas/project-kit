@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-18T13:32:42Z
+      at: 2026-10-18T13:52:13Z
       outcome: unchanged
-      unchanged-because: ADR-065 gains point 14, on which pkit a migration reaches, what it may ask it and which commands refuse inside it, and the Decision's list names it. Point 11's own text is unchanged, so the overlay's writers and reconcile's repair of a missing overlay, which this page describes, still hold.
+      unchanged-because: "COR-049 point 5 gains one sentence: the default folder of a project's rule sets is not recorded on first use, and a change of root keeps it found instead (COR-051 point 6). This page cites COR-049 for the overlay categories that derive from the internal root, and for the consent recording one over existing documents takes. Neither covers the rule-set folder, so what it says still holds."
 ---
 
 # Agents

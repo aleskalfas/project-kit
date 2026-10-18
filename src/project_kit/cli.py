@@ -377,6 +377,9 @@ def config_set(key: str, value: str, yes: bool) -> None:
     before anything is written — an invalid value is refused. Writing needs
     consent (COR-048 point 5): an interactive confirmation, or `--yes`; a
     non-interactive run without `--yes` refuses and names the command to run.
+    Setting `docs.internal` also adds the old root's `rule-sets/` to
+    `friction.places` where a rule-set file there would go unfound under the
+    new root, in the same write and under the same consent (COR-051 point 6).
     """
     from project_kit import backbone_schemas, project_config
 
@@ -396,11 +399,17 @@ def config_set(key: str, value: str, yes: bool) -> None:
     def mutate(data: CommentedMap) -> None:
         project_config.set_value(data, resolved, typed)
 
-    if not project_config.preview_config(target_root, mutate).changes:
+    rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
+    try:
+        unchanged = not project_config.preview_config(target_root, mutate).changes
+    except project_config.RuleSetPlaceUnwritable as exc:
+        raise exc.naming(rerun) from None
+    if unchanged:
         click.echo(f"{resolved.dotted} is already {typed}; nothing to write.")
         return
-    rerun = f"pkit config set {shlex.quote(key)} {shlex.quote(value)} --yes"
-    project_config.write_config(
+    # A change of the internal root also declares the old rule-set folder as a
+    # place, in the same write and under the same consent (COR-051 point 6).
+    change = project_config.apply_config(
         target_root,
         mutate,
         consent=project_config.Consent(yes=yes, rerun=rerun),
@@ -409,6 +418,8 @@ def config_set(key: str, value: str, yes: bool) -> None:
     click.echo(
         f"set {resolved.dotted} = {typed}  ({project_config.PROJECT_CONFIG_RELPATH.as_posix()})"
     )
+    if change.kept_rule_sets is not None:
+        click.echo(change.kept_rule_sets.notice())
     # The `.pkit/.gitignore` render reads the configuration (the process
     # journal's ignore line, COR-033 point 7): follow the new value now rather
     # than at the next sync, naming each component entry the render now leaves out.
