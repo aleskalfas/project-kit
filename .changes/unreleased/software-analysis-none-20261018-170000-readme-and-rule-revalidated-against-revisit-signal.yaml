@@ -1,0 +1,9 @@
+component: software-analysis
+kind: none
+custom:
+  pr: "1702"
+body: >
+  Internal. The README says the core now lets a component declare a link
+  that asks for a revisit of its targets (COR-050 point 16), and that this
+  capability declares none for a use case. RS-SAN-005 is revalidated
+  unchanged against the same refinement (#1667). Nothing you run changes.

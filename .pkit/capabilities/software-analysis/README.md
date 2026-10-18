@@ -15,9 +15,8 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007]
     revalidated:
-      at: 2026-10-18T16:20:28Z
-      outcome: unchanged
-      unchanged-because: "The README says the check requires a journey's use-case anchors to match its steps and relies-on, and that the message names the anchors to write. Both still hold now that a part anchor on a use case counts among them and matches neither list (#1725). It never says how an anchor is read, so nothing in it changes."
+      at: 2026-10-18T15:55:14Z
+      outcome: updated
 ---
 
 # software-analysis capability
@@ -41,7 +40,7 @@ The analysis describes the requirements: what your system must do, and for whom.
 - **A use case anchors each architecture view that realises it,** where you keep one. Use `--path` on the view's file. Where a place holds the view, write an artefact anchor on it instead.
 - **Nothing anchors the analysis back.** No record and no view anchors an analysis artefact. So no cycle runs between the two. No check finds such an anchor in general, so keep the rule when you write a record or a view.
 - **What a record serves is computed.** A page that shows a record or a view may list what anchors it, such as "Serves: UC-003". It is worked out from the analysis's anchors, and never stored.
-- **A changed use case flags none of the records that answer it,** since no anchor runs that way. Check them yourself when you change what a use case asks. A core mechanism for it is planned ([project-kit#1667](https://github.com/aleskalfas/project-kit/issues/1667)).
+- **A changed use case flags none of the records that answer it,** since no anchor runs that way. Check them yourself when you change what a use case asks. The core lets a component declare a link whose source's change asks for a revisit of its targets (COR-050 point 16), and this capability declares none for a use case.
 - **Architecture views stay outside the analysis.** A view, one kept as a documentation page included, names an analysis artefact only by its id, and states none of its facts. A context view names your actors that way, and does not describe them again.
 - **What goes where.** A decision holds the choice and why it was made. A rule in a rule set says what must hold of an artefact. A requirement says what must hold of the system: a checkable obligation and, where it has them, its measure and what verifies it. So a decision names a requirement rather than restating its measure. The analysis artefact that states the requirement holds the measure.
 
