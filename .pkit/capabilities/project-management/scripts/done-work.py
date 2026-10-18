@@ -222,8 +222,8 @@ declined prompt and 2 for a run with no terminal to ask at. So a verb that
 composes done-work (`land-work`, #1203) calls `run`, which returns how the
 run ended (`DoneWorkRun`: merged, merged with a step after the merge owed,
 queued, unconfirmed, declined, planned, head moved, refused — saying whether
-running again unchanged can help — or unreadable), and decides on that. The exit codes above are what `main`
-returns for each, unchanged.
+running again unchanged can help — or unreadable), and decides on that. The
+exit codes above are what `main` returns for each.
 """
 
 from __future__ import annotations
