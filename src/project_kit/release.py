@@ -370,9 +370,16 @@ class ComponentRelease:
     capability_bounds: tuple[CapabilityBoundWidening, ...] = ()
 
     @property
+    def changelog_changesets(self) -> list[Changeset]:
+        """The changesets the changelog entry is written from, in changeset
+        order: every one but a `none` changeset, which moves no version and adds
+        no line to the changelog (PRJ-002)."""
+        return [cs for cs in self.changesets if cs.segment != "none"]
+
+    @property
     def notes(self) -> list[str]:
         """The non-empty changelog notes, in changeset order."""
-        return [cs.note for cs in self.changesets if cs.note]
+        return [cs.note for cs in self.changelog_changesets if cs.note]
 
     @property
     def raises_floor(self) -> bool:
@@ -1630,7 +1637,9 @@ def render_changelog_entry(
 
     The section is keyed by the backbone's new version + date when the
     backbone moved, else by date alone (a component-only release has no
-    backbone tag to key on). Entries are grouped under Keep-a-Changelog
+    backbone tag to key on). A `none` changeset adds no entry, even when its
+    component moves (`ComponentRelease.changelog_changesets`, PRJ-002).
+    Entries are grouped under Keep-a-Changelog
     category headings; a component that is *not* the backbone is tagged inline
     with its name + new version so a date-keyed section still surfaces which
     component moved. A raised `requires_backbone` floor is stated once per
@@ -1657,7 +1666,7 @@ def render_changelog_entry(
     refs: dict[str, str] = {}  # link label -> target, for the trailing block
     for rel in plan.releases:
         is_backbone = rel.component.name == BACKBONE
-        for cs in rel.changesets:
+        for cs in rel.changelog_changesets:
             text = cs.note
             for sentence in rel.floor_sentences(cs):
                 text = _with_sentence(text, sentence)
@@ -1764,7 +1773,7 @@ def _write_changelog(repo_root: Path, plan: ReleasePlan, when: date) -> None:
         unlinked = sum(
             1
             for rel in plan.releases
-            for cs in rel.changesets
+            for cs in rel.changelog_changesets
             if cs.pr and _PR_BARE_NUMBER_RE.fullmatch(cs.pr)
         )
         if unlinked:

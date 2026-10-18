@@ -1,0 +1,8 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release apply` no longer writes a `none` changeset's note to the
+  changelog when another changeset moves its component, as PRJ-002 decides.
+  `pkit release plan` no longer lists that note either.
