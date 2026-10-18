@@ -2632,7 +2632,9 @@ def land(
         monkeypatch.setattr(lw, "_monotonic", clock)
 
         def once() -> str:
-            code = lw.main([str(ISSUE), "--yes", *argv])
+            # An authorisation names its head (#1760): the PR's head as the run
+            # finds it, as each other caller lands the head it finds.
+            code = lw.main([str(ISSUE), "--yes", "--expect-head", host.head_oid, *argv])
             out = capsys.readouterr().out
             steps = [line for line in out.splitlines() if line.split(":", 1)[0] in _STEPS]
             return f"{code} {_gist(steps[-1])}" if steps else f"{code}"

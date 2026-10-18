@@ -950,19 +950,70 @@ class KeySpan(NamedTuple):
     flow: bool
 
 
-def key_span(front_matter: str, keys: Sequence[str]) -> KeySpan | None:
+def key_span(front_matter: str, keys: Sequence[str]) -> KeySpan | str:
     """Where the last of `keys` is written in `front_matter`: from its key's first character
     to its value's last — the characters a write in flow style replaces, and in block style
     the key's lines without their indentation or line break.
 
-    `None` when the front matter does not parse, or the key is not written directly —
-    reached through an alias or merge key — or not at all.
+    Each step is the key the parsed front matter reads under that text: each key is read
+    rendered as text (`backbone_schemas.as_written`), as discovery reads it, so `0x1` is
+    read as `1` and `true` as `True`. A key written as the step but read otherwise is
+    another key. Else why the key cannot be told, as words that follow its name: the
+    front matter does not parse, a mapping on the path holds a merge key, through which
+    keys written elsewhere are read as its own, two of its keys are read as the step, or
+    none is.
     """
-    parent = _node_at(_composed(front_matter), keys[:-1])
-    pair = _pair(parent, keys[-1]) if isinstance(parent, MappingNode) and keys else None
-    if pair is None or not isinstance(parent, MappingNode):
-        return None
+    root = _composed(front_matter)
+    if root is None:
+        return "is not in front matter that parses"
+    constructor: Any = YAML(typ="safe").constructor  # ruamel's constructor is untyped
+    node: Node = root
+    parent: MappingNode | None = None
+    pair: tuple[Node, Node] | None = None
+    for step in keys:
+        if not isinstance(node, MappingNode):
+            return f"is not written under a key read as `{step}`"
+        parent = node
+        read: list[tuple[Node, Node]] = []
+        held: Any = getattr(node, "value", ())  # ruamel's nodes are untyped
+        for key_node, value_node in cast("list[tuple[Node, Node]]", held):
+            if getattr(key_node, "tag", None) == _MERGE_TAG:
+                return (
+                    "is reached through a merge key, which reads keys written elsewhere as "
+                    "its mapping's own"
+                )
+            if _read_as(constructor, key_node) == step:
+                read.append((key_node, value_node))
+        if len(read) > 1:
+            return f"cannot be told apart: two keys on its path are read as `{step}`"
+        if not read:
+            return f"is not written under a key read as `{step}`"
+        pair = read[0]
+        node = pair[1]
+    if pair is None or parent is None:
+        return "is named by no key"
     return KeySpan(*_pair_span(*pair), flow=_in_flow(parent))
+
+
+# The tag YAML resolves a merge key to, written `<<` or tagged `!!merge`.
+_MERGE_TAG = "tag:yaml.org,2002:merge"
+
+
+def _read_as(constructor: Any, key_node: Node) -> str | None:
+    """A key as the parsed front matter reads it: built as YAML builds it, a sequence held
+    as a tuple, then rendered as text (`backbone_schemas.as_written`), or `None` where it
+    cannot be built."""
+    try:
+        key = constructor.construct_object(key_node, deep=True)
+    except (YAMLError, TypeError, ValueError, KeyError):
+        return None
+    if isinstance(key, list):
+        key = tuple(cast("list[Any]", key))
+    try:
+        rendered = cast("Mapping[str, Any]", bs.as_written({key: None}))
+    except TypeError:  # a key no mapping can hold
+        return None
+    return next(iter(rendered))
 
 
 def _in_flow(mapping: MappingNode) -> bool:

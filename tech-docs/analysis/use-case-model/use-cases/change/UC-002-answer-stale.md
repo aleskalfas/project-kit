@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-18T19:06:24Z
+      at: 2026-10-18T19:14:52Z
       outcome: unchanged
-      unchanged-because: This branch words the revisit finding and the revisit writer's refusal, rewords the software-engineer agent's revisit paragraph, and splits one validation bullet of COR-050 point 12. Revalidating and deferring, and what this use case takes from core rule 20, are untouched.
+      unchanged-because: "Variant 9b and step 6 still hold: friction resolve still resolves a conflicted block's text and writes no answer, and the writers write as before. This change only makes the reading both share find a block under the keys discovery reads it by, and leave in conflict a file whose keys on that path are read alike, or hold a merge key, which this use case does not describe."
 ---
 
 # UC-002 — Answer what my change made stale
