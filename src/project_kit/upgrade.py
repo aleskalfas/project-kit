@@ -36,6 +36,9 @@ as `completed_version`, and every migration runs inside it, in COR-010's order
      merge brings.
   9. Record the completion, then (10) the pin.
 
+Then, outside the transition, the questions the data points declare
+(COR-061; `point_questions`).
+
 When the project is current, upgrade reports it and exits: refreshing content
 at the recorded version is `sync`'s job, not upgrade's.
 """
@@ -380,6 +383,20 @@ def run_upgrade(
 
     click.echo()
     click.echo("Upgrade complete.")
+
+    # After the transition (COR-061; ADR-065 point 4): every question a data
+    # point declares, once the transition is complete and the pin written, asked
+    # where a person can answer and named otherwise. No step of the transition.
+    # A dry run names them from the wiring with each moving capability at the
+    # version the bundle ships.
+    from project_kit import point_questions
+
+    sources = [plan.source for plan in moving if plan.source is not None] if dry_run else []
+    point_questions.ask(
+        target_root,
+        point_questions.questions_for(point_questions.wiring_after(target_root, sources)),
+        dry_run=dry_run,
+    )
 
 
 # --- What a transition records and moves (ADR-065 points 2, 3 and 5) -----------
