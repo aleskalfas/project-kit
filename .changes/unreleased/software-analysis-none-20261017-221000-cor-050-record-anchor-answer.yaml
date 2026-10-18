@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  The README's and RS-SAN-005's friction blocks record that they still hold
+  against COR-050's refinement for #1647: revalidations only, which move no
+  surface.

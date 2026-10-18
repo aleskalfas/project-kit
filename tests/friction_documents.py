@@ -125,6 +125,34 @@ def pointed_record(
     )
 
 
+#: An architectural record the place `docs` holds, so a record that is an artefact
+#: (COR-050 point 1), found where the agents overlay names the ADR folder (`ADR_OVERLAY`).
+ADR = "docs/architecture/decisions/ADR-007-recorded.md"
+ADR_OVERLAY = {
+    ".pkit/agents/project/overlay.yaml": "adr-records:\n  - docs/architecture/decisions/\n"
+}
+
+#: Its Decision, with two point headings, so an anchor may name its point 3.
+ADR_DECISION = (
+    "## Decision\n\nThe engine stays one module.\n\n### 1. One\n\nOne.\n\n### 3. Three\n\nThree.\n"
+)
+
+
+def adr(**overrides: Any) -> str:
+    """`ADR-007` at `ADR`, carrying its own friction block: anchored to the engine and
+    revalidated at T1, `outcome: updated`."""
+    values: dict[str, Any] = {
+        "anchors": {"path": ["src/core/**"]},
+        "at": T1,
+        "outcome": "updated",
+        "title": "A recorded decision",
+        "status": "accepted",
+        "body": ADR_DECISION,
+    }
+    values.update(overrides)
+    return document("ADR-007", **values)
+
+
 #: A document with a lead and sections, for anchors on one section or the lead (COR-050
 #: point 2).
 MANUAL = "docs/manual.md"

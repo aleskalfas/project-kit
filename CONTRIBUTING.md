@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-17T21:42:58Z
+      at: 2026-10-17T21:34:51Z
       outcome: unchanged
-      unchanged-because: checks.yml gains only a comment on the changeset guard, naming its range tie. Its steps, its triggers and the aggregator it runs stay as they were, so what this guide says CI runs, and when, holds.
+      unchanged-because: COR-050 changes what a whole record anchor stands on, the record's content without its container, and lets cycles and the upstream-first order follow record anchors. This guide's friction gate, whole-repository report and escape hatch rest on COR-050 point 12 and ADR-055 point 5, which the change leaves as they were.
 ---
 
 # Contributing to project-kit
@@ -186,7 +186,7 @@ The `core/` corpus is treated as an axiom system. A record may use only:
 
 It must not lean on tooling, commands, or conventions that the kit itself has not yet recorded a decision about. Concretely: do not use `pkit sync`, `pkit init`, `pkit` or any other kit-internal command name inside core records until that name is decided in its own record. Use generic phrasing instead — "the kit's sync operation", "first-time install", "the kit's CLI" — or defer the discussion to a future record.
 
-When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one.
+When a record needs to reach for something not yet defined, the right move is either to introduce that concept in its own earlier record or to defer the topic to a future one. Forward-pointer "see also" references are fine for navigation, but no record should *depend* on a later one. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
 
 This keeps the corpus self-supporting: any reader can start at COR-001 and follow forward without needing to know what the kit's CLI eventually looks like, what its sync mechanism is named, or what its distribution channel will be.
 

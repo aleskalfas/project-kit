@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-17T21:42:35Z
+      at: 2026-10-17T20:04:00Z
       outcome: unchanged
-      unchanged-because: PRJ-002 lets a branch correct a range that excludes the version the tree carries, and the guard admits that correction. A pull request still declares each surface change in a changeset the guard checks, and the release still cuts the tag, so the Note's two steps hold.
+      unchanged-because: COR-050 changes what a whole record anchor stands on and lets cycles and the upstream-first order follow record anchors. The actor's needs and its Core note rest on the checks running unattended and binding once required (point 12), which the change leaves as it was.
 ---
 
 # ACT-ci-pipeline — CI pipeline
