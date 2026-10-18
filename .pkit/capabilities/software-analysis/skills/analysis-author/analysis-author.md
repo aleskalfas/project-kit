@@ -24,6 +24,7 @@ reads:
     - COR-008
   paths:
     - .pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md
+    - .pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md
     - .pkit/capabilities/software-analysis/README.md
     - .pkit/project/config.yaml
 ---

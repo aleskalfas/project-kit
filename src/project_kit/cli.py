@@ -33,6 +33,7 @@ from project_kit import (
     friction_report,
     friction_repository,
     friction_resolve,
+    friction_since,
     friction_write,
     pull_request_landing,
     router,
@@ -1408,7 +1409,8 @@ def connections_resolve(address: str, as_json: bool) -> None:
 def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
-    discovery finds — which never write, the writers — revalidate, defer,
+    discovery finds, whether what changed since a commit lies inside
+    `revalidated` blocks — which never write, the writers — revalidate, defer,
     record-status — which write one block, only with consent, and resolve,
     which resolves a merge's conflicting revalidations as text and writes no
     answer.
@@ -1840,6 +1842,56 @@ def friction_artefacts_command(at: str | None, as_json: bool) -> None:
         click.echo(friction_discovery.render_artefacts_json(document), nl=False)
     else:
         click.echo(friction_discovery.render_artefacts_human(document), nl=False)
+
+
+@friction.command("since")
+@click.argument("since_rev", metavar="REV")
+@click.option(
+    "--head",
+    "head_rev",
+    metavar="REV",
+    default=None,
+    help="The later commit. Default: HEAD. Read from git objects; the working tree is not read.",
+)
+@click.option(
+    "--base",
+    "base_ref",
+    metavar="REF",
+    default=None,
+    help=f"The base whose merges are set apart. Default: ${friction_check.BASE_ENV}, else the "
+    "default branch (`pkit repository base` shows it).",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_since_command(
+    since_rev: str, head_rev: str | None, base_ref: str | None, as_json: bool
+) -> None:
+    """Whether every change from commit REV to the head, apart from merges of the base, lies
+    inside `revalidated` blocks (COR-050 point 3).
+
+    The head must descend from REV along its own line of commits. A merge of
+    the base counts only for what differs from git's clean merge of its two
+    parents, and any other commit for its own diff. A file lies inside the
+    blocks only when it is an artefact's file and its two texts are the same
+    once every `revalidated` key is taken out. Each change outside is named
+    with its commit and why. Reads git only and writes nothing. Exit 0 when
+    answered, either way; 1 when it cannot answer: a shallow clone, a name that
+    is no commit, a base that does not resolve, a git too old for `merge-tree`.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    # Read once, and said where it is read from the local branch (COR-054 point 2).
+    settled = default_branch.settled(target_root, base_ref, head_rev=head_rev or "HEAD")
+    _warn_settled(settled)
+    found = friction_since.run_since(
+        target_root, since_rev, head_rev=head_rev, base_ref=base_ref, resolved=settled.base
+    )
+    if as_json:
+        click.echo(friction_since.render_json(found), nl=False)
+    else:
+        click.echo(friction_since.render_human(found), nl=False)
 
 
 @main.group("rule-sets")

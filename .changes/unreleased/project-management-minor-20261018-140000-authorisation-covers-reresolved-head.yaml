@@ -1,0 +1,19 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `land-work --yes --expect-head <sha>` lands a later head that the
+  authorisation for `<sha>` covers: one where every change since lies inside
+  `revalidated` blocks, a clean merge of the base counting as none, as the
+  backbone's `pkit friction since` answers it. That is a merge round that only
+  wrote answers again. The run goes on at the later head, its checks, review and
+  merge gates as for any head. Its `head:` and `merge:` lines say which head it
+  merged and why the authorisation covered it. It stops at `ready:` on that head
+  where it finds a finding to judge or an answer the change check did not ask
+  for, since each needs the person. Any other later head, or one the backbone
+  cannot answer for, still stops the run (exit 3), now naming the changes outside
+  the blocks (DEC-055 point 3). Approved pull requests whose answers cover the
+  same documents merge one after another without a new authorisation after each
+  merge round.

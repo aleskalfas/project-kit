@@ -9,9 +9,10 @@ backbone and never walks the places itself, so it reads that answer through
 the backbone's reading command, `pkit friction artefacts --json`, at the
 working tree or, with `--at`, at one commit (`backbone.read_document`).
 
-What this module decides over the answer is DEC-001's: each place of this
-capability holds one kind of artefact (point 2) — the glossary is a collection
-file, one keyed entry per term; an actor, a use case and a journey are a
+What this module decides over the answer is DEC-001's and DEC-002's: each place
+of this capability holds one kind of artefact (DEC-001 point 2, DEC-002 point
+3) — the glossary is a collection file, one keyed entry per term; an actor, a
+use case, a journey and a requirement of each of the three kinds are a
 document each — and a file in a place that holds no artefact of its kind's
 shape is a stray the check reports. The revalidation records are not
 artefacts: their folder is this capability's folder of held documents (COR-050
@@ -39,22 +40,54 @@ from typing import Any
 CAPABILITY = "software-analysis"
 LOCATION = "analysis"
 
-#: The four kinds of anchored artefact (DEC-001 point 1).
-ACTOR, TERM, USE_CASE, JOURNEY = "actor", "term", "use-case", "journey"
-KINDS = (ACTOR, TERM, USE_CASE, JOURNEY)
+#: The kinds of anchored artefact: the four DEC-001 point 1 gives, and the three kinds
+#: of requirement DEC-002 point 1 adds.
+ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT = (
+    "actor",
+    "term",
+    "use-case",
+    "journey",
+    "quality-requirement",
+    "functional-requirement",
+    "constraint",
+)
+REQUIREMENTS = (QUALITY, FUNCTIONAL, CONSTRAINT)
+KINDS = (ACTOR, TERM, USE_CASE, JOURNEY, *REQUIREMENTS)
 
 #: The kinds kept as one collection file, an entry per artefact (DEC-001 point 2):
 #: the glossary. An actor is a document of its own, so its needs, in its front
 #: matter, read beside its description.
 COLLECTIONS = frozenset({TERM})
 
-#: Each kind's id prefix (DEC-001 point 3); use cases and journeys are numbered.
-PREFIX = {ACTOR: "ACT", TERM: "TERM", USE_CASE: "UC", JOURNEY: "JRN"}
+#: Each kind's id prefix (DEC-001 point 3). The three kinds of requirement share one
+#: numbering (DEC-002 point 2). The stamp and the number checks number use cases and
+#: journeys, and no requirement yet.
+PREFIX = {
+    ACTOR: "ACT",
+    TERM: "TERM",
+    USE_CASE: "UC",
+    JOURNEY: "JRN",
+    **dict.fromkeys(REQUIREMENTS, "REQ"),
+}
 NUMBERED = frozenset({USE_CASE, JOURNEY})
 
 #: How each kind is named in a message, and how its id is written.
-NOUN = {ACTOR: "actor", TERM: "term", USE_CASE: "use case", JOURNEY: "journey"}
-ID_SHAPE = {ACTOR: "ACT-<slug>", TERM: "TERM-<slug>", USE_CASE: "UC-NNN", JOURNEY: "JRN-NNN"}
+NOUN = {
+    ACTOR: "actor",
+    TERM: "term",
+    USE_CASE: "use case",
+    JOURNEY: "journey",
+    QUALITY: "quality requirement",
+    FUNCTIONAL: "functional requirement",
+    CONSTRAINT: "constraint",
+}
+ID_SHAPE = {
+    ACTOR: "ACT-<slug>",
+    TERM: "TERM-<slug>",
+    USE_CASE: "UC-NNN",
+    JOURNEY: "JRN-NNN",
+    **dict.fromkeys(REQUIREMENTS, "REQ-NNN"),
+}
 
 #: The front-matter fields DEC-001 point 4 adds to what a use case and a journey name:
 #: a use case's other actors, and the use cases outside a journey that a step relies on.
@@ -118,6 +151,9 @@ KIND_OF_PLACE = {
     "use-case-model/actors": ACTOR,
     "use-case-model/use-cases": USE_CASE,
     "use-case-model/journeys": JOURNEY,
+    "requirements/quality": QUALITY,
+    "requirements/functional": FUNCTIONAL,
+    "requirements/constraints": CONSTRAINT,
 }
 
 #: The revalidation records' folder inside the analysis location. The records

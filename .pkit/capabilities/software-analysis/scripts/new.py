@@ -69,7 +69,7 @@ from pathlib import Path
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import backbone, revalidation, schemas, stamp
-from _lib.model import ACTOR, JOURNEY, TERM, USE_CASE
+from _lib.model import ACTOR, JOURNEY, KINDS, TERM, USE_CASE
 from _lib.placeholder import unfilled
 
 #: The kind a revalidation record is stamped as.
@@ -279,8 +279,9 @@ def _gap(value: str) -> revalidation.Gap:
 
 
 def _artefact_id(text: str) -> bool:
-    """Whether `text` has the shape of an artefact's id, of any kind."""
-    return any(schemas.id_pattern(kind).match(text) for kind in (ACTOR, TERM, USE_CASE, JOURNEY))
+    """Whether `text` has the shape of an artefact's id, of any kind, a requirement's
+    included (DEC-002, Implications)."""
+    return any(schemas.id_pattern(kind).match(text) for kind in KINDS)
 
 
 def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:

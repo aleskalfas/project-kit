@@ -4,7 +4,8 @@ What is checked, each against the record's words:
 
 - **Shape** (points 1 and 2). Every file in one of the places holds artefacts of
   that place's kind: the glossary is a collection file, one entry per term
-  keyed by its id; an actor, a use case and a journey are a document each. A
+  keyed by its id; an actor, a use case, a journey and a requirement of each
+  of DEC-002's three kinds are a document each. A
   file without front matter, one whose front matter does not parse, a glossary
   that is no collection, or an actor, use-case or journey file holding
   entries, is an error: what it holds cannot be read, its ids included, and
@@ -12,7 +13,8 @@ What is checked, each against the record's words:
   use case's or journey's file name carries.
 - **Missing required parts** (points 1 and 3). Each artefact's own fields
   against its kind's companion schema — its id, its title or name, its
-  status, its actor, its steps, its needs, its definition — and an entry's id
+  status, its actor, its steps, its needs, its definition, a requirement's
+  statement, measure and where it holds (DEC-002 point 4) — and an entry's id
   against its kind's id. Unknown fields are refused, so a misspelt one is
   never silently ignored.
 - **A placeholder left** (point 1). What the stamp leaves a person to write —
@@ -34,7 +36,8 @@ What is checked, each against the record's words:
   actor's name — `# UC-NNN — <title>`, `# ACT-<slug> — <name>`: what a reader
   of the front matter alone sees — a data point publishing `{id, title,
   status}`, say — is what the page shows. The heading is read from the file
-  discovery names.
+  discovery names. A requirement's heading, which shows its kind between its
+  id and its title, is not held here yet: its structure's title heading is.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held.
 - **A name the id disagrees with** (point 3). A use case or journey whose
@@ -120,8 +123,9 @@ And where the format rule binds, at its status:
   RS-SAN-001): an artefact's body — a collection entry's section, as the
   backbone's reading spans it — against the structure its kind declares
   (`_lib/structure.py`): a declared part missing, out of order or empty,
-  `None.` where the part may not read it, and a part or a front-matter field
-  that does not hold the form its element names (`_lib/forms.py`), a part of
+  `None.` where the part or the front-matter field may not read it, and a part
+  or a front-matter field that does not hold the form its element names
+  (`_lib/forms.py`), a part of
   the `sentence` form that holds a list too. A journey's steps read each use
   case's title. A part or a
   label a writer adds is never reported, though what it holds is content of
@@ -476,7 +480,9 @@ def _headings(root: Path, analysis: Analysis) -> list[Finding]:
     front matter gives them."""
     found: list[Finding] = []
     for artefact in analysis.artefacts:
-        field = TITLED[artefact.kind]
+        field = TITLED.get(artefact.kind)
+        if field is None:
+            continue  # a requirement's heading shows its kind too, which this does not hold
         title = artefact.fields.get(field)
         if (
             artefact.entry
@@ -1753,7 +1759,12 @@ def _field_findings(
             continue
         field = departure.field
         each = " in each item" if departure.pointer.count("/") > 1 else ""
-        if departure.how == structure.NOT_A_SENTENCE:
+        if departure.how == structure.NONE_REFUSED:
+            problem = (
+                f"{subject}'s `{field.name}` reads `None.`, which only a field that allows it "
+                f"may: it always has something to say{each}"
+            )
+        elif departure.how == structure.NOT_A_SENTENCE:
             problem = (
                 f"{departure.text!r} is more than one sentence: {subject}'s `{field.name}` "
                 f"holds one sentence{each}, and a sentence ends at `.`, `?` or `!` followed by a "

@@ -15,7 +15,7 @@
       "const": 1
     },
     "kinds": {
-      "description": "The kinds, keyed by the type the capability's places give each artefact kind (DEC-001 point 2), and by a key of its own for the revalidation record, which has no type. Each kind's template is `templates/<kind>.md`, and the glossary's is `templates/glossary.md`.",
+      "description": "The kinds, keyed by the type the capability's places give each artefact kind (DEC-001 point 2; software-analysis DEC-002 point 3), and by a key of its own for the revalidation record, which has no type. Each kind's template is `templates/<kind>.md`, and the glossary's is `templates/glossary.md`.",
       "type": "object",
       "propertyNames": {
         "$ref": "#/$defs/word"
@@ -59,6 +59,10 @@
           "description": "Whether the elements come in the order listed. True unless set to false.",
           "type": "boolean",
           "default": true
+        },
+        "shown-as": {
+          "description": "The kind's name as its artefacts show it beside their id, such as `Quality` (software-analysis DEC-002 point 2). A document of the kind is headed `# <id> · <shown-as> · <title>`. An actor, a use case and a journey show none, and are headed `# <id> — <title>`, an actor by its name. A project's own structures relabel no `shown-as`.",
+          "$ref": "#/$defs/line"
         },
         "retired": {
           "description": "The ids of elements the kind shipped and retired. An id is permanent once shipped: a retired element is listed here, never renamed, and its id is never given to another element (DEC-001 point 1). A project's addition that names a retired element is an error.",
@@ -269,6 +273,10 @@
       "properties": {
         "form": {
           "$ref": "#/$defs/form"
+        },
+        "allows-none": {
+          "description": "Whether the field may read `None.` and nothing else, when there is nothing to say yet (DEC-001 point 1; software-analysis DEC-002 point 4). True, it may, and its form is not judged while it does. False, `None.` is refused, at the format rule's status, as every form is. Left out, the field's form alone judges it, so a field that sets neither reads `None.` wherever its form takes it.",
+          "type": "boolean"
         },
         "hint": {
           "description": "What goes in the field, for whoever fills it.",

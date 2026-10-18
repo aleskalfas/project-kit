@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-18T08:25:31Z
+      at: 2026-10-18T12:51:45Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14, whose synced-tree clause names the external source a component is pinned to, and the Rationale bullet on why a section anchor needs no permanent id. This page cites COR-050 point 3, on who writes and who checks a change's answers, which the change leaves as it was.
+      unchanged-because: DEC-055 adds when an authorisation for one head covers a later head whose only changes are answers inside revalidated blocks, and the limits that brings. This page cites point 3 for who writes and who checks a change's answers and what docs-reviewer blocks on, and point 5 for a sentence edited after the verdict, which the change leaves as they were.
 ---
 
 # software-engineering capability
