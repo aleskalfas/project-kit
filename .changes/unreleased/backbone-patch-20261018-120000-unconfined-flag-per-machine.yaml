@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit permissions sandbox enable --dangerously-allow-unconfined` no longer
+  writes `failIfUnavailable: false` into the committed `.claude/settings.json`.
+  The fail-open goes to the gitignored `.claude/settings.local.json`, for this
+  machine only, and the committed floor stays `true`. The run warns when the
+  repository does not ignore that file. A run without the flag, `setup
+  autonomy` included, removes any `failIfUnavailable` other than `true` from
+  `settings.local.json`, a hand-set one too. A committed `false` that an
+  earlier version wrote is reported by `sandbox status` and `overview`, with
+  the `sandbox enable` step that moves it, and `setup autonomy` restores it.
+  On macOS, where the box is gated off, the flag records the local `false`
+  too. It has no effect while the box is off, takes effect if the box is
+  turned on later, and is reported meanwhile. There a committed value is
+  corrected, but a missing one is not added.

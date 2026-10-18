@@ -14,7 +14,11 @@ of this capability holds one kind of artefact (DEC-001 point 2, DEC-002 point
 3) — the glossary is a collection file, one keyed entry per term; an actor, a
 use case, a journey and a requirement of each of the three kinds are a
 document each — and a file in a place that holds no artefact of its kind's
-shape is a stray the check reports. The revalidation records are not
+shape is a stray the check reports. The folder that holds the three kinds of
+requirement's places is no place (DEC-002 point 3), so a file in it outside them
+is in no place: the answer lists the files of the analysis location that no
+place or held folder of this capability holds, and the check reports those
+under that folder. The revalidation records are not
 artefacts: their folder is this capability's folder of held documents (COR-050
 point 1), and the records are the files the answer's declaration of that
 folder holds. A file the project's `friction.exclude` leaves out is no part of
@@ -30,6 +34,7 @@ which a project's tightening of a structure binds (DEC-001 point 1).
 from __future__ import annotations
 
 import dataclasses
+import posixpath
 import re
 from collections import defaultdict
 from collections.abc import Mapping
@@ -177,6 +182,11 @@ KIND_OF_PLACE = {
     "requirements/constraints": CONSTRAINT,
 }
 
+#: The folder inside the analysis location that holds the three kinds of requirement's
+#: places, one folder each. It is no place itself: a requirement lies in the folder of
+#: its kind (DEC-002 point 3). A test holds it to the package.
+REQUIREMENTS_FOLDER = "requirements"
+
 #: The revalidation records' folder inside the analysis location. The records
 #: describe an act and are not anchored artefacts, so it is not a place: the
 #: package declares it as its folder of held documents (`friction.held`), by
@@ -232,6 +242,13 @@ STEPS_RULE = "RS-SAN-002"
 #: hold, each saying whether `friction.exclude` leaves it out.
 HELD = "held"
 HELD_FILES = "held_files"
+
+#: The key of each capability location's files in that document that no place or held
+#: folder of the capability holds, by the capability's name and then the location's,
+#: each with whether `friction.exclude` leaves it out. Added within its version: a
+#: backbone that predates it gives none, and then nothing says whether `requirements/`
+#: holds a file outside the three kinds' folders.
+UNPLACED = "unplaced"
 
 
 class Unreadable(Exception):
@@ -308,6 +325,12 @@ class Analysis:
     leaves out, as it leaves out an artefact. `records_unheld` says why that
     folder holds nothing, when it does not: the backbone skipped it (its
     validation says why), or the reading declares no such folder.
+    `outside_kinds` are the files under `REQUIREMENTS_FOLDER` that no place or
+    held folder of this capability holds, by path, less those `friction.exclude`
+    leaves out: a file there outside the three kinds' folders, which no place
+    holds (DEC-002 point 3). It is `None` when the reading gives no such list of
+    the analysis location, as from a backbone that predates it, so nothing says
+    whether there are any.
     `method_rules` are the statuses of the rules of this capability's method
     set, `METHOD_SET`, by id, a rule without one `proposed` (COR-051 point 4);
     `None` when the reading holds no such set. `project_rules` are the rules of
@@ -325,6 +348,7 @@ class Analysis:
     records: tuple[str, ...]
     records_unheld: str | None = None
     excluded: frozenset[str] = frozenset()
+    outside_kinds: tuple[str, ...] | None = ()
     method_rules: Mapping[str, str] | None = None
     project_rules: Mapping[str, ProjectRule] = dataclasses.field(default_factory=dict)
     rule_statuses: Mapping[str, str] = dataclasses.field(default_factory=dict)
@@ -518,9 +542,41 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         records=records,
         records_unheld=unheld,
         excluded=frozenset(excluded),
+        outside_kinds=_outside_kinds(document.get(UNPLACED)),
         method_rules=_method_rules(document),
         project_rules=_project_rules(document),
         rule_statuses=_rule_statuses(document),
+    )
+
+
+def _outside_kinds(unplaced: Any) -> tuple[str, ...] | None:
+    """The files under `REQUIREMENTS_FOLDER` of the analysis location that the reading
+    says no place or held folder of this capability holds, by path, less those
+    `friction.exclude` leaves out. `None` when the reading cannot say: it gives no
+    `UNPLACED`, or not the analysis location in it, or the location without where it
+    lies or without its list of files. The check reads this only where the reading
+    places this capability's places in the location, so a reading without it has no
+    answer, never one of no such files."""
+    if not isinstance(unplaced, Mapping):
+        return None
+    own = unplaced.get(CAPABILITY)
+    location = own.get(LOCATION) if isinstance(own, Mapping) else None
+    if not isinstance(location, Mapping):
+        return None
+    where = _text(location.get("path"))
+    files = location.get("files")
+    if where is None or not isinstance(files, list):
+        return None
+    where = posixpath.normpath(where)
+    folder = REQUIREMENTS_FOLDER if where == "." else f"{where}/{REQUIREMENTS_FOLDER}"
+    return tuple(
+        sorted(
+            path
+            for entry in _mappings(files)
+            if isinstance(path := entry.get("path"), str)
+            and path.startswith(f"{folder}/")
+            and entry.get("excluded") is not True
+        )
     )
 
 
