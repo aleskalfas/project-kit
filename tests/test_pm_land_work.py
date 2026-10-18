@@ -1907,6 +1907,24 @@ def test_a_reason_that_reads_as_a_closing_reference_is_refused_and_never_written
     assert run.github.bodies == [] and run.github.merges == []
 
 
+def test_a_revisit_entry_s_target_that_reads_as_a_closing_reference_is_refused(
+    world, capsys
+) -> None:
+    """A revisit entry's target, links and trigger fields are words of the list too
+    (#1703): one that reads as a closing reference is refused, never written."""
+    run = _answers_world(world)
+    target = {"kind": "path", "value": "docs/fixes #77.md"}
+    run.written = [INSTALL, {**REVISIT_DEFERRED, "target": target}]
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1] == (
+        f"{_STEP}: refused — the words on reqs/latency.md read as a closing reference (fixes "
+        "#77): in the description and the squash commit they would close an issue at merge. "
+        f"Reword them there, push, and run `land-work {ISSUE}` again. Nothing was written"
+    )
+    assert run.github.bodies == [] and run.github.merges == []
+
+
 def test_a_reason_quoting_the_provenance_marker_is_refused_and_never_written(world, capsys) -> None:
     """A delimiter in a reason could open or close an HTML comment around the
     section's markers: the list is refused, as a closing reference is."""

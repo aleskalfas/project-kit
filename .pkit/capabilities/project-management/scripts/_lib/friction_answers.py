@@ -1020,7 +1020,8 @@ class Counted(NamedTuple):
 def counted_told(document: Mapping[str, Any]) -> Counted:
     """How many documents the change updated, how many it leaves out of date, and
     how many targets of a link it leaves out of date (`Counted`): a document by
-    its location, a target by its anchor, whatever sources name it."""
+    its location, a target by its anchor, whatever sources name it. An entry the
+    check names no target for counts as one of its own, as `told` gives it a line."""
     entries = _entries(document)
     updated = {str(e.get("location") or "") for e in entries if e.get("answer") == UPDATED}
     late = {
@@ -1028,11 +1029,13 @@ def counted_told(document: Mapping[str, Any]) -> Counted:
         for e in entries
         if e.get("answer") == DEFERRED or e.get("kept")
     }
-    targets = {
-        (str(_mapping(e.get("target")).get("kind")), str(_mapping(e.get("target")).get("value")))
-        for e in entries
-        if e.get("answer") == REVISITED and e.get("outcome") == DEFERRED
-    }
+    targets: set[tuple[str, ...]] = set()
+    for index, e in enumerate(entries):
+        if e.get("answer") != REVISITED or e.get("outcome") != DEFERRED:
+            continue
+        target = _mapping(e.get("target"))
+        named = (str(target.get("kind")), str(target.get("value")))
+        targets.add(named if target else ("", str(index)))
     return Counted(len(updated), len(late), len(targets))
 
 
@@ -1241,7 +1244,7 @@ _UPDATED_MARK = f"**{LABELS[UPDATED]}**".lower()
 _CODE_SPAN = re.compile(r"(`+).+?\1(?!`)")
 
 
-def _revisit_line(line: str) -> bool:
+def _is_revisit_line(line: str) -> bool:
     """Whether an entry's line is a revisit entry's: its source's code span, then
     `_NAMES`. Its outcome may read `updated` — a target the change revisited by
     changing it — yet it marks no document updated, since no revalidation carries
@@ -1253,8 +1256,8 @@ def _revisit_line(line: str) -> bool:
 def _marked_updated(line: str) -> bool:
     """Whether an entry's line gives the outcome `updated` of a revalidation: the
     bold label outside every code span, so an artefact's words that quote it mark
-    nothing, on a line that is no revisit entry's (`_revisit_line`)."""
-    if _revisit_line(line):
+    nothing, on a line that is no revisit entry's (`_is_revisit_line`)."""
+    if _is_revisit_line(line):
         return False
     return _UPDATED_MARK in _CODE_SPAN.sub("", line).lower()
 

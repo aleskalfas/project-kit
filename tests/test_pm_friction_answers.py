@@ -569,10 +569,13 @@ def test_a_deferred_revisit_entry_is_told_and_counted_with_what_is_left_out_of_d
     assert fa.counted_told(document) == (0, 1, 1)
     counted = fa.counted_told(document)
     assert (counted.updated, counted.left, counted.targets) == (0, 1, 1)
-    # A revisit entry whose words or target are not there is told all the same.
-    bare = _document(_revisit(SOURCE_REQ, "deferred", None, target=None, links=[]))
-    assert fa.told(bare) == [f"Left out of date: a target, which {SOURCE_REQ} names"]
-    assert fa.counted_told(bare) == (0, 0, 1)
+    # A revisit entry whose words or target are not there is told all the same, and
+    # each such entry counts as a target of its own, as it has a line of its own.
+    unnamed = _revisit(SOURCE_REQ, "deferred", None, target=None, links=[])
+    bare = _document(unnamed, unnamed)
+    told = f"Left out of date: a target, which {SOURCE_REQ} names"
+    assert fa.told(bare) == [told, told]
+    assert fa.counted_told(bare) == (0, 0, 2)
 
 
 def test_a_target_revisited_by_its_own_change_is_listed_without_a_sentence(
