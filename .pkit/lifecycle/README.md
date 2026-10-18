@@ -21,6 +21,7 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/process_dependencies.py
         - src/project_kit/migrations.py
+        - src/project_kit/scaffolds.py
         - src/project_kit/install.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
@@ -29,7 +30,7 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
       at: 2026-10-18T16:37:56Z
       outcome: updated
@@ -779,7 +780,7 @@ A migration's folder names the version it carries a project to, never one alread
 
   It joins no folder further ahead, since a change may target a later release on purpose. It reads the default branch from git objects, as a command that allocates from settled state does ([COR-054](../decisions/core/COR-054-default-branch.md) point 3). It refuses a `--version` at or below the default branch's version, and names the version to give.
 - **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose folder is at or below the version its tier records at the base's tip. It reads the tip, not the branch point, since a release that lands after the branch was cut releases the folder too. It skips a script the project receives by sync, and one the tip already holds. A tier the tip records no version for, such as a new component, has nothing released.
-- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors. `pkit release plan` warns of a backbone folder above the current version that does not match the version it computes, and the warning does not fail.
+- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors.
 
 ### Three scopes (per tier)
 
