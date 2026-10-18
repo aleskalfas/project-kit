@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-15T17:58:33Z
+      at: 2026-10-17T20:03:49Z
       outcome: unchanged
-      unchanged-because: COR-050 lets an artefact anchor name a document's section or its lead, and says where such an anchor is dead, ambiguous or refused. This README describes the docs reviewer checking a change's answers (COR-050 point 3), which the refinement leaves as it was, so it holds.
+      unchanged-because: COR-050 changes what a whole record anchor stands on, the record's content without its container, and lets cycles and the upstream-first order follow record anchors. This page says how the docs-reviewer checks a change's answers under point 3, which the change leaves as it was.
 ---
 
 # software-engineering capability

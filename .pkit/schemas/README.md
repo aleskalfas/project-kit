@@ -19,9 +19,8 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-17T00:52:33Z
-      outcome: unchanged
-      unchanged-because: "This change adds a reader in src/project_kit/rule_sets.py of the rule sets a capability ships, claimed and read as discovery claims and reads them once installed, and the install's refusal of one whose name a project rule set already declares. It moves discovery's read loop into one helper that finds the same files. Rule-set files still holds: where the files live, the signpost, unique set names and every check validation runs are as before. The page does not describe install."
+      at: 2026-10-17T21:34:48Z
+      outcome: updated
 ---
 
 # Schemas
@@ -463,7 +462,11 @@ So a project that writes a typed place or a mapping scope needs a backbone that 
 - *`unanchored-because` beside anchors* (`unanchored-beside-anchors`) — the reason an artefact has none, in a block that lists some: the two contradict each other, so remove one. The schema admits the key alone; the pair is the pass's own finding, against the key's pointer, for a rule of a rule set too;
 - *a dangling deferral* — a `deferred[].anchor` matching, by kind and value, no anchor of the artefact; the pointer carries the entry's index as written;
 - *a deferral repeated* (`duplicate-deferral`) — a `deferred[]` entry for an anchor an earlier entry already defers, by kind and value: the list holds one entry per anchor (COR-050 point 4), so one anchor never carries two reasons. Each later entry is the finding, its pointer carrying its index as written; `pkit friction defer` writes the anchor's one entry;
-- *a cycle between artefacts* through `anchors.artefact`, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`). An anchor on a section or the lead of a document counts as one on the document (COR-050 point 5), so one on a part of its own artefact is a cycle, said so: the artefact's own edits would flag it, and so would its own revalidation;
+- *a cycle between artefacts*, reported once with its path (`A -> B -> A`; a self-anchor is `A -> A`), against the anchor by which its first member rests on the next, under `anchors.artefact` or `anchors.record`. The cycle is found along the anchors between artefacts, as truth-chain order follows them (COR-050 points 5 and 11):
+  - an `artefact` anchor, an anchor on a section or the lead of a document counting as one on the document;
+  - a `record` anchor, whole or on a point, on a record a place holds, whose file is an artefact. A record no place holds carries no anchors the checks read, so no cycle passes through it.
+
+  A `path` anchor names files, so it closes no cycle, even on an artefact's file. An anchor on a part of its own artefact is a cycle, said so: the artefact's own edits would flag it, and so would its own revalidation. So is a record's anchor on itself or on one of its own points;
 - *a dead or ambiguous anchor on a record's point* (`dead-point-anchor`, `ambiguous-point-anchor`) — against the anchor's pointer: its record does not resolve, holds no point with the id, or writes its points as a list, whose numbers no anchor can rely on until the record is converted to point headings; or two points of the record have the id (COR-050 points 7 and 12). The record is read from the working tree, its points as validation's `decisions` member reads them;
 - *a dead, ambiguous or refused anchor on a document's section or its lead* (`dead-section-anchor`, `ambiguous-section-anchor`, `refused-section-anchor`) — against the anchor's pointer, whatever made it so, its artefact gone included (COR-050 points 2, 7 and 12). Dead: no artefact has the name before the `#`, or no heading of the document has the slug — a renamed heading leaves its anchors dead, and a revalidation records the anchor re-pointed. Ambiguous: two headings of the document have the slug. Refused, naming the anchor to use: a section or the lead of a collection file, whose entries are named by their ids (the entry whose id follows the `#`, or whose section holds the heading); of a collection entry, cited whole by its id, an extension point of a rule such as `RS-CMN-003#cause-location` among them (COR-051 point 3); or of a record a place holds, whose parts are its points (the record anchor on the point whose id follows the `#` or whose heading has the slug, else the whole record). A whole artefact anchor that names nothing stays the checks' finding.
 
@@ -492,7 +495,7 @@ A rule set ([COR-051](../decisions/core/COR-051-rule-sets.md)) is one Markdown f
 | `rule-sets/` under the internal documentation root (`docs/rule-sets/` by default, COR-049) | the project's rule sets | bare, `<SET>` |
 | any declared place — a `friction.places` entry of the project or of a capability — whose path has a `rule-sets` segment | more project rule sets, wherever the project keeps them | bare |
 
-Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). A project never edits a method rule set: it inherits it.
+Every Markdown file in or beneath such a folder is a rule-set file, except its `README.md`, which is the folder's signpost. A file two of them reach belongs to the first in the table's order. A file there with no front matter, or front matter that does not parse, is a finding, never skipped. Method rule sets are refreshed by sync with their component. Project rule sets are the project's: sync never reads or writes one, and uninstall never writes one (COR-051 point 6). Beside the project's own edits, a capability's install creates the one project rule set the capability declares, in `rule-sets/` under the internal documentation root, and that capability's migration may create it for an earlier install (COR-017; the lifecycle README, "The declared project rule set"). A project never edits a method rule set: it inherits it.
 
 **The front matter.**
 

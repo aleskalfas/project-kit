@@ -459,9 +459,9 @@ def test_release_check_names_a_stray_floor(tmp_path: Path, monkeypatch: pytest.M
 
     assert result.exit_code == 1, result.output
     assert "no surface-touched components — ok" not in result.stdout
-    assert "a requires_backbone floor declared for a component this diff neither touches" in (
-        result.output
-    )
+    assert (
+        "a floor or upper bound declared for a component this diff neither touches nor moves"
+    ) in result.output
     assert "claude-code-floor.yaml: 'claude-code' (kind: none, requires_backbone: 1.5.0)" in (
         result.output
     )
@@ -852,6 +852,186 @@ def test_what_release_apply_writes_is_a_release_diff(
     assert heading in changelog
     assert f"Requires backbone >={floor}." in changelog
     assert release.is_release_diff(source_kit, "main")
+
+
+def test_a_release_that_raises_a_capability_floor_is_a_release_diff(tmp_path: Path) -> None:
+    """The floor raise on another capability rewrites one `version:` line of the
+    dependent's `requires_capabilities` entry, which the guard admits as a release
+    write (`release_writes`)."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0"),
+            ".pkit/capabilities/project-management/package.yaml": _package(
+                "capability", "project-management", "0.54.0", ">=1.0.0,<2.0.0"
+            ),
+            ".pkit/capabilities/living-docs/package.yaml": _package(
+                "capability", "living-docs", "0.1.0", ">=1.0.0,<2.0.0"
+            )
+            + "requires_capabilities:\n"
+            + '  - name: project-management\n    version: ">=0.54.0,<1.0.0"\n',
+        },
+    )
+    _add_changeset(source_kit, "project-management", "minor")
+    directory = changesets.unreleased_dir(repo)
+    (directory / "living-docs-minor.yaml").write_text(
+        "component: living-docs\nkind: minor\nbody: Uses the new gate.\n"
+        "requires_capabilities:\n  project-management: release\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the pull requests the release consumes")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), today=date(2026, 9, 30))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release)")
+
+    living = (source_kit / "capabilities" / "living-docs" / "package.yaml").read_text()
+    assert 'version: ">=0.55.0,<1.0.0"' in living
+    assert "Requires project-management >=0.55.0." in (repo / "CHANGELOG.md").read_text()
+    assert release.is_release_diff(source_kit, "main")
+
+
+def test_a_release_that_widens_a_capability_bound_is_a_release_diff(tmp_path: Path) -> None:
+    """The widening rewrites the same `version:` line of the dependent's
+    `requires_capabilities` entry, which the guard admits as a release write."""
+    source_kit = _make_repo(tmp_path)
+    repo = source_kit.parent
+    _git(repo, "checkout", "-q", "main")
+    _write_files(
+        repo,
+        {
+            ".pkit/manifest.yaml": _SELF_HOST_MANIFEST.format(version="1.5.0"),
+            ".pkit/capabilities/project-management/package.yaml": _package(
+                "capability", "project-management", "0.54.0", ">=1.0.0,<2.0.0"
+            ),
+            ".pkit/capabilities/living-docs/package.yaml": _package(
+                "capability", "living-docs", "0.1.0", ">=1.0.0,<2.0.0"
+            )
+            + "requires_capabilities:\n"
+            + '  - name: project-management\n    version: ">=0.54.0,<1.0.0"\n',
+        },
+    )
+    _add_changeset(source_kit, "project-management", "major")
+    directory = changesets.unreleased_dir(repo)
+    (directory / "living-docs-patch.yaml").write_text(
+        "component: living-docs\nkind: patch\nbody: Runs on the new major.\n"
+        "runs_on_capabilities:\n  project-management: release\n",
+        encoding="utf-8",
+    )
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "the pull requests the release consumes")
+    _git(repo, "checkout", "-q", "-B", "feature")
+
+    release.apply_release(source_kit, release.compute_release(source_kit), today=date(2026, 9, 30))
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "chore(release)")
+
+    living = (source_kit / "capabilities" / "living-docs" / "package.yaml").read_text()
+    assert 'version: ">=0.54.0,<2.0.0"' in living
+    assert "Runs on project-management <2.0.0." in (repo / "CHANGELOG.md").read_text()
+    assert release.is_release_diff(source_kit, "main")
+
+
+def test_a_runs_on_on_a_none_changeset_of_an_untouched_component_is_stray(
+    tmp_path: Path,
+) -> None:
+    """A wider bound changes what the component claims to run on, so the floor tie
+    holds it too: on a `none` changeset of a component the diff leaves alone it has
+    neither a change nor a release behind it."""
+    source_kit = _make_repo(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "claude-code-bound.yaml").write_text(
+        "component: claude-code\nkind: none\nbody: Runs on it.\n"
+        "runs_on_capabilities:\n  project-management: release\n",
+        encoding="utf-8",
+    )
+    _commit_change(source_kit, "docs/notes.md")
+
+    result = release.check_changesets(source_kit, "main", skip=True)
+
+    assert [cs.path.name for cs in result.stray_floors] == ["claude-code-bound.yaml"]
+    assert not result.ok
+
+
+def test_a_runs_on_riding_on_a_release_of_its_component_passes(tmp_path: Path) -> None:
+    source_kit = _make_repo(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "claude-code-bound.yaml").write_text(
+        "component: claude-code\nkind: patch\nbody: Runs on it.\n"
+        "runs_on_capabilities:\n  project-management: release\n",
+        encoding="utf-8",
+    )
+    _commit_change(source_kit, "docs/notes.md")
+
+    result = release.check_changesets(source_kit, "main")
+
+    assert result.stray_floors == []
+    assert result.ok
+
+
+def test_release_check_refuses_a_runs_on_field_it_cannot_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "claude-code-bound.yaml").write_text(
+        "component: claude-code\nkind: minor\nbody: Runs on it.\n"
+        "runs_on_capabilities:\n  - project-management\n",
+        encoding="utf-8",
+    )
+    _commit_change(source_kit, ".pkit/adapters/claude-code/README.md")
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "`runs_on_capabilities` maps each capability the component runs on" in result.output
+
+
+def test_a_capability_floor_on_a_none_changeset_of_an_untouched_component_is_stray(
+    tmp_path: Path,
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "claude-code-floor.yaml").write_text(
+        "component: claude-code\nkind: none\nbody: Needs it.\n"
+        "requires_capabilities:\n  project-management: '0.54.0'\n",
+        encoding="utf-8",
+    )
+    _commit_change(source_kit, "docs/notes.md")
+
+    result = release.check_changesets(source_kit, "main", skip=True)
+
+    assert [cs.path.name for cs in result.stray_floors] == ["claude-code-floor.yaml"]
+    assert not result.ok
+
+
+def test_release_check_refuses_a_capability_floor_field_it_cannot_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    source_kit = _make_repo(tmp_path)
+    directory = changesets.unreleased_dir(source_kit.parent)
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / "claude-code-floor.yaml").write_text(
+        "component: claude-code\nkind: minor\nbody: Needs it.\nrequires_capabilities: release\n",
+        encoding="utf-8",
+    )
+    _commit_change(source_kit, ".pkit/adapters/claude-code/README.md")
+    monkeypatch.chdir(source_kit.parent)
+
+    result = CliRunner().invoke(main, ["release", "check", "--base", "main"])
+
+    assert result.exit_code == 1, result.output
+    assert "`requires_capabilities` maps each capability the component needs" in result.output
 
 
 # --- The root the guard reads (#877): the working directory, not the checkout

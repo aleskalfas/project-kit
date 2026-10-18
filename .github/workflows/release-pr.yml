@@ -117,17 +117,20 @@ jobs:
           git commit -m "${title}"
           git push --set-upstream origin "${branch}"
 
-          # PR body: the computed bumps, each with the requires_backbone floor a
+          # PR body: the computed bumps, each with the requires_backbone floor, the
+          # requires_capabilities floors and the upper bounds on capabilities a
           # changeset declared for it (the lines `pkit release plan` prints), any
           # migration-dir prediction warnings (#465), and the freshly generated
-          # changelog entry (the top block of CHANGELOG.md) for human review.
+          # changelog entry (the top block of CHANGELOG.md) for review. A range on
+          # a capability that excludes a dependency's version never reaches here:
+          # the plan step refuses it (PRJ-002 D4).
           body="${RUNNER_TEMP}/pr-body.md"
           {
             echo "Automated release PR — review the version bumps and changelog, then merge."
             echo "Merging tags the backbone version post-merge (release-tag.yml). Do not squash away the version bump."
             echo
             echo "## Version bumps"
-            jq -r '.releases[] | "- \(.component): \(.old_version) → \(.new_version) (\(.segment))", (.requires_backbone_floor.lines[]? | "  - \(.)")' "${plan}"
+            jq -r '.releases[] | "- \(.component): \(.old_version) → \(.new_version) (\(.segment))", (.requires_backbone_floor.lines[]? | "  - \(.)"), (.requires_capabilities_floors[]?.lines[]? | "  - \(.)"), (.requires_capabilities_bounds[]?.lines[]? | "  - \(.)")' "${plan}"
             warnings="$(jq -r '.migration_warnings[]?' "${plan}")"
             if [ -n "${warnings}" ]; then
               echo

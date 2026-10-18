@@ -17,7 +17,7 @@ Building and shipping the panel (released in v1.149.0) did not turn it on for pr
 **Register the in-repo `software-engineering` capability into project-kit's own manifest so the code-review panel gates project-kit's own code-carrying PRs.** project-kit dogfoods the review discipline it ships.
 
 - Registration is via `pkit capabilities register software-engineering` (COR-031's in-place register for a capability whose source *is* the working tree), not `install` (which copies from kit source). Origin is recorded `incubated-in-repo`.
-- The panel's dependency — `project-management >=0.54.0` ([COR-030]), the version that ships the DEC-032 type-axis + `touches-code` diff floor the panel's activation relies on — is satisfied by the v1.149.0 release (pm 0.53.0 → 0.54.0) and by reconciling pm's stale installed record to the released version.
+- The panel's dependency — `project-management >=0.54.0` ([COR-030]), the version that ships the DEC-032 type-axis + `touches-code` diff floor the panel's activation relies on — is satisfied by the v1.149.0 release (pm 0.53.0 → 0.54.0).
 - No new capability content is authored here; this is a project-side configuration change turning on already-shipped, already-released functionality.
 
 ## Rationale
@@ -26,13 +26,11 @@ Building and shipping the panel (released in v1.149.0) did not turn it on for pr
 
 **Why registration, not a source change.** The capability already ships and released; adopters who install `software-engineering` already get the panel. Turning it on *here* is purely project-kit's own install-state — the same gesture any adopter makes — so it belongs in project-kit's manifest, recorded as a project (PRJ) decision, not in core.
 
-**Why the installed-record reconciliation was needed.** The COR-030 dependency gate reads a dependency's *installed* record. project-kit's pm installed record had frozen at 0.17.0 because `pkit capabilities upgrade` copies kit-source→adopter and cannot run on an in-repo capability (source and destination are the same directory). All three intervening pm migrations were already applied in-tree (workflow schema already v4; bootstrap stamp already present), so only the record's version number was stale; it was reconciled to the released 0.54.0.
-
 ## Implications
 
 - **project-kit's code-carrying PRs now require the panel.** A PR whose diff touches any non-documentation file resolves `code-reviewer` + `security-reviewer` + `docs-reviewer` into the required-reviewer set (the `touches-code` floor); `docs-reviewer` also rides the `type:*` wildcard for classified docs-only PRs. Each must post a fresh `APPROVED` verdict ([project-management:DEC-028]) — or be waived per-reviewer with an audited `--bypass-reviewer` ([project-management:DEC-050]) — before `done-work` passes.
 - **The panel agents deploy** via the claude-code adapter alongside the existing agents.
-- **Self-host quirk recorded:** `pkit capabilities upgrade` does not work on an in-repo capability (same-dir copy); an in-place installed-record refresh is the gap. Reconciling by hand is the current workaround; a dedicated in-place refresh verb is a possible future addition if this recurs (COR-007).
+- **Self-host:** in the methodology's source, `pkit capabilities upgrade` re-deploys a capability in place, and the source holds no capability manifest to refresh (ADR-059). Each capability there is read from its `package.yaml`, which the release step writes (PRJ-007).
 - **Not an adopter surface change:** the capability and its behaviour shipped in v1.149.0; this only flips project-kit's own install-state, so it declares no changelog entry.
 
 ## Related
@@ -40,3 +38,4 @@ Building and shipping the panel (released in v1.149.0) did not turn it on for pr
 - EPIC #725 (the code-review discipline); report #715 (the gap this closes on our repo).
 - [software-engineering:DEC-002] — the panel; [project-management:DEC-032] — the reviewer-contribution socket; [project-management:DEC-050] — the per-reviewer override; [project-management:DEC-028] — the verdict grammar the gate consumes.
 - [COR-030] — capability dependencies; [COR-031] — in-repo capability registration.
+- [ADR-059] — the methodology's source repository; [PRJ-007] — the release step keeps the self-host backbone manifest current.

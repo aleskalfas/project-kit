@@ -1,0 +1,15 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A changeset can say that a capability runs on the version a release writes
+  for another capability it depends on: `runs_on_capabilities` maps that
+  capability to `release`. `pkit release apply` then widens the upper bound of
+  the dependency's entry to admit that version, up to the next major, and states
+  the new bound in the changelog. A `release` floor raised past the bound
+  widens it the same way. `release plan` and `release apply` refuse a release
+  that would leave a capability's range excluding the version the release
+  writes, or the tree carries, for a capability it depends on, and name both.
+  `release check` and `release lint` refuse a declaration the release cannot
+  write.

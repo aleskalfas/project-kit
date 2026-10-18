@@ -1,0 +1,19 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  The capability declares one project rule set, `ANALYSIS`, and installing it
+  creates the set (COR-017; DEC-001, Implications; #1613). The set selects
+  the analysis by the capability's four types and inherits
+  `software-analysis:SAN` at its major then, so `SAN`'s rules bind from the
+  first artefact. Install creates nothing where a set of the project's own
+  inherits `SAN` already, directly or not. The 0.2.0 upgrade's migration
+  creates the set, on the same conditions, for a project that installed the
+  capability earlier. That adds a set a project may have chosen not to have:
+  remove it if you do not want `SAN` to bind, and nothing creates it again.
+  Where `SAN`'s accepted rules then bind on the analysis, `pkit validate` may
+  fail on artefacts that passed before. The declaration needs the package key
+  and the reading command only the backbone this release ships has, so the
+  capability requires it.

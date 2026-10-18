@@ -522,6 +522,15 @@ def load_declarations(target_root: Path) -> Declarations:
     return Declarations.from_installed(_installed_components(target_root))
 
 
+def installed_versions(target_root: Path) -> dict[str, str]:
+    """Each registered component's installed version, as validation reads it
+    (`_version_of_record`): its manifest's, else its authored package's. A
+    component whose version reads as nothing is left out. The release step bounds
+    a declared floor on a capability by it, so the floor it writes is one
+    validation reads that capability as meeting (PRJ-002 D4)."""
+    return {c.name: c.version for c in _installed_components(target_root) if c.version}
+
+
 def _installed_components(target_root: Path) -> list[Installed]:
     """Every registered component whose package file reads, in registry order."""
     backbone = read_backbone_manifest(target_root)

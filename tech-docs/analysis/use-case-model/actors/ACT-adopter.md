@@ -19,8 +19,9 @@ pkit:
         - COR-001
         - COR-010
     revalidated:
-      at: 2026-10-14T09:21:09Z
-      outcome: updated
+      at: 2026-10-17T15:21:33Z
+      outcome: unchanged
+      unchanged-because: COR-001 now names a capability's install among the writers of project-owned paths, creating the one project rule set the capability declares as a new file the project then owns, never over a file. The adopter's needs, among them that its own files are left alone and that installing a capability is a core act, still hold.
 ---
 
 # ACT-adopter — Adopter

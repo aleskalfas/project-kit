@@ -121,6 +121,14 @@ is the one reader of those declarations and the one walker of the places:
   (COR-050 point 5); the parsed instant of `at`, so writing the same instant
   differently is no change (point 3); and a deferral's reason, whitespace
   folded (point 4).
+- `record_content` — what a whole record anchor stands on (COR-050 point 5):
+  a record's content, read from its file's bytes by the one reading that
+  gives an artefact's content (`document_content`), whether or not a place
+  holds the record, so nothing in the methodology's container counts. A
+  record whose front matter does not parse to a mapping is its whole file,
+  line endings read universally. Both checks call it, at each state they
+  compare (ADR-057 point 2); the home of a record's points does not compute
+  it.
 
 Nothing here computes friction: the checks (`friction_check`,
 `friction_repository`) and the history walk read the model this module
@@ -153,7 +161,7 @@ from project_kit.document_parts import (
     parse_front_matter,
     yaml_reason,
 )
-from project_kit.line_breaks import line_break
+from project_kit.line_breaks import line_break, universal_newlines
 from project_kit.manifest import read_backbone_manifest
 from project_kit.record_points import PointState, RecordPoints, read_points_bytes, split_anchor
 from project_kit.report_context import project_config_path
@@ -2151,10 +2159,43 @@ class Artefact:
 # point 2): its content, the parsed marker, and the reason a deferral gives.
 
 
+#: A record's content (COR-050 point 5), as both checks compare it: `(body, own fields)`
+#: where its front matter parses to a mapping, read as a document artefact's content is;
+#: otherwise `(whole file, None)` — its text with `\\n` line breaks, or its bytes where it
+#: is no UTF-8 text.
+RecordContent = tuple[str | bytes, dict[str, Any] | None]
+
+
+def document_content(carrier: Mapping[str, Any], body: str) -> tuple[str, dict[str, Any]]:
+    """The content of what carries a container, and its body (COR-050 point 5): the body
+    as text and the carrier's own fields, never the container."""
+    return body, {k: v for k, v in carrier.items() if k != CONTAINER_KEY}
+
+
 def content(artefact: Artefact) -> tuple[str, dict[str, Any]]:
     """An artefact's content (COR-050): its body text and its own fields, never the container."""
-    own = {k: v for k, v in artefact.carrier.items() if k != CONTAINER_KEY}
-    return artefact.body, own
+    return document_content(artefact.carrier, artefact.body)
+
+
+def record_content(raw: bytes) -> RecordContent:
+    """A record's content (COR-050 point 5), from its file's bytes, whether or not a place
+    holds the record.
+
+    Where its front matter parses to a mapping, the record is read as a document
+    artefact is (`parse_front_matter`, `document_content`): its body as text and its
+    own fields, so nothing in the methodology's container counts, whichever block it
+    is. Otherwise its whole file, line endings read universally, with `None` for
+    the fields, so a record without such front matter is still compared, never
+    skipped, and never equals one with it.
+    """
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw, None
+    front_matter, body, _reason = parse_front_matter(text)
+    if front_matter is None:
+        return universal_newlines(text), None
+    return document_content(front_matter, body)
 
 
 def revalidated_field(artefact: Artefact, key: str) -> Any:

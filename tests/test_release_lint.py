@@ -427,6 +427,120 @@ def test_escape_hatch_does_not_cover_the_floor_field(tmp_path: Path) -> None:
     assert len(result.floor_violations) == 1
 
 
+def _capability_kit(tmp_path: Path, floor: str, *, pm_moves: bool = False) -> Path:
+    """A kit where `houseware` depends on project-management, with a pending
+    houseware changeset declaring `floor` as its need on it."""
+    source_kit = _kit(tmp_path)
+    package = source_kit / "capabilities" / "houseware" / "package.yaml"
+    package.write_text(
+        package.read_text(encoding="utf-8")
+        + 'requires_capabilities:\n  - name: project-management\n    version: ">=0.50.0,<1.0.0"\n',
+        encoding="utf-8",
+    )
+    pm = source_kit / "capabilities" / "project-management"
+    pm.mkdir(parents=True)
+    (pm / "package.yaml").write_text(
+        "schema_version: 1\ncomponent:\n  kind: capability\n  name: project-management\n"
+        '  version: 0.54.0\nrequires_backbone: ">=1.0.0,<2.0.0"\n',
+        encoding="utf-8",
+    )
+    unreleased = source_kit.parent / ".changes" / "unreleased"
+    unreleased.mkdir(parents=True, exist_ok=True)
+    (unreleased / "houseware-minor-x.yaml").write_text(
+        "component: houseware\nkind: minor\nbody: Uses the new gate.\n"
+        f"custom:\n  requires_capabilities:\n    project-management: {floor}\n",
+        encoding="utf-8",
+    )
+    if pm_moves:
+        (unreleased / "project-management-minor-x.yaml").write_text(
+            "component: project-management\nkind: minor\nbody: A new floor.\n", encoding="utf-8"
+        )
+    return source_kit
+
+
+@pytest.mark.parametrize(
+    ("floor", "pm_moves"),
+    [("release", True), ("'0.54.0'", False)],
+)
+def test_a_capability_floor_the_release_can_raise_passes(
+    tmp_path: Path, floor: str, pm_moves: bool
+) -> None:
+    source_kit = _capability_kit(tmp_path, floor, pm_moves=pm_moves)
+    result = release.lint_release_format(source_kit)
+    assert result.ok, result.floor_violations
+
+
+@pytest.mark.parametrize(
+    ("floor", "problem"),
+    [
+        ("release", "no pending changeset moves project-management"),
+        ("'0.55.0'", "above the version this tree carries for it (0.54.0"),
+        ("0.54", 'write it in full and quoted, `project-management: "0.54.0"`'),
+    ],
+)
+def test_a_capability_floor_the_release_refuses_fails_the_lint_with_the_hatch_on(
+    tmp_path: Path, floor: str, problem: str
+) -> None:
+    """A capability floor the release would refuse blocks every later release, so
+    the escape hatch does not pass it either."""
+    source_kit = _capability_kit(tmp_path, floor)
+    result = release.lint_release_format(source_kit, skip=True)
+    assert not result.ok
+    (violation,) = result.floor_violations
+    assert violation.source == "changeset houseware-minor-x.yaml"
+    assert problem in violation.message
+
+
+def _runs_on_kit(tmp_path: Path, value: str, *, pm_moves: bool, kind: str = "minor") -> Path:
+    """`_capability_kit`'s tree, its houseware changeset declaring instead that
+    houseware runs on project-management's `value`."""
+    source_kit = _capability_kit(tmp_path, "release", pm_moves=pm_moves)
+    (source_kit.parent / ".changes" / "unreleased" / "houseware-minor-x.yaml").write_text(
+        f"component: houseware\nkind: {kind}\nbody: Runs on the new major.\n"
+        f"custom:\n  runs_on_capabilities:\n    project-management: {value}\n",
+        encoding="utf-8",
+    )
+    return source_kit
+
+
+def test_a_runs_on_the_release_can_write_passes(tmp_path: Path) -> None:
+    source_kit = _runs_on_kit(tmp_path, "release", pm_moves=True)
+    result = release.lint_release_format(source_kit)
+    assert result.ok, result.floor_violations
+
+
+@pytest.mark.parametrize(
+    ("value", "pm_moves", "kind", "problem"),
+    [
+        ("release", False, "minor", "no pending changeset moves project-management"),
+        ("'1.0.0'", True, "minor", "takes only `release`"),
+        ("release", True, "none", "a `none` changeset moves no version"),
+    ],
+)
+def test_a_runs_on_the_release_refuses_fails_the_lint_with_the_hatch_on(
+    tmp_path: Path, value: str, pm_moves: bool, kind: str, problem: str
+) -> None:
+    """A declared widening the release would refuse blocks every later release, so
+    the escape hatch does not pass it either."""
+    source_kit = _runs_on_kit(tmp_path, value, pm_moves=pm_moves, kind=kind)
+    result = release.lint_release_format(source_kit, skip=True)
+    assert not result.ok
+    (violation,) = result.floor_violations
+    assert violation.source == "changeset houseware-minor-x.yaml"
+    assert problem in violation.message
+
+
+def test_a_range_that_excludes_a_pending_major_is_not_the_lints(tmp_path: Path) -> None:
+    """The release holds on such a range until each dependent declares it runs on
+    the major (PRJ-002 D4); the pull request adding the major passes the lint."""
+    source_kit = _capability_kit(tmp_path, "'0.54.0'")
+    (source_kit.parent / ".changes" / "unreleased" / "project-management-major-x.yaml").write_text(
+        "component: project-management\nkind: major\nbody: A breaking change.\n", encoding="utf-8"
+    )
+    result = release.lint_release_format(source_kit)
+    assert result.ok, result.floor_violations
+
+
 def _written_floor(source_kit: Path, floor_line: str) -> None:
     """A pending `houseware` changeset whose floor field is `floor_line` as written."""
     unreleased = source_kit.parent / ".changes" / "unreleased"

@@ -10,16 +10,12 @@ pkit:
         - .pkit/capabilities/software-analysis/templates/**
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
-      record: ["software-analysis:DEC-001", COR-049, COR-050, COR-051, COR-052, COR-053]
-      artefact: [RS-SAN-001, RS-SAN-002]
+        - .pkit/capabilities/software-analysis/review-contributions.yaml
+      record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-17T13:18:27Z
+      at: 2026-10-18T08:20:45Z
       outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: software-analysis:DEC-001
-          reason: "DEC-001 refines ahead of the code. The capability now declares each kind's structure and a planned record's reviewed-against, and this page describes both. Its check holds each record's body to its structure always. It holds each artefact's body and front matter to its structure's parts and forms where the format rule binds. That rule binds through a set of the project's own that inherits SAN. This page describes those checks, and the set a project writes. It also checks where the commits a planned record names sit, and this page describes that check. Its stamp renders each body from the structure, as each template's body is rendered, and writes a planned record's sources, and this page describes both. The stamp also writes its hint in each front-matter field a writer fills, as in each body part, and this page says so. The check and the stamp take a project's own structures, which tighten no record, and this page describes that. Its preview places a project's group whose rule, or a rule it fills, is proposed where the rule would bind, and this page says so. The stamp writes, and the check requires, the anchors of point 4, and this page describes them. A use case anchors to its actor and to each other actor it involves. A journey anchors to its actor and to the use cases of its steps and of its relies-on. Its number check keeps a use case's steps and variants append-only, and this page describes that check. The capability does not yet create the project's set on install. So this page describes the check and the stamp it ships. It changes, and is revalidated against the record, with the Task that applies the rest. Under EPIC #1474, #1613 makes installing create the set."
 ---
 
 # software-analysis capability
@@ -35,11 +31,23 @@ Each artefact declares what makes it true — its anchors — and when it was la
 - **Write** the analysis with the `analysis-author` skill, which walks each kind through its stamp, `pkit analysis new` ("Authoring" below).
 - **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence and the commands you run to record it, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below).
 
+## How it meets your decisions
+
+The analysis describes the requirements: what your system must do, and for whom. Your decisions and your architecture describe the solution: how the system is built to do it, and why. The two stay apart. The analysis points at the solution by anchors, and never the reverse (DEC-001 point 11):
+
+- **A use case anchors the records it rests on, and the records that answer it,** with `--record` ("Stamping artefacts" below). They may be your own records, your architecture records, or records a component ships. A use case that runs on git anchors the decision to use git. One that must export a report as a file anchors the decision to write the report as CSV.
+- **A use case anchors each architecture view that realises it,** where you keep one. Use `--path` on the view's file. Where a place holds the view, write an artefact anchor on it instead.
+- **Nothing anchors the analysis back.** No record and no view anchors an analysis artefact. So no cycle runs between the two. No check finds such an anchor in general, so keep the rule when you write a record or a view.
+- **What a record serves is computed.** A page that shows a record or a view may list what anchors it, such as "Serves: UC-003". It is worked out from the analysis's anchors, and never stored.
+- **A changed use case flags none of the records that answer it,** since no anchor runs that way. Check them yourself when you change what a use case asks. A core mechanism for it is planned ([project-kit#1667](https://github.com/aleskalfas/project-kit/issues/1667)).
+- **Architecture views stay outside the analysis.** A view, one kept as a documentation page included, names an analysis artefact only by its id, and states none of its facts. A context view names your actors that way, and does not describe them again.
+- **What goes where.** A decision holds the choice and why it was made. A rule in a rule set says what must hold of an artefact. A requirement says what must hold of the system: a checkable obligation and, where it has them, its measure and what verifies it. So a decision names a requirement rather than restating its measure. The analysis artefact that states the requirement holds the measure.
+
 ## Adopting it
 
 Install it with `pkit capabilities install software-analysis`. Then:
 
-1. **Write a rule set of your own that inherits `SAN`.** `SAN`'s rules bind on your analysis only through such a set. The preview reads it too ("Where `SAN` binds: a set of your own", below).
+1. **Review the rule set install created.** `SAN`'s rules bind on your analysis only through a rule set of your own that inherits it. Installing creates one, `ANALYSIS`, where none of your sets inherits `SAN` already. The preview reads it too ("Where `SAN` binds: a set of your own", below).
 2. **Choose each kind's parts,** which its template shows and the stamp writes. The shipped parts are a starting point you review, never a default you skip (DEC-001 point 1). For each kind:
    - review its shipped parts
    - fill a candidate with one of your own examples, and check it with `pkit analysis validate --preview`
@@ -100,7 +108,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--relies-on <UC-id>]… [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its actor, its steps and the use cases it relies on anchored |
 | `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--reviewed-against "<title> @ <version> [@ <link>]"]… [--gap "<ids>: <gap> => <resolution>"]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
 
-Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as `unanchored-because` in its friction block — the core's key (COR-050 point 1), so the core's unanchored measure lists the artefact apart, with its reason, rather than counting it — and the stamp refuses it beside `--path` or `--record`.
+Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. For a use case, those decisions are each record it rests on and each record that answers it ("How it meets your decisions", above). Without them an actor or term is stamped unanchored — the core reports that, and never fails on it. An actor or term nothing embodies takes `--unanchored-because <why>` instead: the reason is written as `unanchored-because` in its friction block — the core's key (COR-050 point 1), so the core's unanchored measure lists the artefact apart, with its reason, rather than counting it — and the stamp refuses it beside `--path` or `--record`.
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case or journey takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since included; when the history's number is the one it follows, the stamp says which file it was given to. Only your numbering setting frees a number ("Configuration" below): an id it frees is not counted, and the stamp says so, naming the commit, when it is the number it would have followed. A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's or term's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its file or its glossary entry, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. What the stamp numbers past is the default branch — `repository.default-branch` in the backbone configuration, `main` when undeclared, read as its upstream or `origin/<name>`, and as the local branch only in a clone with no remote (COR-054) — and, when you name one, the base `--base <ref>` names too; the stamp never reads `$PKIT_CHECK_BASE`, the base a pipeline sets for its checks, so a pipeline's base never moves where it numbers from (COR-054 point 3). When the default branch or the base names no commit here, the stamp refuses with the core's reason and fix — fetch it, declare the right one — rather than number from the working tree alone. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
 - **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's or journey's title, and an actor's name, in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for (DEC-001 point 4). A use case anchors to its actor and to each other actor who takes part, which `--other-actor` names and the stamp writes in its `other-actors`. A journey anchors to its actor, and to the use cases of its steps and of its `relies-on`: those outside the journey that a step relies on, which `--relies-on` names. Its body is rendered from its kind's structure, every part in its order, each holding its hint ("Templates and hints" below). Under a journey's *Steps* it writes one line for each of its `steps`, the use case's id and title, as the part's form asks.
@@ -531,22 +539,38 @@ Each message gives the part's hint and example. How the check reads a body:
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds two rules, each accepted, with the decision as its origin and its anchor: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds five rules, each with the decision as its origin and its anchor.
+
+- **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
+- **Three proposed judgement rules,** which declare no check. They cover a use case's actors and its goal (DEC-001 points 1 and 4), and what an artefact's anchors name (points 4 and 9).
 
 | Rule | Status | Statement |
 |---|---|---|
 | `RS-SAN-001` | accepted | An analysis artefact carries its kind's declared structure. |
 | `RS-SAN-002` | accepted | A use case's steps and variants keep their numbers and letters. |
+| `RS-SAN-003` | proposed | A use case's actor is the one whose goal it is, and each other actor that takes part in it is one of its `other-actors`. |
+| `RS-SAN-004` | proposed | A use case's goal is one of its actor's needs. |
+| `RS-SAN-005` | proposed | An analysis artefact's anchors name what its statements rest on. |
 
 - **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
 - **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
-- **What each gates.** The format rule gates the check of each artefact kind's structure, since that structure binds at the rule's status (DEC-001 point 1). The append-only rule gates the check that keeps a use case's steps and variants append-only. Both rules are accepted, so each check fails on what it finds where its rule binds. While a rule is proposed, its check reports nothing (COR-051 point 4). `pkit analysis validate --preview` shows what the structure check would report ("Each body against its structure", above), and `pkit analysis check-numbers --preview` what the append-only check would ("Steps and variants stay append-only", below). A kind's schema checks the front matter of an artefact or a record whatever any rule's status.
-- **What the checks settle.** `SAN` declares, under `checks`, what this capability's checks enforce of each rule (COR-051 point 2). Of the format rule, `software-analysis:validate` enforces what the rule binds, above, as far as it holds it ("Each body against its structure", above). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. Of the append-only rule, `software-analysis:check-numbers` enforces that no step or variant the base held is renumbered or removed ("Steps and variants stay append-only", below). `pkit validate` never runs that command, so run it in your check gate, or that part of the rule goes unchecked ("A number keeps its meaning", below). Whoever judges the rest of a rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
+- **What the judgement rules ask.** Each judges an artefact in force, never a withdrawn one, as its *How* says.
+  - A use case's actor is the one whose goal it is. Each other actor that takes part in it is one of its `other-actors` (`RS-SAN-003`).
+  - A use case's goal states one of its actor's `needs`, whole (`RS-SAN-004`).
+  - The code and the decisions an artefact's statements rest on are named by its anchors (`RS-SAN-005`).
+- **What judges them.** They declare no check, so a reviewer judges each where it binds, such as the rule-set reviewer (COR-057). While the rules are proposed, they bind nothing, and nothing judges them.
+  - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
+  - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
+  - **A change to anchors alone.** It alters no artefact's content, so the rule-set reviewer judges nothing there (COR-057 point 1). The friction check asks for the artefact's revalidation instead (COR-050 point 6).
+- **What each gates.** The format rule gates the check of each artefact kind's structure, since that structure binds at the rule's status (DEC-001 point 1). The append-only rule gates the check that keeps a use case's steps and variants append-only. The format rule and the append-only rule are accepted, so each check fails on what it finds where its rule binds. While a rule is proposed, its check reports nothing (COR-051 point 4). `pkit analysis validate --preview` shows what the structure check would report ("Each body against its structure", above), and `pkit analysis check-numbers --preview` what the append-only check would ("Steps and variants stay append-only", below). A kind's schema checks the front matter of an artefact or a record whatever any rule's status.
+- **What the checks settle.** `SAN` declares, under `checks`, what this capability's checks enforce of the format rule and the append-only rule (COR-051 point 2). Of the format rule, `software-analysis:validate` enforces what the rule binds, above, as far as it holds it ("Each body against its structure", above). That command is the one `pkit validate` runs as its `software-analysis:artefacts` member. Of the append-only rule, `software-analysis:check-numbers` enforces that no step or variant the base held is renumbered or removed ("Steps and variants stay append-only", below). `pkit validate` never runs that command, so run it in your check gate, or that part of the rule goes unchecked ("A number keeps its meaning", below). Whoever judges the rest of a rule leaves that part to the check, and `pkit rule-sets reach` lists the part wherever the rule binds.
 - **Its name and scope.** `SAN` takes no scope, as no method rule set does (COR-051 point 2). You never edit it (COR-051 point 6). Its name is reserved in your project. A rule set of yours named `SAN` clashes with it, and `pkit validate` fails on the clash (COR-051 point 3).
 
 ### Where `SAN` binds: a set of your own
 
-`SAN` takes no scope, so its rules bind only through a rule set of your own that inherits it (COR-051 point 7). Where that set's scope selects an artefact, the check holds the artefact to `SAN`'s accepted rules, as `pkit rule-sets reach` answers. Installing the capability creates no such set yet: that waits on [project-kit#1613](https://github.com/aleskalfas/project-kit/issues/1613). So write it yourself, among your rule sets, by default in the `rule-sets` folder under your internal documentation root (COR-049):
+`SAN` takes no scope, so its rules bind only through a rule set of your own that inherits it (COR-051 point 7). Where that set's scope selects an artefact, the check holds the artefact to `SAN`'s accepted rules, as `pkit rule-sets reach` answers.
+
+**Installing creates the set.** The capability declares one project rule set in its package metadata, `ANALYSIS` (COR-017; DEC-001, Implications). `pkit capabilities install software-analysis` creates it in the `rule-sets` folder under your internal documentation root (COR-049), `tech-docs/rule-sets/analysis.md` with that root at `tech-docs/`:
 
 ```markdown
 ---
@@ -558,12 +582,16 @@ scope:
 rules: {}
 ---
 
-# ANALYSIS — our rules for the analysis
+# ANALYSIS — The project's rules for its analysis
 ```
 
+- **Only where none inherits `SAN`.** A set of yours that inherits `SAN`, directly or through another set, is your choice already, and install creates nothing.
+- **Never over your content.** Where a rule set of yours cannot be read, a set already takes the name `ANALYSIS`, or a file lies at the path, install creates nothing and says why. Write the set yourself then, in the shape above.
+- **It is yours.** Edit it, add rules to it, or remove it. Nothing creates it again while the capability stays installed. Uninstalling refuses while it stands, since it inherits `SAN`.
+- **An earlier install.** A project that installed the capability before 0.2.0 has no set from its install. The upgrade's migration creates it, on the same conditions. `pkit capabilities project-rule-set software-analysis` shows whether install would create it, and what it would write.
 - **Its scope** selects the analysis by the capability's types, so it reaches the artefacts wherever they lie. A revalidation record has no type, and no scope selects one. The capability checks a record's structure itself.
-- **Its pin,** `SAN@1`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted both its rules, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
-- **A set you have already** that selects the analysis may inherit `SAN` instead. Changing what a set inherits gives that set a new major.
+- **Its pin,** `SAN@1`, decides when a new major of `SAN` starts binding. Accepting a rule of `SAN` gives `SAN` a new major. Your pin then falls behind, and no rule of `SAN` binds through it until you review the new major and update the pin (COR-051 point 7). `pkit rule-sets reach` lists each rule a pin behind its set holds back. `SAN` 1.0.0 accepted its format rule and its append-only rule, so a set pinned at `SAN@0` binds neither, and `pkit validate` fails on its pin, until you re-pin it.
+- **A set you have already** that selects the analysis may inherit `SAN` instead, before you install, and install then creates none. Changing what a set inherits gives that set a new major.
 - **Never silent.** The check's summary counts the artefacts no rule of `SAN` binds on. Where it binds on none of the analysis, the check says so, at the analysis's folder. It reports this while no rule of `SAN` is accepted, and warns once one is. Neither fails `pkit validate`. If you choose not to inherit `SAN`, you keep the warning.
 
 ## A number keeps its meaning: `pkit analysis check-numbers`
@@ -635,7 +663,7 @@ It reads each source without a `url` whose `version` is a commit's full id, and 
 - **A record your change adds** is one whose file the merge-base of that base does not hold at its path. So a record your change moves reads as added. The working tree is read, uncommitted changes included.
 - **The default branch and the base** both come from `pkit repository base --json`. Git answers the rest from your clone's history, offline, and no remote is asked. A partial clone that lacks the merge-base's tree fails, rather than fetch it.
 - **Nothing to place.** A tree with no planned record, or whose planned records name no commit of this repository, reads no base and says so. A source in this repository that names neither a commit's full id nor `this change` is counted and not placed: `pkit analysis validate` fails its form.
-- **It fails** when no default branch resolves, or when the base names no commit or shares no history with `HEAD`. It gives the core's reason and fix (COR-054 point 4).
+- **It fails** when no default branch resolves, or when the base names no commit or shares no history with `HEAD`. It says why: the core's reason and fixes, or git's own reason where git cannot read the branches (COR-054 point 4).
 
 **Wiring it in.** It answers about a change and reads history beyond the working tree, so it is not a member of `pkit validate` (COR-055 points 1 and 2). Run it as a line of its own in your check gate, beside `pkit analysis check-numbers` and `pkit friction check`, with the same base. It binds only where you wire it in. In CI:
 
@@ -897,9 +925,26 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 - **Empty is an answer.** A default branch nothing has been committed to, or one holding no use case yet, gives the empty list: there are none yet.
 - **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
 
+## The review contribution
+
+Where the project-management capability is installed, this capability contributes the core `rule-set-reviewer` to its merge gate (DEC-001 point 10). The reviewer judges a change against the accepted rules that bind on what it alters or brings under a rule (COR-057). The contribution is `review-contributions.yaml`, with one rule:
+
+```yaml
+contributions:
+  - floor: touches-ruled-artefact
+    reviewer: rule-set-reviewer
+```
+
+When that floor requires the reviewer, and what it reads locally, is in [project-management's README](../project-management/README.md), "Documents the rules govern" ([project-management:DEC-032-conditional-reviewer-requirements] D1).
+
+- **What it covers.** Every artefact on which an accepted rule binds, of the analysis or not, such as a page. living-docs contributes the same rule. With both installed, the reviewer is required once.
+- **Opting out.** An opt-out under `review.agents.contributed_opt_out` in project-management's configuration withdraws one capability's contribution. The reviewer stays required through any other, so list each capability that contributes it.
+- **The reviewer.** Core ships it, and `pkit sync` deploys it with the other agents. While it is not deployed, project-management refuses to resolve any pull request's reviewers.
+- **Not a connection.** The contribution names project-management's gate, not a role, so it is none of the connections above.
+
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), architecture views, executable use cases, and evidence kept on the artefact itself.
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Named for later: planned-revalidation and onboarding lifecycles, a supplementary specification (constraints and quality), executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
 
 ## Citing this capability's decisions
 
@@ -907,4 +952,6 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 ## Dependencies
 
-None. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
+None required. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
+
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.

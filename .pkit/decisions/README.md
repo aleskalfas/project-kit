@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-17T00:52:31Z
+      at: 2026-10-17T20:04:10Z
       outcome: unchanged
-      unchanged-because: "This change adds a reader in src/project_kit/rule_sets.py of the rule sets a capability ships, read before it is installed, and the install's refusal of one whose name a project rule set already declares. It moves discovery's read loop into one helper that finds the same files. What this page says of rule sets still holds: a separate id family, permanent ids, statuses, the acceptance gate, where sets live and what validation checks. It says nothing of install."
+      unchanged-because: COR-050 points 2 and 7 were reached through the Decision's text outside its points, which says a record anchor stands on the record's content, and through point 2's added case of a record anchoring itself. This page's way of naming a point as an anchor's value, and its checks of a record's points, rest on neither, so they hold.
 ---
 
 # Decision records

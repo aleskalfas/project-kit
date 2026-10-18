@@ -9,9 +9,8 @@ body: >
   journey's *Variants* read `None.`, or each opens with a step's number and
   a letter, such as `2a.`. A journey's *Steps* hold one line for each of its
   `steps`, `<id> — <title>` with the use case's title, and each hand-over
-  under a step names an earlier step, or a use case its `relies-on` lists, a
-  field the journey's schema does not take until #1507 lands. A record's
-  *Outcomes* follow its `outcomes`, in order, and its *Gaps* name each
+  under a step names an earlier step, or a use case its `relies-on` lists. A
+  record's *Outcomes* follow its `outcomes`, in order, and its *Gaps* name each
   `code-regressed` or `gap-found` artefact with a `**Resolution:**`. A
   term's `definition` is a phrase with no article first, no full stop last,
   and no word of its name. A part's list is read as Markdown reads one, and
