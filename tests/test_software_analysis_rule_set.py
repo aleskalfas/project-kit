@@ -15,6 +15,9 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   proposed, its origin DEC-001, declaring no check: a reviewer judges each. Each
   *How* leaves out what the stamp and the check hold always, and judges an artefact
   in force alone. Proposed rules move no version, so the set stays at 1.0.0;
+- the **anchors rule**, `RS-SAN-005`, asks of a use case the anchors DEC-001 points
+  4 and 11 give it, in their one direction: the decisions that answer it and the
+  views that realise it, beside what it rests on (#1686);
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`;
@@ -62,12 +65,16 @@ JUDGEMENT_RULES = {
         ["software-analysis:DEC-001#1"],
     ),
     "RS-SAN-005": (
-        "An analysis artefact's anchors name what its statements rest on.",
+        "An analysis artefact's anchors name what its statements rest on. A use case's "
+        "anchors also name the decisions that answer it and the views that realise it.",
         [
             "software-analysis:DEC-001#2",
             "software-analysis:DEC-001#4",
             "software-analysis:DEC-001#9",
+            "software-analysis:DEC-001#11",
             "COR-050#1",
+            "COR-050#2",
+            "COR-050#5",
         ],
     ),
 }
@@ -322,7 +329,10 @@ def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> 
     assert "**What the check holds.**" not in goal  # no check holds any of it
     anchors = " ".join(_section(body, "RS-SAN-005").split())
     assert "This list is whole:" in anchors
-    assert "Nor does this rule ask for an anchor that would close a cycle." in anchors
+    assert (
+        "Nor does this rule ask for an anchor on another analysis artefact that would close "
+        "a cycle."
+    ) in anchors
     assert "**What this rule judges.** The rest: the code and the decisions" in anchors
     # Unanchored is a state the core reports, never a failure (DEC-001 point 4), and the
     # rule judges it all the same. A reason for having none is a person's answer, never
@@ -330,6 +340,94 @@ def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> 
     unanchored = "no check fails on it. This rule still judges what its statements rest on."
     assert unanchored in anchors
     assert "is not judged under this rule. The reason is a person's answer" in anchors
+
+
+def _anchors_list(body: str) -> dict[str, str]:
+    """The anchors rule's whole list of what an artefact's anchors name, one item per
+    kind, keyed by the kind it opens with."""
+    section = _section(body, "RS-SAN-005")
+    block = section.split("**What its anchors name.**", 1)[1].split("**Nothing else.**", 1)[0]
+    items = [" ".join(item.split()) for item in re.split(r"\n {4}- ", block)[1:]]
+    return {item.split(" rests on ", 1)[0]: item for item in items}
+
+
+def test_the_anchors_rule_asks_a_use_case_for_what_answers_or_realises_it() -> None:
+    """DEC-001 points 4 and 11 (#1686): a use case anchors each decision it rests on or
+    is answered by, and each architecture view that realises it. The rule's list, its
+    finder, the anchor each takes, what it judges and its break all reach the two, so
+    an anchor on either is never judged unasked once the rule is accepted."""
+    _data, body = _shipped()
+    listed = _anchors_list(body)
+    assert list(listed) == ["An actor or a term", "A use case", "A journey"]
+    use_case = listed["A use case"]
+    # What a use case rests on is what its statements cite or apply, as point 11's
+    # "rests on" reads. Point 4's "relies on" also takes in the decisions that answer
+    # it, which the rule names apart.
+    assert "the decisions it cites or applies." in use_case
+    assert "relies on" not in use_case
+    assert (
+        "Its anchors also name each decision that answers it and each architecture view "
+        "that realises it. Each such decision and view counts, even where none of the use "
+        "case's statements names it."
+    ) in use_case
+    section = " ".join(_section(body, "RS-SAN-005").split())
+    # The finder reaches each, narrowed by DEC-001's own words: a record made to meet
+    # what the use case asks, and a view made to show how the system carries it out, so
+    # a decision or a view of the whole system is not asked of every use case.
+    assert "**The decisions an artefact rests on** are the records its statements cite or" in (
+        section
+    )
+    assert "An actor's or a term's are also the records that embody it." in section
+    assert "**The decisions that answer a use case** are the records made to meet what it" in (
+        section
+    )
+    assert (
+        "**The views that realise a use case** are the architecture views made to show how "
+        "the system carries it out"
+    ) in section
+    assert (
+        "A view a place holds takes an artefact anchor, and any other view takes a path "
+        "anchor on its file."
+    ) in section
+    assert "a view the project does not keep, or one no anchor kind can name" in section
+    assert "a decision not yet recorded, or a proposed one, which decides nothing yet" in section
+    assert (
+        "**What this rule judges.** The rest: the code and the decisions a statement rests "
+        "on, the decisions that answer a use case and the views that realise it."
+    ) in section
+    assert (
+        "A use case also breaks this rule while a decision that answers it, or a view that "
+        "realises it, is named by none of its anchors."
+    ) in section
+
+
+@pytest.mark.parametrize("kind", ["An actor or a term", "A journey"])
+def test_the_anchors_rule_asks_no_other_kind_for_what_answers_it(kind: str) -> None:
+    """Only a use case is answered by a decision or realised by a view (DEC-001 point
+    11): an actor, a term or a journey anchors what point 4 gives it, and nothing
+    more."""
+    _data, body = _shipped()
+    item = _anchors_list(body)[kind]
+    assert "answer" not in item
+    assert "realis" not in item
+    assert "view" not in item
+
+
+def test_the_anchors_rule_keeps_the_use_case_s_anchor_against_a_cycle_back() -> None:
+    """The analysis points at the solution, never the reverse (DEC-001 point 11). So the
+    cycle exemption reaches only anchors between analysis artefacts: an anchor that runs
+    back from a decision or a view never excuses a use case from anchoring it."""
+    _data, body = _shipped()
+    section = " ".join(_section(body, "RS-SAN-005").split())
+    assert "Nor does this rule ask for an anchor that would close a cycle." not in section
+    assert (
+        "**One direction.** An anchor on a decision or a view runs from the analysis to the "
+        "solution, never back."
+    ) in section
+    assert (
+        "even where anchors that run back from that decision or view would close a cycle. "
+        "The cycle is mended on the solution's side, and the use case's anchor stands."
+    ) in section
 
 
 def test_each_judgement_rule_judges_an_artefact_in_force_alone() -> None:

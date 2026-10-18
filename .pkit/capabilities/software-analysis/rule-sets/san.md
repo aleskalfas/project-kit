@@ -45,7 +45,10 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#4"
             - "software-analysis:DEC-001#9"
+            - "software-analysis:DEC-001#11"
             - "COR-050#1"
+            - "COR-050#2"
+            - "COR-050#5"
         revalidated:
           at: 2026-10-18T08:20:46Z
           outcome: unchanged
@@ -95,7 +98,7 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project (software-analysis DEC-001 points 1 to 4, and 9). Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project (software-analysis DEC-001 points 1 to 4, 9 and 11). Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
 
@@ -152,24 +155,32 @@ A use case's goal is one of its actor's needs.
   - **Its words.** The goal's words and voice may differ from the need's. So the goal "Get my report exported to a file" states the need "Export my report as a file".
   - **History.** This rule judges a use case in force. A withdrawn use case is history.
 
-## RS-SAN-005 — An artefact's anchors name what its statements rest on
+## RS-SAN-005 — An artefact's anchors name what it rests on, and what answers or realises a use case
 
-An analysis artefact's anchors name what its statements rest on.
+An analysis artefact's anchors name what its statements rest on. A use case's anchors also name the decisions that answer it and the views that realise it.
 
 - **How:**
   - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
-  - **What a statement rests on.** What its kind anchors to, where a change to it can make the statement false. This list is whole:
+  - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it.
-    - A use case rests on its `actor` and its `other-actors`, the code it exercises and the decisions it relies on.
+    - A use case rests on its `actor` and its `other-actors`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each such decision and view counts, even where none of the use case's statements names it.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, and the code and decisions at its seams.
-  - **Nothing else.** A statement about any other artefact rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor. Nor does this rule ask for an anchor that would close a cycle.
-  - **Only what exists.** Code not yet written, or a decision not yet recorded, is nothing a statement rests on.
-  - **Where to find it.** The code lies in the repository, within the surface the project declares for its analysis where it declares one. The decisions are the records a statement cites or applies.
-  - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. An anchor on one part of a record or a document names only what that part stands on.
+  - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor. Nor does this rule ask for an anchor on another analysis artefact that would close a cycle.
+  - **One direction.** An anchor on a decision or a view runs from the analysis to the solution, never back. A use case anchors a decision that answers it, or a view that realises it, even where anchors that run back from that decision or view would close a cycle. The cycle is mended on the solution's side, and the use case's anchor stands.
+  - **Only what exists.** This rule asks no anchor for:
+    - code not yet written
+    - a decision not yet recorded, or a proposed one, which decides nothing yet
+    - a view the project does not keep, or one no anchor kind can name, such as a view kept outside the repository
+  - **Where to find it.**
+    - **Code** lies in the repository, within the surface the project declares for its analysis where it declares one.
+    - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it.
+    - **The decisions that answer a use case** are the records made to meet what it asks, such as the decision to write a report as CSV, for a use case that must export the report as a file.
+    - **The views that realise a use case** are the architecture views made to show how the system carries it out, such as one that names the use case by its id.
+  - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
   - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It does so whatever any rule's status, and this rule does not cover it.
-  - **What this rule judges.** The rest: the code and the decisions a statement rests on.
-  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision.
+  - **What this rule judges.** The rest: the code and the decisions a statement rests on, the decisions that answer a use case and the views that realise it.
+  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case also breaks this rule while a decision that answers it, or a view that realises it, is named by none of its anchors.
   - **No anchors.** The core reports an artefact with no anchors, and no check fails on it. This rule still judges what its statements rest on.
   - **A reason for no anchors.** An actor or a term that gives a reason for having none is not judged under this rule. The reason is a person's answer, and only a person decides it.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
