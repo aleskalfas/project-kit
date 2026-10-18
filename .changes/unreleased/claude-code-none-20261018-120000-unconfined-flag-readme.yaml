@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  The adapter README now says where `sandbox enable --dangerously-allow-unconfined`
+  writes the fail mode. The adapter's own surface is unchanged: the behaviour
+  lives in the backbone's `pkit permissions`, declared by its own changeset.
