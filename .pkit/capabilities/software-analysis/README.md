@@ -14,9 +14,9 @@ pkit:
       record: ["software-analysis:DEC-001", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-18T10:55:36Z
+      at: 2026-10-18T11:59:32Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet. This page cites COR-050 on the friction block, held documents, who decides an answer, bumps, the change check, exclusions and a reason beside anchors (points 1, 3, 5, 6, 7 and 12), none of which the change alters.
+      unchanged-because: "COR-051 point 6 says a change of the internal root keeps the sets in the default rule-set folder found: the backbone's configuration command declares the old folder as a place, and validation fails on a file a hand edit leaves behind. COR-049 point 5 points to that exception. This page says install creates the project rule set ANALYSIS, and places the analysis under the internal root's analysis folder, recorded on first use. It says nothing of where the project's rule sets lie after a change of root, so it still holds."
 ---
 
 # software-analysis capability

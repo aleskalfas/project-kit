@@ -19,8 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-18T08:25:39Z
-      outcome: updated
+      at: 2026-10-18T11:59:29Z
+      outcome: unchanged
+      unchanged-because: COR-051 point 6 adds what a change of the internal root does to the project's default rule-set folder, and rule_sets.py adds validation's unfound-rule-set error on a rule-set file no place finds. This page says a project rule set is the project's, cited bare, and lies under the internal documentation root by default, says validation checks every rule set, and sends the reader to the schemas reference for every check. All of that still holds.
 ---
 
 # Decision records
