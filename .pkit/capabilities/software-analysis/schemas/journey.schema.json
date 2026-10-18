@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "journey.schema.json",
   "title": "A journey's own fields — software-analysis capability",
-  "description": "The front matter of one journey, a file `JRN-NNN-<slug>.md` in `use-case-model/journeys/` under the analysis location (software-analysis DEC-001 points 1 to 4): an end-to-end path one actor takes across several use cases, including the seams between them where the path can break. `steps` and `relies-on` are the source: the use cases they list are written into the friction block's artefact anchors by the stamp, and the capability's check requires the two to match, so the friction check sees every use case the journey passes through or relies on. It also anchors to its actor, which the check requires, and to the code and decisions at the seams (DEC-001 point 4). These are the journey's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "description": "The front matter of one journey, a file `JRN-NNN-<slug>.md` in `use-case-model/journeys/` under the analysis location (software-analysis DEC-001 points 1 to 4): an end-to-end path one actor takes across several use cases, including the seams between them where the path can break. `steps` and `relies-on` are the source: the use cases they list are written into the friction block's artefact anchors by the stamp, and the capability's check requires the two to match, so the friction check sees every use case the journey passes through or relies on. It also anchors to its actor, which the check requires, and to the code and decisions at the seams (DEC-001 point 4). It anchors each requirement it lists in `requirements`, and the check requires those anchors to match the list (DEC-002 point 7). These are the journey's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). Applied by `pkit software-analysis validate`; unknown fields are refused.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "title", "status", "actor", "steps"],
@@ -32,6 +32,12 @@
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "analysis.schema.json#/$defs/use-case-id" }
+    },
+    "requirements": {
+      "description": "Each requirement that binds the journey's whole path, by id: a requirement of the analysis, of any of the three kinds, never withdrawn while the journey is in force (software-analysis DEC-002 point 7). A requirement that binds one of its steps is that step's use case's to list, not the journey's. Each is an artefact anchor of the journey, and the capability's check requires the requirement anchors to match the list exactly. What meets a requirement is computed from these lists, and the requirement stores none of it. Absent, or empty, where it lists none.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/requirement-id" }
     }
   }
 }

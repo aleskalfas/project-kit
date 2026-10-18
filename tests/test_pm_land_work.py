@@ -1504,7 +1504,7 @@ def test_ready_runs_done_works_gates_and_reports_their_refusal(world, capsys) ->
 
 
 def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) -> None:
-    """A head whose changes since the authorised one lie outside `revalidated` blocks
+    """A head whose changes since the authorised one lie outside the answers
     is a head nobody authorised: the run stops, naming the changes (DEC-055 point 3)."""
     run = world()
     authorised = run.github.head
@@ -1514,9 +1514,9 @@ def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) 
     assert out.splitlines()[-1] == (
         f"head: stopped — PR #{PR}'s head is {_short(head)}, not "
         f"{authorised[:7]}, the head the merge was authorised for: an authorisation covers a "
-        "later head only where every change since lies inside `revalidated` blocks, a clean "
-        f"merge of main counting as none, and these changes do not: after.txt ({head[:7]}: "
-        "added). "
+        "later head only where every change since lies inside `revalidated` blocks or "
+        "`revisited` lists, a clean merge of main counting as none, and these changes do "
+        f"not: after.txt ({head[:7]}: added). "
         f"Nothing was done; `land-work {ISSUE}` checks and reviews the new one"
     )
     assert run.asked_cover == [(authorised[:12], head, "main")]
@@ -1576,13 +1576,13 @@ def test_a_later_head_whose_base_cannot_be_read_stops_before_anything(world, cap
 def _covered(authorised: str) -> str:
     return (
         f"the authorisation for {_short(authorised)} covers it, since every change after "
-        f"{_short(authorised)} lies inside `revalidated` blocks, a clean merge of main "
-        "counting as none"
+        f"{_short(authorised)} lies inside `revalidated` blocks or `revisited` lists, a "
+        "clean merge of main counting as none"
     )
 
 
 def test_an_authorisation_covers_a_later_head_of_re_resolved_answers(world, capsys) -> None:
-    """Every change since the authorised head lies inside `revalidated` blocks: the run
+    """Every change since the authorised head lies inside the answers: the run
     goes on at the later head — its checks, its review — and merges it, saying which
     head it merged and why the authorisation covered it (DEC-055 point 3)."""
     run = world()

@@ -38,8 +38,9 @@ It stops at the first step that cannot go on, and its last line says why.
           open PRs are read once (`_lib.issue_branch`, #1608). The PR's head
           on GitHub is read once and pinned. `--expect-head` stops the run when
           it is not the head named, unless the authorisation for that head
-          covers it: every change since lies inside `revalidated` blocks, a
-          clean merge of the base counting as none, as the backbone answers
+          covers it: every change since lies inside `revalidated` blocks or
+          `revisited` lists, a clean merge of the base counting as none, as
+          the backbone answers
           it (`friction_answers.covers`, DEC-055 point 3). The line then says
           so, and the run goes on at the later head. Refused when the local branch holds
           commits that head lacks (the line gives the push) or has diverged
@@ -273,8 +274,9 @@ class _Head:
     #: The PR's base branch as GitHub names it; empty when it named none.
     base_branch: str = ""
     #: The earlier head `--expect-head` authorised, where its authorisation covers this
-    #: one: every change since lies inside `revalidated` blocks, a clean merge of the
-    #: base counting as none (DEC-055 point 3). Empty where the head is the one named.
+    #: one: every change since lies inside `revalidated` blocks or `revisited` lists, a
+    #: clean merge of the base counting as none (DEC-055 point 3). Empty where the head
+    #: is the one named.
     authorised: str = ""
 
     @property
@@ -286,7 +288,8 @@ class _Head:
         earlier = short_sha(self.authorised)
         return (
             f"the authorisation for {earlier} covers it, since every change after {earlier} "
-            f"lies inside `revalidated` blocks, a clean merge of {self.base} counting as none"
+            f"lies inside `revalidated` blocks or `revisited` lists, a clean merge of "
+            f"{self.base} counting as none"
         )
 
 
@@ -479,8 +482,8 @@ def _parser() -> argparse.ArgumentParser:
         help=(
             "The PR head the merge is authorised for (7 to 40 hex digits): the run "
             "stops (exit 3) when the PR's head is another, unless every change since "
-            "lies inside `revalidated` blocks, a clean merge of the base counting as "
-            "none. The `ready:` line names it."
+            "lies inside `revalidated` blocks or `revisited` lists, a clean merge of "
+            "the base counting as none. The `ready:` line names it."
         ),
     )
     parser.add_argument(
@@ -629,9 +632,9 @@ def _pin_head(
 
 def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
     """The pinned head, where the authorisation for the earlier head `authorised` covers
-    it: every change from that head to this one lies inside `revalidated` blocks, a
-    clean merge of the base counting as none, as the backbone answers it (DEC-055
-    point 3). Any other change, and an answer that cannot be read, stops the run
+    it: every change from that head to this one lies inside `revalidated` blocks or
+    `revisited` lists, a clean merge of the base counting as none, as the backbone
+    answers it (DEC-055 point 3). Any other change, and an answer that cannot be read, stops the run
     before anything is checked, as a head nobody authorised does."""
     issue, number, sha = head.issue, head.pr_number, short_sha(head.oid)
     moved = (
@@ -669,8 +672,8 @@ def _covered(head: _Head, authorised: str, *, cross_repository: bool) -> _Head:
         raise _Stop(
             EXIT_HEAD_MOVED,
             f"{moved}: an authorisation covers a later head only where every change since "
-            f"lies inside `revalidated` blocks, a clean merge of {head.base} counting as none, "
-            f"and these changes do not: {listed}. {again}",
+            f"lies inside `revalidated` blocks or `revisited` lists, a clean merge of "
+            f"{head.base} counting as none, and these changes do not: {listed}. {again}",
         )
     return replace(head, authorised=found.since)
 
