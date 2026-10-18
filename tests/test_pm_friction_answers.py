@@ -28,6 +28,14 @@ from ruamel.yaml import YAML
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import RESOLVING, register_kinds
 from tests.friction_documents import CONFIG, SOURCE, T1, document, friction_config, guide
+from tests.test_friction_revisit import (
+    DECISION,
+    SOURCE_DOC,
+    TEST_FILE,
+    declare_linker,
+    requirement,
+)
+from tests.test_friction_revisit import entry as revisit_entry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -280,6 +288,31 @@ def test_the_list_reads_as_the_change_check_s_own(fa: ModuleType) -> None:
             changed=(Anchor("path", "src/\u200bx/**"),),
             kept=(fc.KeptDeferral(core, "kept\nnext"),),
         ),
+        # Revisit entries (COR-050 point 16): one for each outcome, then one with no
+        # links or fields, one whose outcome alone changed, and one naming no target.
+        *(
+            written(
+                fc.REVISITED,
+                None if outcome == "updated" else "Why.",
+                outcome=outcome,
+                target=Anchor("path", "tests/test_x.py"),
+                links=("verified-by", "traces"),
+                fields=("statement", "threshold"),
+            )
+            for outcome in ("updated", "unchanged", "deferred")
+        ),
+        written(fc.REVISITED, "Later.", outcome="deferred", target=Anchor("record", "DEC-7")),
+        written(
+            fc.REVISITED,
+            "Same.",
+            outcome="deferred",
+            target=Anchor("symbol", "pkg.run"),
+            links=("verified-by",),
+            asked=False,
+            status=status.EDITED,
+            new=True,
+        ),
+        written(fc.REVISITED, "Odd.", outcome=None, target=None),
     ]
     question = fc.ANSWERS_QUESTION
     assert f"{question[:1].upper()}{question[1:]}." == fa.QUESTION
@@ -302,13 +335,15 @@ def test_the_check_s_terms_stay_out_of_the_section(fa: ModuleType) -> None:
             _entry("a.md", "unchanged", "Holds."),
             _entry("b.md", "deferred", "Later.", anchor=("path", "x/**"), asked=False, new=True),
             _entry("c.md", "unanchored", "A rule.", status="bump"),
+            *(_revisit(f"r{n}.md", outcome, "Why.") for n, outcome in enumerate(OUTCOMES)),
         ),
         HEAD,
     )
     assert section is not None
     # The markers are HTML comments: a reader never sees them.
     shown = "\n".join(ln for ln in section.splitlines() if not ln.startswith("<!--")).lower()
-    for term in ("unchanged", "deferred", "unanchored", "friction", "artefact", "change check"):
+    terms = ("unchanged", "deferred", "unanchored", "revisited", "friction", "artefact")
+    for term in (*terms, "change check"):
         assert term not in shown, term
 
 
@@ -378,6 +413,260 @@ def test_the_terminal_list_carries_every_word_and_mark(fa: ModuleType) -> None:
         '3. docs/g.md — still accurate: "Holds."',
         '   (still out of date for changes to x/**, fixed later: "Kept.")',
     ]
+
+
+# ---- revisit entries (COR-050 point 16) ------------------------------------------
+
+SOURCE_REQ = "reqs/latency.md"
+TEST_TARGET = ("path", "tests/test_latency.py")
+#: The outcomes a revisit entry gives.
+OUTCOMES = ("updated", "unchanged", "deferred")
+
+
+def _revisit(
+    location: str,
+    outcome: str | None,
+    reason: str | None = None,
+    *,
+    target: tuple[str, str] | None = TEST_TARGET,
+    links: list[str] | None = None,
+    fields: list[str] | None = None,
+    asked: bool = True,
+    status: str = "stands",
+    new: bool = False,
+) -> dict[str, Any]:
+    """One revisit entry of the change check's `answers`, as `--json` gives it: the
+    source's answer for one target, through `verified-by` by default, the change
+    having modified the source's `threshold`."""
+    revisit = _entry(location, "revisited", reason, asked=asked, status=status, new=new)
+    revisit["changed"] = []
+    revisit.update(
+        outcome=outcome,
+        target=None if target is None else {"kind": target[0], "value": target[1]},
+        links=["verified-by"] if links is None else links,
+        fields=["threshold"] if fields is None else fields,
+    )
+    return revisit
+
+
+#: Each kind of revisit entry: a target revisited by changing it, one that still
+#: stands, one left out of date, one whose outcome alone changed, and one the check
+#: names no target or outcome for.
+REVISITS = (
+    _revisit(SOURCE_REQ, "updated"),
+    _revisit(
+        SOURCE_REQ,
+        "unchanged",
+        "The test asserts under 2 s, which meets 10 s too.",
+        target=("artefact", "UC-status"),
+    ),
+    _revisit(
+        SOURCE_REQ,
+        "deferred",
+        "The cache decision is revisited in #9999.",
+        target=("record", "DEC-7"),
+        links=["verified-by", "traces"],
+        fields=["statement", "threshold"],
+    ),
+    _revisit(
+        "reqs/new.md",
+        "deferred",
+        "Same.",
+        target=("path", "x/**"),
+        links=[],
+        fields=[],
+        asked=False,
+        status="edited",
+        new=True,
+    ),
+    _revisit(SOURCE_REQ, None, "Odd.", target=None, links=[], fields=[]),
+)
+
+
+def test_a_revisit_entry_names_its_source_target_outcome_and_reason(fa: ModuleType) -> None:
+    """Each revisit entry says, in words, the source, the target, the links that list
+    it, the trigger fields the change modified, the outcome and its reason, with every
+    flag (#1703): never the bare word the check's machine-readable list gives it."""
+    document = _document(*REVISITS)
+    section = fa.render(document, HEAD)
+    assert section is not None
+    assert section.splitlines()[7:-1] == [
+        "1. `reqs/latency.md` names `tests/test_latency.py` through `verified-by`, and this "
+        "change modifies its `threshold`. **Updated in this change**",
+        "2. `reqs/latency.md` names document `UC-status` through `verified-by`, and this change "
+        'modifies its `threshold`. **Still accurate**: "``The test asserts under 2 s, which '
+        'meets 10 s too.``"',
+        "3. `reqs/latency.md` names decision record `DEC-7` through `verified-by` and `traces`, "
+        "and this change modifies its `statement` and `threshold`. **Out of date, fixed "
+        'later**: "``The cache decision is revisited in #9999.``"',
+        "4. `reqs/new.md` names `x/**`. **Out of date, fixed later** (new document) (not asked "
+        "for by this change) (outcome changed without a new reason, which answers nothing): "
+        '"``Same.``"',
+        '5. `reqs/latency.md` names a target. **No decision recorded**: "``Odd.``"',
+    ]
+    assert fa.lines(document) == [
+        fa.QUESTION,
+        "1. reqs/latency.md names tests/test_latency.py through verified-by, and this change "
+        "modifies its threshold. Updated in this change",
+        "2. reqs/latency.md names document UC-status through verified-by, and this change "
+        'modifies its threshold. Still accurate: "The test asserts under 2 s, which meets 10 s '
+        'too."',
+        "3. reqs/latency.md names decision record DEC-7 through verified-by and traces, and "
+        'this change modifies its statement and threshold. Out of date, fixed later: "The '
+        'cache decision is revisited in #9999."',
+        "4. reqs/new.md names x/**. Out of date, fixed later (new document) (not asked for by "
+        "this change) (outcome changed without a new reason, which answers nothing): "
+        '"Same."',
+        '5. reqs/latency.md names a target. No decision recorded: "Odd."',
+    ]
+
+
+def test_a_revisit_entry_s_texts_are_shown_escaped_in_code_spans(fa: ModuleType) -> None:
+    """The target, the links and the trigger fields are the artefact's texts: each is
+    shown escaped and set in a code span, so none is read as Markdown."""
+    document = _document(
+        _revisit(
+            SOURCE_REQ,
+            "unchanged",
+            "Holds.",
+            target=("path", "tests/*bold*\x1b.py"),
+            links=["verified`by"],
+            fields=["thres‮hold"],
+        )
+    )
+    section = fa.render(document, HEAD)
+    assert section is not None
+    assert (
+        "names `tests/*bold*\\x1b.py` through ``verified`by``, and this change modifies its "
+        "`thres\\u202ehold`. **Still accurate**" in section
+    )
+    assert all(ch.isprintable() for line in section.splitlines() for ch in line)
+
+
+def test_a_deferred_revisit_entry_is_told_and_counted_with_what_is_left_out_of_date(
+    fa: ModuleType,
+) -> None:
+    """The person who authorises the merge is told each target a `deferred` revisit
+    entry leaves out of date, with the source that names it and the words that name
+    its follow-up, beside the documents left out of date (COR-050 points 3 and 16).
+    A target is counted once, however many sources leave it out of date; one that
+    still stands, or that the change revisited by changing it, is not told."""
+    deferred = "The cache decision is revisited in #9999."
+    document = _document(
+        _entry("docs/d.md", "deferred", "With the redesign, #13.", anchor=("record", "COR-1")),
+        _revisit(SOURCE_REQ, "updated"),
+        _revisit(SOURCE_REQ, "unchanged", "Holds.", target=("artefact", "UC-status")),
+        _revisit(SOURCE_REQ, "deferred", deferred, target=("record", "DEC-7")),
+        _revisit("reqs/other.md", "deferred", "Also #9999.", target=("record", "DEC-7"), links=[]),
+    )
+    assert fa.told(document) == [
+        'Left out of date: docs/d.md, for changes to decision record COR-1: "With the '
+        'redesign, #13."',
+        f"Left out of date: decision record DEC-7, which {SOURCE_REQ} names through "
+        f'verified-by: "{deferred}"',
+        'Left out of date: decision record DEC-7, which reqs/other.md names: "Also #9999."',
+    ]
+    assert fa.counted_told(document) == (0, 1, 1)
+    counted = fa.counted_told(document)
+    assert (counted.updated, counted.left, counted.targets) == (0, 1, 1)
+    # A revisit entry whose words or target are not there is told all the same.
+    bare = _document(_revisit(SOURCE_REQ, "deferred", None, target=None, links=[]))
+    assert fa.told(bare) == [f"Left out of date: a target, which {SOURCE_REQ} names"]
+    assert fa.counted_told(bare) == (0, 0, 1)
+
+
+def test_a_target_revisited_by_its_own_change_is_listed_without_a_sentence(
+    fa: ModuleType,
+) -> None:
+    """A target the change revisited by changing it is listed, for the reviewer who
+    checks that its change meets the change to the source (COR-050 points 3 and 16).
+    It is no revalidation, so it asks its author for no sentence, and marks its
+    source updated nowhere: not in the list, not when an edit gives the sentences."""
+    only = _document(_revisit(SOURCE_REQ, "updated"))
+    said = {SOURCE_REQ: "The threshold is 10 s."}
+    assert fa.given(only, said) == {}
+    assert fa.unsaid(only, said) == []
+    assert fa.told(only) == []
+    assert fa.counted_told(only) == (0, 0, 0)
+    section = fa.render(only, HEAD, (), said)
+    assert section is not None
+    assert section.splitlines()[7:-1] == [
+        "1. `reqs/latency.md` names `tests/test_latency.py` through `verified-by`, and this "
+        "change modifies its `threshold`. **Updated in this change**",
+    ]
+    block = fa.find(section)
+    assert block is not None
+    assert fa.given_in(block, said) == {}
+    assert fa.with_sentences(block, said) == block
+    # A source the change also revalidated as updated gives its sentence once, beside
+    # its revalidation.
+    both = _document(_entry(SOURCE_REQ, "updated"), _revisit(SOURCE_REQ, "updated"))
+    assert fa.given(both, said) == said and fa.unsaid(both, said) == []
+    listed = fa.render(both, HEAD, (), said)
+    assert listed is not None
+    assert listed.splitlines()[7:-1] == [
+        "1. `reqs/latency.md` — **updated in this change**",
+        "   - (what changed, in the words of the pull request's author: \"``The threshold is "
+        '10 s.``")',
+        "2. `reqs/latency.md` names `tests/test_latency.py` through `verified-by`, and this "
+        "change modifies its `threshold`. **Updated in this change**",
+    ]
+    region = fa.find(listed)
+    assert region is not None
+    assert fa.given_in(region, said) == said
+    assert fa.with_sentences(region, said) == region
+    bare = "\n".join(line for line in region.splitlines() if "(what changed" not in line)
+    assert fa.with_sentences(bare, said) == region
+    assert fa.documents(both["answers"]) == 1
+
+
+@pytest.mark.parametrize(
+    "location", ["docs/x` names `y.md", "docs/a.md", "docs/`names`.md", "docs/a names b.md"]
+)
+def test_only_a_revisit_entry_s_line_reads_as_one(fa: ModuleType, location: str) -> None:
+    """A document whose name or words quote a revisit entry's line stays an updated
+    document, its sentence given: only the words after its code span tell."""
+    said = {location: "Now says X."}
+    document = _document(_entry(location, "updated", "the `x` names y"))
+    block = fa.find(fa.render(document, HEAD, (), said) or "")
+    assert block is not None
+    assert fa.given_in(block, said) == said
+    assert fa.with_sentences(block, said) == block
+
+
+@pytest.mark.parametrize(
+    ("revisit", "found"),
+    [
+        (
+            _revisit(SOURCE_REQ, "deferred", "Later.", target=("path", "src/fixes #3/**")),
+            "fixes #3",
+        ),
+        (_revisit(SOURCE_REQ, "deferred", "Later.", links=["closes #4"]), "closes #4"),
+        (_revisit(SOURCE_REQ, "deferred", "Later.", fields=["resolves #5"]), "resolves #5"),
+        (_revisit(SOURCE_REQ, "deferred", "This fixes #6."), "fixes #6"),
+    ],
+)
+def test_a_revisit_entry_s_texts_are_read_for_closing_references(
+    fa: ModuleType, revisit: dict[str, Any], found: str
+) -> None:
+    """Every text a revisit entry shows is read before the list is written: its
+    target, its links and its trigger fields as well as its words."""
+    assert fa.closing_reference(_document(revisit)) == (SOURCE_REQ, found)
+
+
+@pytest.mark.parametrize(
+    "revisit",
+    [
+        _revisit(SOURCE_REQ, "unchanged", "Holds.", target=("path", "a<!--.md")),
+        _revisit(SOURCE_REQ, "unchanged", "Holds.", links=["-->"]),
+        _revisit(SOURCE_REQ, "unchanged", "Holds.", fields=["<!--"]),
+    ],
+)
+def test_a_revisit_entry_s_texts_are_read_for_comment_delimiters(
+    fa: ModuleType, revisit: dict[str, Any]
+) -> None:
+    found = fa.comment_delimiter(_document(revisit))
+    assert found is not None and found[0] == SOURCE_REQ
 
 
 # ---- closing references ---------------------------------------------------------
@@ -650,6 +939,46 @@ def test_the_list_is_derived_at_the_head_from_another_checkout(
     ]
     assert found.merge_base == repo.git("rev-parse", "main").stdout.strip()
     assert (found.outdated, found.unreadable) == (False, ())
+
+
+def test_a_revisit_entry_derived_from_the_check_is_listed_in_words(
+    fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
+) -> None:
+    """The real change check's revisit entries (#1703): a source whose trigger field
+    changed, one target it revisits by changing it and one it leaves out of date. The
+    list names both in words, and tells the person the one left out of date."""
+    deferral = "the cache decision is revisited in #9999"
+    repo = make_adopter_repo()
+    declare_linker(repo.root)
+    repo.write(
+        {
+            CONFIG: friction_config(places=("docs",)),
+            **SOURCE,
+            TEST_FILE: "def test_latency():\n    assert answer_time() < 2\n",
+            DECISION: "Cache the status.\n",
+            SOURCE_DOC: requirement(),
+        }
+    )
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    source = requirement(
+        threshold="10 s", revisited=[revisit_entry("deferred", deferral, DECISION)]
+    )
+    test = "def test_latency():\n    assert answer_time() < 10\n"
+    repo.commit("relax the threshold", {SOURCE_DOC: source, TEST_FILE: test})
+    found = fa.derive(repo.head(), "main")
+    assert found.problem is None, found.problem
+    assert fa.lines(found.document) == [
+        fa.QUESTION,
+        f"1. {SOURCE_DOC} names {DECISION} through verified-by, and this change modifies its "
+        f'threshold. Out of date, fixed later: "{deferral}"',
+        f"2. {SOURCE_DOC} names {TEST_FILE} through verified-by, and this change modifies its "
+        "threshold. Updated in this change",
+    ]
+    assert fa.told(found.document) == [
+        f'Left out of date: {DECISION}, which {SOURCE_DOC} names through verified-by: "{deferral}"'
+    ]
+    assert fa.counted_told(found.document) == (0, 0, 1)
 
 
 def test_a_base_that_moved_on_is_outdated(
@@ -1294,7 +1623,7 @@ def test_what_the_person_is_told_is_the_sentences_and_what_is_left_out_of_date(
         'redesign, #13."',
         "Checked locations: docs → docs, guides",
     ]
-    assert fa.counted_told(document) == (2, 2)
+    assert fa.counted_told(document) == (2, 2, 0)
     assert fa.told(_document(_entry("docs/e.md", "unchanged", "Holds."))) == []
 
 

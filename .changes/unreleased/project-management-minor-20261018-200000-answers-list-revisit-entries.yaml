@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  The answers list shows each revisit entry in words (#1703, COR-050 point 16).
+  The pull request's `## Documentation this change affects` section and
+  `land-work`'s printed list gave a revisit entry as the bare word
+  "revisited". Each now names the source, the target, the fields that list the
+  target and the trigger fields the change modified, then the outcome and its
+  reason, as the change check's own list does. A target the change revisited
+  by changing it is listed as "updated in this change", for the reviewer. It
+  asks for no sentence and marks its source updated nowhere. The words are
+  read for closing references and comment delimiters, the target, the fields
+  and the trigger fields included. Above its `ready:` line, `land-work` now
+  tells each target of a link a `deferred` revisit entry leaves out of date,
+  with the source that names it and the reason that names its follow-up, and
+  the `ready:` line counts those targets beside the documents left out of
+  date. A backbone whose change check gives no revisit entries gives the same
+  list as before.

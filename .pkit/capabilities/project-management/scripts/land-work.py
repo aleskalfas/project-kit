@@ -332,6 +332,9 @@ class _AnswersEnd:
     #: How many documents it leaves out of date: a deferral it wrote or a
     #: revalidation kept.
     left: int = 0
+    #: How many targets of a link it leaves out of date: a `deferred` revisit
+    #: entry (COR-050 point 16).
+    targets: int = 0
     #: How many of the project's friction settings the change alters.
     settings: int = 0
     #: What the `ready:` line tells, a line each (`friction_answers.told`).
@@ -343,8 +346,9 @@ class _AnswersEnd:
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
-        `, what changed in 1 updated document and 1 document left out of date
-        above, for information` — or "" when there is nothing to tell."""
+        `, what changed in 1 updated document, 1 document left out of date and
+        1 target of a link left out of date above, for information` — or ""
+        when there is nothing to tell."""
         parts: list[str] = []
         if self.updated:
             noun = "document" if self.updated == 1 else "documents"
@@ -352,6 +356,9 @@ class _AnswersEnd:
         if self.left:
             noun = "document" if self.left == 1 else "documents"
             parts.append(f"{self.left} {noun} left out of date")
+        if self.targets:
+            noun = "target of a link" if self.targets == 1 else "targets of a link"
+            parts.append(f"{self.targets} {noun} left out of date")
         if self.settings:
             parts.append(friction_answers.CHECKED)
         if not parts:
@@ -1148,10 +1155,11 @@ def _answers(
         print(f"  {line}")
     count = friction_answers.documents(derived.answers)
     written = friction_answers.affected(count, settings=bool(settings))
-    updated, left = friction_answers.counted_told(document)
+    counted = friction_answers.counted_told(document)
     end = _AnswersEnd(
-        updated,
-        left,
+        counted.updated,
+        counted.left,
+        counted.targets,
         settings=len(settings),
         told=tuple(friction_answers.told(document, settings, sentences)),
         unasked=sum(1 for entry in derived.answers if entry.get("asked") is not True),
@@ -1567,7 +1575,8 @@ def _ready(
     the review it waits for. Above the `ready:` line, what the person who
     authorises the merge is told, as information, not a gate: what changed in
     each updated document, in its author's sentence, which documents are left
-    out of date, with each deferral's words, and the friction settings changed."""
+    out of date, with each deferral's words, which targets of a link are left out
+    of date, with each revisit entry's words, and the friction settings changed."""
     argv = [str(head.issue), *_passed_through(args, review=False), "--dry-run"]
     try:
         end = done_work.run(argv, pinned_head=head.oid, branch_reading=reading)

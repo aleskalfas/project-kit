@@ -1756,6 +1756,64 @@ def test_the_answers_are_printed_above_ready_and_written_into_the_description(
     assert run.github.merges == []
 
 
+#: A revisit entry (COR-050 point 16) that leaves a target of a link out of date.
+REVISIT_DEFERRED = _answer(
+    "reqs/latency.md",
+    "The cache decision is revisited in #9999.",
+    answer="revisited",
+    outcome="deferred",
+    target={"kind": "path", "value": "docs/cache.md"},
+    links=["verified-by"],
+    fields=["threshold"],
+)
+#: A target the change revisited by changing it: listed, never told.
+REVISIT_UPDATED = _answer(
+    "reqs/latency.md",
+    None,
+    answer="revisited",
+    outcome="updated",
+    target={"kind": "path", "value": "tests/test_latency.py"},
+    links=["verified-by"],
+    fields=["threshold"],
+)
+
+
+def test_a_target_a_revisit_entry_leaves_out_of_date_is_told_above_ready(world, capsys) -> None:
+    """The person who authorises the merge is told which targets of a link are left
+    out of date, until which follow-up, beside the documents (COR-050 points 3 and
+    16, #1703); a target the change revisited by changing it is listed, not told."""
+    run = _answers_world(world)
+    run.written = [INSTALL, DEFERRED, REVISIT_UPDATED, REVISIT_DEFERRED]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    assert (
+        "  3. reqs/latency.md names tests/test_latency.py through verified-by, and this change "
+        "modifies its threshold. Updated in this change"
+    ) in lines
+    assert lines[-3:] == [
+        *TOLD,
+        "  Left out of date: docs/cache.md, which reqs/latency.md names through verified-by: "
+        '"The cache decision is revisited in #9999."',
+        _ready_line(
+            run,
+            ", 1 document left out of date and 1 target of a link left out of date above, for "
+            "information",
+        ),
+    ]
+
+
+def test_the_ready_line_counts_the_targets_left_out_of_date(land) -> None:
+    end = land._AnswersEnd
+    assert end(targets=1).phrase() == ", 1 target of a link left out of date above, for information"
+    assert end(updated=1, left=2, targets=3).phrase() == (
+        ", what changed in 1 updated document, 2 documents left out of date and 3 targets of a "
+        "link left out of date above, for information"
+    )
+    assert end(left=1).phrase() == ", 1 document left out of date above, for information"
+    assert end().phrase() == ""
+
+
 def test_a_pr_into_another_branch_is_derived_against_that_branch(world, capsys) -> None:
     """The PR's base is always named to the change check, which resolves it as it
     resolves every branch named a base — never `$PKIT_CHECK_BASE`."""
