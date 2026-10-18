@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-17
+retired: 2026-10-18
+produced:
+  - software-analysis:DEC-002
 ---
 
 # Quality requirements and constraints in the analysis
