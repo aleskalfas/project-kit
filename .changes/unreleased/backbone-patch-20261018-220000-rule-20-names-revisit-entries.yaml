@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Core rule 20 and the agents README's "Friction writers" name the revisit
+  entries of COR-050 point 16. An agent making a change writes the revisit
+  entry it owes for a combined state after resolving a conflict, as it writes
+  the revalidation. Each `deferred` revisit entry it writes names an open
+  follow-up. A reviewer checks the entries from the change check's own list,
+  and checks that each target the change revisited by changing it meets the
+  change to the source. The person who authorises the merge is told what is
+  left out of date, until which follow-up. A revisit entry for a target the
+  change was not asked about stays a person's decision.
