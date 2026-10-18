@@ -28,9 +28,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-17T11:56:20Z
+          at: 2026-10-18T17:06:02Z
           outcome: unchanged
-          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, and a name that gives none of a thing's facts needs no link or anchor. It does not touch that each page names its reader in its reader field and says only what that reader needs, so this rule holds."
+          unchanged-because: living-docs DEC-001 point 4 gains that a document lying only in an untyped place of rule sets outside every root, with no assignment, is no page. The rule says each page names its reader in its reader field and says only what that reader needs. It binds on pages whatever makes a document one, so it still holds.
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
@@ -38,9 +38,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
         revalidated:
-          at: 2026-10-17T11:56:22Z
+          at: 2026-10-18T17:06:09Z
           outcome: unchanged
-          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home: a decision record a page anchors is the home of the facts it decides, and a name that gives none of a thing's facts needs no link or anchor. It does not touch that pages of a kind follow one format with a template per kind, how a kind's structure is checked, or a page's kind field, so this rule holds."
+          unchanged-because: living-docs DEC-001 point 4 gains that a document lying only in an untyped place of rule sets outside every root, with no assignment, is no page. The rule says pages of a kind follow one format, with a template per kind, and a page names its kind in its kind field. It binds on pages whatever makes a document one, so it still holds.
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}

@@ -14,9 +14,8 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files"]
     revalidated:
-      at: 2026-10-18T15:13:52Z
-      outcome: unchanged
-      unchanged-because: COR-050 gains point 16, a link a component declares whose source's change asks for a revisit of its targets, and the schemas README's friction-block section adds the revisited key and links on a place. This page declares no link. What it says of parts, answers, dead anchors and how an anchor names a part holds, and its agent runs no friction writer, the new revisit included.
+      at: 2026-10-18T17:06:16Z
+      outcome: updated
 ---
 
 # living-docs capability
