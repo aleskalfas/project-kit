@@ -42,11 +42,11 @@ nothing.
   one for each key, so there a block or a list added lies outside. A block or
   a list removed, or emptied, lies outside in either style, since it drops
   its answers. So does a block turned to a value that is no mapping, or a
-  list turned to one that is no list. An entry written, rewritten or removed within a list lies
-  inside it, as a deferral does within a block. Front matter with a YAML
-  anchor lies outside, since through it the text of a block or a list could
-  change what an alias repeats outside it. Anything else is a change outside,
-  with why.
+  list turned to one that is no list. An entry written, rewritten or
+  removed within a list lies inside it, as a deferral does within a block.
+  Front matter with a YAML anchor lies outside, since through it the text
+  of a block or a list could change what an alias repeats outside it.
+  Anything else is a change outside, with why.
 - **It cannot answer** — and says why, exit 1 — in a shallow clone, where the
   history between the commits may not be here, when a name is no commit or
   the base does not resolve, when an object cannot be read, as in a partial
