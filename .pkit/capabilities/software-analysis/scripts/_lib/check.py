@@ -11,6 +11,15 @@ What is checked, each against the record's words:
   entries, is an error: what it holds cannot be read, its ids included, and
   an id is never used again (point 3) — the stamp then counts the number a
   use case's or journey's file name carries.
+- **A file under `requirements/` outside the three kinds' folders** (DEC-002
+  point 3) is an error: that folder is no place, so the file is a requirement
+  of no kind, held to none, and the stamp counts no number it holds. The
+  backbone's reading lists the files of the analysis location that no place or
+  held folder of this capability holds, from the one listing discovery reads,
+  so the check agrees with discovery. A file `friction.exclude` leaves out is
+  not reported. A backbone whose reading gives no such list is an error too:
+  the check says it could not look, and never reads the silence as no such
+  file.
 - **Missing required parts** (points 1 and 3). Each artefact's own fields
   against its kind's companion schema — its id, its title or name, its
   status, its actor, its steps, its needs, its definition, a requirement's
@@ -238,6 +247,7 @@ from _lib.model import (
     FORMAT_RULE,
     ID_SHAPE,
     JOURNEY,
+    KIND_OF_PLACE,
     KINDS,
     METHOD_SET,
     MUST_MEET,
@@ -246,9 +256,11 @@ from _lib.model import (
     OTHER_ACTORS,
     RELIES_ON,
     REQUIREMENTS,
+    REQUIREMENTS_FOLDER,
     REVALIDATED_AT,
     TERM,
     UNANCHORED_BECAUSE,
+    UNPLACED,
     USE_CASE,
     Analysis,
     Artefact,
@@ -316,6 +328,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     records = list(analysis.records)
     outcome.summary.append(_counts(analysis, len(records)))
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
+    outcome.findings += _outside_kinds(analysis)
     outcome.findings += _unreadable(analysis)
     outcome.findings += _own_fields(analysis)
     outcome.findings += _placeholders(root, analysis)
@@ -361,6 +374,39 @@ def _counts(analysis: Analysis, records: int) -> str:
 
 
 # --- shape and required parts --------------------------------------------------------------
+
+
+def _outside_kinds(analysis: Analysis) -> list[Finding]:
+    """A file under `requirements/` outside the three kinds' folders, which no place holds
+    (DEC-002 point 3); or, when the backbone's reading gives no list of such files, that
+    the check could not look."""
+    folder = f"`{REQUIREMENTS_FOLDER}/`"
+    *some, last = [
+        f"`{written}/`" for written, kind in KIND_OF_PLACE.items() if kind in REQUIREMENTS
+    ]
+    kinds = f"{', '.join(some)} or {last}"
+    if analysis.outside_kinds is None:
+        return [
+            Finding(
+                ERROR,
+                analysis.location or ".",
+                f"no file under {folder} outside the three kinds' folders is looked for: "
+                f"`pkit friction artefacts --json` gives no `{UNPLACED}` list of the analysis "
+                f"location's files, which an installed backbone that predates it lacks — "
+                f"upgrade it (`pkit upgrade`)",
+            )
+        ]
+    return [
+        Finding(
+            ERROR,
+            path,
+            f"lies under {folder} outside the three kinds' folders, and {folder} is no place, "
+            f"so it is a requirement of no kind: the check holds it to none and the stamp "
+            f"counts no number it holds. A requirement lies in the folder of its kind, {kinds} "
+            f"(DEC-002 point 3) — move it there, or leave it out with `friction.exclude`",
+        )
+        for path in analysis.outside_kinds
+    ]
 
 
 def _unreadable(analysis: Analysis) -> list[Finding]:
