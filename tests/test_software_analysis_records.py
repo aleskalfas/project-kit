@@ -182,7 +182,7 @@ def test_a_gap_names_each_artefact_it_affects(project: AdopterRepo) -> None:
     assert errors(check(project)) == []
 
 
-#: A constraint, written by hand while it has no stamp (#1692), filled as its structure asks.
+#: A constraint, written whole as a person fills it, as its structure asks.
 CONSTRAINT = (
     "---\nid: REQ-004\ntitle: Run suites on the client's machines\nstatus: active\n"
     "statement: The system runs every suite on a machine the client owns.\n"
