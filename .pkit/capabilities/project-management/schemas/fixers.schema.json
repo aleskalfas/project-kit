@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-kit/capabilities/project-management/fixers.schema.json",
+  "title": "Fixers — the value of pkit::work-tracking:fixers, version 1",
+  "description": "The data point's companion schema (COR-052 point 5; project-management:DEC-056 point 1). The value says which agent fixes the artefacts of each type: when the default branch leaves an artefact of the type out of date, that agent proposes its answer, and the person decides it. One entry per type. The point is `union`: a project filler may replace an entry, and two capabilities that claim one type are an error naming both. It has no default. A capability contributes its entries as a static `value`, never through a command filler. The version rises only on a change that breaks existing fillers.",
+  "type": "array",
+  "items": { "$ref": "#/$defs/fixer" },
+  "$defs": {
+    "fixer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "agent", "description"],
+      "properties": {
+        "id": {
+          "description": "The artefact type the agent fixes (COR-056 point 1): `<component>:<name>` for a component's type, `backbone:<name>` for the backbone's, or a bare name for a project's own. A capability's entry names a type of its own type registry. A project's entry may name any type.",
+          "type": "string",
+          "pattern": "^(?:(?:[a-z]|[a-z][a-z0-9-]*[a-z0-9]):)?[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        "agent": {
+          "description": "The agent that fixes artefacts of the type. A capability's entry names an agent the capability ships, and a project's entry any deployed agent. Either way the agent only proposes: its definition claims no paths (`owns`) and holds no tool that changes existing files or starts agents.",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
+        },
+        "description": {
+          "description": "What the agent keeps true, in plain words a person reads, such as \"your pages\". The question that asks the person to grant the fixer is built from it, so it reads after \"keep\" and before \"true\".",
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  }
+}

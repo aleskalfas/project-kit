@@ -92,6 +92,14 @@ mapping from the config, and no config is no obligations. Gated, it would turn
 every un-bootstrapped project's `pkit validate` into an error on an unresolved
 point. The verb that acts on the point, `check-doc-mapping`, stays gated.
 
+The five fixer verbs are exempt too ([project-management:DEC-056-drift-fixers]
+points 1 and 2). They read the fixers point and read or write the grant list,
+and assume no label or board a bootstrap provides. Their validator,
+`check-fixers`, runs inside `pkit validate`, as `fill-doc-check` does. The
+question, `ask-fixers`, is to be asked at the end of an install or upgrade,
+which may come before the project bootstraps. The commands it prints, and the
+one validation names, must then run there too.
+
 The gate is called explicitly at the top of each gated entry point — not in the
 dispatcher (direct script invocation, which happens constantly, would bypass
 it: the exact hole) and not inside the shared config/`gh` seam (the refusal
@@ -138,8 +146,8 @@ BY_MIGRATE = "migrate"
 BY_MIGRATION_GRANDFATHER = "migration-grandfather"
 
 # The five setup-and-diagnosis verbs that must work on an un-bootstrapped
-# project, and the one query the backbone runs, each with the reason it is
-# exempt. This mapping IS the exemption list: the coverage guard reads it, and
+# project, the one query the backbone runs, and the five fixer verbs, each with
+# the reason it is exempt. This mapping IS the exemption list: the coverage guard reads it, and
 # a verb absent from here must call the gate.
 EXEMPT_VERBS: dict[str, str] = {
     "bootstrap": (
@@ -167,6 +175,31 @@ EXEMPT_VERBS: dict[str, str] = {
         "resolves — `pkit validate` included; it reads only the doc mapping (no "
         "config, no obligations), and `check-doc-mapping`, which acts on the "
         "point, stays gated"
+    ),
+    # The fixer verbs (DEC-056 points 1 and 2; the module docstring).
+    "check-fixers": (
+        "the fixers validator, run by `pkit validate`: a gated validator would "
+        "fail every un-bootstrapped project's validation with no answer, and it "
+        "reads only the fixers point and the grant list"
+    ),
+    "ask-fixers": (
+        "the fixers question, which install and upgrade are to ask, possibly "
+        "before the project bootstrapped; it reads the fixers point and writes "
+        "only the grant list, nothing a bootstrap provides"
+    ),
+    "grant-fixer": (
+        "the command line the fixers question prints when nobody can answer it, "
+        "so it must run wherever the question runs; it writes only the grant list"
+    ),
+    "revoke-fixer": (
+        "the command validation names for a grant no entry gives, and a grant "
+        "must stay revocable wherever it could be given; it writes only the "
+        "grant list"
+    ),
+    "list-fixers": (
+        "the read-only view of the fixers point and the grant list, which "
+        "the fixers question and its commands run beside; it reads no label "
+        "or board a bootstrap provides"
     ),
 }
 

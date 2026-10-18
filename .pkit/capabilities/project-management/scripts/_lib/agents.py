@@ -14,11 +14,25 @@ at v1 — the only adapter shipping agent deployment (consistent with
 DEC-028 and DEC-032 D2). Centralising it here means a second harness, or
 a relocation of the deploy directory, is a one-line change in one place
 rather than a hunt across callers.
+
+The fixers point (DEC-056 point 1) asks two more things of an agent: whether
+the capability that names it ships it (`agent_is_shipped_by`), and what its
+deployed definition grants it (`deployed_definition`) — the tools and the
+claimed paths of the file the harness runs.
 """
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+try:  # ruamel is declared by every pm script's PEP 723 header.
+    from ruamel.yaml import YAML
+    from ruamel.yaml.error import YAMLError
+except ImportError:  # pragma: no cover — ruamel is in the kit's pyproject
+    YAML = None  # type: ignore[assignment, misc]
+    YAMLError = Exception  # type: ignore[assignment, misc]
 
 # The relative path, under the repo root, where the Claude Code adapter
 # deploys an agent named `<name>`. The single place to widen when a
@@ -47,3 +61,60 @@ def agent_is_core(repo_root: Path, name: str) -> bool:
     by redeploying a capability."""
     core = repo_root.joinpath(*CORE_AGENTS_SUBDIR)
     return (core / f"{name}.md").is_file() or (core / name / f"{name}.md").is_file()
+
+
+def agent_is_shipped_by(repo_root: Path, capability: str, name: str) -> bool:
+    """True when the installed `capability` ships agent `name`: its canonical
+    file is in the capability's `agents/` folder, as `<name>.md` or
+    `<name>/<name>.md` — the two layouts the deploy primitive reads."""
+    agents = repo_root / ".pkit" / "capabilities" / capability / "agents"
+    return (agents / f"{name}.md").is_file() or (agents / name / f"{name}.md").is_file()
+
+
+@dataclass(frozen=True)
+class Definition:
+    """What a deployed agent's front matter declares: the tools the harness
+    grants it and the paths it claims (`owns`, resolved at deploy). `problem` is
+    why the front matter could not be read; the other fields are then empty."""
+
+    tools: tuple[str, ...] = ()
+    owns: tuple[str, ...] = ()
+    problem: str = ""
+
+
+def deployed_definition(repo_root: Path, name: str) -> Definition | None:
+    """The front matter of agent `name` as deployed — what the harness runs, an
+    adopter's overlay applied — or None when it is not deployed."""
+    path = agent_deploy_path(repo_root, name)
+    if not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        return Definition(problem=f"{path.name} cannot be read ({exc})")
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return Definition(problem=f"{path.name} opens with no front matter")
+    try:
+        end = next(i for i, line in enumerate(lines[1:], start=1) if line.strip() == "---")
+    except StopIteration:
+        return Definition(problem=f"{path.name}'s front matter never closes")
+    if YAML is None:  # pragma: no cover — ruamel is in the kit's pyproject
+        return Definition(problem="ruamel.yaml is not installed")
+    try:
+        data = YAML(typ="safe").load("\n".join(lines[1:end]))
+    except YAMLError as exc:
+        return Definition(problem=f"{path.name}'s front matter does not parse ({exc})")
+    if not isinstance(data, dict):
+        return Definition(problem=f"{path.name}'s front matter is not a mapping")
+    return Definition(tools=_strings(data.get("tools")), owns=_strings(data.get("owns")))
+
+
+def _strings(value: Any) -> tuple[str, ...]:
+    """A front-matter list as its strings: a tool list may be written as a list
+    or as one comma-separated string, as the harness reads it."""
+    if isinstance(value, str):
+        return tuple(part.strip() for part in value.split(",") if part.strip())
+    if isinstance(value, list):
+        return tuple(str(item).strip() for item in value if str(item).strip())
+    return ()
