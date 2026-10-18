@@ -1,0 +1,7 @@
+component: software-engineering
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050, whose point
+  14 names the external source a component is pinned to as a source of synced
+  trees (#1638). Only the README's friction block changes, and nothing you
+  run or read changes.
