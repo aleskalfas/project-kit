@@ -1,4 +1,19 @@
 ---
+TERM-acceptance-gate:
+  name: acceptance gate
+  status: active
+  definition: rule that work builds only on decisions and rules already accepted, and never on proposed ones
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/decisions/README.md
+          - .pkit/rules/core.md
+          - .pkit/skills/core/decision-author.md
+        record:
+          - COR-025
+          - COR-051#4
+          - COR-051#5
 TERM-anchor:
   name: anchor
   status: active
@@ -96,6 +111,31 @@ TERM-debt:
           - src/project_kit/friction_report.py
         record:
           - COR-050#9
+TERM-decision-record:
+  name: decision record
+  status: active
+  definition: document stating one choice with its context and reasons, numbered in a namespace and binding once accepted
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/decisions.py
+        record:
+          - COR-025
+          - COR-058#1
+          - COR-058#3
+TERM-epic:
+  name: EPIC
+  status: active
+  definition: issue for one outcome, often spanning quarters, under which the Features, Umbrellas and Tasks that reach it are filed
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/schemas/issue-types.yaml
+        record:
+          - project-management:DEC-004
+          - project-management:DEC-008
 TERM-friction:
   name: friction
   status: active
@@ -111,6 +151,19 @@ TERM-friction:
           - COR-050#5
           - COR-050#6
           - COR-050#9
+TERM-head:
+  name: head
+  status: active
+  definition: latest commit of a branch, such as the one a pull request would merge
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/land-work.py
+          - src/project_kit/pull_request_landing.py
+        record:
+          - project-management:DEC-028
+          - project-management:DEC-055#3
 TERM-methodology:
   name: methodology
   status: active
@@ -118,6 +171,19 @@ TERM-methodology:
   pkit:
     friction:
       unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
+TERM-page:
+  name: page
+  status: active
+  definition: document of a space that declares its kind, and names the one reader it is written for
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
+        record:
+          - living-docs:DEC-001#1
+          - living-docs:DEC-001#3
+          - living-docs:DEC-001#4
 TERM-place:
   name: place
   status: active
@@ -130,6 +196,31 @@ TERM-place:
         record:
           - COR-050#1
           - COR-050#14
+TERM-revalidation-record:
+  name: revalidation record
+  status: active
+  definition: held document logging one review of artefacts against a version of the system, kept only when the review has something to say
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/software-analysis/scripts/_lib/revalidation.py
+        record:
+          - software-analysis:DEC-001#5
+          - software-analysis:DEC-001#6
+TERM-space:
+  name: space
+  status: active
+  definition: "set of documents for one audience, under a documentation root or in places assigned to it, which its definition's rules bind"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
+        record:
+          - living-docs:DEC-001#1
+          - living-docs:DEC-001#2
+          - COR-049
 TERM-surface-change:
   name: surface change
   status: active
@@ -150,11 +241,45 @@ TERM-system:
   pkit:
     friction:
       unanchored-because: It names the whole of pkit, so an anchor on its code would match every change. No record defines it.
+TERM-use-case:
+  name: use case
+  status: active
+  definition: "description of one actor's goal and of how the system fulfils it, kept in the analysis as an artefact"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/software-analysis/scripts/_lib/settled_use_cases.py
+        record:
+          - software-analysis:DEC-001#1
+          - software-analysis:DEC-001#3
+          - project-management:DEC-054#1
+TERM-verdict:
+  name: verdict
+  status: active
+  definition: "reviewer agent's judgement of a pull request at one commit, posted with the marker the merge gate reads"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/agent_verdicts.py
+        record:
+          - project-management:DEC-028
+          - project-management:DEC-055#3
 ---
 
 # Glossary
 
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
+
+## TERM-acceptance-gate — acceptance gate
+
+**Example:** a change would cite a project record that is still proposed, so the change's author has the record accepted first, or pauses the change.
+
+**Distinctions:**
+
+- **Acceptance:** the change of a record's status from `proposed` to `accepted`, in a commit of its own. The gate asks for it before dependent work starts. An agent makes it only once the person it works for approves (the `decision-author` skill).
+- **A rule's acceptance:** a rule an agent drafted binds only once a person's review accepts it (COR-051 point 4). An accepted rule rests only on accepted records (COR-051 point 5).
 
 ## TERM-anchor — anchor
 
@@ -233,6 +358,26 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Stale and deferred:** stale debt is a change nobody answered, dated from that change. Deferred debt is a deferral, dated from the commit that introduced it (COR-050 point 9).
 - **Ledger:** no file lists the debt. Each run derives it from git again (COR-050 point 9).
 
+## TERM-decision-record — decision record
+
+**Example:** PRJ-002 is one of project-kit's own, beside the methodology's core ones, such as COR-050.
+
+**Distinctions:**
+
+- **Point:** a numbered part of a record's Decision. A point keeps its id for good, even when the record is refined in place (COR-058 points 1 and 3).
+- **Namespace:** where a record is numbered, apart from the others: the core's `COR`, the project's `PRJ`, its architecture's `ADR`, and each capability's `DEC` (COR-025). `pkit new decision` names one as `core`, `project`, `adr` or the capability's name.
+- **Rule:** a statement in a rule set of what must hold of an artefact. A rule's origin may name the record it rests on.
+
+## TERM-epic — EPIC
+
+**Example:** the planner's intent to write project-kit's analysis is filed as one EPIC, with a Task under the EPIC for each area.
+
+**Distinctions:**
+
+- **Milestone:** the hosting service's field that scopes issues by date. An EPIC states an outcome, not a date (project-management DEC-004).
+- **Task:** the issue type for one change, the only type that gets a branch and a pull request. Its parent is an EPIC, a Feature, an Umbrella or a Milestone (`issue-types.yaml`).
+- **Who files one:** only the planner commits the project to an outcome, so the planner's authority files it (project-management DEC-008).
+
 ## TERM-friction — friction
 
 **Example:** a change modifies `src/project_kit/release.py`, and the change check reports friction on `.pkit/release/README.md` until the page carries an answer.
@@ -241,6 +386,16 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Debt:** what the whole-repository check reports on the default branch. Friction nobody answered is stale debt, and a deferral is deferred debt (COR-050 point 9).
 - **The `friction` block:** the block in an artefact's front matter that holds its anchors and answers (COR-050 point 1). It is no finding.
+
+## TERM-head — head
+
+**Example:** `land-work` stops ready naming the pull request's head, so the merge authoriser authorises the merge of that one commit.
+
+**Distinctions:**
+
+- **A later head:** a commit pushed after the authorised one, along the branch's own line. The authorisation covers it only where every change since lies inside `revalidated` blocks (project-management DEC-055 point 3). A clean merge of the target counts as no change.
+- **What stands for a head:** a check's result, a verdict and an authorisation to merge. A verdict may stay fresh across a change outside what its reviewer checks (project-management DEC-028).
+- **Base:** what a check compares a change with. The head is the change's own end.
 
 ## TERM-methodology — methodology
 
@@ -252,6 +407,16 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The methodology maintainer:** an actor, "whoever maintains a distribution of the methodology" (`ACT-methodology-maintainer`). The role also works on parts of the system, such as the backbone and its releases. So its name, which the maintainer kept (PR #1374), uses the word more widely than this term.
 - **A capability's discipline:** what one capability packages, for a project to install or leave out (COR-017). A capability the system ships carries one part of the methodology, never the whole. A capability a project or its organisation writes is their own (COR-031 and COR-041).
 
+## TERM-page — page
+
+**Example:** `.pkit/cli/README.md` is one of project-kit's user space, and anchors the code of the commands it describes.
+
+**Distinctions:**
+
+- **Unclassified document:** a document in a space's places that declares no page kind, even one that names a reader. It is none until onboarding classifies it (living-docs DEC-001 point 4).
+- **Decision record:** never one, though a page may anchor a record as the home of the facts the record decides (living-docs DEC-001 points 3 and 4).
+- **Grounding:** a page's anchors ground each statement it makes, as a rule of `LDOC` asks. A page that breaks the rule is still a page (living-docs DEC-001 point 3).
+
 ## TERM-place — place
 
 **Example:** project-kit lists `.pkit/cli/README.md` in `friction.places`, so the backbone reads that page's anchors.
@@ -261,6 +426,25 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Documentation root:** where a project keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced tree:** a folder that sync copies into the project from elsewhere, such as the methodology's records. It is never a place, or each refresh would read as friction (COR-050 point 14).
 - **Held folder:** a folder a component declares for its held documents. No place reads a file in it as an artefact (COR-050 point 1).
+
+## TERM-revalidation-record — revalidation record
+
+**Example:** before a change is built, a planned revalidation record names the issue's body the developer reviewed, and the time its text was read. The record also names each gap, and the issue that builds the missing behaviour.
+
+**Distinctions:**
+
+- **Revalidation:** the answer on an artefact itself, which clears its friction. The held document never clears friction (software-analysis DEC-001 point 5).
+- **When one is kept:** for a planned review, or for a gap or a regression found. A person's decision that an artefact was stale is kept too (software-analysis DEC-001 points 5 and 6).
+- **Planned record:** a revalidation record of a review made before the code. It names the design it reviewed in `reviewed-against`, each source at its version (software-analysis DEC-001 point 6).
+
+## TERM-space — space
+
+**Example:** project-kit's technical one is `tech-docs/`, with `CONTRIBUTING.md` and the release guide, and its definition, `TECH`, inherits `LDOC`.
+
+**Distinctions:**
+
+- **Documentation root:** where a project keeps its documents, for users or for itself (COR-049). A space holds a root's documents, and those of the places the project assigns to it.
+- **Definition:** the rule set of the project's own that names the rules the space's pages follow (living-docs DEC-001 point 2).
 
 ## TERM-surface-change — surface change
 
@@ -281,3 +465,23 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A system:** other software, such as the hosting service or the harness. The analysis names it for what it is, never a system (PR #1345, question 12).
 - **A platform:** in COR-009, the hosting service a project's remote lives on. It is other software, never the system.
 - **The methodology:** the body of decision records, rules and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* point back here.
+
+## TERM-use-case — use case
+
+**Example:** UC-012 describes landing a change, so an issue that plans a change to landing names it in its `## Use cases` section.
+
+**Distinctions:**
+
+- **Journey:** one actor's path across several of its use cases, with the seams between them (software-analysis DEC-001 point 1).
+- **A settled one:** one the default branch holds. Planning and issue bodies are checked against those alone (project-management DEC-054 point 1).
+- **Need:** what an actor wants, in its front matter. A use case's goal is one of its actor's needs.
+
+## TERM-verdict — verdict
+
+**Example:** `docs-reviewer` approves the head of a pull request, and the merge gate counts that approval while it still stands for the head that merges.
+
+**Distinctions:**
+
+- **Finding for a person:** a passage a reviewer tags `[person]`. It withholds no approval, and waits for the merge authoriser (project-management DEC-028).
+- **Authorisation to merge:** the person's, never a reviewer's (project-management DEC-055 point 3).
+- **Merge gate:** the checks and approvals a merge waits for. A missing or unreadable verdict never satisfies it (project-management DEC-028).
