@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  The capability's README records, in its front matter, that it still holds
+  after COR-049 point 5 and COR-051 point 6 changed what a change of the
+  internal documentation root does to the project's rule sets. No surface of
+  the capability changes.
