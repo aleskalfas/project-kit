@@ -74,7 +74,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
         - .pkit/lifecycle/README.md#script-contract
     revalidated:
-      at: 2026-10-18T17:49:05Z
+      at: 2026-10-18T18:27:45Z
       outcome: updated
 ---
 
