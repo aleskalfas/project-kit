@@ -2,7 +2,7 @@
 TERM-agent-workspace:
   name: agent workspace
   status: active
-  definition: folder at the root of each checkout where agents keep their intermediate files, which no commit carries
+  definition: folder at the root of a checkout where agents keep their intermediate files, which the system excludes from version control
   pkit:
     friction:
       anchors:
@@ -11,7 +11,7 @@ TERM-agent-workspace:
           - .pkit/rules/core.md
         record:
           - ADR-060#1
-          - ADR-060#4
+          - ADR-060#3
           - ADR-060#9
 TERM-anchor:
   name: anchor
@@ -141,7 +141,7 @@ TERM-grant:
 TERM-guardrail:
   name: guardrail
   status: active
-  definition: privilege denied to every subject, both by the permission hook and by the harness's native settings, whatever any grant allows
+  definition: privilege the permission hook denies to every subject whatever any grant allows, and whose common forms the harness's native settings deny too
   pkit:
     friction:
       anchors:
@@ -158,6 +158,7 @@ TERM-harness:
     friction:
       anchors:
         record:
+          - COR-013#1
           - COR-047
           - COR-028
 TERM-methodology:
@@ -170,7 +171,7 @@ TERM-methodology:
 TERM-overlay:
   name: overlay
   status: active
-  definition: project-owned file that gives each placeholder category in the agents' sources the project's own paths, applied when the agents are deployed
+  definition: project-owned file whose paths the deploy writes in place of each placeholder category in the front matter of the agents' sources
   pkit:
     friction:
       anchors:
@@ -184,7 +185,7 @@ TERM-overlay:
 TERM-permission-hook:
   name: permission hook
   status: active
-  definition: script the harness runs before each tool call, which allows, denies or defers the call by the grants that apply to it
+  definition: script the harness runs before each tool call, which allows the call, denies it, asks the operator about it or defers it to the harness
   pkit:
     friction:
       anchors:
@@ -233,13 +234,14 @@ TERM-profile:
           - .pkit/permissions/profiles/*.yaml
           - src/project_kit/permissions.py
         record:
+          - COR-028#1
           - ADR-005#1
           - ADR-005#2
           - ADR-032
 TERM-sandbox:
   name: sandbox
   status: active
-  definition: box of the operating system that the harness runs shell commands in, which bounds what they can reach on the file system and the network
+  definition: isolation layer of the operating system in which the harness runs shell commands, bounding what they can reach on the file system and network
   pkit:
     friction:
       anchors:
@@ -254,7 +256,7 @@ TERM-sandbox:
 TERM-session-anchor:
   name: session anchor
   status: active
-  definition: directory the harness records when it starts hosting an agent's work, which stays put when the working directory changes
+  definition: directory the harness records at the start of an agent's run, which stays put when the working directory changes
   pkit:
     friction:
       anchors:
@@ -297,7 +299,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **The harness's scratch directory:** a folder a harness may offer for temporary files, outside the repository. It is no agent workspace, and the methodology's rules send intermediate files to the agent workspace instead (core rule 16).
 - **Held folder:** a folder a component declares for its held documents, which a commit carries. The agent workspace holds nothing a commit carries.
-- **A shell write:** a redirect or a here-document into the folder. The `workspace` grant covers the file tools alone, so such a write may still prompt (ADR-060 point 4).
+- **The harness's working directory:** the checkout's root for the main session, or a worktree's root for an agent working in a worktree. The agent workspace is one folder inside it (ADR-060 point 3).
 
 ## TERM-anchor — anchor
 
@@ -387,13 +389,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-grant — grant
 
-**Example:** project-management contributes a grant that denies `agent:project-manager` the privilege `issue-tracker-write`, so that agent cannot run `gh issue edit`.
+**Example:** project-management contributes a grant that denies `agent:project-manager` the privilege `issue-tracker-write`, so the permission hook denies that agent `gh issue edit`.
 
 **Distinctions:**
 
 - **Subject:** whom a grant is for: `all`, `operator`, or one agent as `agent:<name>`. An agent's effective grants are those to `all` and its own, and a deny wins (COR-028 point 1).
 - **Settings rule:** an allow or a deny in the harness's settings files. `pkit permissions apply` writes one where the harness can express a grant natively (COR-028 point 2).
-- **A profile's grants:** a layer the active profile adds under the project's own grants, which `.pkit/permissions/project/grants.yaml` holds. The project's own come last, so a profile never overrides them (ADR-005 point 2).
+- **A profile's grants:** a layer the active profile adds to the project's own grants in `.pkit/permissions/project/grants.yaml`. Activating a profile swaps that layer and never edits the file, so a manual grant survives (ADR-005 point 2).
 
 ## TERM-guardrail — guardrail
 
@@ -401,8 +403,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Deny grant:** a grant that denies one subject a privilege, which a project or a capability writes and can remove. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
-- **The double lock:** a guardrail's two layers. The permission hook may fail open, and the native settings deny the guardrail all the same (ADR-002 point 3).
+- **Deny grant:** a grant that denies one subject a privilege. A project or a capability writes the grant, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
+- **The double lock:** a guardrail's two layers. The native settings deny its common forms, such as `Bash(git push --force:*)`, even where the permission hook fails. A form they miss, such as the flag at the end, rests on the hook alone (ADR-002 point 3).
 
 ## TERM-harness — harness
 
@@ -410,7 +412,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Adapter:** the component that translates the methodology into one harness's form, such as its settings and its agents' files. The system ships the adapter, and the harness is other software (COR-028 point 2).
+- **Adapter:** the component that translates the methodology into one harness's form, such as its settings and its agents' files. The system ships the adapter, and the harness is other software (COR-013 point 1 and COR-028 point 2).
 - **Harness requirement:** a behaviour the methodology needs of any harness, declared once as data. Each adapter answers it for its own harness (COR-047).
 - **The system:** the software under discussion. The harness hosts the agents that run the system's commands, and is never the system itself.
 
@@ -430,7 +432,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Placeholder:** a `<category>` in an agent's source, which the deploy replaces with the overlay's paths for that category (COR-013 point 5).
+- **Placeholder:** a `<category>` in an agent's source. The deploy replaces it in the front matter with the overlay's paths for that category (COR-013 point 5). In the body it stays as written.
 - **Override:** a value under `overrides.<agent>` in the overlay. It replaces a category's value for that agent alone, and is never merged with it (COR-013 point 5).
 - **Optional read:** a category an agent reads only through `reads.patterns`. Where the overlay lacks it, the deploy drops the item rather than skipping the agent (ADR-052).
 - **A capability's adapter overlay:** a capability's addition to the harness's settings, which project-management DEC-030 defines. It holds no paths for an agent.
@@ -442,8 +444,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Hook of an agent:** a named entry point an agent invokes, which a skill or a script provides (COR-013 point 4). It decides no permission.
-- **Registration:** `pkit permissions enable` registers the permission hook in `.claude/settings.json`, and `pkit permissions disable` removes it. The adapter ships the script either way (ADR-002 point 2).
-- **Native settings:** the allows and denies the harness enforces itself. They hold even where the permission hook fails and defers the call (ADR-002 point 3).
+- **Enforcement:** the methodology's word for a registered permission hook. `pkit permissions enable` registers the hook in `.claude/settings.json`, and `pkit permissions disable` removes it. The adapter ships the script either way (ADR-002 point 2).
+- **Native settings:** the allows and denies the harness enforces itself. They deny the guardrails' common forms even where the permission hook fails and defers the call (ADR-002 point 3).
 
 ## TERM-place — place
 
@@ -472,18 +474,18 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Posture:** what becomes of a request no grant decides. `lenient` defers it to the harness, and `strict` denies it. A profile sets the posture, which the project commits as shared policy (ADR-032).
-- **The project's grants:** those in `.pkit/permissions/project/grants.yaml`. They come after the active profile's, so a profile never overrides them (ADR-005 point 2).
-- **Sandbox:** a profile relies on the sandbox, and never writes its settings (ADR-005 point 2).
+- **The project's grants:** those in `.pkit/permissions/project/grants.yaml`. Activating a profile never edits that file, so a manual grant survives a switch of profile (ADR-005 point 2). Where a profile's deny meets a project's allow, the deny wins (COR-028 point 1).
+- **Autonomy settings:** the sandbox's settings that `pkit permissions setup autonomy` writes beside a profile. A profile relies on them, and never writes them (ADR-005 point 2).
 
 ## TERM-sandbox — sandbox
 
-**Example:** with the sandbox on, a command an agent runs cannot read under `~/.ssh`, whatever grant let the command run.
+**Example:** `pkit permissions sandbox enable` adds `~/.ssh` to the sandbox's denied reads, so a command the sandbox confines cannot read there, whatever grant let the command run.
 
 **Distinctions:**
 
 - **Confinement:** the bound the sandbox puts on a command's reach. The operator's need speaks of the agents' confinement, which the sandbox alone enforces (ADR-004 point 2).
 - **Grant:** an entry that decides what a subject may invoke. It spares a prompt, and confines nothing (ADR-004 point 1).
-- **One for the session:** the agents of a session share one sandbox, so no agent is confined apart from another (ADR-004 point 5).
+- **Per-agent confinement:** none exists. The agents of a session share one sandbox, so no agent is confined apart from another (ADR-004 point 5).
 - **Exclusion:** a command carved out of the sandbox, which then runs unconfined (ADR-008 point 4).
 
 ## TERM-session-anchor — session anchor
@@ -493,7 +495,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Target:** the repository a change would land in, read from the working directory. The cross-repository guard compares it with the session anchor's repository (ADR-034 point 1).
-- **Project root:** the folder a command finds the project in, from its working directory. The session anchor is never a root, only the other side of the comparison (ADR-034 point 1).
+- **Project root:** the folder the system's commands find the project in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
 - **Anchor:** an artefact's link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 
 ## TERM-surface-change — surface change

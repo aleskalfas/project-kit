@@ -14,6 +14,7 @@ pkit:
         - src/project_kit/status.py
         - .pkit/permissions/decide.py
         - .pkit/permissions/profiles/*.yaml
+        - .pkit/adapters/claude-code/settings/core/settings.json
         - .pkit/rules/core.md
       record:
         - ADR-005#5
@@ -21,7 +22,7 @@ pkit:
         - ADR-060#2
         - ADR-060#3
         - ADR-060#4
-        - ADR-060#6
+        - ADR-060#5
         - ADR-060#7
         - ADR-060#9
       artefact:
@@ -47,30 +48,31 @@ pkit:
 
 **Main path:**
 
-1. The agent writes the file with a file tool inside the agent workspace, `.agent-workspace/` at its checkout's root, such as `Write` on `.agent-workspace/pr-body.md`.
-2. The permission hook finds the file tool's target inside the agent workspace, and allows the write with no prompt. Every shipped profile grants the `workspace` privilege to every agent (ADR-005 point 5 and ADR-060 point 1).
+1. The agent writes the file inside the agent workspace, `.agent-workspace/` at its checkout's root, with a file tool, such as `Write` on `.agent-workspace/pr-body.md`.
+2. The write runs with no prompt. The permission hook allows it under the `workspace` privilege, which every shipped profile grants to every agent (ADR-005 point 5 and ADR-060 point 1). The adapter's baseline settings also allow `Write` and `Edit` for the whole session.
 3. The agent passes the file to the command that needs it, such as `pkit pm open-pr <number> --body-file .agent-workspace/pr-body.md`.
 4. The work is committed. Git leaves the folder out, since `pkit init` and `pkit sync` excluded it in the clone's local exclude file (ADR-060 point 9).
 5. The agent removes the files it no longer needs (core rule 16).
 
 **Variants:**
 
-- **1a.** The agent works in a linked worktree. The worktree's own `.agent-workspace/` lies at its root, and the one exclude entry in the common git directory covers it too. The hook counts the worktree only where git registered it for the same repository (ADR-060 point 3).
+- **1a.** The agent works in a linked worktree. The worktree's own `.agent-workspace/` lies at its root, and the one exclude entry in the common git directory covers that folder too. The hook counts the folder as an agent workspace only where git registered the worktree for the same repository (ADR-060 point 3).
 - **1b.** The agent writes the file with a shell command, such as a redirect or a here-document into the folder. The hook judges such a command like any other shell write, so the harness may ask to confirm it (ADR-060 point 4).
-- **1c.** The `workspace` grant does not cover the target, and the write is decided as it would be without the grant (ADR-060 points 1 and 3). The grant leaves out three targets:
+- **1c.** The `workspace` privilege does not cover the target. So the hook decides the write as it would decide it without the privilege (ADR-060 points 1 and 3). The privilege leaves out three targets:
   - one that leaves the folder once symlinks are resolved
   - one in a repository nested in the folder
   - an existing file with more than one link
 - **1d.** A symlink named `.agent-workspace` sits where the folder belongs. It is never the agent workspace. `pkit sync` refuses to adopt it, and `pkit status` reports it (ADR-060 point 2).
-- **2a.** The permission hook is not registered, or no profile is active. The harness's own approvals hold in its working directory. A read never prompts, and an edit prompts until the operator accepts edits for the session (ADR-060 point 6).
-- **2b.** The hook defers on the file tool all the same. The diagnostic report lists the deferral as a defect, never as an allowlist gap (ADR-060 point 7).
+- **2a.** The permission hook is not registered, or no profile is active. The baseline settings' allow of `Write` and `Edit` for the whole session spares the prompt all the same.
+- **2b.** The posture is `strict`, as in the `read-only` profile. The hook denies a file tool's write anywhere else, and allows it in the agent workspace under the `workspace` privilege (ADR-060 point 5).
+- **2c.** The hook defers on the file tool all the same. The diagnostic report lists the deferral as a defect, never as an allowlist gap (ADR-060 point 7).
 - **4a.** The clone has run neither `pkit init` nor `pkit sync`, and the project's `.gitignore` lacks `/.agent-workspace/`. Git does not ignore the folder, so `git add -A` would stage its files. `pkit status` reports the folder `NOT excluded from git`, and `pkit init` recommends the `.gitignore` line (ADR-060 point 9).
 
 **Postconditions:** The agent's intermediate files lie in `.agent-workspace/`, written with no prompt, and no commit carries them.
 
 **Minimal guarantees:**
 
-- The `workspace` grant reaches no file outside the folder, and has no opinion there (ADR-060 point 1).
+- The `workspace` privilege reaches no file outside the folder, and has no opinion there (ADR-060 point 1).
 - Another repository's agent workspace never counts as this checkout's (ADR-060 point 3).
 - `pkit init` and `pkit sync` add the exclude entry once, and change no other line of the exclude file (`workspace.py`).
 - A symlink in the folder's place is never adopted as the agent workspace (ADR-060 point 2 and `workspace.py`).
