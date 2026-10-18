@@ -47,10 +47,15 @@ def test_split_front_matter(text: str, expected: tuple[str | None, str]) -> None
         ("---\n- a list\n---\nbody\n", None, None),  # front matter that is no mapping
         ("no front matter\n", None, None),
         ("---\nid: [unclosed\n---\nbody\n", None, "line 2"),
-        # A complex key holding a mapping is no key a mapping can hold (#1750): ruamel
-        # fails on it with a `TypeError`, which is a reason too, never an error.
-        ("---\n? [{a: 1}]\n: x\n---\nbody\n", None, "found unhashable key"),
+        # A mapping as a key is refused by ruamel's own error. Held in a list, it is no
+        # key a mapping can hold either, and a date out of range or a tag on text it
+        # cannot convert builds no value: ruamel fails on these outside its own errors,
+        # which give a reason too, never an error (#1750).
         ("---\n? {a: 1}\n: x\n---\nbody\n", None, "found unhashable key"),
+        ("---\n? [{a: 1}]\n: x\n---\nbody\n", None, "cannot build a value from it: TypeError"),
+        ("---\ndue: 2026-02-30\n---\nbody\n", None, "cannot build a value from it: ValueError"),
+        ("---\na: !!int x\n---\nbody\n", None, "cannot build a value from it: ValueError"),
+        ("---\n!!bool a: x\n---\nbody\n", None, "cannot build a value from it: KeyError"),
     ],
 )
 def test_front_matter_is_parsed_as_written(
@@ -63,35 +68,6 @@ def test_front_matter_is_parsed_as_written(
     assert (why is None) == (reason is None)
     if reason is not None:
         assert why is not None and reason in why
-
-
-PATHS = [("1", "a", "b"), ("2026-10-02", "a", "b"), ("x", "1", "b"), ("x", "a"), ("true", "a")]
-
-
-@pytest.mark.parametrize(
-    ("front_matter", "expected"),
-    [
-        # Written alike, typed apart: an integer and a text.
-        ('1:\n  a: {b: 1}\n"1":\n  a: {b: 2}\n', {("1", "a", "b"): "1"}),
-        # Written apart, rendered alike: a hexadecimal integer and a text.
-        ('"1":\n  a: {b: 1}\n0x1:\n  a: {b: 2}\n', {("1", "a", "b"): "1"}),
-        ("2026-10-02: {a: 1}\n'2026-10-02': {a: 2}\n", {("2026-10-02", "a", "b"): "2026-10-02"}),
-        # A collision deeper on a path is found at its step.
-        ("x:\n  1: {b: 1}\n  '1': {b: 2}\n", {("x", "1", "b"): "1"}),
-        # Keys read apart, or a collision off every path, leave the paths out.
-        ("1:\n  a: {b: 1}\n'2':\n  a: {b: 2}\n", {}),
-        ("x:\n  a: {b: 1}\ny:\n  1: 1\n  '1': 2\n", {}),
-        # `true` is read as `True`, so it does not collide with the text `true`.
-        ("true: {a: 1}\n'true': {a: 2}\n", {}),
-        # Front matter that does not parse gives no path.
-        ("? [{a: 1}]\n: x\n", {}),
-    ],
-)
-def test_colliding_keys_are_the_keys_two_keys_are_read_as(
-    front_matter: str, expected: dict[tuple[str, ...], str]
-) -> None:
-    """`parse_front_matter` renders keys as text, and keeps the last of two read alike."""
-    assert dp.colliding_keys(front_matter, PATHS) == expected
 
 
 def test_the_body_opens_on_the_line_after_its_front_matter_and_the_blank_lines() -> None:

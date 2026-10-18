@@ -85,7 +85,7 @@ import click
 
 from project_kit import cli_render
 from project_kit.backbone_schemas import CONTAINER_KEY
-from project_kit.document_parts import colliding_keys, split_front_matter
+from project_kit.document_parts import split_front_matter
 from project_kit.friction_check import (
     SHORT,
     FrictionCheckError,
@@ -575,42 +575,28 @@ def read_version(rel: str, found: DiscoveredFile, text: str) -> Version | str:
     """One version's artefacts and where each `revalidated` block and each `revisited`
     list is written in it, or why it cannot be read.
 
-    A block or a list is found by the written text of the keys that lead to it
-    (`key_span`), and discovery reads each key rendered as text. Where two keys on that
-    path are read alike, as `1` and `"1"` are, discovery reads one entry and the text
-    found may be the other's, so the version cannot be read (`colliding_keys`)."""
+    Each is found under the keys discovery reads it by (`key_span`). Where those keys
+    cannot be told, as where `1` and `"1"` are both read as `1`, the text found could be
+    another entry's, so the version cannot be read."""
     artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
     if reason is not None:
         return f"its front matter does not parse ({reason})"
     front_matter, _body = split_front_matter(text)
+    offset = text.find("\n") + 1  # the front matter starts after its opening line
     spans: dict[str, dict[_Key, Stamp]] = {REVALIDATED: {}, REVISITED_KEY: {}}
-    written: list[tuple[Artefact, str, Any, tuple[str, ...]]] = []
     for artefact in artefacts:
-        for which in spans:
+        for which, into in spans.items():
             present, value = _written(artefact, which)
-            if present:
-                keys = (*carrier_keys(artefact), CONTAINER_KEY, FRICTION_KEY, which)
-                written.append((artefact, which, value, keys))
-    if front_matter is not None and written:
-        alike = colliding_keys(front_matter, [keys for *_, keys in written])
-        offset = text.find("\n") + 1  # the front matter starts after its opening line
-        for artefact, which, value, keys in written:
-            if keys in alike:
-                return (
-                    f"two keys on the path to the {_named(which, artefact.location)} are "
-                    f"read as `{alike[keys]}` once rendered, so which one holds it cannot "
-                    f"be told"
-                )
+            if not present or front_matter is None:
+                continue
+            keys = (*carrier_keys(artefact), CONTAINER_KEY, FRICTION_KEY, which)
             span = key_span(front_matter, keys)
-            if span is None:
-                return (
-                    f"the {_named(which, artefact.location)} is not written directly "
-                    f"(a YAML alias or merge key)"
-                )
+            if isinstance(span, str):
+                return f"the {_named(which, artefact.location)} {span}"
             start = offset + span.start
             column = start - (text.rfind("\n", 0, start) + 1)
-            text_of = front_matter[span.start : span.end]
-            spans[which][_key(artefact)] = Stamp(value, start, text_of, column, span.flow)
+            written = front_matter[span.start : span.end]
+            into[_key(artefact)] = Stamp(value, start, written, column, span.flow)
     return Version(text, {_key(a): a for a in artefacts}, spans[REVALIDATED], spans[REVISITED_KEY])
 
 

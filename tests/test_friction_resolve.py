@@ -988,7 +988,7 @@ def test_keys_that_collide_once_rendered_leave_the_file(repo: AdopterRepo) -> No
     result = _cli()
 
     assert result.exit_code == 1, result.output
-    assert "are read as `1` once rendered" in result.output
+    assert "two keys on its path are read as `1`" in result.output
     assert _unmerged(repo) == {TERMS}
 
 
