@@ -444,7 +444,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Hook of an agent:** a named entry point an agent invokes, which a skill or a script provides (COR-013 point 4). It decides no permission.
-- **Enforcement:** the methodology's word for a registered permission hook. `pkit permissions enable` registers the hook in `.claude/settings.json`, and `pkit permissions disable` removes it. The adapter ships the script either way (ADR-002 point 2).
+- **Enforcement:** the system's word for a registered permission hook. `pkit permissions enable` registers the hook in `.claude/settings.json`, and `pkit permissions disable` removes it. The adapter ships the script either way (ADR-002 point 2).
 - **Native settings:** the allows and denies the harness enforces itself. They deny the guardrails' common forms even where the permission hook fails and defers the call (ADR-002 point 3).
 
 ## TERM-place — place
