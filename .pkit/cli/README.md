@@ -16,6 +16,7 @@ pkit:
         - src/project_kit/capabilities.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
+        - src/project_kit/point_questions.py
         - src/project_kit/merge.py
         - src/project_kit/settings_consolidate.py
         - src/project_kit/workspace.py
@@ -55,7 +56,7 @@ pkit:
         - src/project_kit/document_parts.py
         - src/project_kit/artefact_parts.py
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
-      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
+      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/decisions/README.md#checking-a-changes-numbering
@@ -70,6 +71,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#per-component-upgrade
+        - .pkit/lifecycle/README.md#a-data-points-question
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
         - .pkit/lifecycle/README.md#script-contract
@@ -273,7 +275,7 @@ If you arrive at a partial or broken state, run `validate` to see what is and is
 
 Reconciles your project at the release it records, and moves no version ([COR-059](../decisions/core/COR-059-version-transition.md) point 2, [ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 1). It copies that release's content into your project's `.pkit/` tree, and regenerates what is derived from your project's own declarations. Idempotent: re-running with no changes pending reports "current" and exits cleanly. `pkit upgrade` is the command that moves a project to another release.
 
-**What sync writes.** Sync writes three kinds of thing: the methodology's content at the release your project records, the state derived from your project's own declarations, and your project-owned paths through merge delivery's tier that asks nothing. It writes no version, no manifest and no seed path, and runs no migration ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)).
+**What sync writes.** Sync writes three kinds of thing: the methodology's content at the release your project records, the state derived from your project's own declarations, and your project-owned paths through merge delivery's tier that asks nothing. It writes no version, no manifest and no seed path, runs no migration, and asks no question a data point declares ([the lifecycle README, "What sync writes"](../lifecycle/README.md#what-sync-writes)).
 
 **Seed paths.** Sync creates none, so a seed you deleted on purpose stays deleted until the next `pkit upgrade` to a new release creates it again ([the lifecycle README, "Seed paths"](../lifecycle/README.md#seed-paths)). `pkit agents reconcile --write` repairs a deleted overlay sooner ([the agents README, "Diagnosing + repairing the overlay"](../agents/README.md#diagnosing--repairing-the-overlay)).
 
@@ -337,6 +339,7 @@ Compares the version of the core layer recorded in your project against the vers
 - **A new collision** is asked about at a terminal, as `capabilities install` asks, and refused without one, before anything is written ([the lifecycle README, "A new collision"](../lifecycle/README.md#a-new-collision)).
 - **`--force`** overrides the dependency gates' two warnings and nothing else ([the lifecycle README, "The dependency gates"](../lifecycle/README.md#the-dependency-gates)).
 - **The report and `--dry-run`** say what the upgrade moves and runs, and `--dry-run` writes nothing ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)).
+- **The questions data points declare** come last, once the upgrade is complete and the pin written ([COR-061](../decisions/core/COR-061-point-questions.md)). At a terminal, each runs its capability's command, which asks you and records your answer. Without one, nothing is asked or recorded, and each is printed as `not asked <point>: pkit <capability> <command>`, the command to run at a terminal later. `--dry-run` names them as `would ask`. A question that fails, or that you stop, leaves the upgrade complete ([the lifecycle README, "A data point's question"](../lifecycle/README.md#a-data-points-question)).
 - **Already current:** only once the backbone and every adapter and capability this pkit ships are at its release does `upgrade` say "Already at backbone" and write or raise no more than its pin. Short of that it runs, even at the same backbone version ([the lifecycle README, "The steps of a transition"](../lifecycle/README.md#the-steps-of-a-transition)).
 
 It also **updates the pkit tool itself** when it is stale (per [ADR-063](../../tech-docs/architecture/decisions/ADR-063-upgrade-updates-the-tool.md)): it queries the release source for the latest release tag (a pre-release or dev release tag is skipped, as `pin` refuses one) and, when the installed `pkit` is behind, runs **`uv tool install --force …@v<latest>`** and **re-runs the upgrade under the new version** — one seamless command, no manual step. It **degrades to just printing the command** when the session is non-interactive (no TTY, so a network install is never forced under automation), when `--no-self-update` is passed, when the running `pkit` is not the installed tool, or if the install fails/is declined (the sandbox gates a global-binary mutation) — it never bricks. The install runs **only under the installed tool**: the running `pkit` must run from the environment `uv tool install` made for it under `uv tool dir`. A pkit run through `uv run`, a pip install, or a `uvx` that uv serves from its cache rather than from the installed tool's environment is not the tool an install would replace. There `upgrade` never installs and never hands the upgrade to another `pkit`: it prints the newer release and its install command, says why it does not install (at a terminal, or in a dry run), and goes on under the pkit that started it. When `uv` cannot say where its tools live, `upgrade` takes the running pkit for not the tool and prints the command, unless a hand-over started it (below). **A failed hand-over pins nothing:** when the install succeeds but `pkit` cannot be started, or the `pkit` the `PATH` runs first is another pkit, behind the latest release, `upgrade` stops with an error before it syncs or pins anything. It names the command to re-run once uv's tool directory comes first on the `PATH`. That other pkit makes the check itself, so two failed hand-overs go on anyway and pin the project at that pkit's release: one where it cannot look up the latest release, and one where it comes from a release without this check ([ADR-063](../../tech-docs/architecture/decisions/ADR-063-upgrade-updates-the-tool.md) point 3).
@@ -405,6 +408,14 @@ If a same-named capability later begins shipping from kit source (graduation, be
 - **`capabilities upgrade <name>`** re-runs the deploy primitives and provisions the capability's query commands — what `sync` does in the source — with nothing copied and no migration run: `Re-deployed capability '<name>' v<version> from its source at .pkit/capabilities/<name>/: … so nothing was copied and no migration ran`. An incubated capability re-deploys as anywhere.
 - **`capabilities uninstall <name>`** never deletes the subtree. For a `kit-shipped` registration, whose uninstall elsewhere deletes the subtree, it says the subtree it would have deleted and that it unregisters the capability instead, then asks `Unregister '<name>' and keep .pkit/capabilities/<name>/?` — `--yes` answers for a non-interactive run, `--dry-run` asks nothing and writes nothing — and removes the registration from `.pkit/manifest.yaml`: `Unregistered capability '<name>'; nothing was deleted: its source stays at .pkit/capabilities/<name>/`. `capabilities install <name>` registers it again. An incubated capability is unregistered in place as anywhere. `--purge` is refused whatever the origin: a capability leaves the source through git (`git rm -r .pkit/capabilities/<name>`). Unregistering rather than refusing follows COR-031 D4 — uninstall deletes a subtree only because it is a disposable copy, and removes authored work by unregistering it in place.
 
+**The questions a capability's points declare.** `capabilities install`, `capabilities register` and `capabilities upgrade` end, after everything else, with the questions of the points the capability defines and of the points its contributions reach ([COR-061](../decisions/core/COR-061-point-questions.md)). A question is a command of the point's definer that asks you about the point and records your answer, such as whether to grant what a contribution offers.
+- **At a terminal,** with standard input and standard output both terminals, each runs in turn, after an `asking <point>: pkit <definer> <command>` line. It asks only what has no recorded answer, so it may ask nothing.
+- **Without one,** none runs and nothing is recorded. Each is printed as `not asked <point>: pkit <definer> <command>`, the command to run at a terminal later.
+- **`--dry-run`** names each as `would ask`, from the version it would bring.
+- **A question that fails** is printed as a `warning` with the command to run again, and the next still runs. Stopping one with an interrupt leaves the rest unasked, each printed. Neither undoes the install or the upgrade, nor changes its exit status.
+
+`capabilities show` lists a point's question beside its policy ([the lifecycle README, "A data point's question"](../lifecycle/README.md#a-data-points-question)). `pkit sync` never asks.
+
 **Query-command environments.** `capabilities install`, `capabilities register` and `capabilities upgrade` end, after deploying the capability, with the provisioning step `init` and `sync` run (see [`sync`](#sync)), scoped to that capability: each query command it registers is resolved once, online, and reported with the line `sync` prints — `provisioned`, `unchanged … already provisioned`, `skipped`, or a `warning` that never fails the command. An offline `pkit validate` then answers for it without a `pkit sync` first. Other components' commands are left to `sync`, and `--dry-run` provisions nothing.
 
 ### The project rule set a capability declares
@@ -436,7 +447,8 @@ Exit `0` when answered, a capability that declares no set included. Exit `1` whe
 - **Its checks:** sync's guard first, so it stops wherever `sync` stops ("Capabilities — two ways in", above), then compatibility, its dependencies and mandatory process connections (below), and the collision flow.
 - **`--interactive`:** a new collision is asked about only under this flag, as `capabilities install` asks: `override`, `skip` or `inspect`. Without it the command refuses and names the flag ([the lifecycle README, "A new collision"](../lifecycle/README.md#a-new-collision)).
 - **`--force`:** overrides the warning for an installed dependent the new version leaves out of range, or with a mandatory connection unmet, and nothing else ([the lifecycle README, "Per-component upgrade"](../lifecycle/README.md#per-component-upgrade)).
-- **`--dry-run`:** names the move and the migrations, and writes nothing.
+- **`--dry-run`:** names the move, the migrations and the questions, and writes nothing.
+- **The questions:** last, once the capability is moved, the questions of the points it defines and of the points its contributions reach ("The questions a capability's points declare", above).
 
 A run a migration stops is finished by the next run. Over an interrupted `pkit upgrade` it stops, as `sync` does, and names `pkit upgrade` ([the lifecycle README, "Per-component upgrade"](../lifecycle/README.md#per-component-upgrade)).
 
