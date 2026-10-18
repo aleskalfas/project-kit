@@ -11,8 +11,8 @@ pkit:
         - .pkit/capabilities/living-docs/templates/**
         - .pkit/capabilities/living-docs/skills/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
-      record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files"]
+      record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
       at: 2026-10-18T18:02:33Z
       outcome: unchanged
@@ -249,7 +249,7 @@ It reports, without failing: a `source` anchor, or a rule origin citing a `sourc
 
 ## Connections
 
-The capability provides the `pkit::documentation` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)). Under it, it accepts two data points, and it contributes to the work-tracking role's documentation check. `pkit status` shows how each point resolved, and `pkit connections resolve <point>` prints one.
+The capability provides the `pkit::documentation` role (COR-053); `pkit::` is this distribution's literal for the methodology's publisher qualifier ([the lifecycle README, "The methodology's literals"](../../lifecycle/README.md#the-methodologys-literals)). Under it, it accepts two data points. It contributes to two points of the work-tracking role, its documentation check and its fixers. `pkit status` shows how each point resolved, and `pkit connections resolve <point>` prints one.
 
 **Accepts `pkit::documentation:readers`** (version 1): who reads the documentation and what they need. Each entry is an `id`, which a page names as its `reader`, and a `description` of what that reader needs (`schemas/readers.schema.json`). A `user` and a `maintainer` are built in and always included. The point is `union`, so you add readers, replace one by its id, or drop one with `remove` and a reason, in the point's [project file](../../lifecycle/README.md#where-a-project-filler-file-lives-the-address-to-path-mapping) — `docs/pkit/fillers/pkit/documentation/readers.yaml` with the default internal root:
 
@@ -270,6 +270,16 @@ A capability that keeps an analysis of the software can supply readers too, unde
 - `code-undocumented` — one per path of the declared surface that nothing anchors, naming the code as `path` and no `document`: no page's change meets it, only a page anchoring the path. The command reads HEAD, so the obligation leaves the point once a page on the branch anchors the code; until then the check reports it unmet, with the fix — anchor the path from a page.
 
 The work-tracking capability decides whether `friction` obligations block. With project-management they are advisory until you set `doc_check.sources.friction: enforcing`. A repository with no commit yet owes nothing. The command asks git nothing itself: whether HEAD has a commit it reads from the core (`head` in `pkit repository base --json`). If git cannot read a commit that is there — a repository git refuses as unsafe, or a missing object — the command gives no answer, never "nothing owed". If a page's friction lies beyond a shallow clone's history, the command gives no answer either: the check then reports itself unresolved rather than pass on fewer obligations, so fetch the full history. Nor does it answer for a page whose anchor's resolver gave no answer (`no-answer`, state `unresolved`), or a page in a state this capability does not know, which it never takes for current: `pkit friction explain <page>` says why. A page left unjudged only by an anchor of a kind nothing installed resolves (`unresolved-kind`) is different. That anchor is a declaration to mend — correct or remove it, install the capability that registers the kind, or mend a refused registration — not an obligation of this change. So the command answers for the page with what its other anchors owe, and names the anchor in its human view. `pkit validate` reports such an anchor under `friction`, and the change check fails it where a pull request adds it or takes its resolver away (COR-050 point 12). It gives none either when the friction check answers a `schema_version` other than 1, which it does not read; a document without the key, from a backbone before it, reads as 1 (the CLI README, "Friction checks"). `pkit living-docs fill-doc-check` lists the obligations, and `--json` prints what the backbone reads. The contribution is inert when no work-tracking capability is installed.
+
+**Contributes to `pkit::work-tracking:fixers`**, which says which agent fixes the artefacts of each type, in a work-tracking capability such as project-management ([project-management:DEC-056-drift-fixers]). Its static value names the `living-docs` agent as the fixer of your pages (DEC-001 point 5):
+
+```yaml
+- id: living-docs:page
+  agent: living-docs
+  description: your pages
+```
+
+The agent starts on its own only where you grant it, as [project-management's README](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare) says. A work-tracking capability that starts granted fixers then starts it on the pages the default branch left stale, and brings you what it proposes ("The agent" below). The point is keyed by type, so only pages of the type `living-docs:page` are the agent's there. A page in a project place that gives no type, or one whose type is tied, is not started on: give the place the page type ([Types](#types)) to bring its pages in. The contribution is inert when no work-tracking capability is installed.
 
 ## The review contribution
 
@@ -308,7 +318,15 @@ What it will not do:
 - **Fetch a source.** For a page stale on a `source` anchor it reads the versions recorded and the address from the source file's history (`git show <commit> -- <file>`), names the source, both versions and the link, and asks you what changed in the source that bears on the page's statements. It never rewrites a page from a version change alone.
 - **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version`; one other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
 
-Until the readers point resolves, the agent reads a page as the audience DEC-001 gives its space — users for the user space, maintainers for the technical one — and says so. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
+**As the fixer of your pages.** Where you granted it, a work-tracking command may start the agent on the pages the default branch left stale, with nobody watching ("Connections" above). It then only proposes friction fixes, on the pages the command names:
+
+- **For each page it proposes,** it writes a diff of the page's own file, the answer as fields in `answer.json`, and the evidence. The fields hold the page, `updated` or `unchanged`, a draft justification or a sentence on what changed, and the deferrals to keep. The command builds the answer's command from those fields, and never runs a command the agent wrote.
+- **A page whose fix needs what only you know,** such as what changed in a source, it holds with one question. Your answer goes with the page's next run.
+- **It ends with one line per page,** which the command reads: proposed, held with the question, or none with the reason.
+
+Nothing is applied until you accept it.
+
+Until the readers point resolves, the agent reads a page as the audience DEC-001 gives its space — users for the user space, maintainers for the technical one — and says so. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source, a fixer run a command started) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
 
 ## Onboarding an existing project
 
@@ -328,7 +346,7 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. So is the agent's declaration as the fixer of your pages, with the brief it takes from the command that starts it and the line it returns for each page. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate.
 
 ## Citing this capability's decisions
 
