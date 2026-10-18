@@ -1,18 +1,20 @@
 """software-analysis' comparison of numbers with the default branch (DEC-001 point 3).
 
-When two lines of work number a new use case or journey the same, the first to
-reach the default branch keeps the number, and the other renumbers before
-merging. This is where the other finds out: a number the working tree holds
-that the default branch took too since this branch left it — its tip holds
-it, or its history since the fork gave it a file gone since, as the stamp
-counts a number held — where the merge-base, where this branch left the
-default branch, held no file with that id.
+When two lines of work number a new use case, journey or requirement the same,
+the first to reach the default branch keeps the number, and the other
+renumbers before merging. This is where the other finds out: a number the
+working tree holds that the default branch took too since this branch left it
+— its tip holds it, or its history since the fork gave it a file gone since,
+as the stamp counts a number held — where the merge-base, where this branch
+left the default branch, held no file with that id. A requirement's number is
+one numbering across its three kinds' places, read as one (DEC-002 point 2).
 
 An artefact is known by its id, never by its path, and a number is read from a
 file's name as well as its front matter, on both sides (`Analysis.numbers`):
 
-- **an id moved** within the branch — into an area, say — or on the default
-  branch is no collision: the merge-base held it, so neither side took it;
+- **an id moved** within the branch — into an area, say, or a requirement into
+  another kind's place — or on the default branch is no collision: the
+  merge-base held it, so neither side took it;
 - **this branch's own work, landed** — a parent branch squash-merged or
   rebased onto the default branch while this one was stacked on it — is no
   collision when the default branch's file for the number is, byte for byte,
@@ -64,7 +66,7 @@ nothing here resolves a base or computes a merge-base. The base is read at its
 tip and at the merge-base through the backbone's discovery at a commit (`pkit
 friction artefacts --at`), and its history since the fork as the stamp reads a
 history (`_lib/history.py`). Git answers — only for a number both sides took —
-which versions of the use-case and journey files this branch's history wrote
+which versions of the numbered artefacts' files this branch's history wrote
 since the merge-base, which the default branch's tip holds, and which files
 this branch's history added (`backbone.blobs_written`, `backbone.blob_of`,
 `backbone.added`).
@@ -89,7 +91,7 @@ from typing import Any
 
 from _lib import append_only, backbone, history, numbering
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome
-from _lib.model import NOUN, NUMBERED, Analysis, Unreadable, kind_numbered
+from _lib.model import NUMBERED, Analysis, Unreadable, noun_numbered
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1
@@ -157,7 +159,7 @@ def compare(root: Path, ref: str | None = None, *, preview: bool = False) -> Com
         raise CannotCompare(f"the analysis could not be read: {exc}") from exc
     ours = analysis.numbers()
     written = numbering.read(root)
-    nothing = "numbers: no use case or journey is numbered here; nothing to compare"
+    nothing = "numbers: no use case, journey or requirement is numbered here; nothing to compare"
     if not ours and written.unset:
         return Comparison(None, Outcome([f"{nothing}, no base read."]))
 
@@ -271,7 +273,7 @@ def _collisions(
 def _message(number: str, path: str, held: bool, same_name: bool, ref: str) -> tuple[str, str]:
     """A finding's severity and message for `number`, which the default branch took for
     `path` — its tip holds it, or its history gave it (`held`)."""
-    noun = NOUN[kind_numbered(number)]
+    noun = noun_numbered(number)
     renumber = (
         f"renumber this {noun} before merging — `pkit analysis new` gives the next free one "
         f"(DEC-001 point 3)"

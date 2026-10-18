@@ -9,12 +9,15 @@
 """software-analysis capability — check-numbers: a number given never changes meaning.
 
 Two checks guard that promise (DEC-001 point 3). The first is of a number the
-default branch took first: a use case or journey numbered in the working tree
-whose number the default branch took too since this branch left it — its tip
-holds it, or its history since gave it a file gone since — for another line of
-work's artefact. The first to reach the default branch keeps the number, and a
-number is never used again, so this one renumbers before merging. An artefact is
-known by its id, not its path; a file of the name this branch gives the
+default branch took first: a use case, journey or requirement numbered in the
+working tree whose number the default branch took too since this branch left
+it — its tip holds it, or its history since gave it a file gone since — for
+another line of work's artefact. A requirement's number is one numbering across
+its three kinds' folders (DEC-002 point 2). The first to reach the default
+branch keeps the number, and a number is never used again, so this one
+renumbers before merging. An artefact is known by its id, not its path, so a
+requirement moved to another kind's folder keeps its number; a file of the
+name this branch gives the
 number is a warning — possibly its own work landed; `_lib/numbers.py` states
 the rule. An id the project's numbering setting frees is free again, as the
 stamp counts it, and each entry's are listed; an entry naming what is no
@@ -83,8 +86,9 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog="pkit analysis check-numbers",
         description=(
-            "Report a use case or journey whose number the default branch took too since "
-            "this branch left it, for another line of work's artefact, and a use case's step "
+            "Report a use case, journey or requirement whose number the default branch took "
+            "too since this branch left it, for another line of work's artefact, a requirement's "
+            "number being one across its three kinds (DEC-002 point 2), and a use case's step "
             "or variant renumbered or removed since (software-analysis DEC-001 point 3). "
             "Read-only and offline."
         ),
