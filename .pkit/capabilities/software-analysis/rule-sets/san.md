@@ -157,25 +157,25 @@ A use case's goal is one of its actor's needs.
 
 ## RS-SAN-005 — An artefact's anchors name what it rests on, and what answers or realises a use case
 
-An analysis artefact's anchors name what its statements rest on. A use case's anchors also name the decisions that answer it and the views that realise it.
+An analysis artefact's anchors name what its statements rest on. A use case's anchors also name the decisions that answer it and the architecture views that realise it.
 
 - **How:**
   - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it.
-    - A use case rests on its `actor` and its `other-actors`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each such decision and view counts, even where none of the use case's statements names it.
+    - A use case rests on its `actor` and its `other-actors`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, and the code and decisions at its seams.
-  - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor. Nor does this rule ask for an anchor on another analysis artefact that would close a cycle.
-  - **One direction.** An anchor on a decision or a view runs from the analysis to the solution, never back. A use case anchors a decision that answers it, or a view that realises it, even where anchors that run back from that decision or view would close a cycle. The cycle is mended on the solution's side, and the use case's anchor stands.
-  - **Only what exists.** This rule asks no anchor for:
+  - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor.
+  - **No cycle excuses it.** An anchor this list asks for on a decision or a view is asked for even where anchors that run back from that decision or view would close a cycle.
+  - **What it never asks for.** This rule asks no anchor for:
     - code not yet written
-    - a decision not yet recorded, or a proposed one, which decides nothing yet
-    - a view the project does not keep, or one no anchor kind can name, such as a view kept outside the repository
+    - a decision that is not accepted: one not yet recorded, a proposed one or a superseded one
+    - a view the project does not keep, or keeps outside its repository
   - **Where to find it.**
     - **Code** lies in the repository, within the surface the project declares for its analysis where it declares one.
     - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it.
-    - **The decisions that answer a use case** are the records made to meet what it asks, such as the decision to write a report as CSV, for a use case that must export the report as a file.
-    - **The views that realise a use case** are the architecture views made to show how the system carries it out, such as one that names the use case by its id.
+    - **The decisions that answer a use case** are the records made to meet what it asks. They lie among the project's own records and those its components ship, such as one that names the use case by its id, or the decision to write a report as CSV for a use case that must export the report as a file.
+    - **The views that realise a use case** are the architecture views the project keeps that were made to show how the system carries it out, such as one that names the use case by its id.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
   - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It does so whatever any rule's status, and this rule does not cover it.
