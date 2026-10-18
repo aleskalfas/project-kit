@@ -1936,8 +1936,8 @@ def friction_since_command(
     parents, and any other commit for its own diff. A file lies inside the
     blocks and lists only when it is an artefact's file, its two texts are
     the same once every `revalidated` and `revisited` key is taken out, and
-    no block or list was removed. Each change outside is named with its
-    commit and why. Reads git only and writes nothing. Exit 0 when
+    no block or list was removed or emptied. Each change outside is named
+    with its commit and why. Reads git only and writes nothing. Exit 0 when
     answered, either way; 1 when it cannot answer: a shallow clone, a name that
     is no commit, a base that does not resolve, a git too old for `merge-tree`.
     """

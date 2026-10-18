@@ -89,7 +89,9 @@ from project_kit.working_tree import nul_separated
 
 #: The version of the document `render_json` returns, under the rule every reading
 #: document of the `friction` group follows: raised when a key a reader relies on
-#: changes its meaning or goes, never for a key added.
+#: changes its meaning or goes, never for a key added. Which keys `all_inside` counts
+#: — `revalidated` and `revisited` — is part of its meaning, since a reader gates on it:
+#: counting another raises it.
 SINCE_SCHEMA_VERSION = 1
 
 # What a file's mode is, as a tree writes it, when its text can be compared.
