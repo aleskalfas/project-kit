@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Changed
+body: >
+  A project's rule sets stay found when its internal documentation root
+  changes (COR-051 point 6). `pkit config set docs.internal <path>` now also
+  adds the old root's `rule-sets/` folder to `friction.places` where a
+  rule-set file there would go unfound under the new root, in the same write
+  and under the one consent, and prints `recorded project rule sets = …` with
+  how to move the sets; where the entry cannot be added without rewriting
+  another line of the file, it writes nothing and names the entry to add by
+  hand. `pkit validate` gains the `unfound-rule-set` error on a rule-set file
+  left behind: a Markdown file in or beneath a `rule-sets` folder, outside the
+  method folders, whose front matter names a set (`rule-set:`) while no place
+  finds it. A project that changed its root by hand, or keeps a `rule-sets`
+  example whose front matter has a `rule-set:` key, fails `pkit validate`
+  until it declares the folder, moves the file, or removes the key. A
+  configuration write that adds items at the end of a block list now keeps
+  that list's lines and comments.
