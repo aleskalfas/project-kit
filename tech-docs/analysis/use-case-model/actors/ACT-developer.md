@@ -7,13 +7,13 @@ needs:
   - Author and extend my project's rule sets without editing the ones that ship with the system.
   - Think a question too big for a decision through in a scratchpad note, and retire the note once it has produced something.
   - Say what each of my documents rests on, so a change there reaches me.
-  - Answer what my change made stale, judging an agent's proposed answer word for word, or running its commands myself when it cannot ask me.
+  - Answer what my change made stale, letting an agent write the answers my change owes and a reviewer other than that agent check them.
   - Know before I push that my change passes the checks my project gates its merges on.
   - Have a substantive draft challenged before I adopt it, and have my diff checked against the methodology's conventions before I commit it.
   - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
   - Turn recurring work into my project's own skill or agent, designing its dialogue as a storyboard first.
   - Build my change with an agent that writes the change's code to my project's own conventions, read from wherever I keep them.
-  - Declare what my change means for the next release in a changeset that names each component and the segment I judge.
+  - Declare what my change means for the next release, in changesets naming what it moves, the backbone or a component, and the segment I judge.
   - Resolve what the default branch left out of date, knowing for each debt the change it came from.
   - File a Task under its parent, with its title and the sections its body needs checked as it is filed.
   - Move my issue through its lifecycle, with each move checked and the moves that need my authorisation never made without it.
@@ -37,6 +37,7 @@ pkit:
         - software-engineering:DEC-001#2
         - PRJ-002#D1
         - PRJ-002#D2
+        - COR-050#3
         - COR-050#6
         - COR-050#9
         - project-management:DEC-010
@@ -60,9 +61,8 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T17:13:18Z
-      outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 4 gains that a document lying only in an untyped place of rule sets outside every root, with no assignment, is no page. The developer's needs on pages, writing one for its reader with grounding anchors, having a stale page's fix proposed and having a page read as its reader, hold for every page, and this changes only which documents are pages, so they still hold.
+      at: 2026-10-18T17:14:17Z
+      outcome: updated
 ---
 
 # ACT-developer — Developer
