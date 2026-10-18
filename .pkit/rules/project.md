@@ -11,4 +11,4 @@
 
 ## Commits
 
-4. **Sign every commit you make in this repository, and never switch signing off,** by a flag or by a change to git configuration. If a commit fails to sign, wait a minute before the one retry (core rule 21). Signing is project-kit's own policy, so this rule lives here rather than in core ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648)).
+4. **Sign every commit you make in this repository, and never switch its signing off.** If a commit fails to sign, wait a minute before the one retry core rule 21 allows. Signing is project-kit's own policy, so this rule lives here rather than in core ([project-kit#1648](https://github.com/aleskalfas/project-kit/issues/1648)).
