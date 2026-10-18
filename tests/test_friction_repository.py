@@ -26,10 +26,13 @@ from project_kit.friction_discovery import Anchor
 from project_kit.friction_git import BlobReader, TreeReader
 from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
 from tests.friction_documents import (
+    ADR,
+    ADR_OVERLAY,
     CONFIG,
     T1,
     T2,
     Timeline,
+    adr,
     document,
     friction_config,
     guide,
@@ -177,6 +180,48 @@ def test_a_record_anchor_changes_with_its_file(timeline: Timeline) -> None:
     text = (timeline.adopter.root / record).read_text(encoding="utf-8")
     amended = timeline.commit("amend the record", {record: text + "\nAmended.\n"})
     assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "record:COR-050", amended)]
+
+
+ON_ADR = guide(anchors={"record": ["ADR-007"]})
+REVALIDATED = adr(at=T2, outcome="unchanged", because="the engine is still one module")
+SPLIT = adr(
+    at=T2,
+    outcome="unchanged",
+    because="the engine is still one module",
+    body="## Decision\n\nThe engine splits in two.\n",
+)
+
+
+def test_a_record_s_container_alone_makes_no_stale_debt_on_a_whole_record_anchor(
+    timeline: Timeline,
+) -> None:
+    """A whole record anchor stands on the record's content (COR-050 points 5 and 9): a
+    commit that writes only the record's container is no change, and is never behind its
+    debt; one that edits its content is."""
+    timeline.start({**ADR_OVERLAY, ADR: adr(), "docs/guide.md": ON_ADR})
+    timeline.commit("the record revalidated, its content as it was", {ADR: REVALIDATED})
+    assert _summary(_run(timeline)) == []
+
+    edited = timeline.commit("the record's decision edited", {ADR: SPLIT})
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "record:ADR-007", edited)]
+    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    assert [c.commit.sha for c in finding.commits] == [edited]
+
+
+def test_a_deferral_of_a_whole_record_anchor_lists_no_container_only_commit(
+    timeline: Timeline,
+) -> None:
+    timeline.start({**ADR_OVERLAY, ADR: adr(), "docs/guide.md": ON_ADR})
+    timeline.commit("the record revalidated, its content as it was", {ADR: REVALIDATED})
+    edited = timeline.commit("the record's decision edited", {ADR: SPLIT})
+    deferring = guide(
+        anchors={"record": ["ADR-007"]}, deferred=[("record", "ADR-007", "rewrite after #1")]
+    )
+    deferred = timeline.commit("defer the guide", {"docs/guide.md": deferring})
+
+    assert _summary(_run(timeline)) == [("deferred", "docs/guide.md", "record:ADR-007", deferred)]
+    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    assert [c.commit.sha for c in finding.commits] == [edited]
 
 
 def test_collection_entries_have_their_own_points(timeline: Timeline) -> None:

@@ -14,8 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block"]
     revalidated:
-      at: 2026-10-17T18:28:12Z
-      outcome: updated
+      at: 2026-10-17T21:35:01Z
+      outcome: unchanged
+      unchanged-because: COR-050 now says a whole record anchor stands on the record's content, without its container. COR-050 and the schemas reference's section on the friction block say that cycles, and the upstream-first order, follow record anchors. This page says a page is flagged when what it anchors changes, that a part anchor spares it changes elsewhere, and where an anchor's part is named, which all still hold.
 ---
 
 # living-docs capability
