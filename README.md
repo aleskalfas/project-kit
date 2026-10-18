@@ -15,7 +15,9 @@ pkit:
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
-      record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
+      record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, ADR-049, ADR-064]
+      artefact:
+        - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
       at: 2026-10-18T13:32:43Z
       outcome: unchanged
@@ -32,7 +34,7 @@ pkit:
 
 You've probably done this: you write your conventions into `CLAUDE.md`, have Claude generate a couple of agent files, and it works — until it **rots**. Nobody improves it, a fix you make in project A never reaches project B, and there's no safe way to pull updates. You end up owning a pile you now have to maintain by hand.
 
-**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write**, except two it merges into rather than overwrites, on every `init`, `sync` and `upgrade`: `CLAUDE.md` (it adds two `@.pkit/rules/…` include lines if they're missing) and `.claude/settings.json` (it adds the kit's settings and keeps yours, though a kit deny rule you removed is put back; `init` backs the file up first, to `.claude/settings.json.pre-pkit`). A migration may also change a file of yours where a decision record allows it, such as adding a category your agents' overlay lacks. And `pkit upgrade` puts back a starter file you deleted, such as that overlay. Installing a capability may also create one new file of yours: the rule set the capability declares, where no rule set of yours already inherits its rules. Install never writes over a file, and nothing writes that set again while the capability stays installed. Where a capability ships a skill or an agent named like one of yours, `pkit capabilities install` and `pkit upgrade` ask you first: only your answer replaces yours, and git keeps it. Every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
+**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write**, except two it merges into rather than overwrites, on every `init`, `sync` and `upgrade`: `CLAUDE.md` (it adds two `@.pkit/rules/…` include lines if they're missing) and `.claude/settings.json` (it adds the kit's settings and keeps yours, though a kit deny rule you removed is put back; `init` backs the file up first, to `.claude/settings.json.pre-pkit`). A migration may also change a file of yours where a decision record allows it, such as adding a category your agents' overlay lacks. And `pkit upgrade` puts back a starter file you deleted, such as that overlay. Installing a capability may also create one new file of yours: the rule set the capability declares, where no rule set of yours already inherits its rules. Install never writes over a file, and nothing writes that set again while the capability stays installed. Where a capability ships a skill or an agent named like one of yours, `pkit capabilities install` and `pkit upgrade` ask you first: only your answer replaces yours, and git keeps it. A capability may also ask you a question when you install or upgrade it, at a terminal, and it records only the answer you give ([the lifecycle README, "A data point's question"](.pkit/lifecycle/README.md#a-data-points-question)). Every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
 
 That's the honest pitch, including its limit:
 
