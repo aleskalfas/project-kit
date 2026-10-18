@@ -2,9 +2,10 @@
 
 Held to software-analysis DEC-001 points 1 to 6:
 
-- one **companion schema** per kind — actor, term, use case, journey,
-  revalidation record — and the evidence point's (#1001), each valid Draft
-  2020-12, sharing one home for the id shapes (`analysis.schema.json`);
+- one **companion schema** per kind — actor, term, use case, journey, the
+  three kinds of requirement (#1691), revalidation record — and the evidence
+  point's (#1001), each valid Draft 2020-12, sharing one home for the id shapes
+  (`analysis.schema.json`), a requirement's `REQ-NNN` among them;
 - each anchored kind's **template** carrying the friction block inside the
   methodology's container — in the front matter of a document, an actor's
   included (#1346), in each entry of the glossary, a collection — valid against
@@ -93,7 +94,10 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
         "analysis",
         "artefact-kinds",
         "config",
+        "constraint",
+        "functional-requirement",
         "journey",
+        "quality-requirement",
         "revalidation-evidence",
         "revalidation-record",
         "structures",
@@ -112,24 +116,32 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
         "UC-007",
         "UC-1000",
         "JRN-001",
+        "REQ-004",
+        "REQ-1000",
         "ACT-Tester",
         "UC-0007",
         "JRN-1",
+        "REQ-04",
+        "REQ-0004",
         "USER-x",
         f"UC-007@{SHA1}",
         "",
     ],
 )
 def test_an_evidence_id_is_an_artefact_id_a_commit_and_a_check(artefact: str) -> None:
-    """A pattern cannot refer to another, so the evidence id spells the four id
-    shapes again beside them: held in step, it admits `<artefact>@<commit>#<check>`
-    exactly when the artefact id does — and never without its check."""
+    """A pattern cannot refer to another, so the evidence id spells the five id
+    shapes again beside them, a requirement's among them (#1691): held in step, it
+    admits `<artefact>@<commit>#<check>` exactly when the artefact id does — and never
+    without its check."""
     definitions = _schema("analysis")["$defs"]
     evidence_id = re.compile(definitions["evidence-id"]["pattern"])
     is_artefact = any(
         re.match(definitions[f"{kind}-id"]["pattern"], artefact)
-        for kind in ("actor", "term", "use-case", "journey")
+        for kind in ("actor", "term", "use-case", "journey", "requirement")
     )
+    assert {ref["$ref"] for ref in definitions["artefact-id"]["anyOf"]} == {
+        f"#/$defs/{kind}-id" for kind in ("actor", "term", "use-case", "journey", "requirement")
+    }
     assert bool(evidence_id.match(f"{artefact}@{SHA1}#{CHECK}")) is is_artefact
     assert not evidence_id.match(f"{artefact}@{SHA1}")
     assert not evidence_id.match(f"{artefact}@{SHA1}#")
@@ -196,6 +208,7 @@ COPIED = (
     "term-id",
     "use-case-id",
     "journey-id",
+    "requirement-id",
     "artefact-id",
     "commit",
     "check-name",
@@ -237,6 +250,11 @@ def test_the_evidence_point_s_schema_reads_alone() -> None:
             ["UC-07", "UC-0007", "UC-01000"],
         ),
         ("journey-id", ["JRN-001", "JRN-1000"], ["JRN-1", "JRN-0001"]),
+        (
+            "requirement-id",
+            ["REQ-000", "REQ-007", "REQ-999", "REQ-1000"],
+            ["REQ-7", "REQ-07", "REQ-0007", "REQ-01000", "REQ-abc", "req-007", "QR-007"],
+        ),
     ],
 )
 def test_a_number_has_one_spelling(
@@ -253,13 +271,37 @@ def test_every_id_shape_has_one_home() -> None:
     """The kinds' schemas refer to the shared id shapes; none writes its own. The
     evidence point's companion carries a copy, held equal to its home
     (`test_the_evidence_point_s_schema_reads_alone`)."""
-    for prefix in ("ACT", "TERM", "UC", "JRN"):
+    for prefix in ("ACT", "TERM", "UC", "JRN", "REQ"):
         holders = [s for s in _stems() if f'"^{prefix}-' in json.dumps(_schema(s))]
         assert holders == ["analysis", "revalidation-evidence"], prefix
 
 
+#: The three kinds of requirement, each a document kind whose template and schema are
+#: named as its type (DEC-002 point 3, #1691).
+REQUIREMENTS = ("quality-requirement", "functional-requirement", "constraint")
+
+#: A requirement's own fields, filled: valid for each of the three kinds, which take the
+#: same fields (DEC-002 point 4).
+REQUIREMENT: dict[str, Any] = {
+    "id": "REQ-004",
+    "title": "Show a run's result quickly",
+    "status": "active",
+    "statement": "The system shows a suite's result within two seconds of the run's end.",
+    "measure": "95 of every 100 runs show their result within two seconds.",
+    "applies-to": "Every run of a suite.",
+    "actors": ["ACT-tester"],
+    "refines": ["REQ-001"],
+}
+
+
 @pytest.mark.parametrize(
-    ("template", "schema"), [("actor", "actor"), ("use-case", "use-case"), ("journey", "journey")]
+    ("template", "schema"),
+    [
+        ("actor", "actor"),
+        ("use-case", "use-case"),
+        ("journey", "journey"),
+        *((kind, kind) for kind in REQUIREMENTS),
+    ],
 )
 def test_a_document_template_carries_the_friction_block_in_the_container(
     template: str, schema: str
@@ -292,6 +334,33 @@ def test_a_document_template_s_heading_is_its_id_and_title(template: str, field:
     text = (CAPABILITY / "templates" / f"{template}.md").read_text(encoding="utf-8")
     data = _template(template)
     assert f"\n# {data['id']} — {data[field]}\n" in text
+
+
+@pytest.mark.parametrize(
+    ("template", "shown"),
+    [
+        ("quality-requirement", "Quality"),
+        ("functional-requirement", "Functional"),
+        ("constraint", "Constraint"),
+    ],
+)
+def test_a_requirement_template_s_heading_is_its_id_its_kind_and_its_title(
+    template: str, shown: str
+) -> None:
+    """The kind shows beside the id in the heading: `# REQ-NNN · Quality · <title>`, with
+    the kind's name for each kind (DEC-002 point 2)."""
+    text = (CAPABILITY / "templates" / f"{template}.md").read_text(encoding="utf-8")
+    data = _template(template)
+    assert f"\n# {data['id']} · {shown} · {data['title']}\n" in text
+
+
+def test_a_requirement_template_anchors_its_actors_and_what_it_refines() -> None:
+    """Within the analysis, a requirement anchors only each actor in `actors` and each
+    requirement in `refines`, as artefact anchors (DEC-002 point 6)."""
+    for template in REQUIREMENTS:
+        data = _template(template)
+        anchored = [*data["actors"], *data["refines"]]
+        assert data["pkit"]["friction"]["anchors"]["artefact"] == anchored, template
 
 
 #: The migration that retires the actors' collection template (#1346).
@@ -473,7 +542,7 @@ def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
     in_templates, in_commands = _shipped("IN_TEMPLATES"), _shipped("IN_COMMANDS")
     assert len(set(in_templates)) == len(in_templates)
     shipped: set[str] = set()
-    for name in ("actor", "glossary", "use-case", "journey"):
+    for name in ("actor", "glossary", "use-case", "journey", *REQUIREMENTS):
         text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
         _front, body = document_parts.split_front_matter(text)
         for value in [*_texts(_template(name)), body]:
@@ -508,6 +577,9 @@ DOCUMENT_OPENINGS = {
     "use-case": "**Goal:** <!-- pkit:hint ",
     "journey": "**Goal:** <!-- pkit:hint ",
     "revalidation-record": "## Outcomes",
+    # A requirement's obligation is in its front matter, so its body opens with what
+    # verifies it (DEC-002 point 4).
+    **dict.fromkeys(REQUIREMENTS, "**Verified by:** <!-- pkit:hint "),
 }
 
 
@@ -638,6 +710,31 @@ def test_a_document_template_opens_with_its_first_part(name: str, opening: str) 
             {"name": "T", "status": "active", "definition": "d", "replaces": ["x", "x"]},
             "non-unique",
         ),
+        # A requirement (DEC-002 points 2 to 4, #1691): its id is `REQ-NNN`, and it
+        # requires its statement, its measure and where it holds. No field names its kind.
+        *(
+            (kind, {**REQUIREMENT, "id": bad}, "does not match")
+            for kind in REQUIREMENTS
+            for bad in ("REQ-7", "REQ-0007", "UC-007", "QR-007")
+        ),
+        *(
+            (kind, {k: v for k, v in REQUIREMENT.items() if k != field}, f"'{field}' is a required")
+            for kind in REQUIREMENTS
+            for field in ("statement", "measure", "applies-to")
+        ),
+        *(
+            (kind, {**REQUIREMENT, "kind": "quality"}, "'kind' was unexpected")
+            for kind in REQUIREMENTS
+        ),
+        *(
+            (kind, {**REQUIREMENT, field: value}, message)
+            for kind in REQUIREMENTS
+            for field, value, message in (
+                ("refines", ["UC-001"], "does not match"),
+                ("actors", ["ACT-a", "ACT-a"], "non-unique"),
+                ("applies-to", "", "should be non-empty"),
+            )
+        ),
     ],
 )
 def test_the_schemas_refuse_what_the_decision_rules_out(
@@ -645,6 +742,59 @@ def test_the_schemas_refuse_what_the_decision_rules_out(
 ) -> None:
     (found,) = _schema_errors(stem, instance)
     assert message in found
+
+
+@pytest.mark.parametrize("kind", REQUIREMENTS)
+def test_a_requirement_s_schema_takes_what_the_decision_gives(kind: str) -> None:
+    """Its fields, a `measure` of `None.` included, and `actors` and `refines` absent,
+    empty or listing ids. Where it holds may read anything here: the declared structure
+    refuses `None.` there, where the format rule binds (DEC-002 point 4)."""
+    assert _schema_errors(kind, REQUIREMENT) == []
+    assert _schema_errors(kind, {**REQUIREMENT, "measure": "None."}) == []
+    assert _schema_errors(kind, {**REQUIREMENT, "actors": [], "refines": []}) == []
+    bare = {k: v for k, v in REQUIREMENT.items() if k not in ("actors", "refines")}
+    assert _schema_errors(kind, bare) == []
+    assert _schema_errors(kind, {**REQUIREMENT, "status": "withdrawn"}) == []
+
+
+def _evidence(artefact: str, **more: Any) -> dict[str, Any]:
+    return {
+        "id": f"{artefact}@{SHA1}#{CHECK}",
+        "artefact": artefact,
+        "commit": SHA1,
+        "check": CHECK,
+        "result": "passed",
+        "ran": "tests/test_run.py::test_sandbox",
+        **more,
+    }
+
+
+def test_a_record_and_the_evidence_point_take_a_requirement_s_id() -> None:
+    """A revalidation record's outcomes and the evidence point's entries may name a
+    requirement by its id. A requirement has no steps, as an actor has none (DEC-002,
+    Implications; #1691)."""
+    record = {
+        "change": "#42",
+        "trigger": "drift",
+        "date": "2026-10-18",
+        "by": "Sam",
+        "outcomes": {"REQ-004": "holds", "UC-003": "holds"},
+        "evidence": [_evidence("REQ-004")],
+    }
+    assert _schema_errors("revalidation-record", record) == []
+    assert _schema_errors("revalidation-evidence", [_evidence("REQ-004")]) == []
+    (stepped,) = _schema_errors("revalidation-evidence", [_evidence("REQ-004", steps=["1"])])
+    assert "False schema does not allow" in stepped
+    (misspelt,) = _schema_errors("revalidation-record", {**record, "outcomes": {"REQ-4": "holds"}})
+    assert "REQ-4" in misspelt
+
+
+def test_the_evidence_point_s_version_stays() -> None:
+    """Taking a requirement's id is an addition to the point's schema, so its version stays
+    (COR-052 point 5)."""
+    package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    accepts = package["connections"]["extension-points"]["accepts"]
+    assert accepts["pkit::analysis:revalidation-evidence"]["schema_version"] == 1
 
 
 # --- each body rendered from its kind's declaration (#1366) --------------------------------
@@ -660,6 +810,7 @@ KIND_OF = {
     "journey": "journey",
     "revalidation-record": "revalidation-record",
     "use-case": "use-case",
+    **{kind: kind for kind in REQUIREMENTS},
 }
 
 #: The mark that opens a hint, and what closes it (#1366).
@@ -730,8 +881,16 @@ def test_a_hint_is_one_marked_comment_with_its_example() -> None:
 
 
 #: The front-matter fields the stamp leaves a writer to fill, by artefact template: each
-#: holds its declared hint (#1593). A revalidation record's stamp writes every field.
-FIELDS_LEFT = {"actor": {"needs"}, "glossary": {"definition"}, "use-case": set(), "journey": set()}
+#: holds its declared hint (#1593). A revalidation record's stamp writes every field. A
+#: requirement's statement, measure and where it holds are a writer's, and its actors and
+#: what it refines are written from what the stamp is given (#1691).
+FIELDS_LEFT = {
+    "actor": {"needs"},
+    "glossary": {"definition"},
+    "use-case": set(),
+    "journey": set(),
+    **{kind: {"statement", "measure", "applies-to"} for kind in REQUIREMENTS},
+}
 
 
 @pytest.mark.parametrize("name", sorted(FIELDS_LEFT))

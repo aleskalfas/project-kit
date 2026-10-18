@@ -48,6 +48,7 @@ from project_kit.friction_validate import FrictionFindingKind, validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo, sign_nothing
 from tests.analysis_repo import (
     ACTORS,
+    CONSTRAINTS,
     GLOSSARY,
     NEW,
     RECORDS,
@@ -177,6 +178,46 @@ def test_a_gap_names_each_artefact_it_affects(project: AdopterRepo) -> None:
     assert body.endswith(
         "## Gaps\n\n- **UC-001, JRN-001:** The suite no longer runs? **Resolution:** defect "
         "#46 reported!\n"
+    )
+    assert errors(check(project)) == []
+
+
+#: A constraint, written by hand while it has no stamp (#1692), filled as its structure asks.
+CONSTRAINT = (
+    "---\nid: REQ-004\ntitle: Run suites on the client's machines\nstatus: active\n"
+    "statement: The system runs every suite on a machine the client owns.\n"
+    "measure: None.\napplies-to: The whole system.\n"
+    "pkit:\n  friction:\n    anchors:\n      path: [src/run.py]\n---\n\n"
+    "# REQ-004 · Constraint · Run suites on the client's machines\n\n"
+    "**Verified by:** None.\n\n**Imposed by:** None.\n"
+)
+
+
+def test_a_requirement_s_regression_or_gap_is_recorded_with_its_gap(project: AdopterRepo) -> None:
+    """A record's outcomes may name a requirement (DEC-002, Implications, #1691), so the
+    stamp takes its id in an outcome and in the gap that names it, as any artefact's."""
+    project.write({f"{CONSTRAINTS}/REQ-004-client-machines.md": CONSTRAINT})
+    completed = _record(
+        project,
+        "suite-abroad",
+        "--change",
+        "#45",
+        "--trigger",
+        "drift",
+        "--outcome",
+        "REQ-004=gap-found",
+        "--because",
+        "REQ-004=The design now runs suites on a hired host, which nothing describes.",
+        "--gap",
+        "REQ-004: suites run on a hired host => the host is withdrawn, #46",
+    )
+    assert completed.returncode == 0, completed.stderr
+    rel = f"{RECORDS}/{_today()}-suite-abroad.md"
+    assert front(project, rel)["outcomes"] == {"REQ-004": "gap-found"}
+    body = (project.root / rel).read_text(encoding="utf-8")
+    assert body.endswith(
+        "## Gaps\n\n- **REQ-004:** suites run on a hired host. **Resolution:** the host is "
+        "withdrawn, #46.\n"
     )
     assert errors(check(project)) == []
 
