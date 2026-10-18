@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T08:25:37Z
+      at: 2026-10-18T12:33:06Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged.
+      unchanged-because: COR-050 gains point 16, a link a component declares whose source's change asks for a revisit of its targets, which only the change check asks and enforcing mode fails on. This actor's needs, unattended runs gated on their exit status, machine-readable findings and a whole-repository report that never fails, and its citation of point 12, that the checks bind once a project makes them a required status, still hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline

@@ -19,8 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-18T08:25:39Z
-      outcome: updated
+      at: 2026-10-18T12:33:18Z
+      outcome: unchanged
+      unchanged-because: Points 2 and 7 are reached through the Decision's text outside its points, which gains a sentence on a link that asks for a revisit of its targets (point 16). This page names a record's point by its id as an anchor's value (point 2) and keeps a retired point's id with a stub (point 7), and both read as before.
 ---
 
 # Decision records

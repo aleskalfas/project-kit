@@ -47,9 +47,9 @@ rules:
             - "software-analysis:DEC-001#9"
             - "COR-050#1"
         revalidated:
-          at: 2026-10-18T11:58:03Z
+          at: 2026-10-18T12:33:16Z
           outcome: unchanged
-          unchanged-because: Points 2 and 4 changed only by pointers to software-analysis DEC-002, on the analysis's layout, its type registry and the lead of what each kind anchors. What an actor, a term, a use case and a journey anchor, which this rule's list gives, reads as before. What a requirement rests on joins the list when the requirement kinds are built (project-kit#1695).
+          unchanged-because: Point 1 gains one sentence, that a component's place may also declare links, and the Decision's text outside its points gains one on a link that asks for a revisit of its targets (point 16). RS-SAN-005 asks that an artefact's anchors name what its statements rest on, which a link's targets, themselves anchors, leave as it was.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
