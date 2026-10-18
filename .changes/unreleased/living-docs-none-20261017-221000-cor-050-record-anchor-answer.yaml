@@ -1,0 +1,5 @@
+component: living-docs
+kind: none
+body: >
+  The README's friction block records that it still holds against COR-050's
+  refinement for #1647: a revalidation only, which moves no surface.

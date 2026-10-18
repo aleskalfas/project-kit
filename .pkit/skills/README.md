@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-17T21:38:59Z
+      at: 2026-10-17T21:10:12Z
       outcome: unchanged
-      unchanged-because: migration-author now names the backbone, adapter and capability tiers in place of the retired bundle tier, and its steps 6 and 7 carry the script contract's rules for a script that runs pkit. This page names the skill, its paired command and what it walks the author through, tier and scope selection, body drafting and self-checks among them, which still holds.
+      unchanged-because: The README lists the skills and what each is for; a sentence added to two skills' axiom discipline leaves each skill's purpose and the list as they were.
 ---
 
 # Skills
