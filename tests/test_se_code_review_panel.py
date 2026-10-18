@@ -578,6 +578,8 @@ def test_the_docs_reviewer_judges_each_revisit_outcome_in_the_list_s_words():
         assert "is a `[block]`" in item, item
     read = [line for line in _answers_check() if line.startswith("- **Read the answers")]
     assert f"There a revisit has `answer` `{fc.REVISITED}`" in read[0]
+    for key in ("`outcome`", "`target`", "`links`", "`fields`"):
+        assert key in read[0], key
 
 
 @pytest.mark.parametrize(
@@ -587,8 +589,8 @@ def test_the_docs_reviewer_judges_each_revisit_outcome_in_the_list_s_words():
             "Updated in this change",
             [
                 "a reformat included",
-                "contradicts what the modified fields now say",
-                "a test that still checks the old threshold",
+                "contradicts what the modified trigger fields now say",
+                "a test that still checks the value the change replaced",
                 "contradicts nothing, yet leaves part of the change unmet, is an `[advisory]`",
             ],
         ),
@@ -620,7 +622,8 @@ def test_a_target_revisited_by_its_change_needs_no_sentence():
         "A revisit line needs no sentence under `## What changed in each updated document`",
         "since a revisit is no revalidation",
         "still needs the sentence for that revalidation",
-        "Read what the target stands on at the head, as COR-050 point 5 says",
+        "Read what the target stands on at the head (COR-050 point 5)",
+        "Read the diff of the trigger fields the line names as modified",
     ):
         assert words in lead, words
 
@@ -633,8 +636,9 @@ def test_a_revisit_entry_not_asked_for_is_named_not_judged():
     lead = "- **Some answers are a person's decision, not yours to judge.**"
     (item,) = [line for line in _answers_check() if line.startswith(lead)]
     for words in (
-        'A revisit entry the list flags "not asked for by this change" is a person\'s decision'
-        " wherever its document sits, and the bullets above never judge it (COR-050 point 16)",
+        'A revisit entry the list flags "not asked for by this change" is a person\'s decision,'
+        " even on a document the check asked about, and the bullets above never judge it"
+        " (COR-050 point 16)",
         "Its target owes no answer, or only its outcome changed",
         "An entry whose outcome alone changed also answers nothing.",
     ):
@@ -655,14 +659,18 @@ def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
     section = _friction_answers()
     for words in (
         "`pkit friction revalidate`, `pkit friction defer` or `pkit friction revisit`",
-        "and the third an entry in its `revisited` list",
-        "the revalidation or revisit entry of a combined state after you resolved a conflict",
-        "each target you revisited by changing it, against the change",
+        "The third writes an entry in its `revisited` list",
+        "the revalidation of a combined state after you resolved a conflict (COR-050 point 3)",
+        "After you resolve a conflict in a `revisited` list, write the entry again for the"
+        " combined state (COR-050 point 16)",
+        "against the change, and each target you revisited by changing it.",
         "Each deferral, and each `deferred` revisit entry, you write names an open follow-up",
         "told those sentences and what is left out of date",
         "on a target your change asks no revisit of",
-        "Bring each such target up to your change by changing it, never by an edit made only"
-        " to clear the check",
+        "- **Change it**, to bring it up to your change, never by an edit made only to clear"
+        " the check.",
+        "- **Write its entry** with `pkit friction revisit`",
+        "write a `deferred` entry, naming the follow-up for its owner",
         "write a reason new to this change",
         "Changing only an entry's outcome answers nothing, and is not yours to write.",
     ):
@@ -678,15 +686,17 @@ def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
     body = "\n".join(_answers_check())
     d1 = record.split("\n### 1. The panel\n", 1)[1].split("\n### ", 1)[0]
     shared = (
-        "with a new reason, where the reason does not hold against the change, or the entry is"
-        " `deferred` and names no open follow-up",
-        "a target the change revisited by changing it, where the target contradicts what the",
+        "for a target that owes an answer, a",
+        "entry the change writes with a new reason that does not hold against the change, or a"
+        " `deferred` one that names no open follow-up",
+        "a target the change revisited by changing it, where the target contradicts what the"
+        " trigger fields the change modified now say",
         "contradicts nothing, yet leaves part of the change",
         "a revisit entry the change check does not ask for: one for a target that owes no"
-        " revisit, or one whose outcome alone changed",
+        " answer, or one whose outcome alone changed",
     )
     for words in shared:
         assert words.lower() in d1.lower(), ("DEC-002", words)
         assert words.lower() in readme.lower(), ("README", words)
-    for words in ("contradicts what the modified fields now say", "contradicts nothing"):
+    for words in ("contradicts what the modified trigger fields now say", "contradicts nothing"):
         assert words in body, words
