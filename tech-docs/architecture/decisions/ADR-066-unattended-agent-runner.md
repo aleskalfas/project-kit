@@ -192,7 +192,7 @@ DEC-056 point 5 reads the run's rules as denies, and this record keeps that read
 - **Git is read as hostile.** The check runs git with the clone's own configuration ignored. Any error of git's is a breach, so the check fails closed.
 - **A breach** comes back with what changed, and the caller sets the run's files aside.
 - **A check, not a boundary.** It finds a breach after it happened, and only inside the clone. There, only an excluded command can write outside the workspace. Outside the clone, an excluded command's writes go unseen (point 11).
-- **Then the files, then the removal.** The run command copies the run's files from the workspace to the folder the caller named. It copies regular files only, follows no symbolic link, refuses a file with more than one link, and bounds the total size. It refuses any entry named `.git`, and never copies the temp folder. Then it removes the clone, and each confined run first removes any clone a killed run left behind.
+- **Then the files, then the removal.** The run command copies the run's files from the workspace to the folder the caller named. It copies regular files only, follows no symbolic link, refuses a file with more than one link, and bounds the total size. It refuses any entry whose name a file system may treat as `.git`, compared without regard to case, as git's own guard compares it. It never copies the temp folder. Then it removes the clone, and each confined run first removes any clone a killed run left behind.
 
 ### 8. A run is a leaf
 
@@ -258,6 +258,7 @@ Before the confined form is built, a probe of the harness confirms the facts bel
 - A call outside the run's settings is refused, with no prompt, and the run goes on.
 - The shell and the file tools write only the workspace, and the shell's temp folder lies there. A working folder below the clone's root opens neither the clone's git folder nor the per-user temp folder to writes.
 - A call of the run's `pkit` from the workspace finds the clone as its root, and reads no git or `uv` configuration the workspace holds.
+- No allowed command that runs outside the sandbox runs or reads, as code or configuration, a file its arguments name.
 - With auto-approval off, a sandboxed command outside the run's allows is refused.
 - A sandbox that cannot start stops the harness at start.
 - The shell reads the clone, the system's folders and the installed tool, and none of the person's other files. The allowed commands still run under that block.
