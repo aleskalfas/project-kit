@@ -186,3 +186,35 @@ connections:
         schema_version: 1
         command: fill-use-cases
         description: Every use case the default branch holds, withdrawn ones included, each with its id, title, status and document path — complete, or no answer.
+      # The analysis-resolver as the fixer of each of this capability's types
+      # (DEC-001 points 5 and 8): where the project grants it, the role's
+      # provider may start it on the default branch's stale analysis
+      # artefacts, and it only proposes. A static value, so it reads here and
+      # resolving it runs nothing. Each description says what the agent keeps
+      # true (project-management DEC-056 point 1). Inert while no capability
+      # provides the work-tracking role.
+      - point: pkit::work-tracking:fixers
+        schema_version: 1
+        description: The analysis-resolver fixes the analysis's artefacts of every type.
+        value:
+          - id: software-analysis:actor
+            agent: analysis-resolver
+            description: your actors
+          - id: software-analysis:use-case
+            agent: analysis-resolver
+            description: your use cases
+          - id: software-analysis:journey
+            agent: analysis-resolver
+            description: your journeys
+          - id: software-analysis:term
+            agent: analysis-resolver
+            description: your glossary terms
+          - id: software-analysis:quality-requirement
+            agent: analysis-resolver
+            description: your quality requirements
+          - id: software-analysis:functional-requirement
+            agent: analysis-resolver
+            description: your functional requirements
+          - id: software-analysis:constraint
+            agent: analysis-resolver
+            description: your constraints
