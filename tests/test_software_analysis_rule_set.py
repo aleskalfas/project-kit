@@ -84,6 +84,7 @@ JUDGEMENT_RULES = {
             "software-analysis:DEC-001#11",
             "software-analysis:DEC-002#5",
             "software-analysis:DEC-002#6",
+            "software-analysis:DEC-002#7",
             "COR-050#1",
             "COR-050#2",
             "COR-050#5",
@@ -464,6 +465,24 @@ def test_the_anchors_rule_asks_a_use_case_for_what_answers_or_realises_it() -> N
     ) in section
 
 
+def test_the_anchors_rule_names_the_requirements_a_use_case_or_a_journey_lists() -> None:
+    """A use case and a journey rest on each requirement in their `requirements`, and the
+    check holds their anchors on exactly those requirements, whatever any rule's status
+    (DEC-002 point 7, #1694). So the rule names them and leaves them to the check."""
+    _data, body = _shipped()
+    listed = _anchors_list(body)
+    assert "each requirement in its `requirements`" in listed["A use case"]
+    assert "each requirement in its `requirements`" in listed["A journey"]
+    section = " ".join(_section(body, "RS-SAN-005").split())
+    held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
+    assert (
+        "It requires the anchors of a use case and of a journey on exactly the requirements "
+        "each lists in `requirements`."
+    ) in held
+    judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
+    assert "`requirements`" not in judged
+
+
 @pytest.mark.parametrize("kind", ["An actor or a term", "A journey"])
 def test_the_anchors_rule_asks_no_other_kind_for_what_answers_it(kind: str) -> None:
     """Only a use case and a requirement are answered by a decision or realised by a
@@ -493,9 +512,9 @@ def test_the_anchors_rule_keeps_its_anchors_against_a_cycle_back() -> None:
 def test_the_anchors_rule_asks_a_requirement_for_what_dec_002_point_6_gives() -> None:
     """A requirement anchors each record it rests on or is answered by, each view that
     realises it, the files that verify it, the narrow code that holds it, its actors and
-    the requirements it refines (DEC-002 points 5 and 6, #1695). The check that holds
-    its anchors on its actors and the requirements it refines is not built yet, so the
-    rule judges them, and its `What the check holds` names no requirement."""
+    the requirements it refines (DEC-002 points 5 and 6, #1695). The rule judges its
+    anchors on its actors and the requirements it refines, and its `What the check
+    holds` names neither field, until #1727 moves them there."""
     _data, body = _shipped()
     item = _anchors_list(body)["A requirement"]
     for asked in (
@@ -523,7 +542,7 @@ def test_the_anchors_rule_asks_a_requirement_for_what_dec_002_point_6_gives() ->
     judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
     assert "- a requirement's anchors on its `actors` and its `refines`" in judged
     held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
-    assert "requirement" not in held
+    assert "`actors`" not in held and "`refines`" not in held
     assert (
         "A requirement breaks it too while no anchor names an actor in its `actors`, or a "
         "requirement in its `refines`."

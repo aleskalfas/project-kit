@@ -23,13 +23,16 @@ Name each other actor who takes part with `--other-actor <ACT-id>`: one the use 
 - **`--path`** — the code the use case exercises: the entry point and the files doing the behaviour its steps describe. Also the file of each architecture view that realises it, where the project keeps one. Where a place holds the view, write an artefact anchor on it instead.
 - **`--record`** — the records it rests on, and the records that answer it. Those are each record whose decision the use case rests on, and each record made to meet what it asks. That may be a project record, an architecture record, or a record a component ships.
 - **Only from the use case.** Records carry no drivers: no record anchors the use case it answers, or any other analysis artefact. What a record serves is worked out from the analysis's anchors, and never stored (DEC-001 point 11).
+- **`--requirement`** — each requirement the use case must meet, of any of the three kinds, once for each: a quality it must reach, a rule that holds across use cases, a limit it works within. Each must be in the analysis and in force. Stamp a missing one first (`requirement.md`). The stamp writes each in `requirements`, and anchors it. So a changed requirement flags the use case (DEC-002 point 7).
+  - **List it here, never on the requirement.** A requirement names no use case. What meets it is worked out from the lists, and `pkit analysis met-by` shows it.
+  - **The cost.** Any change to a requirement's content flags each use case that lists it, a reworded reason included. So list a requirement the use case must meet, not one it only touches.
 
-The anchor to each actor is written by the stamp.
+The anchor to each actor and to each requirement is written by the stamp.
 
 ## 5. Stamp it
 
 ```
-pkit analysis new use-case <slug> --actor <ACT-id> [--other-actor <ACT-id>]... [--title "<Title>"] [--area <area>] [--path <glob>]... [--record <id>]...
+pkit analysis new use-case <slug> --actor <ACT-id> [--other-actor <ACT-id>]... [--requirement <REQ-id>]... [--title "<Title>"] [--area <area>] [--path <glob>]... [--record <id>]...
 ```
 
 It takes the next free number on the default branch and in the working tree.
@@ -48,5 +51,7 @@ Steps and variants are **only ever added**, never renumbered or removed: journey
 - **A new variant** takes a letter after every letter of its step.
 - **A step that no longer happens** stays in place, under its number. A variant does the same, under its letter.
 - **The check.** `pkit analysis check-numbers` compares each use case with the same use case where your branch left its base, the default branch unless you name another, and fails on a step or a variant renumbered or removed. It fails only where the append-only rule, `RS-SAN-002`, is accepted and binds. While that rule is proposed, run it with `--preview`: it reports what it would fail, and never fails.
+
+`requirements` is the source of the use case's requirement anchors. To change it, edit it and those anchors together. The check names the anchors to write when they differ. A use case in force never lists a withdrawn requirement. So the change that withdraws one takes it off each list, with its anchor.
 
 A use case no actor pursues any more is withdrawn, never deleted.

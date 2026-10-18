@@ -68,7 +68,10 @@ What is checked, each against the record's words:
 - **A journey's anchors match its steps and what it relies on** (point 4): the
   use cases among its artefact anchors are exactly those `steps` and
   `relies-on` list, so the friction check sees every use case it passes
-  through or relies on, and the anchors and the lists cannot drift apart.
+  through or relies on, and the anchors and the lists cannot drift apart. A
+  part anchor, such as `UC-001#`, names the use case before its last `#`
+  (COR-050 point 2), so it counts among its use-case anchors and matches no
+  entry of the lists, which name each use case whole.
 - **What a requirement names** (DEC-002 points 6 and 7): each of its `actors`
   is an actor of the analysis, and each of its `refines` a requirement of any
   of the three kinds, never itself; one in force names none withdrawn. The
@@ -79,6 +82,13 @@ What is checked, each against the record's words:
   kinds — are exactly its `actors` and its `refines`. A cycle through
   `refines` is then a cycle of anchors, the core's validation finding
   (COR-050 point 5).
+- **The requirements a use case or a journey lists** (DEC-002 point 7): each
+  of its `requirements` is a requirement of the analysis, of any of the three
+  kinds, and one in force lists none withdrawn, as the stamp refuses
+  (`Analysis.unfit_requirement`). Its requirement anchors, those naming a
+  requirement, are exactly the list, so a changed requirement flags every use
+  case and journey that lists it. A part anchor names the artefact before its
+  last `#` (COR-050 point 2), so one on a requirement counts among them.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -230,6 +240,7 @@ from _lib.model import (
     JOURNEY,
     KINDS,
     METHOD_SET,
+    MUST_MEET,
     NOUN,
     NUMBERED,
     OTHER_ACTORS,
@@ -313,11 +324,13 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
     outcome.findings += _requirement_references(analysis)
+    outcome.findings += _listed_requirements(analysis)
     outcome.findings += _lists_apart(analysis)
     outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
     outcome.findings += _requirement_anchors(analysis)
+    outcome.findings += _listed_requirement_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -782,6 +795,42 @@ def _unfit_message(problem: str, missing: bool, withdrawn_because: str) -> str:
     )
 
 
+def _listed_requirements(analysis: Analysis) -> list[Finding]:
+    """Each requirement a use case or a journey lists in `requirements` is a requirement
+    of the analysis, of any of the three kinds, and one in force lists none withdrawn
+    (DEC-002 point 7): the change that withdraws a requirement also takes it off these
+    lists. A withdrawn use case or journey is history, and may list withdrawn ones. The
+    rule is the model's (`Analysis.unfit_requirement`), which the stamp reads as well.
+    An entry that is no requirement's id is the schema's to report."""
+    requirement_id = schemas.id_pattern(REQUIREMENTS[0])
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        if artefact.kind not in (USE_CASE, JOURNEY):
+            continue
+        for index, value in _listed(artefact, MUST_MEET):
+            if not requirement_id.match(value):
+                continue  # the schema reports it
+            problem = analysis.unfit_requirement(value, in_force=not artefact.withdrawn)
+            if problem is None:
+                continue
+            held = analysis.find(value)
+            if held is None or held.kind not in REQUIREMENTS:
+                rule = f"what {with_article(artefact.kind)} lists is in the analysis"
+            else:
+                rule = (
+                    f"{with_article(artefact.kind)} in force lists only requirements in force — "
+                    f"take it off `{MUST_MEET}` and its anchors, or withdraw this one too"
+                )
+            found.append(
+                Finding(
+                    ERROR,
+                    at(artefact.location, f"/{MUST_MEET}/{index}"),
+                    f"{problem}: {rule} (DEC-002 point 7)",
+                )
+            )
+    return found
+
+
 def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
     """A journey in force whose step is a use case of another actor than the journey's:
     a journey is one actor's path across use cases (DEC-001 point 1), and the stamp
@@ -879,7 +928,10 @@ def _actor_anchors(analysis: Analysis) -> list[Finding]:
 def _journey_anchors(analysis: Analysis) -> list[Finding]:
     """A journey's use-case anchors are exactly the use cases of its `steps` and its
     `relies-on` (DEC-001 point 4): the two lists are the source, and the stamp writes
-    the anchors from them."""
+    the anchors from them. An anchor on a part of a use case is an anchor on that use
+    case (`_artefact_named`), so it counts among them. It matches no entry of the
+    lists, which name each use case whole: a part anchor flags the journey only when
+    its part changes (COR-050 point 5)."""
     pattern = schemas.id_pattern(USE_CASE)
     found: list[Finding] = []
     for journey in analysis.of_kind(JOURNEY):
@@ -889,7 +941,9 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
         relies_on = journey.fields.get(RELIES_ON)
         listed = [*steps, *(relies_on if isinstance(relies_on, list) else [])]
         expected = _unique(s for s in listed if isinstance(s, str) and pattern.match(s))
-        anchored = _unique(a for a in journey.anchored_to("artefact") if pattern.match(a))
+        anchored = _unique(
+            a for a in journey.anchored_to("artefact") if pattern.match(_artefact_named(a))
+        )
         if expected and set(expected) != set(anchored):
             found.append(
                 Finding(
@@ -911,16 +965,17 @@ def _requirement_anchors(analysis: Analysis) -> list[Finding]:
     source, and the stamp writes the anchors from them, so a changed actor or a changed
     requirement it refines flags it. An artefact anchor is within the analysis when the
     artefact it names is of one of the analysis's kinds by its id: a part anchor, such as
-    `UC-001#` or `ACT-tester#needs`, names its artefact before its last `#` (COR-050
-    point 2). Compared as written, a part anchor matches no entry of the two fields,
-    which the stamp writes whole. An entry naming the requirement itself is left out of
-    what it anchors, since `_requirement_references` refuses it, and a cycle through
-    `refines` is the core's validation finding (COR-050 point 5)."""
+    `UC-001#` or `ACT-tester#needs`, names its artefact before its last `#`
+    (`_artefact_named`, COR-050 point 2). Compared as written, a part anchor matches no
+    entry of the two fields, which the stamp writes whole. An entry naming the
+    requirement itself is left out of what it anchors, since `_requirement_references`
+    refuses it, and a cycle through `refines` is the core's validation finding (COR-050
+    point 5)."""
     patterns = [schemas.id_pattern(kind) for kind in KINDS]
     actor_id, requirement_id = schemas.id_pattern(ACTOR), schemas.id_pattern(REQUIREMENTS[0])
 
     def within(anchor: str) -> bool:
-        named = anchor.rsplit("#", 1)[0]
+        named = _artefact_named(anchor)
         return any(p.match(named) for p in patterns)
 
     found: list[Finding] = []
@@ -956,8 +1011,60 @@ def _requirement_anchors(analysis: Analysis) -> list[Finding]:
     return found
 
 
+def _listed_requirement_anchors(analysis: Analysis) -> list[Finding]:
+    """A use case's and a journey's requirement anchors are exactly the requirements its
+    `requirements` lists (DEC-002 point 7), as a journey's use-case anchors match its
+    steps: the list is the source, and the stamp writes the anchors from it, so a
+    changed requirement flags every use case and journey that lists it. A requirement
+    anchor is an artefact anchor naming a requirement. A part anchor names its artefact
+    before its last `#` (`_artefact_named`, COR-050 point 2), so one on a requirement
+    counts among them. It matches no entry of the list, which names each requirement
+    whole, and would flag the use case only when its part changes. A `requirements`
+    that is no list is the schema's to report, and nothing is compared until it is
+    one."""
+    requirement_id = schemas.id_pattern(REQUIREMENTS[0])
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        if artefact.kind not in (USE_CASE, JOURNEY):
+            continue
+        if not isinstance(artefact.fields.get(MUST_MEET, []), list):
+            continue  # the schema reports it
+        expected = _unique(
+            value for _i, value in _listed(artefact, MUST_MEET) if requirement_id.match(value)
+        )
+        anchored = _unique(
+            anchor
+            for anchor in artefact.anchored_to("artefact")
+            if requirement_id.match(_artefact_named(anchor))
+        )
+        if set(expected) == set(anchored):
+            continue
+        write = f"anchor exactly [{', '.join(expected)}]" if expected else "anchor none"
+        found.append(
+            Finding(
+                ERROR,
+                at(artefact.location, ARTEFACT_ANCHORS),
+                f"its requirement anchors ({', '.join(anchored) or 'none'}) do not match its "
+                f"`{MUST_MEET}` ({', '.join(expected) or 'none'}): the anchors are written "
+                f"from `{MUST_MEET}`, so a changed requirement flags every use case and "
+                f"journey that lists it — {write} (DEC-002 point 7)",
+            )
+        )
+    return found
+
+
 def _unique(values: Iterable[str]) -> list[str]:
     return list(dict.fromkeys(values))
+
+
+def _artefact_named(anchor: str) -> str:
+    """The artefact of the analysis an artefact anchor names: what comes before its last
+    `#`, or the whole anchor where it has none. After the `#`, a part anchor names a
+    section or the lead of that artefact, as `UC-001#` names the lead of UC-001 (COR-050
+    point 2). No id of the analysis holds a `#`, so none is cut short. An artefact
+    outside the analysis may hold one in its name, which COR-050 reads whole: compare
+    what this gives with the analysis's ids alone."""
+    return anchor.rsplit("#", 1)[0]
 
 
 # --- revalidation records ------------------------------------------------------------------

@@ -1,0 +1,16 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `land-work`'s authorisation for one head also covers a later head whose
+  changes since lie inside `revisited` lists, which hold the entries a link
+  asks of its source (COR-050 point 16), as well as inside `revalidated`
+  blocks, a clean merge of the base counting as none (DEC-055 point 3). A merge
+  round that only wrote a source's revisit entries again needs no new
+  authorisation. An entry rewritten, added or removed lies inside its list, as
+  a deferral does inside a block, and a list removed whole or emptied is a
+  change outside, as a block removed is. The `head:` and `merge:` lines, the
+  stop at a head the authorisation does not cover, and the `--expect-head`
+  help say so.
