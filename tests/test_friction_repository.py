@@ -29,6 +29,8 @@ from tests.friction_documents import (
     ADR,
     ADR_OVERLAY,
     CONFIG,
+    NOTES,
+    NOTES_HOLD,
     T1,
     T2,
     Timeline,
@@ -36,6 +38,7 @@ from tests.friction_documents import (
     document,
     friction_config,
     guide,
+    notes,
 )
 
 ALICE = Author("Alice", "alice@example.com")
@@ -222,6 +225,111 @@ def test_a_deferral_of_a_whole_record_anchor_lists_no_container_only_commit(
     assert _summary(_run(timeline)) == [("deferred", "docs/guide.md", "record:ADR-007", deferred)]
     (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
     assert [c.commit.sha for c in finding.commits] == [edited]
+
+
+# --- a path anchor stands on the content of a file a place holds (#1661, COR-050 point 5) ----
+
+ON_NOTES = guide(anchors={"path": [NOTES]})
+NOTES_SPLIT = notes(at=T2, body="The engine splits in two.")
+
+
+def test_a_revalidation_alone_makes_no_stale_debt_through_a_path_anchor(
+    timeline: Timeline,
+) -> None:
+    """A commit that writes only a placed file's container is no change to a path anchor on
+    it (COR-050 points 5 and 9), and never dates its debt; one that edits its content is."""
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES})
+    timeline.commit("the notes revalidated, their content as it was", {NOTES: NOTES_HOLD})
+    assert _summary(_run(timeline)) == []
+
+    edited = timeline.commit("the notes edited", {NOTES: NOTES_SPLIT})
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", f"path:{NOTES}", edited)]
+    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    assert [c.commit.sha for c in finding.commits] == [edited]
+
+
+def test_a_chain_of_path_anchors_does_not_cascade_past_an_unchanged_revalidation(
+    timeline: Timeline,
+) -> None:
+    """notes ← guide ← index, each on the one before by path: the engine changes, notes and
+    guide each revalidate `unchanged`, and nothing is left stale."""
+    on_guide = document("index", anchors={"path": ["docs/guide.md"]}, at=T1, outcome="updated")
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES, "docs/index.md": on_guide})
+    held = guide(anchors={"path": [NOTES]}, at=T2, because="the notes still say the same")
+    timeline.commit(
+        "the engine changed; the notes and the guide still hold",
+        {"src/core/engine.py": "ENGINE = 2\n", NOTES: NOTES_HOLD, "docs/guide.md": held},
+    )
+    assert _summary(_run(timeline)) == []
+
+
+def test_a_status_write_makes_no_stale_debt_through_a_path_anchor(timeline: Timeline) -> None:
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES})
+    status = {"state": "current", "as-of": "0" * 40}
+    front, body = notes().removeprefix("---\n").split("\n---\n", 1)
+    loaded = json.loads(front)
+    loaded["pkit"]["friction"]["last-check"] = status
+    timeline.commit(
+        "record the status", {NOTES: f"---\n{json.dumps(loaded, indent=2)}\n---\n{body}"}
+    )
+    assert _summary(_run(timeline)) == []
+
+
+def test_container_only_commits_before_an_edit_leave_the_edit_as_the_origin(
+    timeline: Timeline,
+) -> None:
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES})
+    deferring = notes(deferred=[("path", "src/core/**", "rewrite after #1")])
+    timeline.commit("defer the notes' anchor", {NOTES: deferring})
+    edited = timeline.commit(
+        "edit the notes",
+        {NOTES: notes(deferred=[("path", "src/core/**", "rewrite after #1")], body="Edited.")},
+    )
+    timeline.commit(
+        "revalidate the notes, their content as it is", {NOTES: notes(at=T2, body="Edited.")}
+    )
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", f"path:{NOTES}", edited)]
+    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    assert [c.commit.sha for c in finding.commits] == [edited]
+
+
+def test_a_deferral_of_a_path_anchor_lists_no_container_only_commit(timeline: Timeline) -> None:
+    timeline.start({NOTES: notes(), "docs/guide.md": ON_NOTES})
+    timeline.commit("the notes revalidated, their content as it was", {NOTES: NOTES_HOLD})
+    edited = timeline.commit("the notes edited", {NOTES: NOTES_SPLIT})
+    deferring = guide(anchors={"path": [NOTES]}, deferred=[("path", NOTES, "rewrite after #1")])
+    deferred = timeline.commit("defer the guide", {"docs/guide.md": deferring})
+
+    assert _summary(_run(timeline)) == [("deferred", "docs/guide.md", f"path:{NOTES}", deferred)]
+    (finding,) = frep.run_explain(timeline.adopter.root, "docs/guide.md").findings
+    assert [c.commit.sha for c in finding.commits] == [edited]
+
+
+def test_a_container_edit_on_a_file_no_place_holds_is_stale_debt(timeline: Timeline) -> None:
+    template = "templates/page.md"
+    on_template = guide(anchors={"path": ["templates/**"]})
+    timeline.start(
+        {template: document(None, anchors={"path": ["src/**"]}), "docs/guide.md": on_template}
+    )
+    edited = timeline.commit(
+        "the template's default anchor", {template: document(None, anchors={"path": ["lib/**"]})}
+    )
+    assert _summary(_run(timeline)) == [("stale", "docs/guide.md", "path:templates/**", edited)]
+
+
+def test_a_file_a_place_held_at_the_revalidation_point_is_read_by_its_content(
+    timeline: Timeline,
+) -> None:
+    """Each state's places are its own: a file a place held at the revalidation point and
+    no longer holds at HEAD is still read by its content, so a container write while it
+    was placed is no debt, as the change check asked nothing of it."""
+    page = "notes/page.md"
+    on_page = guide(anchors={"path": [page]})
+    placed = friction_config(places=("docs", "notes"))
+    timeline.start({page: notes(), "docs/guide.md": on_page}, config=placed)
+    timeline.commit("revalidate the page, its content as it was", {page: NOTES_HOLD})
+    timeline.commit("the page leaves the places", {CONFIG: friction_config()})
+    assert _summary(_run(timeline)) == []
 
 
 def test_collection_entries_have_their_own_points(timeline: Timeline) -> None:

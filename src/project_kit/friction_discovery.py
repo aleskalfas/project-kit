@@ -159,8 +159,10 @@ from project_kit.document_parts import (
     SectionSpan,
     body_first_line,
     parse_front_matter,
+    split_front_matter,
     yaml_reason,
 )
+from project_kit.friction_git import LINK_MODE, CommitTree
 from project_kit.line_breaks import line_break, universal_newlines
 from project_kit.manifest import read_backbone_manifest
 from project_kit.record_points import PointState, RecordPoints, read_points_bytes, split_anchor
@@ -2198,6 +2200,57 @@ def record_content(raw: bytes) -> RecordContent:
     return document_content(front_matter, body)
 
 
+def placed_content(raw: bytes) -> RecordContent:
+    """The content of a file a place holds, as a path anchor or an anchor of a registered
+    kind reads it (COR-050 point 5), from the file's bytes — the one reading both checks
+    compare such a file by (ADR-057 point 2).
+
+    Read as an artefact's content is: its body as text and its front matter's fields
+    compared parsed, nothing in a container counted wherever the records let one sit,
+    whatever artefacts the file holds (`without_containers`). So a write to the
+    containers alone, such as a revalidation, changes nothing. Where it differs from a
+    record's content (`record_content`): a file with no front matter has its body, line
+    endings read universally, and no fields — so adding a front matter that holds only
+    a container is no change — and an entry's or a rule's container is left out too.
+    Where front matter is there but does not parse to a mapping, its whole file, read
+    as a record's is; bytes that are no UTF-8 text, as they are.
+    """
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError:
+        return raw, None
+    front_matter, body, _reason = parse_front_matter(text)
+    if front_matter is not None:
+        return body, without_containers(front_matter)
+    if split_front_matter(text)[0] is None:
+        return body, {}
+    return universal_newlines(text), None
+
+
+def without_containers(front_matter: Mapping[str, Any]) -> dict[str, Any]:
+    """A front matter's fields with every container left out where the records let one sit
+    (COR-050 points 1 and 5, COR-051 point 2): the front matter's own, each entry's — a
+    mapping at its top level — and each rule's, under `rules`. Whatever artefacts the
+    file holds, so adding a container at the top of a collection file leaves its
+    entries' out still; a key of that name deeper is the artefact's own data, and counts."""
+
+    def bare(value: Any) -> Any:
+        if not isinstance(value, Mapping):
+            return value
+        mapping = cast("Mapping[Any, Any]", value)
+        return {k: v for k, v in mapping.items() if k != CONTAINER_KEY}
+
+    fields: dict[str, Any] = {}
+    for key, value in front_matter.items():
+        if key == CONTAINER_KEY:
+            continue
+        entry = bare(value)
+        if key == RULES_KEY and isinstance(entry, dict):
+            entry = {k: bare(v) for k, v in cast("dict[Any, Any]", entry).items()}
+        fields[key] = entry
+    return fields
+
+
 def revalidated_field(artefact: Artefact, key: str) -> Any:
     """One key of the artefact's `revalidated` block as written, `None` when absent."""
     revalidated = artefact.revalidated
@@ -2308,6 +2361,12 @@ class Discovery:
         return tuple(a for a in self.artefacts if a.has_container)
 
     @functools.cached_property
+    def placed(self) -> frozenset[str]:
+        """The files a place holds at the state walked (COR-050 point 5): every file the
+        walk read, as `placed_files` names them for a state without walking it."""
+        return frozenset(found.path for found in self.files)
+
+    @functools.cached_property
     def types(self) -> Types:
         """Every artefact's type and the type findings (COR-056), resolved once for
         this discovery (`resolve_types`). Friction never reads them."""
@@ -2369,45 +2428,12 @@ def discover_artefacts(
     is never held, as it is never read.
     """
     settings = settings if settings is not None else read_friction_settings(target_root, tree)
-    # Which rule-set folders are places is read from the state walked — a
-    # commit's own listing, or the disk for the working tree: a folder that
-    # exists only at a commit — one a change adds, or deletes outright — is
-    # walked there, whichever checkout reads it. The working tree's folders are
-    # existence-gated on disk so that a project without rule sets stays dormant
-    # without a repository being demanded.
-    rule_set_places_found = rule_set_places(target_root, settings, tree)
-    places = declared_places(settings)
-    declared = frozenset(places)
-    places += tuple(r.place for r in rule_set_places_found if r.place not in places)
-    if not places and not settings.held:
-        return Discovery(settings=settings, places=places, artefacts=(), unreadable=())
-    folders = held_folders(target_root, settings, rule_set_places_found)
-    listing = tree if tree is not None else working_tree(target_root)
-    files = listing.files()
-    claimed = rule_set_files(target_root, rule_set_places_found, listing)
-    holder: dict[str, HeldFolder] = {}  # each held file: the folder holding it
-    for folder in folders:
-        if folder.skipped is None:
-            for rel in listed_files_in_place(folder.place, files):
-                holder.setdefault(rel, folder)
-    is_synced_copy = synced_copy_test(target_root) if declared else None
-    matched: list[tuple[Place, str]] = []
-    synced: list[SyncedMatch] = []
-    matching: dict[str, list[Place]] = {}  # each walked file: every place matching it
-    left_out: dict[str, list[Place]] = {}  # each held file: every place matching it
-    for place in places:
-        for rel in listed_files_in_place(place, files):
-            if rel in matching:
-                matching[rel].append(place)
-                continue
-            if place in declared and is_synced_copy is not None and is_synced_copy(rel):
-                synced.append(SyncedMatch(place=place, path=rel))
-                continue
-            if rel in holder:
-                left_out.setdefault(rel, []).append(place)
-                continue
-            matching[rel] = [place]
-            matched.append((place, rel))
+    match = _match_places(target_root, settings, tree)
+    if match is None:
+        return Discovery(settings=settings, places=(), artefacts=(), unreadable=())
+    places, listing, holder = match.places, match.listing, match.holder
+    matched, matching, left_out = match.matched, match.matching, match.left_out
+    claimed = rule_set_files(target_root, match.rule_set_places, listing)
 
     artefacts: list[Artefact] = []
     unreadable: list[UnreadableFile] = []
@@ -2455,12 +2481,120 @@ def discover_artefacts(
         places=places,
         artefacts=tuple(artefacts),
         unreadable=tuple(unreadable),
-        synced=tuple(synced),
+        synced=match.synced,
         files=tuple(sorted(read, key=lambda f: f.path)),
-        rule_set_places=rule_set_places_found,
-        held_folders=folders,
+        rule_set_places=match.rule_set_places,
+        held_folders=match.folders,
         held=tuple(held),
     )
+
+
+@dataclass(frozen=True)
+class _PlaceMatch:
+    """What the walk of the places matches at one state, before it reads a file
+    (`_match_places`): the places, the rule-set places among them, the folders of held
+    documents; the listing; each held file with its folder; each walked file with the
+    place it is read under, in walk order, and every place matching it; each held
+    file with every place matching it; the synced copies a declared place matches."""
+
+    places: tuple[Place, ...]
+    rule_set_places: tuple[RuleSetPlace, ...]
+    folders: tuple[HeldFolder, ...]
+    listing: RepositoryTree
+    holder: Mapping[str, HeldFolder]
+    matched: tuple[tuple[Place, str], ...]
+    matching: Mapping[str, list[Place]]
+    left_out: Mapping[str, list[Place]]
+    synced: tuple[SyncedMatch, ...]
+
+
+def _match_places(
+    target_root: Path, settings: FrictionSettings, tree: RepositoryTree | None
+) -> _PlaceMatch | None:
+    """The walk's matching of the places at the state `tree` holds, else the working
+    tree (`discover_artefacts`); `None` where no place and no held folder is declared.
+
+    The one matching of which file a place holds: the walk and `placed_files` both
+    take it (ADR-057 point 2).
+    """
+    # Which rule-set folders are places is read from the state walked — a
+    # commit's own listing, or the disk for the working tree: a folder that
+    # exists only at a commit — one a change adds, or deletes outright — is
+    # walked there, whichever checkout reads it. The working tree's folders are
+    # existence-gated on disk so that a project without rule sets stays dormant
+    # without a repository being demanded.
+    rule_set_places_found = rule_set_places(target_root, settings, tree)
+    places = declared_places(settings)
+    declared = frozenset(places)
+    places += tuple(r.place for r in rule_set_places_found if r.place not in places)
+    if not places and not settings.held:
+        return None
+    folders = held_folders(target_root, settings, rule_set_places_found)
+    listing = tree if tree is not None else working_tree(target_root)
+    files = listing.files()
+    holder: dict[str, HeldFolder] = {}  # each held file: the folder holding it
+    for folder in folders:
+        if folder.skipped is None:
+            for rel in listed_files_in_place(folder.place, files):
+                holder.setdefault(rel, folder)
+    is_synced_copy = synced_copy_test(target_root) if declared else None
+    matched: list[tuple[Place, str]] = []
+    synced: list[SyncedMatch] = []
+    matching: dict[str, list[Place]] = {}  # each walked file: every place matching it
+    left_out: dict[str, list[Place]] = {}  # each held file: every place matching it
+    for place in places:
+        for rel in listed_files_in_place(place, files):
+            if rel in matching:
+                matching[rel].append(place)
+                continue
+            if place in declared and is_synced_copy is not None and is_synced_copy(rel):
+                synced.append(SyncedMatch(place=place, path=rel))
+                continue
+            if rel in holder:
+                left_out.setdefault(rel, []).append(place)
+                continue
+            matching[rel] = [place]
+            matched.append((place, rel))
+    return _PlaceMatch(
+        places=places,
+        rule_set_places=rule_set_places_found,
+        folders=folders,
+        listing=listing,
+        holder=holder,
+        matched=tuple(matched),
+        matching=matching,
+        left_out=left_out,
+        synced=tuple(synced),
+    )
+
+
+def placed_files(target_root: Path, tree: RepositoryTree | None = None) -> frozenset[str]:
+    """The files a place holds at the state `tree` holds, else the working tree
+    (COR-050 point 5): every file the walk of the places reads there
+    (`discover_artefacts`, `Discovery.placed`) — a Markdown file a place matches, a rule
+    set's included, never a held document, a synced copy or a link — matched by the
+    walk's own matching (`_match_places`) and read from no file but the settings.
+
+    Each state's places are its own: its configuration, the capabilities its manifest
+    installs and their package metadata, its rule-set folders. Whether a file is a
+    synced copy is read from the working tree's install state, as the walk reads it.
+    """
+    settings = read_friction_settings(target_root, tree)
+    match = _match_places(target_root, settings, tree)
+    if match is None:
+        return frozenset()
+    return frozenset(rel for _place, rel in match.matched if not _is_link(match.listing, rel))
+
+
+def _is_link(tree: RepositoryTree, rel: str) -> bool:
+    """Whether the file at `rel` of a state is a link, which the walk never reads: by its
+    entry's mode in a commit, on disk in the working tree."""
+    if isinstance(tree, WorkingTree):
+        return (tree.root / rel).is_symlink()
+    if isinstance(tree, CommitTree):
+        found = tree.entry(rel)
+        return found is not None and found[0] == LINK_MODE
+    return tree.read_bytes([rel]).get(rel) is None
 
 
 def _held_file(

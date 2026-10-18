@@ -95,6 +95,7 @@ class CommitTree:
 
     def __init__(self, root: Path, commit: str) -> None:
         self._root = root
+        self.commit = commit
         listed = run_git(root, "ls-tree", "-r", "-z", commit).stdout
         self._entries: dict[str, TreeEntry] = {}  # path -> (mode, object), gitlinks included
         self._blobs: dict[str, TreeEntry] = {}  # the files: a submodule is a commit, not a file

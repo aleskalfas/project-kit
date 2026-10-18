@@ -64,7 +64,11 @@ cut is named (`history.cut`).
 **When an anchor changed** (point 5) — between the base and head, two states,
 so an edit undone within the change is none: a *path* anchor when a changed
 path matches it that both sides leave in — each side read under its own
-`friction.exclude` (point 7) — the artefact's own file ignored; a *record*
+`friction.exclude` (point 7) — the artefact's own file ignored, and a
+Markdown file a place holds at either side compared by its content and mode
+(`file_changed`, `friction_discovery.placed_content`), so a write to its
+containers alone, a revalidation say, is none; an anchor of a registered
+kind reads the files its resolver names the same way; a *record*
 anchor when the record's **content** differs between the two sides — its
 body compared textually and its own fields compared parsed, never the
 methodology's container, read by discovery's one reading
@@ -198,6 +202,7 @@ from project_kit.friction_discovery import (
     entry_reason,
     parsed_at,
     pattern_matcher,
+    placed_content,
     record_content,
     refuse_resolver_without_query_contract,  # noqa: F401 — re-exported: the check's public surface
     registered_anchor_kinds,
@@ -672,6 +677,7 @@ class Side(Listing):
         self.discovery = discovery
         self._records: dict[str, RecordPoints | None] = {}
         self._contents: dict[str, RecordContent | None] = {}
+        self._placed: dict[str, RecordContent | None] = {}
         self._paths: dict[str, str | None] = {}
         self._parts: dict[str, AnchoredPart] = {}
         self._named: dict[str, str | None] = {}
@@ -768,6 +774,22 @@ class Side(Listing):
             raw = self.tree.read_bytes([rel]).get(rel) if rel in self.files else None
             self._contents[rel] = None if raw is None else record_content(raw)
         return self._contents[rel]
+
+    @property
+    def placed(self) -> frozenset[str]:
+        """Every file a place holds here (COR-050 point 5), as discovery found them
+        (`Discovery.placed`): a rule set's included, never a held document, a synced copy
+        or a link, which no place walks."""
+        return self.discovery.placed
+
+    def placed_content(self, rel: str) -> RecordContent | None:
+        """The file at `rel` here, read once as a path anchor reads a file a place holds
+        (`friction_discovery.placed_content`), or `None` when this state holds no such
+        file."""
+        if rel not in self._placed:
+            raw = self.tree.read_bytes([rel]).get(rel) if rel in self.files else None
+            self._placed[rel] = None if raw is None else placed_content(raw)
+        return self._placed[rel]
 
     def point_of(self, anchor: Anchor, rel: str) -> AnchoredPoint | None:
         """What an anchor on a point of the record at `rel` finds there (COR-050 point 7),
@@ -1032,6 +1054,56 @@ def retired_note(anchor: Anchor, side: Side) -> str | None:
     )
 
 
+def file_changed(rel: str, later: Side, earlier: Side, earlier_rel: str | None = None) -> bool:
+    """Whether a file a diff names changed what a path anchor, or one of a registered
+    kind, stands on in it (COR-050 point 5): the file at `rel` in the later state, at
+    `earlier_rel` — its name there, `rel` by default — in the earlier.
+
+    A file a place holds at either state is compared by its content
+    (`Side.placed_content`) and its mode, so a write to its containers alone, a
+    revalidation say, changes nothing. One added or removed changed. Any other file the
+    diff names changed: it is compared as stored, and the diff names it because it
+    differs.
+    """
+    before = rel if earlier_rel is None else earlier_rel
+    if rel not in later.placed and before not in earlier.placed:
+        return True
+    if rel not in later.files or before not in earlier.files:
+        return True
+    if later.placed_content(rel) != earlier.placed_content(before):
+        return True
+    return _mode_changed(later, earlier, rel, before)
+
+
+def _mode_changed(later: Side, earlier: Side, rel: str, before: str) -> bool:
+    """Whether the file's mode differs between the two states, as git reads it — the
+    working tree's under the repository's own settings (`git diff --raw`)."""
+    if not isinstance(earlier.tree, CommitTree):
+        return False  # the earlier state is always a commit; nothing else is compared
+    then = earlier.tree.entry(before)
+    if isinstance(later.tree, CommitTree):
+        now = later.tree.entry(rel)
+        return then is None or now is None or then[0] != now[0]
+    listed = run_git(
+        later.root,
+        "diff",
+        "--raw",
+        "--no-renames",
+        "-z",
+        "--no-color",
+        "--relative",
+        earlier.tree.commit,
+        "--",
+        rel,
+    ).stdout
+    tokens = nul_separated(listed)
+    for meta, path in zip(tokens[::2], tokens[1::2], strict=False):
+        if path == rel:
+            mode = meta.lstrip(":").split(" ")[1]
+            return then is None or mode != then[0]
+    return False  # git lists no change to it: the working tree holds it as the commit does
+
+
 def content_differs(artefact: Artefact, other: Artefact) -> bool:
     """Whether two artefacts differ in content (COR-050 point 5): the body compared as
     text, the own fields compared parsed, never the methodology's container — so a
@@ -1263,9 +1335,17 @@ def _path_reading(
     moved = exclusion_change(anchor.value, base, head).less(own)
     stood, stands = base.stands_on(anchor.value), head.stands_on(anchor.value)
     changed = tuple(
-        sorted(rel for rel in diff.paths - own if stood(rel) and (stands(rel) or rel in moved.gone))
+        sorted(
+            rel
+            for rel in diff.paths - own
+            if stood(rel) and (stands(rel) or rel in moved.gone) and file_changed(rel, head, base)
+        )
     )
-    touched = frozenset(rel for rel in moved.left_out + moved.let_in if rel in diff.paths)
+    touched = frozenset(
+        rel
+        for rel in moved.left_out + moved.let_in
+        if rel in diff.paths and file_changed(rel, head, base)
+    )
     return _PathReading(changed, moved, touched)
 
 
@@ -1332,7 +1412,7 @@ def _anchor_question(
             rel
             for rel in kinds.files(anchor)
             if rel not in own and (entry := diff.by_path.get(rel)) is not None
-            if entry.changes_content
+            if entry.changes_content and file_changed(rel, head, base, entry.old_path)
         )
         if not changed:
             return None, None

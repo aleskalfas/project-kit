@@ -499,6 +499,33 @@ def test_the_artefact_s_own_file_is_left_out_of_what_a_registered_anchor_is_aske
     assert asked.message.startswith("changed in this diff (sources/iso-8601.md)")
 
 
+def test_a_registered_anchor_on_a_placed_file_stands_on_its_content(repo: AdopterRepo) -> None:
+    """A file a place holds is read by its content, as a path anchor's is (COR-050 point 5):
+    a write to its container alone — a revalidation of the artefact in it — asks nothing of
+    an anchor whose resolver names it, in either check; an edit to its body does."""
+    notes = "docs/notes.md"
+    _sources(repo, ANSWERING.format({"paths": [notes]}))
+
+    def noted(**overrides: Any) -> str:
+        values: dict[str, Any] = {"anchors": {"path": ["src/core/**"]}, "at": T1}
+        values.update({"outcome": "updated", **overrides})
+        return document("notes", **values)
+
+    _start(repo, {notes: noted(), "docs/guide.md": guide(anchors=SOURCE_ANCHORS)})
+    held = noted(at=T2, outcome="unchanged", because="the engine is still one module")
+    repo.commit(
+        "the engine changed; the notes hold", {"src/core/engine.py": "E = 2\n", notes: held}
+    )
+    assert _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR) == []
+    assert _of_anchor(fr.run_repository_check(repo.root).findings, SOURCE_ANCHOR) == []
+
+    repo.commit("edit the notes", {notes: noted(at=T2, body="Edited.")})
+    [asked] = _of_anchor(fc.run_change_check(repo.root, "main").findings, SOURCE_ANCHOR)
+    assert asked.message.startswith(f"changed in this diff ({notes})")
+    [stale] = _of_anchor(fr.run_repository_check(repo.root).findings, SOURCE_ANCHOR)
+    assert stale.kind is fr.RepositoryFindingKind.STALE
+
+
 def test_the_files_a_resolver_answers_are_anchored_surface(repo: AdopterRepo) -> None:
     _sources(repo)
     files = {"docs/guide.md": guide(anchors=SOURCE_ANCHORS), **CAPTURED, "sources/x.md": "x\n"}
