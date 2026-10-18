@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-17T21:38:48Z
+      at: 2026-10-17T21:37:50Z
       outcome: unchanged
-      unchanged-because: The migration runner now gives each migration script a pkit of its own and refuses installation changes inside a migration. This page says a migration may change a file of yours where a decision record allows it, and that pkit upgrade runs any migrations automatically, which still holds.
+      unchanged-because: decisions_validate.py changes only in its docstrings, which add an externally-sourced capability's records to the copies validation skips. This page names `pkit decisions validate` as a day-one gate for decision-id uniqueness and says nothing of which records it skips, so it still holds.
 ---
 
 # project-kit

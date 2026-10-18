@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-18T08:24:31Z
+      at: 2026-10-18T08:25:25Z
       outcome: unchanged
-      unchanged-because: ADR-065 gains point 14, on which pkit a migration reaches, what it may ask it and which commands refuse inside it, and the Decision's list names it. Point 11's own text is unchanged, so the overlay's writers and reconcile's repair of a missing overlay, which this page describes, still hold.
+      unchanged-because: ownership.py changes is_synced_copy, which asks a new helper whether a file is a registered externally-sourced capability's and answers yes for it, with a constant for that origin and the comments around them. The write-authority check this page describes rests on is_sync_managed and the write-carrying categories, both unchanged, and the COR-050 points it cites, 3 and 10, are unchanged too.
 ---
 
 # Agents
