@@ -52,8 +52,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T15:02:47Z
-          outcome: updated
+          at: 2026-10-18T15:55:14Z
+          outcome: unchanged
+          unchanged-because: Point 1 gains one sentence, that a component's place may also declare links. Points 2 and 5 are reached only through the Decision's text outside its points, which gains one on a link that asks for a revisit of its targets (point 16). RS-SAN-005 asks which anchors an artefact's kind names, a requirement's included, by which anchor kind, cycle or not. A link's targets are anchors the artefact already names, so what the rule asks is as it was.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
