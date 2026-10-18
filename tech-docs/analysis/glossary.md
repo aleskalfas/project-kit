@@ -163,9 +163,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-18T19:56:52Z
+        at: 2026-10-18T21:26:52Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that none of its places or held folders holds. What a place is, and which files it matches, is unchanged.
+        unchanged-because: A capability's place may declare a link of a second shape, read in friction_discovery.py. What a place is, and how it differs from a root, a synced tree and a held folder, is untouched.
 TERM-range:
   name: range
   status: active
