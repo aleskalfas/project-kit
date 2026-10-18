@@ -23,6 +23,10 @@ TERM-answer:
         record:
           - COR-050#3
           - COR-050#4
+      revalidated:
+        at: 2026-10-18T19:14:44Z
+        outcome: unchanged
+        unchanged-because: "The definition still holds: this change only alters where the reading of friction since and friction resolve finds a block or list, not what an answer is or what the writers write."
 TERM-artefact:
   name: artefact
   status: active
