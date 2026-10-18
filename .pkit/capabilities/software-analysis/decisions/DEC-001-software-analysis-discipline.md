@@ -53,7 +53,7 @@ A user story, in the sense of a need stated in one sentence, is an actor's need 
 
 ### 2. Where it keeps them
 
-Everything lives under the project's internal documentation root (COR-049), in an `analysis` area laid out after a use-case model:
+Everything lives under the project's internal documentation root (COR-049), in an `analysis` area laid out after a use-case model (refinement per [software-analysis:DEC-002-analysis-requirements]):
 - the glossary is one collection file, serving everything;
 - the use-case model holds a folder of actors, one file each, a folder of use cases (optionally grouped by functional area), and a folder of journeys;
 - revalidation records are kept in a folder of their own.
@@ -62,7 +62,7 @@ Everything lives under the project's internal documentation root (COR-049), in a
 - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
 - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act and are not anchored artefacts, so their folder is not a place: the capability declares it as a folder of held documents (COR-050 point 1), so the records are listed as this capability's and no place reads them as artefacts.
 - **Types.** Each place gives its artefacts a type (COR-056). So a rule set selects the analysis's artefacts by what they are, without naming where they lie.
-  - **The type registry.** The capability's type registry, in its package metadata, declares one type for each kind of anchored artefact. They are `actor`, `use-case`, `journey` and `term`, each with a description. A scope names them `software-analysis:actor` and so on.
+  - **The type registry.** The capability's type registry, in its package metadata, declares one type for each kind of anchored artefact. They are `actor`, `use-case`, `journey` and `term`, each with a description (refinement per [software-analysis:DEC-002-analysis-requirements]). A scope names them `software-analysis:actor` and so on.
   - **Each place's type.** The actors' place gives `actor`, the use cases' place `use-case` and the journeys' place `journey`. The glossary gives its entries `term`.
   - **No kind field.** No type names a kind field. The capability's check holds every file in a place to that place's kind, so no kind field needs to gate the place's type (COR-056 points 2 and 4).
   - **No project place.** None of the four admits a project place. The capability checks only the artefacts in its own places, so a project place would give its types to files the capability never checks.
@@ -82,7 +82,7 @@ Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), in
 
 ### 4. Every artefact says what makes it true
 
-Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle. The analysis anchors the decisions it relies on and the architecture views that realise it. Neither a decision nor a view anchors the analysis (point 11). Each kind anchors as follows:
+Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle. The analysis anchors the decisions it relies on and the architecture views that realise it. Neither a decision nor a view anchors the analysis (point 11). Each kind anchors as follows (refinement per [software-analysis:DEC-002-analysis-requirements]):
 - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.
 - Use cases anchor to their actor and to each other actor they involve, as artefact anchors. They also anchor to the code they exercise and the decisions they rely on, those that answer them included (point 11). They anchor to each architecture view that realises them too. The other actors are listed in the use case's front matter, so a check resolves each to an actor.
 - Journeys anchor to their actor; to the use cases they pass through, and to each use case outside the journey that a step relies on; and to the code and decisions at the seams between them. A journey's ordered list of steps, and its list of the use cases it relies on, are the source. Its use-case anchors are written into its anchor field from the two by the capability's stamp and check, and validation requires them to match, so the friction check sees them and they cannot drift apart.
@@ -153,7 +153,7 @@ The analysis keeps to the requirements, and points at the solution by anchors, n
 
 **Outside this record.** Each of these needs its own decision when a real need arrives:
 - lifecycles on the process substrate (a planned revalidation, onboarding)
-- further kinds of analysis artefact (constraints and quality requirements)
+- further kinds of analysis artefact, such as constraints and quality requirements (refinement per [software-analysis:DEC-002-analysis-requirements])
 - executable use cases
 - evidence kept on the artefact itself
 

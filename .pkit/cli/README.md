@@ -72,8 +72,9 @@ pkit:
         - .pkit/lifecycle/README.md#where-a-capabilitys-manifest-lives
         - .pkit/lifecycle/README.md#the-downgrade-guard-on-capability-refresh-issue-524
     revalidated:
-      at: 2026-10-17T21:34:49Z
-      outcome: updated
+      at: 2026-10-18T08:25:34Z
+      outcome: unchanged
+      unchanged-because: cli.py changes only the decisions validate help, which adds an externally-sourced capability's records to the copies it skips, and this page's row says a record that arrives as a synced copy is not checked. COR-050 point 14 changes only in its synced-tree clause, and this page cites it for the friction keys and for the synced copies friction artefacts lists, which still hold.
 ---
 
 # Command-line interface

@@ -1,0 +1,10 @@
+component: software-analysis
+kind: none
+body: >
+  Design-ahead: [software-analysis:DEC-002-analysis-requirements] decides
+  three more kinds of analysis artefact, quality requirements, functional
+  requirements and constraints, numbered together as `REQ-NNN` in a folder for
+  each kind, and listed by the use cases and journeys that must meet them.
+  Nothing you run changes yet. The issues that build the kinds carry their own
+  changesets, and the one that adds the types warns of a clash with a
+  project's own bare type named `constraint`.
