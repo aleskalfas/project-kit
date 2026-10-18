@@ -38,7 +38,7 @@ commands:
     query-contract: true
   met-by:
     script: scripts/met-by.py
-    help: "List what meets each requirement (DEC-002 point 7): `met-by [<REQ-id>] [--json]` gives each requirement the analysis holds, or the one named, with the use cases and journeys in force that list it in their `requirements`, computed from the working tree each time and never stored on the requirement. A withdrawn requirement is listed with its status, and a withdrawn use case or journey meets nothing. Complete or no answer: exit 1 when a file of the use cases, the journeys or the requirements cannot be read as its kind, or the requirement named is not in the analysis. --json prints the document, each requirement with its id, kind, title, status, path and `met_by`. A query: read-only, offline; `pkit sync` provisions its dependencies."
+    help: "List what meets each requirement (DEC-002 point 7): `met-by [<REQ-id>] [--json]` gives each requirement the analysis holds, or the one named, with the use cases and journeys in force that list it in their `requirements`, computed from the working tree each time and never stored on the requirement. A withdrawn requirement is listed with its status, and a withdrawn use case or journey meets nothing. Complete or no answer: exit 1 when a file of the use cases, the journeys or the requirements cannot be read as its kind, gives no id of its kind's shape, or gives a `requirements` that is no list, or when the requirement named is not in the analysis. --json prints the document, each requirement with its id, kind, the kind as its heading shows it (`shown_as`), title, status, path and `met_by`. A query: read-only, offline; `pkit sync` provisions its dependencies."
     query-contract: true
   propose:
     script: scripts/propose.py

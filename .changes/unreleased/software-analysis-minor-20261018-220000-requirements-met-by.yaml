@@ -17,9 +17,10 @@ body: >
   lists it. `pkit analysis met-by [<REQ-id>] [--json]` gives each
   requirement, or the one named, with the use cases and journeys in force
   that list it. It is computed from the working tree each time, and nothing
-  is written on the requirement. A file it cannot read is no answer. The
-  field is optional, so no use case or journey written before needs a change.
-  A new use case or journey is stamped with `requirements: []` when it lists
-  none. `SAN`'s `RS-SAN-005` names the requirements a use case and a journey
+  is written on the requirement. A file it cannot read, or whose id or list it
+  cannot tell, is no answer. The field is optional, so a use case or journey
+  written before needs a change only where it anchors a requirement by hand:
+  list that requirement in `requirements`, or drop the anchor. A new use case
+  or journey is stamped with `requirements: []` when it lists none. `SAN`'s `RS-SAN-005` names the requirements a use case and a journey
   list among what each rests on, and leaves their anchors to the check. It
   stays proposed, so `SAN` stays at 1.0.0.

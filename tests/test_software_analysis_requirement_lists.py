@@ -346,9 +346,12 @@ def test_met_by_lists_the_use_cases_and_journeys_in_force_that_list_each_one(
     }
     # It wrote nothing: the analysis is as the edits left it.
     assert _tree(listed) == before
+    # A use case in force that lists a withdrawn requirement is shown under it, and the
+    # check refuses it.
+    _withdraw(listed, LOCAL)
+    assert _met(listed)["REQ-001"] == ["UC-001"]
     # A withdrawn use case meets nothing, and a withdrawn requirement keeps its status.
     _withdraw(listed, RUN_SUITE)
-    _withdraw(listed, LOCAL)
     assert _met(listed) == {"REQ-001": [], "REQ-004": ["UC-002", "JRN-001"]}
     assert _met_by(listed).stdout.splitlines()[:2] == [
         f"REQ-001 · Constraint · {LOCAL_TITLE} (withdrawn)",
@@ -356,17 +359,39 @@ def test_met_by_lists_the_use_cases_and_journeys_in_force_that_list_each_one(
     ]
 
 
+def _no_answer(repo: AdopterRepo, said: str) -> None:
+    """`met-by` gives no answer: exit 1, nothing on standard output, and `said` among the
+    reason on standard error, with and without `--json`."""
+    for args in ((), ("--json",)):
+        completed = _met_by(repo, *args)
+        assert (completed.returncode, completed.stdout) == (1, ""), args
+        assert said in completed.stderr, (args, completed.stderr)
+
+
 def test_met_by_gives_no_answer_it_cannot_give_in_full(listed: AdopterRepo) -> None:
-    """A requirement the analysis does not hold, and a file of a use case it cannot read,
-    are no answer: exit 1, nothing on standard output, and the reason on standard error."""
+    """A requirement the analysis does not hold is no answer, and so is a file whose list
+    or whose requirement cannot be told: one whose front matter does not parse, one with
+    none, a requirement with no id, and a use case whose `requirements` is no list. Each
+    exits 1, with nothing on standard output and the reason on standard error."""
     completed = _met_by(listed, "REQ-009")
     assert (completed.returncode, completed.stdout) == (1, "")
     assert "no requirement REQ-009 in the analysis" in completed.stderr
     broken = f"{USE_CASES}/UC-009-broken.md"
     listed.write({broken: "---\nid: [UC-009\n---\n\n# UC-009 — Broken\n"})
-    completed = _met_by(listed, "--json")
-    assert (completed.returncode, completed.stdout) == (1, "")
-    assert f"{broken} cannot be read as an artefact of its place" in completed.stderr
+    _no_answer(listed, f"{broken} cannot be read as an artefact of its place")
+    (listed.root / broken).unlink()
+    bare = f"{QUALITY}/REQ-005-bare.md"
+    listed.write({bare: "# REQ-005 · Quality · No front matter\n"})
+    _no_answer(listed, f"{bare} cannot be read as an artefact of its place")
+    listed.write({bare: requirement(req_id="REQ-005", title="No id", id=None)})
+    _no_answer(listed, f"{bare} gives no requirement id")
+    (listed.root / bare).unlink()
+    _set(listed, READ_REPORT, "requirements: []\n", "requirements: REQ-004\n")
+    _no_answer(listed, f"{READ_REPORT} (UC-002) gives a `requirements` that is no list")
+    # The check reports the field's shape once, as the schema's, and compares no anchors.
+    assert [location for location, _message in errors(check(listed))] == [
+        f"{READ_REPORT}:/requirements"
+    ]
 
 
 def test_with_no_requirement_met_by_says_so(listed: AdopterRepo) -> None:

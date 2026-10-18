@@ -1010,12 +1010,15 @@ def _listed_requirement_anchors(analysis: Analysis) -> list[Finding]:
     anchor is an artefact anchor naming a requirement. A part anchor names its artefact
     before its last `#` (COR-050 point 2), so one on a requirement counts among them. It
     matches no entry of the list, which names each requirement whole, and would flag
-    the use case only when its part changes."""
+    the use case only when its part changes. A `requirements` that is no list is the
+    schema's to report, and nothing is compared until it is one."""
     requirement_id = schemas.id_pattern(REQUIREMENTS[0])
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         if artefact.kind not in (USE_CASE, JOURNEY):
             continue
+        if not isinstance(artefact.fields.get(MUST_MEET, []), list):
+            continue  # the schema reports it
         expected = _unique(
             value for _i, value in _listed(artefact, MUST_MEET) if requirement_id.match(value)
         )

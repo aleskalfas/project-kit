@@ -20,7 +20,7 @@ The path's goal, verb first — `first-run`, `month-end-close` — with `--title
 
 The stamp writes the anchor to the actor, and the use-case anchors from the steps and `relies-on`. Add as `--path` the code at the **seams**: where state passes from one use case to the next — a file one writes and the next reads, a session, a hand-over.
 
-**`--requirement`** names a requirement that binds the journey's **whole path**, once for each, such as a limit on how long the path may take end to end. Each must be in the analysis and in force. The stamp writes each in `requirements`, and anchors it (DEC-002 point 7).
+**`--requirement`** names a requirement that binds the journey's **whole path**, once for each, such as how long the whole path may take, end to end. Each must be in the analysis and in force. The stamp writes each in `requirements`, and anchors it (DEC-002 point 7).
 
 - **A requirement that binds one step** is that step's use case's to list (`use-case.md`), not the journey's. Listed by both, one change would flag both for one obligation.
 - **No check can tell the two apart.** Ask whether the requirement holds of the path as a whole, or of one use case on it. List it on the journey only for the whole path.

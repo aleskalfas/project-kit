@@ -14,9 +14,11 @@ requirement reads it here, through `pkit analysis met-by`.
   shown under it, and `pkit analysis validate` refuses it.
 - **Complete, or no answer.** A file in the places of the use cases, the
   journeys or the requirements that holds no artefact of its kind, such as one
-  whose front matter does not parse, is no answer: what it lists, or which
-  requirement it is, cannot be told, so a shorter answer would read as a true
-  one. The check says what is wrong with the file.
+  whose front matter does not parse, is no answer. So is a requirement, or a
+  use case or a journey in force, that gives no id of its kind's shape, and a
+  `requirements` that is no list. What such a file lists, or which requirement
+  it is, cannot be told, so a shorter answer would read as a true one. The
+  check says what is wrong with the file.
 
 The analysis is read through the backbone's reading, `pkit friction artefacts
 --json` (`backbone.read_analysis`), of the working tree. Nothing is written.
@@ -28,6 +30,7 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from _lib import schemas
 from _lib.model import (
     JOURNEY,
     MUST_MEET,
@@ -63,7 +66,8 @@ class Met:
 def met_by(analysis: Analysis, only: str | None = None) -> list[Met]:
     """Each requirement the analysis holds, or only `only`, with what lists it, ordered
     by number then path. Raises NoAnswer when a file of the places it reads cannot be
-    read as its kind, or when `only` is no requirement the analysis holds."""
+    read as its kind, or what it lists or which requirement it is cannot be told
+    (`_readable`), or when `only` is no requirement the analysis holds."""
     unread = sorted(
         {
             *(s.path for s in analysis.strays if s.kind in (*LISTERS, *REQUIREMENTS)),
@@ -79,16 +83,35 @@ def met_by(analysis: Analysis, only: str | None = None) -> list[Met]:
             f"{', '.join(unread)} cannot be read as {_one_of(unread)}, so what it lists, or "
             f"which requirement it is, cannot be told; `pkit analysis validate` says why"
         )
-    requirements = [a for a in analysis.artefacts if a.kind in REQUIREMENTS and a.id]
+    requirements = [a for a in analysis.artefacts if a.kind in REQUIREMENTS]
+    listers = [a for a in analysis.artefacts if a.kind in LISTERS and not a.withdrawn]
+    for artefact in (*requirements, *listers):
+        _readable(artefact)
     if only is not None:
         requirements = [a for a in requirements if identity(str(a.id)) == identity(only)]
         if not requirements:
             raise NoAnswer(f"no {REQUIREMENT} {only} in the analysis")
-    listers = [a for a in analysis.artefacts if a.kind in LISTERS and not a.withdrawn]
     return [
         Met(requirement, tuple(_listing(listers, str(requirement.id))))
         for requirement in sorted(requirements, key=_order)
     ]
+
+
+def _readable(artefact: Artefact) -> None:
+    """Raises NoAnswer unless `artefact` gives an id of its kind's shape and, for a use
+    case or a journey, a `requirements` that is a list where it gives one: otherwise
+    which requirement it is, or what it lists, cannot be told."""
+    noun = REQUIREMENT if artefact.kind in REQUIREMENTS else NOUN[artefact.kind]
+    if artefact.id is None or not schemas.id_pattern(artefact.kind).match(artefact.id):
+        raise NoAnswer(
+            f"{artefact.path} gives no {noun} id, so which {noun} it is cannot be told; "
+            f"`pkit analysis validate` says why"
+        )
+    if artefact.kind in LISTERS and not isinstance(artefact.fields.get(MUST_MEET, []), list):
+        raise NoAnswer(
+            f"{artefact.path} ({artefact.id}) gives a `{MUST_MEET}` that is no list, so what "
+            f"it lists cannot be told; `pkit analysis validate` says why"
+        )
 
 
 def _listing(listers: Sequence[Artefact], requirement_id: str) -> list[Artefact]:

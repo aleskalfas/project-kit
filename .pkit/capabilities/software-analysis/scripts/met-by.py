@@ -23,8 +23,9 @@ Usage:
 Exit codes:
   0  answered, an analysis with no requirement included
   1  no answer: the analysis could not be read, a file of the use cases, the
-     journeys or the requirements cannot be read as its kind, or the
-     requirement named is not in the analysis
+     journeys or the requirements cannot be read as its kind, gives no id of
+     its kind's shape or a `requirements` that is no list, or the requirement
+     named is not in the analysis
 """
 
 from __future__ import annotations

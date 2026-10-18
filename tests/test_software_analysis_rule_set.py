@@ -476,8 +476,8 @@ def test_the_anchors_rule_names_the_requirements_a_use_case_or_a_journey_lists()
     section = " ".join(_section(body, "RS-SAN-005").split())
     held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
     assert (
-        "It requires a use case's and a journey's anchors on exactly the requirements its "
-        "`requirements` lists."
+        "It requires the anchors of a use case and of a journey on exactly the requirements "
+        "each lists in `requirements`."
     ) in held
     judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
     assert "`requirements`" not in judged
