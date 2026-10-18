@@ -139,7 +139,7 @@ Choice 10 built the loop after #1682 and after project-kit has its analysis and 
 - **Refined in place:**
   - project-management DEC-029, "Invocation pattern": an agent a project-management command starts is no `Agent`-tool dispatch, and its set is the grant the command reads
   - software-analysis DEC-001 and living-docs DEC-001: each names its agent as the fixer of its types
-  - the agents README, "Friction writers" condition 2: "an agent another agent or a command started"
+  - the agents README, "Friction writers" condition 2: not needed after all. A fixer cannot ask the person, so condition 2 already lets it run no writer, and the record's confinement denies it every writer.
   - both fixers' bodies and storyboards: the brief they take, the result line, and "a command started you"
   - the pm skill and the project manager's body: when to run the command, the batch, and applying accepted proposals
   - the dispatch note: the command route
@@ -151,7 +151,7 @@ Choice 10 built the loop after #1682 and after project-kit has its analysis and 
 
 1. **The project-management decision** (#1740). The critic, the architect and the methodology-reviewer, then acceptance. Delivers the first criterion.
 2. **The ADR,** after task 1. Delivers the runner's architecture, accepted before task 5.
-3. **The runner out of `review-pr`,** into project-management's `_lib`, after task 2. Behaviour stays the same, so it needs no changeset.
+3. **The runner out of `review-pr`,** after task 2, to the home the ADR names. The architect recommends an adapter primitive, found by name as the deploy primitives are, since the record puts realisation in the adapter. Behaviour stays the same, so it needs no changeset.
 4. **The point and the grant,** after task 1. The schema, the package entry, the checks on each entry, the grant list and its commands, with tests on fixtures. Delivers the declaration and the grant. The question at install and upgrade needs the lifecycle to ask for a point's definer, a core change of its own. project-kit's own grant of both fixers lands here.
 5. **The command,** after tasks 2, 3 and 4. The worktree, reading, order, bounds, lock, confinement, the check after the run, the index, the count line in `land-work` and `--dry-run`, tested with a stub runner. Delivers a run that proposes.
 6. **software-analysis,** after task 4. The contribution, the agent's brief and result line, its storyboard, the README and the DEC-001 refinement. Delivers its fixer, declared.
