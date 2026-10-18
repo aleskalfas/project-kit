@@ -1015,8 +1015,11 @@ def test_a_journey_s_part_anchor_on_a_use_case_is_an_anchor_on_that_use_case(
     # A match: a part anchor on the journey's actor is no use-case anchor.
     _set(seeded, JOURNEY, "        - UC-002\n", "        - UC-002\n        - ACT-tester#\n")
     assert errors(check(seeded)) == []
-    # A part anchor on a use case outside the lists, which slipped past before.
-    _set(seeded, JOURNEY, "        - ACT-tester#\n", "        - UC-003#\n")
+    # A part anchor on a use case outside the lists, which slipped past before: a
+    # section, then the lead.
+    _set(seeded, JOURNEY, "        - ACT-tester#\n", "        - UC-003#main-flow\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-002, UC-003#main-flow")
+    _set(seeded, JOURNEY, "        - UC-003#main-flow\n", "        - UC-003#\n")
     assert errors(check(seeded)) == mismatch("UC-001, UC-002, UC-003#")
     # A part anchor on a step's use case, in place of its whole anchor or beside it.
     _set(seeded, JOURNEY, "        - UC-003#\n", "")

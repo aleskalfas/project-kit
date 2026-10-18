@@ -778,10 +778,12 @@ def _unique(values: Iterable[str]) -> list[str]:
 
 
 def _artefact_named(anchor: str) -> str:
-    """The artefact an artefact anchor names: what comes before its last `#`, or the
-    whole anchor where it has none. After the `#`, a part anchor names a section or the
-    lead of that artefact, as `UC-001#` names the lead of UC-001 (COR-050 point 2). No
-    id of the analysis holds a `#`, so none is cut short."""
+    """The artefact of the analysis an artefact anchor names: what comes before its last
+    `#`, or the whole anchor where it has none. After the `#`, a part anchor names a
+    section or the lead of that artefact, as `UC-001#` names the lead of UC-001 (COR-050
+    point 2). No id of the analysis holds a `#`, so none is cut short. An artefact
+    outside the analysis may hold one in its name, which COR-050 reads whole: compare
+    what this gives with the analysis's ids alone."""
     return anchor.rsplit("#", 1)[0]
 
 
