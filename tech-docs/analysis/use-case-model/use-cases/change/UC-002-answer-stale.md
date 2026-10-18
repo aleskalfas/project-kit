@@ -82,7 +82,7 @@ pkit:
 - **6b.** The artefact's block would not pass validation once written. The system refuses and writes nothing, and the developer mends the block that `pkit validate` names.
 - **7a.** The check reports a `bump`: `at` changed with nothing behind it, such as `updated` with no change to the content. The developer corrects the answer, and the path rejoins at step 5.
 - **9a.** The project runs the change check in `warning` mode. The check reports what it finds and passes, so nothing holds the merge on it.
-- **9b.** The pull request's base moved, and merging it conflicts inside a `revalidated` block. `pkit friction resolve` resolves the block's text, writes no answer, and names the revalidation still owed. The path rejoins at step 5.
+- **9b.** The pull request's base moved, and merging it conflicts inside a `revalidated` block. `pkit friction resolve` resolves the block's text, writes no answer of its own, and names the revalidation still owed. The path rejoins at step 5.
 - **10a.** A reason does not hold, a deferral names no open follow-up, or an `updated` artefact has no matching sentence. The reviewer blocks the merge, and the path rejoins at step 4.
 - **10b.** The project chose no such reviewer, or a person skipped the review on record. The answers stand, checked by their writer alone, a limit the record accepts (COR-050 point 3).
 
