@@ -2,6 +2,7 @@ component: backbone
 kind: minor
 custom:
   category: Changed
+  pr: 1707
 body: >
   A path anchor, and an anchor of a registered kind, stand on the content and
   mode of a file a place holds at either state compared (COR-050 point 5;
