@@ -1,0 +1,13 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `fill-doc-check` answers well within the 30-second bound on a command. On a
+  large repository it could run past the bound, mostly under load, and then
+  `pkit validate` failed for want of an answer. It now starts its three
+  backbone readings at once: whether HEAD names a commit, the
+  whole-repository friction check, and the pages. It reads their answers in
+  the same order as before, so the answer, and the reason when there is none,
+  are unchanged. The backbone's whole-repository check, where most of the time
+  went, is faster in the same change.
