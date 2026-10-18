@@ -83,8 +83,6 @@ def test_rule_20_names_revisit_entries(words):
         " the change to the source (COR-050 point 16).",
         "Each deferral, and each `deferred` revisit entry, the agent writes names an open"
         " follow-up in its reason.",
-        "A revisit's line names instead the target, the link's field that lists it and the"
-        " trigger fields the change modified.",
         "told those sentences and what is left out of date, until which follow-up, as"
         " information, not a gate (COR-050 point 3)",
     ],
