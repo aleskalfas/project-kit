@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-08
+retired: 2026-10-17
+produced:
+  - software-analysis:DEC-001
 ---
 
 # Analysis and architecture
@@ -71,3 +74,7 @@ B and D together. The two stay apart, and each points at the other by anchors.
 - **Which direction must friction flow first?** Both, by the decision. The use case's anchor to a record is the one that exists today.
 - **Where would a view live, and which agent keeps it?** Left until the first view. The architect keeps the architecture records today (COR-025).
 - **Does a use-case realisation belong in the use case, in the view, or in neither?** Left until the first view, since a realisation names components a view would describe.
+
+## The rule that replaced "both ways"
+
+On 17 October the maintainer fixed the direction: the analysis anchors the solution, and no record and no view anchors the analysis back. What a record or a view serves is computed for display. software-analysis DEC-001 point 11 states the rule (#1447), and this note is retired into it.
