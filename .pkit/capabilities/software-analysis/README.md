@@ -191,7 +191,7 @@ pkit:
 ```
 
 - **`other-actors`** lists each other actor who takes part, by id, never the use case's own `actor`. Each is anchored as the use case's actor is, and the check requires each anchor. So a changed actor flags every use case it takes part in.
-- **`requirements`** lists each requirement the use case must meet, by id, of any of the three kinds (DEC-002 point 7). The field is optional, and a use case written before it needs no change.
+- **`requirements`** lists each requirement the use case must meet, by id, of any of the three kinds (DEC-002 point 7). The field is optional. A use case written before it needs a change only where it anchors a requirement by hand: list that requirement, or drop the anchor.
   - **Its anchors.** Each requirement listed is an artefact anchor, which the stamp writes. The check requires the requirement anchors to match the list exactly. So any change to a requirement's content flags every use case that lists it, a reworded reason included.
   - **In force.** A use case in force lists only requirements in force. So the change that withdraws a requirement also takes it off the list of each use case in force.
 - **The heading** is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree. So whoever reads only the front matter sees the title the page shows. The title may change, and the id does not.
