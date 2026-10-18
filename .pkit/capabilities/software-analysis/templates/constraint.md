@@ -2,21 +2,23 @@
 # A constraint (software-analysis DEC-002 points 1 to 6): a limit on the
 # solution, which the design takes as given. It says who or what imposes it,
 # where a requirement of the other two kinds says why it is needed.
-# Stamp it, never copy it: `pkit analysis new constraint <slug>`
-# numbers it, fills its title, its actors (`--actor <ACT-id>`, each) and the
-# requirements it refines (`--refines <REQ-id>`, each), anchors each of them,
-# and writes it to `requirements/constraints/` under the analysis location
-# (`--area <area>` for a folder per functional area).
+# Stamp it, never copy it. `pkit analysis new constraint <slug>`:
+# - numbers it, and fills its title
+# - writes its actors (`--actor <ACT-id>`, each) and the requirements it
+#   refines (`--refines <REQ-id>`, each), and anchors each of them
+# - writes it to `requirements/constraints/` under the analysis location, or to
+#   a folder per functional area in it (`--area <area>`)
+# It also anchors the files that verify it (`--path`), and the records it rests
+# on or that answer it (`--record`). One with no anchor at all gives the reason
+# instead (`--unanchored-because`).
 # Its id is one numbering across the three kinds of requirement, so a move to
 # another kind keeps it. Its heading is its id, its kind and its title. The
 # statement, the measure and where it holds are fields a tool reads. Each holds
 # its hint until you write in its place what it asks for, and so does each part
 # of the body. The body is rendered from the kind's declared structure
 # (`schemas/artefact-kinds.yaml`).
-# It also anchors the files that verify it (`--path`), and the records it rests
-# on or that answer it (`--record`). One with no anchor at all gives the reason
-# instead (`--unanchored-because`). Its own fields' shape is
-# `schemas/constraint.schema.json`, and the friction block is the core's.
+# Its own fields' shape is `schemas/constraint.schema.json`, and the friction
+# block is the core's.
 id: REQ-000                       # stamped: the next free number across the three kinds, never reused
 title: <Title>                    # --title. The heading below repeats it after the id and the kind.
 status: active                    # or withdrawn: the file stays and its id is never reused
