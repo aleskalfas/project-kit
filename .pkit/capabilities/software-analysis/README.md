@@ -14,8 +14,9 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
-      at: 2026-10-18T11:44:46Z
-      outcome: updated
+      at: 2026-10-18T12:53:39Z
+      outcome: unchanged
+      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, its containers left out. This page cites COR-050 for the friction block in each artefact's container, answers and the anchor list, and says nothing of what a path anchor sees in a file, so it still holds.
 ---
 
 # software-analysis capability

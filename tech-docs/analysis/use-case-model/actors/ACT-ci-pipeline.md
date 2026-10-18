@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T08:25:37Z
+      at: 2026-10-18T12:53:03Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged.
+      unchanged-because: "COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds: its content and mode, its containers left out. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged."
 ---
 
 # ACT-ci-pipeline — CI pipeline

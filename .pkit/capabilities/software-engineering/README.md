@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-18T08:25:31Z
+      at: 2026-10-18T12:53:18Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14, whose synced-tree clause names the external source a component is pinned to, and the Rationale bullet on why a section anchor needs no permanent id. This page cites COR-050 point 3, on who writes and who checks a change's answers, which the change leaves as it was.
+      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, and the Rationale behind it. This page cites COR-050 point 3, on who writes and who checks a change's answers, which the change leaves as it was.
 ---
 
 # software-engineering capability

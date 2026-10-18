@@ -47,9 +47,9 @@ rules:
             - "software-analysis:DEC-001#9"
             - "COR-050#1"
         revalidated:
-          at: 2026-10-18T11:58:03Z
+          at: 2026-10-18T12:53:36Z
           outcome: unchanged
-          unchanged-because: Points 2 and 4 changed only by pointers to software-analysis DEC-002, on the analysis's layout, its type registry and the lead of what each kind anchors. What an actor, a term, a use case and a journey anchor, which this rule's list gives, reads as before. What a requirement rests on joins the list when the requirement kinds are built (project-kit#1695).
+          unchanged-because: COR-050 point 1 was reached only through the Decision's lead, which now says what a path anchor and a registered kind's anchor stand on in a file a place holds. This rule rests on point 1's account of an artefact and its friction block, and says which kind of anchor names code, a decision or an artefact, which still holds.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only

@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T08:25:35Z
+      at: 2026-10-18T12:53:23Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet, and this page cites its points 3, 4 and 12 on answers, deferrals and the required status, all unchanged. The decisions README adds an externally-sourced capability's records to the copies validation skips, and this page's account of it as the decision-record spec still holds.
+      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, its containers left out. This page cites its points 3, 4 and 12 on answers, deferrals and the required status, all unchanged.
 ---
 
 # Contributing to project-kit
