@@ -772,8 +772,8 @@ Component migrations live within the component:
 Each number is used once in a folder. The runner runs a folder's scripts in the order of their names, so two scripts of one number would run in the order their slugs give, which nobody chose.
 
 - **The stamp.** `pkit new migration` numbers a script one past the highest in its folder, in the working tree or on the default branch.
-- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it, so a number another change took on the base since the branch left it counts too. The finding gives each script it names a number of its own to take, past the highest in the folder. Of two scripts the change itself adds with one number, it names the later by name. It skips a script the project receives by sync.
-- **Renumbering.** A script that must run before one already in its folder takes a lower number, and the other moves up. Renumber only in a folder no release has shipped.
+- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it, so a number another change took on the base since the branch left it counts too. The finding gives each script it names a number of its own to take, past the highest in the folder. Of two scripts the change itself adds with one number, it names the one whose name sorts later. It skips a script the project receives by sync.
+- **Renumbering.** The stamp reads no scope. So a script that must run before one already in its folder, such as a manifest-schema script beside a resource-scoped one, is renumbered by hand: it takes the lower number, and the other moves up. Renumber only in a folder no release has shipped. No check holds this, since a rename inside a migrations folder triggers nothing.
 
 ### Which version a migration targets
 

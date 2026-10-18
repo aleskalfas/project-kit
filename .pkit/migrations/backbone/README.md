@@ -1,8 +1,10 @@
 # Backbone migrations
 
-The backbone's migration scripts, one folder per version, as `<major>.<minor>.0/<NNN>-<slug>.sh` ([COR-010](../../decisions/core/COR-010-resource-lifecycle.md)). The spec is the lifecycle README's [migration framework](../../lifecycle/README.md#migration-framework).
+The backbone's migration scripts, one folder per version, as `<major>.<minor>.0/<NNN>-<slug>.sh`. Your project receives them by sync, and a version transition runs them. [COR-010](../../decisions/core/COR-010-resource-lifecycle.md) sets the rules, and the lifecycle README's [migration framework](../../lifecycle/README.md#migration-framework) is the spec.
 
-- **When a folder runs:** a version transition runs each folder above the backbone version the project last completed, up to its target. A folder at or below a released version never runs for a project already there. So a new script goes in a folder no release has shipped.
-- **The order within a folder:** the runner runs a folder's scripts in the order of their names, so the zero-padded number each name opens with sets the order. Each number is used once. A script that must run before another takes the lower number. COR-010's order of scopes follows from the numbers: manifest-schema first, then structural, then resource-scoped.
-- **Adding a script:** `pkit new migration --tier backbone --name <slug>` picks the folder and the next number. `pkit migrations check-diff` fails a change that adds a script to a released folder, or with a number its folder already holds.
+- **When a folder runs:** a version transition runs each folder above the backbone version the project last completed, up to its target. Where the project records no completed transition, it runs every folder up to the target once ([the replay](../../lifecycle/README.md#the-replay-a-missing-completion)).
+- **The order within a folder:** the runner runs a folder's scripts in the order of their names. Each name opens with a zero-padded number, used once in its folder. The numbers follow COR-010's order of scopes: manifest-schema first, then structural, then resource-scoped.
+- **Safe over any state:** a backbone migration acts only on a positive sign that its change is needed, since a transition may run it again over a project whose migration history is unknown.
 - **Patch releases** have no migrations. A folder covers every patch of its minor line.
+
+These scripts are the methodology's. Migrations for a component your project authors live with that component ([directory layout](../../lifecycle/README.md#directory-layout)).
