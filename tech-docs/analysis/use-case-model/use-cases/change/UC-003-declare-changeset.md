@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T18:27:36Z
+      at: 2026-10-18T20:02:44Z
       outcome: unchanged
-      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. How a change declares its changesets and how the guard reads them is unchanged.
+      unchanged-because: This change stops release apply and release plan from writing a none changeset note to the changelog. The use case covers declaring changesets and the guard that checks them, which this change leaves as they were.
 ---
 
 # UC-003 — Declare what my change means for the next release

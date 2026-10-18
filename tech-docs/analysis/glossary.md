@@ -155,6 +155,10 @@ TERM-surface-change:
           - PRJ-002#D1
           - PRJ-002#D2
           - COR-050#8
+      revalidated:
+        at: 2026-10-18T20:02:46Z
+        outcome: unchanged
+        unchanged-because: This change alters which changesets reach the changelog. What counts as a surface change, and that a person judges it, stays as it was.
 TERM-system:
   name: system
   status: active
