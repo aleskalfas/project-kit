@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The whole-repository friction check, `pkit friction check --all`, takes about
+  half the time it did on a large repository, so a command that reads it, such
+  as living-docs' `fill-doc-check`, answers well within its 30-second bound.
+  It reads the files of HEAD through the one `git cat-file` process it already
+  keeps for history, rather than starting a git process for each read. It
+  finds a record anchor's file without parsing every path of the
+  listing, and works out a listing's Markdown files once rather than once per
+  place. A timestamp's scan of a history's files is quicker too. Its answer is
+  unchanged, and so are those of the change check, `pkit friction artefacts`
+  and `pkit friction debt`, which share some of these readings.

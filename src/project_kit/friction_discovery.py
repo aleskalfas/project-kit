@@ -1408,6 +1408,18 @@ def _under_skipped(rel: Path | PurePosixPath) -> bool:
     return bool(rel.parts) and rel.parts[0] in _SKIPPED_TOP_LEVEL
 
 
+@functools.lru_cache(maxsize=16)
+def _documents(files: tuple[str, ...]) -> tuple[str, ...]:
+    """The Markdown files of a listing, in its order, none under a skipped top level:
+    worked out once per listing, however many places read it — a pure function of
+    the listing, so it is the same whichever place asks."""
+    return tuple(
+        f
+        for f in files
+        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX and not _under_skipped(PurePosixPath(f))
+    )
+
+
 def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
     """The Markdown files of a listing — a tree's files — that a place matches, sorted.
 
@@ -1422,13 +1434,9 @@ def listed_files_in_place(place: Place, files: Sequence[str]) -> list[str]:
     if not _textually_inside(place.pattern):
         return []
     pattern = os.path.normpath(place.pattern).replace(os.sep, "/")
-    documents = [
-        f
-        for f in files
-        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX and not _under_skipped(PurePosixPath(f))
-    ]
+    documents = _documents(tuple(files))
     if pattern == ".":
-        matched = documents
+        matched = list(documents)
     elif any(ch in _GLOB_CHARS for ch in pattern):
         if PurePosixPath(pattern).name == "**":
             pattern = f"{pattern}/*{DOCUMENT_SUFFIX}"
