@@ -37,7 +37,7 @@ The current declared dependencies:
 
 Read `CONTRIBUTING.md`'s **Adding a core record (COR)** section. Three disciplines apply when authoring a COR:
 
-- **Axiom discipline** — use only previously-defined terms in the corpus, generic English, or named external tools (e.g. Claude Code, Yeoman). Do not reach for framework-internal command names that haven't been decided yet.
+- **Axiom discipline** — use only previously-defined terms in the corpus, generic English, or named external tools (e.g. Claude Code, Yeoman). Do not reach for framework-internal command names that haven't been decided yet. One exception: a record refined in place may cite a later accepted record, if the citation states what the refinement adds and the record's original decision still reads without the later records.
 - **Project-neutrality** — the record must make sense in any adopting project. Framework-source-specific decisions (CLI binary name, self-hosting, distribution channel) belong in PRJ records, not COR.
 - **Principles, not inventory** — capture durable rules-among-alternatives, not path lists, command lists, or current-state inventories. Inventory belongs in reference docs that the COR points at.
 

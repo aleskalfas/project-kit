@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-17T21:38:13Z
+      at: 2026-10-17T20:04:00Z
       outcome: unchanged
-      unchanged-because: COR-050 changes only point 14's synced-tree clause and one Rationale bullet. This actor cites COR-050 point 12, that the checks bind once a project makes them a required status, which is unchanged.
+      unchanged-because: COR-050 changes what a whole record anchor stands on and lets cycles and the upstream-first order follow record anchors. The actor's needs and its Core note rest on the checks running unattended and binding once required (point 12), which the change leaves as it was.
 ---
 
 # ACT-ci-pipeline — CI pipeline

@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-17T21:47:17Z
+      at: 2026-10-17T20:03:51Z
       outcome: unchanged
-      unchanged-because: ownership.py changes is_synced_copy, which asks a new helper whether a file is a registered externally-sourced capability's and answers yes for it, with a constant for that origin and the comments around them. The write-authority check this page describes rests on is_sync_managed and the write-carrying categories, both unchanged, and the COR-050 points it cites, 3 and 10, are unchanged too.
+      unchanged-because: COR-050 changes what a whole record anchor stands on, the record's content without its container, and lets cycles and the upstream-first order follow record anchors. This page's friction writers rest on point 3, who writes an answer and who checks it, which the change leaves as it was.
 ---
 
 # Agents
