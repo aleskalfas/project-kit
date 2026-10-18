@@ -7,7 +7,7 @@ needs:
   - Author and extend my project's rule sets without editing the ones that ship with the system.
   - Think a question too big for a decision through in a scratchpad note, and retire the note once it has produced something.
   - Say what each of my documents rests on, so a change there reaches me.
-  - Answer what my change made stale, judging an agent's proposed answer word for word, or running its commands myself when it cannot ask me.
+  - Answer what my change made stale, letting an agent write the answers my change owes while a reviewer other than that agent checks them.
   - Know before I push that my change passes the checks my project gates its merges on.
   - Have a substantive draft challenged before I adopt it, and have my diff checked against the methodology's conventions before I commit it.
   - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
@@ -37,6 +37,7 @@ pkit:
         - software-engineering:DEC-001#2
         - PRJ-002#D1
         - PRJ-002#D2
+        - COR-050#3
         - COR-050#6
         - COR-050#9
         - project-management:DEC-010
