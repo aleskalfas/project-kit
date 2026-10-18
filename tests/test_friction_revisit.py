@@ -438,7 +438,7 @@ def test_a_target_two_links_list_is_asked_once(repo: AdopterRepo) -> None:
         repo.root,
         f"    - path: reqs\n{LINK}        - targets: answered-by\n          when: [threshold]\n",
     )
-    linked = {"answered-by": [DECISION]}
+    linked: dict[str, Any] = {"answered-by": [DECISION]}
     _start(repo, {SOURCE_DOC: requirement(**linked)})
     repo.commit(
         "relax the threshold; one reason for the decision",
