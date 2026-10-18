@@ -338,6 +338,25 @@ def test_a_page_its_place_assigns_outside_the_definitions_scope_is_put_back(
     assert snapshot(project) == before
 
 
+def test_a_page_in_an_unassigned_place_of_rule_sets_outside_the_roots_is_put_back(
+    project: AdopterRepo,
+) -> None:
+    """Such a place gives no space until it is assigned one (DEC-001 point 1)."""
+    declare(project, places=["README.md", "old-docs/rule-sets"])
+    project.write(
+        {"old-docs/rule-sets/old.md": "---\nrule-set: OLD\nversion: 1.0.0\nrules: {}\n---\n"}
+    )
+    before = snapshot(project)
+    message = refused(page(project, "old-docs/rule-sets/README.md", "--space", "user"))
+    assert "old-docs/rule-sets/README.md would not be a page of space 'user'" in message
+    assert (
+        "it lies in no place of a space, and in project place 'old-docs/rule-sets', which is "
+        "declared to hold rule sets, gives no type, lies outside every documentation root and "
+        "is assigned to no space, so no space counts it"
+    ) in message
+    assert snapshot(project) == before
+
+
 def test_a_page_two_places_claim_at_equal_rank_is_put_back(project: AdopterRepo) -> None:
     declare(
         project,

@@ -18,7 +18,9 @@ naming its own actor and a journey's `relies-on` naming a step, a use case not
 anchored to each actor it involves or a journey not anchored to its actor, a
 journey whose use-case anchors do not match its steps and its `relies-on`, a
 requirement's `actors` and `refines` against the analysis and its anchors
-within it (DEC-002 points 6 and 7), and the revalidation
+within it (DEC-002 points 6 and 7), a use case's and a journey's
+`requirements` against the analysis and its requirement anchors against the
+list (point 7), and the revalidation
 records' front matter, the artefacts they cite and the evidence
 they copy. Where it reads the evidence point, it warns on an entry whose `id`
 is not its own `<artefact>@<commit>#<check>`, and on a capability's entry whose

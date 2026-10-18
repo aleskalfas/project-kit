@@ -1,0 +1,26 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  A use case and a journey now list the requirements they must meet, in an
+  optional `requirements` field, and `pkit analysis met-by` lists what meets
+  each requirement (#1694, software-analysis DEC-002 point 7). A journey lists
+  only the requirements that bind its whole path. `pkit analysis new
+  use-case` and `new journey` take `--requirement <REQ-id>`, repeatable,
+  write the list and anchor each requirement, and refuse one the analysis
+  does not hold or has withdrawn. `pkit analysis validate` fails a listed
+  requirement that is no requirement of the analysis, or that is withdrawn
+  while the use case or the journey is in force. It also fails requirement
+  anchors that do not match the list exactly, a part anchor on a requirement
+  included. So a changed requirement flags every use case and journey that
+  lists it. `pkit analysis met-by [<REQ-id>] [--json]` gives each
+  requirement, or the one named, with the use cases and journeys in force
+  that list it. It is computed from the working tree each time, and nothing
+  is written on the requirement. A file it cannot read, or whose id or list it
+  cannot tell, is no answer. The field is optional, so a use case or journey
+  written before needs a change only where it anchors a requirement by hand:
+  list that requirement in `requirements`, or drop the anchor. A new use case
+  or journey is stamped with `requirements: []` when it lists none. `SAN`'s `RS-SAN-005` names the requirements a use case and a journey
+  list among what each rests on, and leaves their anchors to the check. It
+  stays proposed, so `SAN` stays at 1.0.0.

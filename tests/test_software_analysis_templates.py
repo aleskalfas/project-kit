@@ -397,14 +397,36 @@ def test_the_actors_collection_template_is_retired_by_a_migration_that_changes_n
 
 def test_the_journey_template_anchors_its_actor_its_steps_and_what_it_relies_on() -> None:
     data = _template("journey")
-    anchored = [data["actor"], *data["steps"], *data["relies-on"]]
+    anchored = [data["actor"], *data["steps"], *data["relies-on"], *data["requirements"]]
     assert data["pkit"]["friction"]["anchors"]["artefact"] == anchored
 
 
 def test_the_use_case_template_anchors_each_actor() -> None:
     data = _template("use-case")
-    anchored = [data["actor"], *data["other-actors"]]
+    anchored = [data["actor"], *data["other-actors"], *data["requirements"]]
     assert data["pkit"]["friction"]["anchors"]["artefact"] == anchored
+
+
+#: A use case's and a journey's own fields, filled, beside which `requirements` is tested.
+USE_CASE: dict[str, Any] = {"id": "UC-007", "title": "T", "status": "active", "actor": "ACT-a"}
+JOURNEY: dict[str, Any] = {**USE_CASE, "id": "JRN-001", "steps": ["UC-001", "UC-002"]}
+
+
+@pytest.mark.parametrize(("stem", "own"), [("use-case", USE_CASE), ("journey", JOURNEY)])
+def test_a_use_case_and_a_journey_may_list_the_requirements_they_must_meet(
+    stem: str, own: dict[str, Any]
+) -> None:
+    """`requirements` is optional, so no use case or journey written before it changes. It
+    lists requirement ids, of any of the three kinds, each once (DEC-002 point 7, #1694)."""
+    assert _schema_errors(stem, own) == []
+    assert _schema_errors(stem, {**own, "requirements": []}) == []
+    assert _schema_errors(stem, {**own, "requirements": ["REQ-001", "REQ-1000"]}) == []
+    (wrong,) = _schema_errors(stem, {**own, "requirements": ["UC-001"]})
+    assert "does not match" in wrong
+    (twice,) = _schema_errors(stem, {**own, "requirements": ["REQ-001", "REQ-001"]})
+    assert "non-unique" in twice
+    (spelt,) = _schema_errors(stem, {**own, "requirements": ["REQ-0001"]})
+    assert "does not match" in spelt
 
 
 def _record_hint(front_matter: str) -> str | None:
