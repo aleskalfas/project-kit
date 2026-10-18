@@ -15,9 +15,9 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007]
     revalidated:
-      at: 2026-10-18T17:01:01Z
+      at: 2026-10-18T16:49:43Z
       outcome: unchanged
-      unchanged-because: "The README says the check requires a journey's use-case anchors to match its steps and relies-on, and that the message names the anchors to write. Both still hold now that a part anchor on a use case counts among them and matches neither list (#1725). Its line on a requirement's anchors within the analysis holds too: the requirement check reads a part anchor as before, now through the same helper. It never says how an anchor is read, so nothing in it changes."
+      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, its containers left out. This page cites COR-050 for the friction block in each artefact's container, answers, the anchor list and a component's links (point 16), which still hold, and takes the files and commits behind a path anchor from the explain document, whatever they are.
 ---
 
 # software-analysis capability

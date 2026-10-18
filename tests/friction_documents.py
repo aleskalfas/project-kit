@@ -153,6 +153,24 @@ def adr(**overrides: Any) -> str:
     return document("ADR-007", **values)
 
 
+#: An artefact the place `docs` holds, for path anchors on an artefact's file (COR-050
+#: point 5, #1661): `notes`, anchored to the engine.
+NOTES = "docs/notes.md"
+
+
+def notes(**overrides: Any) -> str:
+    """`notes` at `NOTES`, anchored to the engine and revalidated at T1, `outcome:
+    updated`."""
+    values: dict[str, Any] = {"anchors": {"path": ["src/core/**"]}, "at": T1, "outcome": "updated"}
+    values.update(overrides)
+    return document("notes", **values)
+
+
+#: `notes` revalidated against an engine change, its content as it was: only its
+#: container differs from `notes()`.
+NOTES_HOLD = notes(at=T2, outcome="unchanged", because="the engine is still one module")
+
+
 #: A document with a lead and sections, for anchors on one section or the lead (COR-050
 #: point 2).
 MANUAL = "docs/manual.md"
