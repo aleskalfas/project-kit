@@ -60,9 +60,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T15:32:32Z
+      at: 2026-10-18T16:38:20Z
       outcome: unchanged
-      unchanged-because: COR-050 gains point 16, a link a component declares whose source's change asks for a revisit of its targets. Points 6 and 9 are reached through the Decision's text outside its points, which gains a sentence on it. The developer's need to resolve what the default branch left out of date, knowing each debt's change, rests on the change check and the debt listing, which read as before, so it still holds.
+      unchanged-because: COR-050 point 6 now stops the cascade at an unchanged revalidation whatever the kind of the anchors that reach the artefact's file. Point 9 dates stale debt from a change to a file's content or mode. The developer still answers what a change made stale, and resolves each debt knowing the change it came from, so the needs still hold.
 ---
 
 # ACT-developer — Developer
