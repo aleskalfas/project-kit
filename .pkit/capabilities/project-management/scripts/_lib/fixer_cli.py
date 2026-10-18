@@ -293,8 +293,14 @@ def ask_pending(
         fixers.record(config_path, question.agent, question.types, given)
         recorded.append((question, given))
 
+    def shown_now(text: str) -> None:
+        """Write and flush: a prompt has no line break, so it must reach the
+        terminal before the read blocks."""
+        out.write(text)
+        out.flush()
+
     try:
-        left = fixers.ask(pending, read=read, write=out.write, answer=answer)
+        left = fixers.ask(pending, read=read, write=shown_now, answer=answer)
     except fixers.Refused as exc:
         err.write(f"error: the answer could not be recorded: {exc}\n")
         return 1

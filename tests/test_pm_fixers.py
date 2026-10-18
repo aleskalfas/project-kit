@@ -20,6 +20,7 @@ Three layers:
 
 from __future__ import annotations
 
+import io
 import json
 import os
 import pty
@@ -955,22 +956,33 @@ def test_validation_fails_the_project_s_entry_naming_an_undeployed_agent(
     assert "pkit pm revoke-fixer gone --type docs-test:page" in result.output
 
 
-def test_the_ask_entry_point_can_be_called_by_another_command(
-    project: AdopterRepo, tmp_path: Path
-) -> None:
+class _Terminal(io.StringIO):
+    """An output stream that keeps what was flushed, as a terminal shows it."""
+
+    shown = ""
+
+    def flush(self) -> None:
+        self.shown = self.getvalue()
+
+
+def test_the_ask_entry_point_can_be_called_by_another_command(project: AdopterRepo) -> None:
     """The drift command asks through the same function: it hands the point, the
-    terminal and the answer's reader in."""
-    point = fixers.read_point()
-    out = tmp_path / "out.txt"
-    with out.open("w", encoding="utf-8") as stream:
-        code = fixer_cli.ask_pending(
-            point=point,
-            repo_root=project.root,
-            config_path=project.root / CONFIG_REL,
-            interactive=True,
-            read=lambda: "y\n",
-            out=stream,
-        )
+    terminal and the answer's reader in. Each prompt reaches the terminal before
+    the answer is read."""
+    out = _Terminal()
+
+    def read() -> str:
+        assert out.shown.endswith("Turn this on? [Y/n] ")
+        return "y\n"
+
+    code = fixer_cli.ask_pending(
+        point=fixers.read_point(),
+        repo_root=project.root,
+        config_path=project.root / CONFIG_REL,
+        interactive=True,
+        read=read,
+        out=out,
+    )
     assert code == 0
     assert _answers(project) == {FIXER: {"granted": [PAGE]}}
-    assert f"Recorded: {FIXER} granted {PAGE}." in out.read_text(encoding="utf-8")
+    assert f"Recorded: {FIXER} granted {PAGE}." in out.getvalue()
