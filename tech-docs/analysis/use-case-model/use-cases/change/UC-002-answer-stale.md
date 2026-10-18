@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-18T18:54:07Z
+      at: 2026-10-18T18:34:29Z
       outcome: unchanged
-      unchanged-because: This change words the revisit finding and the revisit writer's refusal, rewords the software-engineer agent's revisit paragraph, and splits one validation bullet of COR-050 point 12. Revalidating and deferring, which this use case describes, are untouched.
+      unchanged-because: "Core rule 20 now names the revisit entry beside the revalidation, a deferred entry's follow-up, and any other entry as a person's. This use case covers revalidations and deferrals, not revisits, and what it takes from rule 20 still holds: an answer the change does not owe waits for a person (its assumption and variant 5c)."
 ---
 
 # UC-002 — Answer what my change made stale

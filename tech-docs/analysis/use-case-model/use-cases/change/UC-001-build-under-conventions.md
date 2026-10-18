@@ -26,9 +26,9 @@ pkit:
         - ACT-developer
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-18T18:54:05Z
+      at: 2026-10-18T18:34:27Z
       outcome: unchanged
-      unchanged-because: The software-engineer agent's revisit paragraph says a link takes some of an artefact's anchors as its targets. Reading the corpus, writing to it, and handing the change on for review are untouched.
+      unchanged-because: Core rule 20 now names revisit entries among the answers an agent's own change owes. This use case cites core rules 2, 8, 14, 15, 17, 19 and 21, not rule 20, and variant 3b leaves the answers to UC-002, so what it says still holds.
 ---
 
 # UC-001 — Build my change under my project's conventions
