@@ -1,10 +1,12 @@
-"""Tests for `pkit friction resolve` (Task #1181, COR-050 points 3 and 4).
+"""Tests for `pkit friction resolve` (Task #1181, #1728; COR-050 points 3, 4 and 16).
 
 Every test stands up a real adopter repository, commits a page on `main`,
 changes it on a branch and again on `main`, and merges `main` into the
 branch, so git itself leaves the conflict the command resolves: the three
 versions it reads are git's index stages, and what it writes is checked
-against the file and the index git hold afterwards.
+against the file and the index git hold afterwards. The `revisited` lists'
+tests declare the fixture capability `linker` (`tests/test_friction_revisit`),
+whose link makes the change check ask for an entry.
 """
 
 from __future__ import annotations
@@ -28,6 +30,7 @@ from project_kit.cli import main
 from project_kit.document_parts import split_front_matter
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, friction_config, guide
+from tests.test_friction_revisit import declare_linker, entry, requirement
 
 PAGE = "docs/guide.md"
 T0 = "2026-09-01T09:00:00Z"  # the common ancestor's revalidation
@@ -561,6 +564,378 @@ def test_a_block_the_base_side_removed_while_this_branch_changed_it_is_reported(
         in result.output
     )
     assert _read(repo) == conflicted
+
+
+# --- `revisited` lists (COR-050 point 16) ---------------------------------------------
+
+REQ = "reqs/latency.md"
+TEST_FILE = "tests/test_latency.py"
+DECISION = "tests/decision.md"
+STATEMENT = "Status answers in 2 seconds."
+REVISIT_COMMAND = (
+    f"pkit friction revisit {REQ} --target path:{TEST_FILE} --outcome unchanged "
+    f"--reason '{fres.REVISIT_REASON}'"
+)
+
+
+def _requirement(
+    *revisited: tuple[str, str, str], statement: str = STATEMENT, threshold: str = "2 s"
+) -> str:
+    """`REQ-1`, the source of the fixture capability's link, in block style. Its trigger
+    fields lie apart — `statement` first, `threshold` last — so a change to one on each
+    side merges cleanly. `revisited` is its list, `(target, outcome, reason)` each, as
+    `pkit friction revisit` writes it."""
+    entries = "".join(
+        f"      - anchor:\n          kind: path\n          value: {value}\n"
+        f"        outcome: {outcome}\n        reason: {reason}\n"
+        for value, outcome, reason in revisited
+    )
+    listed = f"    revisited:\n{entries}" if revisited else ""
+    return (
+        f"---\nid: REQ-1\nstatement: {statement}\nverified-by: [{TEST_FILE}, {DECISION}]\n"
+        f"pkit:\n  friction:\n    anchors:\n      path: [{TEST_FILE}, {DECISION}]\n"
+        f"    revalidated:\n      at: {T0}\n      outcome: unchanged\n"
+        f"      unchanged-because: the test and the decision say what it says\n"
+        f"{listed}status: draft\ntitle: Latency\nthreshold: {threshold}\n---\n\nWhy it matters.\n"
+    )
+
+
+def _test(reason: str, outcome: str = "unchanged") -> tuple[str, str, str]:
+    return (TEST_FILE, outcome, reason)
+
+
+TARGETS = {
+    TEST_FILE: "def test_latency():\n    assert answer_time() < 2\n",
+    DECISION: "Cache the status.\n",
+}
+
+
+def _merge_revisits(repo: AdopterRepo, ancestor: str, this: str, base: str) -> None:
+    """`_merge` for the source, with the fixture capability declared and the link's
+    targets on disk."""
+    declare_linker(repo.root)
+    _merge(repo, {REQ: ancestor, **TARGETS}, {REQ: this}, {REQ: base})
+
+
+def _revisited_findings(repo: AdopterRepo) -> list[tuple[str, str, str | None]]:
+    """(kind, target, answer) of the change check's findings on the source's targets."""
+    kinds = {fc.FindingKind.REVISITED, fc.FindingKind.UNREVISITED}
+    return [
+        (f.kind.value, f.anchor.value, None if f.answer is None else f.answer.value)
+        for f in fc.run_change_check(repo.root, "main").findings
+        if f.kind in kinds and f.anchor is not None
+    ]
+
+
+def test_an_entry_both_sides_wrote_takes_the_base_sides_and_the_check_asks_again(
+    repo: AdopterRepo,
+) -> None:
+    """Both sides wrote the entry of one target, and changed different trigger fields.
+    The base side's entry is taken, and the rest is git's merge. Its reason is no new
+    reason, so the change check asks for the entry again, and an entry written for the
+    combined state answers it."""
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason"), threshold="3 s"),
+        _requirement(_test("the base's reason"), statement="Status answers at once."),
+    )
+
+    result = _cli("--yes")
+
+    assert result.exit_code == 0, result.output
+    resolved = _requirement(
+        _test("the base's reason"), statement="Status answers at once.", threshold="3 s"
+    )
+    assert _read(repo, REQ) == resolved
+    assert (
+        f"{REQ} now carries the base side's `revisited` entry of path:{TEST_FILE}: unchanged — "
+        f"the base's reason" in result.output
+    )
+    assert REVISIT_COMMAND in result.output
+    assert "writes each `revisited` entry both sides wrote" in result.output
+    repo.git("commit", "-q", "--no-edit")
+
+    assert ("unrevisited", TEST_FILE, None) in _revisited_findings(repo)
+    fw.write(
+        fw.plan_revisit(
+            repo.root,
+            REQ,
+            target=TEST_FILE,
+            outcome="unchanged",
+            reason="the test's bound holds for both changes",
+        )
+    )
+    assert ("revisited", TEST_FILE, "unchanged") in _revisited_findings(repo)
+
+
+def test_the_json_document_names_each_entry_owed(repo: AdopterRepo) -> None:
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason")),
+        _requirement(_test("the base's reason", "deferred")),
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    (file,) = json.loads(result.output)["files"]
+    assert (file["status"], file["owed"]) == ("resolved", [])
+    assert file["owed_revisits"] == [
+        {
+            "artefact": "REQ-1",
+            "location": REQ,
+            "target": {"kind": "path", "value": TEST_FILE},
+            "base_entry": {"outcome": "deferred", "reason": "the base's reason"},
+            "command": REVISIT_COMMAND.replace("--outcome unchanged", "--outcome deferred"),
+        }
+    ]
+
+
+def test_entries_for_different_targets_merge_by_target(repo: AdopterRepo) -> None:
+    """Each side wrote the entry of another target where there was no list: both are
+    kept, sorted as the writer sorts them, and nothing is owed."""
+    decision = (DECISION, "deferred", "the cache is revisited in issue 9999")
+    _merge_revisits(
+        repo,
+        _requirement(),
+        _requirement(_test("the test meets the new bound")),
+        _requirement(decision),
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    assert _read(repo, REQ) == _requirement(decision, _test("the test meets the new bound"))
+    (file,) = json.loads(result.output)["files"]
+    assert (file["status"], file["owed_revisits"]) == ("resolved", [])
+
+
+def test_an_entry_only_one_side_changed_is_that_sides(repo: AdopterRepo) -> None:
+    """The base side rewrote one target's entry, and this branch added another's right
+    after it, in lines git conflicts on as one: each entry is the side's that changed
+    it, and nothing is owed."""
+    first = (DECISION, "unchanged", "the first decision reason")
+    rewritten = (DECISION, "unchanged", "the base's decision reason")
+    added = _test("this branch's reason")
+    _merge_revisits(
+        repo,
+        _requirement(first),
+        _requirement(first, added),
+        _requirement(rewritten),
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    assert _read(repo, REQ) == _requirement(rewritten, added)
+    assert json.loads(result.output)["files"][0]["owed_revisits"] == []
+
+
+def test_a_revisited_list_in_flow_style(repo: AdopterRepo) -> None:
+    """JSON front matter: the conflict lies in the list's entry, the base side's entry is
+    taken, and this branch's change to a trigger field is kept."""
+    _merge_revisits(
+        repo,
+        requirement(revisited=[entry("unchanged", "the first reason")]),
+        requirement(threshold="3 s", revisited=[entry("unchanged", "this branch's reason")]),
+        requirement(revisited=[entry("unchanged", "the base's reason")]),
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    expected = requirement(threshold="3 s", revisited=[entry("unchanged", "the base's reason")])
+    assert _read(repo, REQ) == expected
+    (owed,) = json.loads(result.output)["files"][0]["owed_revisits"]
+    assert owed["target"] == {"kind": "path", "value": TEST_FILE}
+
+
+def test_an_entry_both_sides_wrote_from_a_branch_that_is_not_the_check_base_is_left(
+    repo: AdopterRepo,
+) -> None:
+    """Taken from another feature branch, the other side's entry would read in this
+    branch's change check as an entry written here, which nobody wrote."""
+    declare_linker(repo.root)
+    repo.write(
+        {
+            CONFIG: friction_config(),
+            **SOURCE,
+            **TARGETS,
+            REQ: _requirement(_test("the first reason")),
+        }
+    )
+    repo.commit("ancestor")
+    repo.checkout("other", create=True)
+    repo.commit("the other branch", {REQ: _requirement(_test("the other's reason"))})
+    repo.checkout("main")
+    repo.checkout("topic", create=True)
+    repo.commit("this branch", {REQ: _requirement(_test("this branch's reason"))})
+    merged = repo.git("merge", "-q", "--no-edit", "other", check=False)
+    assert merged.returncode == 1, merged.stdout + merged.stderr
+    conflicted = _read(repo, REQ)
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    other = repo.git("rev-parse", "other").stdout.strip()
+    assert (
+        f"both sides wrote the `revisited` entry of path:{TEST_FILE} in {REQ}, and MERGE_HEAD "
+        f"{other[:12]} is not the change check's base" in result.output
+    )
+    assert "an entry written here, which nobody wrote" in result.output
+    assert _read(repo, REQ) == conflicted
+
+
+def test_an_entry_one_side_removed_and_the_other_changed_is_left(repo: AdopterRepo) -> None:
+    decision = (DECISION, "unchanged", "the decision still holds")
+    _merge_revisits(
+        repo,
+        _requirement(decision, _test("the first reason")),
+        _requirement(decision),
+        _requirement(decision, _test("the base's reason")),
+    )
+    conflicted = _read(repo, REQ)
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert (
+        f"this branch removed the `revisited` entry of path:{TEST_FILE} in {REQ} and the other "
+        f"side changed it: keep it or remove it by hand" in result.output
+    )
+    assert _read(repo, REQ) == conflicted
+
+
+def test_a_revisited_list_conflicting_beside_the_body_is_left_with_advice(
+    repo: AdopterRepo,
+) -> None:
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason")).replace("Why it matters.", "Why, here."),
+        _requirement(_test("the base's reason")).replace("Why it matters.", "Why, there."),
+    )
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert "it conflicts in the body" in result.output
+    assert (
+        f"the `revisited` list of {REQ} conflicts too: both sides wrote the entry of "
+        f"path:{TEST_FILE} — take the base side's entry" in result.output
+    )
+    assert _unmerged(repo) == {REQ}
+
+
+def test_the_human_view_escapes_the_words_of_an_entry(repo: AdopterRepo) -> None:
+    """An entry's reason is the author's: a control character in it is printed escaped,
+    so it cannot hide the command printed beneath it."""
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason")),
+        _requirement(_test('"the base\'s \\e[8mreason"')),
+    )
+
+    result = _cli()
+
+    assert result.exit_code == 0, result.output
+    assert "\x1b[8m" not in result.output
+    assert "the base's \\x1b[8mreason" in result.output
+    assert REVISIT_COMMAND in result.output
+
+
+def test_a_merge_that_leaves_no_entry_is_left(repo: AdopterRepo) -> None:
+    """Each side removed the other's entry: an emptied list drops every answer in it, so
+    the person decides."""
+    decision = (DECISION, "unchanged", "the decision still holds")
+    test = _test("the test still holds")
+    _merge_revisits(repo, _requirement(decision, test), _requirement(test), _requirement(decision))
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert f"both sides removed entries of the `revisited` list of {REQ}, which leaves none" in (
+        result.output
+    )
+
+
+def test_a_list_that_is_not_one_entry_per_target_is_left(repo: AdopterRepo) -> None:
+    """This branch's list names one target twice: the entries cannot be merged by target."""
+    _merge_revisits(
+        repo,
+        _requirement(_test("the first reason")),
+        _requirement(_test("this branch's reason"), _test("this branch's second reason")),
+        _requirement(_test("the base's reason")),
+    )
+
+    result = _cli()
+
+    assert result.exit_code == 1, result.output
+    assert "a side's list is not one well-formed entry per target" in result.output
+
+
+def test_a_block_and_a_list_both_sides_answered_owe_each(repo: AdopterRepo) -> None:
+    """Both sides revalidated the source and wrote one target's entry: each conflict is
+    decided, and each owes its answer again."""
+
+    def source(at: str, because: str, reason: str) -> str:
+        return _requirement(_test(reason)).replace(
+            f"at: {T0}\n      outcome: unchanged\n"
+            f"      unchanged-because: the test and the decision say what it says",
+            f"at: {at}\n      outcome: unchanged\n      unchanged-because: {because}",
+        )
+
+    _merge_revisits(
+        repo,
+        source(T0, "first", "the first reason"),
+        source(T1, "this branch's", "this branch's reason"),
+        source(T2, "the base's", "the base's reason"),
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    assert _read(repo, REQ) == source(T2, "the base's", "the base's reason")
+    (file,) = json.loads(result.output)["files"]
+    assert [o["location"] for o in file["owed"]] == [REQ]
+    assert [o["target"]["value"] for o in file["owed_revisits"]] == [TEST_FILE]
+
+
+def _listed(name: str, stamp: tuple[str, str], reason: str) -> str:
+    """`_entry` with a `revisited` list of one entry after its block."""
+    return _entry(name, "[src/cli/**]", stamp) + (
+        "      revisited:\n"
+        f"      - anchor: {{kind: path, value: {TEST_FILE}}}\n"
+        f"        outcome: unchanged\n        reason: {reason}\n"
+    )
+
+
+def test_the_lists_of_a_collections_entries(repo: AdopterRepo) -> None:
+    """Each entry carries its own list: the one both sides wrote takes the base side's
+    entry and owes it, named by the entry's location; the one only this branch wrote
+    keeps this branch's."""
+    first = (T0, "first")
+
+    def terms(alpha: str, beta: str) -> str:
+        return _collection(_listed("alpha", first, alpha), _listed("beta", first, beta))
+
+    _merge(
+        repo,
+        {TERMS: terms("alpha first", "beta first")},
+        {TERMS: terms("alpha here", "beta here")},
+        {TERMS: terms("alpha there", "beta first")},
+    )
+
+    result = _cli("--json")
+
+    assert result.exit_code == 0, result.output
+    assert _read(repo, TERMS) == terms("alpha there", "beta here")
+    (owed,) = json.loads(result.output)["files"][0]["owed_revisits"]
+    assert owed["location"] == f"{TERMS}#alpha"
+    assert owed["command"].startswith(f"pkit friction revisit '{TERMS}#alpha' --target ")
 
 
 # --- left, skipped, nothing to do ----------------------------------------------------
