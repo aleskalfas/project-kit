@@ -10,19 +10,26 @@ The design round of #1684. When drift is found, the fixer declared for that kind
 
 - **Starts from:** the issue, and the maintainer's choice 10 of 17 October (`2026-10-17-autonomous-feature-flow`). That note's gaps frame it: nothing dispatches the drift agents (G7), what waits on the person is scattered (G11), and nothing tells the person's act from an agent's (G12). The question of who may start which agent is held by the note `2026-07-02-agent-dispatch-privilege-model`, which no record has accepted.
 - **Reviewed:** the architect recommended the design, the critic reviewed it, and the methodology-reviewer reviewed this note. Every red flag and blocker is fixed below. "Review" lists every finding and its answer.
-- **Decides nothing.** The question for the maintainer is under "Who may start which agent". Records change only through the acceptance gate.
+- **Decided on 18 October** (#1684):
+  - **The maintainer:** a fixer starts on its own only where the project granted it, in a list that is empty by default. Installing a capability that declares a fixer asks a plain question. The upgrade that first brings one asks once. An install without a terminal grants nothing and prints the one line to grant later. Commands list, grant and revoke for advanced use. project-kit grants both of its fixers.
+  - **The project manager,** under the maintainer's delegation: the loop does not wait for #1682. Proposals wait as files in the agent workspace, and `land-work` prints their count until #1682's view lists them.
+- **This note decides nothing.** A project-management decision record states the design (#1740).
 
 ## In short
 
 - **A command starts the fixers, not the `Agent` tool.** A project-management command reads the declared fixers, starts each granted one headless, as `review-pr` starts reviewers, and gathers the proposals. Code fixes the set of agents, so tests can check it.
-- **The project grants, the capability declares.** A capability declares which of its agents fixes which of its types. Only the agents the project has granted in writing start. Until then the command starts nothing.
+- **The project grants, the capability declares.** A capability declares which of its agents fixes which of its types. Only the agents the project granted start, from a list that is empty by default. Install asks the person, and commands list, grant and revoke.
 - **A fixer runs confined, as far as the harness can confine it.** The command denies it every command it does not need, and the OS sandbox bounds what its shell writes. Network egress stays an honest gap. A fixer is a leaf: it starts no other agent.
-- **The proposal waits as files,** in one durable run folder with an index. The project manager brings the proposals to the person in one batch. Once the person accepts, the project manager applies them through an ordinary pull request.
-- **Built after #1682,** as choice 10 orders. The view then lists proposals as a third kind beside ready merges and acceptances.
+- **The proposal waits as files,** in one durable run folder with an index. `land-work` prints how many wait. The project manager brings the proposals to the person in one batch. Once the person accepts, the project manager applies them through an ordinary pull request.
+- **Not waiting for #1682.** When #1682's view is built, it lists proposals as a third kind beside ready merges and acceptances.
 
 ## Who may start which agent
 
-This is the issue's first criterion and the maintainer's to decide. Today only a person starts a fixer.
+This was the issue's first criterion and the maintainer's to decide. Before it, only a person started a fixer.
+
+**The maintainer's answer, 18 October:** option 3, with the grant asked at install. A fixer starts on its own only where the project granted it. The list is empty by default. Installing a capability that declares a fixer asks, for example: "living-docs can keep your pages true on its own. After each merge it proposes fixes for pages that went out of date, and you approve them. Turn this on? [Y/n]". The upgrade that first brings the feature asks once. An install without a terminal grants nothing and prints the one line to grant later. Commands list, grant and revoke for advanced use. project-kit grants both of its fixers.
+
+The options as they were put:
 
 1. **Only you.** The command prints each fixer's start command, and you run it. Nothing new is granted, and nothing is automated.
 2. **You start the command each time.** It starts every fixer the installed capabilities declare. Each run has your consent, and nothing runs after a merge on its own.
@@ -55,8 +62,10 @@ This is the issue's first criterion and the maintainer's to decide. Today only a
 
 ### The grant
 
-- A list in project-management's project configuration: each granted agent, and the types it may fix. It is empty by default.
-- One opt-in command writes it after the person consents, as `enable-default-agent` does (DEC-030), and another removes an entry. Both changes show in the diff.
+- A list in project-management's project configuration: each agent the person was asked about, and the answer. It is empty by default.
+- **Install asks.** Installing a capability that declares a fixer asks the plain question above, once for each of its agents. The upgrade that first brings a fixer asks once. The answer is recorded either way, so nothing asks again. With no terminal, nothing is granted or recorded, and the one line to grant later is printed.
+- **Commands for advanced use:** one lists the declared fixers and their grants, one grants and one revokes. A grant shows in the diff, as `enable-default-agent`'s activation does (DEC-030).
+- **Install and upgrade are the lifecycle's operations,** so the lifecycle asks. project-management supplies the question's words and records the answer. How a lifecycle operation asks for a point's definer is a core question the record names, not one it decides.
 - The command starts a declared fixer only when the list grants it.
 
 ### The run
@@ -120,7 +129,7 @@ Choice 10 says that "each kind of place declares its fixer, and the drift check 
 
 ## Order of work
 
-Choice 10 builds the loop after #1682 and after project-kit has its analysis and pages. project-kit's analysis holds eight actors and a glossary today, with no use case, so a loop built now has little to run on. The tasks below keep that order. Three go ahead, since none adds the loop: the decision the first criterion needs, its ADR, and moving the runner, which changes no behaviour.
+Choice 10 built the loop after #1682 and after project-kit has its analysis and pages. The project manager decided on 18 October, under the maintainer's delegation, that the loop does not wait for #1682. Proposals wait as files in the agent workspace, and `land-work` prints their count, until #1682's view lists them. project-kit's analysis holds use cases of its own since then, so the loop has artefacts to run on.
 
 ## Records that change
 
@@ -140,11 +149,11 @@ Choice 10 builds the loop after #1682 and after project-kit has its analysis and
 
 ## Build tasks
 
-1. **The project-management decision.** The critic, the architect and the methodology-reviewer, then the maintainer's acceptance. Delivers the first criterion. It can start now.
+1. **The project-management decision** (#1740). The critic, the architect and the methodology-reviewer, then acceptance. Delivers the first criterion.
 2. **The ADR,** after task 1. Delivers the runner's architecture, accepted before task 5.
 3. **The runner out of `review-pr`,** into project-management's `_lib`, after task 2. Behaviour stays the same, so it needs no changeset.
-4. **The point and the grant,** after #1682. The schema, the package entry, the checks on each entry, the grant list and its commands, with tests on fixtures. Delivers the declaration and the grant.
-5. **The command,** after tasks 3 and 4. The worktree, reading, order, bounds, lock, confinement, the check after the run, the index, the count line and `--dry-run`, tested with a stub runner. Delivers a run that proposes.
+4. **The point and the grant,** after task 1. The schema, the package entry, the checks on each entry, the grant list and its commands, with tests on fixtures. Delivers the declaration and the grant. The question at install and upgrade needs the lifecycle to ask for a point's definer, a core change of its own. project-kit's own grant of both fixers lands here.
+5. **The command,** after tasks 2, 3 and 4. The worktree, reading, order, bounds, lock, confinement, the check after the run, the index, the count line in `land-work` and `--dry-run`, tested with a stub runner. Delivers a run that proposes.
 6. **software-analysis,** after task 4. The contribution, the agent's brief and result line, its storyboard, the README and the DEC-001 refinement. Delivers its fixer, declared.
 7. **living-docs,** the same, in parallel with task 6.
 8. **The pm skill and the project manager's body,** after task 5. Running the command after merges, the batch, and applying what the person accepts. Delivers the closed loop.
@@ -176,7 +185,7 @@ It also found where the issue's words need reading:
 
 Three red flags. R2 and R3 were fixed at once. R1 was partly fixed, and a confirmation round's remainder is answered.
 
-- **R1. The build reversed choice 10's order without saying so.** Fixed. The build follows #1682, and only the decision, its ADR and the runner's move go ahead. The run folder sits in the main checkout, and a count line shows what waits. The confirmation round found the folder still one checkout's. Answered under "Why one checkout is enough": git holds the debt, and a proposal is work that can be done again.
+- **R1. The build reversed choice 10's order without saying so.** Fixed. The build followed #1682, and only the decision, its ADR and the runner's move went ahead. The run folder sits in the main checkout, and a count line shows what waits. The confirmation round found the folder still one checkout's. Answered under "Why one checkout is enough": git holds the debt, and a proposal is work that can be done again. The project manager's decision of 18 October then took the loop off #1682, saying so ("Order of work").
 - **R2. The unattended risk was understated, and controls that exist now were deferred.** Fixed. The residual names merging and status changes, and prompt injection. The command sets deny rules and the OS sandbox for each run, and "What stays open" names what neither holds. The check after the run covers ignored files, and the hook's judged agent is tested in the trial.
 - **R3. "The declaration is the grant" misread its precedents.** Fixed. A contributed fixer widens what runs, so the person grants it (ADR-008, ADR-016 point 7). The recommendation is now option 3, a list the person writes.
 
