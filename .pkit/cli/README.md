@@ -77,6 +77,7 @@ pkit:
         - .pkit/lifecycle/README.md#script-contract
         - .pkit/lifecycle/README.md#what-ships-a-migration
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
+        - .pkit/lifecycle/README.md#naming
     revalidated:
       at: 2026-10-18T20:17:11Z
       outcome: updated
