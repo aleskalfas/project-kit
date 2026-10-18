@@ -18,6 +18,10 @@ body: >
   `--unanchored-because` instead. The stamp refuses an actor or a requirement
   the analysis does not hold or has withdrawn, a requirement that refines
   itself, `--unanchored-because` beside an anchor, and a placeholder left in
-  a value. The `analysis-author` skill gains a sub-procedure for requirements,
-  `requirement.md`, with the test between the three kinds and a use case.
-  Requirements may now be written: use the stamp rather than a file by hand.
+  a value. A requirement's number is now read as a use case's is:
+  `pkit analysis validate` holds a requirement file's name to its id, and
+  `pkit analysis check-numbers` reports a `REQ` number another line of work
+  took, across the three kinds' folders. The `analysis-author` skill gains a
+  sub-procedure for requirements, `requirement.md`, with the test between the
+  three kinds and a use case. Requirements may now be written: use the stamp
+  rather than a file by hand.
