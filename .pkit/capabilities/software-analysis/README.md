@@ -539,7 +539,7 @@ Each message gives the part's hint and example. How the check reads a body:
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds five rules, each with the decision as its origin and among its anchors.
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds five rules, each with the decision as its origin.
 
 - **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
 - **Three proposed judgement rules,** which declare no check. They cover a use case's actors and its goal (DEC-001 points 1 and 4), and what an artefact's anchors name (points 2, 4, 9 and 11).
@@ -557,7 +557,7 @@ Each message gives the part's hint and example. How the check reads a body:
 - **What the judgement rules ask.** Each judges an artefact in force, never a withdrawn one, as its *How* says.
   - A use case's actor is the one whose goal it is. Each other actor that takes part in it is one of its `other-actors` (`RS-SAN-003`).
   - A use case's goal states one of its actor's `needs`, whole (`RS-SAN-004`).
-  - An artefact's anchors name the code and the decisions its statements rest on. A use case's anchors also name the decisions that answer it and the architecture views that realise it, as "How it meets your decisions" above says (`RS-SAN-005`).
+  - An artefact's anchors name the code and the decisions its statements rest on. For a use case, see also "How it meets your decisions", above (`RS-SAN-005`).
 - **What judges them.** They declare no check, so a reviewer judges each where it binds, such as the rule-set reviewer (COR-057). While the rules are proposed, they bind nothing, and nothing judges them.
   - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.

@@ -174,7 +174,7 @@ An analysis artefact's anchors name what its statements rest on. A use case's an
   - **Where to find it.**
     - **Code** lies in the repository, within the surface the project declares for its analysis where it declares one.
     - **The decisions an artefact rests on** are the records its statements cite or apply, such as the decision to use git, for a use case that runs on git. An actor's or a term's are also the records that embody it.
-    - **The decisions that answer a use case** are the records made to meet what it asks. They lie among the project's own records and those its components ship, such as one that names the use case by its id, or the decision to write a report as CSV for a use case that must export the report as a file.
+    - **The decisions that answer a use case** are the records made to meet what it asks, such as one that names the use case by its id, or the decision to write a report as CSV for a use case that must export the report as a file. Each may be a core record, a capability's record or the project's own.
     - **The views that realise a use case** are the architecture views the project keeps that were made to show how the system carries it out, such as one that names the use case by its id.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.

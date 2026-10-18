@@ -381,10 +381,11 @@ def test_the_anchors_rule_asks_a_use_case_for_what_answers_or_realises_it() -> N
         section
     )
     assert "An actor's or a term's are also the records that embody it." in section
-    assert (
-        "**The decisions that answer a use case** are the records made to meet what it asks. "
-        "They lie among the project's own records and those its components ship"
-    ) in section
+    assert "**The decisions that answer a use case** are the records made to meet what it" in (
+        section
+    )
+    # Where they lie, in point 11's own words: no kind of record is left out.
+    assert "Each may be a core record, a capability's record or the project's own." in section
     assert (
         "**The views that realise a use case** are the architecture views the project keeps "
         "that were made to show how the system carries it out"
