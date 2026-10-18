@@ -1222,6 +1222,46 @@ def test_a_journey_whose_use_case_anchors_do_not_match_its_steps_is_reported(
     assert errors(check(seeded)) == []
 
 
+def test_a_journey_s_part_anchor_on_a_use_case_is_an_anchor_on_that_use_case(
+    seeded: AdopterRepo,
+) -> None:
+    """A part anchor names the artefact before its last `#` (COR-050 point 2), so one on a
+    use case is among the journey's use-case anchors (#1725). It matches no entry of
+    `steps` or `relies-on`, which name each use case whole: a part anchor flags the
+    journey only when its part changes (COR-050 point 5). A part anchor on an artefact
+    that is no use case is not among them."""
+    stamped(seeded, "use-case", "third", "--actor", "ACT-tester")
+    fill(seeded)
+    where = f"{JOURNEY}:/pkit/friction/anchors/artefact"
+
+    def mismatch(anchored: str) -> list[tuple[str, str]]:
+        return [
+            (
+                where,
+                f"its use-case anchors ({anchored}) do not match its steps and the use cases "
+                f"it relies on (UC-001, UC-002): the anchors are written from `steps` and "
+                f"`relies-on`, so the friction check sees every use case it passes through or "
+                f"relies on — anchor exactly [UC-001, UC-002] (DEC-001 point 4)",
+            )
+        ]
+
+    # A match: a part anchor on the journey's actor is no use-case anchor.
+    _set(seeded, JOURNEY, "        - UC-002\n", "        - UC-002\n        - ACT-tester#\n")
+    assert errors(check(seeded)) == []
+    # A part anchor on a use case outside the lists, which slipped past before: a
+    # section, then the lead.
+    _set(seeded, JOURNEY, "        - ACT-tester#\n", "        - UC-003#main-flow\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-002, UC-003#main-flow")
+    _set(seeded, JOURNEY, "        - UC-003#main-flow\n", "        - UC-003#\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-002, UC-003#")
+    # A part anchor on a step's use case, in place of its whole anchor or beside it.
+    _set(seeded, JOURNEY, "        - UC-003#\n", "")
+    _set(seeded, JOURNEY, "        - UC-001\n", "        - UC-001#\n")
+    assert errors(check(seeded)) == mismatch("UC-001#, UC-002")
+    _set(seeded, JOURNEY, "        - UC-001#\n", "        - UC-001\n        - UC-001#\n")
+    assert errors(check(seeded)) == mismatch("UC-001, UC-001#, UC-002")
+
+
 def test_a_use_case_with_another_actor_names_it_and_anchors_to_it(seeded: AdopterRepo) -> None:
     """A use case lists each other actor it involves in `other-actors`, and anchors to each,
     so a changed actor flags every use case it takes part in (DEC-001 point 4). The stamp
