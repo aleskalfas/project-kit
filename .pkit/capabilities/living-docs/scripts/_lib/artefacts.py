@@ -55,7 +55,9 @@ class DeclaredPlace:
     `index` is its position in the document's `places`, by which a file names
     the places matching it. `location` and `location_path` are the capability
     documentation location it lies inside, if it names one; `encloses` the
-    audiences of the roots it reaches whole.
+    audiences of the roots it reaches whole. `rule_sets` is whether it holds
+    rule sets, as the answer's `rule_sets` marks it (COR-051 point 2): a
+    rule-set folder, or a declared place whose path has a `rule-sets` segment.
     """
 
     index: int
@@ -67,6 +69,7 @@ class DeclaredPlace:
     location_path: str | None
     encloses: frozenset[str]
     type: str | None = None  # the type it gives, in full, or `None` (COR-056 point 3)
+    rule_sets: bool = False
 
     @property
     def is_project(self) -> bool:
@@ -313,6 +316,7 @@ def _place(index: int, entry: Mapping[str, Any]) -> DeclaredPlace:
         location_path=_text(location.get("path")),
         encloses=frozenset(str(a) for a in entry.get("encloses") or []),
         type=_text(entry.get("type")),
+        rule_sets=isinstance(entry.get("rule_sets"), Mapping),
     )
 
 

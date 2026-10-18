@@ -102,6 +102,11 @@ ID_SHAPE = {
 OTHER_ACTORS = "other-actors"
 RELIES_ON = "relies-on"
 
+#: The front-matter field DEC-002 point 7 adds to a use case and a journey: each
+#: requirement it must meet, of any of the three kinds. A journey lists only those that
+#: bind its whole path.
+MUST_MEET = "requirements"
+
 #: A numbered artefact's id — a use case's, a journey's or a requirement's — with its
 #: number in any number of digits, the spellings the id schema refuses included.
 _PREFIXES = "|".join(sorted({PREFIX[kind] for kind in NUMBERED}))
@@ -374,10 +379,11 @@ class Analysis:
         return None
 
     def unfit_requirement(self, artefact_id: str, *, in_force: bool) -> str | None:
-        """Why a requirement cannot refine `artefact_id`, or `None` when it can: what it
-        refines is a requirement of the analysis, of any of the three kinds, and a
-        requirement in force refines none withdrawn (DEC-002 points 6 and 7). As `unfit`
-        is, one rule for the check and the stamp of a requirement."""
+        """Why a requirement cannot refine `artefact_id`, or a use case or a journey list
+        it in its `requirements`, or `None` when it can: what it names is a requirement
+        of the analysis, of any of the three kinds, and an artefact in force names none
+        withdrawn (DEC-002 points 6 and 7). As `unfit` is, one rule for the check and the
+        stamp."""
         found = self.find(artefact_id)
         if found is None or found.kind not in REQUIREMENTS:
             return f"no {REQUIREMENT} {artefact_id} in the analysis"

@@ -1,0 +1,17 @@
+component: living-docs
+kind: patch
+custom:
+  category: Fixed
+  requires_backbone: release
+body: >
+  `pkit living-docs validate` no longer fails with `assignment-missing` on a
+  place of rule sets outside every documentation root, such as the old
+  `rule-sets/` folder `pkit config set docs.internal` declares to keep a
+  project's rule sets found. Such a place joins a space only when the project
+  assigns it one (DEC-001 point 1). Until then it gives no space and owes no
+  assignment, so its `README.md` is neither a page nor an unclassified
+  document. A document there that declares a page kind is reported, never
+  failed, naming the assignment that would make it a page. A place of rule
+  sets that gives a type owes an assignment as any other. The place is read
+  from the backbone's answer, `pkit friction artefacts --json`, where it is
+  declared to hold rule sets, so it needs the backbone this release ships.
