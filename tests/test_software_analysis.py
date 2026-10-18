@@ -332,6 +332,7 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
         "status": "active",
         "actor": "ACT-tester",
         "other-actors": [],
+        "requirements": [],
         "pkit": {"friction": {"anchors": {"path": ["src/run.py"], "artefact": ["ACT-tester"]}}},
     }
     body = (seeded.root / USE_CASES / "UC-001-run-suite.md").read_text(encoding="utf-8")
@@ -340,6 +341,7 @@ def test_use_cases_and_journeys_are_numbered_in_order_with_their_anchors(
     assert journey["title"] == "First run"
     assert journey["steps"] == ["UC-001", "UC-002"]
     assert journey["relies-on"] == []
+    assert journey["requirements"] == []
     # Its actor, and the use cases of its steps (DEC-001 point 4).
     assert journey["pkit"] == {
         "friction": {"anchors": {"artefact": ["ACT-tester", "UC-001", "UC-002"]}}

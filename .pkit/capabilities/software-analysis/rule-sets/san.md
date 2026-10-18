@@ -48,13 +48,13 @@ rules:
             - "software-analysis:DEC-001#11"
             - "software-analysis:DEC-002#5"
             - "software-analysis:DEC-002#6"
+            - "software-analysis:DEC-002#7"
             - "COR-050#1"
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T16:38:29Z
-          outcome: unchanged
-          unchanged-because: "COR-050 point 5 says a path anchor stands on a file's content and mode, a container of a file a place holds left out, and points 1 and 2 were reached through the Decision's lead, which says the same. This rule asks which anchors an artefact names, a requirement's included, and by which kind: a view a place holds by an artefact anchor, any other view by a path anchor on its file. What each anchor stands on is not its concern, so it still holds."
+          at: 2026-10-18T17:34:31Z
+          outcome: updated
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -122,7 +122,7 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9 and 11, and DEC-002 points 4 to 6 and 8. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9 and 11, and DEC-002 points 4 to 8. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
 
@@ -187,8 +187,8 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
   - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it.
-    - A use case rests on its `actor` and its `other-actors`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
-    - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, and the code and decisions at its seams.
+    - A use case rests on its `actor` and its `other-actors`, each requirement in its `requirements`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
+    - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
     - A requirement rests on each actor in its `actors`, each requirement in its `refines`, and the decisions it cites or applies. It also rests on the narrow code that holds it and the files that verify it. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of its statements names it.
   - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor.
   - **No cycle excuses it.** An anchor this list asks for on a decision or a view is asked for even where anchors that run back from that decision or view would close a cycle.
@@ -205,7 +205,7 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - **The code that holds a requirement** is the code that keeps it, never all the code its `applies-to` reaches.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
-  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It does so whatever any rule's status, and this rule does not cover it.
+  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. It does so whatever any rule's status, and this rule does not cover it.
   - **What this rule judges.** The rest:
     - the code and the decisions a statement rests on
     - the decisions that answer a use case or a requirement, and the views that realise one

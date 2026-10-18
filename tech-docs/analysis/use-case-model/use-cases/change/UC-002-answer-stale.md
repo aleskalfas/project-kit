@@ -33,6 +33,10 @@ pkit:
         - ACT-ai-agent
         - ACT-ci-pipeline
         - ACT-merge-authoriser
+    revalidated:
+      at: 2026-10-18T17:49:18Z
+      outcome: unchanged
+      unchanged-because: "Variant 9b still holds: friction resolve still resolves a conflicted revalidated block's text, writes no answer and names the revalidation owed. This change adds the same for revisited lists, which this use case, on revalidations and deferrals, does not describe."
 ---
 
 # UC-002 — Answer what my change made stale

@@ -3,7 +3,8 @@
 # and how the system fulfils it. Stamp it, never copy it: `pkit analysis new
 # use-case <slug> --actor <ACT-id>` numbers it, fills its title, its actor, its
 # other actors (`--other-actor <ACT-id>`, each) and an anchor to each actor,
-# and writes it to `use-case-model/use-cases/` under the
+# and the requirements it must meet (`--requirement <REQ-id>`, each) and an
+# anchor to each, and writes it to `use-case-model/use-cases/` under the
 # analysis location (`--area <area>` for a folder per functional area). Its
 # heading is its id and title, as the front matter gives them. Its body is
 # rendered from the use case's declared structure (`schemas/artefact-kinds.yaml`).
@@ -15,12 +16,13 @@ title: <Title>                    # --title; the heading below repeats it after 
 status: active                    # or withdrawn: the file stays and its id is never reused
 actor: ACT-actor                  # the actor whose goal this is
 other-actors: []                  # --other-actor: each other actor who takes part
+requirements: []                  # --requirement: each requirement it must meet
 pkit:
   friction:
     anchors:
       path: ["<code it exercises>"]           # --path: a change there asks whether the use case still holds
       record: ["<record it rests on>"]        # --record: each record it rests on, or that answers it. A change to one asks the same (DEC-001 point 11)
-      artefact: [ACT-actor]                   # its actor and other actors: a changed actor flags this use case
+      artefact: [ACT-actor]                   # its actor, other actors and requirements: a change to one flags this use case
 ---
 
 # UC-000 — <Title>

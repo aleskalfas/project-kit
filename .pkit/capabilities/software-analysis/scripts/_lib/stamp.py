@@ -39,7 +39,9 @@ is given: a use case's actor and each other actor it involves, written in its
 its `relies-on`, those outside it that a step relies on. A requirement's
 `actors` and `refines` are written, each an artefact anchor (DEC-002 point
 6): each actor must be in force, and each requirement it refines one of the
-three kinds, in force and not itself (point 7).
+three kinds, in force and not itself (point 7). A use case's and a journey's
+`requirements`, each requirement it must meet, are written, each an artefact
+anchor, and each must be a requirement of the analysis in force (point 7).
 An actor, a term or a requirement nothing embodies is stamped with the reason
 instead, its `unanchored-because` (DEC-001 point 9, DEC-002 point 6), written
 in its friction block: the key is the core's, which the unanchored measure
@@ -122,6 +124,7 @@ from _lib.model import (
     COLLECTIONS,
     CONTAINER,
     JOURNEY,
+    MUST_MEET,
     NOUN,
     NUMBERED,
     OTHER_ACTORS,
@@ -183,6 +186,7 @@ class Request:
     unanchored_because: str | None = None  # the reason an actor, term or requirement has none
     actors: tuple[str, ...] = ()  # a requirement's actors, whose need it meets
     refines: tuple[str, ...] = ()  # the requirements a requirement refines
+    requirements: tuple[str, ...] = ()  # those a use case or a journey must meet
 
 
 @dataclass(frozen=True)
@@ -417,12 +421,15 @@ def _check_references(analysis: Analysis, request: Request) -> None:
     journey's steps is a use case of its actor, as the check holds a journey in force
     (`Analysis.another_actor`). The other actors leave out the use case's own actor,
     and what a journey relies on leaves out its steps, as the check holds both. Each
-    actor a requirement names is in force too (DEC-002 point 7). What it refines is
-    checked once its id is known (`_check_refines`)."""
+    actor a requirement names is in force too, and so is each requirement a use case
+    or a journey must meet (DEC-002 point 7). What a requirement refines is checked
+    once its id is known (`_check_refines`)."""
     if request.kind in ALWAYS_ANCHORED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
         _in_force(analysis, request.actor, ACTOR)
+        for listed in request.requirements:
+            _requirement_in_force(analysis, listed, f"{with_article(request.kind)} lists")
     if request.kind in REQUIREMENTS:
         for actor in request.actors:
             _in_force(analysis, actor, ACTOR)
@@ -480,20 +487,28 @@ def _check_refines(analysis: Analysis, request: Request, new_id: str) -> None:
                 f"--refines {refined} is the id this requirement takes: a requirement never "
                 f"refines itself (DEC-002 point 6)"
             )
-        problem = analysis.unfit_requirement(refined, in_force=True)
-        if problem is None:
-            continue
-        found = analysis.find(refined)
-        if found is None or found.kind not in REQUIREMENTS:
-            kinds = ", ".join(REQUIREMENTS[:-1])
-            raise Refused(
-                f"{problem}: stamp it first, `pkit analysis new <kind> <slug>`, its kind "
-                f"{kinds} or {REQUIREMENTS[-1]}"
-            )
+        _requirement_in_force(analysis, refined, "a requirement refines")
+
+
+def _requirement_in_force(analysis: Analysis, listed: str, lister: str) -> None:
+    """Refused unless `listed` is a requirement of the analysis, of any of the three
+    kinds, in force: what the stamp writes is in force, and `lister`, such as `a use
+    case lists`, names only requirements in force (DEC-002 point 7). The rule is the
+    check's (`Analysis.unfit_requirement`)."""
+    problem = analysis.unfit_requirement(listed, in_force=True)
+    if problem is None:
+        return
+    found = analysis.find(listed)
+    if found is None or found.kind not in REQUIREMENTS:
+        kinds = ", ".join(REQUIREMENTS[:-1])
         raise Refused(
-            f"{problem}: a requirement in force refines only requirements in force (DEC-002 "
-            f"point 7)"
+            f"{problem}: stamp it first, `pkit analysis new <kind> <slug>`, its kind "
+            f"{kinds} or {REQUIREMENTS[-1]}"
         )
+    raise Refused(
+        f"{problem}: {lister} only requirements in force, since what the stamp writes is in "
+        f"force (DEC-002 point 7)"
+    )
 
 
 # --- the id ----------------------------------------------------------------------------------
@@ -634,11 +649,13 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         if kind == JOURNEY:
             data["steps"] = list(request.steps)
             data[RELIES_ON] = list(dict.fromkeys(request.relies_on))
-            anchored = list(dict.fromkeys([str(request.actor), *request.steps, *request.relies_on]))
+            named = [*request.steps, *request.relies_on]
             written = _step_lines(structured, request.steps, analysis)
         else:
             data[OTHER_ACTORS] = list(dict.fromkeys(request.other_actors))
-            anchored = list(dict.fromkeys([str(request.actor), *request.other_actors]))
+            named = list(request.other_actors)
+        data[MUST_MEET] = list(dict.fromkeys(request.requirements))
+        anchored = list(dict.fromkeys([str(request.actor), *named, *request.requirements]))
     data[CONTAINER] = _container(request, anchored)
     heading = render.title_heading(structured, new_id, _title(request))
     body = render.body(structured, heading, written)
