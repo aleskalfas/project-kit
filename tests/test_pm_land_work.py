@@ -2101,9 +2101,11 @@ def test_at_a_terminal_without_yes_the_prompt_follows_the_answers(
     run = _answers_world(world)
     monkeypatch.setattr(sys.stdin, "isatty", lambda: True, raising=False)
     before: list[str] = []
+    asked: list[str] = []
 
     def answer(prompt: str = "") -> str:
         before.append(capsys.readouterr().out)
+        asked.append(prompt)
         return "y"
 
     monkeypatch.setattr("builtins.input", answer)
@@ -2112,6 +2114,9 @@ def test_at_a_terminal_without_yes_the_prompt_follows_the_answers(
     (printed,) = before
     assert LISTED[0] in printed.splitlines()
     assert "(written now)" in printed
+    # The yes is for a named head: the question names the head the run pinned,
+    # and that head is the one that merges (#1760).
+    assert asked == [f"Squash-merge PR #{PR} at {_short(run.github.head)} + close? [y/N] "]
     assert run.github.merges[-1][-1] == run.github.head
 
 

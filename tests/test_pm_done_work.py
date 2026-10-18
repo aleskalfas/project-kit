@@ -1676,6 +1676,34 @@ def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     ]
 
 
+def test_an_override_is_not_audited_on_a_run_with_no_authorisation(dw, monkeypatch):
+    """The override's audit records an act on the way to a merge, so a run
+    refused for want of an authorisation (#1760) posts none."""
+    gate = dw._GateResult(
+        passed=True,
+        passed_via="design-reviewer satisfied-by-override",
+        override_audits=[
+            dw._OverrideAudit(
+                reviewer="design-reviewer",
+                capability="ux-ui-design",
+                state="a fresh CHANGES_REQUESTED (an active block)",
+                block_comment_url="https://example.test/c/design-reviewer",
+                head="deadbeef",
+                others_approved=(),
+            )
+        ],
+    )
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent", agent_gate_result=gate
+    )
+    _no_terminal(monkeypatch)
+    ended = dw.run(
+        ["42", "--bypass-reviewer", "design-reviewer", "--bypass-reviewer-reason", "flaky"]
+    )
+    assert (ended.kind, ended.exit_code) == (dw.DECLINED, 2)
+    assert (calls["override_audits"], calls["order"]) == ([], [])
+
+
 # ---- the deprecated `--bypass-reason` alias (DEC-050, released in pm 0.54.0) ---
 #
 # `--bypass-reason` shipped on done-work in project-management 0.54.0, so
@@ -2397,6 +2425,19 @@ def test_an_in_progress_issue_moves_to_review_before_the_merge(
     ]
     assert "lead-in: in-progress → review before the merge" in captured.out
     assert "[warn]" not in captured.err
+
+
+def test_an_in_progress_issue_is_not_moved_on_a_run_with_no_authorisation(
+    dw: ModuleType,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The move to Review leads into the merge, so a run refused for want of an
+    authorisation (#1760) makes none: the issue stays where it is."""
+    calls = _wire_lead_in(dw, monkeypatch, _task("state:in-progress"))
+    _no_terminal(monkeypatch)
+    ended = dw.run(["42"])
+    assert (ended.kind, ended.exit_code) == (dw.DECLINED, 2)
+    assert calls["order"] == []
 
 
 def test_an_issue_in_review_makes_only_the_move_to_done(

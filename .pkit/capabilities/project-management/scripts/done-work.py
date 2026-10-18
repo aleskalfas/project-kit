@@ -15,15 +15,17 @@ goes through Review first, #1162). Per DEC-026:
                   [--skip-checkbox-gate]
                   [--bypass-reviewer <name> ... --bypass-reviewer-reason "<r>"]
 
-Authorisation (#1760): the merge is the person's to authorise, for the head
-it merges ([project-management:DEC-055-pr-lists-answers] point 3,
-[project-management:DEC-006-state-machine-and-cascade]) — `--yes`, or a yes at
+Authorisation (#1760): the merge is the person's to authorise
+([project-management:DEC-006-state-machine-and-cascade],
+[project-management:DEC-055-pr-lists-answers] point 3) — `--yes`, or a yes at
 the prompt a run at a terminal asks, which names the PR and the head the merge
 is pinned to. A run with neither, no `--yes` and no terminal, runs every gate
 and then refuses (exit 2), naming that head: nothing is posted, moved or
-merged. Completing a PR that has merged
-already merges nothing, so that path asks at a terminal and goes on without
-one, as before.
+merged. `--yes` names no head: it merges the head the gates read when the run
+starts. A merge authorised for a named head goes through `land-work --yes
+--expect-head <sha>`, which hands that head on as `run`'s `pinned_head`.
+Completing a PR that has merged already merges nothing, so that path asks at
+a terminal and goes on without one, as before.
 
 Approval gate (human-mode three-way OR per DEC-026):
   1. Latest review on the PR is APPROVED, OR
@@ -1347,7 +1349,8 @@ def _not_merged(
             f"#{issue_number} stays in Review. Run `done-work {issue_number}` again once "
             f"GitHub answers: if the PR merged, it moves #{issue_number} to Done, closes and "
             "cascades the issues the PR closes, and cleans up the branch; if it did not, it "
-            "merges it."
+            "merges it on the authorisation that run is given (--yes, or a yes at a "
+            "terminal)."
         )
         return _ended(UNCONFIRMED, EXIT_ACCEPTED, reason=f"[unconfirmed] {landing.message}")
     if landing.outcome == pr_merge.REFUSED:
