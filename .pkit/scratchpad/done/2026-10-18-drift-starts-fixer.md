@@ -2,6 +2,9 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-18
+retired: 2026-10-18
+produced:
+  - project-management:DEC-056
 ---
 
 # A drift finding starts the fixer of its artefact's type
