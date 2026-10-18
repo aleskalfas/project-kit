@@ -2584,7 +2584,7 @@ _MODE_GLOSS = {
 def render_human(result: ChangeCheck) -> str:
     """The read view: header, findings grouped by artefact upstream first, result, legend,
     and last the answers the change wrote, word for word — what the repository wrote shown
-    with any character a terminal would act on escaped (`_shown`)."""
+    with any character a terminal would act on escaped (`printable`)."""
     title = cli_render.style("title", "Friction change check")
     if result.dormant:
         return "\n".join([f"{title} — dormant", "", *_dormant_lines(result)]) + "\n"
@@ -2611,12 +2611,12 @@ def render_human(result: ChangeCheck) -> str:
     for finding in rows:
         if finding.location != current:
             current = finding.location
-            lines.append(f"  {_shown(current or '')}")
+            lines.append(f"  {printable(current or '')}")
         cells = f"{finding.kind.value:{kind_width}}  {_anchor_cell(finding):{anchor_width}}"
-        lines.append(f"    {cells}  {_shown(finding.message)}".rstrip())
+        lines.append(f"    {cells}  {printable(finding.message)}".rstrip())
     for finding in unreadable:
-        lines.append(f"  {_shown(finding.location or '')}")
-        lines.append(f"    {finding.kind.value:{kind_width}}  {_shown(finding.message)}")
+        lines.append(f"  {printable(finding.location or '')}")
+        lines.append(f"    {finding.kind.value:{kind_width}}  {printable(finding.message)}")
 
     lines.extend(["", _result_line(result)])
     shown = [kind for kind in _LEGEND if result.count(kind)]
@@ -2640,10 +2640,10 @@ def render_human(result: ChangeCheck) -> str:
 def _anchor_cell(finding: Finding) -> str:
     if finding.anchor is None:
         return "—"
-    return _shown(f"{finding.anchor.kind} {finding.anchor.value}")
+    return printable(f"{finding.anchor.kind} {finding.anchor.value}")
 
 
-def _shown(text: str) -> str:
+def printable(text: str) -> str:
     """`text` as the human view prints it: each character that is not printable — a
     control character such as an escape, a bidirectional override, a zero-width
     character — written as its escape (`\\x1b`, `\\u202e`), never raw. Words read
@@ -2734,7 +2734,7 @@ def _answer_lines(answer: WrittenAnswer) -> list[str]:
     of its own. A deferral the change did not ask about names its anchor without
     saying the change modifies it, and an answer about no anchor reads `<location> —
     <outcome>`. Every word written, any character that is not printable escaped
-    (`_shown`)."""
+    (`printable`)."""
     outcome = OUTCOME_WORDS.get(answer.answer, answer.answer) if answer.answer else NO_OUTCOME
     sentence = outcome[:1].upper() + outcome[1:]
     if answer.changed:
@@ -2753,7 +2753,7 @@ def _answer_lines(answer: WrittenAnswer) -> list[str]:
         + ")"
         for held in answer.kept
     ]
-    return [_shown(text) for text in (line, *kept)]
+    return [printable(text) for text in (line, *kept)]
 
 
 def _header_lines(result: ChangeCheck) -> list[str]:
@@ -2777,14 +2777,14 @@ def _header_lines(result: ChangeCheck) -> list[str]:
         lines.append(f"  Head: {result.head.commit[:SHORT]} {working}")
     if result.shallow:
         read = counted(len(result.cut), "artefact", "artefacts")
-        named = f" ({_shown(_listed(result.cut))})" if result.cut else ""
+        named = f" ({printable(_listed(result.cut))})" if result.cut else ""
         lines.append(f"  History: shallow — {read} read without history beyond the cut{named}")
     gloss = _MODE_GLOSS.get(result.mode, "")
     lines.append(f"  Mode: {result.mode}" + cli_render.style("muted", f"   ({gloss})"))
     lines.extend(_mode_warning(result))
     for finding in result.findings:
         if finding.kind is FindingKind.OUTDATED_BASE:
-            lines.append(f"  ⚠ outdated base: {_shown(finding.message)}")
+            lines.append(f"  ⚠ outdated base: {printable(finding.message)}")
     return lines
 
 

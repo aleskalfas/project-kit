@@ -1369,7 +1369,7 @@ The **debt listing** (COR-050 point 9): the debt derived from git, never kept in
 
 ### `friction since <rev> [--head <rev>] [--base <ref>] [--json]`
 
-**Whether every change since a commit, apart from merges of the base, lies inside `revalidated` blocks** (COR-050 point 3). A pull request's head moves when a merge of its base leaves its answers stale and the round that answers again commits. A component that must tell such a move from any other asks this command, and never reads a friction block itself. The landing command of the project-management capability asks it when a pull request's head is not the one its merge was authorised for. The command reads git and writes nothing (`src/project_kit/friction_since.py`).
+**Whether every change since a commit, apart from merges of the base, lies inside `revalidated` blocks** (COR-050 point 3). A pull request's head moves when a merge of its base leaves its answers stale and the round that answers again commits. A component that must tell such a move from any other asks this command, and never reads a friction block itself. The command reads git and writes nothing (`src/project_kit/friction_since.py`).
 
 - **The two commits.** The head is commit `--head`, else HEAD, read from git objects: the working tree is not read. It must descend from `<rev>`, and `<rev>` must lie on its own line of commits, its first parents. Otherwise the answer is no, and says why: the branch was rebased, or `<rev>` reached it only through a merge.
 - **The base** is `--base`, else `$PKIT_CHECK_BASE`, else the default branch, resolved as every reader resolves it ([COR-054](../decisions/core/COR-054-default-branch.md)), with a `warning:` on standard error where it is read from the local branch. Only its tip is read, to tell a merge of the base. Fetch it first, or a merge of commits it does not yet hold counts whole.
@@ -1380,7 +1380,7 @@ The **debt listing** (COR-050 point 9): the debt derived from git, never kept in
 - **When a file's change lies inside the blocks.** The file is an artefact's file at that commit, by discovery's walk of its places, and not a held document. On both sides it is a regular file of one mode, UTF-8 text with one line break, and its front matter parses. Its two texts are the same once every artefact's `revalidated` key is taken out of each.
   - **In block style,** the key's lines are taken out, so a block a revalidation adds whole lies inside.
   - **In flow style** (`pkit: { friction: { … } }`), the key's characters are replaced by one marker, so a block added there lies outside.
-  - **A block removed** lies outside in either style, since it drops an answer.
+  - **A block removed,** or emptied to no value, lies outside in either style, since it drops an answer.
   - **Front matter with a YAML anchor** lies outside: through an alias, a block's text could change a value outside it while the text outside stays the same.
   - **Anything else** lies outside, with why: added, removed, its mode or line endings changed, not an artefact's file, front matter that does not parse, or a change outside its blocks.
 - Without `--json`, a line per file changed only inside the blocks and per change outside them, with its commit and why, then whether every change lies inside.

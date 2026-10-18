@@ -36,8 +36,8 @@ itself. It reads git and writes nothing.
   two texts are the same once every artefact's `revalidated` key is taken out
   of each. In block style the key's lines are taken out, so a block added
   whole lies inside. In flow style its characters are replaced by one
-  marker, so there a block added lies outside. A block removed lies outside
-  in either style, since it drops an answer. So does front matter with a YAML
+  marker, so there a block added lies outside. A block removed, or emptied to
+  no value, lies outside in either style, since it drops an answer. So does front matter with a YAML
   anchor, through which a block's text could change what an alias repeats
   outside it. Anything else is a change outside, with why.
 - **It cannot answer** — and says why, exit 1 — in a shallow clone, where the
@@ -51,9 +51,11 @@ from __future__ import annotations
 
 import io
 import json
+import re
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, cast
 
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
@@ -61,6 +63,7 @@ from ruamel.yaml.nodes import MappingNode, Node, SequenceNode
 
 from project_kit import cli_render, default_branch
 from project_kit.document_parts import split_front_matter
+from project_kit.friction_check import printable  # the friction group's one escape of a human view
 from project_kit.friction_discovery import (
     DiscoveredFile,
     Discovery,
@@ -91,6 +94,8 @@ _ABSENT = "000000"
 _MARKER = "\0revalidated\0"
 # `git merge-tree` exits 0 for a clean merge and 1 for one with conflicts.
 _MERGED = (0, 1)
+# A name that reads as a commit's id, in full or abbreviated.
+_HEX = re.compile(r"[0-9a-fA-F]{7,40}")
 
 
 @dataclass(frozen=True)
@@ -233,6 +238,13 @@ def _commit(root: Path, rev: str, what: str) -> str:
     commit = None if not rev or rev.startswith("-") else commit_of(root, rev)
     if commit is None:
         raise FrictionCheckError(f"{what} {rev!r} names no commit of this repository.")
+    if _HEX.fullmatch(rev) and not commit.startswith(rev.lower()):
+        # git reads a branch or tag before a short id: one named like a commit's id
+        # would stand in for that commit.
+        raise FrictionCheckError(
+            f"{what} {rev!r} reads as a commit's id but names {commit[:SHORT]}, through a "
+            f"branch or tag of that name; name the commit in full."
+        )
     return commit
 
 
@@ -420,7 +432,11 @@ def _without_blocks(path: str, found: DiscoveredFile, text: str) -> tuple[str, f
             "its front matter uses a YAML anchor, through which text inside a "
             "`revalidated` block can change what lies outside it"
         )
-    carriers = frozenset(version.artefacts[key].location for key in version.stamps)
+    # A block emptied — `revalidated:` with no value, `{}` or `null` — drops its answer
+    # as a block removed does, so it carries none.
+    carriers = frozenset(
+        version.artefacts[key].location for key, stamp in version.stamps.items() if stamp.value
+    )
     for stamp in sorted(version.stamps.values(), key=lambda s: -s.start):
         start = text.rfind("\n", 0, stamp.start) + 1
         if stamp.flow or text[start : stamp.start].strip():
@@ -438,8 +454,9 @@ def _anchored(text: str) -> bool:
     front_matter, _body = split_front_matter(text)
     if front_matter is None:
         return False
+    composer: Any = YAML()  # ruamel's composer is untyped
     try:
-        root = YAML().compose(io.StringIO(front_matter))
+        root: Node | None = composer.compose(io.StringIO(front_matter))
     except YAMLError:
         return True
     stack: list[Node] = [] if root is None else [root]
@@ -449,12 +466,14 @@ def _anchored(text: str) -> bool:
         if id(node) in seen:
             continue
         seen.add(id(node))
-        if node.anchor is not None:
+        if getattr(node, "anchor", None) is not None:
             return True
+        held: Any = getattr(node, "value", None)
         if isinstance(node, MappingNode):
-            stack.extend(part for pair in node.value for part in pair)
+            pairs = cast("list[tuple[Node, Node]]", held)
+            stack.extend(part for pair in pairs for part in pair)
         elif isinstance(node, SequenceNode):
-            stack.extend(node.value)
+            stack.extend(cast("list[Node]", held))
     return False
 
 
@@ -479,22 +498,26 @@ def render_json(found: Since) -> str:
 
 
 def render_human(found: Since) -> str:
-    """Whether every change since lies inside `revalidated` blocks, and each that does not."""
+    """Whether every change since lies inside `revalidated` blocks, and each that does not.
+    A path, a reason and a parser's message quoting a file are the author's words, so each
+    is printed escaped, as the change check's human view prints them (`printable`)."""
     since, head = found.since[:SHORT], found.head[:SHORT]
+    base = printable(found.base_ref)
     title = cli_render.style("title", "Friction since")
-    lines = [f"{title} — {since} to {head}, apart from merges of {found.base_ref}", ""]
+    lines = [f"{title} — {since} to {head}, apart from merges of {base}", ""]
     if found.reason is not None:
-        lines.append(f"  Not all inside the blocks: {found.reason}.")
+        lines.append(f"  Not all inside the blocks: {printable(found.reason)}.")
     elif not found.steps:
         lines.append("  Nothing changed: the two commits are one.")
     else:
         merges = sum(1 for step in found.steps if step.merges_base)
-        lines.append(f"  {len(found.steps)} commit(s), {merges} of them merging {found.base_ref}.")
+        lines.append(f"  {len(found.steps)} commit(s), {merges} of them merging {base}.")
         for path in found.inside:
-            lines.append(f"  {path} — changed only inside `revalidated` blocks")
+            lines.append(f"  {printable(path)} — changed only inside `revalidated` blocks")
         for change in found.outside:
-            where = change.path or "(the merge)"
-            lines.append(f"  {where} — outside, in {change.commit[:SHORT]}: {change.why}")
+            where = printable(change.path) if change.path else "(the merge)"
+            why = printable(change.why)
+            lines.append(f"  {where} — outside, in {change.commit[:SHORT]}: {why}")
         lines.append("")
         lines.append(
             "  Every change lies inside `revalidated` blocks."

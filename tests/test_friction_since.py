@@ -112,6 +112,18 @@ def test_a_block_added_whole_lies_inside_and_one_removed_does_not(repo: AdopterR
     ]
 
 
+@pytest.mark.parametrize("emptied", ["    revalidated:\n", "    revalidated: {}\n"])
+def test_a_block_emptied_lies_outside_as_one_removed(repo: AdopterRepo, emptied: str) -> None:
+    """An emptied block drops its answer as a block removed does."""
+    since = _authorised(repo)
+    block = "    revalidated:\n      at: 2026-09-01T09:00:00Z\n      outcome: unchanged\n"
+    block += "      unchanged-because: the CLI is as described\n"
+    assert block in _page(T0)
+    repo.commit("empty the block", {PAGE: _page(T0).replace(block, emptied)})
+    (outside,) = _since(repo, since).outside
+    assert outside.why == "a `revalidated` block was removed from it, which drops an answer"
+
+
 def test_front_matter_with_a_yaml_anchor_lies_outside(repo: AdopterRepo) -> None:
     """An anchor inside the block, repeated by an alias outside it, would let the
     block's text change a field outside it while the text outside stays the same."""
@@ -375,6 +387,27 @@ def test_a_name_that_is_no_commit_cannot_be_answered(repo: AdopterRepo) -> None:
     result = _cli("no-such-commit", "--base", "main")
     assert result.exit_code == 1
     assert "names no commit" in result.output
+
+
+def test_a_tag_named_like_a_commit_id_is_refused(repo: AdopterRepo) -> None:
+    """git reads a tag before a short id: a tag named like the authorised commit's id
+    must not stand in for it."""
+    since = _authorised(repo)
+    repo.commit("answer again", {PAGE: _page(T1)})
+    repo.git("tag", since[:7], "main")
+    with pytest.raises(FrictionCheckError, match="reads as a commit's id"):
+        _since(repo, since[:7])
+
+
+def test_the_human_view_escapes_what_the_author_named(repo: AdopterRepo) -> None:
+    """A path is the author's: a control character in it is printed escaped, so it
+    cannot rewrite what the terminal shows."""
+    since = _authorised(repo)
+    repo.commit("a strange name", {"src/x\x1b[8m.py": "X = 1\n"})
+    result = _cli(since, "--base", "main")
+    assert result.exit_code == 0, result.output
+    assert "\x1b[8m" not in result.stdout
+    assert "src/x\\x1b[8m.py — outside" in result.stdout
 
 
 def test_a_shallow_clone_cannot_be_answered(
