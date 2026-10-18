@@ -51,7 +51,7 @@ pkit:
 
 **Main path:**
 
-1. The developer runs the checks the project's merges wait on. In project-kit, `scripts/check.sh` runs them, the full test suite among them, and the pre-push hook `.githooks/pre-push` runs it before each push (project rule 2).
+1. The developer runs the checks the project's merges wait on. In project-kit, `scripts/check.sh` runs them, the full test suite among them, and the pre-push hook `.githooks/pre-push` runs `scripts/check.sh` before each push (project rule 2).
 2. Each check that compares the change reads one base: `PKIT_CHECK_BASE` where set, else the remote's copy of the default branch (COR-054 points 2 and 3).
 3. `pkit validate` checks the working tree's state through every registered validator, the backbone's and each installed component's (COR-055 point 3). It fails only on an `error` finding (COR-055 point 5).
 4. The checks that compare a change, such as `pkit friction check`, `pkit migrations check-diff` and `pkit decisions check-diff`, compare it with where the branch left the base.

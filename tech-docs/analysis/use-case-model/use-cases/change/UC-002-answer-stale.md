@@ -43,7 +43,7 @@ pkit:
 
 - **AI agent** (`ACT-ai-agent`): an agent making the change writes, without asking, the answers the change owes. A reviewer agent, where the project chose one, checks them and writes none (COR-050 point 3).
 - **CI pipeline** (`ACT-ci-pipeline`): runs the change check against the pull request's target, named once for every check (COR-054 point 3). It is told when a shallow clone cut the history the check reads.
-- **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated artefact, the sentence its author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up (COR-050 point 3).
+- **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated artefact, the sentence the change's author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up (COR-050 point 3).
 
 **Preconditions:** The artefacts the change could make stale lie in a declared place, and carry their anchors (UC-005).
 
