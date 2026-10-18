@@ -15,9 +15,13 @@ pkit:
         - .pkit/rules/project.md
       record:
         - software-engineering:DEC-001
+        - software-engineering:DEC-002#4
+        - project-management:DEC-028
+        - project-management:DEC-032#D1
         - COR-024
         - COR-050#3
         - ADR-052#3
+        - ADR-052#6
       artefact:
         - ACT-developer
         - ACT-ai-agent
@@ -29,36 +33,42 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): the `software-engineer` agent finds its definition deployed, with the path to the project's conventions corpus where the project names one. It never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
+- **AI agent** (`ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
 
 **Preconditions:** The project has installed the software-engineering capability, and the adapter has deployed its `software-engineer` agent.
 
 **Assumptions:**
 
-- The agent follows its definition. Nothing at run time holds it to the corpus, and no reviewer reads the corpus to check its code (software-engineering DEC-001 point 4).
-- The agent asks the developer before a destructive operation, such as deleting files or rewriting history (core rule 8).
-- The agent retries once a step that failed for a cause outside its own work, such as a locked signing key. Then it stops and reports (core rule 21).
-- In project-kit, every commit the agent makes is signed, and the agent never switches signing off (project rule 4).
+- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
+- Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too (software-engineering DEC-002 point 4).
+- The change builds only on accepted decision records (core rule 2).
+- The agent asks before a destructive operation, such as `git push --force` or deleting files outside `project/` (core rule 8).
+- The agent works within the permission model, never around it (core rules 14 and 15).
+- The agent changes no other repository, unless the person it works for confirms it (core rule 19).
+- The agent retries once a step that failed for a cause outside its own work, such as a locked signing key. It first checks that the step did not take effect. If it fails again, the agent stops and reports (core rule 21).
+- In project-kit, the agent runs the tests of what it changed, and leaves the full suite to the pre-push hook and CI (project rule 2).
+- In project-kit, every commit is signed, and signing is never switched off. A commit that fails to sign waits a minute before its one retry (project rule 4).
 
 **Trigger:** The developer asks the `software-engineer` agent to make a change, such as the code an issue asks for.
 
 **Main path:**
 
 1. The developer asks the `software-engineer` agent to make the change.
-2. The agent reads the conventions corpus at the path its deployed definition gives for `<project-conventions>`, before it writes any code.
+2. The agent reads the conventions corpus the project names, before it writes any code.
 3. The agent writes the change's code, applying the corpus to each choice it settles, such as naming, layout and error handling.
 4. The agent reads its diff again against the corpus, and corrects what does not conform.
-5. The agent hands the change to the reviewers (COR-024). The `critic` reviews a substantive design, and the `architect` reviews one that touches the big picture. The `convention-compliance-reviewer` reviews the diff.
-6. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered.
+5. The agent hands the change on for review, and invokes no reviewer itself (COR-024).
+6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032).
+7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for that person (project-management DEC-028).
 
 **Variants:**
 
-- **2a.** The project names no corpus, or the corpus is empty or says nothing on a choice. The agent says so, as in "no project conventions found for X; proceeding as a careful generalist", and works by ordinary judgement. The path rejoins at step 3.
-- **3a.** A design fork arises that the corpus does not settle. The agent names it and its trade-off in its hand-off, rather than choosing silently, and the path goes on at step 4.
-- **3b.** The change makes an anchored artefact owe an answer. The agent writes the answers its own change owes, as UC-002 describes, and the path goes on at step 4.
+- **2a.** The project names no corpus, as project-kit names none today, or the corpus is empty or silent on a choice. The agent says so, as in "no project conventions found for X; proceeding as a careful generalist", and works by ordinary judgement. The path rejoins at step 3.
+- **3a.** A design fork arises that the corpus does not settle. The agent names it and its trade-off, rather than choosing silently. The developer decides, asked one decision at a time with the agent's recommendation (core rule 17), and the path rejoins at step 3.
+- **3b.** The change makes an anchored artefact owe an answer. The agent writes the answers its own change owes, as UC-002 describes, and says in its hand-off that the change wrote answers. It composes no list of them, and the path goes on at step 4.
 
-**Postconditions:** The change's code conforms to the project's conventions corpus wherever the corpus speaks, and its reviewers have it, with each blocking finding fixed.
+**Postconditions:** The change's code conforms to the project's conventions corpus wherever the corpus speaks, and its reviewers have judged it, with each blocking finding fixed.
 
 **Minimal guarantees:**
 
-- A project that names no corpus still gets the agent deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 point 3 and `_resolve_agent.py`).
+- A project that names no corpus still gets the agent deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points 3 and 6, and `_resolve_agent.py`).
