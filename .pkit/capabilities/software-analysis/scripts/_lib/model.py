@@ -60,8 +60,7 @@ KINDS = (ACTOR, TERM, USE_CASE, JOURNEY, *REQUIREMENTS)
 COLLECTIONS = frozenset({TERM})
 
 #: Each kind's id prefix (DEC-001 point 3). The three kinds of requirement share one
-#: numbering (DEC-002 point 2). The stamp and the number checks number use cases and
-#: journeys, and no requirement yet.
+#: numbering (DEC-002 point 2).
 PREFIX = {
     ACTOR: "ACT",
     TERM: "TERM",
@@ -69,7 +68,10 @@ PREFIX = {
     JOURNEY: "JRN",
     **dict.fromkeys(REQUIREMENTS, "REQ"),
 }
-NUMBERED = frozenset({USE_CASE, JOURNEY})
+#: The kinds whose id is a number, `<PREFIX>-NNN`, which the stamp gives: a use case, a
+#: journey, and a requirement of each of the three kinds, which read their three places
+#: as one (DEC-002 point 2).
+NUMBERED = frozenset({USE_CASE, JOURNEY, *REQUIREMENTS})
 
 #: How each kind is named in a message, and how its id is written.
 NOUN = {
@@ -94,33 +96,35 @@ ID_SHAPE = {
 OTHER_ACTORS = "other-actors"
 RELIES_ON = "relies-on"
 
-#: A use case's or journey's id with its number in any number of digits — the
-#: spellings the id schema refuses included.
-_NUMBER = rf"(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]})-(?P<number>[0-9]+)"
+#: A numbered kind's id with its number in any number of digits — the spellings the
+#: id schema refuses included.
+_PREFIXES = "|".join(sorted({PREFIX[kind] for kind in NUMBERED}))
+_NUMBER = rf"(?P<prefix>{_PREFIXES})-(?P<number>[0-9]+)"
 _ANY_NUMBER = re.compile(rf"^{_NUMBER}$")
 
-#: A file named after the use case or journey it holds, `UC-NNN-<slug>.md`, as the
-#: stamp names one: the number, then a hyphen or the extension.
+#: A file named after the numbered artefact it holds, `UC-NNN-<slug>.md` or
+#: `REQ-NNN-<slug>.md`, as the stamp names one: the number, then a hyphen or the
+#: extension.
 _NAMED = re.compile(rf"^{_NUMBER}(?=[-.])")
 
 
 def identity(artefact_id: str) -> str:
-    """The id `artefact_id` stands for: a use case's or journey's number in its one
-    spelling, the one the id schema admits — `UC-0007` stands for `UC-007` — any
-    other id as written. The stamp counts a number as held, and the check two
-    artefacts as sharing an id, by this, so the two never disagree."""
+    """The id `artefact_id` stands for: a numbered kind's number in its one spelling,
+    the one the id schema admits — `UC-0007` stands for `UC-007` — any other id as
+    written. The stamp counts a number as held, and the check two artefacts as sharing
+    an id, by this, so the two never disagree."""
     return number_in(artefact_id) or artefact_id
 
 
 def number_in(artefact_id: str) -> str | None:
-    """The use case's or journey's number `artefact_id` spells, as `identity` spells
-    it; `None` for an id that is no such number."""
+    """The number of a numbered kind `artefact_id` spells, as `identity` spells it;
+    `None` for an id that is no such number."""
     found = _ANY_NUMBER.match(artefact_id)
     return None if found is None else _spelt(found)
 
 
 def number_of(artefact_id: str) -> int:
-    """The number of a use case's or journey's id as `identity` spells it: 7 for `UC-007`."""
+    """The number of a numbered kind's id as `identity` spells it: 7 for `UC-007`."""
     return int(artefact_id.split("-", 1)[1])
 
 
@@ -130,8 +134,8 @@ def kind_numbered(artefact_id: str) -> str:
 
 
 def id_in_name(path: str) -> str | None:
-    """The use case's or journey's id a file's name carries — `UC-007` for
-    `…/UC-007-export.md` — as `identity` spells it; `None` for a name carrying none.
+    """The numbered id a file's name carries — `UC-007` for `…/UC-007-export.md` — as
+    `identity` spells it; `None` for a name carrying none.
     The stamp names each file so, and counts the number a name carries as held
     whatever the file holds — no front matter, one that does not parse, one naming
     no id — so a number is never used again because its file cannot be read."""
@@ -310,12 +314,12 @@ class Analysis:
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
-        artefact's own id, and each number a use case or journey holds (`numbers`)."""
+        artefact's own id, and each number a numbered artefact holds (`numbers`)."""
         return {identity(a.id) for a in self.artefacts if a.id} | set(self.numbers())
 
     def numbers(self) -> dict[str, set[str]]:
-        """Each use case's or journey's number this state holds, as `identity` spells
-        it, and the files holding it: by its front matter's id, and by the number a
+        """Each number of a numbered kind this state holds, as `identity` spells it, and
+        the files holding it: by its front matter's id, and by the number a
         file's name carries (`id_in_name`) — so a file whose id cannot be read still
         holds the number its name gives it (DEC-001 point 3)."""
         found: dict[str, set[str]] = defaultdict(set)

@@ -1,0 +1,23 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit analysis new` stamps a requirement of each of the three kinds DEC-002
+  keeps: `quality-requirement <slug>`, `functional-requirement <slug>` and
+  `constraint <slug>` (#1692). Each is written as `REQ-NNN-<slug>.md` in its
+  kind's folder under `requirements/`, or an area's folder in it with
+  `--area`. Its heading shows its id, its kind and its title, and its
+  `statement`, `measure` and `applies-to` hold their hints until you write
+  them. A requirement takes the next free `REQ-NNN` across the three kinds,
+  past every number the working tree, the default branch and its history hold
+  in any of their folders. The numbering setting, `numbering.freed-by`, now
+  frees a requirement's id as it frees a use case's. `--actor` and
+  `--refines`, each repeatable, write `actors` and `refines`, and anchor each
+  actor and each requirement refined. A requirement nothing embodies takes
+  `--unanchored-because` instead. The stamp refuses an actor or a requirement
+  the analysis does not hold or has withdrawn, a requirement that refines
+  itself, `--unanchored-because` beside an anchor, and a placeholder left in
+  a value. The `analysis-author` skill gains a sub-procedure for requirements,
+  `requirement.md`, with the test between the three kinds and a use case.
+  Requirements may now be written: use the stamp rather than a file by hand.
