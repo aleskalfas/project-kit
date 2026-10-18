@@ -47,9 +47,9 @@ rules:
             - "software-analysis:DEC-001#9"
             - "COR-050#1"
         revalidated:
-          at: 2026-10-17T22:14:49Z
+          at: 2026-10-17T20:04:12Z
           outcome: unchanged
-          unchanged-because: Point 4 keeps the words this rule uses, the decisions a use case relies on, and says those that answer it are among them. It adds that a use case anchors the views that realise it, which this rule's list does not ask for. The rule asks no anchor point 4 forbids, and contradicts none it gives.
+          unchanged-because: COR-050 point 1 was reached only through the Decision's text outside its points, which says a record anchor stands on the record's content and what a record's content is. RS-SAN-005 asks that an artefact's anchors name what its statements rest on, and that an anchor on a part names only that part, which still holds.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only

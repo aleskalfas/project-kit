@@ -561,5 +561,6 @@ def test_truth_chain_order_follows_a_part_anchor_to_its_artefact(adopter: Adopte
     downstream = document("aaa", anchors={"artefact": ["page#"]}, body="Downstream.")
     _write(adopter, **{"docs/aaa.md": downstream})
     discovery = fd.discover_artefacts(adopter.root)
-    order = [discovery.artefacts[i].id for i in fc.truth_chain_order(discovery)]
+    head = fc.Side(adopter.root, fc.WorkingTree(adopter.root), discovery)
+    order = [discovery.artefacts[i].id for i in fc.truth_chain_order(discovery, head.record_path)]
     assert order.index("page") < order.index("aaa")

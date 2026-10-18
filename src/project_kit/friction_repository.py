@@ -35,10 +35,13 @@ each, some part of it differs, not necessarily the same — never part by
 part. A part differs from a state (`friction_history.differs`) as follows:
 a path anchor's files by mode and object — HEAD's from its tree, a state's
 from the state's tree objects, read through `git cat-file --batch`
-(`TreeReader`) — a record's file and a registered kind's files the same
-way, followed across renames; an anchor on a record's point by what the
-point stands on, cut from each version of the record's file through
-`record_points` (`_Judge.standing_in`), so a version that changed the file
+(`TreeReader`) — a registered kind's files the same way, followed across
+renames; a record anchor by the record's content, read from each version of
+the record's file by discovery's one reading (`friction_discovery.
+record_content`, `_Judge.standing_in`), followed across renames, so a version
+that wrote only the record's container is no change to it; an anchor on a
+record's point by what the point stands on, cut from each version of the
+record's file through `record_points`, so a version that changed the file
 elsewhere is no change to it; an artefact anchor's target by its content,
 read at the state's commit, and one on a document's section or its lead by
 what the part stands on, its text and the document's own fields, cut from
@@ -70,7 +73,8 @@ was last added, since only there is it known where the value it carries was
 first carried.
 
 **What it reports** (points 7, 8, 11, 12), per artefact, upstream first
-along artefact anchors: *stale* — an anchor changed since its answering
+along the anchors between artefacts, record anchors on a record that is an
+artefact included (`truth_chain_order`): *stale* — an anchor changed since its answering
 states, or the artefact moved, or was let back in by `friction.exclude`,
 after the point with no revalidation — with its origin (author, date,
 change); *deferred* — every deferral, with its point's origin and, in the
@@ -163,12 +167,14 @@ from project_kit.friction_discovery import (
     Artefact,
     Discovery,
     FrictionSettings,
+    RecordContent,
     ResolverCommand,
     content,
     deferral_reason,
     discover_artefacts,
     pattern_matcher,
     read_friction_settings,
+    record_content,
     registered_anchor_kinds,
 )
 from project_kit.friction_git import (
@@ -534,6 +540,7 @@ class _Judge:
         self._flips: dict[int, tuple[FrictionSettings, list[Callable[[str], bool]]] | None] = {}
         self._lines: dict[tuple[Any, ...], dict[int, Any]] = {}
         self._records: dict[str, RecordPoints | None] = {}  # by blob: a record's points
+        self._contents: dict[str, RecordContent | None] = {}  # by blob: a record's content
         self.taken: dict[tuple[int, int], set[str]] = {}
         """By merge and answering state, the files a merge took whole from one side that
         `line` read as changes measured from that state: git's combined diff lists none of
@@ -906,10 +913,11 @@ class _Judge:
         out; where `friction.exclude` changed since the point (`exclusion`),
         each commit that changed a file it leaves out, lets in or that is gone
         while the anchor stood on the file (`counts`), and each that let one of
-        its files in. A record anchor: each commit that changed the content of
-        the record's file. One on a record's point: each commit at which what
-        the point stands on differs from what it stood on at every parent of
-        the commit (`standing_in`). An anchor of a registered kind: each commit that
+        its files in. A record anchor: each commit at which what it stands on —
+        the record's content, or what its point stands on, for one on a point —
+        differs from what it stood on at every parent of the commit
+        (`standing_in`), so a commit that wrote only the record's container is
+        none of them. An anchor of a registered kind: each commit that
         changed the content of a file its resolver says it stands on, followed
         through renames as a record's file is, its artefact's own names left
         out as a path anchor's are. One pass over the history's listing,
@@ -930,7 +938,7 @@ class _Judge:
                     if index not in covered and self.counts(index, rel)
                 )
             return touched | self.flips(moved.let_in, covered, excluded=False)
-        if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
+        if anchor.kind == "record":
             rel = self.head.record_path(anchor.value)
             standing = self.standing_in(anchor)
             return {
@@ -951,9 +959,10 @@ class _Judge:
         }
 
     def files_of(self, anchor: Anchor, own: frozenset[str]) -> tuple[str, ...]:
-        """The files at HEAD a record anchor or an anchor of a registered kind stands
-        on: the record's file, or what its resolver answers, `own` left out; none for
-        another kind, or for one that resolves to nothing."""
+        """The files at HEAD a record anchor names or an anchor of a registered kind
+        stands on: the record's file, or what its resolver answers, `own` left out; none
+        for another kind, or for one that resolves to nothing. A record anchor stands on
+        the record's content, read from that file (`standing_in`)."""
         if anchor.kind == "record":
             rel = self.head.record_path(anchor.value)
             return () if rel is None else (rel,)
@@ -987,7 +996,7 @@ class _Judge:
         *,
         renames: bool = False,
         target: Artefact | None = None,
-        point: Anchor | None = None,
+        record: Anchor | None = None,
         part: str | None = None,
     ) -> dict[int, Any]:
         """The changes to a part since the answering state at `state`, on the lines that carry
@@ -997,9 +1006,10 @@ class _Judge:
         The part is the file's entry, `then` its entry at the state; for `target`,
         an artefact anchor's, the target's content, `then` its content there, or,
         with `part`, what that section or the lead of the target stands on
-        (`part_in`), `then` what it stood on there; for `point`, an anchor on a
-        record's point, what the point stands on (`standing_in`), `then` what it
-        stood on there. Each merge among the changes that lists none of the
+        (`part_in`), `then` what it stood on there; for `record`, a record
+        anchor, what it stands on — the record's content, or what its point
+        stands on (`standing_in`) — `then` what it stood on there. Each merge
+        among the changes that lists none of the
         file's names took it whole from one side: recorded in `taken`.
         """
         value: Callable[[str, TreeEntry | None], Any] = file_entry
@@ -1010,9 +1020,9 @@ class _Judge:
         elif target is not None:
             key = ("artefact", state, start, rel, renames, target.id)
             value = self._content_in(target)
-        elif point is not None:
-            key = ("point", state, start, rel, renames, point.value)
-            value = self.standing_in(point)
+        elif record is not None:
+            key = ("record", state, start, rel, renames, record.value)
+            value = self.standing_in(record)
         found = self._lines.get(key)
         if found is None:
             found = self._lines[key] = line_changes(
@@ -1122,9 +1132,10 @@ class _Judge:
         Each part is compared as HEAD's trees and the state's hold it: a path
         anchor's files it stands on at the state and at HEAD, each under its own
         exclusions, those a widening took (`exclusion`), those gone under an
-        exclusion, and those a narrowing let in, which always count; a record's
-        file and a registered kind's files, followed across renames; an
-        artefact's content, read at the state's commit. Where a merge lies
+        exclusion, and those a narrowing let in, which always count; what a
+        record anchor stands on, the record's content or what its point stands
+        on (`_record_since`), and a registered kind's files, followed across
+        renames; an artefact's content, read at the state's commit. Where a merge lies
         between the state and HEAD, every such part is compared, whatever the
         history lists, so one a merge took whole from one side is never missed;
         where none does, the commits between are one line, and a part none of
@@ -1141,8 +1152,8 @@ class _Judge:
             return self._target_since(found.target, state)
         if anchor.kind == "path":
             return self._path_since(anchor, state, own)
-        if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
-            return self._point_since(anchor, state)
+        if anchor.kind == "record":
+            return self._record_since(anchor, state)
         covered = self.history.ancestors(state)
         merged = self.history.merged(state, 0)
         origins: list[int] = []
@@ -1279,17 +1290,18 @@ class _Judge:
         entry = self.trees.entry(self.history.commits[state].sha, name)
         return self.part_in(target, part)(name, entry)
 
-    def _point_since(self, anchor: Anchor, state: int) -> Change | None:
-        """`since` for an anchor on a record's point: what the point stands on at HEAD
-        against what it stood on at the state (COR-050 point 5), the record's file followed
-        across renames, as a record anchor's is.
+    def _record_since(self, anchor: Anchor, state: int) -> Change | None:
+        """`since` for a record anchor: what it stands on at HEAD against what it stood on
+        at the state (COR-050 point 5), the record's file followed across renames.
 
-        The point is cut from each version of the file (`standing_in`): a point
-        missing at a version, or retired there, stands on nothing. So a version
-        that changed the file elsewhere is no change to the point, and debt is
-        dated from the oldest version from which what it stands on has
-        differed without returning (point 9). On one line, where no commit
-        since the state touched the file, it stands as it stood.
+        What it stands on is read from each version of the file (`standing_in`): the
+        record's content for an anchor on the whole record, never its container; what
+        the point stands on for one on a point, where a point missing at a version, or
+        retired there, stands on nothing. So a version that wrote only the record's
+        container is no change to a whole anchor, one that changed the file elsewhere
+        is no change to a point, and debt is dated from the oldest version from which
+        what the anchor stands on has differed without returning (point 9). On one
+        line, where no commit since the state touched the file, it stands as it stood.
         """
         rel = self.head.record_path(anchor.value)
         if rel is None:
@@ -1299,16 +1311,16 @@ class _Judge:
         if not self.history.merged(state, 0) and all(v.index in reached for v in versions):
             return None  # one line, and no commit since the state touched the record's file
         then = self.standing_at(anchor, state)
-        if self.head.standing(anchor, rel) == then:
+        if self.head.record_standing(anchor, rel) == then:
             return None
-        changes = self.line(state, 0, rel, then, renames=True, point=anchor)
+        changes = self.line(state, 0, rel, then, renames=True, record=anchor)
         found = origin(self.history, changes, then)
         return None if found is None else Change(found, frozenset(changes))
 
-    def standing_at(self, anchor: Anchor, state: int) -> Standing | None:
-        """What an anchor on a record's point stood on at the state at `state` (COR-050
-        point 5): the record read from the state's tree, under the file's name there as the
-        history follows it, else under the name it has at HEAD."""
+    def standing_at(self, anchor: Anchor, state: int) -> Standing | RecordContent | None:
+        """What a record anchor stood on at the state at `state` (COR-050 point 5): the
+        record read from the state's tree, under the file's name there as the history
+        follows it, else under the name it has at HEAD (`standing_in`)."""
         rel = self.head.record_path(anchor.value)
         if rel is None:
             return None
@@ -1318,15 +1330,20 @@ class _Judge:
         entry = self.trees.entry(self.history.commits[state].sha, name)
         return self.standing_in(anchor)(name, entry)
 
-    def standing_in(self, anchor: Anchor) -> Callable[[str, TreeEntry | None], Standing | None]:
-        """What an anchor on a record's point stands on in the record's file at a path, with
-        an entry: the point cut from the blob the entry names, each blob read once for the
-        run (`record_points.read_points`), and nothing where there is no file."""
+    def standing_in(
+        self, anchor: Anchor
+    ) -> Callable[[str, TreeEntry | None], Standing | RecordContent | None]:
+        """What a record anchor stands on in the record's file at a path, with an entry,
+        each blob read once for the run, and nothing where there is no file: for an
+        anchor on the whole record, its content (`friction_discovery.record_content`);
+        for one on a point, the point cut from the blob (`record_points.read_points`)."""
         point = split_anchor(anchor.value)[1]
 
-        def standing(_path: str, entry: TreeEntry | None) -> Standing | None:
-            if point is None or entry is None or not entry[0].startswith(_FILE_MODE):
+        def standing(_path: str, entry: TreeEntry | None) -> Standing | RecordContent | None:
+            if entry is None or not entry[0].startswith(_FILE_MODE):
                 return None  # no file there, or a link or a submodule, which holds no record
+            if point is None:
+                return self._record_content(entry[1])
             if entry[1] not in self._records:
                 raw = self.blobs.read_object(entry[1])
                 self._records[entry[1]] = None if raw is None else read_points_bytes(raw)
@@ -1334,6 +1351,14 @@ class _Judge:
             return None if points is None else points.anchored(point).standing
 
         return standing
+
+    def _record_content(self, blob: str) -> RecordContent | None:
+        """The content of the record the blob `blob` holds, read once for the run; `None`
+        where the blob does not read."""
+        if blob not in self._contents:
+            raw = self.blobs.read_object(blob)
+            self._contents[blob] = None if raw is None else record_content(raw)
+        return self._contents[blob]
 
 
 # --- the check ---------------------------------------------------------------------
@@ -1374,7 +1399,7 @@ def run_repository_check(
         judge = _Judge(head, tree, history, Walker(history, blobs), blobs, registry)
         reports: list[ArtefactReport] = []
         findings: list[RepositoryFinding] = []
-        for index in truth_chain_order(discovery):
+        for index in truth_chain_order(discovery, head.record_path):
             artefact = discovery.artefacts[index]
             if artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals):
                 report, found = _check_artefact(artefact, judge)
@@ -1888,7 +1913,7 @@ def _part_diffs(
         if anchor is None:
             continue
         if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
-            then = judge.standing_at(anchor, point)
+            then = _point_standing(judge.standing_at(anchor, point))
             now = judge.head.standing(anchor, judge.head.record_path(anchor.value))
         elif anchor.kind == "artefact" and judge.head.part_of(anchor.value).names_part:
             then = judge.part_standing_at(anchor, point)
@@ -1907,6 +1932,12 @@ def _part_diffs(
             )
         )
     return diffs
+
+
+def _point_standing(found: Standing | RecordContent | None) -> Standing | None:
+    """What an anchor on a record's point stood on, as `_Judge.standing_at` reads it for
+    any record anchor: a point's standing, never a whole record's content."""
+    return found if isinstance(found, Standing) else None
 
 
 def _traced(
@@ -2186,7 +2217,7 @@ def render_human(result: RepositoryCheck, *, now: datetime | None = None) -> str
         *_header_lines(result),
         "",
         cli_render.style("heading", "FINDINGS")
-        + cli_render.style("muted", " — upstream first along artefact anchors"),
+        + cli_render.style("muted", " — upstream first along the anchors between artefacts"),
     ]
     rows = [f for f in result.findings if f.location is not None and f.artefact is not None]
     unreadable = [f for f in result.findings if f.kind is RepositoryFindingKind.UNREADABLE]

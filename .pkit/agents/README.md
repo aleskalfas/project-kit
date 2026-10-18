@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-17T15:21:29Z
+      at: 2026-10-17T20:03:51Z
       outcome: unchanged
-      unchanged-because: ADR-065 point 11 gains a row for the project rule set a capability declares, created by its install or by its migration for an earlier install, and a bullet that it is no seed path. The overlay's row, and reconcile's repair of a missing overlay that this page describes, are unchanged.
+      unchanged-because: COR-050 changes what a whole record anchor stands on, the record's content without its container, and lets cycles and the upstream-first order follow record anchors. This page's friction writers rest on point 3, who writes an answer and who checks it, which the change leaves as it was.
 ---
 
 # Agents

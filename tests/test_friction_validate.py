@@ -26,7 +26,17 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import LISTED, POINTED, POINTS, listed_record, pointed_record
+from tests.friction_documents import (
+    ADR,
+    ADR_OVERLAY,
+    LISTED,
+    POINTED,
+    POINTS,
+    adr,
+    document,
+    listed_record,
+    pointed_record,
+)
 
 CONFIG = ".pkit/project/config.yaml"
 
@@ -1066,6 +1076,95 @@ def test_artefact_anchor_may_name_a_document_by_path_or_an_entry_by_id(
     cycles = [f for f in result.errors if f.kind is fv.FrictionFindingKind.CYCLE]
     assert len(cycles) == 1
     assert "A -> RS-CMN-001 -> A" in cycles[0].message
+
+
+# --- cycles through record anchors (#1647, COR-050 point 5) ------------------------------
+
+
+def _cycles(adopter: AdopterRepo) -> list[fv.FrictionFinding]:
+    result = fv.validate_friction(adopter.root)
+    assert all(f.kind is fv.FrictionFindingKind.CYCLE for f in result.errors), [
+        f.message for f in result.errors
+    ]
+    return list(result.errors)
+
+
+@pytest.mark.parametrize("value", ["ADR-007", "ADR-007#3"])
+def test_a_cycle_through_a_record_anchor_is_found(adopter: AdopterRepo, value: str) -> None:
+    """The record a place holds anchors an artefact, which anchors the record back, whole
+    or on a point: the record anchor counts as one on the record."""
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            **ADR_OVERLAY,
+            ADR: adr(anchors={"artefact": ["guide"]}),
+            "docs/guide.md": document("guide", anchors={"record": [value]}),
+        }
+    )
+    (cycle,) = _cycles(adopter)
+    assert cycle.location == ADR
+    assert cycle.pointer == "/pkit/friction/anchors/artefact"
+    assert "form a cycle through anchors.artefact and anchors.record" in cycle.message
+    assert "ADR-007 -> guide -> ADR-007" in cycle.message
+
+    adopter.write({"docs/guide.md": document("guide", anchors={"path": [ADR]})})
+    assert _cycles(adopter) == []  # a path anchor on the record's file names a file
+
+
+def test_a_record_anchoring_itself_whole_or_on_its_point_is_a_cycle(adopter: AdopterRepo) -> None:
+    adopter.write({CONFIG: _config(["docs"]), **ADR_OVERLAY, ADR: adr()})
+    assert _cycles(adopter) == []
+
+    adopter.write({ADR: adr(anchors={"record": ["ADR-007"]})})
+    (whole,) = _cycles(adopter)
+    assert whole.pointer == "/pkit/friction/anchors/record"
+    assert "the artefact anchors to itself: ADR-007 -> ADR-007" in whole.message
+    assert "remove one of the record anchors" in whole.message
+
+    adopter.write({ADR: adr(anchors={"record": ["ADR-007", "ADR-007#3"]})})
+    (point,) = _cycles(adopter)
+    assert point.pointer == "/pkit/friction/anchors/record"
+    assert point.message.startswith(
+        "the artefact anchors itself, and one of its own points ('ADR-007', 'ADR-007#3'), "
+        "which is a cycle"
+    )
+
+
+def test_no_edge_reaches_a_record_outside_every_place(adopter: AdopterRepo) -> None:
+    """A record no place holds is no artefact: its block is not read, so no cycle passes
+    through it. Once a place holds it, the same anchors close a cycle."""
+    back = pointed_record().replace(
+        '"author": "A. Author <a@example.com>"',
+        '"author": "A. Author <a@example.com>",\n  "pkit": {"friction": '
+        '{"anchors": {"artefact": ["guide"]}}}',
+    )
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            POINTED: back,
+            "docs/guide.md": document("guide", anchors={"record": ["PRJ-900"]}),
+        }
+    )
+    assert _cycles(adopter) == []
+
+    adopter.write({CONFIG: _config(["docs", ".pkit/decisions/project"])})
+    (cycle,) = _cycles(adopter)
+    assert "PRJ-900 -> guide -> PRJ-900" in cycle.message
+
+
+def test_a_path_anchor_on_an_artefact_s_file_makes_no_cycle(adopter: AdopterRepo) -> None:
+    adopter.write(
+        {
+            CONFIG: _config(["docs"]),
+            "docs/a.md": _document("A", anchors={"path": ["docs/b.md"]}),
+            "docs/b.md": _document("B", anchors={"artefact": ["A"]}),
+        }
+    )
+    assert _cycles(adopter) == []
+
+    adopter.write({"docs/a.md": _document("A", anchors={"artefact": ["docs/b.md"]})})
+    (cycle,) = _cycles(adopter)
+    assert "A -> B -> A" in cycle.message
 
 
 def test_invalid_mode_is_the_configuration_pass_s_finding_and_reads_as_the_default(
