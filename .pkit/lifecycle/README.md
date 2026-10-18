@@ -31,8 +31,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-18T13:32:40Z
-      outcome: updated
+      at: 2026-10-18T13:52:23Z
+      outcome: unchanged
+      unchanged-because: "friction_discovery.py gains two readings for COR-051 point 6: whether a path lies in a folder of method rule sets, and which default rule-set folder a change of the internal root would leave behind. This page names friction discovery for held folders, the anchor-kind registry and its resolver runs, and says install creates the declared project rule set in rule-sets under the internal root, where the backbone finds it with no configuration. None of that changes, so what it says still holds."
 ---
 
 # Lifecycle
