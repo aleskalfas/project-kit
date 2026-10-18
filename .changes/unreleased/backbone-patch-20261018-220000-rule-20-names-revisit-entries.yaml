@@ -1,0 +1,8 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The core rules now tell an agent that it writes the revisit entries its own
+  change owes, again after a merge conflict, that a reviewer checks them, and
+  that any other entry is a person's decision.
