@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  `pkit friction artefacts --json` gains the key `unplaced`, within schema
+  version 1 (#1724). For each documentation location an installed capability
+  declares, keyed by the capability's name and then the location's, it gives
+  where the location lies and the Markdown files within it that no place and
+  no held folder of that capability holds. Each file says whether
+  `friction.exclude` leaves it out. The files come from the listing the walk
+  reads, so the list agrees with discovery inside a git work tree, outside
+  one, and at a commit with `--at`. Only the capability's own declarations
+  count, so a capability reads what lies in its location outside its places
+  without listing files itself. The human view adds a line for each location
+  that holds such files. The key is added, so no migration is due.

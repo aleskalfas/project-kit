@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T19:27:43Z
+      at: 2026-10-18T18:27:36Z
       outcome: unchanged
-      unchanged-because: This change alters pkit new migration and pkit migrations check-diff in cli.py. The stamp names a migration's folder and writes no version cell, and the changeset guard and the release commands this use case describes are untouched.
+      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. How a change declares its changesets and how the guard reads them is unchanged.
 ---
 
 # UC-003 — Declare what my change means for the next release
