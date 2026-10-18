@@ -12,16 +12,26 @@ needs:
   - Make my merges wait on the system's checks, knowing they bind only once my CI requires them.
   - Re-pin an inherited rule set to its new major version once I have reviewed it.
   - Report a problem with the system, and follow what happens to it.
+  - Choose the parts of each kind of analysis artefact as I adopt software analysis, keeping, relabelling or adding to the shipped ones.
+  - Set up a documentation space for one audience, with its own location and a definition whose scope selects its pages.
+  - Bring my existing documents into documentation spaces, anchored and fit for their readers, through a proposed plan that I review before anything moves.
+  - See, before I install a capability, what it would connect to in my project and which conflicts I would have to resolve.
+  - Upgrade one capability on its own to the version my project's release ships, without moving the backbone.
 pkit:
   friction:
     anchors:
       record:
         - COR-001
         - COR-010
+        - software-analysis:DEC-001#1
+        - living-docs:DEC-001#1
+        - living-docs:DEC-001#2
+        - living-docs:DEC-001#8
+        - COR-053#8
+        - COR-059#3
     revalidated:
-      at: 2026-10-17T21:38:12Z
-      outcome: unchanged
-      unchanged-because: COR-010 gains a paragraph saying that renaming or removing a section's heading in a shipped document triggers no migration, since no project that receives it can anchor its sections. The adopter's need to upgrade like a dependency, with its migrations run for it and its own files left alone, still holds.
+      at: 2026-10-18T14:15:22Z
+      outcome: updated
 ---
 
 # ACT-adopter — Adopter
