@@ -50,7 +50,7 @@ pkit:
 4. The system writes the component's new version in the `version:` line of its `package.yaml`.
 5. The system widens the upper bound of the component's `requires_backbone` to cover the backbone the repository carries, the one the author releases under. The system never narrows an upper bound, and moves no floor unless a changeset declares that floor (`versioning.py`).
 6. The system raises each floor a changeset declares for the component, on the backbone or on another capability. It also widens each upper bound on a capability that a changeset says the component runs on (PRJ-002 D4).
-7. The system adds an entry at the top of `CHANGELOG.md`, headed by the date, since the backbone does not move. It heads each of the component's notes with `**<component> <version>**`, and states each raised floor, such as `Requires backbone >=1.149.0.`
+7. The system adds an entry at the top of `CHANGELOG.md`, headed by the date, since the backbone does not move. The system heads each of the component's notes with `**<component> <version>**`, and states each raised floor, such as `Requires backbone >=1.149.0.`
 8. The system deletes the changesets it consumed.
 9. The author commits the release, and merges the release into the default branch. The release cuts no tag, since a tag names a backbone version, read from `.pkit/VERSION` (PRJ-004 and `versioning.py`).
 

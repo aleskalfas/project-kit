@@ -58,7 +58,7 @@ pkit:
 **Variants:**
 
 - **1a.** The change only adds, such as a new skill or a new schema, or it refines a document. It needs no migration (COR-010). The check reports `No migration-triggering changes in diff.`, and the use case ends.
-- **1b.** The change renames or removes a decision record. The check finds no trigger in it (`migrations.py`), and the use case ends.
+- **1b.** The change renames or removes a decision record. The check finds no trigger in the decision record (`migrations.py`), and the use case ends.
 - **2a.** The maintainer leaves out `--version`. The system takes the backbone's current version, a minor already released, so a project already at that minor never runs the migration. No check reports that the folder names a minor already released (`migrations.py` and `release.py`).
 - **2b.** On the path of 2a, the current version's patch is not 0. The system refuses, saying the version `must be X.Y.0`, and the path rejoins at step 2.
 - **3a.** The script adds a default that a project lacks. A later run over a project whose history is unknown may restore a default the project removed. The maintainer names that default in the changeset, so the release's notes carry the sentence (COR-010).
