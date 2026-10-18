@@ -44,6 +44,11 @@ updated document's sentence from the change's author:
   could open or close a comment around the section's markers.
   `sentence_closing_reference` and `sentence_comment_delimiter` name the same
   in an author's sentence.
+- `covers(since, head, base)` asks the backbone whether every change from one
+  head of a pull request to a later one lies inside `revalidated` blocks, a
+  clean merge of the base counting as none (`pkit friction since`): where it does, an
+  authorisation for the earlier head covers the later one (DEC-055 point 3).
+  An answer that cannot be read is never a pass.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
   footer. The section sits last, before the provenance footer. A section
@@ -144,6 +149,13 @@ RESOLVER_REFUSAL = "Run from a checkout at"
 #: reading of the friction settings a capability's script makes, which never
 #: re-reads the configuration itself (the CLI README, "friction artefacts").
 ARTEFACTS = ("friction", "artefacts", "--json", "--at")
+#: Whether what changed between two heads lies inside `revalidated` blocks, a clean
+#: merge of the base counting as none, as the backbone answers it (`pkit friction since`, the CLI
+#: README, "friction since"): the one reading of the blocks this capability makes.
+SINCE = ("friction", "since")
+#: The version of `pkit friction since --json` this module reads, versioned apart from
+#: the change check's document; a document of another is no answer, never misread.
+SINCE_SCHEMA_VERSION = 1
 #: Where a friction setting's change is said to be, in a refusal.
 SETTINGS_WHERE = "the friction settings"
 
@@ -419,6 +431,93 @@ def _run_check(head: str, base: str, *, cwd: Path | None) -> Mapping[str, Any] |
             f"{command}: its document lists no answers — the backbone predates the list"
         )
     return document
+
+
+# --- a later head an authorisation covers ------------------------------------------
+
+
+@dataclass(frozen=True)
+class Coverage:
+    """The backbone's answer for two heads of a pull request: whether every change from
+    `since` to `head` lies inside `revalidated` blocks, a clean merge of the base
+    counting as none (DEC-055 point 3). `outside` names each change that does not, a line each, and
+    `problem` why the answer could not be read, which is never a pass."""
+
+    since: str = ""
+    head: str = ""
+    covered: bool = False
+    #: How many files changed only inside `revalidated` blocks.
+    inside: int = 0
+    outside: tuple[str, ...] = ()
+    problem: str | None = None
+
+
+def covers(since: str, head: str, base: str) -> Coverage:
+    """Whether the changes from commit `since` to commit `head` lie only inside
+    `revalidated` blocks, a clean merge of the branch `base` counting as none, as the
+    backbone answers it (`pkit friction since <since> --head <head> --base <base>
+    --json`, run unrouted as the change check is). The base is fetched first where it
+    is a remote's, so a merge of it is told from the author's own commits. This
+    capability never reads a friction block itself (DEC-055 point 3)."""
+    problem = _refresh_base(base)
+    if problem is not None:
+        return Coverage(problem=problem)
+    command = f"`pkit friction since {since} --head {head} --base {base} --json`"
+    try:
+        proc = subprocess.run(
+            [*PKIT, *SINCE, since, "--head", head, "--base", base, "--json"],
+            env={**os.environ, **UNROUTED},
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=TIMEOUT,
+        )
+    except FileNotFoundError as exc:
+        return Coverage(problem=f"{command}: `pkit` is not on PATH ({exc})")
+    except subprocess.TimeoutExpired:
+        return Coverage(problem=f"{command}: it did not answer within {TIMEOUT}s")
+    except OSError as exc:
+        return Coverage(problem=f"{command}: it could not be run ({exc})")
+    said = [line.strip() for line in (proc.stderr or "").splitlines() if line.strip()]
+    if proc.returncode != 0:
+        return Coverage(
+            problem=f"{command}: it exited {proc.returncode}" + (f": {said[-1]}" if said else "")
+        )
+    try:
+        document = json.loads(proc.stdout or "")
+    except ValueError:
+        return Coverage(problem=f"{command}: its answer is not JSON")
+    if not isinstance(document, dict) or document.get("schema_version") != SINCE_SCHEMA_VERSION:
+        return Coverage(
+            problem=f"{command}: its answer is not a document of version {SINCE_SCHEMA_VERSION}"
+        )
+    return _coverage(document, command)
+
+
+def _coverage(document: Mapping[str, Any], command: str) -> Coverage:
+    """The backbone's document read, every field it rests on checked: a document missing
+    one is no answer."""
+    since, head = document.get("since"), document.get("head")
+    covered, inside, outside = (document.get(k) for k in ("all_inside", "inside", "outside"))
+    if not (
+        isinstance(since, str)
+        and isinstance(head, str)
+        and isinstance(covered, bool)
+        and isinstance(inside, list)
+        and isinstance(outside, list)
+    ):
+        return Coverage(problem=f"{command}: its document lacks what an answer needs")
+    lines = [
+        f"{shown(str(_mapping(o).get('path') or 'the merge'))} "
+        f"({str(_mapping(o).get('commit'))[:SHORT]}: {shown(str(_mapping(o).get('why')))})"
+        for o in outside
+    ]
+    reason = document.get("reason")
+    if isinstance(reason, str) and reason:
+        lines.insert(0, shown(reason))
+    if not covered and not lines:
+        return Coverage(problem=f"{command}: it answers not covered and names no change")
+    return Coverage(since, head, covered, len(inside), tuple(lines))
 
 
 @contextlib.contextmanager

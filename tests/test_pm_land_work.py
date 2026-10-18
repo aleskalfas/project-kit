@@ -340,6 +340,23 @@ class _Run:
     #: Each (head, base) the list was derived for.
     derived: list[tuple[str, str | None]] = field(default_factory=list)
     merge_base: str = ""
+    #: The backbone's answer on whether the authorisation for an earlier head covers
+    #: the PR's head (`friction_answers.covers`): covered, or why it cannot answer —
+    #: and each (since, head, base) it was asked about.
+    cover: bool = False
+    cover_problem: str | None = None
+    asked_cover: list[tuple[str, str, str]] = field(default_factory=list)
+
+    def covers(self, since: str, head: str, base: str) -> Any:
+        """`friction_answers.covers`, answered from this world."""
+        self.asked_cover.append((since, head, base))
+        fa = self.land.friction_answers
+        if self.cover_problem is not None:
+            return fa.Coverage(problem=self.cover_problem)
+        full = _git(self.work, "rev-parse", since)
+        if self.cover:
+            return fa.Coverage(full, head, True, inside=1)
+        return fa.Coverage(full, head, False, outside=(f"after.txt ({head[:7]}: added)",))
 
     def derive(self, head: str, base: str | None) -> Any:
         """`friction_answers.derive`, answered from this world's change check."""
@@ -481,6 +498,7 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         run = _Run(land=land, work=work, github=github, merge_base=clone.base)
         github.checks[github.head] = checks if checks is not None else [_GREEN]
         monkeypatch.setattr(land.friction_answers, "derive", run.derive)
+        monkeypatch.setattr(land.friction_answers, "covers", run.covers)
         # The backbone's reading, stood in for: the default branch `main` (COR-054).
         settled = land.friction_answers.default_branch
         monkeypatch.setattr(settled, "_read", {})
@@ -1486,19 +1504,128 @@ def test_ready_runs_done_works_gates_and_reports_their_refusal(world, capsys) ->
 
 
 def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) -> None:
+    """A head whose changes since the authorised one lie outside `revalidated` blocks
+    is a head nobody authorised: the run stops, naming the changes (DEC-055 point 3)."""
     run = world()
     authorised = run.github.head
-    run.push_new_head("after.txt")
+    head = run.push_new_head("after.txt")
     rc, out, _err = run.run("--yes", "--expect-head", authorised[:12], capsys=capsys)
     assert rc == run.land.EXIT_HEAD_MOVED
     assert out.splitlines()[-1] == (
-        f"head: stopped — PR #{PR}'s head is {_short(run.github.head)}, not "
-        f"{authorised[:7]}, the head the merge was authorised for: an authorisation is "
-        f"for one head. Nothing was done; `land-work {ISSUE}` checks and reviews the new one"
+        f"head: stopped — PR #{PR}'s head is {_short(head)}, not "
+        f"{authorised[:7]}, the head the merge was authorised for: an authorisation covers a "
+        "later head only where every change since lies inside `revalidated` blocks, a clean "
+        f"merge of main counting as none, and these changes do not: after.txt ({head[:7]}: "
+        "added). "
+        f"Nothing was done; `land-work {ISSUE}` checks and reviews the new one"
     )
+    assert run.asked_cover == [(authorised[:12], head, "main")]
     assert not any(call[:2] == ["pr", "view"] for call in run.github.calls)
     assert run.github.merges == []
     assert run.invoked == []
+
+
+def test_an_authorisation_whose_cover_cannot_be_told_stops_before_anything(world, capsys) -> None:
+    """The backbone cannot answer: never read as covered."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("after.txt")
+    run.cover_problem = "`pkit friction since …`: it exited 1: Error: this clone is shallow"
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert out.splitlines()[-1] == (
+        f"head: stopped — PR #{PR}'s head is {_short(head)}, not {authorised[:7]}, the head "
+        "the merge was authorised for, and whether that authorisation covers it could not be "
+        f"told: {run.cover_problem}. Nothing was done; `land-work {ISSUE}` checks and reviews "
+        "the new one"
+    )
+    assert run.github.merges == [] and run.invoked == []
+
+
+#: How the head step and the merge step say an earlier head's authorisation covers it.
+def _covered(authorised: str) -> str:
+    return (
+        f"the authorisation for {_short(authorised)} covers it, since every change after "
+        f"{_short(authorised)} lies inside `revalidated` blocks, a clean merge of main "
+        "counting as none"
+    )
+
+
+def test_an_authorisation_covers_a_later_head_of_re_resolved_answers(world, capsys) -> None:
+    """Every change since the authorised head lies inside `revalidated` blocks: the run
+    goes on at the later head — its checks, its review — and merges it, saying which
+    head it merged and why the authorisation covered it (DEC-055 point 3)."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_GREEN]
+    run.cover = True
+    rc, out, err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == 0, out + err
+    steps = _steps(out)
+    assert steps[0] == f"head: {_short(head)} (PR #{PR}, {BRANCH}); {_covered(authorised)}"
+    assert steps[-1] == f"merge: merged as {'c' * 7}, at {_short(head)} — {_covered(authorised)}"
+    assert [merge[-1] for merge in run.github.merges] == [head]
+    # The reviewers judged the later head, not the one authorised.
+    assert sorted(run.invoked) == sorted((name, head) for name in PANEL)
+    assert run.derived == [(head, "main")]
+
+
+def test_a_covered_head_whose_checks_fail_merges_nothing(world, capsys) -> None:
+    """The run at the later head passes as any run must: a failed check stops it."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_RED]
+    run.cover = True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert out.splitlines()[-1].startswith(f"ci: failed on {_short(head)}")
+    assert run.github.merges == []
+
+
+def test_a_covered_head_with_a_finding_to_judge_stops_ready(world, capsys) -> None:
+    """A `[person]` finding at the later head needs the person, who was not shown it:
+    the run stops ready on that head, though its verdict stood when the run started."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_GREEN]
+    run.github.comments.append(_verdict(run, "code-reviewer", _PERSON, sha=head))
+    run.github.comments.append(_verdict(run, "reviewer", "Looks right.", sha=head))
+    run.cover = True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert out.splitlines()[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 finding to judge "
+        f"above; the authorisation for {_short(authorised)} covers {_short(head)} only where "
+        f"nothing there needs a person, and it holds 1 finding to judge; {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+    # The person's authorisation for the later head, given on the finding, merges it.
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_covered_head_with_an_answer_not_asked_for_stops_ready(world, capsys) -> None:
+    """An answer the change check did not ask for needed the person's acceptance: the
+    earlier head's authorisation does not cover a later head holding one."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_GREEN]
+    run.written = [INSTALL, DEFERRED]
+    run.cover = True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert out.splitlines()[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, 1 document left "
+        f"out of date above, for information; the authorisation for {_short(authorised)} "
+        f"covers {_short(head)} only where nothing there needs a person, and it holds 1 answer "
+        f"this change was not asked for; {_merge_line(run)}"
+    )
+    assert run.github.merges == []
 
 
 def test_expect_head_takes_a_commit_id_only(land) -> None:
