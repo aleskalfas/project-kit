@@ -1542,6 +1542,36 @@ def test_an_authorisation_whose_cover_cannot_be_told_stops_before_anything(world
     assert run.github.merges == [] and run.invoked == []
 
 
+def test_an_answer_for_another_pair_of_heads_is_no_answer(world, capsys, monkeypatch) -> None:
+    """The backbone's answer is taken only for the two heads it was asked about."""
+    run = world()
+    authorised = run.github.head
+    head = run.push_new_head("answers.txt")
+    fa = run.land.friction_answers
+    monkeypatch.setattr(
+        fa, "covers", lambda since, h, base: fa.Coverage(authorised, "f" * 40, True)
+    )
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert (
+        f"whether that authorisation covers it could not be told: the backbone answered for "
+        f"{authorised[:7]} to fffffff, not {authorised[:7]} to {_short(head)}"
+    ) in out.splitlines()[-1]
+    assert run.github.merges == []
+
+
+def test_a_later_head_whose_base_cannot_be_read_stops_before_anything(world, capsys) -> None:
+    run = world()
+    authorised = run.github.head
+    run.push_new_head("answers.txt")
+    run.github.base_branch = ""
+    run.cover = True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert "its base branch could not be read" in out.splitlines()[-1]
+    assert run.asked_cover == [] and run.github.merges == []
+
+
 #: How the head step and the merge step say an earlier head's authorisation covers it.
 def _covered(authorised: str) -> str:
     return (

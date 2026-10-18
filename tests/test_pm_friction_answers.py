@@ -1405,7 +1405,13 @@ def test_the_backbone_is_asked_unrouted_with_the_base_named(
         (0, '{"schema_version": 2}', "not a document of version 1"),
         (0, '{"schema_version": 1, "since": "a", "head": "b"}', "lacks what an answer needs"),
         (0, _since_document(all_inside="yes"), "lacks what an answer needs"),
-        (0, _since_document(all_inside=False), "answers not covered and names no change"),
+        (0, _since_document(all_inside=False), "and the changes it names disagree"),
+        (
+            0,
+            _since_document(outside=[{"path": "a.py", "commit": HEAD, "why": "added"}]),
+            "and the changes it names disagree",
+        ),
+        (0, _since_document(reason="it was rebased"), "and the changes it names disagree"),
     ],
 )
 def test_an_answer_that_cannot_be_read_is_never_covered(

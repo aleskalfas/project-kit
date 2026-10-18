@@ -481,7 +481,9 @@ def covers(since: str, head: str, base: str) -> Coverage:
     said = [line.strip() for line in (proc.stderr or "").splitlines() if line.strip()]
     if proc.returncode != 0:
         return Coverage(
-            problem=f"{command}: it exited {proc.returncode}" + (f": {said[-1]}" if said else "")
+            # The backbone's message can quote a path the author chose: escaped.
+            problem=f"{command}: it exited {proc.returncode}"
+            + (f": {shown(said[-1])}" if said else "")
         )
     try:
         document = json.loads(proc.stdout or "")
@@ -515,8 +517,10 @@ def _coverage(document: Mapping[str, Any], command: str) -> Coverage:
     reason = document.get("reason")
     if isinstance(reason, str) and reason:
         lines.insert(0, shown(reason))
-    if not covered and not lines:
-        return Coverage(problem=f"{command}: it answers not covered and names no change")
+    if covered != (not lines and reason is None):
+        return Coverage(
+            problem=f"{command}: its answer and the changes it names disagree, so it is no answer"
+        )
     return Coverage(since, head, covered, len(inside), tuple(lines))
 
 
