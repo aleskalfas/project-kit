@@ -29,22 +29,28 @@ What is checked, each against the record's words:
   are. A hint the stamp wrote as a placeholder, still in an own field, a body
   or a section, is an error too: a comment that opens with its mark, `<!--
   pkit:hint`, outside fenced code and code spans (`structure.hints`). The
-  stamp writes one as the text of each field it leaves to fill, an actor's
-  need and a term's definition, and as each body part. The message repeats
-  the hint. Neither needs a rule.
+  stamp writes one as the text of each field it leaves to fill, such as an
+  actor's need or a term's definition, and as each body part, and a
+  requirement's template holds one in its statement, its measure and where it
+  holds. The message repeats the hint. Neither needs a rule.
 - **A document's heading** is its id and its front matter's title — an
   actor's name — `# UC-NNN — <title>`, `# ACT-<slug> — <name>`: what a reader
   of the front matter alone sees — a data point publishing `{id, title,
   status}`, say — is what the page shows. The heading is read from the file
-  discovery names. A requirement's heading, which shows its kind between its
-  id and its title, is not held here yet: its structure's title heading is.
+  discovery names. A requirement's heading shows its kind between its id and
+  its title, `# REQ-NNN · Quality · <title>`, as its kind's structure names it
+  (DEC-002 point 2). The heading wanted is the one the stamp and the templates
+  write (`render.title_heading`).
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
-  a number spelt with other zeros included — as the stamp counts it held.
-- **A name the id disagrees with** (point 3). A use case or journey whose
-  file's name carries a number (`UC-007-<slug>.md`) its front matter does not
-  give — no id, or another: the stamp counts the number its name carries, so
-  the front matter says the same. An actor whose file is not named
-  `<id>.md`: an actor's id names its file.
+  a number spelt with other zeros included — as the stamp counts it held. A
+  requirement's number is one across its three kinds (DEC-002 point 2).
+- **A name the id disagrees with** (point 3). A use case, journey or
+  requirement whose file's name carries a number (`UC-007-<slug>.md`) its
+  front matter does not give — no id, or another: the stamp counts the number
+  its name carries, so the front matter says the same. A requirement whose
+  file's name carries no number: its path shows its kind beside its id
+  (DEC-002 point 2). An actor whose file is not named `<id>.md`: an actor's id
+  names its file.
 - **What a use case or journey names** (points 1, 3 and 4): its actor, a use
   case's other actors, and a journey's steps and the use cases outside it that
   a step relies on, are actors and use cases of the analysis; and one in force
@@ -66,6 +72,16 @@ What is checked, each against the record's words:
   part anchor, such as `UC-001#`, names the use case before its last `#`
   (COR-050 point 2), so it counts among its use-case anchors and matches no
   entry of the lists, which name each use case whole.
+- **What a requirement names** (DEC-002 points 6 and 7): each of its `actors`
+  is an actor of the analysis, and each of its `refines` a requirement of any
+  of the three kinds, never itself; one in force names none withdrawn. The
+  rule is the model's (`Analysis.unfit`, `Analysis.unfit_requirement`), for
+  the stamp of a requirement to read as well.
+- **A requirement's anchors match its fields** (DEC-002 point 6): its
+  artefact anchors within the analysis — those that are the id of one of its
+  kinds — are exactly its `actors` and its `refines`. A cycle through
+  `refines` is then a cycle of anchors, the core's validation finding
+  (COR-050 point 5).
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -205,7 +221,7 @@ from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, evidence, markdown, project_structure, schemas, structure
+from _lib import backbone, evidence, markdown, project_structure, render, schemas, structure
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
@@ -221,6 +237,7 @@ from _lib.model import (
     NUMBERED,
     OTHER_ACTORS,
     RELIES_ON,
+    REQUIREMENTS,
     REVALIDATED_AT,
     TERM,
     UNANCHORED_BECAUSE,
@@ -243,8 +260,19 @@ ARTEFACT_ANCHORS = f"/{CONTAINER}/friction/anchors/artefact"
 REASON_POINTER = f"/{CONTAINER}/friction/{UNANCHORED_BECAUSE}"
 
 #: The front-matter field a document's heading repeats after its id: an actor's name,
-#: a use case's or journey's title. A term is an entry, with no heading of its own.
-TITLED = {ACTOR: "name", TERM: "name", USE_CASE: "title", JOURNEY: "title"}
+#: a use case's, a journey's or a requirement's title. A term is an entry, with no
+#: heading of its own.
+TITLED = {
+    ACTOR: "name",
+    TERM: "name",
+    USE_CASE: "title",
+    JOURNEY: "title",
+    **dict.fromkeys(REQUIREMENTS, "title"),
+}
+
+#: A requirement's front-matter fields naming artefacts of the analysis: the actors whose
+#: need it meets, and the requirements it refines (DEC-002 point 4).
+ACTORS, REFINES = "actors", "refines"
 
 #: The outcome whose record stays open until the artefact is revalidated again.
 REGRESSED = "code-regressed"
@@ -287,10 +315,12 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_otherwise(analysis)
     outcome.findings += _references(analysis)
+    outcome.findings += _requirement_references(analysis)
     outcome.findings += _lists_apart(analysis)
     outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
+    outcome.findings += _requirement_anchors(analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -480,12 +510,24 @@ def _read(path: Path) -> str | None:
 
 def _headings(root: Path, analysis: Analysis) -> list[Finding]:
     """A document's heading reads `<id> — <title>` — an actor's `<id> — <name>` — as its
-    front matter gives them."""
+    front matter gives them, and a requirement's `<id> · <kind> · <title>`, its kind as
+    its structure shows it beside its id (DEC-002 point 2). The heading wanted is the one
+    the stamp and the templates write (`render.title_heading`), so the three never
+    disagree. While the kinds' declaration cannot be read, how a requirement's kind shows
+    cannot be told, so its heading is not held: the structure check reports the
+    declaration."""
+    try:
+        declared: Mapping[str, structure.Kind] | None = structure.read_kinds()
+    except structure.Unreadable:
+        declared = None
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         field = TITLED.get(artefact.kind)
-        if field is None:
-            continue  # a requirement's heading shows its kind too, which this does not hold
+        kind = declared.get(artefact.kind) if declared is not None else None
+        if kind is None and artefact.kind not in REQUIREMENTS:
+            kind = structure.Kind(artefact.kind, ())  # shown beside its id by no name
+        if field is None or kind is None:
+            continue
         title = artefact.fields.get(field)
         if (
             artefact.entry
@@ -499,22 +541,30 @@ def _headings(root: Path, analysis: Analysis) -> list[Finding]:
             _front, body = markdown.split((root / artefact.path).read_text(encoding="utf-8"))
         except (OSError, UnicodeDecodeError):
             continue  # the core reports a file it cannot read
-        wanted = f"{artefact.id} — {title}"
+        wanted = render.title_heading(kind, artefact.id, title)
         written = markdown.heading(body)
         if written == wanted:
             continue
+        shown = "its id, its kind" if kind.shown_as else "its id"
+        parts = f"{shown} and its front matter's {field}"
         what = (
-            "has no heading"
-            if written is None
-            else f"its heading, `# {written}`, is not its id and its front matter's {field}"
+            "has no heading" if written is None else f"its heading, `# {written}`, is not {parts}"
         )
+        if kind.shown_as:
+            why = (
+                f"so its heading shows its kind beside its id, as its place does (DEC-002 point "
+                f"2) — write the heading, change `{field}`, or move the file to its kind's folder"
+            )
+        else:
+            why = (
+                f"so what a reader of its front matter sees is what the page shows — write the "
+                f"heading, or change `{field}`"
+            )
         found.append(
             Finding(
                 ERROR,
                 artefact.location,
-                f"{what}: {with_article(artefact.kind)} opens with `# {wanted}`, so what a "
-                f"reader of its front matter sees is what the page shows — write the heading, "
-                f"or change `{field}`",
+                f"{what}: {with_article(artefact.kind)} opens with `# {wanted}`, {why}",
             )
         )
     return found
@@ -550,14 +600,32 @@ def _duplicates(analysis: Analysis) -> list[Finding]:
 
 
 def _named_otherwise(analysis: Analysis) -> list[Finding]:
-    """A use case or journey whose file's name carries a number its front matter does
-    not give — no id, or another: the stamp counts the number the name carries, and
-    every number a history gave a file, so the name and the id say the same (DEC-001
-    point 3). An id spelt with other zeros is the same id; the id check reports it."""
+    """A use case, a journey or a requirement whose file's name carries a number its
+    front matter does not give — no id, or another: the stamp counts the number the name
+    carries, and every number a history gave a file, so the name and the id say the
+    same (DEC-001 point 3). An id spelt with other zeros is the same id; the id check
+    reports it. A requirement's file's name carries its id, since its path shows its
+    kind beside its id (DEC-002 point 2), so one whose name carries no number is
+    reported too."""
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         named = id_in_name(artefact.path)
-        if artefact.entry or artefact.kind not in NUMBERED or named is None:
+        if artefact.entry or artefact.kind not in NUMBERED:
+            continue
+        if named is None and artefact.kind in REQUIREMENTS:
+            name = artefact.path.rsplit("/", 1)[-1]
+            spelt = identity(artefact.id) if artefact.id is not None else ""
+            fits = schemas.id_pattern(artefact.kind).match(spelt)
+            after = spelt if fits else ID_SHAPE[artefact.kind]
+            message = (
+                f"its name is {name}, which carries no number: a requirement's file is named "
+                f"after its id, `REQ-NNN-<slug>.md`, so its path shows its kind beside its id, "
+                f"and the stamp counts the number it carries — name the file {after}-<slug>.md "
+                f"(DEC-002 point 2)"
+            )
+            found.append(Finding(ERROR, artefact.location, message))
+            continue
+        if named is None:
             continue
         if artefact.id is None:
             message = (
@@ -643,6 +711,78 @@ def _references(analysis: Analysis) -> list[Finding]:
                 )
             )
     return found
+
+
+def _requirement_references(analysis: Analysis) -> list[Finding]:
+    """What a requirement names (DEC-002 points 6 and 7): each of its `actors` an actor
+    of the analysis, and each of its `refines` a requirement of the analysis, of any of
+    the three kinds, and never itself. A requirement in force names none withdrawn, so
+    the change that withdraws an artefact also takes it off these lists. A withdrawn
+    requirement is history, and may name withdrawn ones. The rule is the model's
+    (`Analysis.unfit`, `Analysis.unfit_requirement`), for the stamp of a requirement to
+    read as well. An entry that is no id of its kind is the schema's to report."""
+    actor_id, requirement_id = schemas.id_pattern(ACTOR), schemas.id_pattern(REQUIREMENTS[0])
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        if artefact.kind not in REQUIREMENTS:
+            continue
+        in_force = not artefact.withdrawn
+        for index, value in _listed(artefact, ACTORS):
+            if not actor_id.match(value):
+                continue  # the schema reports it
+            problem = analysis.unfit(value, ACTOR, in_force=in_force)
+            if problem is not None:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(artefact.location, f"/{ACTORS}/{index}"),
+                        _unfit_message(
+                            problem, analysis.of(value, ACTOR) is None, "DEC-001 point 3"
+                        ),
+                    )
+                )
+        for index, value in _listed(artefact, REFINES):
+            if not requirement_id.match(value):
+                continue  # the schema reports it
+            where = at(artefact.location, f"/{REFINES}/{index}")
+            if artefact.id is not None and identity(value) == identity(artefact.id):
+                found.append(
+                    Finding(
+                        ERROR,
+                        where,
+                        f"`{REFINES}` names {value}, the requirement itself: a requirement "
+                        f"refines others, never itself — remove it from `{REFINES}` (DEC-002 "
+                        f"point 6)",
+                    )
+                )
+                continue
+            problem = analysis.unfit_requirement(value, in_force=in_force)
+            if problem is not None:
+                held = analysis.find(value)
+                missing = held is None or held.kind not in REQUIREMENTS
+                found.append(
+                    Finding(ERROR, where, _unfit_message(problem, missing, "DEC-002 point 7"))
+                )
+    return found
+
+
+def _listed(artefact: Artefact, field: str) -> list[tuple[int, str]]:
+    """Each text a front-matter list holds, with its index; none where it holds no list."""
+    listed = artefact.fields.get(field)
+    if not isinstance(listed, list):
+        return []
+    return [(index, value) for index, value in enumerate(listed) if isinstance(value, str)]
+
+
+def _unfit_message(problem: str, missing: bool, withdrawn_because: str) -> str:
+    """Why a requirement may not name what `problem` says: it is not in the analysis, or
+    it is withdrawn while the requirement is in force, citing `withdrawn_because` then."""
+    if missing:
+        return f"{problem}: what a requirement names is in the analysis (DEC-002 point 6)"
+    return (
+        f"{problem}: a requirement in force rests only on artefacts in force — withdraw it "
+        f"too, or name another ({withdrawn_because})"
+    )
 
 
 def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
@@ -770,6 +910,58 @@ def _journey_anchors(analysis: Analysis) -> list[Finding]:
                     f"[{', '.join(expected)}] (DEC-001 point 4)",
                 )
             )
+    return found
+
+
+def _requirement_anchors(analysis: Analysis) -> list[Finding]:
+    """A requirement's anchors within the analysis are exactly the actors of its `actors`
+    and the requirements of its `refines` (DEC-002 point 6): the two fields are the
+    source, and the stamp writes the anchors from them, so a changed actor or a changed
+    requirement it refines flags it. An artefact anchor is within the analysis when the
+    artefact it names is of one of the analysis's kinds by its id: a part anchor, such as
+    `UC-001#` or `ACT-tester#needs`, names its artefact before its last `#`
+    (`_artefact_named`, COR-050 point 2). Compared as written, a part anchor matches no
+    entry of the two fields, which the stamp writes whole. An entry naming the
+    requirement itself is left out of what it anchors, since `_requirement_references`
+    refuses it, and a cycle through `refines` is the core's validation finding (COR-050
+    point 5)."""
+    patterns = [schemas.id_pattern(kind) for kind in KINDS]
+    actor_id, requirement_id = schemas.id_pattern(ACTOR), schemas.id_pattern(REQUIREMENTS[0])
+
+    def within(anchor: str) -> bool:
+        named = _artefact_named(anchor)
+        return any(p.match(named) for p in patterns)
+
+    found: list[Finding] = []
+    for artefact in analysis.artefacts:
+        if artefact.kind not in REQUIREMENTS:
+            continue
+        own = identity(artefact.id) if artefact.id is not None else None
+        expected = _unique(
+            [
+                *(value for _i, value in _listed(artefact, ACTORS) if actor_id.match(value)),
+                *(
+                    value
+                    for _i, value in _listed(artefact, REFINES)
+                    if requirement_id.match(value) and identity(value) != own
+                ),
+            ]
+        )
+        anchored = _unique(a for a in artefact.anchored_to("artefact") if within(a))
+        if set(expected) == set(anchored):
+            continue
+        write = f"anchor exactly [{', '.join(expected)}]" if expected else "anchor none of them"
+        found.append(
+            Finding(
+                ERROR,
+                at(artefact.location, ARTEFACT_ANCHORS),
+                f"its anchors within the analysis ({', '.join(anchored) or 'none'}) do not match "
+                f"its `{ACTORS}` and `{REFINES}` ({', '.join(expected) or 'none'}): within the "
+                f"analysis, a requirement anchors only each actor whose need it meets and each "
+                f"requirement it refines, written from the two fields, so a changed actor or "
+                f"requirement flags it — {write} (DEC-002 point 6)",
+            )
+        )
     return found
 
 
