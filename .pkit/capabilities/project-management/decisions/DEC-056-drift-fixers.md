@@ -1,7 +1,7 @@
 ---
 id: DEC-056
 title: Only granted fixers start on stale artefacts, and they only propose
-status: proposed
+status: accepted
 date: 2026-10-18
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
