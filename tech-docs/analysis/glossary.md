@@ -127,6 +127,7 @@ TERM-migration:
       anchors:
         path:
           - src/project_kit/migrations.py
+          - .pkit/capabilities/project-management/migrations/0.55.0/001-pm-reviewer-agent-rename.sh
         record:
           - COR-010
 TERM-place:
@@ -157,7 +158,7 @@ TERM-range:
 TERM-release:
   name: release
   status: active
-  definition: set of new versions written at once on the default branch from the pending changesets, with their changelog entry
+  definition: step that writes new versions from the pending changesets, with their changelog entry, and lands those versions on the default branch
   pkit:
     friction:
       anchors:
@@ -170,7 +171,7 @@ TERM-release:
 TERM-report:
   name: report
   status: active
-  definition: "issue an adopter files from the command line on the repository of the distribution they use: a bug, a change request or feedback"
+  definition: "issue an adopter composes with the system and files on the repository of the distribution they use: a bug, a change request or feedback"
   pkit:
     friction:
       anchors:
@@ -304,11 +305,11 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-migration — migration
 
-**Example:** project-management renamed its reviewer agent `pm-reviewer`. So its migration `0.55.0/001-pm-reviewer-agent-rename.sh` rewrites that name in each project's own settings, which sync never touches.
+**Example:** project-management renamed its reviewer agent from `reviewer` to `pm-reviewer`. So the capability's migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each project's own settings, which sync never touches.
 
 **Distinctions:**
 
-- **Sync:** refreshes what a project receives from the methodology at the versions the project records, and runs no migration. A migration changes what sync cannot derive, such as a project's own settings (COR-010).
+- **Sync:** the command that refreshes what a project receives from the system, at the versions the project records. It runs no migration. A migration changes what sync cannot derive, such as a project's own settings (COR-010).
 - **The migration check:** `pkit migrations check-diff`, which finds the renames and removals of a change that no migration covers. It runs no migration.
 
 ## TERM-place — place
@@ -327,13 +328,13 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Floor:** the lowest version a range admits, its `>=X.Y.Z`. It rises only where a changeset declares that the component needs a newer version (PRJ-002 D4).
-- **Upper bound:** the version a range stops below, its `<A.B.C`. A release widens a bound on the backbone by itself, and a bound on another capability only on a changeset's declaration (PRJ-002 D4).
-- **Version:** the one number a component carries in its `package.yaml`. A range names versions of something the component depends on (COR-010 and COR-030).
+- **Floor:** the lowest version a range admits, its `>=X.Y.Z`. At a release, a floor rises only where a changeset declares that the component needs a newer version (PRJ-002 D4).
+- **Upper bound:** the version a range stops below, its `<A.B.C`. A release widens an upper bound on the backbone with no declaration. It widens an upper bound on another capability only on a changeset's declaration (PRJ-002 D4).
+- **A component's version:** the one number the component carries in its `package.yaml`, as the backbone carries its own in `.pkit/VERSION`. A range names versions of what the component depends on (COR-010 and COR-030).
 
 ## TERM-release — release
 
-**Example:** the release of 24 August 2026 moved the backbone to 1.149.0 and project-management to 0.54.0. Its commit carries the tag `v1.149.0`.
+**Example:** the release of 24 August 2026 moved the backbone to 1.149.0, and moved project-management to 0.54.0. The release commit carries the tag `v1.149.0`.
 
 **Distinctions:**
 
@@ -350,7 +351,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Report target:** the one repository a distribution's reports go to, project-kit's own for project-kit. An adopter cannot name another (ADR-047 point 3).
 - **Tracked fix:** an issue the maintainer lists under a report's `## Tracked by` heading. One issue may fix several reports (PRJ-008).
-- **Reported note:** a scratchpad note sent as a report's text. Once the report is posted, the note moves to `reported/` (COR-043 point 3).
+- **Reported note:** a scratchpad note attached to a report. Once the report is posted, the note moves to `reported/` (COR-043 point 3).
 - **The whole-repository report:** what the whole-repository check publishes for the default branch, such as project-kit's tracking issue. It is no report in this sense.
 
 ## TERM-surface-change — surface change

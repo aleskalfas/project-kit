@@ -26,36 +26,36 @@ pkit:
 
 **Other actors:**
 
-- **Adopter** (`ACT-adopter`): filed the report, and sees each issue linked to it, with that issue's state, from their own project (UC-012).
+- **Adopter** (`ACT-adopter`): filed the report, and sees each tracked fix with that fix's state, from their own project (UC-012).
 
-**Preconditions:** The maintainer works in a clone of the report target, project-kit's own repository, and `gh` is signed in there.
+**Preconditions:** None.
 
 **Assumptions:** None.
 
-**Trigger:** Adopters' reports arrive on the report target.
+**Trigger:** Adopters' reports arrive on the report target, project-kit's own repository.
 
 **Main path:**
 
-1. The maintainer runs `pkit report inbox` in the report target's clone.
-2. The system lists every report on the target, by any author, newest first, with its number, kind, state and title.
-3. The maintainer reads a report, with the versions its environment block gives.
+1. The maintainer runs `pkit report inbox` in a clone of the report target.
+2. The system lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`).
+3. The maintainer reads a report on the hosting service, with the versions its environment block gives.
 4. The maintainer files the issue that will fix the report, or finds one that exists.
-5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, and prints `Linked #<fix> into #<report>'s Tracked by.`
-6. Once the linked issues close, the maintainer runs `pkit report inbox --resolved`. The system lists each open feedback and change request whose linked issues are all closed.
-7. For each of them, the system asks `Post a closing comment on #<n> and close it?`. On a yes, the system comments that all the tracked fixes are closed, and closes the report.
+5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's tracked fixes. The system prints `Linked #<fix> into #<report>'s Tracked by.`
+6. Once the tracked fixes close, the maintainer runs `pkit report inbox --resolved`. The system lists each open feedback and change request whose tracked fixes are all closed.
+7. For each listed report, the system asks `Post a closing comment on #<n> and close it?`. On a yes, the system comments that all the report's tracked fixes are closed, and closes the report.
 
 **Variants:**
 
-- **1a.** The maintainer runs the command outside the report target's clone. The system refuses with `the maintainer side (inbox/link/unlink) runs only inside the report target repo (<target>). Cd into it and retry.` The use case ends.
-- **1b.** The maintainer passes `--kind <kind>` to see one kind of report, or `--group-by project` to group the reports by the project each one names (ADR-050 point 3).
-- **5a.** The maintainer linked the wrong issue. `pkit report unlink <report> <fix>` removes that issue from the report's `## Tracked by` list.
-- **5b.** The issue is linked already. The system changes nothing, and reports the link done.
-- **5c.** One issue fixes several reports. The maintainer links it to each of them, since any issue may stand in a report's list (PRJ-008).
-- **6a.** The report is a bug, or links no issue. `--resolved` never lists such a report, so the maintainer closes the report by other means.
+- **1a.** The maintainer runs the command outside a clone of the report target. The system refuses with `the maintainer side (inbox/link/unlink) runs only inside the report target repo (<target>). Cd into it and retry.` The use case ends.
+- **1b.** The maintainer passes `--kind <kind>` to see one kind of report. Or the maintainer passes `--group-by project`, to group the reports by the project each one names (ADR-050 point 3).
+- **5a.** The maintainer linked the wrong issue. `pkit report unlink <report> <fix>` removes that issue from the report's tracked fixes.
+- **5b.** The issue is one of the report's tracked fixes already. The system changes nothing, and still prints `Linked #<fix> into #<report>'s Tracked by.`
+- **5c.** One issue fixes several reports. The maintainer links that issue to each of them, since one issue may be a tracked fix of several reports (PRJ-008).
+- **6a.** The report is of the `bug` kind, or has no tracked fix. `--resolved` never lists such a report, so the maintainer closes the report by other means.
 - **6b.** The maintainer passes `--yes`. The system lists the reports and closes none, since closing needs a person to confirm each one.
 - **7a.** The maintainer declines. The system prints `Skipped #<n>.`, and the report stays open.
 
-**Postconditions:** Each report the maintainer triaged lists, under `## Tracked by`, the issues that fix it. Each feedback or change request whose linked issues all closed is closed, with a comment saying so.
+**Postconditions:** Each report the maintainer triaged lists its tracked fixes under `## Tracked by`. Each feedback or change request whose tracked fixes all closed is closed, with a comment saying so.
 
 **Minimal guarantees:**
 
