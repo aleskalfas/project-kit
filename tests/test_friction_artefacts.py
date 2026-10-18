@@ -34,6 +34,7 @@ from click.testing import CliRunner
 
 from project_kit import friction_discovery as fd
 from project_kit import record_points as rp
+from project_kit import working_tree
 from project_kit.cli import main
 from project_kit.friction_check import Side
 from project_kit.friction_git import CommitTree
@@ -965,6 +966,138 @@ def test_without_a_held_folder_the_lists_are_empty(adopter: AdopterRepo) -> None
     document = _document()
     assert (document["held"], document["held_files"]) == ([], [])
     assert "held folder" not in _run().output
+
+
+# --- a capability's location, outside its places (#1724) ------------------------------------
+
+LOGS = "tech-docs/logs"
+
+
+def _logs_declared(adopter: AdopterRepo, held: str) -> None:
+    """The evidence capability given a third location, `logs`, with one place in it,
+    `kept`, and the folders of held documents `held` lists."""
+    package = adopter.root / EVIDENCE_PACKAGE
+    package.write_text(
+        package.read_text(encoding="utf-8").replace(
+            "    guides: {path: guides, root: user}\n",
+            "    guides: {path: guides, root: user}\n    logs: {path: logs}\n",
+        )
+        + "    - {location: logs, path: kept}\n"
+        + (f"  held:\n{held}" if held else ""),
+        encoding="utf-8",
+    )
+
+
+def _unplaced(document: dict[str, Any], location: str) -> list[tuple[str, bool]]:
+    entry = document["unplaced"]["evidence"][location]
+    return [(f["path"], f["excluded"]) for f in entry["files"]]
+
+
+def test_each_capability_location_lists_the_files_no_place_or_held_folder_of_its_holds(
+    adopter: AdopterRepo,
+) -> None:
+    """Each location an installed capability declares, by the capability and the
+    location, with where it lies and the Markdown files within it that no place or
+    held folder of that capability holds, each saying whether `friction.exclude` leaves
+    it out. Another component's place, or the project's, holds nothing for it. A link is
+    never listed, as the walk never reads one. A location holding none is listed with no
+    files. A key added: the version stays."""
+    _logs_declared(adopter, "    - {location: logs, path: records}\n")
+    config = adopter.root / CONFIG
+    config.write_text(
+        config.read_text(encoding="utf-8")
+        .replace(
+            "places: [notes, notes/rules.md]", f"places: [notes, notes/rules.md, {LOGS}/shared]"
+        )
+        .replace("exclude: [notes/old.md]", f"exclude: [notes/old.md, {LOGS}/old.md]"),
+        encoding="utf-8",
+    )
+    adopter.write(
+        {
+            f"{LOGS}/kept/a.md": "# Kept\n",
+            f"{LOGS}/records/2026-10-01.md": "# A record\n",
+            f"{LOGS}/loose.md": "# Loose\n",
+            f"{LOGS}/old.md": "# Old\n",
+            f"{LOGS}/shared/b.md": ANCHORED.format(id="b"),
+            f"{LOGS}/plain.txt": "not a document\n",
+            "handbook/guides/deep/c.md": "# Deeper than the place's glob\n",
+        }
+    )
+    (adopter.root / LOGS / "alias.md").symlink_to("loose.md")  # a link: never listed
+    document = _document()
+    assert document["schema_version"] == fd.ARTEFACTS_SCHEMA_VERSION == 1
+    assert document["unplaced"] == {
+        "evidence": {
+            "runs": {"path": "tech-docs/evidence", "files": []},
+            "guides": {
+                "path": "handbook/guides",
+                "files": [{"path": "handbook/guides/deep/c.md", "excluded": False}],
+            },
+            "logs": {
+                "path": LOGS,
+                "files": [
+                    {"path": f"{LOGS}/loose.md", "excluded": False},
+                    {"path": f"{LOGS}/old.md", "excluded": True},
+                    {"path": f"{LOGS}/shared/b.md", "excluded": False},
+                ],
+            },
+        }
+    }
+    # The project's place walks the shared file, and still no place of the capability's holds it.
+    assert f"{LOGS}/shared/b.md" in [f["path"] for f in document["files"]]
+    human = _run().output.rstrip().split("\n")
+    assert human[-3:] == [
+        "2 capability location(s) holding files no place or held folder of the capability holds:",
+        "  handbook/guides  (capability:evidence, location guides)  1 file(s), 0 excluded",
+        f"  {LOGS}  (capability:evidence, location logs)  3 file(s), 1 excluded",
+    ]
+
+
+def test_a_held_folder_that_holds_nothing_leaves_its_files_unplaced(adopter: AdopterRepo) -> None:
+    """Two held folders that would share a file each hold nothing (`overlap`), so no
+    folder of the capability holds what lies in them."""
+    _logs_declared(
+        adopter, "    - {location: logs, path: records}\n    - {location: logs, path: records/x}\n"
+    )
+    adopter.write({f"{LOGS}/records/r.md": "# A record\n"})
+    document = _document()
+    assert [h["skipped"]["reason"] for h in document["held"]] == ["overlap", "overlap"]
+    assert _unplaced(document, "logs") == [(f"{LOGS}/records/r.md", False)]
+
+
+def test_the_unplaced_files_are_read_from_the_walk_s_one_listing(
+    adopter: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Inside a git work tree a file git ignores is no file of the listing, so neither the
+    walk nor this list reads it. Outside one, where every file is listed, both read it
+    (ADR-057 point 2)."""
+    _logs_declared(adopter, "")
+    config = adopter.root / CONFIG
+    config.write_text(
+        config.read_text(encoding="utf-8").replace(
+            "places: [notes, notes/rules.md]", f"places: [notes, notes/rules.md, {LOGS}]"
+        ),
+        encoding="utf-8",
+    )
+    ignored = f"{LOGS}/ignored.md"
+    adopter.write({".gitignore": f"{ignored}\n", ignored: "# Ignored\n"})
+    inside = _document()
+    assert _unplaced(inside, "logs") == []
+    assert ignored not in [f["path"] for f in inside["files"]]
+    monkeypatch.setattr(working_tree, "in_git_work_tree", lambda _root: False)
+    outside = _document()
+    assert _unplaced(outside, "logs") == [(ignored, False)]
+    assert ignored in [f["path"] for f in outside["files"]]
+
+
+def test_at_a_commit_the_unplaced_files_are_that_state_s(adopter: AdopterRepo) -> None:
+    _logs_declared(adopter, "")
+    adopter.write({f"{LOGS}/loose.md": "# Loose\n"})
+    adopter.commit("a loose file")
+    adopter.write({f"{LOGS}/loose.md": None, f"{LOGS}/later.md": "# Later\n"})
+    assert _unplaced(_document(), "logs") == [(f"{LOGS}/later.md", False)]
+    at_head = json.loads(_run("--at", "HEAD", "--json").output)
+    assert _unplaced(at_head, "logs") == [(f"{LOGS}/loose.md", False)]
 
 
 def test_the_same_state_prints_the_same_bytes(adopter: AdopterRepo) -> None:

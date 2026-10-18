@@ -21,6 +21,7 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/process_dependencies.py
         - src/project_kit/migrations.py
+        - src/project_kit/scaffolds.py
         - src/project_kit/install.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
@@ -29,9 +30,9 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-18T16:37:56Z
+      at: 2026-10-18T19:50:12Z
       outcome: updated
 ---
 
@@ -747,7 +748,7 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - a documentation refinement, an internal refactor or a behaviour-preserving fix
   - a section's heading renamed or removed in a document the methodology or a component ships. A project that receives the document cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change mends the anchors on the heading, as validation requires (COR-050 point 12).
 
-A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers. It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
+A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers, and a change that adds a migration at a version already released ("Which version a migration targets", below). It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
 
 ### Directory layout
 
@@ -767,6 +768,19 @@ Component migrations live within the component:
 ### Naming
 
 `<NNN>-<slug>.sh`, where `NNN` is a zero-padded execution-order index within the directory and `<slug>` is a kebab-case description (e.g., `001-add-status-labels.sh`).
+
+### Which version a migration targets
+
+A migration's folder names the version it carries a project to, never one already released. The runner runs a folder only past the version a project records ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)). So a folder at or below a released minor never runs for a project already there, and nothing else reports it.
+
+- **The stamp.** `pkit new migration` without `--version` takes the highest of these:
+  - the next minor past the version the default branch records for the tier: `.pkit/VERSION` for the backbone, the component's `package.yaml` for an adapter or a capability
+  - the version the working tree records, where it is above that one, as on the branch of a project whose change bumps its own version
+  - the next major, where its folder already waits, so the script runs after the migrations of the change that made it
+
+  It joins no folder further ahead, since a change may target a later release on purpose. It reads the default branch from git objects, as a command that allocates from settled state does ([COR-054](../decisions/core/COR-054-default-branch.md) point 3). It refuses a `--version` at or below the default branch's version, and names the version to give.
+- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose folder is at or below the version its tier records at the base's tip. It reads the tip, not the branch point, since a release that lands after the branch was cut releases the folder too. It skips a script the project receives by sync. It also skips one the tip already holds, at its path or under another name in its folder with the same content, as a rename leaves it. A tier the tip records no version for, such as a new component, has nothing released.
+- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors.
 
 ### Three scopes (per tier)
 

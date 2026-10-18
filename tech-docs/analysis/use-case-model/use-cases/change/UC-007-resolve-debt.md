@@ -30,6 +30,10 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
         - ACT-ai-agent
+    revalidated:
+      at: 2026-10-18T18:34:32Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 now names revisit entries. This use case cites it only for an answer no change of the writer's own owes being a person's decision, shown word for word first, which the rule still says. Only the change check asks for a revisit entry, never the debt this use case resolves (COR-050 point 16).
 ---
 
 # UC-007 — Resolve what the default branch left out of date
