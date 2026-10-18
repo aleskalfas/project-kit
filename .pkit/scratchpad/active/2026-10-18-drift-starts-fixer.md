@@ -43,7 +43,7 @@ This is the issue's first criterion and the maintainer's to decide. Today only a
 - **A data point project-management accepts,** `pkit::work-tracking:fixers`, beside `doc-check` and `use-cases` (DEC-053, DEC-054).
   - **Entries:** `{id, agent, description}`. The `id` is a qualified type, such as `software-analysis:use-case` (COR-056).
   - **Combination `union`:** the check below keeps two capabilities from claiming one type. The project's own filler may replace an entry, naming any deployed agent (COR-052 point 4). The grant still decides whether it starts.
-  - **No default.**
+  - **No default.** A fixer belongs to the capability that owns the type it fixes, so project-management supplies none.
   - **Inert policy `fail`:** the command refuses on the point's value, so a point that does not resolve starts no fixer, and the command says why (COR-052 point 6).
 - **Keyed by type, not by place.** A place has no id, and a type has. A project place typed `living-docs:page` gets the fixer too. It is no field on COR-050's place. A third concept on places would move places into a functionality of their own (COR-056 point 7).
 - **A static `value`, not a command filler.** The declaration reads in package metadata and in review, and resolving it runs no code (`src/project_kit/data_points.py`).
