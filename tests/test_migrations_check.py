@@ -751,3 +751,159 @@ def test_the_target_never_names_a_released_minor() -> None:
         )
         assert target.version == expected, (released, own, folders)
         assert migrations_mod.minor_of(target.version) > migrations_mod.minor_of(released)
+
+
+# --- each number once in a folder (#1776) ------------------------------------------
+
+_NEXT = ".pkit/migrations/backbone/1.150.0"
+
+
+def _scripts(*names: str, folder: str = _NEXT) -> dict[str, str | None]:
+    """Scripts in `folder`, each with text of its own."""
+    return {f"{folder}/{name}": _script(f"{folder}/{name}") for name in names}
+
+
+@pytest.mark.parametrize(
+    ("name", "number"),
+    [
+        ("001-a.sh", 1),
+        ("010-b.sh", 10),
+        ("1.sh", 1),
+        ("001-a.py", None),
+        ("README.md", None),
+        ("a-001.sh", None),
+    ],
+)
+def test_a_script_s_number_is_the_digits_its_name_opens_with(name: str, number: int | None) -> None:
+    """The runner runs `[0-9]*.sh`, so a file it does not run has no number."""
+    assert migrations_mod.script_number(name) == number
+
+
+def test_a_script_taking_a_number_its_folder_holds_fails_the_check(released: GitRepo) -> None:
+    released.git("checkout", "-q", "main")
+    released.commit("first", _scripts("001-first.sh"))
+    released.git("checkout", "-q", "-B", "topic")
+    released.commit("second", _scripts("001-second.sh"))
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert (
+        f"[backbone] {_NEXT}/001-second.sh: its number 001 is also held by 001-first.sh, so "
+        "the order they run in falls to the rest of their names. Renumber it to 002, one past "
+        "the highest in its folder."
+    ) in result.output
+    assert "1 migration script(s) in diff take a number their folder holds:" in result.output
+    assert "Verdict: NUMBER TAKEN." in result.output
+    released.git("mv", f"{_NEXT}/001-second.sh", f"{_NEXT}/002-second.sh")
+    released.commit("renumbered")
+    result = _check()
+    assert result.exit_code == 0, result.output
+    assert "NUMBER TAKEN" not in result.output
+
+
+def test_a_number_the_base_took_since_the_branch_left_it_fails_the_check(
+    released: GitRepo,
+) -> None:
+    """Two branches each stamp a script in one folder, and the first lands: the second
+    takes a number the folder holds once it merges."""
+    released.commit("mine", _scripts("001-mine.sh"))
+    released.git("checkout", "-q", "main")
+    released.commit("theirs", _scripts("001-theirs.sh"))
+    released.git("checkout", "-q", "topic")
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert (
+        f"[backbone] {_NEXT}/001-mine.sh: its number 001 is also held by 001-theirs.sh (main "
+        "took it since this branch left it)"
+    ) in result.output
+    assert "Renumber it to 002," in result.output
+
+
+def test_a_number_the_base_freed_since_the_branch_left_it_is_free(released: GitRepo) -> None:
+    released.git("checkout", "-q", "main")
+    released.commit("first", _scripts("001-first.sh"))
+    released.git("checkout", "-q", "-B", "topic")
+    released.git("checkout", "-q", "main")
+    released.git("mv", f"{_NEXT}/001-first.sh", f"{_NEXT}/002-first.sh")
+    released.commit("renumbered on main")
+    released.git("checkout", "-q", "topic")
+    released.commit("mine", _scripts("001-mine.sh"))
+    result = _check()
+    assert result.exit_code == 0, result.output
+
+
+def test_of_two_scripts_a_change_adds_with_one_number_the_later_is_named(
+    released: GitRepo,
+) -> None:
+    """One renumbering mends it, so one script is named."""
+    released.commit("both", _scripts("001-a.sh", "001-b.sh"))
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert f"{_NEXT}/001-b.sh: its number 001 is also held by 001-a.sh," in result.output
+    assert f"{_NEXT}/001-a.sh:" not in result.output
+    assert "1 migration script(s) in diff take a number their folder holds:" in result.output
+
+
+def test_a_script_renamed_to_a_free_number_passes_and_onto_a_held_one_fails(
+    released: GitRepo,
+) -> None:
+    """A folder that holds two scripts of one number is mended by renumbering one, as
+    this change does in `backbone/1.150.0/`."""
+    released.git("checkout", "-q", "main")
+    released.commit("both", _scripts("001-keep.sh", "001-untrack.sh"))
+    released.git("checkout", "-q", "-B", "topic")
+    released.git("mv", f"{_NEXT}/001-untrack.sh", f"{_NEXT}/002-untrack.sh")
+    released.commit("renumbered")
+    result = _check()
+    assert result.exit_code == 0, result.output
+    released.git("mv", f"{_NEXT}/001-keep.sh", f"{_NEXT}/002-keep.sh")
+    released.commit("onto a held number")
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert f"{_NEXT}/002-untrack.sh: its number 002 is also held by 002-keep.sh," in result.output
+
+
+def test_an_uncommitted_script_is_judged_with_the_working_tree(released: GitRepo) -> None:
+    released.git("checkout", "-q", "main")
+    released.commit("first", _scripts("001-first.sh"))
+    released.git("checkout", "-q", "-B", "topic")
+    released.write(_scripts("001-second.sh"))
+    released.git("add", "-A")
+    result = _check("--include-working-tree")
+    assert result.exit_code == 1, result.output
+    assert f"{_NEXT}/001-second.sh: its number 001 is also held by 001-first.sh," in result.output
+    assert _check().exit_code == 0
+
+
+def test_a_component_script_is_judged_in_its_own_folder(released: GitRepo) -> None:
+    folder = ".pkit/capabilities/evidence/migrations/0.55.0"
+    released.commit("both", _scripts("001-a.sh", "001-b.sh", folder=folder))
+    result = _check()
+    assert result.exit_code == 1, result.output
+    assert f"[capability:evidence] {folder}/001-b.sh: its number 001" in result.output
+    # One number in two folders is no clash.
+    released.git("rm", "-q", f"{folder}/001-b.sh")
+    released.commit("one each", _scripts("001-b.sh"))
+    assert _check().exit_code == 0
+
+
+def test_a_script_the_project_receives_by_sync_is_not_judged_for_its_number(
+    released: GitRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    released.commit("both", _scripts("001-a.sh", "001-b.sh"))
+    synced = SimpleNamespace(is_synced_copy=lambda root, path: path.startswith(".pkit/migrations/"))
+    monkeypatch.setattr(migrations_mod.lifecycle_ownership, "load_ownership", lambda root: synced)
+    assert _check().exit_code == 0
+
+
+def test_no_migration_folder_of_this_tree_holds_two_scripts_of_one_number() -> None:
+    kit = Path(__file__).resolve().parent.parent / ".pkit"
+    folders: dict[Path, list[str]] = {}
+    for script in kit.rglob("*.sh"):
+        if "migrations" in script.parts and migrations_mod._VERSION_DIR_RE.match(
+            script.parent.name
+        ):
+            folders.setdefault(script.parent, []).append(script.name)
+    assert folders, "no migration folder found"
+    for folder, names in folders.items():
+        held = [n for n in map(migrations_mod.script_number, names) if n is not None]
+        assert len(held) == len(set(held)), (folder, sorted(names))

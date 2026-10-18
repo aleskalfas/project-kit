@@ -1,7 +1,8 @@
 # Backbone migrations
 
-Per-version migration scripts for the kit's backbone, organised as `<major>.<minor>.0/<NNN>-<slug>.sh` (per COR-010 and `.pkit/lifecycle/README.md`).
+The backbone's migration scripts, one folder per version, as `<major>.<minor>.0/<NNN>-<slug>.sh` ([COR-010](../../decisions/core/COR-010-resource-lifecycle.md)). The spec is the lifecycle README's [migration framework](../../lifecycle/README.md#migration-framework).
 
-Empty today — the backbone is at `0.1.0` (see `.pkit/VERSION`) with no prior version to migrate from. The first migration directory lands when the backbone reaches `0.2.0` (or later) and an upgrade requires a manifest-schema, structural, or resource-scoped migration.
-
-Each version directory holds scripts that run when an adopter upgrades into that version's `<major>.<minor>` line. Within a directory, scope ordering is `manifest-schema → structural → resource-scoped`, by the `NNN` index within each scope. Patches don't have migrations (per the lifecycle spec — backward-compatible bug fixes by semver convention).
+- **When a folder runs:** a version transition runs each folder above the backbone version the project last completed, up to its target. A folder at or below a released version never runs for a project already there. So a new script goes in a folder no release has shipped.
+- **The order within a folder:** the runner runs a folder's scripts in the order of their numbers, and each number is used once. A script that must run before another takes the lower number. COR-010's order of scopes follows from the numbers: manifest-schema first, then structural, then resource-scoped.
+- **Adding a script:** `pkit new migration --tier backbone --name <slug>` picks the folder and the next number. `pkit migrations check-diff` fails a change that adds a script to a released folder, or with a number its folder already holds.
+- **Patch releases** have no migrations. A folder covers every patch of its minor line.

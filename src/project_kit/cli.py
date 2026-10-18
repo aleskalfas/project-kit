@@ -5111,11 +5111,19 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
     receives by sync is not judged, nor one the tip already holds, at its
     path or renamed in its folder with the same content.
 
-    Exits 0 when covered or no triggers exist and no script targets a
-    released version; exits 1 when triggers exist without matching
-    migrations, listing the affected tiers so the author can land the
-    missing scripts, or when a script targets a released version, naming
-    the version to move it to.
+    It also fails a migration script the change adds, or moves in, whose
+    number another script in its folder holds, as merging the base would
+    leave the folder: the runner orders a folder's scripts by name, so two of
+    one number run in an order nobody chose. A number another change took on
+    the base since the branch left it counts. A script the project receives
+    by sync is not judged.
+
+    Exits 0 when covered or no triggers exist, no script targets a released
+    version and none takes a number its folder holds; exits 1 when triggers
+    exist without matching migrations, listing the affected tiers so the
+    author can land the missing scripts, when a script targets a released
+    version, naming the version to move it to, or when a script takes a
+    number its folder holds, naming the number to take.
     """
     from project_kit import migrations as migrations_mod
 
@@ -5137,9 +5145,18 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
         tip=found.tip,
         head=None if include_working_tree else "HEAD",
     )
+    clashes = migrations_mod.number_clashes(
+        target_root,
+        report.landed,
+        base=found.ref,
+        fork=found.fork,
+        tip=found.tip,
+        head=None if include_working_tree else "HEAD",
+    )
     migrations_mod.render_coverage_report(report)
     migrations_mod.render_released_targets(released)
-    if not report.is_covered or released:
+    migrations_mod.render_number_clashes(clashes)
+    if not report.is_covered or released or clashes:
         raise SystemExit(1)
 
 
