@@ -1,0 +1,10 @@
+component: project-management
+kind: none
+body: >
+  Design-ahead: DEC-056 (accepted) says how a stale artefact's fixer starts. A
+  capability declares its fixers in the pkit::work-tracking:fixers data point.
+  Only the person grants a fixer, by answering a plain question or by command,
+  and nothing is granted by default. A command starts the granted fixers,
+  bounded and confined, and their proposals wait as files for the person.
+  Asking at install and upgrade needs a core record of its own. No behaviour
+  changes until the point, the grant and the command are built.
