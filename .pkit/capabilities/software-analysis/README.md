@@ -11,6 +11,7 @@ pkit:
         - .pkit/capabilities/software-analysis/skills/**
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
+        - .pkit/capabilities/software-analysis/package.yaml
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, "project-management:DEC-032", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005]
     revalidated:
@@ -112,7 +113,7 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
 
 Create artefacts with the stamp, never by copying a template by hand: it gives each one its id, puts it in its place and writes the anchors it must carry. `analysis` is this capability's alias; `pkit software-analysis new` is the same command.
 
-**A requirement has no stamp yet.** The stamp of the three kinds of requirement comes next ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)). Wait for it before you write one: it gives a requirement its number across the three kinds, which nothing else gives yet, and only the duplicate-id check holds.
+**A requirement has no stamp yet.** The stamp of the three kinds of requirement comes next ([project-kit#1692](https://github.com/aleskalfas/project-kit/issues/1692)). Wait for it before you write one: it gives a requirement its number across the three kinds, which nothing else gives yet, and of the number checks only the duplicate-id check holds.
 
 | Command | Writes |
 |---|---|
