@@ -12,9 +12,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-18T17:44:37Z
+        at: 2026-10-18T19:56:45Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds. What an anchor is, and how discovery reads one, is unchanged.
+        unchanged-because: "This change lets a link take every anchor but those some own fields list, in friction_discovery.py. It changes no anchor: what an anchor is, a dead anchor and a registered kind read as they did."
 TERM-answer:
   name: answer
   status: active
@@ -43,9 +43,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-18T17:44:38Z
+        at: 2026-10-18T19:56:50Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds, never as artefacts. What an artefact is, and where discovery finds one, is unchanged.
+        unchanged-because: This change adds a second way for a link to choose its targets, in friction_discovery.py. What an artefact is, and how a decision record and a held document differ from one, is untouched.
 TERM-base:
   name: base
   status: active
@@ -151,9 +151,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-18T17:44:40Z
+        at: 2026-10-18T19:56:52Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that none of its places or held folders holds. What a place is, and which files it matches, is unchanged.
+        unchanged-because: A capability's place may declare a link of a second shape, read in friction_discovery.py. What a place is, and how it differs from a root, a synced tree and a held folder, is untouched.
 TERM-surface-change:
   name: surface change
   status: active

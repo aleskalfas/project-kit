@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T18:27:39Z
+      at: 2026-10-18T19:56:55Z
       outcome: unchanged
-      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. Which checks a merge waits on, and how they run, is unchanged.
+      unchanged-because: This change words the friction revisit help in cli.py and the revisit finding in friction_check.py, and splits one validation bullet of COR-050 point 12. How a merge waits on pkit validate and pkit friction check is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks
