@@ -1,0 +1,13 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A pull request may correct a capability's range on another capability when
+  the range excludes the version the tree already carries for it, which no
+  changeset can fix and which holds every release. `pkit release check` accepts
+  that correction when it moves only the bound that excludes the version, as far
+  as the version needs: an upper bound up to the next major of it, or a floor
+  down to it. It refuses any other edit to an existing range, which moves only at
+  the release on a changeset's declaration, and the `skip-changeset` label does
+  not waive that. The release's refusal of such a range says how to correct it.

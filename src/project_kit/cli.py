@@ -2290,7 +2290,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     """CI guard: fail if the diff touches a component's surface and adds or edits
     no changeset naming it, or the PR declares a `requires_backbone` or
     `requires_capabilities` floor, or a `runs_on_capabilities` upper bound, for a
-    component it neither touches nor moves.
+    component it neither touches nor moves, or edits the range of an existing
+    `requires_capabilities` entry other than to correct one that excludes the
+    version the tree carries (PRJ-002 D1).
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -2298,8 +2300,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `none` changeset for the component, or the `skip-changeset` label
     (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
     path heuristic can mis-fire; the override exists. No escape hatch waives
-    the floor tie. A pending changeset the diff leaves alone — another pull
-    request's — does not count for this one, whatever component it names.
+    the floor tie or the range tie. A pending changeset the diff leaves alone —
+    another pull request's — does not count for this one, whatever component it
+    names.
     """
     source_kit = _target_kit()
     fork = _settled_base(source_kit.parent, base).fork
@@ -2310,7 +2313,7 @@ def release_check(base: str | None, skip: bool | None) -> None:
     if result.skipped:
         click.echo(
             "changeset guard: surface check skipped (escape hatch active); "
-            "declared floors still checked."
+            "declared floors and range edits still checked."
         )
     elif result.release_exempt:
         click.echo(
@@ -2319,6 +2322,13 @@ def release_check(base: str | None, skip: bool | None) -> None:
         )
     elif result.touched:
         click.echo(f"changeset guard: touched {', '.join(result.touched)}")
+    for edit in result.range_edits:
+        if edit.corrects:
+            click.echo(
+                f"changeset guard: {edit.dependent}'s range on {edit.capability}, "
+                f"{edit.before} -> {edit.after}, corrects a range that excludes the version "
+                "the tree carries (PRJ-002 D1) — ok."
+            )
     if result.ok:
         if result.skipped or result.release_exempt:
             click.echo(
@@ -2361,6 +2371,16 @@ def release_check(base: str | None, skip: bool | None) -> None:
             "the pull request that changes the component, or — for a need found after the "
             "component shipped — on a changeset that moves its version (patch or above). "
             "The `skip-changeset` label does not waive this — see PRJ-002 D4."
+        )
+    if result.refused_ranges:
+        problems.append(
+            "a range of an existing requires_capabilities entry edited on a branch:\n"
+            + "\n".join(f"  {edit.problem}" for edit in result.refused_ranges)
+            + "\n  To move a floor or an upper bound, declare it on a changeset of the dependent "
+            "that moves its version, and the release writes it. A branch edits a range only to "
+            "correct one that excludes the version the tree carries — see .pkit/release/"
+            'README.md, "Correcting a range that excludes a carried version". The '
+            "`skip-changeset` label does not waive this."
         )
     raise click.ClickException("\n".join(problems))
 
