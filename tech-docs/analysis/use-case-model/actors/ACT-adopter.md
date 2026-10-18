@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-18T17:05:50Z
+      at: 2026-10-18T20:04:25Z
       outcome: unchanged
-      unchanged-because: "living-docs DEC-001 point 1 gains a bullet: an untyped place of rule sets outside every root owes no assignment, and is passed over until the project assigns it one. The adopter's needs on documentation spaces, setting one up with its location and a scoped definition and bringing existing documents in through a reviewed plan, do not turn on whether such a place owes an assignment, so they still hold."
+      unchanged-because: COR-059 changed only in the sentence that guides its points 4 and 5, which now names a data point's question beside a transition and an update of the CLI. Point 3, what a version transition is, says what it said, so the adopter's needs this actor states still hold.
 ---
 
 # ACT-adopter — Adopter

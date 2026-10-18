@@ -19,9 +19,8 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-18T13:32:43Z
-      outcome: unchanged
-      unchanged-because: The migration runner now gives each migration script a pkit of its own and refuses installation changes inside a migration. This page says a migration may change a file of yours where a decision record allows it, and that pkit upgrade runs any migrations automatically, which still holds.
+      at: 2026-10-18T20:04:38Z
+      outcome: updated
 ---
 
 # project-kit

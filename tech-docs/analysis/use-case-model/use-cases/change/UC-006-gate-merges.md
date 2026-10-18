@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T18:27:39Z
+      at: 2026-10-18T20:04:31Z
       outcome: unchanged
-      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. Which checks a merge waits on, and how they run, is unchanged.
+      unchanged-because: cli.py changed only in the capability commands, which now end with the questions a data point declares. They ask nothing without a terminal and pkit sync never asks, so the CI pipeline still runs every check with no terminal and no question, and the merge waits on the checks as this use case says.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

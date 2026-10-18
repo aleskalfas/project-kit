@@ -20,8 +20,9 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-18T17:44:30Z
-      outcome: updated
+      at: 2026-10-18T20:04:49Z
+      outcome: unchanged
+      unchanged-because: The package schema gained an optional question key on a data point. This page says the package schema holds every field in use plus the connections, docs and friction blocks, with unknown keys refused, which still holds. The key itself is documented in the lifecycle README's field table.
 ---
 
 # Schemas
