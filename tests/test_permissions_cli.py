@@ -805,10 +805,250 @@ def test_sandbox_dangerous_flag_is_loud_and_not_persisted_as_default(tmp_path, m
     proj = _with_adapter(_setup(tmp_path))
     out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
     assert "DANGEROUS" in out and "UNCONFINED" in out
-    assert _settings(proj)["sandbox"]["failIfUnavailable"] is False
+    assert _sb(proj)["failIfUnavailable"] is False  # this machine runs fail-open
     # Re-running WITHOUT the flag restores the fail-closed floor.
     _run(proj, monkeypatch, "sandbox", "enable")
-    assert _settings(proj)["sandbox"]["failIfUnavailable"] is True
+    assert _sb(proj)["failIfUnavailable"] is True
+
+
+# ---- #1763: the dangerous flag never writes into a committed file (ADR-005 point 6)
+
+
+def test_sandbox_dangerous_flag_writes_only_the_per_machine_file(tmp_path, monkeypatch):
+    # ADR-005 point 6 + ADR-029 / ADR-032 Rule A: the fail-open gesture is one
+    # operator's choice on one machine. It lands in the gitignored local file
+    # (local-wins scalar), and the committed floor stays `true` for every clone.
+    proj = _with_adapter(_setup(tmp_path))
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+    assert _sb_local(proj)["failIfUnavailable"] is False
+    assert "settings.local.json" in out and "this machine only" in out
+    # Idempotent: a second dangerous run changes neither file.
+    committed_before, local_before = _sb_committed(proj), _sb_local(proj)
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert _sb_committed(proj) == committed_before
+    assert _sb_local(proj) == local_before
+
+
+def test_sandbox_enable_without_flag_removes_the_local_fail_open(tmp_path, monkeypatch):
+    # Re-running without the flag restores the floor on this machine: the local
+    # `false` (from the gesture, or a hand-edit) is removed, not left to win.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert "failIfUnavailable" not in _sb_local(proj)
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+    assert _sb(proj)["failIfUnavailable"] is True
+    assert "fail-closed restored on this machine" in out
+    # A local `true` is no deviation and is left alone.
+    local_path = proj / ".claude" / "settings.local.json"
+    local = json.loads(local_path.read_text())
+    local["sandbox"]["failIfUnavailable"] = True
+    local_path.write_text(json.dumps(local))
+    _run(proj, monkeypatch, "sandbox", "enable")
+    assert _sb_local(proj)["failIfUnavailable"] is True
+
+
+def _commit_fail_open(proj: Path) -> None:
+    """Put a committed `failIfUnavailable: false` in place, as an earlier
+    `sandbox enable --dangerously-allow-unconfined` wrote it before #1763."""
+    path = proj / ".claude" / "settings.json"
+    data = json.loads(path.read_text()) if path.is_file() else {}
+    data.setdefault("sandbox", {})["failIfUnavailable"] = False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(data))
+
+
+def test_sandbox_status_reports_a_committed_fail_open_with_the_step(tmp_path, monkeypatch):
+    # Box OFF on this machine: the committed value still reaches every clone.
+    proj = _with_adapter(_setup(tmp_path))
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "OFF" in out
+    assert "committed fail-open" in out
+    assert "sandbox enable --dangerously-allow-unconfined" in out
+    assert "commit .claude/settings.json" in out
+    # The step also turns the box on here (Linux), and the report says so.
+    assert "also turns the box on" in out and "sandbox disable" in out
+    # Box ON, with a local `false` too: reported, and the fail-mode line does
+    # not call the open state "this machine only".
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "ON" in out and "committed fail-open" in out
+    assert "OPEN on this machine only" not in out
+    assert "also turns the box on" not in out  # the box is already on
+
+
+def test_sandbox_status_plain_open_line_for_a_committed_fail_open(tmp_path, monkeypatch):
+    # Box ON, the committed `false` alone (no local value): the plain OPEN line.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable")
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "⚠ OPEN — if the box can't start" in out
+    assert "committed fail-open" in out
+
+
+def test_status_and_overview_report_a_local_fail_open_while_the_box_is_off(tmp_path, monkeypatch):
+    # The flag's local `false` is inert while the box is off, but takes effect
+    # once the box is on, so it stays visible.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    _run(proj, monkeypatch, "sandbox", "disable")
+    for out in (_run(proj, monkeypatch, "sandbox"), _run(proj, monkeypatch, "overview")):
+        assert "fail-open recorded for this machine" in out
+        assert "committed fail-open" not in out
+    # Failing case: nothing to report once a run without the flag removed it.
+    _run(proj, monkeypatch, "sandbox", "enable")
+    _run(proj, monkeypatch, "sandbox", "disable")
+    assert "fail-open recorded" not in _run(proj, monkeypatch, "sandbox")
+
+
+def test_turns_box_on_note_printed_once_beside_both_reports(tmp_path, monkeypatch):
+    # A committed and a local `false` with the box off: both reports show, and
+    # the note that `sandbox enable` turns the box on is printed once.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    _run(proj, monkeypatch, "sandbox", "disable")
+    _commit_fail_open(proj)
+    for out in (_run(proj, monkeypatch, "sandbox"), _run(proj, monkeypatch, "overview")):
+        assert "committed fail-open" in out and "fail-open recorded for this machine" in out
+        assert out.count("also turns the box on") == 1
+
+
+def _git_init(proj: Path, gitignore: str | None, monkeypatch) -> None:
+    """A repository at `proj`, with git's global and system configuration
+    shut out, so an operator's own global ignore file cannot answer for it."""
+    import subprocess
+
+    monkeypatch.setenv("GIT_CONFIG_GLOBAL", str(proj.parent / "no-global-gitconfig"))
+    monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    monkeypatch.setenv("XDG_CONFIG_HOME", str(proj.parent / "no-xdg-config"))
+    subprocess.run(["git", "init", "-q", str(proj)], check=True)
+    if gitignore is not None:
+        (proj / ".gitignore").write_text(gitignore)
+
+
+def test_dangerous_flag_warns_when_settings_local_is_not_ignored(tmp_path, monkeypatch):
+    # The per-machine `false` stays off other clones only while git ignores the
+    # file; pkit writes it itself, so a missing ignore entry is warned about.
+    proj = _with_adapter(_setup(tmp_path))
+    _git_init(proj, gitignore=None, monkeypatch=monkeypatch)
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert "NOT ignored by git" in out
+
+
+def test_dangerous_flag_no_ignore_warning_when_settings_local_is_ignored(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _git_init(proj, gitignore=".claude/settings.local.json\n", monkeypatch=monkeypatch)
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert "NOT ignored by git" not in out
+
+
+def test_setup_autonomy_mends_a_committed_fail_open_under_a_local_true(tmp_path, monkeypatch):
+    # A local `true` holds this machine fail-closed, but the committed `false`
+    # reaches every other clone, so setup does not call it "already" done. It
+    # restores the committed floor and tells the operator to commit it.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "setup", "autonomy")
+    _commit_fail_open(proj)
+    local_path = proj / ".claude" / "settings.local.json"
+    local = json.loads(local_path.read_text())
+    local["sandbox"]["failIfUnavailable"] = True
+    local_path.write_text(json.dumps(local))
+    out = _run(proj, monkeypatch, "setup", "autonomy")
+    assert "✓ done — OS sandbox enabled" in out
+    assert "commit .claude/settings.json" in out
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+
+
+def test_overview_reports_a_committed_fail_open(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "overview")
+    assert "committed fail-open" in out
+    assert "sandbox enable --dangerously-allow-unconfined" in out
+
+
+def test_no_committed_fail_open_report_when_the_floor_holds(tmp_path, monkeypatch):
+    # Failing case of the report: the gesture's local `false` is per-machine and
+    # is NOT a committed fail-open; nothing is reported.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert "committed fail-open" not in _run(proj, monkeypatch, "sandbox")
+    assert "committed fail-open" not in _run(proj, monkeypatch, "overview")
+
+
+def test_sandbox_enable_with_flag_moves_a_committed_fail_open(tmp_path, monkeypatch):
+    # The reported step, keeping fail-open: the committed `false` moves to the
+    # local file and the committed floor is restored.
+    proj = _with_adapter(_setup(tmp_path))
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+    assert _sb_local(proj)["failIfUnavailable"] is False
+    assert "moved to settings.local.json" in out
+    assert "committed fail-open" not in _run(proj, monkeypatch, "sandbox")
+
+
+def test_sandbox_enable_without_flag_restores_a_committed_fail_open(tmp_path, monkeypatch):
+    # The reported step, going fail-closed: the committed floor is restored and
+    # no `false` is left anywhere.
+    proj = _with_adapter(_setup(tmp_path))
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox", "enable")
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+    assert "failIfUnavailable" not in _sb_local(proj)
+    assert "carried failIfUnavailable: false" in out and "removed" in out
+    assert "committed fail-open" not in _run(proj, monkeypatch, "sandbox")
+
+
+def test_macos_gated_enable_moves_a_committed_fail_open(tmp_path, monkeypatch):
+    # The reported step works on a Mac too, where `sandbox enable` is gated off
+    # (#312/#313): it routes the fail mode through the same writer.
+    monkeypatch.setattr("sys.platform", "darwin")
+    proj = _with_adapter(_setup(tmp_path))
+    _commit_fail_open(proj)
+    out = _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert "unsupported on macOS" in out
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+    assert _sb_local(proj)["failIfUnavailable"] is False
+    assert "inert while the box is gated off" in out
+    # Without the flag: the local `false` goes too, and nothing is left open.
+    _run(proj, monkeypatch, "sandbox", "enable")
+    assert "failIfUnavailable" not in _sb_local(proj)
+    assert _sb_committed(proj)["failIfUnavailable"] is True
+
+
+def test_sandbox_status_tells_a_per_machine_fail_open_from_a_committed_one(tmp_path, monkeypatch):
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    out = _run(proj, monkeypatch, "sandbox")
+    assert "OPEN on this machine only" in out
+    assert "committed fail-open" not in out
+
+
+def test_setup_autonomy_restores_the_floor_over_a_per_machine_fail_open(tmp_path, monkeypatch):
+    # ADR-007 rule 6: setup is fail-closed-only. It runs `sandbox enable`
+    # without the flag, so the gesture's local `false` is removed.
+    proj = _with_adapter(_setup(tmp_path))
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    _run(proj, monkeypatch, "setup", "autonomy")
+    assert "failIfUnavailable" not in _sb_local(proj)
+    assert _sb(proj)["failIfUnavailable"] is True
+
+
+def test_macos_gated_enable_adds_no_missing_floor_key(tmp_path, monkeypatch):
+    # The gated branch leaves the committed floor alone apart from correcting a
+    # wrong value: with no committed `failIfUnavailable`, none is created, and
+    # the flag still writes only the per-machine file.
+    monkeypatch.setattr("sys.platform", "darwin")
+    proj = _with_adapter(_setup(tmp_path, settings=json.dumps({"permissions": {}})))
+    before = _settings(proj)
+    _run(proj, monkeypatch, "sandbox", "enable", "--dangerously-allow-unconfined")
+    assert _settings(proj) == before
+    assert _sb_local(proj)["failIfUnavailable"] is False
 
 
 def test_sandbox_disable_flips_enabled_in_local_leaves_floor(tmp_path, monkeypatch):

@@ -5550,8 +5550,9 @@ def permissions_sandbox(ctx: click.Context) -> None:
     is_flag=True,
     default=False,
     help="Operator-only, per-invocation: write failIfUnavailable: false "
-    "(fail-open). Never a committable default — re-running enable "
-    "without it restores fail-closed.",
+    "(fail-open) to the gitignored settings.local.json, for this machine "
+    "only. Never written to the committed settings.json — re-running "
+    "enable without it restores fail-closed.",
 )
 def permissions_sandbox_enable(strict: bool, dangerously_allow_unconfined: bool) -> None:
     """Turn on the OS sandbox with prompt-free scripting (fail-closed, additive, idempotent)."""

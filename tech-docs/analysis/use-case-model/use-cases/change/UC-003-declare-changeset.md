@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T18:27:36Z
+      at: 2026-10-18T19:51:03Z
       outcome: unchanged
-      unchanged-because: In src/project_kit/cli.py the change edits only the friction artefacts command's docstring. How a change declares its changesets and how the guard reads them is unchanged.
+      unchanged-because: This change alters only the help text of the sandbox enable command's --dangerously-allow-unconfined flag in cli.py. The changeset and release commands this use case describes are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release
