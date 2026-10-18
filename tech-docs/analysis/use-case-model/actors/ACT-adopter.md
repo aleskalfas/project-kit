@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-18T20:04:25Z
+      at: 2026-10-18T20:10:02Z
       outcome: unchanged
-      unchanged-because: COR-059 changed only in the sentence that guides its points 4 and 5, which now names a data point's question beside a transition and an update of the CLI. Point 3, what a version transition is, says what it said, so the adopter's needs this actor states still hold.
+      unchanged-because: What COR-059 point 3 stands on changed only in the Decision's guide sentence, which now names a data point's question beside a transition and an update of the CLI. Points 4 and 5 gained the question too. Point 3, what a version transition is, says what it said, so the adopter's needs this actor states still hold.
 ---
 
 # ACT-adopter — Adopter

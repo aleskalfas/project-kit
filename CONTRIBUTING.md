@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T20:04:48Z
+      at: 2026-10-18T20:10:03Z
       outcome: unchanged
-      unchanged-because: "COR-004 gained one sentence: a data point's question is the definer's command and no operation of the core layer. This page cites COR-004 as an example of design rules for the command surface that list no commands, which still holds."
+      unchanged-because: "COR-004 gained two sentences: the rule lists the core layer's operations, and a data point's question is the definer's command and none of them. This page cites COR-004 as an example of design rules for the command surface that list no commands, which still holds."
 ---
 
 # Contributing to project-kit
