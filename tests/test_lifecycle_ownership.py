@@ -565,7 +565,7 @@ def test_what_no_sync_copies_is_never_a_synced_copy(tmp_path: Path, path: str) -
     assert own.is_synced_copy(root, path) is False
 
 
-def test_nothing_in_the_methodology_source_is_a_synced_copy(tmp_path: Path) -> None:
+def test_trees_authored_in_the_methodology_source_are_not_synced_copies(tmp_path: Path) -> None:
     """The source is what a sync copies from, so the kit's trees there are originals.
 
     They stay the kit's to manage — write authority does not move — which is
@@ -576,6 +576,56 @@ def test_nothing_in_the_methodology_source_is_a_synced_copy(tmp_path: Path) -> N
     for path in (".pkit/decisions/README.md", ".pkit/capabilities/shipped/README.md"):
         assert own.is_sync_managed(root, path) is True, path
         assert own.is_synced_copy(root, path) is False, path
+
+
+# An externally-sourced capability is pulled whole from another repository and
+# brought to its pin (COR-041), so its files are copies wherever it is
+# registered — the methodology's source included, since it is not authored
+# there. Its `project/` tier is the consumer's, as a shipped one's is.
+
+
+@pytest.mark.parametrize("source", [False, True], ids=["adopter", "methodology-source"])
+def test_an_externally_sourced_capability_is_a_synced_copy(tmp_path: Path, source: bool) -> None:
+    root = _project(tmp_path, capabilities={"fetched": "externally-sourced"})
+    if source:
+        _source_repository(root)
+    assert own.is_methodology_source(root) is source
+    for path in (
+        ".pkit/capabilities/fetched/README.md",
+        ".pkit/capabilities/fetched/rule-sets/house.md",
+        ".pkit/capabilities/fetched/decisions/DEC-001-x.md",
+    ):
+        assert own.is_synced_copy(root, path) is True, path
+
+
+@pytest.mark.parametrize("source", [False, True], ids=["adopter", "methodology-source"])
+@pytest.mark.parametrize(
+    "path",
+    [
+        ".pkit/capabilities/fetched/project/notes.md",  # the consumer's own tier
+        ".pkit/capabilities/unregistered/README.md",  # nothing brings it to a pin
+        ".pkit/capabilities/mine/README.md",  # incubated: authored here
+        "docs/fetched/README.md",  # outside the tree
+    ],
+)
+def test_what_an_external_source_does_not_bring_is_no_synced_copy(
+    tmp_path: Path, source: bool, path: str
+) -> None:
+    root = _project(
+        tmp_path, capabilities={"fetched": "externally-sourced", "mine": "incubated-in-repo"}
+    )
+    if source:
+        _source_repository(root)
+    assert own.is_synced_copy(root, path) is False
+
+
+def test_the_origin_wire_values_are_the_manifests() -> None:
+    """The module restates the registry's origins as plain strings to stay import-free."""
+    from project_kit import manifest
+
+    assert own.ORIGIN_KIT_SHIPPED == manifest.ORIGIN_KIT_SHIPPED
+    assert own.ORIGIN_INCUBATED_IN_REPO == manifest.ORIGIN_INCUBATED_IN_REPO
+    assert own.ORIGIN_EXTERNALLY_SOURCED == manifest.ORIGIN_EXTERNALLY_SOURCED
 
 
 def test_one_marker_alone_is_not_the_source(tmp_path: Path) -> None:
