@@ -19,8 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-18T08:25:39Z
-      outcome: updated
+      at: 2026-10-18T13:03:18Z
+      outcome: unchanged
+      unchanged-because: "refs.py changes only how resolve_record looks a record up in a listing: a path without the record's id is passed over before it is parsed, and the same file is found. What this page says of records, their ids, namespaces and how a citation resolves is unchanged, so it still holds."
 ---
 
 # Decision records
