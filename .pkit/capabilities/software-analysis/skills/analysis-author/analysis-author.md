@@ -79,8 +79,9 @@ A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens
 An anchor says *if this changes, check me*. Anchor what makes the artefact true, and nothing broader:
 
 - **`--path <glob>`** — the code that embodies it: the entry point and the files that do the behaviour, not a whole tree. An anchor matching more than half the tracked files is reported as over-broad, because it would make every change a revalidation.
-- **`--record <id>`** — a decision it relies on: an architecture decision, a capability's decision, a project record.
-- **Artefact anchors are the stamp's.** A use case anchors to its actor and each other actor it involves, and a journey to its actor and to the use cases of its steps and its `relies-on`. So a changed actor flags its use cases and journeys, and a changed use case the journeys that pass through it or rely on it. Never write them by hand.
+- **`--record <id>`** — a decision it relies on: an architecture decision, a capability's decision, a project record or a core record. For a use case, that is each record it rests on and each record that answers it. The anchor runs from the analysis only. Records carry no drivers: a record never anchors an analysis artefact, not even the use case it was made to meet, so no cycle runs between the two (DEC-001 point 11).
+- **An architecture view** that realises a use case, where the project keeps one: `--path` on the view's file. Where a place holds the view, write an artefact anchor on it instead. A view never anchors the analysis back.
+- **The analysis's own artefact anchors are the stamp's.** A use case anchors to its actor and each other actor it involves, and a journey to its actor and to the use cases of its steps and its `relies-on`. So a changed actor flags its use cases and journeys, and a changed use case the journeys that pass through it or rely on it. Never write them by hand.
 
 **Quote the code you describe.** When a use case's step names a command, a flag, a function or a message, write it in backticks. What an artefact quotes from the code it anchors to is how a revalidation tells a change that leaves the description true from one that removes what it says — the resolver agent's first reading of a flagged artefact rests on it.
 

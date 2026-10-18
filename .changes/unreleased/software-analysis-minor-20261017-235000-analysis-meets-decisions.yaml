@@ -1,0 +1,16 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  Point 11 of software-analysis DEC-001 says how the analysis and a
+  project's decisions and architecture point at each other, a convention
+  your records and views follow. The analysis always anchors the solution: a use case
+  anchors each record it rests on or that answers it, and each architecture
+  view that realises it. No record and no view anchors the analysis, and a
+  view names an analysis artefact only by its id. What a record serves is
+  worked out from the analysis's anchors for display, and never stored. The
+  use-case template's record anchor holds a new placeholder,
+  `<record it rests on>`, which joins the append-only list of placeholders
+  the templates shipped. The analysis-author skill says so, and the README
+  says it in "How it meets your decisions". No check changes.

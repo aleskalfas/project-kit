@@ -68,11 +68,15 @@ settings that declare them, this pass reports:
   the container schema admits any kind a word names, as the container admits
   a role block with no active provider, and a refused registration fails once,
   at the registration, in the packages pass. This pass runs no resolver;
-- **a cycle between artefacts** through `anchors.artefact`, with the cycle's
-  path — a cycle has no order in which its members could be revalidated
-  (COR-050 point 5). An anchor on a document's section or its lead counts as
-  one on the document (`artefact_parts.whole_target`), so one on a part of its
-  own artefact is a cycle, said so;
+- **a cycle between artefacts**, with the cycle's path — a cycle has no
+  order in which its members could be revalidated (COR-050 point 5). It is
+  found along the one edge set truth-chain order reads too
+  (`friction_check.upstream_artefacts`): artefact anchors, an anchor on a
+  document's section or its lead counting as one on the document, and record
+  anchors, whole or on a point, on a record whose file is an artefact. A path
+  anchor and an anchor of a registered kind name files, so neither is
+  followed. So an anchor on a part of its own artefact is a cycle, as is a
+  record's anchor on itself or on one of its own points, said so;
 - **a dead or ambiguous anchor on a record's point** (`_PointAnchors`), an
   error: its record does not resolve, holds no point with the id, writes its
   points as a list, or holds two with the id (COR-050 points 7 and 12) — and
@@ -128,8 +132,14 @@ from typing import Any, cast
 
 from project_kit import backbone_schemas as bs
 from project_kit import connections, validators
-from project_kit.artefact_parts import PartState, anchored_part, whole_target
-from project_kit.friction_check import point_problem, record_file, record_naming
+from project_kit.artefact_parts import PartState, anchored_part
+from project_kit.friction_check import (
+    Upstream,
+    point_problem,
+    record_file,
+    record_naming,
+    upstream_artefacts,
+)
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     FRICTION_KEY,
@@ -561,7 +571,7 @@ def _artefact_findings(target_root: Path, discovery: Discovery) -> list[Friction
         findings.extend(points.findings(artefact))
         findings.extend(_part_anchor_findings(artefact, discovery, record_named))
 
-    findings.extend(_cycles(discovery))
+    findings.extend(_cycles(discovery, points.record_path))
     return findings
 
 
@@ -784,6 +794,7 @@ class _PointAnchors:
         self.tree = WorkingTree(target_root)
         self._files: frozenset[str] | None = None
         self._records: dict[str, RecordPoints | None] = {}
+        self._paths: dict[str, str | None] = {}
 
     def findings(self, artefact: Artefact) -> Iterable[FrictionFinding]:
         for index, value in _written_anchors(artefact, "record"):
@@ -791,7 +802,7 @@ class _PointAnchors:
             if point is None:
                 continue
             pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/record/{index}"
-            rel = record_file(self.root, self.files, record)
+            rel = self.record_path(value)
             if rel is None:
                 yield self._finding(
                     artefact,
@@ -842,6 +853,15 @@ class _PointAnchors:
         if self._files is None:
             self._files = frozenset(self.tree.files())
         return self._files
+
+    def record_path(self, value: str) -> str | None:
+        """The file a record anchor's value names in the working tree, through the record
+        resolver (`friction_check.record_file`), whole or on a point, resolved once per
+        record; `None` where it names no record."""
+        record = split_anchor(value)[0]
+        if record not in self._paths:
+            self._paths[record] = record_file(self.root, self.files, record)
+        return self._paths[record]
 
     def _read(self, rel: str) -> RecordPoints | None:
         if rel not in self._records:
@@ -925,31 +945,27 @@ def _pointer_token(segment: str) -> str:
     return segment.replace("~", "~0").replace("/", "~1")
 
 
-def _cycles(discovery: Discovery) -> list[FrictionFinding]:
-    """Cycles through `anchors.artefact`, each reported once with its path.
+def _cycles(
+    discovery: Discovery, record_path: Callable[[str], str | None]
+) -> list[FrictionFinding]:
+    """Cycles between artefacts, each reported once with its path (COR-050 point 5).
 
-    Edges go from an artefact to every artefact its `anchors.artefact`
-    values name (a value naming nothing is a dead anchor — the checks' finding,
-    not this pass's). An anchor on a document's section or its lead is an edge
-    to the document (`artefact_parts.whole_target`), so one on a part of its own
-    artefact is a cycle (COR-050 point 5). A depth-first walk in discovery order
-    finds each cycle the first time it closes; the cycle is rotated to start at
-    its smallest member so the same cycle reached from two sides is reported
-    once.
+    The edges are the one edge set truth-chain order reads too
+    (`friction_check.upstream_artefacts`): an artefact anchor to the artefact it
+    names, an anchor on a document's section or its lead to the document
+    (`artefact_parts.whole_target`), and a record anchor, whole or on a point, to
+    the record, where the record's file is an artefact. `record_path` gives the
+    file a record anchor names in the working tree. A path anchor and an anchor of
+    a registered kind name files, so neither is followed. So an anchor on a part of
+    its own artefact is a cycle, as is a record's anchor on itself or on one of its
+    own points. A value naming nothing is a dead anchor — the checks' finding, not
+    this pass's. A depth-first walk in discovery order finds each cycle the first
+    time it closes; the cycle is rotated to start at its smallest member so the
+    same cycle reached from two sides is reported once.
     """
     order = list(discovery.artefacts)
-    edges: dict[int, list[int]] = {}
-    own: dict[int, list[str]] = {}  # each artefact's anchors on itself, whole or a part
-    index_of = {id(a): i for i, a in enumerate(order)}
-    for i, artefact in enumerate(order):
-        targets: list[int] = []
-        for reference in artefact.anchors_of_kind("artefact"):
-            target = whole_target(discovery, reference)
-            if target is not None:
-                targets.append(index_of[id(target)])
-                if target is artefact:
-                    own.setdefault(i, []).append(reference)
-        edges[i] = targets
+    upstream = upstream_artefacts(discovery, record_path)
+    edges = {i: [edge.index for edge in found] for i, found in enumerate(upstream)}
 
     WHITE, GREY, BLACK = 0, 1, 2
     colour = dict.fromkeys(range(len(order)), WHITE)
@@ -973,10 +989,7 @@ def _cycles(discovery: Discovery) -> list[FrictionFinding]:
                 canonical = _rotate_to_smallest(cycle, order)
                 if canonical not in seen_cycles:
                     seen_cycles.add(canonical)
-                    selves = own.get(canonical[0], []) if len(canonical) == 1 else []
-                    findings.append(
-                        _cycle_finding([order[i] for i in canonical], selves, discovery)
-                    )
+                    findings.append(_cycle_finding(canonical, order, upstream, discovery))
             elif colour[child] == WHITE:
                 colour[child] = GREY
                 path.append(child)
@@ -993,38 +1006,74 @@ def _rotate_to_smallest(cycle: list[int], order: list[Artefact]) -> tuple[int, .
     return tuple(cycle[pivot:] + cycle[:pivot])
 
 
+#: What an anchor of an artefact on itself names, in the order a finding lists them.
+_ITSELF = "itself"
+_OWN_PART = "a section or the lead of itself"
+_OWN_POINT = "one of its own points"
+
+
+def _own_part(anchor: Anchor, discovery: Discovery) -> str:
+    """What an anchor on its own artefact names (COR-050 points 2 and 5): the artefact
+    itself, a section or the lead of it, or one of the record's own points."""
+    if anchor.kind == "record":
+        return _ITSELF if split_anchor(anchor.value)[1] is None else _OWN_POINT
+    return _ITSELF if discovery.find(anchor.value) is not None else _OWN_PART
+
+
+def _listed_with_and(items: list[str]) -> str:
+    """`a`, `a, and b`, or `a, b, and c`."""
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + ", and " + items[-1]
+
+
 def _cycle_finding(
-    members: list[Artefact], selves: list[str], discovery: Discovery
+    cycle: tuple[int, ...],
+    order: list[Artefact],
+    upstream: tuple[tuple[Upstream, ...], ...],
+    discovery: Discovery,
 ) -> FrictionFinding:
-    """The finding on one cycle. An artefact that anchors a section or the lead of itself
-    is told so, with each anchor on itself it writes, whole or a part (`selves`)."""
+    """The finding on one cycle, `cycle` its members by their index in `order`, at the
+    first member, naming the kind of the anchor by which it rests on the next member:
+    `anchors/artefact` or `anchors/record`. An artefact that anchors a part of itself — a
+    section or the lead, or one of a record's own points — is told so, with each anchor
+    on itself it writes, whole or a part."""
+    members = [order[i] for i in cycle]
     head = members[0]
-    pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/artefact"
-    if any(discovery.find(value) is None for value in selves):
-        named = ", ".join(repr(value) for value in selves)
-        whole = "" if all(discovery.find(value) is None for value in selves) else "itself, and "
-        return FrictionFinding(
-            location=head.location,
-            pointer=pointer,
-            severity=Severity.ERROR,
-            kind=FrictionFindingKind.CYCLE,
-            message=(
-                f"the artefact anchors {whole}a section or the lead of itself ({named}), which "
-                f"is a cycle: its own edits would flag it, and so would its own revalidation — "
-                f"anchor what lies outside it (COR-050 point 5)."
-            ),
-        )
+    closing = [
+        edge.anchor
+        for k, index in enumerate(cycle)
+        for edge in upstream[index]
+        if edge.index == cycle[(k + 1) % len(cycle)]
+    ]
+    pointer = f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/{closing[0].kind}"
+    if len(cycle) == 1:
+        named_parts = {_own_part(anchor, discovery) for anchor in closing}
+        if named_parts - {_ITSELF}:
+            parts = [part for part in (_ITSELF, _OWN_PART, _OWN_POINT) if part in named_parts]
+            named = ", ".join(repr(anchor.value) for anchor in closing)
+            return FrictionFinding(
+                location=head.location,
+                pointer=pointer,
+                severity=Severity.ERROR,
+                kind=FrictionFindingKind.CYCLE,
+                message=(
+                    f"the artefact anchors {_listed_with_and(parts)} ({named}), which is a "
+                    f"cycle: its own edits would flag it, and so would its own revalidation — "
+                    f"anchor what lies outside it (COR-050 point 5)."
+                ),
+            )
+    kinds = [kind for kind in ("artefact", "record") if any(a.kind == kind for a in closing)]
     shown = " -> ".join(a.id for a in members) + f" -> {head.id}"
-    what = "anchors to itself" if len(members) == 1 else "form a cycle through anchors.artefact"
+    through = " and ".join(f"anchors.{kind}" for kind in kinds)
+    what = "anchors to itself" if len(members) == 1 else f"form a cycle through {through}"
     return FrictionFinding(
         location=head.location,
-        pointer=f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/anchors/artefact",
+        pointer=pointer,
         severity=Severity.ERROR,
         kind=FrictionFindingKind.CYCLE,
         message=(
             f"{'the artefact' if len(members) == 1 else 'the artefacts'} {what}: {shown}; "
             f"a cycle has no order in which its members could be revalidated — remove one "
-            f"of the artefact anchors (COR-050 point 5)."
+            f"of the {' or '.join(kinds)} anchors (COR-050 point 5)."
         ),
     )
 

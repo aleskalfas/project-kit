@@ -17,9 +17,9 @@ pkit:
         - .pkit/adapters/claude-code/merge-settings.sh
       record: [COR-001, COR-002, COR-017, PRJ-001, PRJ-004, ADR-049, ADR-064]
     revalidated:
-      at: 2026-10-17T15:21:16Z
+      at: 2026-10-17T21:37:50Z
       outcome: unchanged
-      unchanged-because: COR-017 now lets a capability's install create the one project rule set it declares, and COR-001 names that install among the writers of project-owned paths. The set is a new file, written only where no file lies at its path and no set of the project's own inherits the capability's method set, and never written again while the capability stays installed. So this page's word that pkit never touches the files you write still holds, as does its account of capabilities as opt-in packages.
+      unchanged-because: decisions_validate.py changes only in its docstrings, which add an externally-sourced capability's records to the copies validation skips. This page names `pkit decisions validate` as a day-one gate for decision-id uniqueness and says nothing of which records it skips, so it still holds.
 ---
 
 # project-kit

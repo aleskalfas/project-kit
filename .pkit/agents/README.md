@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-17T21:09:57Z
+      at: 2026-10-18T08:25:25Z
       outcome: unchanged
-      unchanged-because: "COR-049 point 5 gains one sentence: the default folder of a project's rule sets is not recorded on first use, and a change of root keeps it found instead (COR-051 point 6). This page cites COR-049 for the overlay categories that derive from the internal root, and for the consent recording one over existing documents takes. Neither covers the rule-set folder, so what it says still holds."
+      unchanged-because: ownership.py changes is_synced_copy, which asks a new helper whether a file is a registered externally-sourced capability's and answers yes for it, with a constant for that origin and the comments around them. The write-authority check this page describes rests on is_sync_managed and the write-carrying categories, both unchanged, and the COR-050 points it cites, 3 and 10, are unchanged too.
 ---
 
 # Agents
