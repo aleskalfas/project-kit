@@ -19,8 +19,9 @@ pkit:
         - src/project_kit/working_tree.py
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
     revalidated:
-      at: 2026-10-18T11:59:21Z
-      outcome: updated
+      at: 2026-10-18T13:03:35Z
+      outcome: unchanged
+      unchanged-because: friction_discovery.py now works out a listing's Markdown files once and keeps them for every place that reads that listing, rather than once per place, so each place matches the same files. What this page says of the declared places, what a place matches and the one listing of the working tree still holds.
 ---
 
 # Schemas

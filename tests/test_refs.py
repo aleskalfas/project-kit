@@ -620,6 +620,29 @@ def test_resolve_record_rejects_malformed_id(kit_target: Path) -> None:
     assert refs.resolve_record(kit_target, "not-a-record") is None
 
 
+def test_resolve_record_in_a_listing_finds_only_a_file_of_the_records_folder(
+    kit_target: Path,
+) -> None:
+    """In a listing, the record is the first file of its folder whose name the id's
+    pattern matches: the id elsewhere in a path, a longer id, a file in a folder
+    beneath, and a name with no slug are passed over, as they always were."""
+    core = ".pkit/decisions/core"
+    files = [
+        "docs/COR-005-notes/COR-005-elsewhere.md",
+        f"{core}/COR-0050-longer.md",
+        f"{core}/sub/COR-005-beneath.md",
+        f"{core}/COR-005.md",
+        f"{core}/COR-005-b.md",
+        f"{core}/COR-005-a.md",
+        f"{core}/COR-005-a.txt",
+    ]
+    assert refs.resolve_record(kit_target, "COR-005", files=files) == kit_target / (
+        f"{core}/COR-005-a.md"
+    )
+    assert refs.resolve_record(kit_target, "COR-005", files=files[:4]) is None
+    assert refs.resolve_record(kit_target, "PRJ-005", files=files) is None
+
+
 def test_resolve_hook_picks_project_over_core(kit_target: Path) -> None:
     providers = [
         refs.Provider(hook="x.y", tier="core", source="core-skill", implementation="/core-skill"),

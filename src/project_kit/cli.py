@@ -57,6 +57,7 @@ from project_kit.install import (
     sync_remedy,
 )
 from project_kit.merge import run_merge
+from project_kit.migrations import refuse_inside_migration
 from project_kit.release import (
     ReleasePlan,
     apply_release,
@@ -202,6 +203,8 @@ def agents_reconcile(write: bool) -> None:
     `--write`, and nothing else is written in that run: the next dry run shows
     each category the seed does not define (ADR-065 point 11).
     """
+    if write:
+        refuse_inside_migration("agents reconcile --write")
     from project_kit import agents_overlay as ao
 
     target_root = find_target_root()
@@ -254,6 +257,7 @@ def agents_adopt(agent_name: str, yes: bool) -> None:
     Idempotent: re-running on an already-adopted agent reports no changes, asks
     nothing, and re-deploys (the deploy step is itself idempotent).
     """
+    refuse_inside_migration("agents adopt")
     from project_kit import agents_overlay as ao
 
     target_root = find_target_root()
@@ -2249,7 +2253,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     """CI guard: fail if the diff touches a component's surface and adds or edits
     no changeset naming it, or the PR declares a `requires_backbone` or
     `requires_capabilities` floor, or a `runs_on_capabilities` upper bound, for a
-    component it neither touches nor moves.
+    component it neither touches nor moves, or edits the range of an existing
+    `requires_capabilities` entry other than to correct one that excludes the
+    version the tree carries (PRJ-002 D1).
 
     The diff is taken from where HEAD left the base — REF, else
     $PKIT_CHECK_BASE, else the default branch (COR-054); a base that resolves
@@ -2257,8 +2263,9 @@ def release_check(base: str | None, skip: bool | None) -> None:
     `none` changeset for the component, or the `skip-changeset` label
     (PKIT_CHANGESET_SKIP env). Surface is a human judgment (PRJ-002 D2) — this
     path heuristic can mis-fire; the override exists. No escape hatch waives
-    the floor tie. A pending changeset the diff leaves alone — another pull
-    request's — does not count for this one, whatever component it names.
+    the floor tie or the range tie. A pending changeset the diff leaves alone —
+    another pull request's — does not count for this one, whatever component it
+    names.
     """
     source_kit = _target_kit()
     fork = _settled_base(source_kit.parent, base).fork
@@ -2269,7 +2276,7 @@ def release_check(base: str | None, skip: bool | None) -> None:
     if result.skipped:
         click.echo(
             "changeset guard: surface check skipped (escape hatch active); "
-            "declared floors still checked."
+            "declared floors and range edits still checked."
         )
     elif result.release_exempt:
         click.echo(
@@ -2278,6 +2285,13 @@ def release_check(base: str | None, skip: bool | None) -> None:
         )
     elif result.touched:
         click.echo(f"changeset guard: touched {', '.join(result.touched)}")
+    for edit in result.range_edits:
+        if edit.corrects:
+            click.echo(
+                f"changeset guard: {edit.dependent}'s range on {edit.capability}, "
+                f"{edit.before} -> {edit.after}, corrects a range that excludes the version "
+                "the tree carries (PRJ-002 D1) — ok."
+            )
     if result.ok:
         if result.skipped or result.release_exempt:
             click.echo(
@@ -2320,6 +2334,16 @@ def release_check(base: str | None, skip: bool | None) -> None:
             "the pull request that changes the component, or — for a need found after the "
             "component shipped — on a changeset that moves its version (patch or above). "
             "The `skip-changeset` label does not waive this — see PRJ-002 D4."
+        )
+    if result.refused_ranges:
+        problems.append(
+            "a range of an existing requires_capabilities entry edited on a branch:\n"
+            + "\n".join(f"  {edit.problem}" for edit in result.refused_ranges)
+            + "\n  To move a floor or an upper bound, declare it on a changeset of the dependent "
+            "that moves its version, and the release writes it. A branch edits a range only to "
+            "correct one that excludes the version the tree carries — see .pkit/release/"
+            'README.md, "Correcting a range that excludes a carried version". The '
+            "`skip-changeset` label does not waive this."
         )
     raise click.ClickException("\n".join(problems))
 
@@ -2709,6 +2733,7 @@ def init(dry_run: bool, here: bool, yes: bool, root: Path | None) -> None:
     workspace folder as a root, and guides rather than silently installing into a
     repository git cannot verify (issue #787).
     """
+    refuse_inside_migration("init")
     cwd = Path.cwd()
 
     if here and root is not None:
@@ -4076,6 +4101,7 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
 def sync(dry_run: bool, force: bool) -> None:
     """Reconcile the project at the version it records: copy that release's
     content, regenerate the derivable state, and move no version (COR-059)."""
+    refuse_inside_migration("sync")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4100,6 +4126,7 @@ def merge(targets: tuple[str, ...], dry_run: bool) -> None:
     Optional TARGETS filter to specific adapter names; all installed adapters
     that ship a merge primitive run by default.
     """
+    refuse_inside_migration("merge")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4168,6 +4195,7 @@ def upgrade(dry_run: bool, no_pin: bool, no_self_update: bool, force: bool) -> N
     tool. Where the router could not fetch the pin and runs the installed pkit
     instead, it refuses, before it writes anything.
     """
+    refuse_inside_migration("upgrade")
     target_root = find_target_root()
     if target_root is None:
         # Outside any project: update the tool only ("just update my tool").
@@ -4223,6 +4251,7 @@ def pin(version: str | None, force: bool) -> None:
     Refused in the methodology's source repository, where the router runs the
     checkout's own code before any pin is read (ADR-059).
     """
+    refuse_inside_migration("pin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4240,6 +4269,7 @@ def unpin() -> None:
     runs the installed tool as-is (today's un-pinned behaviour). Idempotent: it
     is fine to run when no pin file is present.
     """
+    refuse_inside_migration("unpin")
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -4389,6 +4419,7 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
       warning and require --force to proceed (not a hard block; a hard
       block would deadlock since cascade-upgrade is out of scope).
     """
+    refuse_inside_migration("capabilities upgrade")
     from project_kit import capabilities as caps
 
     target_root = find_target_root()
@@ -6173,6 +6204,7 @@ def install_capability_cmd(
     refused, naming the set and both files, and nothing is installed (COR-051
     point 3).
     """
+    refuse_inside_migration("capabilities install")
     from project_kit import capabilities as caps
 
     _plan_flags(plan, as_json)
@@ -6492,6 +6524,7 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
     existing registry entry (no re-copy, no re-deploy), so `pkit sync` stops
     reconciling it against kit source.
     """
+    refuse_inside_migration("capabilities register")
     from project_kit import capabilities as caps
 
     target_root = find_target_root()
@@ -7085,6 +7118,7 @@ def uninstall_capability_cmd(
     says what it would have deleted, asks, and unregisters only; --purge is
     refused (ADR-059; #1107).
     """
+    refuse_inside_migration("capabilities uninstall")
     from project_kit import capabilities as caps
 
     _plan_flags(plan, as_json)

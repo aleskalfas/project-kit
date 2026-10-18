@@ -7,7 +7,8 @@ history (`friction_history`) and both checks build on it without a cycle
 
 - `run_git` runs one git command, `commit_of` resolves a name to a commit.
 - `CommitTree` is one commit's files, read from git objects — nothing is
-  checked out — with each file's mode and object (`entry`), gitlinks included.
+  checked out — with each file's mode and object (`entry`), gitlinks included;
+  through an open `BlobReader` where its caller gives one.
 - `DiffEntry` is one path a diff or a log lists; from `git log --raw` it
   carries the file's entry after the commit and at each parent, so whether a
   commit put a file back as it stood elsewhere is told by object id, with no
@@ -91,10 +92,18 @@ def _tree_records(listed: bytes) -> Iterable[tuple[str, str, str, str]]:
 
 
 class CommitTree:
-    """The files of one commit, read from git objects; nothing is checked out."""
+    """The files of one commit, read from git objects; nothing is checked out.
 
-    def __init__(self, root: Path, commit: str) -> None:
+    With a `reader`, the files are read through that open `BlobReader`, so a
+    caller that reads a few files at a time — discovery reads the configuration
+    and each capability's package metadata one by one — starts no git process
+    per read. The bytes are the same either way: each file's object, read by its
+    id. The reader is the caller's to close, after its last read of the tree.
+    """
+
+    def __init__(self, root: Path, commit: str, reader: BlobReader | None = None) -> None:
         self._root = root
+        self._reader = reader
         listed = run_git(root, "ls-tree", "-r", "-z", commit).stdout
         self._entries: dict[str, TreeEntry] = {}  # path -> (mode, object), gitlinks included
         self._blobs: dict[str, TreeEntry] = {}  # the files: a submodule is a commit, not a file
@@ -119,6 +128,10 @@ class CommitTree:
             if rel in self._blobs and self._blobs[rel][0] != LINK_MODE
         ]
         if not wanted:
+            return contents
+        if self._reader is not None:
+            for rel, obj in wanted:
+                contents[rel] = self._reader.read_object(obj)
             return contents
         batch = "".join(f"{obj}\n" for _rel, obj in wanted).encode()
         out = run_git(self._root, "cat-file", "--batch", stdin=batch).stdout

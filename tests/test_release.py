@@ -1932,8 +1932,8 @@ def test_a_range_that_excludes_the_version_the_tree_carries_refuses_the_release(
     tmp_path: Path,
 ) -> None:
     """A dependency the release does not move is read at the version the tree
-    carries. No declaration answers that, so the refusal names the pair and
-    leaves the remedy to validation's report of it."""
+    carries. No declaration answers that, so the refusal names the pair and the
+    correction a branch may make (PRJ-002 D1)."""
     source_kit = _make_kit(tmp_path, backbone="1.5.0")
     _write_capability(source_kit, "project-management", "1.0.0", ">=1.0.0,<2.0.0")
     _write_dependent(source_kit, "software-engineering", "0.2.0", ">=0.54.0,<1.0.0")
@@ -1944,8 +1944,10 @@ def test_a_range_that_excludes_the_version_the_tree_carries_refuses_the_release(
 
     assert (
         "excludes project-management 1.0.0, the version this release carries for it. No "
-        "pending changeset moves project-management, so no declaration widens the range, and "
-        "`pkit validate` reports the pair out of range where both are installed."
+        "pending changeset moves project-management, so no declaration widens the range: "
+        "correct it on a branch to admit project-management 1.0.0, moving only the bound that "
+        "excludes it (PRJ-002 D1). `pkit validate` reports the pair out of range where both "
+        "are installed."
     ) in err.value.message
     assert "runs_on_capabilities" not in err.value.message
 
