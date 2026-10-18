@@ -274,17 +274,11 @@ def _message(number: str, path: str, held: bool, same_name: bool, ref: str) -> t
     """A finding's severity and message for `number`, which the default branch took for
     `path` — its tip holds it, or its history gave it (`held`)."""
     noun = noun_numbered(number)
-    if noun == REQUIREMENT:
-        # The stamp gives no requirement its number yet, so the message names no stamp.
-        renumber = (
-            f"renumber this {noun} before merging, to a number neither this branch nor {ref} "
-            f"has given (DEC-001 point 3; DEC-002 point 2)"
-        )
-    else:
-        renumber = (
-            f"renumber this {noun} before merging — `pkit analysis new` gives the next free "
-            f"one (DEC-001 point 3)"
-        )
+    cited = "DEC-001 point 3; DEC-002 point 2" if noun == REQUIREMENT else "DEC-001 point 3"
+    renumber = (
+        f"renumber this {noun} before merging — `pkit analysis new` gives the next free one "
+        f"({cited})"
+    )
     if held:
         taken = f"{number} is numbered on {ref} too, for {path}, since this branch left it"
         rule = "the first to reach the default branch keeps the number"

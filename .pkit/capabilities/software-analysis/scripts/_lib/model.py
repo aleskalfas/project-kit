@@ -68,11 +68,10 @@ PREFIX = {
     JOURNEY: "JRN",
     **dict.fromkeys(REQUIREMENTS, "REQ"),
 }
-
-#: The kinds numbered within the project: use cases, journeys and the three kinds of
-#: requirement, whose number is one across their three places (DEC-001 point 3; DEC-002
-#: point 2). The check and the number comparison count a requirement's number as they
-#: count a use case's. The stamp numbers no requirement yet.
+#: The kinds whose id is a number, `<PREFIX>-NNN`, which the stamp gives: a use case, a
+#: journey, and a requirement of each of the three kinds, which read their three places
+#: as one (DEC-002 point 2). The check and the number comparison count a requirement's
+#: number as they count a use case's.
 NUMBERED = frozenset({USE_CASE, JOURNEY, *REQUIREMENTS})
 
 #: How each kind is named in a message, and how its id is written.
@@ -105,7 +104,8 @@ RELIES_ON = "relies-on"
 
 #: A numbered artefact's id — a use case's, a journey's or a requirement's — with its
 #: number in any number of digits, the spellings the id schema refuses included.
-_NUMBER = rf"(?P<prefix>{PREFIX[USE_CASE]}|{PREFIX[JOURNEY]}|{PREFIX[QUALITY]})-(?P<number>[0-9]+)"
+_PREFIXES = "|".join(sorted({PREFIX[kind] for kind in NUMBERED}))
+_NUMBER = rf"(?P<prefix>{_PREFIXES})-(?P<number>[0-9]+)"
 _ANY_NUMBER = re.compile(rf"^{_NUMBER}$")
 
 #: A file named after the numbered artefact it holds, `UC-NNN-<slug>.md` or

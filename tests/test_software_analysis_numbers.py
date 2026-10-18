@@ -347,8 +347,8 @@ def test_a_requirement_s_number_is_one_across_its_three_places(project: AdopterR
         "message": (
             f"REQ-002 is numbered on main too, for {theirs}, since this branch left it: the "
             "first to reach the default branch keeps the number, so renumber this requirement "
-            "before merging, to a number neither this branch nor main has given (DEC-001 point "
-            "3; DEC-002 point 2)"
+            "before merging — `pkit analysis new` gives the next free one (DEC-001 point 3; "
+            "DEC-002 point 2)"
         ),
     }
     # Renumbered past main's, it passes, the moved requirement with it.

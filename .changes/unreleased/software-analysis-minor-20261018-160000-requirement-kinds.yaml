@@ -20,10 +20,8 @@ body: >
   binds. A declared front-matter field may now say whether it reads `None.`,
   as a part does: a requirement's `measure` may, and its `statement` and
   `applies-to` may not. A field that says neither, as every field of the four
-  earlier kinds, is judged as before. The stamp of a requirement, the check of
-  its id, heading and anchors, and the lists of requirements on use cases and
-  journeys come later. Until the stamp comes, wait for it before you write a
-  requirement.
+  earlier kinds, is judged as before. The lists of requirements on use cases
+  and journeys come later.
   **A clash of types:** while the capability is installed, `pkit validate`
   refuses a bare type of your own that takes one of the three names (COR-056
   point 2). A type of your own named `constraint` is the likeliest. Rename it

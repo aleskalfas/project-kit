@@ -88,6 +88,65 @@ def test_a_list_replaces_the_lines_of_its_key_in_that_list_s_own_layout() -> Non
     assert surface == RICH.replace("  - src/**\n  - tests/**\n", "  - lib/**\n")
 
 
+def _appended(path: tuple[str, ...], *items: Any) -> Callable[[Any], None]:
+    """The mutation that adds `items` at the end of the list at `path`."""
+
+    def mutate(data: Any) -> None:
+        node = data
+        for key in path:
+            node = node[key]
+        node.extend(items)
+
+    return mutate
+
+
+@pytest.mark.parametrize("newline", ["\n", "\r\n"])
+def test_items_added_to_a_block_list_keep_every_line_it_holds(newline: str) -> None:
+    # The comment inside `places` stays; the new item follows the last one, in
+    # the list's layout, before the blank line after it.
+    text = RICH.replace("\n", newline)
+    after = _spliced(text, _appended(("friction", "places"), "docs/rule-sets"))
+    assert after == text.replace(
+        f'    - "README.md"{newline}', f'    - "README.md"{newline}    - docs/rule-sets{newline}'
+    )
+
+    # Dashes at the key's column, and the comment after the list, stay as written.
+    surface = _spliced(RICH, _appended(("friction", "surface"), "lib/**", "bin/**"))
+    assert surface == RICH.replace("  - tests/**\n", "  - tests/**\n  - lib/**\n  - bin/**\n")
+
+
+def test_an_item_added_after_flow_mappings_and_a_trailing_comment() -> None:
+    text = (
+        "friction:\n"
+        "  places:\n"
+        "    # technical\n"
+        "    - {path: CONTRIBUTING.md, type: living-docs:page}\n"
+        "    - {path: README.md, type: living-docs:page}  # user\n"
+        "  # The surface.\n"
+        "  surface:\n"
+        "    - src/**"
+    )
+    after = _spliced(text, _appended(("friction", "places"), "docs/rule-sets"))
+    assert after == text.replace("  # user\n", "  # user\n    - docs/rule-sets\n")
+
+    last = _spliced(text, _appended(("friction", "surface"), "lib/**"))
+    assert last == text + "\n    - lib/**\n"
+
+
+def test_an_item_added_after_block_mappings_follows_the_last_one_s_lines() -> None:
+    text = "places:\n- path: a.md\n  type: page\n- path: b.md\n  type: page\nname: x\n"
+    after = _spliced(text, _appended(("places",), {"path": "c.md"}))
+    assert after == text.replace("name: x\n", "- path: c.md\nname: x\n")
+
+
+def test_a_list_that_changes_an_item_is_replaced_whole() -> None:
+    after = _spliced(RICH, _set("friction", "places", ["CONTRIBUTING.md", "other.md", "x.md"]))
+    old_places = '  places:\n    # first\n    - CONTRIBUTING.md\n    - "README.md"\n'
+    assert after == RICH.replace(
+        old_places, "  places:\n    - CONTRIBUTING.md\n    - other.md\n    - x.md\n"
+    )
+
+
 def test_a_new_key_comes_after_its_last_sibling() -> None:
     after = _spliced(RICH, _set("docs", "extra", "x/"))
     assert after == RICH.replace(
