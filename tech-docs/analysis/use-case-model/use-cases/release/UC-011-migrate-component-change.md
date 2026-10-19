@@ -25,9 +25,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T06:13:46Z
-      outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
+      at: 2026-10-19T06:40:53Z
+      outcome: updated
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it
@@ -71,8 +70,9 @@ pkit:
 - **5b.** The change renames or removes files only in the component's `project/` folder, or only a capability's decision records. The check finds no trigger there (`migrations.py`), and the use case ends.
 - **5c.** The change breaks the projects in a way the check cannot see, such as a key whose meaning changes. The check finds no trigger and passes, whether or not the change holds a migration. The path goes on at step 6.
 - **5d.** The change moves a file out of the component's folder, or into another component's folder. The check reads a rename by its new path alone. So the check finds no trigger, or asks a migration of the component the file moved to. The path goes on at step 6.
+- **5e.** The change adds a script whose number another script in its folder holds, perhaps one taken on the target since the branch left it. The system lists the script with the number to take, ends with `Verdict: NUMBER TAKEN. Renumber each script above before merging.` and exits 1. The author renumbers the script, and the path rejoins at step 4.
 - **7a.** After the branch was cut, a release landed on the target with the component at the version of the script's folder or above. The check reads the target's tip, and lists the script with `targets <X.Y.0>, but <base> already records capability <name> <version>, so a project at <version> never runs it. Move it to <next>/ or a later folder.` The check ends with `Verdict: RELEASED. Move each script above to a version not yet released before merging.` and exits 1. The author moves the script to the folder the check names, and the path rejoins at step 4.
-- **8a.** The release writes another version for the component than the folder names. The release plan compares only the backbone's folders, so nothing reports the mismatch (`release.py`).
+- **8a.** The release writes another version for the component than the folder names. `pkit release plan` warns that the folder `does not match the computed capability <name> release`, or for an adapter `the computed adapter <name> release`, and the release goes on (`release.py`).
 
 **Postconditions:** The release that moves the component ships the component's migration, in the folder of the version that release writes for the component. A project's upgrade of the component across that version runs the migration.
 
@@ -80,3 +80,4 @@ pkit:
 
 - The check fails a pull request that removes a file of the component, or renames the file within the component's folder. Such a pull request passes only once it adds a migration of that component. The check leaves out the component's `project/` folder and a capability's decision records (COR-010 and `migrations.py`).
 - The check fails a pull request that adds a migration of the component in a folder already released. A folder counts as released when its version is at or below the component's version at the target's tip (`migrations.py`).
+- The check fails a pull request that adds a migration of the component whose number another script in its folder holds (`migrations.py`). So a folder's scripts run in the order their numbers give.

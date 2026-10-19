@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  The adapter README's revalidation is rewritten, saying it still holds after
+  ADR-009 renamed a migration file; its content and the adapter's surface do
+  not change.
