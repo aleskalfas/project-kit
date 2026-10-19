@@ -21,7 +21,7 @@ The core layer supplies the machinery this needs:
 - artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
-This record decides what the capability keeps, in what shape, where, how it stays true, in what order an analysis is built, and how it meets the project's decisions and architecture.
+This record decides what the capability keeps, in what shape, and where, one analysis per component. It also decides how an analysis stays true, in what order it is built, and how it meets the project's decisions and architecture.
 
 ## Decision
 
@@ -31,11 +31,21 @@ This record decides what the capability keeps, in what shape, where, how it stay
 
 This point gives what each kind is for, and the distinctions behind its parts. Each kind's declared structure, below, holds the full list of its parts, their order, labels and forms.
 - **Actors:** named roles that use the system, not personas. An actor says what the role is and does with the system, when it comes to the system and with what, and carries in its front matter the needs it brings.
-- **Use cases:** one actor's goal and how the system fulfils it: the other actors who take part and what it must protect for each, what holds before it starts, what starts it, the main path and its variants, the state that shows the goal is met, and what the system still guarantees when it ends early or fails. What holds before it starts is split in two. A precondition is a state the system or an earlier use case made true, which no step checks. An assumption is what must also hold that nothing in the system secures, and it names the record that admits it.
+- **Use cases:** one actor's goal and how the system fulfils it: the other actors who take part and what it must protect for each, what holds before it starts, what starts it, the main path and its variants, the state that shows the goal is met, and what the system still guarantees when it ends early or fails. What holds before it starts is split in two. A precondition is a state a use case makes true, by its postconditions or a guarantee, and no step checks it. An assumption is what the environment gives, which nothing in the system secures, and it names the record that admits it. A condition that holds only in some cases is a variant's, not a precondition.
 - **Journeys:** one actor's end-to-end path across several of its use cases, including the seams between them where the path can break. Each step carries its own seams: what it needs from an earlier step, or from a use case outside the journey, and how that can break. Like a use case, a journey states its goal, its own variants, the state that shows the whole path succeeded, and what still holds when it stops before its end. It is a summary-level path through the system, not a map of the actor's experience.
 - **Glossary terms:** the domain words, each with a stable id separate from its display name and a record of names it replaces, so that renaming a term does not break what cites it. A term's name is written as running text writes it, with no article, and in lower case unless it is a proper name. Its definition is a phrase that could stand in for the term, in the form terminology standards give a definition (ISO 1087 and the ISO/IEC Directives, Part 2): its broader kind, then what sets it apart. A term also gives an example, and the words it could be confused with and how each differs. The names it replaces are only those it carried in the analysis or in an accepted record; a working name that now means something else is one of the words it could be confused with.
 
 A user story, in the sense of a need stated in one sentence, is an actor's need and a use case's goal, not a separate artefact. The hints the capability ships ask for each need, and for the goal of a use case or a journey, in the actor's own voice: one sentence that starts with its verb, or with *Never* and the verb. A project that prefers another voice replaces those hints.
+
+**What makes a precondition true.** Each precondition names its producers: every use case in force of its analysis that makes it true. Any one of them is enough.
+- **A producer** is another use case of the same analysis, or the use case itself, as a release starts from the last release.
+- **A new producer.** The change that adds a use case, or splits one, names it among the producers of each precondition it makes true.
+- **The environment, once.** An environment fact alone is an assumption, stated in the Assumptions part only. Where it is an alternative to a use case, it is stated in that precondition's line instead, with its record.
+- **The words.** Each line of the Preconditions part opens with its producers, such as `**From UC-003:**` or `**From UC-059, or Environment:**`.
+- **The data.** A use case's optional `after` lists, for each precondition in its order, its producers: use-case ids, its own id among them, and `environment`. Where it is written, it names the producers its words name. An entry never names `environment` alone.
+- **No anchor.** `after` draws no anchor. A use case that names itself, or a loop of producers, would close a cycle (COR-050 point 5).
+- **Initial use cases.** A use case that needs no other one has no precondition. It writes no `after`, and its Preconditions part reads `None.`. Followed back, every precondition ends at such use cases, or at the environment beside a producer.
+- **What holds it.** A judgement rule of `SAN`, the rule of logical consequence, holds this, with the order of the areas (point 12). Its *How* says what a check of `after` can hold, and the limits a reviewer judges.
 
 **A kind's structure.** Every artefact and every record carries every part its kind ships, and a part with nothing to say reads `None.`. Which parts those are is the kind's *structure*, declared once as data. An artefact's structure binds where the capability's format rule binds, and a record's is checked always. A project may add to an artefact kind's structure, but never relax a kind's.
 - **Declared once, as data.** Each kind, the revalidation record (point 6) among them, declares its structure in data whose schema this capability ships. A structure lists the parts of the kind's body in their order, each with a permanent id, a label, a hint and an example. It also gives the forms a script checks in a part or a front-matter field, and the hint of each front-matter field a writer fills. For the glossary, a collection, it covers each term's section and the file's head. The body of the kind's template is rendered from the structure and shows exactly it; the template's front matter is written by hand and held to the kind's schema. Nothing reads a structure out of a template's text.
@@ -53,12 +63,14 @@ A user story, in the sense of a need stated in one sentence, is an actor's need 
 
 ### 2. Where it keeps them
 
-Everything lives under the project's internal documentation root (COR-049), in an `analysis` area laid out after a use-case model (refinement per [software-analysis:DEC-002-analysis-requirements]):
+Everything lives under the project's internal documentation root (COR-049), in an `analysis` folder. The folder holds one analysis for each component that keeps one (below). Each analysis is laid out after a use-case model (refinement per [software-analysis:DEC-002-analysis-requirements]):
 - the glossary is one collection file, serving everything;
 - the use-case model holds a folder of actors, one file each, a folder of use cases (optionally grouped by functional area), and a folder of journeys;
 - revalidation records are kept in a folder of their own.
 
 **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
+- **Numbered areas.** An area's folder name may open with a number, such as `010-`. The number gives one valid order in which the areas build on each other, never their importance (point 12). It is no part of any id (point 3).
+
 - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
 - **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act and are not anchored artefacts, so their folder is not a place: the capability declares it as a folder of held documents (COR-050 point 1), so the records are listed as this capability's and no place reads them as artefacts.
 - **Types.** Each place gives its artefacts a type (COR-056). So a rule set selects the analysis's artefacts by what they are, without naming where they lie.
@@ -69,12 +81,39 @@ Everything lives under the project's internal documentation root (COR-049), in a
   - **No type for a record.** A revalidation record is a held document, so it has no type (COR-056 point 1).
 - **Surface.** The capability declares no surface by default, since it cannot know a project's code. The project declares which paths its analysis ought to cover, in the friction key of its backbone configuration (COR-050).
 - **Ownership.** The artefacts live outside the capability's own subtree, so uninstalling the capability never removes them.
+- **Across analyses.** The places are the capability's, whatever the number of analyses. The core's friction checks read every place at once, and so does work tracking's use-case point (point 8).
+
+**One analysis per component.** In this point, a component is a part of the project's system that is developed and versioned on its own. A methodology's core and each of its capabilities are such components. A component may keep an analysis of its own, which describes it alone. Which components keep one is the project's choice.
+- **Where.** An analysis lives in the internal documentation of the repository where its component is developed. It never ships with the component, so whoever receives the component receives no analysis.
+- **The layout.** A project with one analysis keeps it at the `analysis` folder's root. Several analyses each take a folder named after their component, which holds the layout above. So a project that adds a second analysis moves the first into its own folder. The places match both layouts.
+- **What marks an analysis.** Where a project keeps several, the capability's project configuration lists them, each with its folder and the analyses it builds on. Validation then refuses an artefact in a place that no listed analysis holds. A project with one analysis needs no list. The same configuration records the `analysis` folder's location (above).
+- **Its own.** Each analysis has artefacts of every kind of its own, its own areas and its own revalidation records. The ids of its artefacts are unique across the repository (point 3).
+- **A reference across analyses** names the analysis by its component's name, in the form a capability's decision is cited, such as `core:TERM-change`.
+- **Moving in.** Each artefact a project moves into an analysis's folder is revalidated in the same change (COR-050 point 3).
+- **Moving out.** A component that moves to a repository of its own takes its analysis's folder with it (COR-041). What the repository it leaves keeps is point 3's.
+
+**Dependencies between analyses follow the components'.** An analysis builds on the analyses of the components its component depends on, required or optional. It names no other analysis.
+- **Where they are read.** Where the components declare their dependencies, as a capability does in its package metadata (COR-030), validation holds the configuration's list to them. Elsewhere, the configuration's list is the project's statement of them.
+- **A required one** is its environment, as a methodology's core is for each of its capabilities, or a library for the application built on it. What it provides is stated as assumptions, each naming the record that admits it.
+- **An optional one** is used only where its component is present, and the analysis works without it.
+- **The head.** The head of its glossary lists what it takes from each analysis it builds on: the area it builds on, the terms and the actors. A term or an actor is listed by name, with a link to its home in that analysis. No definition is copied.
+- **As data.** What the head lists is data in the glossary's front matter, since a tool reads data only there (point 1). That is each analysis it builds on with the version its links name, the terms, the actors and the needs beside each actor. The check holds the head's text equal to that data.
+- **An actor's needs.** Beside each actor it lists, the analysis states the needs that actor brings to it. A need of that actor that only this analysis meets lives here, not in the actor's own analysis.
+- **A component as an actor.** A component it builds on may trigger its own. That component is then an actor this analysis defines, under an id of its own (point 3). An example is a core's validation that runs a capability's check.
+- **No clash.** A term of its own never takes the name of a term its head lists.
+- **The links' version.** Which version of the other analysis a link names is the project's choice. Where the component declares the lowest version it needs of the one it depends on, the capability's validation warns where a link names another.
+- **Anchors.** Its artefacts anchor the records behind what it takes from another analysis, never that analysis's artefacts (point 4).
+- **Fields across analyses.** Of the fields that the check holds equal to artefact anchors, only those that name actors may name another analysis's artefact (point 4). Every other such field names artefacts of its own analysis alone, such as a journey's steps.
+- **What another analysis provides** is an assumption, which names the record that admits it. A requirement that no record backs, such as one that binds the whole system, is named by its id with its analysis, such as `core:REQ-007`. That name is no anchor.
+- **What holds it.** A judgement rule of `SAN` holds that an analysis names only the analyses its component depends on.
 
 The exact layout is in the capability's README, and each kind's parts are in its declared structure (point 1). The friction block — anchors and revalidation — follows the core schema, inside the methodology's container in each artefact (COR-050, COR-053).
 
 ### 3. Identifiers
 
-Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id. Actors and terms are keyed by stable ids, an actor's naming its file and a term's its entry in the glossary, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
+Use cases and journeys are numbered within the repository (`UC-NNN`, `JRN-NNN`), independent of any grouping. Moving a use case between areas never changes its id, and nor does an area's number. Actors and terms are keyed by stable ids, an actor's naming its file and a term's its entry in the glossary, with distinct prefixes (`ACT-` for actors, `TERM-` for terms), so that no two artefacts in the analysis share an id.
+- **Across a repository's analyses.** No two artefacts of a repository's analyses share an id, of any kind. Each numbered kind has one numbering across them, and the capability's validation refuses an id that two analyses share. So each reader of an id across the repository reads one artefact, as with one analysis: an anchor, and work tracking's use-case point (point 8). Each analysis numbers its own areas, never its own ids.
+- **Leaving the repository.** The repository a component leaves keeps each artefact of its analysis as a withdrawn stub, which says where the artefact went. So whatever cites one of its ids keeps a true reference, and the id is never given again.
 - **Append-only.** An artefact is withdrawn, never deleted, and its id is never reused: once settled, an id names one artefact for good. There is one exception, and only the project makes it; no tool infers it. Artefacts that nothing cites — a pilot abandoned before anything cited it, say — may be removed from the default branch, and the project may then name them; their ids are free again. Nothing else frees an id. Something cites an id when it names the artefact by that id and expects the analysis to answer for it; history fixed at a commit, such as a commit message, does not.
 
   Inside a use case, steps are numbered and variants are lettered after the step they branch from. Both are append-only too, because journeys and evidence cite them. A check compares each use case with the default branch's, and reports a step or a variant renumbered or removed.
@@ -85,7 +124,9 @@ Use cases and journeys are numbered within the project (`UC-NNN`, `JRN-NNN`), in
 Each carries anchors and a revalidation in the sense of the anchors-and-friction record (COR-050). Anchors run in one direction only, so they never form a cycle. The analysis anchors the decisions it relies on and the architecture views that realise it. Neither a decision nor a view anchors the analysis (point 11). Each kind anchors as follows (refinement per [software-analysis:DEC-002-analysis-requirements]):
 - Actors and terms anchor to where the software or a decision embodies them. An actor with no such anchor is reported as unanchored, which is not an error.
 - Use cases anchor to their actor and to each other actor they involve, as artefact anchors. They also anchor to the code they exercise and the decisions they rely on, those that answer them included (point 11). They anchor to each architecture view that realises them too. The other actors are listed in the use case's front matter, so a check resolves each to an actor.
+  - **An actor of another analysis,** one the use case's analysis builds on, is named with that analysis, such as `core:ACT-developer`. Validation resolves it against the actors that the head of its analysis's glossary lists from that one (point 2). The use case anchors the records behind that actor, not the actor. A journey, and a requirement in its `actors`, name and anchor such an actor in the same way.
 - Journeys anchor to their actor; to the use cases they pass through, and to each use case outside the journey that a step relies on; and to the code and decisions at the seams between them. A journey's ordered list of steps, and its list of the use cases it relies on, are the source. Its use-case anchors are written into its anchor field from the two by the capability's stamp and check, and validation requires them to match, so the friction check sees them and they cannot drift apart.
+- Across analyses, only record anchors run. An artefact anchors the records behind what it takes from another analysis, never that analysis's artefacts. So a term whose definition names a term of another analysis anchors the records behind that term. A use case anchors the records its assumptions name. Where the other artefact anchors no record, nothing is anchored in its place.
 
 A changed actor flags the use cases and journeys that anchor to it, and a changed use case flags the journeys that pass through it or rely on it. Friction is reported in that order. Revalidation is this capability's name for the act the core record calls by the same name; recording it on the artefact — its `at`, its outcome and any deferrals — is what clears friction (COR-050).
 
@@ -133,7 +174,7 @@ The slots record (COR-052) allows three kinds of filler: a project file, a capab
 
 ### 8. What it contributes to others
 
-The capability contributes to the documentation role's readers point, `<methodology>::documentation:readers`, by mapping its actors and their needs onto that point's shape (refinement per COR-053). It contributes to the work-tracking role's use-case point, `<methodology>::work-tracking:use-cases`, every use case the default branch holds, withdrawn ones included, each under its id. Once settled, an id names one use case for good; the only id that later names another is one the project freed, declaring that nothing cites it (point 3). Its filler reads settled state alone, and gives the whole set or no answer when a reading it relies on fails (refinement per COR-052 point 6 and COR-054).
+The capability contributes to the documentation role's readers point, `<methodology>::documentation:readers`, by mapping its actors and their needs onto that point's shape (refinement per COR-053). It gives each actor once, with the needs every analysis states for it. Those are the needs its own analysis gives it, and those each analysis that lists it states beside it (point 2). It contributes to the work-tracking role's use-case point, `<methodology>::work-tracking:use-cases`, every use case the default branch holds, withdrawn ones included, each under its id. Once settled, an id names one use case for good; the only id that later names another is one the project freed, declaring that nothing cites it (point 3). Its filler reads settled state alone, and gives the whole set or no answer when a reading it relies on fails (refinement per COR-052 point 6 and COR-054).
 
 It also contributes to the work-tracking role's fixers point, `<methodology>::work-tracking:fixers`. Its entries name its agent as the fixer of each of its types, one entry per type (refinement per [project-management:DEC-056-drift-fixers] point 1). The value is static, so it reads in the package metadata, and resolving it runs nothing. The entries grant nothing. project-management, as the role's provider, starts the agent only where the project granted it ([project-management:DEC-056-drift-fixers] point 2), and the agent only proposes (point 5). A release of project-management that does not define the point warns of the contribution. So the optional dependency on project-management starts at its first release that defines it, raised as point 10 says.
 
@@ -144,9 +185,10 @@ Each contribution addresses a role, not a capability, so any provider of that ro
 An analysis is built bottom-up, from the concepts it uses. Whoever writes it, a person or an agent, keeps to this order:
 1. **The concepts and how they relate,** in the glossary. Each term's definition gives its broader kind and what sets it apart (point 1), and names the concepts it relates to by their terms, wherever its form allows. The actors follow, with their needs.
 2. **The requirements that bind the whole system,** of the kinds [software-analysis:DEC-002-analysis-requirements] gives.
-3. **The use cases, area by area.** An area is written only after the areas it builds on.
-   - **Builds on.** An area builds on another where its use cases rely on what that area's use cases make true, such as a precondition.
-   - **Together.** Areas that build on each other are written together.
+3. **The use cases, area by area.** An area is written only after the areas it builds on, in their numbered order where they carry numbers.
+   - **Builds on.** A precondition relies on one of its producers, any one being enough (point 1). An area builds on another where a precondition of its use cases relies on a producer that area holds.
+   - **The numbers.** Where the areas carry numbers (point 2), each precondition relies on a producer in its own area or a lower-numbered one. The environment counts as one before every area. A producer in a later area may stand beside it, as an alternative the area does not build on. Two areas that rely on each other cannot both keep their numbers, so the project cuts them again, or makes them one.
+   - **Together.** Areas without numbers that build on each other are written together.
    - **Their requirements.** A requirement that binds one area comes before that area's use cases. One that binds some areas comes before the first of them.
    - **No areas.** A project that groups no use cases into areas writes them as one area.
 4. **The journeys, last,** across the areas they pass through.
@@ -156,7 +198,8 @@ What the order binds:
 - **Going back.** An artefact that needs something the order puts before it, and finds it missing, goes back and writes it there first. That may be a concept, an actor, a requirement, or a use case of an area it builds on. So the order binds what an artefact uses, not when a step is closed.
 - **Every analysis.** The order holds for a new analysis and for an area added later. It holds for a brownfield project's candidates (point 9), and for an artefact a revalidation updates.
 - **What a reviewer checks.** A judgement rule of `SAN` holds the result the order leaves in the analysis. An artefact uses a domain concept only where a term of the glossary defines it, and names the concept by that term's name. No two terms define one concept. A term's definition is judged too, and a term breaks the rule while an artefact in force uses a name it replaces.
-- **What the writer keeps.** The order in which the steps and the areas are written leaves nothing in the analysis a reviewer could read. So the writer keeps it, and judges which area builds on which, as the authoring skill walks them. No rule holds them.
+- **What the areas leave.** Which area builds on which is in the analysis: the producers each precondition names, and the areas' numbers. The rule of logical consequence holds them (point 1), with a check where a use case writes `after`.
+- **What the writer keeps.** The order in which the steps are written leaves nothing in the analysis a reviewer could read. So the writer keeps it, as the authoring skill walks the steps. No rule holds it.
 
 ### 9. Brownfield onboarding
 
@@ -207,13 +250,39 @@ So a decision names a requirement rather than restating its measure, and the ana
 
 **Why a use-case model layout.** Grouping actors with the use cases they take part in, and keeping the glossary apart because it serves everything, follows an established requirements practice that analysts and newcomers already recognise. Global ids with optional grouping get the benefit of functional areas without the cost of renumbering.
 
+**Why numbers in the areas' names.** A file listing shows the order in which areas build on each other only if their names carry it. Steps of a fixed size let a new area take a free number between two, so nothing is renamed. The number is no part of an id, so renumbering an area moves no citation.
+
+**Why one analysis per component.** A component owns what describes it, as it owns its decision records. Its analysis then changes with it and at its pace, and depends only on what the component depends on. A component may also move to a repository of its own, as a capability may be pulled from one (COR-041). Its analysis moves with it. One analysis for the whole repository could not be split for such a move, and nothing in it would keep dependencies one way.
+
+**Why keeping one is a project's choice.** An analysis is worth its upkeep only where readers need it. A component small enough to describe within another's analysis gains nothing from its own.
+
+**Why an analysis never ships.** An analysis is documentation for those who develop the system (COR-049). Whoever receives a component needs what it does and how to use it, not the account its developers keep of it.
+
+**Why dependencies between analyses follow the components'.** A component's declared dependencies already say what it may rely on (COR-030). An analysis that named one its component does not depend on would describe a system that may not be there. A required component is always there, so it is the environment. An optional one is there only where it is installed.
+
+**Why another analysis's terms and actors are listed by name, and anchored by their records.** A copied definition is a second home for one definition (COR-006), and a link names its one home. An artefact anchor on another analysis's artefact would anchor nothing after a move, since the analysis moves with its component. A record anchor still resolves. The needs an actor brings to one analysis are that analysis's to meet, so it states them, and the readers point gathers them (point 8).
+
+**What listing them costs.** A changed term or actor of another analysis flags no artefact that uses it. Only a changed record behind it does.
+- **The area named.** The head names the area it builds on by its folder, which carries no anchor. So a re-cut of those areas leaves the head stale, with no signal, until a reviewer reads it.
+- **The needs.** The needs a head states beside a listed actor carry no anchors and no revalidation. Friction reaches them only through the use cases whose goals state them.
+- **A requirement named by id.** A changed requirement of another analysis flags nothing in the analysis that assumes it. What meets it is computed within its own analysis alone (DEC-002 point 7).
+- **The edge of an analysis.** Journeys and the chain of preconditions stop at an analysis's edge. A journey's steps are use cases of its own analysis, and a precondition's producers too. A path across components is told as one journey in each analysis, with the hand-offs between them stated as assumptions.
+
 **Why roles, and paths through the system.** An artefact belongs here if a change to the software can make it false. A role's needs can go false when the software changes, so an actor is a role, covering everyone who plays it; a persona's imagined traits cannot. A journey's steps and seams are what a change can break, as in the critical user journeys of reliability engineering, so a journey is a path through the system; how the actor feels along it is not something a change to the software makes false.
 
 **Why each kind's structure is data, with its template rendered from it.** A script checks only a structure it can read, and a template that writers copy drifts from any other statement of it. Declared once as data, the structure gives the check one home, and a template rendered from it cannot disagree with the check. The hint stands where the content goes, so the first writer, often an agent, meets what a part asks for rather than a bare label.
 
 **Why every shipped part is present, and `None.` is an answer.** A part left out reads the same as a part forgotten. Asking for every part, with `None.` where there is nothing to say, makes the writer consider each one, and lets a script see that they did. A project's own additions serve that project alone, so the project decides whether each binds.
 
-**Why a use case splits what holds before it starts, and names its guarantees.** A precondition is secured by the system, so a step may rely on it. An assumption is secured by nothing, so it is a risk to name, and a candidate for a check; requirements standards list assumptions apart for that reason (ISO/IEC/IEEE 29148). What the system still guarantees when a use case fails is what keeps a failure safe, so it gets a part of its own, and the other actors record whose interests the path must keep.
+**Why a use case splits what holds before it starts, and names its guarantees.** A precondition is made true by a use case of the system, or by the environment beside one, so a step may rely on it. An assumption is secured by nothing, so it is a risk to name, and a candidate for a check; requirements standards list assumptions apart for that reason (ISO/IEC/IEEE 29148). What the system still guarantees when a use case fails is what keeps a failure safe, so it gets a part of its own, and the other actors record whose interests the path must keep.
+
+**Why a precondition names what makes it true.** A use case starts only from what is already true: what another use case made true, or what the environment gives. A precondition is what another use case has already set up (Cockburn, *Writing Effective Use Cases*). Use-case contracts link use cases through their conditions (Nebut et al., 2006, and Ryser and Glinz's dependency charts). This record takes them in a light form, one optional field and one rule, which the capability's maintainer chose ([project-kit#1808](https://github.com/aleskalfas/project-kit/pull/1808)). Followed back, the producers lead to the use cases that need no other one. In most projects those rest on an assumption such as "the system is deployed". A project that develops its system with that system starts from developing it.
+
+**Why an environment fact is stated once.** Stated in the Assumptions part and again among the preconditions, one fact would have two homes (COR-006). Alone, it is an assumption. Beside a use case, it is one way a precondition comes true, so that precondition's line holds it.
+
+**Why `after` draws no anchor.** A release starts from the last release, so a use case names itself, and alternatives can close a loop. As anchors, either would be a cycle, which has no order of revalidation (COR-050 point 5). The cost is that a changed postcondition flags none of the use cases that follow from it. A reviewer of that change reads them.
+
+**Why one producer in its own area or an earlier one is enough.** Producers are alternatives. A later one, such as installing the system, can be one way among several to hold it, and refusing it would refuse a true precondition. So the numbers' order asks only that each precondition can come true from its own area or an earlier one.
 
 **Why a project reviews the shipped parts.** The shipped parts come from established practice, not from the project's own system. Only a project's own examples show whether they suit it, and a default nobody reviewed binds its artefacts to a choice nobody made. What a review finds goes into the project's own changes to the structure, or into a change proposed to the capability, as a project does with a rule it disagrees with (COR-051 point 7).
 
@@ -256,6 +325,10 @@ The capability's maintainer decided the order of the concepts, the requirements,
 
 **Why a declared exception to never reusing an id.** An id is never reused so that whatever cites it keeps naming the artefact it meant. Artefacts nothing cites carry no such promise: a pilot abandoned before anything cited it leaves ids that name nothing anyone reads, and without the exception the analysis would count past them for good. The places that may cite an id, such as other repositories, trackers and code, are open-ended, so no tool can check them all. A person judges that nothing cites the ids, and answers for the judgement: the project declares the exception, naming each id it frees, and a reviewer sees the declaration as an act of its own.
 
+**Why ids are unique across a repository's analyses.** Three readers take an id across the repository. The core's lookup of an artefact anchor reads an id across the repository. Work tracking's use-case point receives every use case under its id (point 8). project-management reads that id as `UC-` and digits (project-management DEC-054 point 1). With one artefact per id, none of them changes.
+
+**Why a component leaving keeps withdrawn stubs.** Issues and records cite its artefacts by id, and an id names one artefact for good. Taking the folder away whole would delete cited artefacts, and would let their numbers be given again. A withdrawn stub keeps each id taken and each citation true, and adds no concept.
+
 **Why a person decides stale versus regressed.** The distinction is intent: was the change meant? An agent can propose it from the change's context, but when intent is unclear, only a person knows. Getting it wrong either rewrites the truth to match a bug, or reports a defect for an intended change.
 
 **Why one agent fixes every type.** Every type is the capability's own, and one judgment answers each of them: the revalidation's, with its four outcomes (point 5). So the capability declares one agent for them all. A project that wants another agent for a type replaces that type's entry in its own filler of the point.
@@ -289,7 +362,22 @@ So the direction from the analysis treats a record that ships as it treats the p
 - **The order as advice in the authoring skill alone.** Rejected. Advice gives way where it costs time, and nothing would check it.
 - **A check that a term was committed before what uses it.** Rejected. The order binds what an artefact uses, which the analysis shows. A term added in the same change as its first use keeps the order.
 - **Each step closed before the next starts.** Rejected. A later step finds concepts the first one missed, and going back to define them keeps the order without freezing the glossary.
-- **A rule that holds which area is written before which.** Not taken. The analysis shows which use case a precondition relies on, but not which area was written first.
+- **A rule that holds the order in which areas are written.** Not taken. The analysis shows which area builds on which, through the producers and the numbers, and a rule holds that. It does not show which area was written first.
+- **Areas named by their goal, unnumbered, with their order computed.** Rejected. A file listing would never show the order.
+- **Layers computed from the preconditions, kept as folders.** Rejected. A layer would move whenever a precondition changed.
+- **Areas named after the concepts they act on.** Rejected. A concept's use cases span the chain, so such areas give no order.
+- **A judgement rule alone, with no field.** Rejected. It leaves the chain to each reviewer, and a picture of the chain would have nothing to draw.
+- **The full trace, with layers and a report on changed postconditions.** Rejected. It is more than the order needs.
+- **Conditions as formal predicates on the concepts' states.** Rejected. Too heavy for the analysis's readers and writers.
+- **Every environment fact in the Preconditions part, with the Assumptions part retired.** Rejected. Every live use case would need a migration.
+- **A check that refuses any producer in a later area.** Rejected. It refuses a true precondition whose alternatives include a later use case.
+- **One analysis for the whole repository.** Rejected. A capability could not move, and nothing would keep dependencies one way.
+- **A component's analysis shipped with it.** Rejected. An analysis is internal documentation for its developers (COR-049).
+- **Dependencies between capabilities' analyses only as an option.** Rejected. A capability may require another (COR-030), and what it requires is always there.
+- **A glossary copying the definitions of another analysis's terms.** Rejected. Two homes for one definition.
+- **Artefact anchors on another analysis's artefacts.** Rejected. After a move they would anchor nothing.
+- **Each analysis numbering alone, with an artefact read as `<analysis>:<id>`.** Rejected. It adds a concept to places (COR-056 point 7), and changes work tracking's use-case point and project-management's reading of an id.
+- **Taking a leaving component's analysis away whole.** Rejected. It deletes cited artefacts, and frees their numbers.
 - **Leaving the glossary unjudged.** Rejected. Two terms could define one concept, and each area could use its own.
 - **Marking each use of a term, so a script checks it.** Rejected. Every artefact would carry markup for a script, and whether a word is a domain concept would still be a reader's judgement.
 - **Each artefact anchoring the terms it uses.** Rejected. The anchors would be a second list of what the text names, and no check could hold the two together, since whether a word is a use is a judgement. Every edit to a term, a reworded example included, would also flag every artefact that uses it, an anchor broader than what makes the artefact true (COR-050 point 7).
@@ -341,7 +429,10 @@ So the direction from the analysis treats a record that ships as it treats the p
   - Install creates it only where no set of the project's own inherits `SAN`, directly or not. So a project that chose where `SAN` binds keeps its own set.
   - A migration creates it, on the same condition, for a project that installed the capability before it declared the set.
   - From then on the set's pin decides when a new major of `SAN` binds (point 1).
-- **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, build the analysis from its concepts up (point 12), keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
+- **A domain model's views** are a kind of their own, which needs a record of its own (point 11). The design note on analysis concepts and order places them in point 12's first step, after the glossary ([project-kit#1808](https://github.com/aleskalfas/project-kit/pull/1808)). Their record refines point 12 to say so.
+- **Named for later: journeys across components,** such as the delivery of a feature through several capabilities ([project-kit#1685](https://github.com/aleskalfas/project-kit/issues/1685)). Such a journey needs a decision of its own, since no analysis describes two components.
+- **Several analyses and `after`** follow this record into the capability. That is the configuration that lists the analyses, a reference across them and the validation of ids across them. It is also a use case's `after`, and a check of it for the rule of logical consequence. A project uses several analyses, and `after`, only where it chooses to. A new check binds at its rule's status.
+- **Projects** keep their analyses under their internal documentation root, one per component that keeps one. They choose each kind's parts when they adopt the capability, and build each analysis from its concepts up (point 12). They keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A project's use cases** anchor the records they rest on or are answered by, and the views that realise them. The project's records and views carry no anchor on the analysis (point 11).
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.
 - **History kept as it was written:** the way a record, or a withdrawn artefact, is checked against the structure in force when it was written or withdrawn comes with the first change to a kind's structure that needs it.

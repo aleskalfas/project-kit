@@ -11,8 +11,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
 - both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
-- it holds six **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
-  with DEC-001 as its origin, and the three below, each proposed and declaring no
+- it holds eight **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
+  with DEC-001 as its origin, and the five below, each proposed and declaring no
   check: a reviewer judges each. Each
   *How* leaves out what the stamp and the check hold always, and judges an artefact
   in force alone. Proposed rules move no version, so the set stays at 1.0.0;
@@ -29,6 +29,9 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - the **concept rule**, `RS-SAN-008`, holds what the build order of DEC-001 point 12
   leaves in the analysis: a domain concept only where one term of the glossary
   defines it, by that term's name (#1784). It stays proposed with the others;
+- the **consequence rule**, `RS-SAN-009`, asks each precondition to name the use
+  cases that make it true, and the **one-way rule**, `RS-SAN-010`, lets an analysis
+  name only the analyses its component depends on (#1809). Both stay proposed;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`;
@@ -60,7 +63,7 @@ SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
 STEPS_RULE = "RS-SAN-002"
-#: The judgement rules (#1577, #1695, #1681, #1784): each statement, and the record points it
+#: The judgement rules (#1577, #1695, #1681, #1784, #1809): each statement, and the record points it
 #: anchors to.
 JUDGEMENT_RULES = {
     "RS-SAN-003": (
@@ -68,13 +71,14 @@ JUDGEMENT_RULES = {
         "part in it is one of its `other-actors`.",
         [
             "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#2",
             "software-analysis:DEC-001#3",
             "software-analysis:DEC-001#4",
         ],
     ),
     "RS-SAN-004": (
         "A use case's goal is one of its actor's needs.",
-        ["software-analysis:DEC-001#1"],
+        ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"],
     ),
     "RS-SAN-005": (
         "An analysis artefact's anchors name what its statements rest on. A use case's or "
@@ -122,6 +126,20 @@ JUDGEMENT_RULES = {
             "software-analysis:DEC-002#4",
         ],
     ),
+    "RS-SAN-009": (
+        "A use case starts only from what is already true. Each of its preconditions names the "
+        "use cases of its analysis that make it true.",
+        [
+            "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#2",
+            "software-analysis:DEC-001#12",
+        ],
+    ),
+    "RS-SAN-010": (
+        "An analysis artefact names another analysis only where its component depends on that "
+        "analysis's component, and names an optional one only as an option.",
+        ["software-analysis:DEC-001#2", "software-analysis:DEC-001#4", "COR-030"],
+    ),
 }
 #: Each judgement rule's origin, where a decision record holds it. The source rule's is
 #: the maintainer's decision of 17 October (#1648, choice 6), which no record holds.
@@ -131,6 +149,8 @@ ORIGINS = {
     "RS-SAN-005": "software-analysis:DEC-001",
     "RS-SAN-006": "software-analysis:DEC-002",
     "RS-SAN-008": "software-analysis:DEC-001",
+    "RS-SAN-009": "software-analysis:DEC-001",
+    "RS-SAN-010": "software-analysis:DEC-001",
 }
 SOURCE_RULE = "RS-SAN-007"
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.

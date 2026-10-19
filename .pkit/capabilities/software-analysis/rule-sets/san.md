@@ -9,32 +9,38 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-19T08:41:20Z
+          at: 2026-10-19T14:38:31Z
           outcome: unchanged
-          unchanged-because: DEC-001 gains its agent as the fixer of the capability's types in points 5 and 8, with a rationale, an alternative and a line in its Implications. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
+          unchanged-because: DEC-001 refines points 1 to 4, 8 and 12 for preconditions, several analyses, ids across them and the order of the areas, and adds no part or form to any kind's structure yet. Point 1's rule that an analysis artefact carries its kind's declared structure is unchanged, so this format rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#3"]}
+        revalidated:
+          at: 2026-10-19T14:38:32Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 3 numbers ids across a repository's analyses and keeps a leaving component's artefacts as withdrawn stubs. Its rule that a use case's steps and variants are append-only reads as before, so this rule holds as written.
   RS-SAN-003:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors:
-          record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
+          record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-18T11:58:01Z
-          outcome: unchanged
-          unchanged-because: Point 4 changed only by a pointer to software-analysis DEC-002 on the lead of what each kind anchors. What a use case anchors on its actor and its other actors, which this rule rests on, reads as before, and points 1 and 3 are unchanged.
+          at: 2026-10-19T14:38:13Z
+          outcome: updated
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
-        anchors: {record: ["software-analysis:DEC-001#1"]}
+        anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
+        revalidated:
+          at: 2026-10-19T14:38:14Z
+          outcome: updated
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -53,9 +59,8 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-19T07:21:34Z
-          outcome: unchanged
-          unchanged-because: Point 9 changed only in the order its candidates are derived in, their kinds and its citation of COR-050 point 8. The reason for having no anchors that this rule rests on, the core's unanchored-because accepted by a person, reads as before, so the rule holds as written.
+          at: 2026-10-19T14:38:15Z
+          outcome: updated
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -64,9 +69,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-002#4", "software-analysis:DEC-002#6", "software-analysis:DEC-002#8"]
         revalidated:
-          at: 2026-10-18T18:54:27Z
+          at: 2026-10-19T14:38:33Z
           outcome: unchanged
-          unchanged-because: DEC-002 point 4 says what the core's signal reaches, beside what triggers it. This rule compares the statement, the measure and where it holds with the records the requirement rests on, which point 4 leaves as they were.
+          unchanged-because: DEC-002 point 6 lets a requirement's actors name another analysis's actor, anchoring the records behind it, and keeps refines within its own analysis. The statement, measure and applies-to this rule compares with the records a requirement rests on read as before, so the rule holds as written.
   RS-SAN-007:
     status: proposed
     origin: {date: 2026-10-17, by: "Aleš Kalfas"}
@@ -81,9 +86,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-18T18:54:30Z
+          at: 2026-10-19T14:38:34Z
           outcome: unchanged
-          unchanged-because: DEC-002 point 4 says what the core's signal reaches, beside what triggers it. This rule asks that the statement and the measure name their source, which point 4 leaves as it was.
+          unchanged-because: DEC-001 point 1 says what makes a precondition true, point 4 lets an artefact name another analysis's actor while anchoring the records behind it, and DEC-002 points 6 and 7 keep their lists within one analysis. None changes what a goal, a minimal guarantee or a requirement is, or what sources one, so this rule holds as written.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -95,6 +100,29 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
             - "software-analysis:DEC-002#4"
+        revalidated:
+          at: 2026-10-19T14:38:16Z
+          outcome: updated
+  RS-SAN-009:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-001"}
+    pkit:
+      friction:
+        anchors:
+          record:
+            - "software-analysis:DEC-001#1"
+            - "software-analysis:DEC-001#2"
+            - "software-analysis:DEC-001#12"
+  RS-SAN-010:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-001"}
+    pkit:
+      friction:
+        anchors:
+          record:
+            - "software-analysis:DEC-001#2"
+            - "software-analysis:DEC-001#4"
+            - "COR-030"
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -104,7 +132,7 @@ rules:
 # (COR-055 point 2). A check enforces its part only where its rule binds.
 # Whoever judges the rest of a rule leaves that part to the check. Where a
 # project's rule tightens a structure, the project's set declares what the
-# check enforces of that rule. RS-SAN-003 to RS-SAN-008 declare no check: a
+# check enforces of that rule. RS-SAN-003 to RS-SAN-010 declare no check: a
 # reviewer judges each.
 checks:
   RS-SAN-001:
@@ -181,6 +209,7 @@ A use case's actor is the one whose goal it is, and each other actor that takes 
 - **How:**
   - **What the check holds.** The stamp and the capability's check refuse a use case whose `actor` or `other-actors` names an actor the analysis does not hold. They also refuse a use case in force that names a withdrawn actor there. They do so whatever any rule's status, and this rule does not cover it.
   - **What an actor is.** A named role that uses the system. The analysis holds each actor as an artefact of its actor kind. The system that fulfils the goal is no actor.
+  - **An actor of another analysis.** A use case may name an actor of an analysis its own builds on, with that analysis's name, such as `core:ACT-developer`. That actor is then one the head of its analysis's glossary lists.
   - **Whose goal.** A use case is one actor's goal and how the system fulfils it. Its `actor` is the actor that wants what the use case's part `goal` states.
   - **An actor that acts for another.** Where the goal is another actor's, an actor that acts for that one takes its part in the steps. It is never the use case's `actor`.
   - So an agent working for a person takes its part in the steps of that person's use cases.
@@ -194,6 +223,7 @@ A use case's goal is one of its actor's needs.
 
 - **How:**
   - **Where to read them.** The goal is the use case's part whose id is `goal`, whatever label a project gives it. The needs are the `needs` in the front matter of the actor that the use case's `actor` names.
+  - **An actor of another analysis.** Where the `actor` names one, such as `core:ACT-developer`, its needs are those the use case's analysis states beside it, in its glossary's head. The needs its own analysis gives it are not read.
   - **One need, whole.** The goal states the same want as one of those needs. A goal breaks this rule where it states a want none of them states, two of them, or a narrower want than one of them.
   - So the goal "Export my report as a CSV file" breaks it where the actor's need is "Export my report as a file". A writer adds the narrower need to the actor, or states the need whole.
   - **Its words.** The goal's words and voice may differ from the need's. So the goal "Get my report exported to a file" states the need "Export my report as a file".
@@ -206,11 +236,13 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
 - **How:**
   - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
-    - An actor or a term rests on the code and the decisions that embody it.
+    - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
     - A use case rests on its `actor` and its `other-actors`, each requirement in its `requirements`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
     - A requirement rests on each actor in its `actors`, each requirement in its `refines`, and the decisions it cites or applies. It also rests on the narrow code that holds it and the files that verify it. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of its statements names it.
   - **Nothing else.** A statement about an artefact this list does not name rests on nothing this rule asks an anchor for. So a term that another term's distinctions name needs no anchor.
+  - **Across analyses.** Where this list names an actor or a term of another analysis, the anchors name records, never that artefact itself. They name each record that artefact's own record anchors name, where the statements rest on what that record decides. Where that artefact anchors no record, nothing is asked in its place.
+  - So a use case whose `actor` is `core:ACT-developer` anchors the records behind that actor, and never the actor.
   - **No cycle excuses it.** An anchor this list asks for on a decision or a view is asked for even where anchors that run back from that decision or view would close a cycle.
   - **What it never asks for.** This rule asks no anchor for:
     - code not yet written
@@ -230,7 +262,8 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - the code and the decisions a statement rests on
     - the decisions that answer a use case or a requirement, and the views that realise one
     - a requirement's anchors on its `actors` and its `refines`
-  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case or a requirement also breaks it while no anchor names a decision that answers it, or a view that realises it. A requirement breaks it too while no anchor names an actor in its `actors`, or a requirement in its `refines`.
+    - the records behind an actor or a term of another analysis
+  - **A break.** A statement that rests on code or a decision that no anchor of the artefact names breaks this rule, until the artefact anchors it. An anchor on another analysis's artefact breaks it too, until the artefact anchors the records behind that one instead. So a use case's minimal guarantee that cites a decision breaks it while no record anchor names the decision. A use case or a requirement also breaks it while no anchor names a decision that answers it, or a view that realises it. A requirement breaks it too while no anchor names an actor in its `actors`, or a requirement in its `refines`.
   - **No anchors.** The core reports an artefact with no anchors, and no check fails on it. This rule still judges what its statements rest on.
   - **A reason for no anchors.** An actor or a term that gives a reason for having none is not judged under this rule. Nor is a requirement that gives one, with no `actors` and no `refines`. The reason is a person's answer, and only a person decides it.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
@@ -293,13 +326,63 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - words quoted from a person or a document, such as a decision quoted as a source, or the wording of a law
     - text in a code span or a fenced block, which quotes code
     - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's.
-  - **Where to read the glossary.** It is the glossary of the analysis that holds the artefact.
+  - **The glossary's head.** Wherever this rule binds on a term, each need that the head of its glossary states beside a listed actor is a statement too.
+  - **Where to read the glossary.** It is the glossary of the analysis that holds the artefact. It takes in the terms its head lists from the analyses it builds on, each as its own analysis's glossary defines it.
   - **A break.** An artefact breaks this rule, until it is mended, where a statement:
     - uses a domain concept that no term in force defines
     - names a defined concept by another word than its term's name, such as a name the term replaces, or a word of its own
     - uses a term's name in a meaning other than the term's own, unless the term tells that meaning apart from its own
   - **Two terms.** A term breaks this rule where another term in force defines the concept it defines. Two terms define one concept where whatever one definition fits, the other fits too, and neither term tells the other apart. Withdrawing one of them, or telling the two apart, mends it.
+  - **A listed term's name.** A term breaks this rule where it takes the name of a term its glossary's head lists from another analysis.
   - **A renamed term.** A term breaks this rule while an artefact in force names its concept by a name the term replaces. So the change that renames a term owns the term's break, which lasts while any use of a name it replaces is left. To judge it, a reviewer reads the analysis's artefacts in force for the names the term replaces.
   - So a writer defines a term before an artefact uses its concept, and adds no second term for a concept the glossary defines.
   - **No anchor.** Using a term asks for no anchor on it.
+  - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
+
+## RS-SAN-009 — A use case starts only from what is already true
+
+A use case starts only from what is already true. Each of its preconditions names the use cases of its analysis that make it true.
+
+- **How:**
+  - **A precondition.** A state a use case makes true, by its postconditions or a guarantee, which no step checks. A condition that holds only in some cases is a variant's, not a precondition.
+  - **Its producers.** Every use case in force of the same analysis that makes a precondition true, any one of them enough. A producer is another use case, or the use case itself.
+  - So a release that starts from the last release names itself.
+  - **The environment.** What the environment gives alone is an assumption, stated only in the part whose id is `assumptions`, with the record that admits it. Where it is an alternative to a use case, it is stated in that precondition's line instead, with its record. So no environment fact is stated twice.
+  - **The words.** Each line of the part whose id is `preconditions` opens with its producers, such as `**From UC-003:**`, `**From UC-001 or UC-064:**` or `**From UC-059, or Environment:**`.
+  - **Meaning.** A producer's postconditions or guarantees make the precondition true, read as their words state them.
+  - **Initial use cases.** A use case that needs no other one has no precondition. Its part whose id is `preconditions` reads `None.`, and it writes no `after`.
+  - **A new producer.** A use case breaks this rule while another use case in force has a precondition that it makes true and that does not name it. So the change that adds a use case, or splits one, owns that break. To judge it, a reviewer reads the analysis's preconditions for the states the new use case makes true.
+  - **`after`.** A use case may list its producers in `after`, one entry for each precondition, in its order. An entry lists use-case ids, the use case's own among them, and `environment`, never `environment` alone. Where `after` is written, it names the producers the words name.
+  - **An area's number.** A number that opens an area's folder name gives one valid order in which the areas build on each other, never their importance. Where a use case's area carries one, each of its preconditions has at least one producer in its own area or a lower-numbered one. The environment counts as one before every area. A later producer may stand beside it, as an alternative.
+  - **No number.** A use case in an area without a number, or in no area, has no place in that order. This item then asks nothing of it.
+  - **What a check can hold.** Of a use case that writes `after`, a script can read:
+    - that each producer is a use case in force of the same analysis, or `environment`
+    - that `after` names the producers the words name
+    - that each precondition of a use case in a numbered area has at least one producer in its own area or a lower-numbered one
+
+    Until this set declares a check of them under `checks`, a reviewer judges them too.
+  - **Its limits.** No script that reads `after` can settle these, so a reviewer judges each:
+    1. **Meaning.** The producers' ids show structure alone. Whether a producer's postcondition makes the precondition true is read from the words.
+    2. **Alternatives and loops.** Real dependencies hold both. So a precondition may name several producers, the environment beside them, and its own use case.
+    3. **The environment.** It is no escape. Each environment fact names its record, and the record admits the fact.
+    4. **A partial order.** Use cases build on each other in a partial order. The areas' numbers show one valid order of it, never the only one.
+    5. **A picture.** `after` holds a partial order, so any picture drawn from it shows one reading of the chain. The use cases are what this rule judges.
+    6. **A split or a merge.** Splitting or merging use cases can leave a list of producers incomplete, and so can a new use case.
+    7. **A closed loop.** A loop of use cases inside one area, with no way out to the environment, meets every item a script can read. A reviewer judges whether each chain, followed back, ends at an initial use case or at the environment.
+  - **No anchor.** `after` draws no anchor. So a changed postcondition flags no use case that names its use case as a producer. A reviewer of that change reads each one.
+  - **History.** This rule judges a use case in force. A withdrawn use case is history.
+  - **Note:** software-analysis DEC-001 calls this the rule of logical consequence.
+
+## RS-SAN-010 — An analysis names only the analyses its component depends on
+
+An analysis artefact names another analysis only where its component depends on that analysis's component, and names an optional one only as an option.
+
+- **How:**
+  - **What names an analysis.** An artefact names another analysis where it names that analysis, or one of its artefacts, such as `core:TERM-change` or `core:ACT-developer`. The glossary's head names each analysis it lists terms or actors from.
+  - **Which analyses.** Those of the components its own component depends on, required or optional. Where the components declare their dependencies, such as in a capability's package metadata, those declarations say which. Elsewhere, software-analysis's project configuration lists them.
+  - So the analysis of a component that depends on no other names no other analysis, as a methodology's core names none of its capabilities'.
+  - **A required one.** It is the analysis's environment. What it provides is stated as assumptions, each naming the record that admits it.
+  - **An optional one.** A statement that relies on it says that it holds where that component is present. The analysis works without it.
+  - **The glossary's head.** Wherever this rule binds on a term, it judges the head of the glossary that holds the term too.
+  - **A break.** An artefact breaks this rule where it names an analysis of a component its own does not depend on. It also breaks it where it relies on an optional one as though that component were always present.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
