@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T16:38:26Z
+      at: 2026-10-18T18:54:20Z
       outcome: unchanged
-      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, its containers left out. This page cites its points 3, 4, 12 and 16 on answers, deferrals, the required status and a target not revisited, all unchanged.
+      unchanged-because: COR-050 point 16 lets a link take every anchor but those its fields list. The guide's target not revisited reads the same for such a link, and what it cites of points 3, 4 and 12 is unchanged.
 ---
 
 # Contributing to project-kit

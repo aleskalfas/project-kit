@@ -53,8 +53,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T17:34:31Z
-          outcome: updated
+          at: 2026-10-18T18:54:25Z
+          outcome: unchanged
+          unchanged-because: DEC-002 point 5 says a change to the obligation asks for a revisit of the requirement's tests. This rule asks which anchors a requirement carries, the files that verify it among them, which point 5 still asks for.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -62,6 +63,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-002#4", "software-analysis:DEC-002#6", "software-analysis:DEC-002#8"]
+        revalidated:
+          at: 2026-10-18T18:54:27Z
+          outcome: unchanged
+          unchanged-because: DEC-002 point 4 says what the core's signal reaches, beside what triggers it. This rule compares the statement, the measure and where it holds with the records the requirement rests on, which point 4 leaves as they were.
   RS-SAN-007:
     status: proposed
     origin: {date: 2026-10-17, by: "Aleš Kalfas"}
@@ -75,6 +80,10 @@ rules:
             - "software-analysis:DEC-002#4"
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
+        revalidated:
+          at: 2026-10-18T18:54:30Z
+          outcome: unchanged
+          unchanged-because: DEC-002 point 4 says what the core's signal reaches, beside what triggers it. This rule asks that the statement and the measure name their source, which point 4 leaves as it was.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only

@@ -15,8 +15,9 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-18T20:28:06Z
-      outcome: updated
+      at: 2026-10-18T21:14:52Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 16 lets a link take every anchor but those its fields list. The answers list's revisit line names the fields that list a target and leaves them out where there are none, which is what such a link gives.
 ---
 
 # project-management capability

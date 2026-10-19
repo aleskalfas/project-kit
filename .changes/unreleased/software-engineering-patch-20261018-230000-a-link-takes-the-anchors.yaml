@@ -1,0 +1,11 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Changed
+body: >
+  The README, the `software-engineer` agent and the `docs-reviewer` agent say
+  that a link takes some of a document's anchors as its targets, rather than
+  that the document lists them (#1659, COR-050 point 16). A link may name the
+  fields that list what stays out, so the `docs-reviewer` reads a revisit
+  whose `links` is empty, and whose line names no field, as one such link
+  takes.

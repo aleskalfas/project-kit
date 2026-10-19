@@ -1,0 +1,18 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A link that revisits its targets may name its targets by what stays out
+  (COR-050 point 16). Beside `targets`, the own field that lists them, a
+  capability's link may give `all-but`, the own fields that list the anchors
+  that stay out: every other anchor of the source is then a target, one added
+  later included. A link names exactly one of the two, and the package schema
+  refuses both or neither. The change check asks after such a target as after
+  any other, and its finding says the link takes every anchor the fields do not
+  list. A revisit answer's `links` names only fields that list a target, so a
+  target such a link takes adds none there. `pkit validate` fails an `all-but`
+  field that is no list of texts, and never a value in it that no anchor has,
+  which keeps nothing out. `pkit friction revisit` takes any target such a link
+  takes. The key is additive, so no migration is due. A capability that
+  declares it needs a backbone that knows it.

@@ -1675,7 +1675,7 @@ def friction_defer_command(
     metavar="ANCHOR",
     required=True,
     help="The target answered for: `kind:value`, or a value only one target has. It must be "
-    "an anchor a link of the artefact lists.",
+    "an anchor a link of the artefact takes.",
 )
 @click.option(
     "--outcome",
@@ -1697,7 +1697,8 @@ def friction_revisit_command(
     """Answer for one target of ARTEFACT's links (COR-050 point 16): add its entry to
     `revisited`, or rewrite the entry already there.
 
-    A link a place declares lists targets in one of ARTEFACT's own fields; when a
+    A link a place declares takes some of ARTEFACT's anchors as its targets: those
+    one own field lists, or every anchor but those its own fields list. When a
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:

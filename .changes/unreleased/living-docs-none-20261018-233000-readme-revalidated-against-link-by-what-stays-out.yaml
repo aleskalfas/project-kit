@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050 point 16 and
+  the schemas README's paragraph on links, where a link may take every anchor
+  but those its fields list (#1659). This capability declares no link. Only the
+  README's friction block changes, and nothing you run or read changes.
