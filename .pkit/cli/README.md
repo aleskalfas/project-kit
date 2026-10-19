@@ -86,7 +86,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-19T06:39:19Z
+      at: 2026-10-19T08:30:04Z
       outcome: updated
 ---
 
