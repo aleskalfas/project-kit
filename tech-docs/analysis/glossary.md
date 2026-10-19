@@ -1293,7 +1293,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Synced copy:** a file that propagation writes into a project.
-- **Sync:** propagation at the recorded versions, with the deployed copies regenerated and merge delivery's tier that asks nothing (COR-059 point 2).
+- **Sync:** runs propagation at the recorded versions. Sync also regenerates the deployed copies, and runs merge delivery's tier that asks nothing (COR-059 point 2).
 - **Seeding:** creates a missing project-owned file once, and never writes over one that exists (COR-059 point 8).
 
 ## TERM-pull-request — pull request
@@ -1506,14 +1506,14 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-version — version
 
-**Example:** backbone 1.149.0 and project-management 0.54.0 are versions, and a `minor` changeset moves the backbone to 1.150.0 at the next release step.
+**Example:** backbone 1.149.0 and project-management 0.54.0 are versions, and a `minor` changeset has the next release step move the backbone to 1.150.0.
 
 **Distinctions:**
 
 - **A rule set's version:** its own, apart from its component's. An inheriting set pins its major (COR-051 point 7).
 - **A connection point's version:** an integer that rises only on a change that breaks its counterparts (COR-053 point 5).
 - **A schema version:** the integer a schema and the data it checks each carry (COR-052 point 5 and COR-023).
-- **Recorded version:** the number or ref a project keeps for what it installed.
+- **Recorded version:** the number or ref a project keeps for what it installed. An externally-sourced component's ref is no version in this sense.
 
 ## TERM-version-pin — version pin
 
