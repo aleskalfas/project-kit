@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-18T11:57:54Z
+          at: 2026-10-19T07:21:33Z
           outcome: unchanged
-          unchanged-because: DEC-001 changed only by pointers to software-analysis DEC-002 on points 2, 4 and 11, and point 11 names constraints and quality requirements as examples of further kinds. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
+          unchanged-because: DEC-001 gains point 12, the order an analysis is built in, and point 9 derives its candidates in that order. Neither adds or changes a part, a form or a structure of any kind, and point 1, which this format rule carries, is unchanged, so the rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -53,9 +53,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T18:54:25Z
+          at: 2026-10-19T07:21:34Z
           outcome: unchanged
-          unchanged-because: DEC-002 point 5 says a change to the obligation asks for a revisit of the requirement's tests. This rule asks which anchors a requirement carries, the files that verify it among them, which point 5 still asks for.
+          unchanged-because: Point 9 changed only in the order its candidates are derived in, their kinds and its citation of COR-050 point 8. The reason for having no anchors that this rule rests on, the core's unanchored-because accepted by a person, reads as before, so the rule holds as written.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -84,6 +84,17 @@ rules:
           at: 2026-10-18T18:54:30Z
           outcome: unchanged
           unchanged-because: DEC-002 point 4 says what the core's signal reaches, beside what triggers it. This rule asks that the statement and the measure name their source, which point 4 leaves as it was.
+  RS-SAN-008:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-001"}
+    pkit:
+      friction:
+        anchors:
+          record:
+            - "software-analysis:DEC-001#1"
+            - "software-analysis:DEC-001#2"
+            - "software-analysis:DEC-001#12"
+            - "software-analysis:DEC-002#4"
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -93,7 +104,7 @@ rules:
 # (COR-055 point 2). A check enforces its part only where its rule binds.
 # Whoever judges the rest of a rule leaves that part to the check. Where a
 # project's rule tightens a structure, the project's set declares what the
-# check enforces of that rule. RS-SAN-003 to RS-SAN-007 declare no check: a
+# check enforces of that rule. RS-SAN-003 to RS-SAN-008 declare no check: a
 # reviewer judges each.
 checks:
   RS-SAN-001:
@@ -131,7 +142,7 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9 and 11, and DEC-002 points 4 to 8. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9, 11 and 12, and DEC-002 points 4 to 8. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
 
@@ -259,4 +270,36 @@ Each goal, minimal guarantee and requirement names its source.
   - **Nothing else.** Anything else is no source, however plausible the item reads. So the need a goal states is no source of the goal, nor is a proposed record.
   - **Where to read the anchors.** An artefact's anchors are in its friction block.
   - **A break.** An item that no source names breaks this rule, until the artefact names one.
+  - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
+
+## RS-SAN-008 — An artefact uses a domain concept only as the glossary defines it
+
+An analysis artefact uses a domain concept only where a term of the glossary defines it, and names the concept by that term's name. No two terms define one concept.
+
+- **How:**
+  - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a requirement's `statement`. An artefact's title is one statement, wherever its heading repeats it, and a file's name is none. A term's statement is its `definition` alone. Its example only illustrates the definition, and its distinctions name words to tell them apart.
+  - **A domain concept.** A word or a phrase that a statement uses in a meaning of the project's domain, one that a general dictionary does not give it. So a word used as a dictionary has it is no domain concept, unless a term holds it as its name.
+  - **Defined.** A term in force defines one concept, the one its `name` names. A concept that a term's definition or its other parts only mention, or tell apart, is not defined by that term.
+  - **Its name.** A statement names a defined concept by its term's `name`, also in these forms:
+    - a form made from the name in the term's sense, such as a plural, a possessive or a verb
+    - a phrase whose other words keep their dictionary meaning, such as "the last release". A phrase that names a thing of its own, such as "release tag", is a concept of its own. It names a thing of its own where the system keeps, shows or acts on what it names as one thing.
+    - a pronoun or a shortened name that points back to the term, where the same part already named it
+  - **A term's name in another sense.** Once a term holds a name, the name means the term's concept wherever a statement uses it, a sense a dictionary gives it included. The exception is a sense the term tells apart from its own.
+  - **A definition and its own name.** The `definition` form refuses a word of the term's own name, and whether a definition holds one is that form's to check. Where such a word is the name of a term the definition relates to, such as its broader kind, the definition names that concept in other words. That is no break.
+  - **What uses no concept.**
+    - an actor, named by its name, a shortened name or the word its id is made of, and an artefact's id
+    - a proper name, such as a person's, an organisation's, a product's or a standard's. A common noun beside it, such as "bank" in "the Northwind bank", is a word like any other.
+    - the names of the analysis's kinds and of their parts, such as "use case", "precondition" or "minimal guarantee"
+    - words quoted from a person or a document, such as a decision quoted as a source, or the wording of a law
+    - text in a code span or a fenced block, which quotes code
+    - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's.
+  - **Where to read the glossary.** It is the glossary of the analysis that holds the artefact.
+  - **A break.** An artefact breaks this rule, until it is mended, where a statement:
+    - uses a domain concept that no term in force defines
+    - names a defined concept by another word than its term's name, such as a name the term replaces, or a word of its own
+    - uses a term's name in a meaning other than the term's own, unless the term tells that meaning apart from its own
+  - **Two terms.** A term breaks this rule where another term in force defines the concept it defines. Two terms define one concept where whatever one definition fits, the other fits too, and neither term tells the other apart. Withdrawing one of them, or telling the two apart, mends it.
+  - **A renamed term.** A term breaks this rule while an artefact in force names its concept by a name the term replaces. So the change that renames a term owns the term's break, which lasts while any use of a name it replaces is left. To judge it, a reviewer reads the analysis's artefacts in force for the names the term replaces.
+  - So a writer defines a term before an artefact uses its concept, and adds no second term for a concept the glossary defines.
+  - **No anchor.** Using a term asks for no anchor on it.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
