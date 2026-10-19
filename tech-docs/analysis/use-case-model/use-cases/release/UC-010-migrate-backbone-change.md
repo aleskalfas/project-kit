@@ -25,9 +25,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T06:13:45Z
-      outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
+      at: 2026-10-19T06:40:52Z
+      outcome: updated
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across
@@ -72,6 +71,7 @@ pkit:
 - **5a.** A rename or a removal has no migration of its tier and component. The system ends with `Verdict: UNCOVERED. Author migrations for the following tiers before merging:`, lists `backbone`, and exits 1. The path rejoins at step 1.
 - **5b.** The change breaks installed projects in a way the check cannot see. Examples are a flag whose meaning inverts, and a rename in a tree the check does not read, such as `.pkit/permissions/`. The check finds no trigger and passes, whether or not the change holds a migration. The path goes on at step 6.
 - **5c.** The change moves a file out of the backbone's trees, such as from `.pkit/skills/core/` to `.pkit/skills/project/`. The check reads a rename by its new path alone, so the check finds no trigger and passes. The path goes on at step 6.
+- **5d.** The change adds a script whose number another script in its folder holds, perhaps one taken on the target since the branch left it. The system lists the script with the number to take, ends with `Verdict: NUMBER TAKEN. Renumber each script above before merging.` and exits 1. The maintainer renumbers the script, and the path rejoins at step 4.
 - **7a.** After the branch was cut, a release landed on the target with the backbone at the version of the script's folder or above. The check lists the script with `targets <X.Y.0>, but <base> already records backbone <version>, so a project at <version> never runs it. Move it to <next>/ or a later folder.` The check ends with `Verdict: RELEASED. Move each script above to a version not yet released before merging.` and exits 1. The maintainer moves the script to the folder the check names, and the path rejoins at step 4.
 - **8a.** The release computes another version than the folder names. `pkit release plan` warns that the folder `does not match the computed backbone release`, and the release goes on. The release pull request's body shows the warning for the maintainer to judge.
 
@@ -81,3 +81,4 @@ pkit:
 
 - The check fails a pull request that removes a file in the backbone's trees it reads, such as `.pkit/skills/core/`, or renames the file within them. Such a pull request passes only once it adds a backbone migration (COR-010 and `migrations.py`).
 - The check fails a pull request that adds a backbone migration in a folder already released. A folder counts as released when its version is at or below the backbone's version at the target's tip (`migrations.py`).
+- The check fails a pull request that adds a backbone migration whose number another script in its folder holds (`migrations.py`). So a folder's scripts run in the order their numbers give.
