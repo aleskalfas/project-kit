@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-19T16:10:20Z
+      at: 2026-10-19T19:00:00Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, wider homes and text alternatives, and point 6 adds a Mermaid fence's text alternative to what validation settles where its rule binds. Writing a page for its reader with anchors that ground each statement, and a reader-review that cites the rule a page breaks, read as before, so the developer's needs still hold.
+      unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. How numbered ids are given and kept append-only reads as before, so the developer's needs still hold.
 ---
 
 # ACT-developer — Developer

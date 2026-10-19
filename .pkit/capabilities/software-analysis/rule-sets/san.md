@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-19T17:53:56Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 gains diagrams in a part's text, the overview's held folder and the use-case diagram's line from a context view. No kind gains a part or a form, so this format rule holds as written.
+          unchanged-because: DEC-001 gains the domain-model view kind, whose structure a later build declares. No kind this rule checks gains a part or a form, so this format rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -19,9 +19,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#3"]}
         revalidated:
-          at: 2026-10-19T14:38:32Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 3 numbers ids across a repository's analyses and keeps a leaving component's artefacts as withdrawn stubs. Its rule that a use case's steps and variants are append-only reads as before, so this rule holds as written.
+          unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. A use case's steps and variants stay append-only, so this rule holds as written.
   RS-SAN-003:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-19T17:53:57Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder. Whose goal a use case is stays as decided, so this rule holds as written.
+          unchanged-because: DEC-001 points 1 to 4 gain the domain-model view, its folder, its id and its anchors. Whose goal a use case is stays as decided, so this rule holds as written.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-19T17:53:58Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder. A goal and its actor's needs stay as decided, so this rule holds as written.
+          unchanged-because: DEC-001 points 1 and 2 gain the domain-model view and its folder. A goal and its actor's needs stay as decided, so this rule holds as written.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -57,13 +57,13 @@ rules:
             - "software-analysis:DEC-002#5"
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#7"
+            - "software-analysis:DEC-004#5"
             - "COR-050#1"
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-19T17:53:59Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 gains the overview's held folder, and point 11 keeps generated diagrams out of views and tells the use-case diagram from a context view. What an artefact anchors is unchanged.
+          at: 2026-10-19T18:36:20Z
+          outcome: updated
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -89,9 +89,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-19T17:54:08Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains diagrams in a part's text, and point 11 keeps generated diagrams out of views. What names the source of a goal, a guarantee or a requirement is unchanged.
+          unchanged-because: DEC-001 points 1 and 4 gain the domain-model view and what it anchors. What names the source of a goal, a guarantee or a requirement is unchanged.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -103,10 +103,11 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
             - "software-analysis:DEC-002#4"
+            - "software-analysis:DEC-003#10"
+            - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-19T17:54:09Z
-          outcome: unchanged
-          unchanged-because: "DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder, and say nothing of terms. DEC-003 point 10 has a diagram's labels read as statements, which SAN's diagram rules carry in #1806."
+          at: 2026-10-19T18:36:20Z
+          outcome: updated
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -118,9 +119,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-19T17:54:10Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder. Preconditions, their producers and after stay as decided, so this rule holds as written.
+          unchanged-because: DEC-001 points 1, 2 and 12 gain the domain-model view, its folder and its place in the build order's first step. Preconditions, their producers and after stay as decided.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -132,9 +133,16 @@ rules:
             - "software-analysis:DEC-001#4"
             - "COR-030"
         revalidated:
-          at: 2026-10-19T17:54:11Z
+          at: 2026-10-19T19:00:00Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 2 gains a held folder for the generated overview of each analysis's diagrams. Which analyses one may name is unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 points 2 and 4 gain the domain model's folder and what a view anchors, terms of its own analysis alone. Which analyses one may name is unchanged.
+  RS-SAN-011:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-004"}
+    pkit:
+      friction:
+        anchors:
+          record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -144,7 +152,7 @@ rules:
 # (COR-055 point 2). A check enforces its part only where its rule binds.
 # Whoever judges the rest of a rule leaves that part to the check. Where a
 # project's rule tightens a structure, the project's set declares what the
-# check enforces of that rule. RS-SAN-003 to RS-SAN-010 declare no check: a
+# check enforces of that rule. RS-SAN-003 to RS-SAN-011 declare no check: a
 # reviewer judges each.
 checks:
   RS-SAN-001:
@@ -182,7 +190,7 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9, 11 and 12, and DEC-002 points 4 to 8. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 point 10 and DEC-004 points 3 to 6. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
 
@@ -247,8 +255,10 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
 
 - **How:**
   - **Its statements.** They are its body and the front-matter fields a writer fills, such as an actor's `needs` or a term's `definition`.
+  - **Views.** A *view* named alone in this rule is an architecture view. A domain-model view is always named in full.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
+    - A domain-model view rests on each term it explains, and the decisions its statements cite or apply. Each fact it states as always true rests on the record that decides it. It rests on no code, since it describes the domain, never the software.
     - A use case rests on its `actor` and its `other-actors`, each requirement in its `requirements`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
     - A requirement rests on each actor in its `actors`, each requirement in its `refines`, and the decisions it cites or applies. It also rests on the narrow code that holds it and the files that verify it. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of its statements names it.
@@ -269,7 +279,7 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - **The code that holds a requirement** is the code that keeps it, never all the code its `applies-to` reaches.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
-  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. It does so whatever any rule's status, and this rule does not cover it.
+  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. Once the domain-model view is built, it requires a view's anchors on exactly the terms its `explains` lists, and refuses a path anchor on one. It does so whatever any rule's status, and this rule does not cover it.
   - **What this rule judges.** The rest:
     - the code and the decisions a statement rests on
     - the decisions that answer a use case or a requirement, and the views that realise one
@@ -336,9 +346,12 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - a proper name, such as a person's, an organisation's, a product's or a standard's. A common noun beside it, such as "bank" in "the Northwind bank", is a word like any other.
     - the names of the analysis's kinds and of their parts, such as "use case", "precondition" or "minimal guarantee"
     - words quoted from a person or a document, such as a decision quoted as a source, or the wording of a law
-    - text in a code span or a fenced block, which quotes code
+    - text in a code span or a fenced block, which quotes code. A Mermaid fence quotes no code. The labels its diagram shows, its `accTitle` and its `accDescr` are statements. An id the diagram never shows uses no concept.
     - a part's label, and text the stamp writes from another artefact, such as a journey's step line, which copies a use case's title. A break in that text is the other artefact's.
   - **The glossary's head.** Wherever this rule binds on a term, each need that the head of its glossary states beside a listed actor is a statement too.
+  - **A domain-model view.** Each of its sections explains the concept that the term its heading names defines, in that term's sense.
+    - **A break.** A section breaks this rule where what it states widens or narrows what the term's `definition` fits. It then holds of something the definition does not fit, or fails of something the definition fits.
+    - So a section may say more of the concept than its definition does, such as its attributes and its states. All of it holds of exactly what the definition fits.
   - **Where to read the glossary.** It is the glossary of the analysis that holds the artefact. It takes in the terms its head lists from the analyses it builds on, each as its own analysis's glossary defines it.
   - **A break.** An artefact breaks this rule, until it is mended, where a statement:
     - uses a domain concept that no term in force defines
@@ -398,3 +411,18 @@ An analysis artefact names another analysis only where its component depends on 
   - **The glossary's head.** Wherever this rule binds on a term, it judges the head of the glossary that holds the term too.
   - **A break.** An artefact breaks this rule where it names an analysis of a component its own does not depend on. It also breaks it where it relies on an optional one as though that component were always present.
   - **History.** This rule judges an artefact in force. A withdrawn artefact is history.
+
+## RS-SAN-011 — A domain-model view uses only the views before it
+
+A domain-model view names a concept that another view of its analysis explains only where that view's number is lower.
+
+- **How:**
+  - **A view's number.** The number its file's name opens with, compared as a number. Two views may share one, and then neither names a concept the other explains.
+  - **What a view explains.** Each concept whose term its `explains` lists, while the view is in force.
+  - **What it names.** A concept whose term one of its statements uses, by the term's name or a form made from it, such as a plural. Its statements are its body, the labels of its diagrams included.
+  - **The glossary first.** A view may name any term in force that no view of its analysis explains, since the glossary comes before the views.
+  - **Another analysis.** A term the head of its glossary lists from another analysis is used as that analysis defines it. Whatever explains it there, this rule asks nothing of it.
+  - So a relation between the concepts of two views is stated in the view with the higher number.
+  - **A new section.** A view also breaks this rule while a view of its analysis with an equal or a lower number names a concept it explains. So the change that adds a section to a view, or moves one into it, owns that break. To judge it, a reviewer reads those views for the term's name.
+  - **No anchor.** A view's uses of other views lie in its prose and its diagrams, which draw no anchor. So no check sees them, and a reviewer judges each.
+  - **History.** This rule judges a domain-model view in force. A withdrawn view is history.

@@ -12,19 +12,18 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
-      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
-      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
+      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T19:45:55Z
-      outcome: unchanged
-      unchanged-because: COR-050 gains a warning on an artefact anchor on an id two artefacts share, never failed. The README keeps ids unique across a repository's analyses (DEC-001 point 3), so its account holds and no anchor of an analysis meets the warning.
+      at: 2026-10-19T19:00:00Z
+      outcome: updated
 ---
 
 # software-analysis capability
 
 Keep a written, checkable account of **what your software must do**, and keep it true as the software changes. The account covers who uses it (actors), what they're trying to achieve and how (use cases), the end-to-end paths across several use cases (journeys), and what the words mean (glossary). It also covers what binds many use cases at once: how well the system behaves, behaviour that holds across use cases, and limits on the solution (requirements).
 
-Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline], the requirements' in [software-analysis:DEC-002-analysis-requirements], and the diagrams' in [software-analysis:DEC-003-analysis-diagrams].
+Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline], the requirements' in [software-analysis:DEC-002-analysis-requirements], the diagrams' in [software-analysis:DEC-003-analysis-diagrams], and the domain model's in [software-analysis:DEC-004-domain-model-views].
 
 ## How it stays true
 
@@ -95,12 +94,18 @@ analysis/
 
 A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
-**Decided, not built yet.** DEC-001 decides how a project whose system has several components keeps its analyses, how areas are numbered, and what a use case starts from. The capability reads none of it yet, so keep one analysis at the folder's root, as above.
+**Decided, not built yet.** DEC-001 decides how a project whose system has several components keeps its analyses, how areas are numbered, and what a use case starts from. DEC-004 decides a domain model of views written by hand. The capability reads none of it yet, so keep one analysis at the folder's root, as above, and no domain model.
 
 - **One analysis per component** (DEC-001 point 2). A component may keep an analysis of its own, and you choose which do. Each takes a folder named after its component, with the layout above, its own glossary, actors, areas and revalidation records. It lives where its component is developed, and never ships with it.
 - **Dependencies between analyses** follow the components' (DEC-001 point 2). An analysis builds only on the analyses of the components its component depends on. Its glossary's head lists the terms and actors it takes from them, by name with a link. Beside each such actor, it states the needs that actor brings to it. Only the actors that a use case, a journey or a requirement names may be another analysis's, and the artefact anchors the records behind them. A journey's steps, and a precondition's producers, stay within one analysis.
 - **Ids unique across a repository's analyses,** of every kind, with one numbering of each numbered kind (DEC-001 point 3). A component that moves to its own repository leaves a withdrawn stub for each of its artefacts.
 - **Numbered areas,** such as `010-develop` (DEC-001 point 2). An area's number gives one valid order in which the areas build on each other, and is no part of any id. The stamp takes only a word as an area today.
+- **A domain model** (DEC-004). An analysis may keep a few views of its concepts beside the glossary, in a folder `domain-model/`, one for each group of related concepts.
+  - **A view** is a file such as `010-orders-and-payments.md`, with the id `VIEW-orders-and-payments`. Its number gives the order the views build in, in a form you choose, and is no part of its id.
+  - **What it holds:** what its group covers and the group's class diagram, then one section for each concept, headed by its term's name. A section explains the concept, then gives its *Attributes*, *Relations*, *States* and what is *Always true* of it. Its `explains` lists those terms.
+  - **What it anchors:** each term it explains, and the records its statements cite or apply. It anchors no code.
+  - **Its order:** a view names a concept that another view of its analysis explains only where that view's number is lower.
+  - **The glossary stays as it is.** A term a view explains links to its section, on a line under the term's heading.
 - **What a use case starts from** (DEC-001 point 1). Each line of its *Preconditions* names the use cases that make it true, such as `**From UC-003:**`, and an optional `after` lists them as data.
 
 **What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the seven places inside it that hold anchored artefacts — the glossary, the actors, the use cases, the journeys, and a folder for each kind of requirement (DEC-002 point 3). The revalidation records describe an act rather than an anchored artefact, so their folder is not a place: the capability declares it as a folder of **held documents** (`friction.held`; DEC-001 point 2, COR-050 point 1). The core lists each record with this capability as its owner, and no place reads one as an artefact — not your documentation root, not another capability's place — so a record is never an unanchored artefact in the friction measures, nor a document a documentation capability asks you to classify. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. Each requirement place also declares a link (COR-050 point 16): a change to a requirement's `statement`, `measure` or `applies-to` asks for a revisit of every anchor but those its `actors` and `refines` list (DEC-002 point 4). The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
@@ -741,17 +746,18 @@ It is a query: read-only and offline. It reads the working tree through the core
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds ten rules. Each has DEC-001 or DEC-002 as its origin, save the source rule, which names who decided it and when.
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds eleven rules. Each has DEC-001, DEC-002 or DEC-004 as its origin, save the source rule, which names who decided it and when.
 
 - **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
-- **Eight proposed judgement rules,** which declare no check. They cover:
+- **Nine proposed judgement rules,** which declare no check. They cover:
   - a use case's actors and its goal (DEC-001 points 1, 2 and 4)
-  - what an artefact's anchors name (DEC-001 points 2, 4, 9 and 11, and DEC-002 points 5 to 7)
+  - what an artefact's anchors name (DEC-001 points 2, 4, 9 and 11, DEC-002 points 5 to 7, and DEC-004 point 5)
   - a requirement against the records it rests on (DEC-002 point 8)
   - the source of each goal, minimal guarantee and requirement
-  - the domain concepts an artefact uses, which the glossary defines (DEC-001 point 12)
+  - the domain concepts an artefact uses, which the glossary defines (DEC-001 point 12, and DEC-004 point 3)
   - what makes each precondition true, the rule of logical consequence (DEC-001 points 1, 2 and 12)
   - which other analyses an analysis names (DEC-001 point 2)
+  - the order of a domain model's views (DEC-004 point 6)
 
 | Rule | Status | Statement |
 |---|---|---|
@@ -765,22 +771,24 @@ It is a query: read-only and offline. It reads the working tree through the core
 | `RS-SAN-008` | proposed | An analysis artefact uses a domain concept only where a term of the glossary defines it, and names the concept by that term's name. No two terms define one concept. |
 | `RS-SAN-009` | proposed | A use case starts only from what is already true. Each of its preconditions names the use cases of its analysis that make it true. |
 | `RS-SAN-010` | proposed | An analysis artefact names another analysis only where its component depends on that analysis's component, and names an optional one only as an option. |
+| `RS-SAN-011` | proposed | A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. |
 
 - **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
 - **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
 - **What the judgement rules ask.** Each judges an artefact in force, never a withdrawn one, as its *How* says.
   - A use case's actor is the one whose goal it is. Each other actor that takes part in it is one of its `other-actors` (`RS-SAN-003`).
   - A use case's goal states one of its actor's `needs`, whole (`RS-SAN-004`).
-  - An artefact's anchors name the code and the decisions its statements rest on. For a use case, see also "How it meets your decisions", above, and for a requirement, its anchors under "The artefacts", above (`RS-SAN-005`). A use case and a journey rest on the requirements they list too, and the check holds those anchors.
+  - An artefact's anchors name the code and the decisions its statements rest on. For a use case, see also "How it meets your decisions", above, and for a requirement, its anchors under "The artefacts", above (`RS-SAN-005`). A use case and a journey rest on the requirements they list too, and the check holds those anchors. A domain-model view rests on the terms it explains and the records it cites or applies, never on code.
   - A requirement's `statement`, `measure` and `applies-to` never contradict an accepted record it rests on. The record wins until it is changed. A conflict between two requirements is no break of it, since a decision record holds that choice (`RS-SAN-006`).
   - Each goal, minimal guarantee and requirement names its source. A source takes one of four forms (`RS-SAN-007`):
     - an accepted record the artefact anchors that decides the item or was made to meet it
     - a filled *Rationale* or *Imposed by*
     - anchored code that already does it
     - a person's decision quoted in the artefact, with their name and the date
-  - Each artefact uses a concept of your domain only where a term defines it, and names it by that term's name. A term's definition is judged too, and no two terms define one concept. A name a term replaces, or a word of the writer's own for a defined concept, breaks the rule. Its *How* says what uses no concept, such as an actor's name, quoted words and code. The rule holds what the build order leaves in the analysis ("Adopting it", above) (`RS-SAN-008`).
+  - Each artefact uses a concept of your domain only where a term defines it, and names it by that term's name. A term's definition is judged too, and no two terms define one concept. A name a term replaces, or a word of the writer's own for a defined concept, breaks the rule. Its *How* says what uses no concept, such as an actor's name, quoted words and code. A Mermaid diagram's labels are statements, and are judged. A domain-model view's section explains its term's concept in the term's own sense. The rule holds what the build order leaves in the analysis ("Adopting it", above) (`RS-SAN-008`).
   - Each precondition of a use case names its producers, the use cases that make it true. At least one lies in its own area or an earlier one. What the environment gives alone is an assumption, stated once. Its *How* says what a check of `after` can hold, and seven limits a reviewer judges (`RS-SAN-009`).
   - An analysis names another only where its component depends on that one's, and an optional one only as an option. Across analyses, an artefact anchors the records behind what it takes, never another analysis's artefacts (`RS-SAN-010`, `RS-SAN-005`).
+  - A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. A change that adds a section to a view owns the break where a view numbered at or below it already names that concept (`RS-SAN-011`).
 - **What judges them.** They declare no check, so a reviewer judges each where it binds, such as the rule-set reviewer (COR-057). While the rules are proposed, they bind nothing, and nothing judges them.
   - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
