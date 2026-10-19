@@ -1,0 +1,23 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  A use case may name what makes each precondition true, as DEC-001 point 1
+  decides. Each line of its *Preconditions* opens with its producers, such as
+  `**From UC-003:**`, and its optional `after` lists them as data, one entry
+  for each line, such as `after: [[UC-003], [UC-059, environment]]`. The
+  schema holds that shape always, and an entry never names `environment`
+  alone. `pkit analysis validate` checks a use case in force that writes
+  `after` where RS-SAN-009 binds, at its status. Each producer is a use case
+  in force of its own analysis, the field matches the words, and in a
+  numbered area each precondition has a producer in no later area. The rule
+  is proposed, so only `--preview` reports it, and `SAN` declares the check
+  under its `checks`. A use case without `after` fails nothing. The stamp's
+  `--area` takes a numbered area, such as `010-develop`, whose number is no
+  part of the id. `pkit analysis diagram chain` draws the chain of use cases
+  from `after` (DEC-003 point 5). It groups the use cases by area, in the
+  order of the areas' numbers, and draws a producer in a later area dotted.
+  It leaves out a solid arrow that other solid arrows imply, a loop counting
+  as one node. A closed list of labels no longer reports a precondition's
+  opening as a label.

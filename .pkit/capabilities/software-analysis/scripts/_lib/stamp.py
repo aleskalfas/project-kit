@@ -416,8 +416,16 @@ def _check_words(request: Request) -> None:
             f"the slug {request.slug!r} is not a word: a lowercase letter, then lowercase "
             f"letters, digits and hyphens"
         )
-    if request.area is not None and not slug.match(request.area):
-        raise Refused(f"the area {request.area!r} is not a word, as a slug is")
+    if request.area is not None and not slug.match(_AREA_NUMBER.sub("", request.area, count=1)):
+        raise Refused(
+            f"the area {request.area!r} is not a word, as a slug is, after an optional number "
+            f"and a hyphen, such as `010-develop`"
+        )
+
+
+#: A number and a hyphen that may open an area's folder name, such as `010-` in
+#: `010-develop`: no part of any id (DEC-001 point 2).
+_AREA_NUMBER = re.compile(r"^[0-9]+-")
 
 
 def _check_placeholders(request: Request) -> None:

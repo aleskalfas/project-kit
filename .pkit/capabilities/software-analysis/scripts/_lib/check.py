@@ -218,6 +218,19 @@ And where the format rule binds, at its status:
   kind takes no group: its schema refuses one, since no rule binds on a
   record.
 
+And where the rule of logical consequence, RS-SAN-009, binds, at its status:
+
+- **A use case's `after`** (point 1; `_lib/chain.py`): of a use case in force
+  that writes it, each producer is a use case in force of its own analysis, the
+  use case itself among them, or `environment`. The field holds one entry for
+  each precondition its *Preconditions* writes, in their order, each naming the
+  producers its line opens with, such as `**From UC-003:**`. In an area whose
+  name opens with a number, each entry names a producer in no later area, the
+  environment before every area (point 12). Where the rule binds is the one
+  reading the format rule reads. Accepted, each departure is an error, and
+  proposed, a preview reports it. A use case that writes no `after` is not read,
+  and its schema holds the field's shape always.
+
 And whatever any rule's status, the project's own structures themselves: a file
 its schema or the shipped structure refuses, a tightening of the record's kind
 among them, and a group naming no rule of the project's own rule sets, are
@@ -257,6 +270,7 @@ from ruamel.yaml.error import YAMLError
 from _lib import (
     analyses,
     backbone,
+    chain,
     evidence,
     markdown,
     project_structure,
@@ -267,14 +281,17 @@ from _lib import (
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    AFTER,
     CAPABILITY,
     COLLECTIONS,
     CONTAINER,
+    ENVIRONMENT,
     FORMAT_RULE,
     ID_SHAPE,
     JOURNEY,
     KIND_OF_PLACE,
     KINDS,
+    LOGIC_RULE,
     METHOD_SET,
     MUST_MEET,
     NOUN,
@@ -292,6 +309,7 @@ from _lib.model import (
     Analysis,
     Artefact,
     Unreadable,
+    area_number,
     id_in_name,
     identity,
     one_actor,
@@ -386,11 +404,15 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _open_regressions(root, read, analysis)
     own = _own(root)
     outcome.findings += _own_findings(analysis, own)
-    summary, departing = _structure(root, analysis, preview=preview, own=own)
+    reached = _Reach(root, backbone.reach)
+    summary, departing = _structure(root, analysis, preview=preview, own=own, reach=reached)
     outcome.summary.append(summary)
     outcome.findings += departing
     said, departing = _record_structure(root, read, own)
     outcome.summary += [said] if said else []
+    outcome.findings += departing
+    lines, departing = _after(root, analysis, reached, preview=preview, own=own)
+    outcome.summary += lines
     outcome.findings += departing
     return outcome
 
@@ -1875,6 +1897,245 @@ def _structure(
         f"in {declaration}{bound.said}; {departing} of them departing from it{never}.{unbound}",
         silence + found + bound_found,
     )
+
+
+# --- what makes each precondition true (DEC-001 point 1; RS-SAN-009) ------------------------
+
+#: The rule of logical consequence as the backbone's reading of where rules bind cites it.
+CITED_LOGIC_RULE = f"{CAPABILITY}:{LOGIC_RULE}"
+
+#: What the summary line about the check of `after` opens with.
+AFTER_SUBJECT = "after"
+
+#: What a producer is, as a finding of one says it.
+_PRODUCER = (
+    "each producer is a use case in force of its own analysis, the use case itself among "
+    "them, or `environment`"
+)
+
+
+def _after(
+    root: Path,
+    analysis: Analysis,
+    reached: Callable[..., Mapping[str, Mapping[str, bool]]],
+    *,
+    preview: bool,
+    own: project_structure.Own | None,
+) -> tuple[list[str], list[Finding]]:
+    """Each use case in force that writes `after` against its analysis, the words of its
+    *Preconditions* and its area's number, where the rule of logical consequence,
+    RS-SAN-009, binds and at its status (DEC-001 point 1; `_lib/chain.py`): an error where
+    the rule is accepted, a report opening `preview:` where it is proposed and a preview
+    is asked for, and nothing otherwise. Where it binds is the backbone's one answer,
+    `reached`, which the format rule reads too. A use case that writes no `after` is not
+    read, and where none does, the summary says nothing of it. Returns the summary's
+    lines and the findings."""
+    writing = [u for u in analysis.of_kind(USE_CASE) if not u.withdrawn and chain.writes_after(u)]
+    if not writing:
+        return [], []
+    rules = analysis.method_rules
+    status = None if rules is None else rules.get(LOGIC_RULE)
+    if status == ACCEPTED:
+        severity, label = ERROR, ""
+    elif status == PROPOSED and preview:
+        severity, label = REPORT, PREVIEW
+    else:
+        said = unchecked(status, rules is None, preview, subject=AFTER_SUBJECT, rule=LOGIC_RULE)
+        return [said], []
+    head = f"{AFTER_SUBJECT} ({LOGIC_RULE}, {status}{', previewed as accepted' if label else ''})"
+    binds, binds_not = ("would bind", "would not bind") if label else ("binds", "does not bind")
+    try:
+        bound_at = reached(root, preview=status != ACCEPTED)
+    except Unreadable as exc:
+        return [f"{head}: not checked — where the rule {binds} cannot be read."], [
+            Finding(
+                severity,
+                analysis.location or ".",
+                f"{label}where {LOGIC_RULE} {binds} cannot be read: {exc}. No use case's "
+                f"`{AFTER}` is checked until it can (COR-051 point 7)",
+            )
+        ]
+    bound = [u for u in writing if CITED_LOGIC_RULE in (bound_at.get(u.location) or {})]
+    unbound = len(writing) - len(bound)
+    unbound_said = (
+        f" The rule {binds_not} on {unbound} of the {len(writing)} use case(s) that write "
+        f"`{AFTER}`, so they are not checked."
+        if unbound
+        else ""
+    )
+    if not bound:
+        return [f"{head}: nothing checked.{unbound_said}"], []
+    kind = _use_case_kind(own)
+    found: list[Finding] = []
+    departing = 0
+    for use_case in sorted(bound, key=lambda u: u.path):
+        entries = chain.producers(use_case)
+        if entries is None:
+            continue  # the schema reports an `after` of another shape
+        messages = [
+            *_unfit_producers(analysis, use_case, entries),
+            *_words_apart(root, use_case, entries, kind),
+            *_all_later(analysis, use_case, entries),
+        ]
+        departing += bool(messages)
+        found += [Finding(severity, where, label + message) for where, message in messages]
+    where = "would bind, as `pkit rule-sets reach --preview` reads it" if label else "binds"
+    never = ", reported and never failing" if label else ""
+    unread = (
+        " Their words are not compared: the use case's structure cannot be read, and "
+        "`pkit analysis validate` says why."
+        if kind is None
+        else ""
+    )
+    line = (
+        f"{head}: {len(bound)} use case(s) that write `{AFTER}` checked, where the rule "
+        f"{where}; {departing} of them departing from it{never}.{unbound_said}{unread}"
+    )
+    return [line], found
+
+
+def _use_case_kind(own: project_structure.Own | None) -> structure.Kind | None:
+    """The use-case kind its *Preconditions* is read with, as the append-only check reads
+    its steps: as shipped, relabelled by the project's own structures, each label any of
+    their groups adds ending the part before it, and a part found by its shipped label
+    too. `None` where the declaration or the project's file cannot be read."""
+    if own is None or own.problems:
+        return None
+    try:
+        kinds = structure.read_kinds()
+    except structure.Unreadable:
+        return None
+    groups = own.of(USE_CASE)
+    kind = project_structure.tightened(
+        project_structure.relabelled(kinds[USE_CASE], own), groups, (), groups
+    )
+    return dataclasses.replace(kind, as_written=True)
+
+
+def _unfit_producers(
+    analysis: Analysis, use_case: Artefact, entries: Sequence[Sequence[str]]
+) -> list[tuple[str, str]]:
+    """Each producer that is no use case in force of the use case's own analysis. Its own
+    id is one, and `environment` passes; an entry that is no use case's id is the
+    schema's."""
+    use_case_id = schemas.id_pattern(USE_CASE)
+    found: list[tuple[str, str]] = []
+    for index, entry in enumerate(entries):
+        for place, named in enumerate(entry):
+            if named == ENVIRONMENT or not use_case_id.match(named):
+                continue
+            problem = analysis.unfit(named, USE_CASE, in_force=True, within=use_case.folder)
+            if problem is not None:
+                where = at(use_case.location, f"/{AFTER}/{index}/{place}")
+                found.append((where, f"{problem}: {_PRODUCER} ({LOGIC_RULE})"))
+    return found
+
+
+def _words_apart(
+    root: Path,
+    use_case: Artefact,
+    entries: Sequence[Sequence[str]],
+    kind: structure.Kind | None,
+) -> list[tuple[str, str]]:
+    """Where `after` and the words of the use case's *Preconditions* disagree: one entry
+    for each precondition the words write, in their order, each naming the producers its
+    precondition's opening names. A body with no such part is the format rule's."""
+    text = _read(root / use_case.path) if kind is not None else None
+    read = chain.words(text, kind) if text is not None and kind is not None else None
+    if read is None:
+        return []
+    element, written = read
+    part = f"`**{element.text}:**`"
+    if len(written) != len(entries):
+        holds = (
+            f"holds {_counted(len(written), 'precondition')}"
+            if written
+            else "holds no precondition, and a use case with none writes no `after`"
+        )
+        return [
+            (
+                use_case.location,
+                f"`{AFTER}` lists {_counted(len(entries), 'precondition')}, and {part} "
+                f"{holds}: `{AFTER}` holds one entry for each precondition the words write, "
+                f"in their order ({LOGIC_RULE})",
+            )
+        ]
+    found: list[tuple[str, str]] = []
+    for index, (entry, precondition) in enumerate(zip(entries, written, strict=True)):
+        where = at(use_case.location, f"/{AFTER}/{index}")
+        named = f"precondition {index + 1} of {part}, at line {precondition.line},"
+        if precondition.named is None:
+            found.append(
+                (
+                    where,
+                    f"{named} opens with no producers, such as `**From UC-003:**`, though "
+                    f"`{AFTER}` lists them: each line of the part opens with its producers "
+                    f"({LOGIC_RULE})",
+                )
+            )
+        elif _producer_set(precondition.named) != _producer_set(entry):
+            found.append(
+                (
+                    where,
+                    f"{named} names {_producers_shown(precondition.named)}, and entry {index} "
+                    f"of `{AFTER}` names {_producers_shown(entry)}: `{AFTER}` names the "
+                    f"producers the words name ({LOGIC_RULE})",
+                )
+            )
+    return found
+
+
+def _all_later(
+    analysis: Analysis, use_case: Artefact, entries: Sequence[Sequence[str]]
+) -> list[tuple[str, str]]:
+    """Each precondition of a use case in a numbered area whose producers all lie in later
+    areas (DEC-001 point 12). The environment counts as one before every area. A producer
+    of an area without a number, of no area, or that is no use case in force of the
+    analysis, counts as one in no later area: a reviewer, or the producers' check, judges
+    those."""
+    area = analysis.area(use_case)
+    if area_number(area) is None:
+        return []
+
+    def later(named: str) -> str | None:
+        if named == ENVIRONMENT:
+            return None
+        if analysis.unfit(named, USE_CASE, in_force=True, within=use_case.folder) is not None:
+            return None
+        producer = analysis.of(named, USE_CASE)
+        producer_area = analysis.area(producer) if producer is not None else None
+        return producer_area if chain.later(producer_area, area) else None
+
+    found: list[tuple[str, str]] = []
+    for index, entry in enumerate(entries):
+        areas = [later(named) for named in entry]
+        if not entry or any(a is None for a in areas):
+            continue
+        each = ", ".join(f"{named} in {a}" for named, a in zip(entry, areas, strict=True))
+        found.append(
+            (
+                at(use_case.location, f"/{AFTER}/{index}"),
+                f"each producer of precondition {index + 1} lies in a later area than "
+                f"{area}: {each}. At least one producer of each precondition lies in its own "
+                f"area or a lower-numbered one, the environment before every area: name one "
+                f"there, or move a use case to another area ({LOGIC_RULE}; DEC-001 point 12)",
+            )
+        )
+    return found
+
+
+def _producer_set(named: Iterable[str]) -> frozenset[str]:
+    """Producers as compared: each use case's number as `identity` spells it."""
+    return frozenset(identity(n) for n in named)
+
+
+def _producers_shown(named: Sequence[str]) -> str:
+    """Producers as a message names them: each id, and `environment`, in the order given."""
+    return ", ".join(named) if named else "none"
+
+
+def _counted(number: int, noun: str) -> str:
+    return f"{number} {noun}" + ("" if number == 1 else "s")
 
 
 def _unbound(analysis: Analysis, reached: _Reach) -> tuple[str, list[Finding]]:

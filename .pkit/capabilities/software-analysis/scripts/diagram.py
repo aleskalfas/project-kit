@@ -8,9 +8,10 @@
 # ///
 """software-analysis capability — diagram: the analysis's diagrams, from its front matter (DEC-003).
 
-Prints the use-case diagram, each journey's flow and the requirement map as
-Mermaid, each with its `accTitle` and `accDescr` and no styling, drawn from the
-analysis's front matter each time (DEC-003 points 3, 4 and 7). Nothing is
+Prints the use-case diagram, each journey's flow, the requirement map and the
+chain of use cases as Mermaid, each with its `accTitle` and `accDescr` and no
+styling, drawn from the analysis's front matter each time (DEC-003 points 3 to
+5 and 7). Nothing is
 stored, so a diagram never goes stale. `_lib/diagrams.py` states the rules.
 
 It reads the analysis in the working tree, through the backbone's discovery,
@@ -20,8 +21,9 @@ Usage:
   pkit analysis diagram [<subject>]           each diagram in a `mermaid` fence
   pkit analysis diagram [<subject>] --json    the document {schema_version, diagrams}
 
-The subject is `use-cases`, `journeys`, `requirements`, a journey's id or a
-requirement's id; with none, every diagram the analysis has something for.
+The subject is `use-cases`, `journeys`, `requirements`, `chain`, a journey's id
+or a requirement's id; with none, every diagram the analysis has something for.
+The chain draws each use case's `after`, grouped by area (DEC-003 point 5).
 Where the project lists several analyses (DEC-001 point 2), `--analysis
 <component>` names the one drawn (DEC-003 point 6); it may be left out where
 the list holds one.
@@ -31,7 +33,8 @@ Exit codes:
   1  no answer: `--analysis` names no analysis the project lists, or none
      where it lists several; the analysis could not be read, a file of a place a diagram
      reads cannot be read as its kind, gives no id of its kind's shape or a
-     list a diagram reads that is no list of ids, or the subject names no
+     list a diagram reads that is no list of ids, a use case's `after` the chain
+     reads is no list of lists of ids, or the subject names no
      diagram, or a journey or a requirement the analysis does not hold in force
 """
 
@@ -53,6 +56,7 @@ _NOTHING = {
     diagrams.USE_CASES: "The analysis holds no use case in force.",
     diagrams.JOURNEYS: "The analysis holds no journey in force.",
     diagrams.REQUIREMENT_MAP: "The analysis holds no requirement in force.",
+    diagrams.CHAIN: "The analysis holds no use case in force that writes `after`.",
 }
 
 
@@ -61,8 +65,9 @@ def main() -> int:
         prog="pkit analysis diagram",
         description=(
             "Print the analysis's diagrams as Mermaid, drawn from its front matter: the "
-            "use-case diagram, each journey's flow and the requirement map (software-analysis "
-            "DEC-003). Each carries its accTitle and accDescr, and no styling. Computed from "
+            "use-case diagram, each journey's flow, the requirement map and the chain of use "
+            "cases (software-analysis DEC-003). Each carries its accTitle and accDescr, and no "
+            "styling. Computed from "
             "the working tree each time, and never stored. Read-only and offline."
         ),
     )
@@ -70,8 +75,8 @@ def main() -> int:
         "subject",
         nargs="?",
         metavar="SUBJECT",
-        help="`use-cases`, `journeys`, `requirements`, a journey's id or a requirement's id "
-        "(default: every diagram the analysis has something for).",
+        help="`use-cases`, `journeys`, `requirements`, `chain`, a journey's id or a "
+        "requirement's id (default: every diagram the analysis has something for).",
     )
     parser.add_argument(
         "--json",
