@@ -25,8 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T06:40:52Z
-      outcome: updated
+      at: 2026-10-19T08:30:01Z
+      outcome: unchanged
+      unchanged-because: This change adds the pkit agents run command to cli.py, and needs no migration since every change adds. pkit new migration and the migration checks are untouched.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

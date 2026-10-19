@@ -1,0 +1,26 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A new command, `pkit agents run <agent> --folder <dir> --limit <seconds>
+  [--effort <level>] [--json]`, runs one agent with nobody watching, on the
+  brief read from standard input (ADR-066 points 1, 2 and 10). It is the one
+  way a command starts an agent: no command calls a harness. The backbone
+  starts the runner the project's adapter registers in its `commands:` tree
+  under `run-agent`, and the runner starts the harness. With no adapter's
+  runner, or more than one, the run is refused and the reason names the
+  registered adapters. So is a runner whose script lies outside its adapter's
+  folder, and a run inside a command the backbone runs, whose kill the harness
+  would outlive. The run takes the unconfined form, the one the review
+  command's runs take: it runs in the folder under the person's and the
+  project's settings, and no flag that bypasses permissions reaches it. With
+  `--json` it writes one document, `schema_version` 1, whose `ending` is
+  `finished`, `not-started`, `timed-out`, `refused` or `no-answer`. A caller
+  decides on that ending, never on the exit. The one command runner gains an
+  agent-run policy for it: the request on standard input, a bound of the run's
+  limit and thirty seconds more, and on overrun or an interrupt the runner is
+  asked to stop with `SIGTERM` before it is killed, so it ends the harness it
+  started. `SIGTERM` or `SIGHUP` to the command stops the runner the same way.
+  The CLI README ("Agent runs"), the lifecycle README (the agent-run policy)
+  and the adapters README ("The agent runner") document it.

@@ -1,0 +1,24 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_capabilities:
+    project-management: release
+body: >
+  The capability declares the `analysis-resolver` the fixer of each of its
+  seven artefact types, in the work-tracking role's point
+  `pkit::work-tracking:fixers`, as a static value (DEC-001 points 5 and 8;
+  project-management DEC-056). Where project-management is installed,
+  `pkit pm ask-fixers` asks you once whether the agent may keep your
+  analysis true on its own, and `pkit pm list-fixers` lists its types.
+  Nothing starts it yet: project-management's command that starts fixers is
+  still to come, and it will start only a fixer you granted. The agent's body
+  and storyboard say what such a run takes and returns. The run takes the
+  command's brief. For each artefact it proposes an answer for, it writes the
+  answer as a JSON file of fields, the diff of any edit and the evidence, and
+  never a command. It ends with one result line per artefact: proposed, held
+  with its question, or none with its reason. It never asks, since nobody
+  watches the run, never proposes a deferral, and never runs a writer. Where
+  the run cannot start `pkit analysis propose`, it judges nothing. The
+  optional dependency on project-management starts from its first release
+  with the fixers point.

@@ -19,9 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-19T06:39:18Z
+      at: 2026-10-19T08:29:57Z
       outcome: unchanged
-      unchanged-because: migrations.py now also fails a migration script whose number another script in its folder holds. This page names pkit migrations check-diff as the migration-coverage check CI can run and says pkit upgrade runs migrations automatically, which both still hold.
+      unchanged-because: pyproject.toml gains one ruff per-file target, Python 3.9 for the adapter's run-agent.py, which runs under the system python3. The README's install and development instructions are untouched.
 ---
 
 # project-kit

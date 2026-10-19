@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-kit/capabilities/project-management/fixer-answer.schema.json",
+  "title": "Fixer answer — what a fixer proposes for one artefact, under pkit::work-tracking:fixers version 1",
+  "description": "The answer a fixer writes as `<artefact>/answer.json` in its workspace, one object for each artefact it proposes an answer for (project-management:DEC-056 points 3 and 6). Every field is present. The drift command reads an answer only where it passes this schema, builds each writer's command from its fields, and never runs a string a fixer wrote. What the schema cannot hold, the command checks: the artefact is the one its result line names, and the diff's file lies in the artefact's own folder. Every text is one line with no control character, no line or paragraph separator, and no bidirectional or zero-width formatting character, so none of those hides words from the person who reads it. The fixers point's version covers this schema with the rest of the run's contract, so it rises only on a change that breaks a fixer which conforms.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["artefact", "outcome", "justification", "sentence", "keep", "diff", "first"],
+  "properties": {
+    "artefact": {
+      "description": "The artefact, exactly as the brief names it: a plain path inside the repository, with no backtick, and no `.` or `..` part.",
+      "allOf": [
+        { "$ref": "#/$defs/line" },
+        { "pattern": "^(?!/)(?!(?:.*/)?\\.\\.?(?:/|#|$))[^`]+$" }
+      ]
+    },
+    "outcome": {
+      "description": "The core answer the fixer proposes (COR-050 point 3): `unchanged` where the artefact still holds, `updated` where its content or its anchors are edited to hold again. A capability's own outcomes map onto these two in its own documentation.",
+      "enum": ["unchanged", "updated"]
+    },
+    "justification": {
+      "description": "For `unchanged`, why the artefact still holds against the change: the fixer's draft, which the person confirms or rewrites. A placeholder the person fills, such as `<the defect reference>`, may stay. `null` for `updated`.",
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/line" }]
+    },
+    "sentence": {
+      "description": "For `updated`, the one sentence on what changed in the artefact, which whoever records the answer gives with the change. `null` for `unchanged`.",
+      "anyOf": [{ "type": "null" }, { "$ref": "#/$defs/line" }]
+    },
+    "keep": {
+      "description": "Each deferral of the artefact the fixer proposes keeping, as `kind:value`. A revalidation removes every deferral it does not keep (COR-050 point 4). An empty list keeps none.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "allOf": [{ "$ref": "#/$defs/line" }, { "pattern": "^[a-z][a-z0-9-]*:\\S" }]
+      }
+    },
+    "diff": {
+      "description": "The file of the proposed diff, relative to the workspace, in the artefact's own folder, ending in `.diff`. Never `null` for `updated`. For `unchanged` it is `null`, or the diff of an anchor the change moved, where a capability records that answer as `unchanged`.",
+      "anyOf": [
+        { "type": "null" },
+        {
+          "allOf": [
+            { "$ref": "#/$defs/line" },
+            { "pattern": "^(?!/)(?!(?:.*/)?\\.\\.?(?:/|$))[^`]+\\.diff$" }
+          ]
+        }
+      ]
+    },
+    "first": {
+      "description": "What the person does before the answer is recorded, in words, one step each, such as reporting a defect. Applying the diff is not one: it goes with the answer. An empty list where nothing comes first.",
+      "type": "array",
+      "items": { "$ref": "#/$defs/line" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "outcome": { "const": "unchanged" } }, "required": ["outcome"] },
+      "then": {
+        "properties": {
+          "justification": { "$ref": "#/$defs/line" },
+          "sentence": { "type": "null" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "outcome": { "const": "updated" } }, "required": ["outcome"] },
+      "then": {
+        "properties": {
+          "justification": { "type": "null" },
+          "sentence": { "$ref": "#/$defs/line" },
+          "diff": { "type": "string" }
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "line": {
+      "description": "One line of text that is not blank. It holds no control character, no line or paragraph separator, and no bidirectional or zero-width formatting character. The check finds such a character anywhere, so it holds wherever a pattern's end anchor matches.",
+      "type": "string",
+      "pattern": "\\S",
+      "not": {
+        "pattern": "[\\u0000-\\u001f\\u007f-\\u009f\\u00ad\\u061c\\u180e\\u200b-\\u200f\\u2028-\\u202e\\u2060-\\u2064\\u2066-\\u2069\\ufeff\\ufff9-\\ufffb\udb40\udc00-\udb40\udc7f]"
+      }
+    }
+  }
+}

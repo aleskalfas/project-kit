@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:39:12Z
+      at: 2026-10-19T08:29:53Z
       outcome: unchanged
-      unchanged-because: This change makes pkit migrations check-diff also fail a migration script whose number another script in its folder holds. This use case names that check only among the project's other checks, each exiting non-zero on what fails it, and how pkit validate and pkit friction check hold a merge is untouched.
+      unchanged-because: This change adds the pkit agents run command to cli.py. pkit config set, pkit validate and pkit friction check, which a merge waits on here, are untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  Internal. The CLI reference, the lifecycle README, the adapters README and
+  the permissions README are revalidated unchanged against ADR-066's
+  refinements (#1792). Only their friction blocks change, and nothing you run
+  or read changes.

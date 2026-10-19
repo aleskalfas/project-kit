@@ -12,11 +12,11 @@ pkit:
         - .pkit/adapters/claude-code/permission-hook.py
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
-      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
+      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
     revalidated:
-      at: 2026-10-19T06:39:14Z
+      at: 2026-10-19T09:38:26Z
       outcome: unchanged
-      unchanged-because: ADR-009 now names the 1.150.0 migration that untracks runtime-ignored files by its new number, 002, and decides nothing new. This page relies on its visibility and untrack rules, which read as before, and names no migration file.
+      unchanged-because: ADR-066 point 12 gains two probe items, the model and effort an --agents run takes and whether the sandbox ends a process that left the tree. This page says a session started with --agent leaves the hook's subject open until the probe shows which agent it judges, which still holds.
 ---
 
 # Permissions — decision core
@@ -123,6 +123,16 @@ order (per issue #57):
 **Implication:** in a session with a configured default agent, a human's
 `!`-typed command is also bound to that agent's grants — consistent, because the
 session runs *as* the agent.
+
+**A session started with `--agent`.** The review command's runs name their
+agent on the command line, through the agent runner ([the adapters README, "The
+agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing
+`.claude/settings.json`, the file rule 2 reads. So the hook may judge such a
+run as the project's default agent, or as `operator`, rather than as the agent
+it names. No grant for one agent counts in those runs until the probe shows
+which subject the hook judges
+([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md)
+point 11).
 
 Without this resolution (the pre-#57 behaviour), the main session always resolved
 to `operator` even when `settings.json` set `agent: project-manager`, making

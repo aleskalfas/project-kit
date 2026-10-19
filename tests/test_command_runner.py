@@ -378,10 +378,17 @@ def _nested_runner(path: Path, then: str = "") -> Path:
     return path
 
 
+# How long a test waits for the processes a run starts: a run's own bound, read
+# before any test shortens it. A shorter wait is one a machine busy with other
+# test workers misses.
+_STARTED_WITHIN = command_runner.COMMAND_TIMEOUT_SECONDS
+
+
 def _pids(script: Path) -> list[int]:
     """The pids a `_STARTS_A_CHILD` script recorded, once it has."""
     record = script.with_name(script.name + ".pids")
-    for _ in range(100):
+    deadline = time.monotonic() + _STARTED_WITHIN
+    while time.monotonic() < deadline:
         if record.is_file() and record.read_text():
             return [int(pid) for pid in record.read_text().split()]
         time.sleep(0.1)
@@ -429,8 +436,10 @@ def test_a_run_inside_a_run_with_no_time_left_does_not_start_its_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # A margin as long as the bound: the caller is told a deadline already due.
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 10)
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 10)
+    # The bound is a run's own, so a busy machine still starts the caller in it.
+    monkeypatch.setattr(
+        command_runner, "ANSWER_MARGIN_SECONDS", command_runner.COMMAND_TIMEOUT_SECONDS
+    )
     touch = _script(tmp_path / "touch.py", "open(__file__ + '.ran', 'w')\nprint('{}')\n")
     run = run_command(_nested_runner(tmp_path / "caller.py"), [str(touch)], cwd=tmp_path)
     assert run.ending is Ending.ANSWERED, run.stderr
@@ -555,7 +564,9 @@ def test_what_a_nested_run_killed_by_anyone_else_started_ends_with_the_outermost
 ) -> None:
     # A validator that starts `pkit` under a timeout of its own kills it without a
     # word to the runner. The killed run's marker stays, so the outermost run,
-    # whose command answers in time, ends what the killed run had started.
+    # whose command answers in time, ends what the killed run had started. The
+    # killer waits for the filler until the deadline its run told it, so a busy
+    # machine still starts the filler, and a filler that never starts is named.
     filler = _script(tmp_path / "filler.py", _STARTS_A_CHILD)
     caller = _nested_runner(tmp_path / "caller.py")
     record = f"{filler}.pids"
@@ -564,7 +575,8 @@ def test_what_a_nested_run_killed_by_anyone_else_started_ends_with_the_outermost
         tmp_path / "killer.py",
         "import os, subprocess, time\n"
         f"caller = subprocess.Popen({argv!r}, stdout=subprocess.DEVNULL)\n"
-        "for _ in range(100):\n"
+        f"deadline = float(os.environ[{command_runner.DEADLINE_ENV!r}])\n"
+        "while time.time() < deadline:\n"
         f"    if os.path.isfile({record!r}) and open({record!r}).read():\n"
         "        break\n"
         "    time.sleep(0.1)\n"
@@ -909,3 +921,64 @@ def test_a_run_reports_rather_than_raises(tmp_path: Path) -> None:
     run = run_command(tmp_path / "absent.py", [], cwd=tmp_path)
     assert isinstance(run, CommandRun)
     assert run.ending is Ending.NOT_STARTED
+
+
+# --- what a policy sets: its own bound, standard input, a grace (#1742) ----------
+
+
+def test_a_policy_sets_the_runs_own_bound(tmp_path: Path) -> None:
+    script = _script(tmp_path / "slow.py", "import time\ntime.sleep(30)\n")
+    started = time.monotonic()
+    run = run_command(script, [], cwd=tmp_path, bound_seconds=1)
+    assert time.monotonic() - started < 15
+    assert (run.ending, run.bound_seconds, run.own_bound_seconds) == (Ending.TIMED_OUT, 1, 1)
+    # Its own bound, not the time a caller had left: the run is not clipped.
+    assert not run.clipped
+    assert run.ending_described == "did not answer within 1 s and was stopped"
+
+
+def test_a_policy_writes_the_commands_standard_input(tmp_path: Path) -> None:
+    script = _script(
+        tmp_path / "echo.py", "import json, sys\nprint(json.dumps({'read': sys.stdin.read()}))\n"
+    )
+    run = run_command(script, [], cwd=tmp_path, stdin='{"brief": "é"}'.encode())
+    assert run.ending is Ending.ANSWERED
+    assert run.document == {"read": '{"brief": "é"}'}
+
+
+# Serial: the script must set its handler inside the three-second bound, which a
+# machine busy with other test workers misses.
+@pytest.mark.serial
+def test_with_a_grace_the_group_is_asked_to_stop_before_it_is_killed(tmp_path: Path) -> None:
+    asked = tmp_path / "asked"
+    script = _script(
+        tmp_path / "slow.py",
+        "import signal, sys, time\n"
+        "def stop(signum, frame):\n"
+        f"    open({str(asked)!r}, 'w').write(str(signum))\n"
+        "    sys.exit(0)\n"
+        "signal.signal(signal.SIGTERM, stop)\n"
+        "time.sleep(30)\n",
+    )
+    run = run_command(script, [], cwd=tmp_path, bound_seconds=3, grace_seconds=5)
+    assert run.ending is Ending.TIMED_OUT
+    assert asked.read_text() == str(int(signal.SIGTERM))
+
+
+def test_without_a_grace_the_group_is_killed_unasked(tmp_path: Path) -> None:
+    asked = tmp_path / "asked"
+    script = _script(
+        tmp_path / "slow.py",
+        "import signal, time\n"
+        f"signal.signal(signal.SIGTERM, lambda *a: open({str(asked)!r}, 'w').write('x'))\n"
+        "time.sleep(30)\n",
+    )
+    run = run_command(script, [], cwd=tmp_path, bound_seconds=1)
+    assert run.ending is Ending.TIMED_OUT
+    assert not asked.exists()
+
+
+def test_a_nested_run_is_bounded_by_its_own_bound_when_its_caller_has_more_time() -> None:
+    now = 1_000.0
+    assert command_runner._remaining(now + 500, now, 120) == 120
+    assert command_runner._remaining(now + 50.07, now, 120) == 50.0

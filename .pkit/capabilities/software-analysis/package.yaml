@@ -11,8 +11,11 @@ requires_backbone: ">=1.149.0,<2.0.0"
 # range starts at its first release with it once that release is made. A
 # change cannot name a version before it is released, so the release writes
 # that start, on the declaration of the changeset that adds the contribution
-# (`requires_capabilities: {project-management: release}`). The dependency is
-# optional, since the capability works without it (COR-030).
+# (`requires_capabilities: {project-management: release}`). The fixers
+# contribution (DEC-001 point 8) names a point an older release does not
+# define, so its changeset declares the same, and the range starts at the
+# first release with that point too. The dependency is optional, since the
+# capability works without it (COR-030).
 requires_capabilities:
   - name: project-management
     version: ">=0.54.0,<1.0.0"
@@ -203,3 +206,35 @@ connections:
         schema_version: 1
         command: fill-use-cases
         description: Every use case the default branch holds, withdrawn ones included, each with its id, title, status and document path — complete, or no answer.
+      # The analysis-resolver as the fixer of each of this capability's types
+      # (DEC-001 points 5 and 8): where the project grants it, the role's
+      # provider may start it on the default branch's stale analysis
+      # artefacts, and it only proposes. A static value, so it reads here and
+      # resolving it runs nothing. Each description says what the agent keeps
+      # true (project-management DEC-056 point 1). Inert while no capability
+      # provides the work-tracking role.
+      - point: pkit::work-tracking:fixers
+        schema_version: 1
+        description: The analysis-resolver fixes the analysis's artefacts of every type.
+        value:
+          - id: software-analysis:actor
+            agent: analysis-resolver
+            description: your actors
+          - id: software-analysis:use-case
+            agent: analysis-resolver
+            description: your use cases
+          - id: software-analysis:journey
+            agent: analysis-resolver
+            description: your journeys
+          - id: software-analysis:term
+            agent: analysis-resolver
+            description: your glossary terms
+          - id: software-analysis:quality-requirement
+            agent: analysis-resolver
+            description: your quality requirements
+          - id: software-analysis:functional-requirement
+            agent: analysis-resolver
+            description: your functional requirements
+          - id: software-analysis:constraint
+            agent: analysis-resolver
+            description: your constraints
