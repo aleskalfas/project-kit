@@ -46,7 +46,7 @@ pkit:
 
 **Assumptions:**
 
-- Each changeset's segment is a person's judgement of the change's surface, and the release takes the segment as written (PRJ-002 D2).
+- Each changeset's segment is a person's judgement of the change's surface, and the release step takes the segment as written (PRJ-002 D2).
 - Where the release ships a backbone migration that adds a missing default, the changelog entry names that default, from a pending changeset. No command checks for that sentence, so the maintainer looks for it at step 8 (COR-010).
 
 **Trigger:** The weekly schedule of `release-pr.yml` comes round, or the maintainer starts that workflow by hand.
@@ -77,13 +77,13 @@ pkit:
 
 **Variants:**
 
-- **1a.** The maintainer releases by hand. The maintainer runs `pkit release plan`, then runs `pkit release apply` on a release branch, and confirms `Write these versions and consume the changesets?`. The maintainer then commits the release and opens its release pull request, and the path goes on at step 7.
+- **1a.** The maintainer releases by hand. The maintainer runs `pkit release plan`, then runs `pkit release apply` on a release branch, and confirms `Write these versions and consume the changesets?`. The maintainer then commits the release step's writes and opens their release pull request, and the path goes on at step 7.
 - **1b.** On the path of 1a, no pending changeset moves a version. `pkit release apply` asks nothing, writes no version and no changelog entry, and deletes the pending `none` changesets. The use case ends.
 - **2a.** No pending changeset moves a version, as when only `none` changesets wait. `release-pr.yml` ends with `No pending changesets move a version — nothing to release.` The `none` changesets wait for the next release, and the use case ends.
-- **2b.** A changeset names a component the tree does not hold. The system refuses the release, naming the changeset and the components it knows. `release-pr.yml` opens no pull request, and the use case ends.
-- **2c.** A changeset declares a floor or an upper bound the release cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
-- **2d.** The release would leave a capability whose range excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends (PRJ-002 D4).
-- **2e.** A backbone migration's folder names a version above the current backbone's version, and the release does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
+- **2b.** A changeset names a component the tree does not hold. The system refuses the release step, naming the changeset and the components it knows. `release-pr.yml` opens no pull request, and the use case ends.
+- **2c.** A changeset declares a floor or an upper bound the release step cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
+- **2d.** The release step would leave a capability whose range excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends (PRJ-002 D4).
+- **2e.** A backbone migration's folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
 - **7a.** The project gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
 - **9a.** The pull request is no release pull request. The system refuses it, and points to `pkit project-management merge-pr` for an issue's pull request. The use case ends.
@@ -93,13 +93,13 @@ pkit:
 - **10d.** The queue drops the release pull request, or the release pull request's head commit moves after the checks were read. The system exits 3 and deletes nothing, and the path rejoins at step 7.
 - **11a.** The version in `.pkit/VERSION` already has its tag, as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes.
 - **11b.** The run of `release-tag.yml` for the release push fails. The next push to the default branch finds the version untagged, and tags that push's commit instead of the release commit.
-- **13a.** A release that moved only components came between this release and the previous backbone release. That release's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
+- **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
 
 **Postconditions:** The release commit on the default branch carries the tag `v<version>`, which adopters install, upgrade to and pin (PRJ-004). That version's changelog section, and the notes of its GitHub release, say what each change the release carries means for adopters.
 
 **Minimal guarantees:**
 
-- A release the system refuses for a changeset's declaration, or for a range, writes nothing. Each of those refusals comes before the first write (`release.py` and PRJ-002 D4).
+- A release step the system refuses for a changeset's declaration, or for a range, writes nothing. Each of those refusals comes before the first write (`release.py` and PRJ-002 D4).
 - No workflow merges a release pull request. A release pull request lands only when someone merges it (`release-pr.yml` and `release-tag.yml`).
 - A version is tagged once. `release-tag.yml` tags only a version with no tag, locally or on the remote, and `pkit version tag` refuses a tag the clone already holds (`versioning.py`).
 - A GitHub release carries notes only, never a file to install from (PRJ-004).
