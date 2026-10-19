@@ -577,6 +577,18 @@ TERM-range:
           - PRJ-002#D4
           - COR-010
           - COR-030
+TERM-reading-command:
+  name: reading command
+  status: active
+  definition: "verb of the system's CLI whose operation reads a project's state, such as a check, validation or a listing, rather than altering it"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-004
+          - COR-050#2
+          - COR-050#13
+          - COR-053#2
 TERM-recorded-version:
   name: recorded version
   status: active
@@ -1323,6 +1335,16 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Upper bound:** the version a range stops below, its `<A.B.C`. A release step widens an upper bound on the backbone with no declaration. It widens an upper bound on another capability only on a changeset's declaration (PRJ-002 D4).
 - **A component's version:** the one number the component carries in its `package.yaml`, as the backbone carries its own in `.pkit/VERSION`. A range names versions of what the component depends on (COR-010 and COR-030).
 - **Harness version bound:** the harness versions that an adapter's support declaration holds for. It is never widened automatically, only by an author who tested the claim (COR-047 point 2).
+
+## TERM-reading-command — reading command
+
+**Example:** `pkit friction check` and `pkit status` are reading commands. `pkit friction revalidate` is the writing command that answers what the check finds.
+
+**Distinctions:**
+
+- **Writing command:** a command whose operation alters the project, such as sync, a stamp or `pkit friction revalidate`. It names what it writes, and no write happens as a side effect of a check (COR-050 point 13).
+- **Query:** a command the backbone itself runs for an answer, such as a validator. It declares that it changes nothing in the project, and the backbone trusts that declaration (COR-050 point 2).
+- **A dry run:** a writing command run with `--dry-run`, which shows what it would write and writes nothing. It is still a writing command (COR-004).
 
 ## TERM-recorded-version — recorded version
 
