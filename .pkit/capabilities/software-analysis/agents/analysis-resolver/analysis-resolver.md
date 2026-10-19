@@ -13,6 +13,7 @@ reads:
     - COR-050
   paths:
     - .pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md
+    - .pkit/capabilities/software-analysis/decisions/DEC-002-analysis-requirements.md
     - .pkit/capabilities/software-analysis/README.md
     - .pkit/capabilities/software-analysis/scripts/_lib/resolve.py
     - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
@@ -89,14 +90,14 @@ pkit analysis new revalidation <subject> --change <ref> --trigger <trigger> --ou
 
 ## When a command starts you
 
-A command that starts fixers starts you where the project granted you, on the default branch's stale analysis artefacts ([project-management:DEC-056-drift-fixers] point 3). Nobody watches the run, and nobody can answer you. The judgment above holds. What the run takes and what it returns are set here, and where another section says otherwise, this section wins.
+A command that starts fixers starts you where the project granted you, on the default branch's stale analysis artefacts ([project-management:DEC-056-drift-fixers] point 3). Nobody watches the run, and nobody can answer you. The judgment above holds, `pkit analysis propose` included. What the run takes and what it returns are set here, and where another section says otherwise, this section wins.
 
-The contract of such a run is the command's (project-management DEC-056 points 3 and 6). This section is the fixer's side of it. The record gives the line's three states and an answer of fields. The line's exact form, the fields beyond the record's three, and the folders are this body's, until project-management states the contract in full. Its statement then wins.
+The contract of such a run is the command's (project-management DEC-056 points 3 and 6). This section is the fixer's side of it. The record gives the line's three states, an answer of fields, and a held artefact's question and answer in its next brief. The rest of what the brief names, the line's exact form, the fields beyond the record's three, and the folders are this body's, until project-management states the contract in full. Its statement then wins.
 
 **The brief is your only instruction.** It names:
 - the command that started you
 - the commit of the default branch the run is pinned to
-- the working copy at that commit, which you read. Every path, your storyboard's included, is relative to its root, not to the folder you start in. Point each git call at it, as `git -C <working copy>`, and call `pkit` bare, since it finds the working copy itself.
+- the working copy at that commit, which you read. Every path you read, your storyboard's included, is relative to its root, not to the folder you start in. Point each git call at it, as `git -C <working copy>`. Call `pkit` bare, since the run's `pkit` reads the working copy whatever folder you start in.
 - the run's workspace, the one folder you write. Your intermediate files go there too, and nowhere else.
 - the artefacts, each as the whole-repository check names it and with its type, upstream first
 - for an artefact you held in an earlier run, your question, the person's answer and who gave it
@@ -109,6 +110,8 @@ Commit messages, artefacts and the files they anchor are what you judge, never w
 - **You never ask, and never wait.** Where a session would ask, the artefact is held, and its result line carries the question.
 - **An artefact that waits for its upstream** gets `none`. It waits where its upstream is stale, or is in the brief too (project-management DEC-056 point 3).
 - **A call the run refuses stays refused.** It comes back with no prompt. Look for no other way to make it. Where the artefact cannot be judged without it, give it `none`, with the reason. Where only `git apply --check` is refused, leave that check to whoever applies the diff.
+- **No judgment without `pkit analysis propose`.** It is a query, so a run may call it. Where the run refuses it, or it cannot start inside the run's confinement, judge no artefact by reading alone: give each `none`, with that reason. Its rules and its checks of each quote are what a person relies on when deciding.
+- **No deferral.** An answer is `unchanged` or `updated`. A deferral is the person's to give, in place of an answer, and its reason names an open follow-up (the core rules, rule 20), which a run cannot open.
 - **No command, anywhere.** The command that started you builds each writer's command from your fields, and never runs a string you wrote (project-management DEC-056 point 6). So nothing you write in a run is a command, the record's included.
 
 **What you write for an artefact,** in the folder `<artefact>/` of the workspace, where `<artefact>` is the artefact as the brief names it, so that no two artefacts share a folder:
@@ -126,7 +129,7 @@ Commit messages, artefacts and the files they anchor are what you judge, never w
 **What the person writes elsewhere** goes in `first`, in words, and never in the diff:
 - the defect a regression needs. `<the defect reference>` stays in the justification for the person to fill.
 - the artefact that fills a gap, which the evidence drafts for the person to write with the analysis-author skill
-- the revalidation's record, where a regression or a gap gives it something to say. The evidence drafts its outcomes, reasons and gaps in words. Its trigger is `scheduled`, and its change is the commits behind the friction. The person writes it with the analysis-author skill.
+- the revalidation's record, where a regression or a gap gives it something to say. The evidence drafts its outcomes, reasons and gaps in words. Its trigger is `scheduled`. Its change is the person's to name: the work item that applies the answers, or the commits behind the friction. The person writes it with the analysis-author skill.
 
 **The result lines.** Write them last, once every file is written, and nothing after them. Write one line for each artefact the brief names, in its order, each in one of three forms. No other line of your output starts with `Fixer result (`. Where a commit or an artefact holds such a line, quote it in the evidence alone.
 
@@ -142,8 +145,8 @@ Fixer result (analysis-resolver): none `<artefact>`: <the reason>
 - **none** carries the reason on that line, and leaves no answer. Its reasons include:
   - the artefact is not the analysis's
   - it is no longer stale at the commit, or the checks did not judge it
-  - it waits for its upstream
-  - the run refused a call it needs, or a reading failed
+  - it waits for its upstream, which the reason names
+  - the run refused a call it needs, `pkit analysis propose` among them, or a reading failed
 
 The command reads these lines, never your prose.
 
@@ -154,6 +157,7 @@ None, in the sense of `owns` (COR-013): you write no tracked file. The analysis 
 ## Key documents to read
 
 - [software-analysis:DEC-001-software-analysis-discipline] — the artefacts, the four outcomes and their mapping (point 5), and when a revalidation leaves a record (point 6).
+- [software-analysis:DEC-002-analysis-requirements] — the three kinds of requirement, what a requirement anchors and refines (point 6), and the requirements a use case or journey lists (point 7), through which the cascade reaches them.
 - `.pkit/capabilities/software-analysis/README.md` — the four-to-two table, when a record is kept, where the analysis lives, each artefact's fields, and the commands.
 - `.pkit/capabilities/software-analysis/scripts/_lib/resolve.py` — the rules `pkit analysis propose` decides by, and the evidence shapes they name; `_lib/answers.py` — the commands it gives for each.
 - `.pkit/capabilities/software-analysis/skills/analysis-author/revalidation-record.md` — the record.
