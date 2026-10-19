@@ -13,9 +13,8 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-18T20:32:40Z
-      outcome: unchanged
-      unchanged-because: "ADR-060 point 6 gains one sentence: in a confined agent run, where the harness approves no write by itself, the Claude Code adapter emits a path rule for the run's workspace (refinement per ADR-066). This page describes what Claude Code approves in a person's session, where the adapter writes nothing for the workspace and the hook allows the file tools there. That still holds. No confined run is built yet, and the page gains the run's settings with the change that builds it (ADR-066, Implications)."
+      at: 2026-10-19T07:10:42Z
+      outcome: updated
 ---
 
 # Claude Code adapter

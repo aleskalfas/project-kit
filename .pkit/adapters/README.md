@@ -12,9 +12,8 @@ pkit:
       record: [COR-005, COR-006, COR-047, ADR-066]
       artefact: [.pkit/adapters/claude-code/README.md, ".pkit/lifecycle/README.md#how-a-registered-command-is-run"]
     revalidated:
-      at: 2026-10-14T08:38:50Z
-      outcome: unchanged
-      unchanged-because: "The claude-code README changes in one sentence: its caveat on script-wrapped diagnostics cites ADR-004's alternative \"Relabel `network-egress` as natively enforced…\" where it cited a line of ADR-004. This page names merge-settings.sh as a deploy primitive and its run order, and says nothing of that caveat or of ADR-004, so nothing it says changes."
+      at: 2026-10-19T07:10:46Z
+      outcome: updated
 ---
 
 # Adapters

@@ -25,9 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:13:44Z
+      at: 2026-10-19T07:10:29Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: This change adds the pkit agents run command to cli.py. How a component is released on its own version, and the backbone range it declares, are untouched.
 ---
 
 # UC-009 — Release my component on its own version

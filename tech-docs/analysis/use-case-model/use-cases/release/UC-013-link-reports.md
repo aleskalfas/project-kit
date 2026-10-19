@@ -19,9 +19,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-19T06:13:48Z
+      at: 2026-10-19T07:10:34Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: This change adds the pkit agents run command to cli.py. How a maintainer receives a report and links it to its fix is untouched.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix
