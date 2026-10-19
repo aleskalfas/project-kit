@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-18T19:06:27Z
+      at: 2026-10-19T07:05:52Z
       outcome: unchanged
-      unchanged-because: This branch words the change check's revisit finding, which the whole-repository check never reads, and splits one validation bullet of COR-050 point 12. Debt, its listing, how it is answered and what this use case takes from core rule 20 are untouched.
+      unchanged-because: The analysis-resolver's body gains how a command that starts fixers runs it, and software-analysis DEC-001 point 5 says so. No such command ships yet, so the developer still dispatches the agent at variant 3a, and it still proposes each outcome with its evidence and runs no command. Debt, its listing and how it is answered are untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

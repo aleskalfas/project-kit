@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T17:35:45Z
+      at: 2026-10-19T07:05:41Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 4 gains that a document lying only in an untyped place of rule sets outside every root, with no assignment, is no page. The developer's needs on pages, writing one for its reader with grounding anchors, having a stale page's fix proposed and having a page read as its reader, hold for every page, and this changes only which documents are pages, so they still hold.
+      unchanged-because: "software-analysis DEC-001 point 5 gains a paragraph: its agent is also the fixer of its types, which a command may start where the project granted it, and in such a run it judges only through the capability's own reading and leaves each answer as data for a person. The developer's need to revalidate from an agent's proposed outcome, never rewriting the analysis to match broken code, holds in a session and in such a run alike."
 ---
 
 # ACT-developer — Developer

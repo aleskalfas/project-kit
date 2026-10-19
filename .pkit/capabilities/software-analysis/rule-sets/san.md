@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-18T11:57:54Z
+          at: 2026-10-19T07:05:53Z
           outcome: unchanged
-          unchanged-because: DEC-001 changed only by pointers to software-analysis DEC-002 on points 2, 4 and 11, and point 11 names constraints and quality requirements as examples of further kinds. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
+          unchanged-because: DEC-001 gains its agent as the fixer of the capability's types in points 5 and 8, with a rationale, an alternative and a line in its Implications. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
