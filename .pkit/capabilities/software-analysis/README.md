@@ -1006,7 +1006,7 @@ Where you grant it, the agent can run on its own after a merge, on the analysis 
 
 - **Nothing starts until you grant it.** How you are asked, and how you grant or revoke a fixer, is in project-management's README, [8. (Optional) Grant the fixers your capabilities declare](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare). Only your answer grants it ([project-management:DEC-056-drift-fixers] point 2).
 - **What a run does.** A command of project-management starts the fixers you granted, once your grant is on the default branch (DEC-056 point 3). It runs the agent on the default branch's stale analysis artefacts, with nobody watching. The agent runs the same judgment as above, on the artefacts the command names. That command is still to come. Until it ships, a grant starts nothing, and you run the agent yourself as above.
-- **What it can't do in a run.** It can't ask you, and it can't read a pull request or a work item. Where it would ask, the artefact waits with its question, and your answer goes with the artefact's next run. A call the run refuses, such as a command it needs, leaves the artefact unjudged, with the reason.
+- **What it can't do in a run.** It can't ask you, and it can't read a pull request or a work item. Where it would ask, the artefact waits with its question, and your answer goes with the artefact's next run. A call the run refuses, such as a command it needs, leaves the artefact unjudged, with the reason. Where the run cannot start `pkit analysis propose`, such as where its confinement cannot host the `uv` the command starts, it judges nothing by reading alone, and each artefact carries that reason.
 - **What it hands back.** Each answer it proposes is data, never a command: a file of its fields, the diff of any edit, and the evidence for you to read. An artefact it holds carries its question, and one it cannot judge carries the reason. The agent's body says what a run takes and returns, under "When a command starts you".
 - **Nothing is applied until you decide.** project-management brings the proposals to you together, and applies only what you accept. A regression's defect and a revalidation record stay yours to write.
 
@@ -1109,6 +1109,7 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 ```yaml
 - point: pkit::work-tracking:fixers
   schema_version: 1
+  description: The analysis-resolver fixes the analysis's artefacts of every type.
   value:
     - id: software-analysis:actor
       agent: analysis-resolver
@@ -1151,4 +1152,4 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 None required. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
 
-project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10) and the fixers point (DEC-001 point 8). Install and upgrade hold an installed project-management to that range, so neither the review contribution nor the fixers contribution meets a release that does not know it (COR-030). Without project-management, nothing reads them.
