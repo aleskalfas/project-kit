@@ -1346,10 +1346,10 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Release step:** the procedure that makes a release from the pending changesets. To release a component is to run the release step for that component's changesets.
 - **Changeset:** a change's declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 D1 and D3).
 - **A release step that moves no backbone:** writes new versions of components and makes no release of its own. Those versions reach a tagged install with the next release (PRJ-004).
-- **A component's release:** PRJ-002's name for one new version of one component (PRJ-002 D4). The analysis calls it the component's new version.
+- **A component's release:** PRJ-002's and PRJ-004's name for one new version of one component (PRJ-002 D4). The analysis calls it the component's new version.
 - **An externally-sourced component's version:** written in the component's own source repository, and reached by a project's transition of that component (COR-041).
 - **Release pull request:** the pull request that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
-- **Release tag:** the annotated tag `v<version>` on the release commit. Only a release that moves the backbone gets one (PRJ-004).
+- **Release tag:** the annotated tag `v<version>` on the release commit. Each release gets one, and a release step that moves only components gets none (PRJ-004).
 - **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
 
 ## TERM-release-step — release step
