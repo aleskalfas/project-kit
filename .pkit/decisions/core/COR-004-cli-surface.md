@@ -28,7 +28,7 @@ The CLI's shape is governed by the principles below. They constrain how the comm
 
 A command performs one of: propagation, seed, merge, version transition, suspension management, validation, or read-only introspection. It does not compound two of these into one verb. Compound verbs (e.g., an "update" that does sync + merge + migrations) hide which contract is being invoked, conflate consent profiles, and resist the manifest-level reasoning the install/sync runtime needs. New commands earn inclusion by representing one operation cleanly.
 
-A version transition moves a project's recorded versions to a target, and every part of it follows from the target the person chose (COR-059). Its propagation, migrations, seeding and merge are parts of that one operation. The rule governs what a command does to a project. Updating the CLI acts on no project, so a command may first update the CLI that runs it (COR-059 point 5).
+A version transition moves a project's recorded versions to a target, and every part of it follows from the target the person chose (COR-059). Its propagation, migrations, seeding and merge are parts of that one operation. The rule governs what a command does to a project. Updating the CLI acts on no project, so a command may first update the CLI that runs it (COR-059 point 5). The rule lists the core layer's operations. A data point's question, which a command may run once its operation is complete, is the definer's command and none of them (COR-059 point 5, COR-061).
 
 ### `sync` and `merge` stay separate
 

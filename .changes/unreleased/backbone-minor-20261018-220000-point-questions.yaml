@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability can ask you a question about a data point it defines, and record
+  your answer (COR-061). It names a command of its own as the point's
+  `question` in its package metadata. `pkit capabilities install`, `register`
+  and `upgrade` end with the questions of the points the capability defines and
+  of the points its contributions reach, and `pkit upgrade` ends with every
+  question, once the transition is complete. Each is asked only where standard
+  input and standard output are both terminals. Without one, nothing is asked
+  or recorded, and each question is printed as the command to run later.
+  `--dry-run` names them, `pkit sync` never asks, and `pkit capabilities show`
+  lists a point's question. `pkit validate` refuses a question that names no
+  command, or one that declares the query contract.

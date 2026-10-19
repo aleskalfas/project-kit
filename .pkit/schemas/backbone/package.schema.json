@@ -321,6 +321,10 @@
         },
         "mandatory": {
           "$ref": "#/$defs/mandatory"
+        },
+        "question": {
+          "description": "The point's question (COR-061): a command of this component's that asks the person about the point and records each answer they give. Must exist in `commands:` and must not declare the query contract, since it writes (checked in Python). The backbone runs it at the end of a capability's install or upgrade and of a transition of the backbone, only where standard input and standard output are both terminals, and prints `pkit <component> <command>` to run later where they are not. Sync never runs it.",
+          "$ref": "#/$defs/command-reference"
         }
       }
     },
