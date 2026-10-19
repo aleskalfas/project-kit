@@ -9,14 +9,17 @@ starts the harness (ADR-066 point 1). This module is that command's work:
   finds it with its one lookup of that tree (`command_runner`). Where no
   registered adapter has one, the run is refused and names the adapters. Where
   more than one has one, it is refused too, until a record says how a project
-  names its harness.
+  names its harness. An adapter's name must be a plain name, and its runner's
+  script must lie inside its folder, or no runner of it is run.
 - **Running it.** The runner runs under the agent-run policy of the one command
   runner (ADR-057 point 5): no arguments, the request as one JSON document on
   standard input, the caller's environment unchanged but for the run's
   deadline, from the project root, bounded by the run's limit plus
   `RUNNER_MARGIN_SECONDS`, the time the runner keeps to end the harness and
   answer. Past that bound, or on an interrupt, the runner is asked to stop, so
-  it ends the harness it started, and is killed after `END_GRACE_SECONDS`.
+  it ends the harness it started, and is killed after `END_GRACE_SECONDS`. A
+  run inside a command the backbone runs is refused: that run's kill asks
+  nothing first, so the harness would escape it.
 - **Reading its answer.** The runner answers with one JSON document
   (`ANSWER_VERSION`): how the run ended, the harness's exit, the agent's
   output, the harness's diagnostics and a reason. Anything else is a run with
@@ -25,9 +28,8 @@ starts the harness (ADR-066 point 1). This module is that command's work:
 What crosses the boundary is ADR-066 point 2's, in its unconfined form: the
 agent, the brief, the folder the run runs in, a wall-clock limit, and an
 effort level where one is set. The confined form, its clone and its check,
-and the marker of a run are the drift command's change (ADR-066,
-Implications). Until they arrive, a request carries no other key, and a
-runner refuses one that does.
+and the marker of a run are not built yet (ADR-066, Implications). Until they
+are, a request carries no other key, and a runner refuses one that does.
 
 The document the command writes for its caller (`AgentRun.as_json`) is the
 contract. A caller decides on its `ending`, never on the exit code.
@@ -42,7 +44,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
-from project_kit import command_runner
+from project_kit import agent_policy, command_runner
 from project_kit.command_runner import END_GRACE_SECONDS, Ending, registered_commands
 from project_kit.manifest import read_backbone_manifest
 
@@ -67,8 +69,8 @@ RUNNER_MARGIN_SECONDS = 30
 MAX_LIMIT_SECONDS = 7 * 24 * 60 * 60
 
 #: The effort levels a run may set, the methodology's vocabulary (the agents
-#: README, "Model and effort").
-EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
+#: README, "Model and effort"), held once in `agent_policy`.
+EFFORT_LEVELS = agent_policy.EFFORT_LEVELS
 
 #: An agent's name: a letter or digit, then letters, digits, dots, underscores
 #: and hyphens. So no name reads as a flag, a path or a second argument.
@@ -78,7 +80,7 @@ AGENT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 # the fifth is the backbone's, for a runner that gave no answer it could read.
 FINISHED = "finished"  # the harness ran and exited: `exit_code` is its exit
 NOT_STARTED = "not-started"  # the harness, or the runner, could not be started
-TIMED_OUT = "timed-out"  # stopped at its limit, with every process it started
+TIMED_OUT = "timed-out"  # stopped at its limit, with the processes the runner reaches
 REFUSED = "refused"  # refused before it started, with the reason
 NO_ANSWER = "no-answer"  # the runner ended without an answer; what ran is not known
 RUNNER_ENDINGS = (FINISHED, NOT_STARTED, TIMED_OUT, REFUSED)
@@ -189,6 +191,8 @@ def find_runners(target_root: Path) -> tuple[list[Runner], list[str]]:
         if entry.kind != "adapter":
             continue
         adapters.append(entry.name)
+        if not AGENT_NAME.fullmatch(entry.name):  # a plain name, never a path
+            continue
         commands = registered_commands(target_root / ".pkit" / "adapters" / entry.name)
         leaf = command_runner.resolve_command(commands, RUNNER_REFERENCE)
         if leaf is not None:
@@ -201,7 +205,22 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
 
     Never raises for what the runner or the harness did: every ending is in
     the run's document. A request with a problem is refused before any runner
-    is looked for."""
+    is looked for.
+
+    A run inside a command the backbone runs is refused before anything else.
+    That command's run bounds what it starts by its own deadline, and on
+    overrun or an interrupt kills its whole group without asking first. So the
+    runner would be killed before it could end the harness, which leads a
+    session of its own and would run on."""
+    if command_runner.inherited_deadline() is not None:
+        return AgentRun(
+            request.agent,
+            REFUSED,
+            reason=(
+                "this run is inside a command the backbone runs, whose bound and kill the "
+                "harness would escape: an agent run starts only outside one"
+            ),
+        )
     problem = request.problem()
     if problem is not None:
         return AgentRun(request.agent, REFUSED, reason=problem)
@@ -233,6 +252,17 @@ def run_agent(target_root: Path, request: Request) -> AgentRun:
             REFUSED,
             runner=runner.adapter,
             reason=f"the runner `{runner.adapter}` registers, {runner.script}, does not exist",
+        )
+    folder = (target_root / ".pkit" / "adapters" / runner.adapter).resolve()
+    if not runner.script.resolve().is_relative_to(folder):
+        return AgentRun(
+            request.agent,
+            REFUSED,
+            runner=runner.adapter,
+            reason=(
+                f"the runner `{runner.adapter}` registers, {runner.script}, lies outside "
+                "the adapter's folder"
+            ),
         )
     run = command_runner.run_command(
         runner.script,

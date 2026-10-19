@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 import dataclasses
+import importlib.util
 import json
 import os
 import signal
@@ -27,11 +28,12 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+from types import ModuleType
 
 import pytest
 from click.testing import CliRunner
 
-from project_kit import agent_runs
+from project_kit import agent_runs, command_runner, run_cache
 from project_kit.agent_runs import Request, run_agent
 from project_kit.cli import main
 from project_kit.manifest import (
@@ -93,9 +95,16 @@ def _deploy_agent(folder: Path, name: str = AGENT) -> None:
     (agents / f"{name}.md").write_text(f"---\nname: {name}\n---\nA reviewer.\n", encoding="utf-8")
 
 
-def _register(root: Path, kind: ComponentKind, name: str, runner_body: str | None) -> Path:
+def _register(
+    root: Path,
+    kind: ComponentKind,
+    name: str,
+    runner_body: str | None,
+    script_path: str = "run-agent.py",
+) -> Path:
     """Register a synthetic component of `kind` whose `commands:` tree names a
-    `run-agent` leaf; its script is written with `runner_body` unless None."""
+    `run-agent` leaf at `script_path`; its script is written with `runner_body`
+    unless None."""
     area = "adapters" if kind == "adapter" else "capabilities"
     component_dir = root / ".pkit" / area / name
     component_dir.mkdir(parents=True, exist_ok=True)
@@ -103,10 +112,10 @@ def _register(root: Path, kind: ComponentKind, name: str, runner_body: str | Non
         f"schema_version: 1\ncomponent:\n  kind: {kind}\n  name: {name}\n  version: 0.1.0\n"
         "description: Synthetic component for agent-run tests.\n"
         'requires_backbone: ">=0.1.0"\n'
-        "commands:\n  run-agent:\n    script: run-agent.py\n    help: Run an agent.\n",
+        f"commands:\n  run-agent:\n    script: {script_path}\n    help: Run an agent.\n",
         encoding="utf-8",
     )
-    script = component_dir / "run-agent.py"
+    script = component_dir / script_path
     if runner_body is not None:
         _script(script, runner_body)
     backbone = read_backbone_manifest(root)
@@ -187,6 +196,89 @@ def test_a_runner_whose_script_is_gone_is_refused(
     run = run_agent(root, _request(tmp_path))
     assert (run.ending, run.runner) == (agent_runs.REFUSED, "other-harness")
     assert "does not exist" in run.reason
+
+
+def test_a_runner_outside_its_adapters_folder_is_refused(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path
+) -> None:
+    root = make_adopter_repo().root
+    _drop_claude_code_runner(root)
+    _register(root, "adapter", "other-harness", "print('{}')\n", "../../capabilities/elsewhere.py")
+    run = run_agent(root, _request(tmp_path))
+    assert (run.ending, run.runner) == (agent_runs.REFUSED, "other-harness")
+    assert "lies outside the adapter's folder" in run.reason
+
+
+def test_an_adapter_whose_name_is_a_path_has_no_runner(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The lookup builds an adapter's folder only from a plain name, so no
+    manifest entry makes a capability's command a runner."""
+    root = make_adopter_repo().root
+    _register(root, "adapter", "../capabilities/cap", "print('{}')\n")
+    runners, adapters = agent_runs.find_runners(root)
+    assert [runner.adapter for runner in runners] == ["claude-code"]
+    assert "../capabilities/cap" in adapters
+
+
+def test_a_run_inside_a_command_the_backbone_runs_is_refused_first(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """That run's kill asks nothing first, so the harness would outlive it."""
+    monkeypatch.setattr(agent_runs.command_runner, "inherited_deadline", lambda: 1.0)
+    # No project, and a request with a problem: the refusal comes before both.
+    run = run_agent(tmp_path / "no-project", _request(tmp_path, brief=""))
+    assert run.ending == agent_runs.REFUSED
+    assert "inside a command the backbone runs" in run.reason
+
+
+def _load(path: Path, name: str) -> ModuleType:
+    spec = importlib.util.spec_from_file_location(name, path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_the_copies_across_the_three_layers_agree() -> None:
+    """The adapter's runner runs under the system `python3` and the capability in
+    its own environment, so neither imports the backbone. What each copies of
+    the contract is held equal here."""
+    repo = Path(__file__).resolve().parent.parent
+    runner = _load(repo / ".pkit" / "adapters" / "claude-code" / "run-agent.py", "_runner_copy")
+    pm = _load(
+        repo
+        / ".pkit"
+        / "capabilities"
+        / "project-management"
+        / "scripts"
+        / "_lib"
+        / "agent_runs.py",
+        "_pm_agent_runs_copy",
+    )
+    assert agent_runs.MAX_LIMIT_SECONDS == runner.MAX_LIMIT_SECONDS == pm.MAX_LIMIT_SECONDS
+    assert tuple(agent_runs.EFFORT_LEVELS) == tuple(runner.EFFORT_LEVELS)
+    assert agent_runs.AGENT_NAME.pattern == runner.AGENT_NAME.pattern
+    assert (agent_runs.REQUEST_VERSION, agent_runs.ANSWER_VERSION) == (
+        runner.REQUEST_VERSION,
+        runner.ANSWER_VERSION,
+    )
+    assert agent_runs.DOCUMENT_VERSION == pm.VERSION
+    assert set(agent_runs.RUNNER_ENDINGS) == {
+        runner.FINISHED,
+        runner.NOT_STARTED,
+        runner.TIMED_OUT,
+        runner.REFUSED,
+    }
+    assert set(agent_runs.ENDINGS) == set(pm.ENDINGS)
+    assert set(runner.RUN_VARIABLES) == {
+        command_runner.DEADLINE_ENV,
+        command_runner.STRAYS_ENV,
+        run_cache.CACHE_ENV,
+    }
+    assert agent_runs.RUNNER_MARGIN_SECONDS + command_runner.END_GRACE_SECONDS < pm.MARGIN_SECONDS
+    assert command_runner.END_GRACE_SECONDS < pm.GRACE_SECONDS
 
 
 # --- the request --------------------------------------------------------------
@@ -343,6 +435,9 @@ def test_a_runner_that_cannot_start_did_not_start(
     assert "could not start" in run.reason
 
 
+# Serial: the runner must set its handler inside a three-second bound, which a
+# machine busy with other test workers misses.
+@pytest.mark.serial
 def test_past_its_bound_the_runner_is_asked_to_stop_before_it_is_killed(
     make_adopter_repo: MakeAdopterRepo, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -357,8 +452,7 @@ def test_past_its_bound_the_runner_is_asked_to_stop_before_it_is_killed(
         "signal.signal(signal.SIGTERM, stop)\n"
         "time.sleep(60)\n",
     )
-    # Two seconds of margin, so a slow start under load still sets the handler
-    # before the bound.
+    # Two seconds of margin: a bound of three seconds.
     monkeypatch.setattr(agent_runs, "RUNNER_MARGIN_SECONDS", 2)
     started = time.monotonic()
     run = run_agent(root, _request(tmp_path, limit_seconds=1))

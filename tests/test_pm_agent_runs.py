@@ -40,8 +40,7 @@ def ar() -> ModuleType:
 # A `pkit` that logs how it was asked and what it read on standard input, then
 # writes what the test put in FAKE_PKIT_ANSWER: its `stderr`, its `stdout`, and
 # exit `code`. With `linger`, it sleeps instead, and writes a mark when it is
-# asked to stop. It listens for the stop before anything else, so a slow start
-# under load cannot let the signal end it unmarked.
+# asked to stop. It listens for the stop before it does anything else.
 _FAKE_PKIT = """\
 import json, os, signal, sys, time
 def stop(signum, frame):
@@ -101,10 +100,10 @@ def test_pm_asks_the_backbones_run_command(ar: ModuleType, fake_pkit: Path) -> N
     )
     assert run == ar.AgentRun("finished", 0, "the review\n", "", "")
     seen = json.loads((fake_pkit / "log.json").read_text(encoding="utf-8"))
+    # The name last, after `--`, so no name is read as an option.
     assert seen["argv"] == [
         "agents",
         "run",
-        "code-reviewer",
         "--folder",
         str(fake_pkit),
         "--limit",
@@ -112,6 +111,8 @@ def test_pm_asks_the_backbones_run_command(ar: ModuleType, fake_pkit: Path) -> N
         "--effort",
         "low",
         "--json",
+        "--",
+        "code-reviewer",
     ]
     assert seen["brief"] == "Review PR 7."
 
@@ -187,6 +188,9 @@ def test_no_pkit_on_path_did_not_start(
     assert "`pkit` is not on PATH" in run.reason
 
 
+# Serial: the fake `pkit` must set its handler inside a three-second bound, which
+# a machine busy with other test workers misses.
+@pytest.mark.serial
 def test_past_its_bound_pkit_is_asked_to_stop(
     ar: ModuleType, fake_pkit: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

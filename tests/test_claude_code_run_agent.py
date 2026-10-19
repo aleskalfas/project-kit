@@ -11,8 +11,10 @@
   deployed, and a harness that is not on PATH;
 - the harness gets the brief on standard input, starts in the folder, and gets
   none of the backbone's run variables;
-- at the limit it ends the harness's whole process group, and asked to stop it
-  ends that group first;
+- at the limit it ends the harness and every process still descended from it,
+  a shell command in a session of its own included, and asked to stop it ends
+  them first;
+- the harness it runs is the one it found, even through a relative PATH entry;
 - it runs under the system `python3` of a stock macOS: Python 3.9 syntax, the
   standard library only.
 """
@@ -72,13 +74,16 @@ def _deploy(folder: Path, name: str = "code-reviewer") -> None:
     (agents / f"{name}.md").write_text("---\nname: x\n---\n", encoding="utf-8")
 
 
-def _run(request: dict[str, object] | str, env: dict[str, str]) -> dict[str, object]:
+def _run(
+    request: dict[str, object] | str, env: dict[str, str], cwd: Path | None = None
+) -> dict[str, object]:
     text = request if isinstance(request, str) else json.dumps(request)
     done = subprocess.run(
         [sys.executable, str(RUNNER)],
         input=text.encode(),
         capture_output=True,
         env=env,
+        cwd=cwd,
         timeout=60,
         check=False,
     )
@@ -268,35 +273,71 @@ def test_a_run_finishes_with_the_harness_exit(tmp_path: Path, env: dict[str, str
     assert seen["deadline"] is None
 
 
-def test_at_the_limit_the_harness_and_what_it_started_are_ended(
-    tmp_path: Path, env: dict[str, str]
-) -> None:
+# A harness that starts what Claude Code starts: a child in its own process
+# group, and a shell command in a session of its own, which starts a
+# grandchild in a further session. It writes the pids of all four once they
+# run, then outlives any limit a test sets.
+_SPAWNING_HARNESS = """
+import os, subprocess, sys, time
+sleeper = [sys.executable, "-c", "import time; time.sleep(120)"]
+in_group = subprocess.Popen(sleeper)
+grandchild_pids = sys.argv[0] + ".grandchild"
+shell = subprocess.Popen(
+    [sys.executable, "-c",
+     "import subprocess, sys, time\\n"
+     "g = subprocess.Popen(sys.argv[1:-1], start_new_session=True)\\n"
+     "open(sys.argv[-1], 'w').write(str(g.pid))\\n"
+     "time.sleep(120)\\n",
+     *sleeper, grandchild_pids],
+    start_new_session=True,
+)
+while not (os.path.exists(grandchild_pids) and open(grandchild_pids).read()):
+    time.sleep(0.05)
+pids = [os.getpid(), in_group.pid, shell.pid, int(open(grandchild_pids).read())]
+open(os.environ["HARNESS_PIDS"], "w").write(" ".join(str(pid) for pid in pids))
+time.sleep(120)
+"""
+
+
+def _spawning_harness(tmp_path: Path, env: dict[str, str]) -> tuple[Path, dict[str, str]]:
     _deploy(tmp_path)
     pids = tmp_path / "pids"
-    _script(
-        _bin(env) / "claude",
-        "import subprocess, sys, time\n"
-        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'])\n"
-        f"open({str(pids)!r}, 'w').write(f'{{child.pid}}')\n"
-        "time.sleep(60)\n",
-    )
+    _script(_bin(env) / "claude", _SPAWNING_HARNESS)
+    return pids, {**env, "HARNESS_PIDS": str(pids)}
+
+
+def _wait_for(pids: Path) -> list[int]:
+    for _ in range(600):
+        if pids.is_file() and pids.read_text(encoding="utf-8"):
+            return [int(pid) for pid in pids.read_text(encoding="utf-8").split()]
+        time.sleep(0.05)
+    pytest.fail("the harness never started what it starts")
+
+
+# Serial: the harness must start its children and grandchild inside the run's
+# limit, which a machine busy with other test workers misses.
+@pytest.mark.serial
+def test_at_the_limit_the_harness_and_every_descendant_are_ended(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    """Claude Code starts each shell command in a session of its own, which a
+    kill of the harness's group alone would leave running."""
+    pids, env = _spawning_harness(tmp_path, env)
     started = time.monotonic()
-    # Three seconds, so a slow start under load still starts the child first.
-    answer = _run(_request(tmp_path, limit_seconds=3), env)
+    answer = _run(_request(tmp_path, limit_seconds=5), env)
     assert time.monotonic() - started < 30
     assert answer["ending"] == "timed-out"
     assert answer["exit_code"] is None
-    assert "within 3 s" in str(answer["reason"])
-    _assert_gone(int(pids.read_text(encoding="utf-8")))
+    assert "within 5 s" in str(answer["reason"])
+    assert "every process still descended from it" in str(answer["reason"])
+    for pid in _wait_for(pids):
+        _assert_gone(pid)
 
 
-def test_asked_to_stop_it_ends_the_harness_first(tmp_path: Path, env: dict[str, str]) -> None:
-    _deploy(tmp_path)
-    pid_file = tmp_path / "harness.pid"
-    _script(
-        _bin(env) / "claude",
-        f"import os, time\nopen({str(pid_file)!r}, 'w').write(str(os.getpid()))\ntime.sleep(60)\n",
-    )
+def test_asked_to_stop_it_ends_the_harness_and_every_descendant_first(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    pids, env = _spawning_harness(tmp_path, env)
     process = subprocess.Popen(
         [sys.executable, str(RUNNER)],
         stdin=subprocess.PIPE,
@@ -307,18 +348,50 @@ def test_asked_to_stop_it_ends_the_harness_first(tmp_path: Path, env: dict[str, 
     assert process.stdin is not None
     process.stdin.write(json.dumps(_request(tmp_path, limit_seconds=60)).encode())
     process.stdin.close()
-    for _ in range(600):
-        if pid_file.is_file() and pid_file.read_text(encoding="utf-8"):
-            break
-        time.sleep(0.05)
-    else:
+    try:
+        started = _wait_for(pids)
+    except BaseException:
         process.kill()
-        pytest.fail("the harness never started")
+        raise
     process.send_signal(signal.SIGTERM)
     assert process.wait(timeout=20) == 128 + signal.SIGTERM
     assert process.stdout is not None
     assert process.stdout.read() == b""  # no answer
-    _assert_gone(int(pid_file.read_text(encoding="utf-8")))
+    for pid in started:
+        _assert_gone(pid)
+
+
+def test_the_walk_finds_every_descendant_and_nothing_else(runner: ModuleType) -> None:
+    table = {
+        10: (1, 10),  # the harness
+        11: (10, 10),  # a child in its group
+        12: (10, 12),  # a shell command in a session of its own
+        13: (12, 13),  # its child, in a further session
+        20: (1, 20),  # unrelated
+        21: (20, 20),
+    }
+    assert runner.descendants(10, table) == {11, 12, 13}
+    assert runner.descendants(99, table) == set()
+
+
+def test_the_process_table_lists_this_process(runner: ModuleType) -> None:
+    table = runner.process_table()
+    assert table[os.getpid()] == (os.getppid(), os.getpgrp())
+
+
+def test_a_relative_path_entry_runs_the_harness_it_found(
+    tmp_path: Path, env: dict[str, str]
+) -> None:
+    """A relative PATH entry is found from the runner's folder. The harness
+    run is that one, never a `claude` the run's folder holds."""
+    runner_folder = tmp_path / "runner"
+    run_folder = tmp_path / "run"
+    _deploy(run_folder)
+    _script(runner_folder / "bin" / "claude", "print('the one found')\n")
+    _script(run_folder / "bin" / "claude", "print('the run folder\\'s')\n")
+    env = {**env, "PATH": f"bin{os.pathsep}{os.environ.get('PATH', '')}"}
+    answer = _run(_request(run_folder), env, cwd=runner_folder)
+    assert (answer["ending"], answer["output"]) == ("finished", "the one found\n")
 
 
 def _assert_gone(pid: int) -> None:

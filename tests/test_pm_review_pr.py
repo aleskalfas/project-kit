@@ -306,7 +306,7 @@ def test_timeout_above_a_week_errors_before_any_run(rpr) -> None:
     assert "at most 604800 seconds" in str(exc.value)
 
 
-def test_invoke_agent_passes_timeout_to_subprocess(rpr, monkeypatch) -> None:
+def test_invoke_agent_passes_timeout_as_the_runs_limit(rpr, monkeypatch) -> None:
     """The resolved timeout reaches the run as its limit."""
     captured = _capture_invocation(rpr, monkeypatch)
     rpr._invoke_agent("reviewer", 99, {}, 720)
@@ -1898,7 +1898,7 @@ def test_a_reviewer_that_fails_or_times_out_does_not_stop_the_others(
             return runs.AgentRun(
                 runs.TIMED_OUT,
                 reason=f"the agent did not finish within {kwargs['limit_seconds']} s, so the "
-                "harness was ended with every process it started",
+                "harness was ended with every process still descended from it",
             )
         if name == "code-reviewer":
             return runs.AgentRun(runs.FINISHED, exit_code=1, diagnostics="crashed")

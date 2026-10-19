@@ -934,6 +934,9 @@ def test_a_policy_writes_the_commands_standard_input(tmp_path: Path) -> None:
     assert run.document == {"read": '{"brief": "é"}'}
 
 
+# Serial: the script must set its handler inside the three-second bound, which a
+# machine busy with other test workers misses.
+@pytest.mark.serial
 def test_with_a_grace_the_group_is_asked_to_stop_before_it_is_killed(tmp_path: Path) -> None:
     asked = tmp_path / "asked"
     script = _script(

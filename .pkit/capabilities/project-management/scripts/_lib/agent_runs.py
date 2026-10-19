@@ -4,7 +4,7 @@ A capability never calls a harness, and never looks for an adapter. It asks the
 backbone's run command, `pkit agents run`, which starts the runner the
 project's adapter registers, and the runner starts the harness. This module is
 the one place project-management asks: `review-pr` starts its reviewers
-through it, and the drift command will start its fixers through it.
+through it, and the command that starts the granted fixers will too.
 
 The command reads the brief on standard input and writes one JSON document, a
 version this module reads (`VERSION`): how the run ended, the harness's exit,
@@ -17,7 +17,11 @@ for the backbone's document that long, plus `MARGIN_SECONDS`. `pkit` runs in
 the caller's process group, so an interrupt at the terminal reaches it, and it
 stops its runner as it ends. Past pm's bound, or on an exception, `pkit` alone
 is asked to stop, and killed `GRACE_SECONDS` later. Asked, it stops the runner,
-which ends the harness and every process it started.
+which ends the harness and the processes still descended from it. In a project
+pinned to another backbone version, `pkit` is the router, which passes no such
+signal on; there the runner still ends the harness at the run's limit.
+
+The agent's name goes last, after `--`, so no name is read as an option.
 
 When the backbone cannot answer (no `pkit`, a backbone that predates the
 command, a run past pm's bound, an answer pm cannot read), the run is one with
@@ -49,7 +53,7 @@ MAX_LIMIT_SECONDS = 7 * 24 * 60 * 60
 MARGIN_SECONDS = 60
 
 #: Once asked to stop, how long `pkit` has to stop its runner before it is
-#: killed: the runner's own grace (2 s), and room to spare.
+#: killed: the backbone's grace on the runner (2 s), and room to spare.
 GRACE_SECONDS = 10.0
 
 # How a run ended, as the backbone's document names it.
@@ -85,10 +89,10 @@ def run_agent(
     """Run agent `name` once on `brief`, in `folder`, within `limit_seconds`, at
     `effort` where one is set. Never raises for what the run did: every ending
     is in the answer. An interrupt stops the run, then propagates."""
-    argv = [*ARGV, name, "--folder", str(folder), "--limit", str(limit_seconds)]
+    argv = [*ARGV, "--folder", str(folder), "--limit", str(limit_seconds)]
     if effort is not None:
         argv += ["--effort", effort]
-    argv.append("--json")
+    argv += ["--json", "--", name]
     command = f"`{' '.join(ARGV)}`"
     try:
         process = subprocess.Popen(

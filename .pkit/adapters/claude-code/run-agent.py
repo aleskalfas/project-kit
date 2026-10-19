@@ -24,14 +24,22 @@ it: the confined form arrives with a runner that reads it.
   the mode they or the harness choose, as a session started in that folder
   would.
 - Those three flags are the closed set (ADR-066 point 4). No other flag is
-  ever passed, and none of them approves a call or loads other configuration.
-  `command` builds the command line, and `check_flags` refuses one with a
-  flag outside the set. The brief goes on standard input, so no word of it is
-  read as a flag or a subcommand.
-- The harness starts in a session of its own. At the limit the runner ends
-  that session's whole process group: the harness and every process it
-  started there. Asked to stop itself (`SIGTERM`, `SIGHUP`, `SIGINT`), it ends
-  that group first, then exits with no answer.
+  ever passed, and none of them approves a call by itself. `--agent` makes the
+  agent's definition the session's agent, so a field that definition carries,
+  such as a permission mode or hooks, applies as in any session started with
+  it. Checking a definition's fields comes with the confined form (ADR-066
+  point 3). `command` builds the command line, and `check_flags` refuses one
+  with a flag outside the set. The brief goes on standard input, so no word of
+  it is read as a flag or a subcommand.
+- The harness starts in a session of its own. At the limit the runner ends the
+  harness and every process still descended from it (`end_harness`). Claude
+  Code starts each shell command in a session of its own, which a kill of the
+  harness's group would not reach. So the runner first stops the harness's
+  group, then walks the process table for its descendants and stops each
+  one's group, until it finds no new one, and then kills them all. A process
+  that has already left the tree, as one that daemonises leaves it, is not
+  reached. Asked to stop itself (`SIGTERM`, `SIGHUP`, `SIGINT`), it ends the
+  harness the same way, then exits with no answer.
 - The harness gets the runner's environment, less the variables of the
   backbone's run of this runner (`RUN_VARIABLES`). So a `pkit` an agent runs
   starts as a run of its own, as in a session a person started.
@@ -68,8 +76,7 @@ HARNESS = "claude"
 REQUEST_KEYS = frozenset({"schema_version", "agent", "brief", "folder", "limit_seconds", "effort"})
 
 #: The closed set of flags this runner passes the harness (ADR-066 point 4),
-#: each with whether it takes a value. No member approves a call or loads
-#: configuration other than the run's own.
+#: each with whether it takes a value. No member approves a call by itself.
 FLAGS = {"-p": False, "--agent": True, "--effort": True}
 
 #: The harness's effort levels, the methodology's vocabulary.
@@ -84,6 +91,14 @@ AGENT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 #: The backbone's own variables for its run of this runner. The harness's run
 #: is not part of that run, so they are not passed on.
 RUN_VARIABLES = ("PKIT_COMMAND_DEADLINE", "PKIT_COMMAND_STRAYS", "PKIT_RUN_CACHE")
+
+#: Where the process table is read: the system's own `ps` first, so no `ps`
+#: earlier on the run's PATH stands in for it.
+PS_CANDIDATES = ("/bin/ps", "/usr/bin/ps")
+
+#: How many times the runner walks the process table for descendants it has not
+#: stopped yet. A stopped process starts nothing, so a few walks find them all.
+END_ROUNDS = 10
 
 FINISHED = "finished"
 NOT_STARTED = "not-started"
@@ -196,11 +211,89 @@ def harness_environment(env: dict[str, str]) -> dict[str, str]:
     return {key: value for key, value in env.items() if key not in RUN_VARIABLES}
 
 
-def end_harness(process: subprocess.Popen[bytes]) -> None:
-    """End the harness's session: its process group, the harness and every
-    process it started there."""
+def process_table() -> dict[int, tuple[int, int]]:
+    """Each process's parent and process group, as `ps` lists them, by pid.
+    Empty when no `ps` can be read: the harness's own group is then all the
+    runner ends."""
+    ps = next((path for path in PS_CANDIDATES if os.access(path, os.X_OK)), None)
+    ps = ps or shutil.which("ps")
+    if ps is None:
+        return {}
+    try:
+        listed = subprocess.run(
+            [ps, "-A", "-o", "pid=,ppid=,pgid="],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return {}
+    table: dict[int, tuple[int, int]] = {}
+    for line in listed.stdout.decode("ascii", errors="replace").splitlines():
+        fields = line.split()
+        if len(fields) != 3:
+            continue
+        try:
+            pid, ppid, pgid = (int(field) for field in fields)
+        except ValueError:
+            continue
+        table[pid] = (ppid, pgid)
+    return table
+
+
+def descendants(root: int, table: dict[int, tuple[int, int]]) -> set[int]:
+    """Every process the table shows descended from `root`."""
+    children: dict[int, list[int]] = {}
+    for pid, (ppid, _pgid) in table.items():
+        children.setdefault(ppid, []).append(pid)
+    found: set[int] = set()
+    waiting = [root]
+    while waiting:
+        for child in children.get(waiting.pop(), ()):
+            if child != root and child not in found:
+                found.add(child)
+                waiting.append(child)
+    return found
+
+
+def _signal_group(pgid: int, signum: int) -> None:
     with contextlib.suppress(ProcessLookupError, PermissionError):
-        os.killpg(process.pid, signal.SIGKILL)
+        os.killpg(pgid, signum)
+
+
+def end_harness(process: subprocess.Popen[bytes]) -> None:
+    """End the harness and every process still descended from it.
+
+    The harness leads a process group of its own, but Claude Code starts each
+    shell command in a session of its own, so a kill of that one group would
+    leave the commands running. The runner stops the harness's group first, so
+    the harness starts nothing more. It then walks the process table for the
+    harness's descendants and stops each one's group, until a walk finds no
+    group it has not stopped, and then kills every group it stopped. A process
+    that left the tree before the limit, as one that daemonises leaves it, is
+    not found. Never the runner's own group, nor a group of 0 or 1."""
+    own = os.getpgrp()
+    stopped: list[int] = []
+
+    def stop_group(pgid: int) -> bool:
+        if pgid <= 1 or pgid == own or pgid in stopped:
+            return False
+        stopped.append(pgid)
+        _signal_group(pgid, signal.SIGSTOP)
+        return True
+
+    stop_group(process.pid)
+    for _ in range(END_ROUNDS):
+        table = process_table()
+        new = False
+        for pid in sorted(descendants(process.pid, table)):
+            new = stop_group(table[pid][1]) or new
+        if not new:
+            break
+    for pgid in stopped:
+        _signal_group(pgid, signal.SIGKILL)
 
 
 def run(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
@@ -208,6 +301,9 @@ def run(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
     harness = shutil.which(HARNESS, path=env.get("PATH"))
     if harness is None:
         raise Refused(f"the `{HARNESS}` command line is not on PATH")
+    # A relative PATH entry gives a relative path, found from the runner's
+    # folder: keep that one, not one the run's folder holds.
+    harness = os.path.abspath(harness)
     folder = Path(request["folder"])
     agent = request["agent"]
     if agent_file(agent, folder, env) is None:
@@ -244,7 +340,7 @@ def run(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
             TIMED_OUT,
             reason=(
                 f"the agent did not finish within {limit} s, so the harness was ended "
-                "with every process it started"
+                "with every process still descended from it"
             ),
         )
     return answer(
@@ -256,7 +352,8 @@ def run(request: dict[str, Any], env: dict[str, str]) -> dict[str, Any]:
 
 
 def stop(signum: int, _frame: object) -> None:
-    """Asked to stop: end the harness's session first, then exit with no answer."""
+    """Asked to stop: end the harness first (`end_harness`), then exit with no
+    answer."""
     for process in _harness:
         end_harness(process)
     os._exit(128 + signum)

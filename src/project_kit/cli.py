@@ -342,11 +342,18 @@ def _stops_on_signal() -> Generator[None]:
     A caller that ends `agents run` at its own bound, as project-management
     does, asks it to stop with `SIGTERM`. Python would otherwise exit at once,
     and the runner, in a session of its own, would run on. Raised here, the
-    signal stops the runner as an interrupt does. Off the main thread no
-    handler can be set, and the block runs without one."""
+    signal stops the runner as an interrupt does. The first signal sets both
+    to be ignored, so a second one cannot cut short the stop it began. Off
+    the main thread no handler can be set, and the block runs without one.
+
+    A project pinned to another backbone version runs this command through the
+    router's `uvx`, which a `SIGTERM` to the router does not reach. There the
+    runner still ends the harness at the run's limit."""
     import signal
 
     def asked_to_stop(signum: int, _frame: object) -> None:
+        for each in (signal.SIGTERM, signal.SIGHUP):
+            signal.signal(each, signal.SIG_IGN)
         raise _AskedToStop(signum)
 
     previous: dict[int, Any] = {}
@@ -377,8 +384,8 @@ def _stops_on_signal() -> Generator[None]:
     type=click.IntRange(1, agent_runs.MAX_LIMIT_SECONDS),
     required=True,
     metavar="SECONDS",
-    help="The run's wall-clock limit. At it the runner ends the harness and every process "
-    "it started.",
+    help="The run's wall-clock limit. At it the runner ends the harness and the processes "
+    "still descended from it.",
 )
 @click.option(
     "--effort",
@@ -398,9 +405,9 @@ def agents_run(
     starts the runner the project's adapter registers in its `commands:` tree
     as `run-agent`, and the runner starts the harness in FOLDER. With no
     adapter's runner, or more than one, the run is refused and the refusal
-    names the adapters. A run nobody watches cannot answer a question, so a
-    call the harness would ask about is never approved in a person's place: no
-    runner passes a flag that bypasses permissions (ADR-066 point 4).
+    names the adapters. Inside a command the backbone runs, it is refused
+    too. No runner passes a flag that bypasses permissions (ADR-066 point 4).
+    The run starts in the mode the settings in FOLDER, or the harness, choose.
 
     \b
     With --json, one line of JSON, keys sorted: `schema_version` (1), `agent`,

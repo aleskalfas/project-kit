@@ -792,7 +792,8 @@ def _invoke_agent(
     the harness. No harness is called here.
 
     `timeout` is the per-agent wall-clock cap in seconds (issue #766); a
-    reviewer that runs longer is ended, with every process it started, and
+    reviewer that runs longer is ended, with the processes still descended
+    from its harness, and
     yields no verdict. The caller resolves the value once
     (`_resolve_agent_timeout`) and passes the same uniform value for every
     reviewer.

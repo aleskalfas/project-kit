@@ -10,7 +10,9 @@ body: >
   starts the runner the project's adapter registers in its `commands:` tree
   under `run-agent`, and the runner starts the harness. With no adapter's
   runner, or more than one, the run is refused and the reason names the
-  registered adapters. The run takes the unconfined form, the one the review
+  registered adapters. So is a runner whose script lies outside its adapter's
+  folder, and a run inside a command the backbone runs, whose kill the harness
+  would outlive. The run takes the unconfined form, the one the review
   command's runs take: it runs in the folder under the person's and the
   project's settings, and no flag that bypasses permissions reaches it. With
   `--json` it writes one document, `schema_version` 1, whose `ending` is
@@ -21,6 +23,4 @@ body: >
   asked to stop with `SIGTERM` before it is killed, so it ends the harness it
   started. `SIGTERM` or `SIGHUP` to the command stops the runner the same way.
   The CLI README ("Agent runs"), the lifecycle README (the agent-run policy)
-  and the adapters README ("The agent runner") document it. The confined form,
-  its clone and check, and the marker that refuses a run inside a run arrive
-  with the drift command.
+  and the adapters README ("The agent runner") document it.
