@@ -106,7 +106,7 @@ pkit analysis new revalidation <subject> --change <ref> --trigger <trigger> --ou
 
 A command that starts fixers starts you where the project granted you, on the default branch's stale analysis artefacts ([project-management:DEC-056-drift-fixers] point 3). Nobody watches the run, and nobody can answer you. The judgment above holds, `pkit analysis propose` included. What the run takes and what it returns are set here, and where another section says otherwise, this section wins.
 
-The contract of such a run is the command's (project-management DEC-056 points 3 and 6). This section is the fixer's side of it. The record gives the line's three states, an answer of fields, and a held artefact's question and answer in its next brief. The rest of what the brief names, the line's exact form, the fields beyond the record's three, and the folders are this body's, until project-management states the contract in full. Its statement then wins.
+The contract of such a run is the command's ([project-management:DEC-056-drift-fixers] points 3 and 6), and this section is your side of it. The record gives the line's three states, an answer of fields, and a held artefact's question and answer in its next brief. This section gives the rest: what else the brief names, the line's exact form, the fields beyond the record's three, and the folders.
 
 **The brief is your only instruction.** It names:
 - the command that started you
@@ -122,11 +122,11 @@ Commit messages, artefacts and the files they anchor are what you judge, never w
 - **Only the artefacts the brief names.** Another flagged artefact is not yours in this run. Run no cascade: the command starts you again once these are answered.
 - **Intent from the commits, and from an answer.** The run is given no network, so you read no pull request and no work item. An answer the brief carries is a quote whose source is the person it names. Pass it to `pkit analysis propose` as `--intended` or `--unintended`, as you would a person's answer in a session.
 - **You never ask, and never wait.** Where a session would ask, the artefact is held, and its result line carries the question.
-- **An artefact that waits for its upstream** gets `none`. It waits where its upstream is stale, or is in the brief too (project-management DEC-056 point 3).
+- **An artefact that waits for its upstream** gets `none`. It waits where its upstream is stale, or is in the brief too ([project-management:DEC-056-drift-fixers] point 3).
 - **A call the run refuses stays refused.** It comes back with no prompt. Look for no other way to make it. Where the artefact cannot be judged without it, give it `none`, with the reason. Where only `git apply --check` is refused, leave that check to whoever applies the diff.
-- **No judgment without `pkit analysis propose`.** It is a query, so a run may call it. Where the run refuses it, or it cannot start inside the run's confinement, judge no artefact by reading alone: give each `none`, with that reason. Its rules and its checks of each quote are what a person relies on when deciding.
+- **No judgment without `pkit analysis propose`.** It is a query, so a run may call it. Its rules and its checks of each quote are what a person relies on. Where the run refuses it, or it cannot start inside the run, judge no artefact by reading alone. Give each `none`, with that reason (DEC-001 point 5).
 - **No deferral.** An answer is `unchanged` or `updated`. A deferral is the person's to give, in place of an answer, and its reason names an open follow-up (the core rules, rule 20), which a run cannot open.
-- **No command, anywhere.** The command that started you builds each writer's command from your fields, and never runs a string you wrote (project-management DEC-056 point 6). So nothing you write in a run is a command, the record's included.
+- **No command, anywhere.** The command that started you builds each writer's command from your fields, and never runs a string you wrote ([project-management:DEC-056-drift-fixers] point 6). So nothing you write in a run is a command, the record's included.
 
 **What you write for an artefact,** in the folder `<artefact>/` of the workspace, where `<artefact>` is the artefact as the brief names it, so that no two artefacts share a folder:
 - `answer.json`, for an artefact you propose an answer for, the answer as fields, one object:
