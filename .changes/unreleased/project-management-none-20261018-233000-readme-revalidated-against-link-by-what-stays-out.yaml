@@ -1,0 +1,7 @@
+component: project-management
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050 point 16,
+  where a link may take every anchor but those its fields list (#1659). Its
+  revisit line already leaves out the fields where there are none. Only the
+  README's friction block changes, and nothing you run or read changes.

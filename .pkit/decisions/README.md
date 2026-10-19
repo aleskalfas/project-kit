@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-18T16:38:25Z
+      at: 2026-10-18T20:04:47Z
       outcome: unchanged
-      unchanged-because: COR-050 point 7 rewords its widening clause to what an anchor stood on in the files a widening takes, and the Decision's lead says what a path anchor stands on in a file a place holds. This page rests on point 2 for how an anchor names a record's point, and on point 7's retired-point exception, which its retired-points field and stubs serve. Neither change touches them.
+      unchanged-because: COR-059 changed only in the guide to its points 4 and 5 and in those points, which now place a data point's question. The lifecycle README's steps of a transition and what sync writes now say the questions run after the transition and that sync asks none. This page's account of what sync writes in a project-owned path, through merge delivery only, still holds.
 ---
 
 # Decision records

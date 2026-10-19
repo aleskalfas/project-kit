@@ -1,0 +1,19 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A change to a requirement's obligation now asks for a revisit of what it
+  anchors outside the analysis (#1659, software-analysis DEC-002 point 4).
+  Each kind of requirement's place declares the core's link (COR-050 point
+  16): a change to `statement`, `measure` or `applies-to` asks the same change
+  to change each record, view, test and file of code the requirement anchors,
+  or to record on the requirement why it still stands (`unchanged`) or which
+  open follow-up revisits it (`deferred`), with `pkit friction revisit`. The
+  anchors its `actors` and `refines` list stay out. The friction change check
+  reports each target with neither, and fails it where the project enforces
+  friction. A change to a body part, a change of kind or a withdrawal asks for
+  none. The link names the fields that list what stays out, which needs the
+  backbone this release ships. The README, the templates and the
+  `analysis-author` skill say what such a change asks.

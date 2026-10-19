@@ -36,6 +36,9 @@ as `completed_version`, and every migration runs inside it, in COR-010's order
      merge brings.
   9. Record the completion, then (10) the pin.
 
+Then, outside the transition, the questions the data points declare
+(COR-061; `point_questions`).
+
 When the project is current, upgrade reports it and exits: refreshing content
 at the recorded version is `sync`'s job, not upgrade's.
 """
@@ -380,6 +383,20 @@ def run_upgrade(
 
     click.echo()
     click.echo("Upgrade complete.")
+
+    # After the transition (COR-061; ADR-065 point 4): every question a data
+    # point declares, once the transition is complete and the pin written, asked
+    # where a person can answer and named otherwise. No step of the transition.
+    # A dry run names them from the wiring with each moving capability at the
+    # version the bundle ships.
+    from project_kit import point_questions
+
+    sources = [plan.source for plan in moving if plan.source is not None] if dry_run else []
+    point_questions.ask(
+        target_root,
+        point_questions.questions_for(point_questions.wiring_after(target_root, sources)),
+        dry_run=dry_run,
+    )
 
 
 # --- What a transition records and moves (ADR-065 points 2, 3 and 5) -----------
@@ -729,7 +746,7 @@ def _settle_new_collisions(
         )
         click.echo()
         return CollisionAnswers()
-    if not _at_a_terminal():
+    if not at_a_terminal():
         raise click.ClickException(
             "\n       ".join(
                 [
@@ -1432,7 +1449,7 @@ def _maybe_self_update_tool(*, self_update: bool, dry_run: bool) -> None:
     # installed tool: the release just installed reports a version below its
     # tag, or a release landed during the install, so it carries on, and the
     # guard keeps it from installing.
-    handed_over = os.environ.get(_SELF_UPDATED_ENV) == "1" and _at_a_terminal()
+    handed_over = os.environ.get(_SELF_UPDATED_ENV) == "1" and at_a_terminal()
     if self_update and not dry_run and handed_over and not _running_is_installed_tool():
         _stop_failed_hand_over(
             f"a newer pkit tool (v{latest}) was installed, but the `pkit` your PATH "
@@ -1468,11 +1485,14 @@ def _self_update_allowed() -> bool:
     instruct so a network install is never forced under automation."""
     if os.environ.get(_SELF_UPDATED_ENV) == "1":
         return False
-    return _at_a_terminal()
+    return at_a_terminal()
 
 
-def _at_a_terminal() -> bool:
-    """True iff both standard input and standard output are terminals."""
+def at_a_terminal() -> bool:
+    """True iff both standard input and standard output are terminals: where a
+    person can answer (ADR-063 point 3). The one test, which the tool step, the
+    collision flow and a data point's question (`point_questions`, COR-061)
+    read."""
     return _is_tty(sys.stdin) and _is_tty(sys.stdout)
 
 

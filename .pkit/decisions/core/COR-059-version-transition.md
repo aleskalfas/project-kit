@@ -28,7 +28,7 @@ Externally-sourced content already keeps the routine operation from moving a ver
 The points that follow:
 
 - **Points 1 to 3** say what a project records, what reconciliation does, and what a version transition is.
-- **Points 4 and 5** say how a transition, and an update of the CLI, fit COR-004's rule of one operation for each command.
+- **Points 4 and 5** say how a transition, an update of the CLI and a data point's question fit COR-004's rule of one operation for each command.
 - **Points 6 to 8** say how a transition of the backbone records its progress, which components it moves, and which seed paths it creates.
 - **Point 9** stops a command that would propagate content under another version than the project records.
 - **Point 10** keeps a rewrite of the project's own content out of the transition.
@@ -84,12 +84,14 @@ Reconciliation is the sync operation (COR-001), COR-010's Update. It is one oper
   - which of two colliding artefacts the project keeps (point 7, COR-017)
   - merge delivery's prompt-once tier (COR-002)
   - the explicit override that lets a dependency move outside a dependent's range (COR-030, COR-053 point 6)
-- **Each is given explicitly, by a person's answer or an explicit override, and none is ever taken silently.** With nobody to give it, a collision refuses the transition before it writes anything (point 7), the prompt-once tier writes nothing, and a dependency gate refuses.
+  - the answer to a question a data point declares, which COR-061 has the command that ran the transition ask once it is complete
+- **Each is given explicitly, by a person's answer or an explicit override, and none is ever taken silently.** With nobody to give it, a collision refuses the transition before it writes anything (point 7), the prompt-once tier writes nothing, a dependency gate refuses, and a question records nothing.
 
 ### 5. The one-operation rule governs operations on a project
 
 - **COR-004's rule,** one operation for each command, governs what a command does to a project.
 - **Updating the CLI installed on the machine acts on no project.** So a command may first update the CLI that runs it, and then perform its one operation.
+- **A data point's question is no second operation.** COR-061 has a command run it after its one operation is complete. It is the definer's command, runs no operation of the core layer, and writes only under the person's own answer.
 
 ### 6. A transition of the backbone records its target first and its completion last
 

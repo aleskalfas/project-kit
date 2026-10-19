@@ -1887,7 +1887,7 @@ def test_a_pinned_project_whose_installed_pkit_is_its_pin_advances_to_a_newer_re
     router.pin_file_path(installed_target).write_text(f"{_this_pkit()}\n", encoding="utf-8")
     stub_ls_remote.ls_remote_returncode = 0
     stub_ls_remote.ls_remote_stdout = _tag_output(_this_pkit(), _NEWER)
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: terminal)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: terminal)
     monkeypatch.setattr(upgrade, "_running_is_installed_tool", lambda: True)
     handed: list[tuple[str, list[str]]] = []
     monkeypatch.setattr(
@@ -3296,7 +3296,7 @@ def _upgrade_at_a_terminal(monkeypatch: pytest.MonkeyPatch, answers: str) -> Any
 
     from project_kit.cli import main
 
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: True)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: True)
     return CliRunner().invoke(main, ["upgrade", "--no-self-update", "--no-pin"], input=answers)
 
 
@@ -3307,7 +3307,7 @@ def test_without_a_terminal_a_new_collision_refuses_before_anything_is_written(
     names a terminal re-run or a rename. `--force` does not override it (ADR-065
     point 6)."""
     _a_new_collision(installed_target, tmp_path, monkeypatch)
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: False)
     before = _tree_bytes(installed_target)
 
     with pytest.raises(click.ClickException) as excinfo:
@@ -3342,7 +3342,7 @@ def test_at_a_terminal_a_skip_is_recorded_before_the_copy_and_never_asked_again(
     assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
 
     fixed.touch()
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: False)
     upgrade.run_upgrade(installed_target, pin=False)
 
     record = _trial_record(installed_target)
@@ -3388,7 +3388,7 @@ def test_the_dry_run_lists_each_components_migrations_and_each_collision(
     _stage_script(_bump_bundled_adapter(source, "0.7.0"), "0.7.0", "#!/usr/bin/env bash\n")
     _stage_backbone_migration(source, "0.2.0", "001-old.sh", "#!/usr/bin/env bash\n")
     _record_finished_at(installed_target, "0.1.0")
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: False)
     before = _tree_bytes(installed_target)
 
     upgrade.run_upgrade(installed_target, dry_run=True)
@@ -3475,7 +3475,7 @@ def test_an_override_holds_when_a_migration_stops_the_transition(
     assert not project.exists()
 
     fixed.touch()
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: False)
     upgrade.run_upgrade(installed_target, pin=False)
 
     assert not project.exists()
@@ -3512,7 +3512,7 @@ def test_a_skip_of_a_capability_with_no_readable_version_is_recorded_before_the_
     assert record.backend_state["skipped"] == [{"kind": "skill", "name": "clash"}]
 
     fixed.touch()
-    monkeypatch.setattr(upgrade, "_at_a_terminal", lambda: False)
+    monkeypatch.setattr(upgrade, "at_a_terminal", lambda: False)
     upgrade.run_upgrade(installed_target, pin=False)
 
     assert not (installed / "skills" / "clash.md").exists()

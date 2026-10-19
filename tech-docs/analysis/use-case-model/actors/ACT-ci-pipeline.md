@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T16:38:18Z
+      at: 2026-10-18T18:53:59Z
       outcome: unchanged
-      unchanged-because: "COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds: its content and mode, its containers left out. This actor's needs, unattended runs gated on their exit status, machine-readable findings and a whole-repository report that never fails, and its citation of point 12, that the checks bind once a project makes them a required status, still hold."
+      unchanged-because: COR-050 point 16 gains a second way for a link to choose its targets, and point 12 splits one validation bullet in two. Unattended runs gated on exit status, a named base, offline runs and machine-readable findings are untouched.
 ---
 
 # ACT-ci-pipeline — CI pipeline

@@ -241,6 +241,7 @@ class Point:
     process_id: str | None = None  # process: the offered definition's id
     fingerprint: str | None = None  # sha256 of the canonical companion schema, when readable
     description: str | None = None  # the declaration's prose; read by people, never parsed
+    question: str | None = None  # data: the definer's command that asks the person (COR-061)
 
     @property
     def policy(self) -> str | None:
@@ -1480,6 +1481,7 @@ def _points_of(component: Installed) -> list[Point]:
                     process_id=_optional_str(raw, "process"),
                     fingerprint=_fingerprint(component.component_dir, schema),
                     description=_optional_str(raw, "description"),
+                    question=_optional_str(raw, "question") if kind is PointKind.DATA else None,
                 )
             )
     return points
