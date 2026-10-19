@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
     revalidated:
-      at: 2026-10-19T07:10:47Z
-      outcome: updated
+      at: 2026-10-19T06:39:14Z
+      outcome: unchanged
+      unchanged-because: ADR-009 now names the 1.150.0 migration that untracks runtime-ignored files by its new number, 002, and decides nothing new. This page relies on its visibility and untrack rules, which read as before, and names no migration file.
 ---
 
 # Permissions — decision core

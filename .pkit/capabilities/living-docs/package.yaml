@@ -97,8 +97,8 @@ friction:
       command: resolve-source
 
 # COR-053 — the documentation role, the two data points defined under it, and
-# the contribution to the work-tracking role's documentation check (DEC-001
-# point 7). See the README, "Connections".
+# the contributions to the work-tracking role's documentation check and fixers
+# (DEC-001 points 5 and 7). See the README, "Connections".
 connections:
   roles: [pkit::documentation]
   extension-points:
@@ -148,3 +148,15 @@ connections:
         schema_version: 1
         command: fill-doc-check
         description: One page-stale obligation per page carrying friction debt, one code-undocumented obligation per path of the declared surface that nothing anchors.
+      # The fixer of the page type (DEC-001 point 5): the `living-docs` agent, in
+      # its friction-fix intent, proposes the answer for each page the default
+      # branch leaves stale. A static value, as the point asks of a capability.
+      # Inert while no capability provides the work-tracking role, and no fixer
+      # starts until the project grants it.
+      - point: pkit::work-tracking:fixers
+        schema_version: 1
+        value:
+          - id: living-docs:page
+            agent: living-docs
+            description: your pages
+        description: The living-docs agent fixes this capability's pages.

@@ -13,8 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-19T07:10:42Z
-      outcome: updated
+      at: 2026-10-19T06:39:13Z
+      outcome: unchanged
+      unchanged-because: ADR-009 changed only the file name it gives the 1.150.0 migration that untracks runtime-ignored files, now numbered 002 so its folder numbers each script once. No decision changed, and this page names no migration file.
 ---
 
 # Claude Code adapter

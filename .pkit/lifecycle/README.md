@@ -35,7 +35,7 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-19T07:10:45Z
+      at: 2026-10-19T06:39:16Z
       outcome: updated
 ---
 
@@ -780,7 +780,7 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - a documentation refinement, an internal refactor or a behaviour-preserving fix
   - a section's heading renamed or removed in a document the methodology or a component ships. A project that receives the document cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change mends the anchors on the heading, as validation requires (COR-050 point 12).
 
-A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers, and a change that adds a migration at a version already released ("Which version a migration targets", below). It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
+A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers, a change that adds a migration at a version already released ("Which version a migration targets", below), and a change that adds one with a number its folder already holds ("Naming", below). It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
 
 ### Directory layout
 
@@ -800,6 +800,12 @@ Component migrations live within the component:
 ### Naming
 
 `<NNN>-<slug>.sh`, where `NNN` is a zero-padded execution-order index within the directory and `<slug>` is a kebab-case description (e.g., `001-add-status-labels.sh`).
+
+Each number is used once in a folder. The runner runs a folder's scripts in the order of their names, so two scripts of one number would run in the order their slugs give, which nobody chose.
+
+- **The stamp.** `pkit new migration` numbers a script one past the highest in its folder, in the working tree or on the default branch.
+- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose number another script in its folder holds. It reads the folder as merging the base would leave it, so a number another change took on the base since the branch left it counts too. The finding gives each script it names a number of its own to take, past the highest in the folder. Of two scripts the change itself adds with one number, it names the one whose name sorts later. It skips a script the project receives by sync.
+- **Renumbering.** The stamp reads no scope. So a script that must run before one already in its folder, such as a manifest-schema script beside a resource-scoped one, is renumbered by hand: it takes the lower number, and the other moves up. Renumber only in a folder no release has shipped. No check holds this, since a rename inside a migrations folder triggers nothing.
 
 ### Which version a migration targets
 
@@ -822,7 +828,7 @@ A migration's folder names the version it carries a project to, never one alread
 
 **Resource-scoped migrations** affect a single resource type (a label is renamed, a setting key changes shape, a primitive moves).
 
-Within a single `<major>.<minor>.0/` directory, scope ordering is: manifest-schema → structural → resource-scoped, by `NNN` index within each scope.
+Within a single `<major>.<minor>.0/` directory, the numbers carry this order ("Naming", above): manifest-schema scripts take the lowest, structural the next, and resource-scoped the highest.
 
 ### Script contract
 

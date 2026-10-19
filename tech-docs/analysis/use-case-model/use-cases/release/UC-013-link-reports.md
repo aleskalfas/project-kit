@@ -19,9 +19,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-19T07:10:34Z
+      at: 2026-10-19T06:40:57Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py. How a maintainer receives a report and links it to its fix is untouched.
+      unchanged-because: cli.py changed only in migrations check-diff, which also fails a script whose number its folder holds. The report commands this use case describes are untouched.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix
