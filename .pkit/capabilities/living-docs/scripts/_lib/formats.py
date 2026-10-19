@@ -1,4 +1,4 @@
-"""A page's body against the structure its kind declares (RS-LDOC-004).
+"""A page's body: its structure against its kind's (RS-LDOC-004), and its diagrams.
 
 Pages of a kind follow one format, with a template per kind (living-docs
 DEC-001 point 3). The part of a format a tool checks is the page's
@@ -35,6 +35,16 @@ The declarations are read whole or not at all: a file that is absent, is not
 YAML or does not fit `schemas/page-kinds.schema.json` is `Unreadable`, with
 the reason. A kind the file does not list declares no structure.
 
+What a **diagram** is: a fenced code block whose info string's first word is
+`mermaid`, read as the headings are, below the front matter and outside an HTML
+comment (living-docs DEC-002 point 2). Its text alternative is an `accTitle` and
+an `accDescr` inside the fence, each followed by text that is not blank
+(RS-LDOC-008; DEC-002 point 8). A line inside the fence is read without the
+indentation and block-quote markers before it. `accTitle: <text>` names the
+diagram. `accDescr: <text>`, or `accDescr {` opening a block that holds text
+before its closing `}`, says what it shows. A Mermaid comment, a line opening
+with `%%`, holds neither.
+
 This module imports nothing of the capability's library, so it reads alone.
 """
 
@@ -58,6 +68,12 @@ PAGE_KINDS_SCHEMA = Path("schemas") / "page-kinds.schema.json"
 #: The shared method's rule a page's structure applies (DEC-001 point 3).
 FORMAT_RULE = "RS-LDOC-004"
 
+#: The shared method's rule a diagram's text alternative applies (DEC-002 point 8).
+ALTERNATIVE_RULE = "RS-LDOC-008"
+
+#: The first word of a diagram's info string (DEC-002 point 2).
+MERMAID = "mermaid"
+
 #: How a section departs from its kind's structure.
 MISSING, OUT_OF_ORDER = "missing", "out-of-order"
 
@@ -76,6 +92,10 @@ _COMMENT_END = "-->"
 _FRONT_MATTER_FENCE = re.compile(r"^---[ \t]*$")
 _PLACEHOLDER = re.compile(r"<[^<>]*>")
 _TRAILING = re.compile(r"[\s.,:;!?]+$")
+_QUOTE_PREFIX = re.compile(_QUOTED)
+_ACC_TITLE = re.compile(r"^accTitle[ \t]*:(.*)$")
+_ACC_DESCR = re.compile(r"^accDescr[ \t]*:(.*)$")
+_ACC_DESCR_BLOCK = re.compile(r"^accDescr[ \t]*\{(.*)$")
 
 
 class Unreadable(Exception):
@@ -139,6 +159,42 @@ class Heading:
 
 
 @dataclass(frozen=True)
+class Fence:
+    """A fenced code block of a page's body: its info string, the line it opens on,
+    and the lines it holds, each without the indentation and block-quote markers
+    before it."""
+
+    info: str
+    line: int
+    lines: tuple[str, ...]
+
+    @property
+    def language(self) -> str:
+        """The info string's first word, or nothing."""
+        words = self.info.split()
+        return words[0] if words else ""
+
+
+@dataclass(frozen=True)
+class Diagram:
+    """A `mermaid` fence of a page's body, at `line`, and whether it carries each
+    half of its text alternative (RS-LDOC-008)."""
+
+    line: int
+    titled: bool
+    described: bool
+
+    @property
+    def lacking(self) -> tuple[str, ...]:
+        """What its text alternative lacks: `accTitle`, `accDescr`, both or neither."""
+        return tuple(
+            name
+            for name, present in (("accTitle", self.titled), ("accDescr", self.described))
+            if not present
+        )
+
+
+@dataclass(frozen=True)
 class Departure:
     """A declared section a page lacks, or carries out of order — then at `line`,
     where the page first carries it."""
@@ -189,15 +245,38 @@ def _yaml_problem(exc: YAMLError) -> str:
 def headings(text: str) -> list[Heading]:
     """The headings of a Markdown file's body, in order, each with its line in the
     file: what the module's opening says a section is."""
+    return _read(text)[0]
+
+
+def fences(text: str) -> list[Fence]:
+    """The fenced code blocks of a Markdown file's body, in order: what the module's
+    opening says hides a line, outside an HTML comment."""
+    return _read(text)[1]
+
+
+def diagrams(text: str) -> list[Diagram]:
+    """The diagrams of a Markdown file's body, in order, each with what it carries
+    of its text alternative: what the module's opening says a diagram is."""
+    return [_alternative(fence) for fence in fences(text) if fence.language == MERMAID]
+
+
+def _read(text: str) -> tuple[list[Heading], list[Fence]]:
+    """The headings and the fenced code blocks of a Markdown file's body, each in order."""
     lines = text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
     found: list[Heading] = []
+    blocks: list[Fence] = []
     fence: tuple[str, int] | None = None  # the open fence's character and length
+    opened: tuple[str, int] = ("", 0)  # the open fence's info string and line
+    held: list[str] = []
     in_comment = False
     for index in range(_body_start(lines), len(lines)):
         line = lines[index]
         if fence is not None:
             if _closes(line, fence):
+                blocks.append(Fence(opened[0], opened[1], tuple(held)))
                 fence = None
+            else:
+                held.append(_QUOTE_PREFIX.sub("", line, count=1))
             continue
         if in_comment:
             in_comment = _COMMENT_END not in line
@@ -207,6 +286,7 @@ def headings(text: str) -> list[Heading]:
             opening.group(1).startswith("`") and "`" in opening.group(2)
         ):
             fence = (opening.group(1)[0], len(opening.group(1)))
+            opened, held = (opening.group(2).strip(), index + 1), []
             continue
         comment = _COMMENT.match(line)
         if comment is not None:
@@ -216,7 +296,42 @@ def headings(text: str) -> list[Heading]:
         if atx is not None:
             raw = (atx.group(2) or "").strip()
             found.append(Heading(len(atx.group(1)), _CLOSING.sub("", raw).strip(), index + 1))
-    return found
+    if fence is not None:  # a fence never closed runs to the end of the file
+        blocks.append(Fence(opened[0], opened[1], tuple(held)))
+    return found, blocks
+
+
+def _alternative(fence: Fence) -> Diagram:
+    """What a `mermaid` fence carries of its text alternative: an `accTitle` and an
+    `accDescr`, each followed by text that is not blank."""
+    titled = described = False
+    block: list[str] | None = None  # an `accDescr {` block's text, while it is open
+    for line in fence.lines:
+        if block is not None:
+            closing = line.find("}")
+            block.append(line if closing < 0 else line[:closing])
+            if closing >= 0:
+                described = described or bool("".join(block).strip())
+                block = None
+            continue
+        stripped = line.strip()
+        title = _ACC_TITLE.match(stripped)
+        if title is not None:
+            titled = titled or bool(title.group(1).strip())
+            continue
+        description = _ACC_DESCR.match(stripped)
+        if description is not None:
+            described = described or bool(description.group(1).strip())
+            continue
+        opening = _ACC_DESCR_BLOCK.match(stripped)
+        if opening is not None:
+            rest = opening.group(1)
+            closing = rest.find("}")
+            if closing >= 0:
+                described = described or bool(rest[:closing].strip())
+            else:
+                block = [rest]
+    return Diagram(fence.line, titled, described)
 
 
 def _body_start(lines: Sequence[str]) -> int:
