@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-18T21:14:54Z
+      at: 2026-10-19T07:05:51Z
       outcome: unchanged
-      unchanged-because: This branch words the revisit finding and the revisit writer's refusal, rewords the software-engineer agent's revisit paragraph, and splits one validation bullet of COR-050 point 12. Revalidating and deferring, and what this use case takes from core rule 20, are untouched.
+      unchanged-because: software-analysis DEC-001 point 5 gains a paragraph on its agent as the fixer a command starts on the default branch's stale artefacts. The four outcomes, their mapping and the rule that a person decides stale against regressed, which variant 5b takes, are unchanged, and how a change answers what it made stale is untouched.
 ---
 
 # UC-002 — Answer what my change made stale

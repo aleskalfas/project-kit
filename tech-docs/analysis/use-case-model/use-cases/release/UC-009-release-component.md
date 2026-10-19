@@ -25,9 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:40:55Z
+      at: 2026-10-19T08:29:51Z
       outcome: unchanged
-      unchanged-because: release.py now also warns of a component's migration folder the release does not cut, and migrations check-diff in cli.py also fails a script whose number its folder holds. This use case names no migration folder, and the versions, floors, changelog and notes it describes the release writing for a component are untouched.
+      unchanged-because: This change adds the pkit agents run command to cli.py. How a component is released on its own version, and the backbone range it declares, are untouched.
 ---
 
 # UC-009 — Release my component on its own version

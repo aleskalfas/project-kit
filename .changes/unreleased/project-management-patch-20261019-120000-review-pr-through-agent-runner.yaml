@@ -1,0 +1,20 @@
+component: project-management
+kind: patch
+custom:
+  category: Changed
+  requires_backbone: release
+body: >
+  `review-pr` starts its reviewers through the backbone's run command,
+  `pkit agents run`, and calls no harness itself (ADR-066 point 10). It asks
+  through the capability's one module for it, `scripts/_lib/agent_runs.py`. A
+  reviewer runs as before: in your checkout, under your settings and the
+  project's, with `--effort` where one is set, under the same timeout. What
+  changes around it: where no registered adapter registers an agent runner, no
+  reviewer runs, and each reviewer's line says why (`[<name>] invocation
+  refused: …`), as it did when `claude` was not on `PATH`. A project with
+  another harness answers through its own adapter's runner, not by editing
+  `review-pr`. At the timeout the runner ends the harness and the processes
+  still descended from it, as the adapters README's "The agent runner" says. A
+  timeout above 604800 seconds (a week) is now a usage error. The run command
+  comes with the backbone this release ships, so the capability needs it:
+  upgrade the capability with the backbone and the claude-code adapter.

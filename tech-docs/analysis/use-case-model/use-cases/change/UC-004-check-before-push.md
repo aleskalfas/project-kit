@@ -30,6 +30,10 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-19T07:10:18Z
+      outcome: unchanged
+      unchanged-because: This change gives the command runner an agent-run policy, with its own bound, standard input and a grace before the kill, which only pkit agents run uses. The query policy and the thirty-second bound that steps 3 and 3a rely on are unchanged.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

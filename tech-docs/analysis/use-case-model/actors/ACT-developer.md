@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-19T08:10:15Z
+      at: 2026-10-19T08:41:07Z
       outcome: unchanged
-      unchanged-because: software-analysis DEC-001 point 9 now derives the candidates in the order point 12 gives, of every kind, restates its reversed order as the analysis drawn from what exists, and cites COR-050 point 8. An agent still derives the candidates from the code, the documents and the decisions, and a person still confirms them, so the developer's need to describe an existing project that way still holds.
+      unchanged-because: "software-analysis DEC-001 point 5 gains a paragraph: its agent is also the fixer of its types, which a command may start where the project granted it, and in such a run it judges only through the capability's own reading and leaves each answer as data for a person. The developer's need to revalidate from an agent's proposed outcome, never rewriting the analysis to match broken code, holds in a session and in such a run alike."
 ---
 
 # ACT-developer — Developer

@@ -25,8 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T06:40:53Z
-      outcome: updated
+      at: 2026-10-19T08:29:52Z
+      outcome: unchanged
+      unchanged-because: This change adds the pkit agents run command to cli.py. How a component's migration is stamped and checked is untouched.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it
