@@ -11,8 +11,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
 - both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
-- it holds five **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
-  with DEC-001 as its origin, and the two below, each proposed and declaring no
+- it holds six **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
+  with DEC-001 as its origin, and the three below, each proposed and declaring no
   check: a reviewer judges each. Each
   *How* leaves out what the stamp and the check hold always, and judges an artefact
   in force alone. Proposed rules move no version, so the set stays at 1.0.0;
@@ -26,6 +26,9 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - the **source rule**, `RS-SAN-007`, asks each goal, minimal guarantee and
   requirement for its source, in the four forms the maintainer chose on 17 October
   (#1681). Both stay proposed with the others, so the set stays at 1.0.0;
+- the **concept rule**, `RS-SAN-008`, holds what the build order of DEC-001 point 12
+  leaves in the analysis: a domain concept only where one term of the glossary
+  defines it, by that term's name (#1784). It stays proposed with the others;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
   `pkit validate`, and the append-only rule `check-numbers`;
@@ -109,6 +112,16 @@ JUDGEMENT_RULES = {
             "software-analysis:DEC-002#8",
         ],
     ),
+    "RS-SAN-008": (
+        "An analysis artefact uses a domain concept only where a term of the glossary defines "
+        "it, and names the concept by that term's name. No two terms define one concept.",
+        [
+            "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#2",
+            "software-analysis:DEC-001#12",
+            "software-analysis:DEC-002#4",
+        ],
+    ),
 }
 #: Each judgement rule's origin, where a decision record holds it. The source rule's is
 #: the maintainer's decision of 17 October (#1648, choice 6), which no record holds.
@@ -117,8 +130,11 @@ ORIGINS = {
     "RS-SAN-004": "software-analysis:DEC-001",
     "RS-SAN-005": "software-analysis:DEC-001",
     "RS-SAN-006": "software-analysis:DEC-002",
+    "RS-SAN-008": "software-analysis:DEC-001",
 }
 SOURCE_RULE = "RS-SAN-007"
+#: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
+CONCEPT_RULE = "RS-SAN-008"
 ACTOR = actor_at("ACT-tester")
 
 #: A set of the project's own whose scope selects the analysis's actors, inheriting
@@ -378,7 +394,7 @@ def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> 
     assert "The goal is the use case's part whose id is `goal`, whatever label" in goal
     assert "a narrower want than one of them." in goal
     assert "**What the check holds.**" not in goal  # no check holds any of it
-    for rule_id in ("RS-SAN-006", SOURCE_RULE):  # nor any of the two that follow
+    for rule_id in ("RS-SAN-006", SOURCE_RULE, CONCEPT_RULE):  # nor any of the three after
         assert "**What the check holds.**" not in _section(body, rule_id), rule_id
     anchors = " ".join(_section(body, "RS-SAN-005").split())
     assert "This list is whole:" in anchors
@@ -639,6 +655,62 @@ def test_the_source_rule_takes_any_of_the_four_forms_the_maintainer_chose() -> N
     assert "**A break.** An item that no source names breaks this rule, until the artefact" in (
         section
     )
+
+
+def test_the_concept_rule_holds_what_the_build_order_leaves() -> None:
+    """DEC-001 point 12 (#1784): an artefact uses a domain concept only where a term of
+    the glossary defines it, by that term's name, and no two terms define one concept.
+    A term's definition is judged too. What uses no concept is named, so a quote the
+    source rule asks for, a proper name or quoted code is never a break. The point the
+    rule anchors is there, before point 9, which follows its order."""
+    _data, body = _shipped()
+    section = " ".join(_section(body, CONCEPT_RULE).split())
+    assert "A term's statement is its `definition` alone." in section
+    assert (
+        "a meaning of the project's domain, one that a general dictionary does not give it."
+    ) in section
+    assert "A term in force defines one concept, the one its `name` names." in section
+    # Mentioned or told apart is not defined.
+    assert "only mention, or tell apart, is not defined by that term." in section
+    # A plural or a verb in the term's sense, and a phrase that only qualifies it, name it.
+    assert "a form made from the name in the term's sense, such as a plural" in section
+    assert 'A phrase that names a thing of its own, such as "release tag"' in section
+    uses_none = section.split("**What uses no concept.**", 1)[1].split("**Where to read")[0]
+    for excluded in (
+        "an actor, named by its name",
+        "a proper name, such as",
+        "the names of the analysis's kinds and of their parts",
+        "words quoted from a person or a document, such as a decision quoted as a source",
+        "text in a code span or a fenced block",
+        "A break in that text is the other artefact's.",
+    ):
+        assert excluded in uses_none, excluded
+    breaks = section.split("**A break.**", 1)[1].split("**Two terms.**")[0]
+    assert "- uses a domain concept that no term in force defines" in breaks
+    assert "such as a name the term replaces, or a word of its own" in breaks
+    assert "unless the term tells that meaning apart from its own" in breaks
+    assert (
+        "**Two terms.** A term breaks this rule where another term in force defines the "
+        "concept it defines."
+    ) in section
+    assert "**No anchor.** Using a term asks for no anchor on it." in section
+    # The accepted `definition` form refuses a word of the term's own name, so the
+    # rule never asks a definition for that word (#1784, the architect's O1).
+    assert "The `definition` form refuses a word of the term's own name" in section
+    assert "the definition names that concept in other words. That is no break." in section
+    # A name a term holds means the term's concept, a dictionary's sense included.
+    assert "**A term's name in another sense.** Once a term holds a name" in section
+    # A rename alters only the term, so the rule holds it on the term (COR-057 point 1).
+    assert (
+        "**A renamed term.** A term breaks this rule while an artefact in force names its "
+        "concept by a name the term replaces."
+    ) in section
+    decision = (CAPABILITY / "decisions" / "DEC-001-software-analysis-discipline.md").read_text(
+        encoding="utf-8"
+    )
+    order = decision.index("### 12. An analysis is built from its concepts up")
+    assert order < decision.index("### 9. Brownfield onboarding")
+    assert "in the order point 12 gives, the concepts first." in decision
 
 
 def test_the_new_rules_name_parts_each_kind_declares() -> None:
