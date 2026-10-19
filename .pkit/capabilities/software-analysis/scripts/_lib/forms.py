@@ -121,6 +121,13 @@ each with what it reads:
 
 What no form checks is whether the words are true: friction flags the artefact
 when what it rests on changes, and a person rereads it (DEC-001 point 4).
+
+**A precondition's producers** are no form, and read with no rule of their own
+(`preconditions`): each item of a use case's *Preconditions* opens with them,
+such as `**From UC-003:**`, `**From UC-001 or UC-064:**` or `**From UC-059, or
+Environment:**` (DEC-001 point 1). The check of a use case's `after` compares
+them with that field (`_lib/chain.py`), and no closed list of labels reads such
+an opening as a label (`structure._undeclared`).
 """
 
 from __future__ import annotations
@@ -536,6 +543,79 @@ def _after(rest: str, item: Item) -> str:
     """An item's text after its number or label, `rest` on its first row: every row, white
     space folded."""
     return " ".join(" ".join([rest, *(row.text for row in item.rows[1:])]).split())
+
+
+# --- a precondition's producers -------------------------------------------------------------
+
+#: A bold run that opens a line, and what follows it on the line.
+_BOLD_OPENING = re.compile(r"^\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$")
+
+#: The text of a precondition's opening, `From <producers>`, a colon at its end or right
+#: after the bold run.
+_PRODUCERS = re.compile(r"^From[ \t]+(?P<named>.+?)[ \t]*:?$")
+
+#: A use case's id as the words may write it, any number of digits: the field's schema
+#: holds the spelling, and the comparison reads a number as `identity` spells it.
+_USE_CASE_WORD = re.compile(r"^UC-[0-9]+$")
+
+#: How the words write the environment, in any case, and how `after` writes it.
+_ENVIRONMENT = "environment"
+
+
+@dataclass(frozen=True)
+class Precondition:
+    """One precondition as a use case's *Preconditions* writes it: the line it opens on,
+    and the producers its opening names, in the order written, each use case by its id and
+    the environment as `environment`; `named` is `None` where it opens with none."""
+
+    line: int
+    named: tuple[str, ...] | None
+
+
+def named_producers(text: str, rest: str = ":") -> tuple[str, ...] | None:
+    """The producers a bold opening names, its `text` such as `From UC-059, or
+    Environment:` and `rest` what follows the bold run: each use case's id and
+    `environment`, in the order written, separated by commas and `or`. `None` where it
+    is no such opening: it does not start `From `, it ends in no colon, inside the bold
+    run or right after it, or it holds a word that names no producer."""
+    stripped = text.strip()
+    if not (stripped.endswith(":") or rest.startswith(":")):
+        return None
+    found = _PRODUCERS.match(stripped)
+    if found is None:
+        return None
+    named: list[str] = []
+    for word in re.split(r"[,\s]+", found["named"].rstrip(":")):
+        if not word or word.lower() == "or":
+            continue
+        if word.lower() == _ENVIRONMENT:
+            named.append(_ENVIRONMENT)
+        elif _USE_CASE_WORD.match(word):
+            named.append(word)
+        else:
+            return None
+    return tuple(named) or None
+
+
+def preconditions(part: Part) -> list[Precondition]:
+    """Each precondition a use case's *Preconditions* holds, in order: each top-level item
+    of its list, or, where it holds no item, its text as one. None where it reads `None.`
+    or nothing. Each opens with its producers, `**From UC-003:**` (DEC-001 point 1)."""
+    flat = " ".join(part.text.split())
+    if not flat or flat == NONE:
+        return []
+    items = listing(part).items
+    if items:
+        return [_precondition(item.line, item.rows[0].text if item.rows else "") for item in items]
+    rows = [row for row in ((part.lead,) if part.lead else ()) + part.rows if row.text.strip()]
+    return [_precondition(rows[0].number, rows[0].text.strip())]
+
+
+def _precondition(line: int, first: str) -> Precondition:
+    opening = _BOLD_OPENING.match(first.strip())
+    if opening is None:
+        return Precondition(line, None)
+    return Precondition(line, named_producers(opening["text"], opening["rest"]))
 
 
 def _sentence(part: Part) -> list[Breach]:

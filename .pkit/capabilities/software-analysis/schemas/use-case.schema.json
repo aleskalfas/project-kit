@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "use-case.schema.json",
   "title": "A use case's own fields — software-analysis capability",
-  "description": "The front matter of one use case, a file `UC-NNN-<slug>.md` in `use-case-model/use-cases/` under the analysis location, optionally in a folder per functional area (software-analysis DEC-001 points 1 to 3): one actor's goal and how the system fulfils it. The body says when it starts, the main path in numbered steps, the variants lettered after the step they branch from, and when it is done; steps and variants are append-only, since journeys and evidence cite them. These are the use case's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A use case anchors to its actor and to each other actor it involves, as artefact anchors, and to the code it exercises and the decisions it relies on: those it rests on and those that answer it. It anchors each architecture view that realises it too (DEC-001 points 4 and 11); the capability's check requires each actor anchor. It anchors each requirement it lists in `requirements`, and the check requires those anchors to match the list (DEC-002 point 7). Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "description": "The front matter of one use case, a file `UC-NNN-<slug>.md` in `use-case-model/use-cases/` under the analysis location, optionally in a folder per functional area, whose name may open with a number such as `010-` (software-analysis DEC-001 points 1 to 3): one actor's goal and how the system fulfils it. The body says when it starts, the main path in numbered steps, the variants lettered after the step they branch from, and when it is done; steps and variants are append-only, since journeys and evidence cite them. These are the use case's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A use case anchors to its actor and to each other actor it involves, as artefact anchors, and to the code it exercises and the decisions it relies on: those it rests on and those that answer it. It anchors each architecture view that realises it too (DEC-001 points 4 and 11); the capability's check requires each actor anchor. It anchors each requirement it lists in `requirements`, and the check requires those anchors to match the list (DEC-002 point 7). Its optional `after` names each precondition's producers, and draws no anchor (DEC-001 point 1). Applied by `pkit software-analysis validate`; unknown fields are refused.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "title", "status", "actor"],
@@ -32,6 +32,23 @@
       "type": "array",
       "uniqueItems": true,
       "items": { "$ref": "analysis.schema.json#/$defs/requirement-id" }
+    },
+    "after": {
+      "description": "Each precondition's producers, one entry for each line of the body's *Preconditions*, in its order (software-analysis DEC-001 point 1). A producer is a use case in force of the analysis that makes the precondition true, and any one is enough. An entry lists use-case ids, the use case's own among them, and `environment` beside them, never alone. It names the producers its line opens with, such as `**From UC-059, or Environment:**`. It draws no anchor. A use case with no precondition writes none. Where RS-SAN-009 binds, the capability's check holds it to the analysis, the words and the areas' numbers.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": {
+          "anyOf": [
+            { "$ref": "analysis.schema.json#/$defs/use-case-id" },
+            { "const": "environment" }
+          ]
+        },
+        "contains": { "$ref": "analysis.schema.json#/$defs/use-case-id" }
+      }
     }
   }
 }

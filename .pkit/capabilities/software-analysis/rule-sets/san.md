@@ -149,11 +149,12 @@ rules:
 # rule, it is a comparison of each use case with the same use case where the
 # change left its base: the default branch, or the base the comparison names
 # (DEC-001 point 3; COR-054 point 3). `pkit validate` never runs that check
-# (COR-055 point 2). A check enforces its part only where its rule binds.
-# Whoever judges the rest of a rule leaves that part to the check. Where a
-# project's rule tightens a structure, the project's set declares what the
-# check enforces of that rule. RS-SAN-003 to RS-SAN-011 declare no check: a
-# reviewer judges each.
+# (COR-055 point 2). Of the rule of logical consequence, it is what a script
+# reads of a use case's `after` (DEC-001 point 1). A check enforces its part
+# only where its rule binds. Whoever judges the rest of a rule leaves that part
+# to the check. Where a project's rule tightens a structure, the project's set
+# declares what the check enforces of that rule. RS-SAN-003 to RS-SAN-008,
+# RS-SAN-010 and RS-SAN-011 declare no check: a reviewer judges each.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
@@ -186,6 +187,19 @@ checks:
         the rule judges these: a step replaced by another under its number, one
         renumbered and reworded at once whose old number holds another step,
         and the number or letter a new one takes.
+  RS-SAN-009:
+    - check: "software-analysis:validate"
+      part: >-
+        Of a use case in force that writes `after`: each producer is a use case
+        in force of its own analysis, the use case itself among them, or
+        `environment`. `after` holds one entry for each precondition the part
+        whose id is `preconditions` writes, in their order, and each entry names
+        the producers its precondition's line opens with. A part that reads
+        `None.` writes none. Where the use case's area carries a number, each
+        entry names a producer in no later area: the environment, or a use case
+        whose area carries no higher number. Whoever judges the rest of the rule
+        judges a producer in an area without a number or in no area, and each
+        use case that writes no `after`.
 ---
 
 # SAN — the software-analysis method

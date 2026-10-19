@@ -113,6 +113,10 @@ KINDS_SCHEMA = SCHEMAS / "artefact-kinds.schema.json"
 #: The kind of a revalidation record, which has no type of its own (DEC-001 point 2).
 RECORD = "revalidation-record"
 
+#: The use-case kind, and the permanent id of its part that names what holds before it
+#: starts, each line opening with its producers (DEC-001 point 1).
+USE_CASE_KIND, PRECONDITIONS = "use-case", "preconditions"
+
 #: An element's types.
 HEADING, LABEL, OPENING = "heading", "label", "opening"
 
@@ -600,13 +604,21 @@ def _undeclared(
     """Where a project's rule closes the kind's list of labels (`kind.closed`), each bold
     run ending in a colon that opens a line or a top-level list item and that no element
     declares, outside fenced code and comments, as a label is read. A part with a form
-    is not read for it, so a step's or a seam's bold run stays content."""
+    is not read for it, so a step's or a seam's bold run stays content. Nor is a
+    precondition's opening in a use case's *Preconditions*, which names its producers,
+    such as `**From UC-003:**` (DEC-001 point 1)."""
     if not kind.closed or kind.as_written:
         return []
     formed = {
         number
         for i, part in parts.items()
         if elements[i].form is not None
+        for number in (part.line, *(row.number for row in part.rows))
+    }
+    producing = {
+        number
+        for i, part in parts.items()
+        if kind.name == USE_CASE_KIND and elements[i].id == PRECONDITIONS and not elements[i].added
         for number in (part.line, *(row.number for row in part.rows))
     }
     found: list[Departure] = []
@@ -620,6 +632,8 @@ def _undeclared(
         if not (text.rstrip().endswith(":") or label["rest"].startswith(":")):
             continue
         if comparable(text) in kind.labels:
+            continue
+        if body.numbers[k] in producing and forms.named_producers(text, label["rest"]):
             continue
         shown = Element("", LABEL, text=text.rstrip().rstrip(":").strip(), rule=kind.closed[0])
         found.append(Departure(shown, UNDECLARED, body.numbers[k], ", ".join(kind.closed)))

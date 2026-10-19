@@ -40,7 +40,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
   name only the analyses its component depends on (#1809). Both stay proposed;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
-  `pkit validate`, and the append-only rule `check-numbers`;
+  `pkit validate`, and the append-only rule `check-numbers`. The consequence rule
+  names the same command for what a script reads of `after` (#1816);
 - **validation accepts the set**, and **it binds nothing while its rule is
   proposed**, even where a project set with a scope inherits it: a proposed copy
   shows it. Accepted, as shipped, the same rule binds there, and its declared part
@@ -69,6 +70,9 @@ SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
 STEPS_RULE = "RS-SAN-002"
+#: The rule of logical consequence, whose part a script can read of `after` the
+#: capability's check enforces (#1816).
+LOGIC_RULE = "RS-SAN-009"
 #: The judgement rules (#1577, #1695, #1681, #1784, #1809, #1814): each statement, and the record
 #: points it anchors to.
 JUDGEMENT_RULES = {
@@ -389,11 +393,14 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     accepts them (#1577), each with DEC-001 as its origin. Beside them the record rule,
     from DEC-002 point 8 (#1695), the source rule (#1681) and the concept rule, from
     DEC-001 point 12 (#1784), proposed until all are accepted in one major. Each anchors
-    to the points it rests on. None declares a check: a reviewer judges each (COR-057).
-    A proposed rule moves no version (COR-051 point 7), so `SAN` stays at 1.0.0."""
+    to the points it rests on. None declares a check but the consequence rule, whose
+    check holds what a script reads of `after` (#1816): a reviewer judges the rest of
+    each (COR-057). A proposed rule moves no version (COR-051 point 7), so `SAN` stays at
+    1.0.0."""
     data, body = _shipped()
     assert data["version"] == "1.0.0"
     assert set(ORIGINS) | {SOURCE_RULE} == set(JUDGEMENT_RULES)
+    assert [rule_id for rule_id in JUDGEMENT_RULES if rule_id in data["checks"]] == [LOGIC_RULE]
     for rule_id, (statement, anchors) in JUDGEMENT_RULES.items():
         entry = data["rules"][rule_id]
         assert entry["status"] == "proposed", rule_id
@@ -406,11 +413,30 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
         revalidated = entry["pkit"]["friction"].get("revalidated", {})
         assert isinstance(revalidated, dict), rule_id
         assert "deferred" not in revalidated, rule_id
-        assert rule_id not in data["checks"], rule_id
         assert "checks" not in entry, rule_id
         section = _section(body, rule_id)
         assert section.split("\n\n")[1] == statement, rule_id
         assert "- **How:**" in section, rule_id
+
+
+def test_the_consequence_rule_declares_what_the_check_reads_of_after() -> None:
+    """RS-SAN-009 names what a script can read of `after`, and leaves it to a reviewer
+    until its set declares a check of it (#1809). The set now declares the capability's
+    check of it, beside the rule and no part of its content, so neither the rule nor
+    `SAN`'s version moves (COR-051 point 2)."""
+    data, body = _shipped()
+    (declared,) = data["checks"][LOGIC_RULE]
+    assert declared["check"] == "software-analysis:validate"
+    part = " ".join(declared["part"].split())
+    assert part.startswith("Of a use case in force that writes `after`: each producer is")
+    assert "each entry names a producer in no later area" in part
+    assert part.endswith(
+        "Whoever judges the rest of the rule judges a producer in an area without a number "
+        "or in no area, and each use case that writes no `after`."
+    )
+    how = " ".join(_section(body, LOGIC_RULE).split())
+    assert "Until this set declares a check of them under `checks`, a reviewer judges" in how
+    assert data["version"] == "1.0.0"
 
 
 def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> None:
@@ -942,7 +968,8 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
 ) -> None:
     """A copy with the judgement rules accepted, a fixture and not the acceptance: each
     binds on the route above, and the answer gives it no check's part, so a reviewer
-    judges the whole of it (COR-057 point 1). Accepting a rule gives `SAN` a new major,
+    judges the whole of it (COR-057 point 1). The consequence rule alone leaves its part
+    to the capability's check, which is there. Accepting a rule gives `SAN` a new major,
     and the set re-pins to it, as an acceptance would (COR-051 point 7). The source
     rule's origin gains its why, as its acceptance must give it."""
     _with_an_actor_and_a_set_inheriting_san(project, major=2)
@@ -956,5 +983,8 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
     ]
     document = reading.reach_document(project.root)
     (entry,) = [a for a in document["artefacts"] if a["location"] == ACTOR]
-    checks = {r["id"]: r["checks"] for r in entry["rules"]}
-    assert [checks[rule_id] for rule_id in JUDGEMENT_RULES] == [[]] * len(JUDGEMENT_RULES)
+    checks = {r["id"]: [(c["check"], c["there"]) for c in r["checks"]] for r in entry["rules"]}
+    assert {rule_id: checks[rule_id] for rule_id in JUDGEMENT_RULES} == {
+        **{rule_id: [] for rule_id in JUDGEMENT_RULES},
+        LOGIC_RULE: [("software-analysis:validate", True)],
+    }

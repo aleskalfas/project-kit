@@ -117,6 +117,24 @@ RELIES_ON = "relies-on"
 #: bind its whole path.
 MUST_MEET = "requirements"
 
+#: The front-matter field DEC-001 point 1 adds to a use case: for each precondition, in
+#: its order, its producers — use cases of its analysis, its own id among them, and
+#: `ENVIRONMENT` beside them. Optional, and it draws no anchor (`_lib/chain.py`).
+AFTER = "after"
+ENVIRONMENT = "environment"
+
+#: A number that opens an area's folder name, such as `010-` in `010-develop`: one valid
+#: order in which the areas build on each other, and no part of any id (DEC-001 point 2).
+_AREA_NUMBER = re.compile(r"^(?P<number>[0-9]+)-")
+
+
+def area_number(area: str | None) -> int | None:
+    """The number that opens an area's folder name, compared as a number — 10 for
+    `010-develop` — or `None` for an area that carries none, or for no area."""
+    found = _AREA_NUMBER.match(area or "")
+    return None if found is None else int(found["number"])
+
+
 #: A numbered artefact's id — a use case's, a journey's or a requirement's — with its
 #: number in any number of digits, the spellings the id schema refuses included.
 _PREFIXES = "|".join(sorted({PREFIX[kind] for kind in NUMBERED}))
@@ -306,6 +324,11 @@ FORMAT_RULE = "RS-SAN-001"
 #: removed binds where it binds and at its status (`_lib/append_only.py`).
 STEPS_RULE = "RS-SAN-002"
 
+#: The rule of logical consequence: a use case starts only from what is already true,
+#: each precondition naming its producers (DEC-001 points 1 and 12). The check of a use
+#: case's `after` binds where it binds and at its status (`_lib/check.py`).
+LOGIC_RULE = "RS-SAN-009"
+
 #: The key of the folders of held documents in that document, each declared as a
 #: place is, with the files it holds (COR-050 point 1), and of the files they
 #: hold, each saying whether `friction.exclude` leaves it out.
@@ -459,6 +482,17 @@ class Analysis:
         found = {self.places[kind] for kind in kinds if kind in self.places}
         found |= {_folder(self.nested[kind]) for kind in kinds if kind in self.nested}
         return found
+
+    def area(self, artefact: Artefact) -> str | None:
+        """The area a use case lies in: the folder of its place that holds it, one folder
+        below the use cases' folder, such as `010-develop`; `None` for one right in that
+        folder, or one no place of this state holds (DEC-001 point 2)."""
+        for place in (self.places.get(USE_CASE), self.nested.get(USE_CASE)):
+            if not place or not under_place(artefact.path, place):
+                continue
+            below = artefact.path.split("/")[len(_folder(place).split("/")) :]
+            return below[0] if len(below) > 1 else None
+        return None
 
     def in_folder(self, folder: str | None) -> list[Artefact]:
         """The artefacts that lie in `folder` of the location, `None` its top."""

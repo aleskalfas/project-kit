@@ -1,7 +1,7 @@
 """The analysis's diagrams, drawn from its front matter (DEC-003).
 
-Three diagrams are drawn from the relations the front matter holds (points 3
-and 4), each for one analysis (point 6): the one the working tree holds, or,
+Four diagrams are drawn from the relations the front matter holds (points 3
+to 5), each for one analysis (point 6): the one the working tree holds, or,
 where the project lists several (DEC-001 point 2), the one the query names. An
 actor of another analysis, named with it, such as `core:ACT-developer`, is the
 one node drawn from beyond its edge, among the actors, by that id alone:
@@ -17,9 +17,13 @@ one node drawn from beyond its edge, among the actors, by that id alone:
   journeys in force that list it in their `requirements`, the requirements it
   `refines` and the actors whose need it meets. For one requirement, that
   requirement alone with what it names and what lists it.
-
-The chain of use cases, drawn from `after` (point 5), is not drawn here: the
-capability reads no `after` yet.
+- **The chain of use cases** (point 5) — the use cases in force, grouped by
+  area, the areas in the order of their numbers, and an arrow from each
+  producer a use case's `after` names to that use case: a use case in force of
+  the analysis, the use case itself, or the environment, one node beside the
+  areas. An arrow from a producer in a later area is dotted. A solid arrow other
+  solid arrows imply is left out, as `_lib/chain.py` says. It is drawn where a
+  use case in force writes `after`.
 
 - **Only what is in force.** A withdrawn artefact draws nothing, and nor does a
   reference to an artefact the analysis does not hold in force: the check
@@ -34,7 +38,8 @@ capability reads no `after` yet.
   artefact's id with each character outside letters and digits made `_`.
 - **Complete, or no answer.** A file of a place a diagram reads that holds no
   artefact of its kind, an artefact there with no id of its kind's shape, or one
-  in force whose list a diagram reads that is no list of ids, is no answer. What
+  in force whose list a diagram reads that is no list of ids, is no answer, and so
+  is, for the chain, a use case in force whose `after` is no list of lists. What
   the diagram would draw cannot be told, so a smaller one would read as true.
   The check says what is wrong with the file.
 
@@ -49,10 +54,12 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from _lib import met_by, schemas
+from _lib import chain, met_by, schemas
 from _lib.model import (
     ACTOR,
+    AFTER,
     ANYWHERE,
+    ENVIRONMENT,
     JOURNEY,
     MUST_MEET,
     NOUN,
@@ -76,7 +83,7 @@ USE_CASES = "use-cases"
 JOURNEYS = "journeys"
 REQUIREMENT_MAP = "requirements"
 CHAIN = "chain"
-SUBJECTS = (USE_CASES, JOURNEYS, REQUIREMENT_MAP)
+SUBJECTS = (USE_CASES, JOURNEYS, REQUIREMENT_MAP, CHAIN)
 
 #: The front-matter fields a diagram reads, beside `actor` and `requirements`.
 STEPS = "steps"
@@ -88,6 +95,7 @@ _READS = {
     USE_CASES: (ACTOR, USE_CASE),
     JOURNEYS: (ACTOR, USE_CASE, JOURNEY),
     REQUIREMENT_MAP: (ACTOR, USE_CASE, JOURNEY, *REQUIREMENTS),
+    CHAIN: (USE_CASE,),
 }
 
 #: The lists of ids each kind's front matter holds that a diagram reads.
@@ -120,13 +128,14 @@ def diagrams(
     folder: str | None = ANYWHERE,
 ) -> list[Diagram]:
     """The diagrams `subject` names: every diagram the analysis has something for when it
-    is `None`, the use-case diagram, each journey's flow, the requirement map, one
-    journey's flow by its id, or one requirement's map by its id. `shown_as` is each kind
+    is `None`, the use-case diagram, each journey's flow, the requirement map, the chain
+    of use cases, one journey's flow by its id, or one requirement's map by its id.
+    `shown_as` is each kind
     of requirement as its heading shows it. Each draws the one analysis in `folder` of the
     location, `None` its top (point 6). Raises NoAnswer when a file the diagrams read
     cannot be read in full, or when `subject` names no diagram."""
     which = _which(subject)
-    drawn = _Drawn(analysis, _reads(which), folder)
+    drawn = _Drawn(analysis, _reads(which), folder, chained=which in (None, CHAIN))
     found: list[Diagram] = []
     if which in (None, USE_CASES):
         found.extend(drawn.use_cases())
@@ -138,6 +147,8 @@ def diagrams(
         found.extend(drawn.requirements(shown_as))
     if which == REQUIREMENT:
         found.append(drawn.requirement(drawn.named(REQUIREMENT, str(subject)), shown_as))
+    if which in (None, CHAIN):
+        found.extend(drawn.chain())
     return found
 
 
@@ -150,11 +161,6 @@ def _which(subject: str | None) -> str | None:
         return JOURNEY
     if schemas.id_pattern(REQUIREMENTS[0]).match(identity(subject)):
         return REQUIREMENT
-    if subject == CHAIN:
-        raise NoAnswer(
-            "the chain of use cases is drawn from each use case's `after`, which the "
-            "capability does not read yet (software-analysis DEC-003 point 5)"
-        )
     raise NoAnswer(
         f"no diagram for {subject!r}: name {', '.join(SUBJECTS)}, a journey's id or a "
         f"requirement's id"
@@ -176,7 +182,12 @@ class _Drawn:
     what a diagram needs of it, and those in force by id."""
 
     def __init__(
-        self, analysis: Analysis, kinds: Sequence[str], folder: str | None = ANYWHERE
+        self,
+        analysis: Analysis,
+        kinds: Sequence[str],
+        folder: str | None = ANYWHERE,
+        *,
+        chained: bool = False,
     ) -> None:
         def drawn(path: str) -> bool:
             return folder == ANYWHERE or analysis.folders.get(path) == folder
@@ -197,7 +208,7 @@ class _Drawn:
             (a for a in analysis.artefacts if a.kind in kinds and drawn(a.path)), key=_order
         )
         for artefact in read:
-            _readable(artefact)
+            _readable(artefact, chained=chained)
         self.analysis = analysis
         self.folder = folder
         self.read = read
@@ -374,6 +385,68 @@ class _Drawn:
         )
         return [_node(a, shown_as) for a in nodes], edges
 
+    # --- the chain of use cases ---------------------------------------------------------
+
+    def chain(self) -> list[Diagram]:
+        """The use cases in force grouped by area, the areas in the order of their
+        numbers, and an arrow from each producer each one's `after` names: dotted from a
+        later area, and a solid one other solid arrows imply left out (point 5). None where
+        no use case in force writes `after`."""
+        use_cases = sorted(self.in_force(USE_CASE), key=_order)
+        if not any(chain.writes_after(u) for u in use_cases):
+            return []
+        area = {_id(u): self.analysis.area(u) for u in use_cases}
+        solid: set[tuple[str, str]] = set()
+        dotted: set[tuple[str, str]] = set()
+        for use_case in use_cases:
+            for entry in chain.producers(use_case) or ():
+                for named in entry:
+                    if named == ENVIRONMENT:
+                        solid.add((_ENVIRONMENT_NODE, _id(use_case)))
+                        continue
+                    producer = self.held(named, USE_CASE)
+                    if producer is None:
+                        continue  # not in force here: the check reports it
+                    arrow = (_id(producer), _id(use_case))
+                    later = chain.later(area[arrow[0]], area[arrow[1]])
+                    (dotted if later else solid).add(arrow)
+        dropped = chain.left_out(solid)
+        edges = {f"{a} --> {b}" for a, b in solid - dropped}
+        edges |= {f"{a} -.-> {b}" for a, b in dotted}
+        lines: list[str] = []
+        if any(a == _ENVIRONMENT_NODE for a, _b in solid):
+            lines.append(f'{_ENVIRONMENT_NODE}(("The environment"))')
+        lines.extend(_node(u) for u in use_cases if area[_id(u)] is None)
+        for name in chain.ordered_areas([a for a in area.values() if a is not None]):
+            lines.append(f'subgraph {_area_id(name)}["{_escape(name)}"]')
+            lines.extend(f"  {_node(u)}" for u in use_cases if area[_id(u)] == name)
+            lines.append("end")
+        description = (
+            f"The chain of {_count(len(use_cases), 'use case')} in force, grouped by area in "
+            "the order of the areas' numbers. An arrow runs from each producer a use case "
+            "names in `after` to that use case, the environment among them. A dotted arrow "
+            "comes from a producer in a later area, an alternative its use case's area does "
+            "not build on. "
+            + (
+                f"{_count(len(dropped), 'solid arrow')} that other solid arrows imply "
+                f"{'is' if len(dropped) == 1 else 'are'} left out."
+                if dropped
+                else "No solid arrow is implied by others."
+            )
+        )
+        return [_diagram(CHAIN, "The chain of use cases", description, lines, edges)]
+
+
+#: The node of the environment in the chain, drawn beside the areas, before every one
+#: (DEC-003 point 5). An artefact's node id keeps its prefix and a `_`, so none is this.
+_ENVIRONMENT_NODE = "environment"
+
+
+def _area_id(area: str) -> str:
+    """An area's group's id: `area_` and its folder's name, each character outside letters
+    and digits made `_`."""
+    return "area_" + re.sub(r"[^A-Za-z0-9]", "_", area)
+
 
 _MAP_CONVENTIONS = (
     "An arrow runs to each requirement from each use case or journey that must meet it, "
@@ -394,9 +467,10 @@ def _order(artefact: Artefact) -> tuple[int, int, str, str]:
     return _KIND_ORDER.index(kind), number, str(artefact.id), artefact.path
 
 
-def _readable(artefact: Artefact) -> None:
+def _readable(artefact: Artefact, *, chained: bool = False) -> None:
     """Raises NoAnswer unless `artefact` gives an id of its kind's shape and, in force,
-    each list a diagram reads of it is a list of ids."""
+    each list a diagram reads of it is a list of ids: with `chained`, a use case's
+    `after` a list of lists of them too."""
     noun = REQUIREMENT if artefact.kind in REQUIREMENTS else NOUN[artefact.kind]
     if artefact.id is None or not schemas.id_pattern(artefact.kind).match(artefact.id):
         raise NoAnswer(
@@ -411,6 +485,13 @@ def _readable(artefact: Artefact) -> None:
             raise NoAnswer(
                 f"{artefact.path} ({artefact.id}) gives a `{field}` that is no list of ids, "
                 f"so what it relates cannot be told; `pkit analysis validate` says why"
+            )
+    if chained and artefact.kind == USE_CASE and chain.writes_after(artefact):
+        if chain.producers(artefact) is None:
+            raise NoAnswer(
+                f"{artefact.path} ({artefact.id}) gives an `{AFTER}` that is no list of lists "
+                f"of ids, so what follows from what cannot be told; `pkit analysis validate` "
+                f"says why"
             )
 
 

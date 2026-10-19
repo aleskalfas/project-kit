@@ -16,7 +16,8 @@ hint until a person writes it (DEC-001 point 1):
 
 - a use case, `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, with its
   actor, its other actors and the requirements it must meet, and an anchor to
-  each;
+  each. An area's folder may open with a number, such as `010-develop`, which
+  is no part of the id (DEC-001 point 2);
 - a journey, `use-case-model/journeys/JRN-NNN-<slug>.md`, with its steps, the
   use cases outside it that a step relies on and the requirements that bind its
   whole path, an anchor to its actor and to each requirement and, from the two
@@ -98,6 +99,13 @@ REVALIDATION = "revalidation"
 GAP_SEPARATOR = " => "
 IDS_SEPARATOR = ":"
 
+#: What `--area` takes: a word, which may open with a number that orders the areas, and
+#: is no part of any id (DEC-001 point 2).
+_AREA_HELP = (
+    "The functional area's folder to put it in: a word, which may open with a number and a "
+    "hyphen, such as `010-develop`, one valid order in which the areas build on each other."
+)
+
 
 def _pair(value: str) -> tuple[str, str]:
     """`<id>=<text>`, as `--outcome` and `--because` take it."""
@@ -166,9 +174,7 @@ def _parser() -> argparse.ArgumentParser:
         help="A requirement it must meet, of any of the three kinds, written in `requirements` "
         "and anchored (repeatable).",
     )
-    use_case.add_argument(
-        "--area", metavar="WORD", help="The functional area's folder to put it in."
-    )
+    use_case.add_argument("--area", metavar="WORD", help=_AREA_HELP)
     journey = kind(JOURNEY, "A journey: one actor's path across several use cases.", "title")
     journey.add_argument("--actor", required=True, metavar="ACT-ID", help="Who takes it.")
     journey.add_argument(
@@ -247,9 +253,7 @@ def _parser() -> argparse.ArgumentParser:
             help="A requirement it refines, of any of the three kinds, written in `refines` and "
             "anchored (repeatable).",
         )
-        requirement.add_argument(
-            "--area", metavar="WORD", help="The functional area's folder to put it in."
-        )
+        requirement.add_argument("--area", metavar="WORD", help=_AREA_HELP)
         requirement.add_argument(
             "--unanchored-because",
             metavar="TEXT",
