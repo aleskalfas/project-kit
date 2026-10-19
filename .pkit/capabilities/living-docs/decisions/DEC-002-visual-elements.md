@@ -33,7 +33,7 @@ What a page holds is content: true, neutral, and the same wherever it is read. H
 - **Presentation:** colours, fonts, light and dark, how a diagram or a callout is drawn, how an image is sized and framed, and a documentation site.
 - **No styling in content.** Content holds nothing that sets a colour, a font, a theme, a class or a style. Examples are Mermaid's `%%{init}%%` directive, a `config` block in a diagram's front matter, and `classDef`, `class`, `:::`, `style` and `linkStyle` lines. So are HTML attributes that size, align or theme an image.
 - **A theme reaches a visual element only through presentation:**
-  - on GitHub, through GitHub's own look, which needs no setup
+  - on the repository host, such as GitHub, through the host's own look, which needs no setup
   - on a documentation site, through the site's settings
   - in an image a renderer writes, through the renderer's settings
   - in a screenshot, through the capture's settings, kept apart from the capture script (point 5)
@@ -43,26 +43,28 @@ So a change of theme changes no content, and flags no page. One theme file that 
 ### 2. A diagram is a Mermaid fence by default
 
 A diagram is written as Mermaid text in a fenced block of the page, whose info string opens with `mermaid`. It carries no styling (point 1).
-- **Drawn with no setup.** GitHub draws the fence, and a site draws it in the project's theme. Where nothing draws it, it reads as text.
+- **Drawn with no setup.** A repository host such as GitHub draws the fence, and a site draws it in the project's theme. Where nothing draws it, it reads as text.
 - **Its syntax is not validated.** A check would need a Mermaid parser installed, and no parser the capability could pin draws as each host draws. A project may run such a check in its own continuous integration.
 - **Another diagram language** is used only where the project renders it to an image, which the page shows as an image (point 5). How the methodology configures a renderer, and checks that an image is fresh, is decided with the first page that needs such a language.
 - **Text laid out as a picture,** such as a folder tree in a code block, is a code block, not a diagram.
 
 ### 3. Each fact has one home, and a diagram is never it
 
-A page may rest on what holds the truth about the software, beyond decision records and pages. The rule that states this binds at `LDOC`'s next major (point 10).
-- **The homes beyond the pages.** A fact's home may be something the page anchors that decides or states the fact:
+A page may rest on what holds the truth about the software, beyond decision records and pages. The rule that states this binds once a major of `LDOC` accepts it (point 10).
+- **The homes beyond the pages.** A fact's home may be something the page anchors that decides or states the fact, in this order:
   - an accepted decision record or an accepted rule
-  - an analysis artefact in force, or a section of one
+  - another artefact in force that is no page, such as an analysis artefact or a section of one
   - a captured source, for what the source it captures says
-  - code
-- **One home among them.** Where the page anchors more than one of them for a fact, the first in that list is the fact's home. So what decides a fact comes before what states it.
+  - code: a file the software is built or configured from, such as its source, its schemas or its configuration
+- **One home among them.** Where the page anchors more than one of them for a fact, the first in that order is the fact's home. So what decides a fact comes before what states it.
 - **The anchor** may be on the whole home, or on the part of it that decides or states the fact (COR-050 point 2).
 - **The page may state such a fact.** It needs no link to another page that states it, and no anchor on one, as DEC-001 point 3 says of a decision record.
 - **A user page and the internal root.** A page of the user space may rest on a home under the internal root. It anchors that home, and links nothing under the internal root (DEC-001 point 1).
 - **Never a home of this kind:** a page, which is a home only among the pages (DEC-001 point 3), and a diagram in any form, such as a fence, a diagram's source file or an image.
 - **Every other fact** has its home among the pages, as DEC-001 point 3 says. A page is a fact's home only where it states the fact in prose.
 - **A diagram shows only facts with a home elsewhere.** Each fact it shows has its home in what the page anchors, or in prose on a page. A fact that only a diagram states has no home, and breaks the rule.
+- **A diagram of its own page's prose** is a view of that prose, not a second statement of its facts. Where the two disagree, the rule is broken.
+- **A diagram of another page's fact** is a summary of it, with the link and the anchor a summary takes (DEC-001 point 3).
 - **A diagram anchors what it shows** through its page. The page anchors the home of each fact the diagram draws.
 - **A wide diagram,** such as one of a system's parts, anchors the records that decide its parts and how they relate. An anchor on most of the repository would flag the page on every change (COR-050 point 7).
 
@@ -79,7 +81,7 @@ An image a renderer writes, a screenshot or a recording is never anchored. The p
 An image is an image file the page shows with `![alt](path)`.
 - **A hand-made image,** a screenshot taken by hand included: the page anchors what the image shows, such as the code of the screen it pictures. It may also anchor the image file, so that replacing the image asks whether the text still agrees.
 - **A screenshot from a script:** a capture script the project keeps takes it, marks and arrows included. The page anchors the script and what the screenshot shows, never the screenshot (point 4). The capture's window size, scale and theme are settings apart from the script, which the page does not anchor.
-- **Answering a flag:** a page flagged through its capture script is answered after the capture runs again, and the new screenshot is part of the answer.
+- **Answering a flag:** a page flagged through its capture script is answered after the capture runs again, and the new screenshot is part of the answer. The fixer of pages runs no capture, so it holds such a page with one question (DEC-001 point 5).
 - **A recording,** an animated image included, follows the same rule. The page anchors the script or storyboard that produced it.
 - **Where an image lies:**
   - beside the page that shows it, with produced images apart from hand-made ones
@@ -102,7 +104,7 @@ A page shows a command and what it prints in a fence for a shell session, such a
 ### 7. Callouts
 
 A callout is a block quote whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]`. It is the one form a callout takes in content.
-- **Its look is presentation:** GitHub's own by default, the site's theme on a site.
+- **Its look is presentation:** the repository host's own by default, the site's theme on a site.
 - **Kept true** as prose is, through the page's anchors.
 - **No check.** An unknown type reads as a plain block quote, which costs little.
 
@@ -117,7 +119,7 @@ A diagram, an image or a recording that carries meaning has a text alternative. 
 
 ### 9. A documentation site meets three criteria
 
-GitHub, with no site, stays the default. A project that publishes a site chooses a generator that meets three criteria:
+The repository host's own view, with no site, stays the default. A project that publishes a site chooses a generator that meets three criteria:
 - **It reads content as written:** the page's front matter, Mermaid fences and the standard callout syntax.
 - **A theme reaches diagrams and callouts from one place,** in light and in dark.
 - **One site serves one space.** It gathers the space's pages and the images they show, wherever they lie. The user space's site never includes the internal root (DEC-001 point 1). A technical page's link to a user page reaches the user space's site.
@@ -130,14 +132,14 @@ Which generator a project uses is its own choice.
 - **A successor of the rule on one home,** under a new id, stating point 3.
 - **The rule on text alternatives,** stating point 8, with its checkable part.
 
-Until a major accepts them, they bind nothing, and the rule on one home binds as it stands (COR-051 point 4). Accepting them is a reviewed change a person makes, which raises `LDOC`'s major and supersedes the rule on one home (COR-051 points 4 and 7). That change also rewrites what names the rule on one home: `LDOC`'s rule on grounding, and DEC-001 point 3's passage on a fact's home.
+Until a major accepts them, they bind nothing, and the rule on one home binds as it stands (COR-051 point 4). Accepting them is a reviewed change a person makes, which raises `LDOC`'s major and supersedes the rule on one home (COR-051 points 4 and 7). That change also rewrites every text that names the rule on one home, such as `LDOC`'s rule on grounding, the capability's README, agent and authoring skill. DEC-001 point 3's passage on a fact's home then points to point 3 here, rather than restating it.
 
 ## Rationale
 
-**Why content stays neutral.** A theme change that touches content flags every page that shows a diagram, though nothing the page says changed. Keeping styling out makes a theme a project setting, which changes no page. The cost is that a project cannot theme what GitHub draws.
+**Why content stays neutral.** A theme change that touches content flags every page that shows a diagram, though nothing the page says changed. Keeping styling out makes a theme a project setting, which changes no page. The cost is that a project cannot theme what its repository host draws.
 
 **Why Mermaid in the page.**
-- **It works on day one.** GitHub draws it with no build step, and it reads as text where nothing draws it.
+- **It works on day one.** GitHub and other repository hosts draw it with no build step, and it reads as text where nothing draws it.
 - **Agents and reviewers handle text.** An agent writes it, and a reviewer reads its diff. Nobody can read a changed image.
 - **Friction's cascade reaches through it.** The fence is content, so changing it flags whatever anchors that part of the page. A separate source would stop the cascade at the page (COR-050 point 6).
 
@@ -147,7 +149,9 @@ Until a major accepts them, they bind nothing, and the rule on one home binds as
 - **The truth lies there.** Facts about the software are decided in records and rules, stated in its analysis and its sources, and carried out in its code.
 - **The same guarantee.** A change to any of them flags each page that anchors it, as a change to a decision record does.
 - **One home whatever the form.** Homes for diagrams alone would give one fact two homes, on a page that states it and draws it too.
+- **Only what is in force.** A proposed or superseded record decides nothing, and a withdrawn artefact states nothing that holds.
 - **The order picks one.** What decides a fact is where a change to it is made, before what states or carries it out.
+- **The cost.** Where code is the only home a page anchors, the page follows the code, and a regression could be written into the page. The person who reviews each proposed fix is the guard against that (DEC-001 point 5).
 
 **Why this refines DEC-001 rather than overturning it.** DEC-001 left other homes "not taken yet", waiting for a page that needs them. This record takes them, and keeps every home DEC-001 gives.
 
@@ -167,8 +171,8 @@ Until a major accepts them, they bind nothing, and the rule on one home binds as
 
 - **No default diagram language, each space's definition naming its own.** Rejected. A project would have nothing that works on day one.
 - **Mermaid also rendered to a committed image for every diagram.** Rejected. It commits an image per diagram, and puts every diagram behind a renderer.
-- **Styling directives in each fence,** so that GitHub shows the project's theme. Rejected. It puts styling into content, and a theme change would flag every page with a diagram.
-- **A rule against styling in content,** with a check of Mermaid's directives. Not taken yet. The authoring skill and review carry point 1, and a rule comes if styling slips past them (COR-007).
+- **Styling directives in each fence,** so that the repository host shows the project's theme. Rejected. It puts styling into content, and a theme change would flag every page with a diagram.
+- **A rule against styling in content,** with a check of Mermaid's directives. Not taken yet. The authoring skill carries point 1, and a rule comes when a project finds styling the skill did not prevent (COR-007).
 - **Today's homes kept, each fact a diagram shows also stated in prose.** Rejected. It costs a sentence for each arrow a diagram draws, and leaves a fact's home away from where it is decided or stated.
 - **The wider homes for diagrams only.** Rejected. One fact would have two homes on a page that states it in prose and draws it.
 - **Anchored artefacts as grounds that need no home, with a home kept to a record or a page.** Not taken. A home is where a change to a fact is made, and for a fact the analysis or the code holds, that place is the analysis or the code.
@@ -189,4 +193,5 @@ Until a major accepts them, they bind nothing, and the rule on one home binds as
 - **The validator** fails a `mermaid` fence that lacks an `accTitle` or an `accDescr`, on each page where the rule on text alternatives binds. While that rule is proposed, it binds on no page, and the validator's summary says so.
 - **DEC-001** points 1, 3, 6 and 7 name what this record adds to them.
 - **The authoring skill** gives writers the forms of points 1, 2 and 5 to 9, and worked examples of a site.
+- **The capability's agent** reads these forms when it proposes a fix or reviews a page as its reader. It holds a page whose fix needs a new run or a new capture (points 5 and 6).
 - **Projects** keep their capture scripts and console runners, and choose a site generator if they want one. A project that adopts the rules at `LDOC`'s next major reviews its pages' diagrams for their text alternatives.
