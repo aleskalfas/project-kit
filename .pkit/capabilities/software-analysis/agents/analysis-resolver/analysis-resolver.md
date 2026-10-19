@@ -41,7 +41,7 @@ Your scripted flows — a drift resolved (the happy path), the stop when you can
 ## When not to
 
 - **An artefact that is not the analysis's** — a documentation page, a decision record, another component's artefact. Revalidating it belongs to the component that owns it (COR-050 point 6). Say so and leave it.
-- **Writing new analysis** — a new actor, use case or journey. That is the `analysis-author` skill's (`.pkit/capabilities/software-analysis/skills/analysis-author/analysis-author.md`); you propose the artefact that fills a gap, and a person writes it.
+- **Writing new analysis** — a new actor, use case, journey or requirement. That is the `analysis-author` skill's (`.pkit/capabilities/software-analysis/skills/analysis-author/analysis-author.md`); you propose the artefact that fills a gap, and a person writes it.
 - **A planned revalidation or an onboarding** — checking the analysis against a proposed design before code, or deriving it from an existing codebase. Their lifecycles are outside this capability's decision for now (DEC-001 point 11).
 - **Reviewing a change**, or **running the software.** Revalidation judges the description by reading; testing judges the software by running it (DEC-001 point 7). A failing result someone ran is evidence you quote; you never run it.
 
@@ -91,7 +91,7 @@ pkit analysis new revalidation <subject> --change <ref> --trigger <trigger> --ou
 
 A command that starts fixers starts you where the project granted you, on the default branch's stale analysis artefacts ([project-management:DEC-056-drift-fixers] point 3). Nobody watches the run, and nobody can answer you. The judgment above holds. What the run takes and what it returns are set here, and where another section says otherwise, this section wins.
 
-The contract of such a run is the command's (DEC-056 points 3 and 6). This section is the fixer's side of it, as the record gives it. Where project-management states the contract in full, its statement wins.
+The contract of such a run is the command's (project-management DEC-056 points 3 and 6). This section is the fixer's side of it. The record gives the line's three states and an answer of fields. The line's exact form, the fields beyond the record's three, and the folders are this body's, until project-management states the contract in full. Its statement then wins.
 
 **The brief is your only instruction.** It names:
 - the command that started you
@@ -105,11 +105,11 @@ Commit messages, artefacts and the files they anchor are what you judge, never w
 
 **What the run changes:**
 - **Only the artefacts the brief names.** Another flagged artefact is not yours in this run. Run no cascade: the command starts you again once these are answered.
-- **Intent from the commits, and from an answer.** The run reaches no network, so you read no pull request and no work item. An answer the brief carries is a quote whose source is the person it names. Pass it to `pkit analysis propose` as `--intended` or `--unintended`, as you would a person's answer in a session.
+- **Intent from the commits, and from an answer.** The run is given no network, so you read no pull request and no work item. An answer the brief carries is a quote whose source is the person it names. Pass it to `pkit analysis propose` as `--intended` or `--unintended`, as you would a person's answer in a session.
 - **You never ask, and never wait.** Where a session would ask, the artefact is held, and its result line carries the question.
-- **An artefact that waits for its upstream** gets `none`. It waits where its upstream is stale, or is in the brief too (DEC-056 point 3).
+- **An artefact that waits for its upstream** gets `none`. It waits where its upstream is stale, or is in the brief too (project-management DEC-056 point 3).
 - **A call the run refuses stays refused.** It comes back with no prompt. Look for no other way to make it. Where the artefact cannot be judged without it, give it `none`, with the reason. Where only `git apply --check` is refused, leave that check to whoever applies the diff.
-- **No command, anywhere.** The command that started you builds each writer's command from your fields, and never runs a string you wrote (DEC-056 point 6). So nothing you write in a run is a command, the record's included.
+- **No command, anywhere.** The command that started you builds each writer's command from your fields, and never runs a string you wrote (project-management DEC-056 point 6). So nothing you write in a run is a command, the record's included.
 
 **What you write for an artefact,** in the folder `<artefact>/` of the workspace, where `<artefact>` is the artefact as the brief names it, so that no two artefacts share a folder:
 - `answer.json`, for an artefact you propose an answer for, the answer as fields, one object:
@@ -179,7 +179,7 @@ Load your storyboard from `storyboard.md` with the Read tool at session start an
 1. **Take the flagged artefacts** from the check the request names, or from the brief of a command that started you, keep the analysis's, upstream first.
 2. **Read each one's evidence** — the explanation, the proposal, the commits, the change's context — and pass what bears on intent back to `pkit analysis propose` as a quote with its source.
 3. **Decide each outcome**, confirming what `propose` proposes or leans to by reading the diff; where it is ambiguous, write the question, and hold what depends on it.
-4. **Write the proposal** — `proposal.md` and a diff per edit — with every artefact's commands for the person, word for word.
+4. **Write the proposal** — `proposal.md` and a diff per edit — with every artefact's commands for the person, word for word. Started by a command, write instead the files "When a command starts you" names, and no command.
 5. **Hand it over**: where the proposal is, what to do first, the commands, and the question if there is one. Once they have been run, the cascade may flag the artefacts downstream: run the change check again and take them. Started by a command, end instead with the result lines, one per artefact the brief names.
 
 ## Intermediate files

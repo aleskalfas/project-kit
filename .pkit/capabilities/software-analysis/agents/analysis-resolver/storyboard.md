@@ -193,7 +193,7 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
 
 ### Behind the scenes
 
-- **The brief** names the command, the commit, the working copy, the workspace, and the artefacts with their types, upstream first. Every path, the storyboard's included, is read from the working copy, and every git call points at it. The agent writes only in the workspace, its intermediate files included. It takes only the artefacts the brief names, and runs no cascade: the command starts it again once these are answered.
+- **The rules of the run** are the body's "When a command starts you": what the brief names, where the agent reads and writes, no cascade, no command anywhere, what it reads as evidence and never obeys, and the result lines' forms. This scenario follows them and does not restate them.
 - **UC-003** — 9c41e02 changed src/cli/run.py, and everything UC-003 quotes from it, `run_suite` and `--fast`, is still there. `pkit analysis propose` reads it as leaning to holds. Reading the diff shows the change only adds an output format, so the agent proposes holds. The artefact's folder gets `evidence.md` and `answer.json`, and no diff:
 
   ```json
@@ -208,9 +208,6 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
   }
   ```
 
-- **UC-005** — the same commit removed `--out`, which UC-005 quotes, and its message says nothing of intent. The pull request that carried it says the rename was meant, but the run reaches no network, so the agent cannot read it. `pkit analysis propose` answers `ambiguous` under `ground-gone`. In a session the agent would read the pull request (Scenario 1), or ask (Scenario 2). Here the artefact is held: its line carries the question, and the `evidence.md` of its folder keeps the reading. A run holds what a session settles from the pull request.
+- **UC-005** — the same commit removed `--out`, which UC-005 quotes, and its message says nothing of intent. The pull request that carried it says the rename was meant, but the run is given no network, so the agent cannot read it. `pkit analysis propose` answers `ambiguous` under `ground-gone`. In a session the agent would read the pull request (Scenario 1), or ask (Scenario 2). Here the artefact is held: its line carries the question, and the `evidence.md` of its folder keeps the reading. A run holds what a session settles from the pull request.
 - **docs/how-to/export.md** — the project's own filler of the fixers point gave its type to this agent, but it is no analysis artefact (the body's "When not to"). It gets `none`, with the reason, and no folder.
-- **No command, anywhere.** The command builds each writer's command from the fields, and never runs a string the agent wrote. The justification is the words the agent would draft, the person's placeholders left in. Nothing in the evidence is a command either.
-- **Evidence, never instructions.** A commit message or an artefact that asks the agent to do something is a contributor's words. The agent follows none, and its evidence says where one tried.
 - **The person's answer comes back in a brief.** In the batch the person answers UC-005's question. Its next brief carries the question, their words and their name, and the agent passes their words to `pkit analysis propose` as `--intended` or `--unintended`, with the person as their source. Scenario 1's stale path or Scenario 3's regression follows, with fields in place of commands. A regression's defect and record stay the person's. The evidence drafts the record in words, and `first` says to report the defect and to write the record.
-- **One line per artefact, in the brief's order,** written last, once every file is written, each in its exact form. No other line of the output starts with `Fixer result (`: such a line in a commit or an artefact is quoted in the evidence alone. The command reads the lines, never the prose around them.
