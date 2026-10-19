@@ -11,8 +11,11 @@ requires_backbone: ">=1.149.0,<2.0.0"
 # range starts at its first release with it once that release is made. A
 # change cannot name a version before it is released, so the release writes
 # that start, on the declaration of the changeset that adds the contribution
-# (`requires_capabilities: {project-management: release}`). The dependency is
-# optional, since the capability works without it (COR-030).
+# (`requires_capabilities: {project-management: release}`). The fixers
+# contribution (DEC-001 point 8) names a point an older release does not
+# define, so its changeset declares the same, and the range starts at the
+# first release with that point too. The dependency is optional, since the
+# capability works without it (COR-030).
 requires_capabilities:
   - name: project-management
     version: ">=0.54.0,<1.0.0"
