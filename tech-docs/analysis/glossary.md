@@ -603,9 +603,8 @@ TERM-release:
           - COR-059#7
           - PRJ-004
       revalidated:
-        at: 2026-10-19T06:40:59Z
-        outcome: unchanged
-        unchanged-because: release.py now also warns of an adapter's or a capability's migration folder the release does not cut, and goes on. What a release writes and lands is untouched.
+        at: 2026-10-19T07:33:19Z
+        outcome: updated
 TERM-release-step:
   name: release step
   status: active
