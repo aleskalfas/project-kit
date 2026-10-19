@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T17:35:45Z
+      at: 2026-10-19T06:33:07Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 4 gains that a document lying only in an untyped place of rule sets outside every root, with no assignment, is no page. The developer's needs on pages, writing one for its reader with grounding anchors, having a stale page's fix proposed and having a page read as its reader, hold for every page, and this changes only which documents are pages, so they still hold.
+      unchanged-because: living-docs DEC-001 point 5 gains that the capability declares its agent the fixer of the page type, so a work-tracking command may start it on stale pages in a run nobody watches. The agent still only proposes there, and nothing is applied until the person accepts it, so the developer's need to have a stale page's fix proposed with its evidence, and to review it before it is applied, still holds.
 ---
 
 # ACT-developer — Developer
