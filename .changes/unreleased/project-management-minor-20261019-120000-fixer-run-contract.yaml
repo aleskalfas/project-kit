@@ -1,0 +1,11 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  The fixers point's version covers what a fixer run passes and returns
+  (#1792, DEC-056 points 1, 3 and 6): the brief, the answer, the result
+  lines and a fixed list of `none` reasons. A fixer writes each answer as
+  `answer.json`, which the new schema `schemas/fixer-answer.schema.json`
+  holds. The README's Connections section shows the contract for whoever
+  writes a fixer. The command that starts fixers is not shipped yet.

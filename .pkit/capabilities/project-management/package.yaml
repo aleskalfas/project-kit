@@ -318,7 +318,10 @@ connections:
           error naming both. No default. A fixer starts on its own only where
           the project granted it, in this capability's grant list, which is
           empty by default. A filler that cannot answer leaves the point
-          unresolved, so no fixer starts.
+          unresolved, so no fixer starts. The version covers the run's
+          contract too, which each entry's agent follows: the brief, the
+          answer (fixer-answer.schema.json), the result lines and the none
+          reasons (DEC-056 points 1, 3 and 6).
         combination: union
         inert: fail
   extensions:

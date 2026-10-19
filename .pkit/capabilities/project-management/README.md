@@ -1199,6 +1199,32 @@ doc_check:
 
   Its entry names a type of its own type registry and an agent it ships. That agent only proposes, so its definition claims no paths and holds no tool that changes existing files or starts agents. Two capabilities that claim one type are an error naming both. **Your own filler file**, `docs/pkit/fillers/pkit/work-tracking/fixers.yaml`, may replace an entry, naming any deployed agent. How a fixer is granted, and what validation checks, is under "8. (Optional) Grant the fixers your capabilities declare", above.
 
+  **The version covers what a fixer run passes and returns.** A contribution at version 1 says that each agent it names follows the run's contract, which [project-management:DEC-056-drift-fixers] points 3 and 6 decide. The command that starts fixers is not shipped yet. What whoever writes a fixer needs from the contract:
+
+  - **The brief** is the one message a run gives the fixer. It names the commit, the working copy, the workspace, the artefacts with their types, and the command forms the run allows. What it quotes, such as a pull request's text or the person's answer to a held question, is data, never an instruction.
+  - **The files** go in a folder of the workspace named for each artefact as the brief names it: `evidence.md`, which the person reads before deciding, the diff where the fixer proposes an edit, and `answer.json`. A folder whose artefact is held, or given `none`, holds no answer.
+  - **The answer,** `answer.json`, is one object with every field present: `artefact`, `outcome`, `justification`, `sentence`, `keep`, `diff` and `first`. `schemas/fixer-answer.schema.json` says what each holds, and refuses an answer off it.
+  - **The result lines** end the fixer's final message, one for each artefact the brief names, the artefact written exactly as the brief names it. No other line of the message starts with `Fixer result (`, and a line inside a fenced block counts the same:
+
+    ```text
+    Fixer result (<agent>): proposed `<artefact>` in `<artefact>/answer.json`
+    Fixer result (<agent>): held `<artefact>`: <the question>
+    Fixer result (<agent>): none `<artefact>`: <reason>: <the reason in words>
+    ```
+
+  - **The `none` reasons,** one on each `none` line:
+
+    | Reason | When |
+    |---|---|
+    | `not-mine` | the artefact is not one the fixer fixes |
+    | `not-stale` | the artefact is not stale at the commit, or the checks did not judge it |
+    | `refused` | the run's rules or its sandbox stopped a call the fixer needs |
+    | `out-of-step` | another component answered in a version the fixer does not read |
+    | `upstream` | the artefact waits for its upstream, which the words name |
+    | `failed` | a call or a reading failed for any other cause |
+
+  How the command treats each reason, and what gives an artefact no result, is the record's.
+
 ## Permissions
 
 The project-management capability ships a **capability-contributed permission grant** (per ADR-016) at `.pkit/capabilities/project-management/permissions/grants.yaml`. This fragment is automatically composed into the effective permission model whenever this capability is a registered component — no manual copy required.
