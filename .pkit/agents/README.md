@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-18T20:04:46Z
+      at: 2026-10-18T18:54:17Z
       outcome: unchanged
-      unchanged-because: ADR-065 point 11 gained a row for the answers to a data point's question, written by the definer's command under the person's answer. This page cites point 11 only for reconcile being the one writer outside the lifecycle that creates a seed path, which still holds.
+      unchanged-because: COR-050 point 16 gains a second way for a link to choose its targets. Who writes a revisit entry, and the friction writers an agent making a change may run, read as they did.
 ---
 
 # Agents

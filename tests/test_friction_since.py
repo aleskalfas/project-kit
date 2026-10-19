@@ -176,6 +176,137 @@ def test_front_matter_with_a_yaml_anchor_lies_outside(repo: AdopterRepo) -> None
     assert outside.path == PAGE and "YAML anchor" in outside.why
 
 
+COLLIDING = "docs/colliding.md"
+
+
+def _colliding(
+    dropped: str, read: str, keys: tuple[str, str] = ("1", '"1"'), after: str = ""
+) -> str:
+    """A collection of two entries whose keys are written `keys`, each with a friction
+    block carrying the answers `dropped` and `read`, then the front matter's lines
+    `after`. Keyed `1` and `"1"`, the two collide once rendered as text: discovery reads
+    the second entry alone and drops the first."""
+
+    def entry(key: str, title: str, answers: str) -> str:
+        return (
+            f"{key}:\n  title: {title}\n  pkit:\n    friction:\n"
+            f"      anchors: {{path: [src/cli/**]}}\n{answers}"
+        )
+
+    first, second = keys
+    entries = entry(first, "dropped", dropped) + entry(second, "read", read)
+    return f"---\n{entries}{after}---\n\nBody.\n"
+
+
+def _listed(reason: str) -> str:
+    """A `revisited` list of one entry, in flow style, as the repro of #1750 writes it."""
+    return (
+        f"      revisited:\n      - {{anchor: {{kind: path, value: {TEST_CLI}}}, "
+        f"outcome: unchanged, reason: {reason}}}\n"
+    )
+
+
+def _stamped(because: str) -> str:
+    """A `revalidated` block in block style."""
+    return (
+        f"      revalidated:\n        at: {T0}\n        outcome: unchanged\n"
+        f"        unchanged-because: {because}\n"
+    )
+
+
+# Text in the entry discovery drops, which no tool reads and no person is shown.
+UNSEEN = "      revisited: |\n        text no tool reads\n        status: accepted\n"
+
+
+@pytest.mark.parametrize(
+    ("before", "after"),
+    [
+        pytest.param(
+            (_listed("a"), _listed("b")), (UNSEEN, _listed("b")), id="the-dropped-entry-s-list"
+        ),
+        pytest.param(
+            (_listed("a"), _listed("b")), (_listed("a"), _listed("c")), id="the-read-entry-s-list"
+        ),
+        pytest.param(
+            (_stamped("a"), _stamped("b")),
+            (_stamped("a, rewritten"), _stamped("b")),
+            id="the-dropped-entry-s-block",
+        ),
+    ],
+)
+def test_keys_that_collide_once_rendered_lie_outside(
+    repo: AdopterRepo, before: tuple[str, str], after: tuple[str, str]
+) -> None:
+    """`1` and `"1"` are both read as `1` (#1750). Discovery reads the second entry, so a
+    block or list found under either key could be the one no tool reads, and a change to
+    it would count as inside. Where two keys on the path to a block or a list are read
+    alike, the file gives no answer: it lies outside, whichever entry changed."""
+    since = _authorised(repo, {COLLIDING: _colliding(*before)})
+    head = repo.commit("rewrite an entry", {COLLIDING: _colliding(*after)})
+    found = _since(repo, since)
+    assert not found.all_inside
+    (outside,) = found.outside
+    assert (outside.path, outside.commit) == (COLLIDING, head)
+    assert "two keys on its path are read as `1`" in outside.why
+
+
+@pytest.mark.parametrize(
+    ("after", "inside"),
+    [
+        pytest.param((UNSEEN, _listed("b")), False, id="the-dropped-entry-s-list"),
+        pytest.param((_listed("a"), _listed("c")), True, id="the-read-entry-s-list"),
+    ],
+)
+def test_a_key_written_alike_but_read_otherwise_is_never_the_one_found(
+    repo: AdopterRepo, after: tuple[str, str], inside: bool
+) -> None:
+    """`true` is read as `True`, and `"True": 0` then drops its entry, so discovery reads
+    the entry `"true"` alone (#1750). Its list is found under the key read as `true`,
+    never the earlier key written the same: a change to the entry dropped lies outside,
+    and one to the list discovery reads lies inside."""
+    keys, tail = ("true", '"true"'), '"True": 0\n'
+    since = _authorised(repo, {COLLIDING: _colliding(_listed("a"), _listed("b"), keys, tail)})
+    repo.commit("rewrite an entry", {COLLIDING: _colliding(*after, keys, tail)})
+    found = _since(repo, since)
+    assert found.all_inside is inside
+    if not inside:
+        (outside,) = found.outside
+        assert outside.why == "it changed outside its `revalidated` blocks and `revisited` lists"
+
+
+def test_a_merge_key_on_the_path_to_a_list_lies_outside(repo: AdopterRepo) -> None:
+    """A key tagged `!!merge` reads the keys of its value as its mapping's own, so the text
+    under it holds the artefact's anchors though it is written as the list (#1750). It
+    needs no YAML anchor. A change to it lies outside, as one through an alias does."""
+    entry = f"{{anchor: {{kind: path, value: {TEST_CLI}}}, outcome: unchanged, reason: r}}"
+
+    def page(anchor: str) -> str:
+        merged = f"    !!merge revisited: {{anchors: {{path: [{anchor}]}}, revisited: [{entry}]}}\n"
+        return _page(T0).replace("    anchors:\n      path: [src/cli/**]\n", merged)
+
+    since = _authorised(repo, {PAGE: page("src/cli/**")})
+    head = repo.commit("narrow the anchors", {PAGE: page("docs/nothing/**")})
+    (outside,) = _since(repo, since).outside
+    assert (outside.path, outside.commit) == (PAGE, head)
+    assert "is reached through a merge key" in outside.why
+
+
+def test_front_matter_with_a_key_no_mapping_can_hold_lies_outside(repo: AdopterRepo) -> None:
+    """A complex key holding a mapping, `? [{a: 1}]`, is no key a mapping can hold
+    (#1750). The front matter does not parse, so the file lies outside, and the command
+    answers rather than fail with an error."""
+    since = _authorised(repo)
+    complex_key = _page(T0).replace("status: draft", "? [{a: 1}]\n: x\nstatus: draft")
+    head = repo.commit("a complex key", {PAGE: complex_key})
+    (outside,) = _since(repo, since).outside
+    assert (outside.path, outside.commit) == (PAGE, head)
+    assert outside.why.startswith(
+        "its front matter does not parse (cannot build a value from it: TypeError"
+    )
+    result = _cli(since, "--base", "main")
+    assert result.exit_code == 0, result.output
+
+
 def test_an_object_that_cannot_be_read_is_never_read_as_empty(
     repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
 ) -> None:

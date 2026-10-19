@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T20:04:31Z
+      at: 2026-10-18T21:14:53Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability commands, which now end with the questions a data point declares. They ask nothing without a terminal and pkit sync never asks, so the CI pipeline still runs every check with no terminal and no question, and the merge waits on the checks as this use case says.
+      unchanged-because: This change words the friction revisit help in cli.py and the revisit finding in friction_check.py, and splits one validation bullet of COR-050 point 12. How a merge waits on pkit validate and pkit friction check is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

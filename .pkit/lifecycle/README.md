@@ -23,6 +23,7 @@ pkit:
         - src/project_kit/friction_discovery.py
         - src/project_kit/process_dependencies.py
         - src/project_kit/migrations.py
+        - src/project_kit/scaffolds.py
         - src/project_kit/install.py
         - src/project_kit/sync.py
         - src/project_kit/upgrade.py
@@ -31,9 +32,9 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065]
     revalidated:
-      at: 2026-10-18T20:04:36Z
+      at: 2026-10-18T21:14:50Z
       outcome: updated
 ---
 
@@ -241,7 +242,7 @@ The table lists every key `.pkit/schemas/backbone/package.schema.json` knows, wi
 | `connections.extensions.depends-on` | **Generated, never hand-written**: `generated: true`, required, and `entries`, a list of `{process}` plus optional `schema_version` and `mandatory`; `process` is in the implementation form `<capability>:<process-id>` or the role form `<publisher>::<role>:<point>`. Written by `pkit capabilities refresh <name>` from the process definitions' `depends_on` — one entry per distinct upstream and targeted interface version, sorted; `schema_version` is the definition entry's `version`, `mandatory` its mark. A copy that differs is a validation error. | COR-053 point 4; COR-038 |
 | `mandatory` — on a data point, a contribution, a subscription or a `depends-on` entry | `{reason}`, a non-empty reason required: the mark without one is refused. An offered point takes no mark. | COR-053 point 6 |
 | `docs.locations` | A mapping from a location name (`[a-z][a-z0-9-]*`) to `{path}` plus optional `root` (`internal`, the default, or `user`) and `description`; `path` is a sub-path of that documentation root. A location recorded for the name in `.pkit/capabilities/<name>/project/docs-locations.yaml` wins over the declared one; every reader of a capability's locations — the documentation-roots readers and friction discovery — reads them this one way (`project_kit.docs_roots.read_capability_locations`). An entry in another shape places nothing, and a place naming it is a validation finding. | COR-049 points 4 and 5 |
-| `friction.places` | A list of `{path}` plus optional `location` (a name declared in `docs.locations`, inside which `path` applies; without one, `path` is repository-relative), `type` (a name this component's `friction.types` declares: the type the artefacts in the place take), `revisits` and `description`. A `type` the registry does not declare gives no type, and the `packages` check reports it without failing. `revisits` is a non-empty list of links whose source's change asks for a revisit of their targets, each `{targets, when}` plus optional `description`: `targets` names the source's own field that lists the targets by their anchors' values, and `when` the trigger fields, a non-empty list of unique own fields. A field is a word, never `pkit`. A link whose `targets` is not one own field, or whose `when` is not a non-empty list of own fields, declares nothing, and the `packages` check refuses every link the schema refuses. What a link means: the schemas README, "A place may declare links". What the change check asks of a triggered link: the CLI reference, "Friction checks". | COR-050 points 1 and 16; COR-056 point 2 |
+| `friction.places` | A list of `{path}` plus optional `location` (a name declared in `docs.locations`, inside which `path` applies; without one, `path` is repository-relative), `type` (a name this component's `friction.types` declares: the type the artefacts in the place take), `revisits` and `description`. A `type` the registry does not declare gives no type, and the `packages` check reports it without failing. `revisits` is a non-empty list of links whose source's change asks for a revisit of their targets, each `{targets, when}` or `{all-but, when}` plus optional `description`: `targets` names the source's own field that lists the targets by their anchors' values, `all-but` the own fields that list the anchors that stay out, every other anchor then a target, a non-empty list of unique own fields, and `when` the trigger fields, a non-empty list of unique own fields. A link names exactly one of `targets` and `all-but`. A field is a word, never `pkit`. A link that names both or neither, whose `targets` is not one own field, whose `all-but` or `when` is not a non-empty list of own fields, declares nothing, and the `packages` check refuses every link the schema refuses. What a link means: the schemas README, "A place may declare links". What the change check asks of a triggered link: the CLI reference, "Friction checks". | COR-050 points 1 and 16; COR-056 point 2 |
 | `friction.types` | The component's **type registry**: a mapping from a type's name (a word of lower-case letters and digits joined by single hyphens, so no `:` and no `/`) to its entry. `description`, required. `kind-field`, optional: the artefact's own field in which an artefact of the type declares its kind, never `pkit`. Where the winning place gives such a type, an artefact takes it only when that field is present and not empty. `project-places`, optional, default `false`: whether a project may give the type on its own places. The type's full name is `<component>:<name>`. How the backbone resolves an artefact's type from the places matching its file, and which findings it raises: the CLI reference, "Artefact types". | COR-056 points 2 to 4; ADR-057 point 2 |
 | `friction.surface` | A list of unique repository-relative paths or globs this component says ought to be described; the part no artefact anchors to is reported as uncovered. | COR-050 point 8 |
 | `friction.held` | A list of `{location, path}` plus optional `description`: `path` is a folder — never a glob — inside the declared location `location` names. Its files are the component's held documents, which no place reads as artefacts. | COR-050 point 1 |
@@ -777,7 +778,7 @@ Once those pass, **what gets deleted depends on origin** — origin-blind deleti
   - a documentation refinement, an internal refactor or a behaviour-preserving fix
   - a section's heading renamed or removed in a document the methodology or a component ships. A project that receives the document cannot anchor its sections, since a synced tree is never a place (COR-050 point 14). Where the document is authored, the change mends the anchors on the heading, as validation requires (COR-050 point 12).
 
-A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers. It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
+A heading a component requires in a project's own documents is part of the component's contract, so the last case does not cover it. Whether a change to it ships a migration is decided as for any other change. `pkit migrations check-diff` fails a change whose renames or removals no migration covers, and a change that adds a migration at a version already released ("Which version a migration targets", below). It leaves decision records out, so a renamed or removed record passes it ([project-kit#1672](https://github.com/aleskalfas/project-kit/issues/1672)).
 
 ### Directory layout
 
@@ -797,6 +798,19 @@ Component migrations live within the component:
 ### Naming
 
 `<NNN>-<slug>.sh`, where `NNN` is a zero-padded execution-order index within the directory and `<slug>` is a kebab-case description (e.g., `001-add-status-labels.sh`).
+
+### Which version a migration targets
+
+A migration's folder names the version it carries a project to, never one already released. The runner runs a folder only past the version a project records ([COR-010](../decisions/core/COR-010-resource-lifecycle.md)). So a folder at or below a released minor never runs for a project already there, and nothing else reports it.
+
+- **The stamp.** `pkit new migration` without `--version` takes the highest of these:
+  - the next minor past the version the default branch records for the tier: `.pkit/VERSION` for the backbone, the component's `package.yaml` for an adapter or a capability
+  - the version the working tree records, where it is above that one, as on the branch of a project whose change bumps its own version
+  - the next major, where its folder already waits, so the script runs after the migrations of the change that made it
+
+  It joins no folder further ahead, since a change may target a later release on purpose. It reads the default branch from git objects, as a command that allocates from settled state does ([COR-054](../decisions/core/COR-054-default-branch.md) point 3). It refuses a `--version` at or below the default branch's version, and names the version to give.
+- **The check.** `pkit migrations check-diff` fails a script a change adds, or moves in, whose folder is at or below the version its tier records at the base's tip. It reads the tip, not the branch point, since a release that lands after the branch was cut releases the folder too. It skips a script the project receives by sync. It also skips one the tip already holds, at its path or under another name in its folder with the same content, as a rename leaves it. A tier the tip records no version for, such as a new component, has nothing released.
+- **What neither predicts.** Neither reads pending changesets for a major: the release computes the version, by the project's version-bump policy. A folder that names a minor below the release still runs inside the transition across it, since the runner's window is a range of minors.
 
 ### Three scopes (per tier)
 

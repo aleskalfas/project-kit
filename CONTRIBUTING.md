@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T20:10:03Z
+      at: 2026-10-18T18:54:20Z
       outcome: unchanged
-      unchanged-because: "COR-004 gained two sentences: the rule lists the core layer's operations, and a data point's question is the definer's command and none of them. This page cites COR-004 as an example of design rules for the command surface that list no commands, which still holds."
+      unchanged-because: COR-050 point 16 lets a link take every anchor but those its fields list. The guide's target not revisited reads the same for such a link, and what it cites of points 3, 4 and 12 is unchanged.
 ---
 
 # Contributing to project-kit

@@ -1,0 +1,7 @@
+component: backbone
+kind: none
+body: >
+  The CLI reference and the permissions README record unchanged
+  revalidations against ADR-027 and ADR-060, which ADR-066 refines for a
+  confined agent run that no change has built yet (#1741). Their text is
+  unchanged, so no surface moves.

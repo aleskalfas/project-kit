@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T20:04:32Z
+      at: 2026-10-18T21:14:55Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. Declaring a changeset and the release check this use case describes are untouched.
+      unchanged-because: This change alters only the help text of friction revisit in cli.py. The changeset and release commands this use case describes are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

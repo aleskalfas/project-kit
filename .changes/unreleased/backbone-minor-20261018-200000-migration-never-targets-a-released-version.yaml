@@ -1,0 +1,19 @@
+component: backbone
+kind: minor
+custom:
+  category: Fixed
+body: >
+  A migration never targets a version already released. A project already at
+  that version never runs a script in its folder, and nothing reported it.
+  `pkit new migration` without `--version` now picks the next version past the
+  one the default branch records for the tier, `.pkit/VERSION` or the
+  component's `package.yaml`, and prints it with its reason. It used to take
+  that released version itself. It joins the next major's folder where one
+  already waits, and takes the version the working tree records where a branch
+  bumped it above the default branch's. A `--version` at or below the default
+  branch's version is refused, naming the version to give. The script's number
+  counts the default branch's scripts in its folder too. `pkit migrations
+  check-diff` now fails a migration script a change adds, or moves in, whose
+  folder is at or below the version its tier records at the base's tip, and
+  names the version to move it to. A script your project receives by sync is
+  not judged.

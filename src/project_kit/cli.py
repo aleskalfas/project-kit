@@ -1558,7 +1558,7 @@ def friction_defer_command(
     metavar="ANCHOR",
     required=True,
     help="The target answered for: `kind:value`, or a value only one target has. It must be "
-    "an anchor a link of the artefact lists.",
+    "an anchor a link of the artefact takes.",
 )
 @click.option(
     "--outcome",
@@ -1580,7 +1580,8 @@ def friction_revisit_command(
     """Answer for one target of ARTEFACT's links (COR-050 point 16): add its entry to
     `revisited`, or rewrite the entry already there.
 
-    A link a place declares lists targets in one of ARTEFACT's own fields; when a
+    A link a place declares takes some of ARTEFACT's anchors as its targets: those
+    one own field lists, or every anchor but those its own fields list. When a
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
@@ -5106,25 +5107,42 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
     scope extends to staged + unstaged changes — what's about to be
     committed. The pre-commit form for local use.
 
-    Exits 0 when covered or no triggers exist; exits 1 when triggers
-    exist without matching migrations, listing the affected tiers so the
-    author can land the missing scripts.
+    It also fails a migration script the change adds, or moves in, whose
+    `X.Y.0` folder is at or below the version its tier records at the
+    base's tip (`.pkit/VERSION`, or the component's `package.yaml`): a
+    project already at that version never runs it. A script the project
+    receives by sync is not judged, nor one the tip already holds, at its
+    path or renamed in its folder with the same content.
+
+    Exits 0 when covered or no triggers exist and no script targets a
+    released version; exits 1 when triggers exist without matching
+    migrations, listing the affected tiers so the author can land the
+    missing scripts, or when a script targets a released version, naming
+    the version to move it to.
     """
     from project_kit import migrations as migrations_mod
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    fork = _settled_base(target_root, base_ref).fork
-    assert fork is not None  # `_settled_base` refuses a base without one
+    found = _settled_base(target_root, base_ref)
+    assert found.fork is not None and found.tip is not None  # `_settled_base` refuses without
     try:
         report = migrations_mod.check_diff_coverage(
-            target_root, fork, include_working_tree=include_working_tree
+            target_root, found.fork, include_working_tree=include_working_tree
         )
     except RuntimeError as exc:
         raise click.ClickException(str(exc)) from exc
+    released = migrations_mod.released_targets(
+        target_root,
+        report.landed,
+        base=found.ref,
+        tip=found.tip,
+        head=None if include_working_tree else "HEAD",
+    )
     migrations_mod.render_coverage_report(report)
-    if not report.is_covered:
+    migrations_mod.render_released_targets(released)
+    if not report.is_covered or released:
         raise SystemExit(1)
 
 
@@ -5552,8 +5570,9 @@ def permissions_sandbox(ctx: click.Context) -> None:
     is_flag=True,
     default=False,
     help="Operator-only, per-invocation: write failIfUnavailable: false "
-    "(fail-open). Never a committable default — re-running enable "
-    "without it restores fail-closed.",
+    "(fail-open) to the gitignored settings.local.json, for this machine "
+    "only. Never written to the committed settings.json — re-running "
+    "enable without it restores fail-closed.",
 )
 def permissions_sandbox_enable(strict: bool, dangerously_allow_unconfined: bool) -> None:
     """Turn on the OS sandbox with prompt-free scripting (fail-closed, additive, idempotent)."""
@@ -7821,7 +7840,9 @@ def new_capability(name: str) -> None:
     "--version",
     type=str,
     default=None,
-    help="Target minor version (X.Y.0). Defaults to the tier's current version.",
+    help="The version (X.Y.0) the migration carries a project to. Defaults to the next "
+    "version past the one the default branch records for the tier; a version already "
+    "released is refused.",
 )
 @click.option(
     "--name",
@@ -7843,7 +7864,12 @@ def new_migration(
     name: str | None,
     scope: str,
 ) -> None:
-    """Scaffold a numbered migration script in the right <X.Y.0>/ directory."""
+    """Scaffold a numbered migration script in the right <X.Y.0>/ directory.
+
+    The version is the one the migration carries a project to, never one already
+    released (COR-010): without --version, the next past the version the default
+    branch records for the tier (COR-054 point 3), said with its reason.
+    """
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
@@ -7856,6 +7882,8 @@ def new_migration(
         scope=_cast_migration_scope(scope),
     )
     rel = result.script.relative_to(target_root)
+    if result.target is not None:
+        click.echo(f"Version: {result.target.version}, {result.target.reason}.")
     click.echo(f"Stamped: {rel}")
 
 
