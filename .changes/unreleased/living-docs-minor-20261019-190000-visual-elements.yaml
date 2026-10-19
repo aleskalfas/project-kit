@@ -3,7 +3,7 @@ kind: minor
 custom:
   category: Added
 body: >
-  living-docs DEC-002 decides how a page shows diagrams, images, console
+  The new record living-docs DEC-002 decides how a page shows diagrams, images, console
   output and callouts. Each is neutral content with no styling, and your
   presentation decides how it looks. A diagram is a `mermaid` fence in the
   page by default, and never a fact's home. A screenshot or a recording is
