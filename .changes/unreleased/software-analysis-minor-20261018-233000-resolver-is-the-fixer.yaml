@@ -5,7 +5,7 @@ custom:
   requires_capabilities:
     project-management: release
 body: >
-  software-analysis declares the `analysis-resolver` the fixer of each of its
+  The capability declares the `analysis-resolver` the fixer of each of its
   seven artefact types, in the work-tracking role's point
   `pkit::work-tracking:fixers`, as a static value (DEC-001 points 5 and 8;
   project-management DEC-056). Where project-management is installed,
