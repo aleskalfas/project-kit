@@ -292,8 +292,13 @@ def test_the_shipped_places_declare_one_link_each() -> None:
         for place in fd.read_friction_settings(root).places
         if place.source == "capability:software-analysis" and place.revisits
     ]
+    # Each kind of requirement's place, at the location's top and one folder down, one
+    # analysis per component (DEC-001 point 2).
     assert sorted(place.type or "" for place in places) == [
         "software-analysis:constraint",
+        "software-analysis:constraint",
         "software-analysis:functional-requirement",
+        "software-analysis:functional-requirement",
+        "software-analysis:quality-requirement",
         "software-analysis:quality-requirement",
     ]

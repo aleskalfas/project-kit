@@ -471,20 +471,26 @@ FORMS = (
     "steps-match-front-matter",
     "outcomes-match-front-matter",
     "gaps-match-outcomes",
+    "builds-on-matches-front-matter",
     "definition",
 )
 
 
 def test_the_forms_are_a_closed_list_and_each_is_used() -> None:
     """The schema gives the closed list, each form with what it holds. `seams-match-steps`
-    went with the journey's seams (#1362). No form in the list is unused."""
+    went with the journey's seams (#1362). No form in the list is unused: a glossary's
+    head takes `builds-on-matches-front-matter` (DEC-001 point 2)."""
     listed = [entry["const"] for entry in _kinds_schema()["$defs"]["form"]["oneOf"]]
     assert listed == list(FORMS)
     assert all(entry["description"] for entry in _kinds_schema()["$defs"]["form"]["oneOf"])
     used = {
         element["form"]
         for kind in _kinds()["kinds"].values()
-        for element in [*kind["sections"], *kind.get("front-matter", {}).values()]
+        for element in [
+            *kind["sections"],
+            *kind.get("head", []),
+            *kind.get("front-matter", {}).values(),
+        ]
         if "form" in element
     }
     assert used == set(FORMS)

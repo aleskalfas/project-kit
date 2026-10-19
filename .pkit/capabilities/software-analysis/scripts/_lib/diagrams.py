@@ -1,7 +1,10 @@
 """The analysis's diagrams, drawn from its front matter (DEC-003).
 
 Three diagrams are drawn from the relations the front matter holds (points 3
-and 4), each for the one analysis the working tree holds (point 6):
+and 4), each for one analysis (point 6): the one the working tree holds, or,
+where the project lists several (DEC-001 point 2), the one the query names. An
+actor of another analysis, named with it, such as `core:ACT-developer`, is the
+one node drawn from beyond its edge, among the actors, by that id alone:
 
 - **The use-case diagram** — the system's boundary, the use cases in force
   inside it and the actors in force around it. An arrow joins each use case to
@@ -49,6 +52,7 @@ from typing import Any
 from _lib import met_by, schemas
 from _lib.model import (
     ACTOR,
+    ANYWHERE,
     JOURNEY,
     MUST_MEET,
     NOUN,
@@ -61,6 +65,7 @@ from _lib.model import (
     Artefact,
     identity,
     number_in,
+    qualified,
 )
 
 #: The version of the document `--json` prints.
@@ -108,14 +113,20 @@ class Diagram:
     mermaid: str
 
 
-def diagrams(analysis: Analysis, subject: str | None, shown_as: Mapping[str, str]) -> list[Diagram]:
+def diagrams(
+    analysis: Analysis,
+    subject: str | None,
+    shown_as: Mapping[str, str],
+    folder: str | None = ANYWHERE,
+) -> list[Diagram]:
     """The diagrams `subject` names: every diagram the analysis has something for when it
     is `None`, the use-case diagram, each journey's flow, the requirement map, one
     journey's flow by its id, or one requirement's map by its id. `shown_as` is each kind
-    of requirement as its heading shows it. Raises NoAnswer when a file the diagrams read
+    of requirement as its heading shows it. Each draws the one analysis in `folder` of the
+    location, `None` its top (point 6). Raises NoAnswer when a file the diagrams read
     cannot be read in full, or when `subject` names no diagram."""
     which = _which(subject)
-    drawn = _Drawn(analysis, _reads(which))
+    drawn = _Drawn(analysis, _reads(which), folder)
     found: list[Diagram] = []
     if which in (None, USE_CASES):
         found.extend(drawn.use_cases())
@@ -164,11 +175,16 @@ class _Drawn:
     """The analysis as the diagrams read it: each artefact of the kinds read, held to
     what a diagram needs of it, and those in force by id."""
 
-    def __init__(self, analysis: Analysis, kinds: Sequence[str]) -> None:
+    def __init__(
+        self, analysis: Analysis, kinds: Sequence[str], folder: str | None = ANYWHERE
+    ) -> None:
+        def drawn(path: str) -> bool:
+            return folder == ANYWHERE or analysis.folders.get(path) == folder
+
         unread = sorted(
             {
-                *(s.path for s in analysis.strays if s.kind in kinds),
-                *(p for p in analysis.unreadable if analysis.files.get(p) in kinds),
+                *(s.path for s in analysis.strays if s.kind in kinds and drawn(s.path)),
+                *(p for p in analysis.unreadable if analysis.files.get(p) in kinds and drawn(p)),
             }
         )
         if unread:
@@ -177,12 +193,16 @@ class _Drawn:
                 f"{'an artefact of its place' if len(unread) == 1 else 'artefacts of their places'}"
                 f", so what the diagram draws cannot be told; `pkit analysis validate` says why"
             )
-        read = sorted((a for a in analysis.artefacts if a.kind in kinds), key=_order)
+        read = sorted(
+            (a for a in analysis.artefacts if a.kind in kinds and drawn(a.path)), key=_order
+        )
         for artefact in read:
             _readable(artefact)
         self.analysis = analysis
+        self.folder = folder
         self.read = read
         self.by_id: dict[str, Artefact] = {}
+        self.foreign: dict[str, Artefact] = {}
         for artefact in read:
             if not artefact.withdrawn:
                 self.by_id.setdefault(identity(str(artefact.id)), artefact)
@@ -191,9 +211,17 @@ class _Drawn:
         return [a for a in self.by_id.values() if a.kind in kinds]
 
     def held(self, artefact_id: Any, *kinds: str) -> Artefact | None:
-        """The artefact in force of one of `kinds` that `artefact_id` names, if any."""
+        """The artefact in force of one of `kinds` that `artefact_id` names, if any. An
+        actor of another analysis, named with it, is the one node drawn from beyond the
+        analysis's edge, by that id alone, so no diagram depends on another analysis's
+        files (point 6)."""
         if not isinstance(artefact_id, str):
             return None
+        if ACTOR in kinds and qualified(artefact_id)[0] is not None:
+            return self.foreign.setdefault(
+                artefact_id,
+                Artefact(ACTOR, artefact_id, "", artefact_id, False, {}, {}),
+            )
         found = self.by_id.get(identity(artefact_id))
         return found if found is not None and found.kind in kinds else None
 
@@ -218,13 +246,8 @@ class _Drawn:
 
     def use_cases(self) -> list[Diagram]:
         use_cases = self.in_force(USE_CASE)
-        actors = self.in_force(ACTOR)
         if not use_cases:
             return []
-        lines = [_node(a) for a in actors]
-        lines.append('subgraph boundary["The system"]')
-        lines.extend(f"  {_node(u)}" for u in use_cases)
-        lines.append("end")
         edges: set[str] = set()
         for use_case in use_cases:
             actor = self.held(use_case.fields.get("actor"), ACTOR)
@@ -234,6 +257,11 @@ class _Drawn:
                 taking_part = self.held(other, ACTOR)
                 if taking_part is not None and taking_part is not actor:
                     edges.add(f"{_id(taking_part)} --- {_id(use_case)}")
+        actors = sorted([*self.in_force(ACTOR), *self.foreign.values()], key=_order)
+        lines = [_node(a) for a in actors]
+        lines.append('subgraph boundary["The system"]')
+        lines.extend(f"  {_node(u)}" for u in use_cases)
+        lines.append("end")
         description = (
             f"The system's boundary holds {_count(len(use_cases), 'use case')}, and "
             f"{_count(len(actors), 'actor')} stand{'s' if len(actors) == 1 else ''} around it. "
@@ -326,6 +354,8 @@ class _Drawn:
         meeting = self._met_by()
         for requirement in requirements:
             for lister in meeting.get(identity(str(requirement.id)), ()):
+                if self.folder not in (ANYWHERE, lister.folder):
+                    continue  # another analysis's, which no line of this one's draws
                 others.setdefault(identity(str(lister.id)), lister)
                 edges.add(f"{_id(lister)} -->|must meet| {_id(requirement)}")
             for refined in _ids(requirement, REFINES):

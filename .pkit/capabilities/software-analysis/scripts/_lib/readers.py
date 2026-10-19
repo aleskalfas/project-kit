@@ -20,7 +20,12 @@ capability maps its actors onto that shape and keeps its own model to itself:
   this contribution;
 - **its description** is the actor's name and needs, with the actor's id, so
   a reader-review reads a page against what the analysis says that reader
-  needs.
+  needs;
+- **each actor once, with the needs every analysis states for it** (point 8):
+  its own analysis's, then those each analysis whose glossary's head lists it
+  states beside it (point 2). An actor such a head lists whose own analysis this
+  repository does not hold is a reader too, by the name and needs the heads
+  give it.
 
 The analysis is read through the backbone's reading, `pkit friction artefacts
 --json` (`backbone.read_analysis`): the filler never walks a place, and never
@@ -41,10 +46,10 @@ list: there is no reader to add.
 
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
-from _lib import schemas
+from _lib import analyses, schemas
 from _lib.model import ACTOR, Analysis
 
 #: The point, and the version of its companion schema this contribution targets —
@@ -68,17 +73,41 @@ def readers(analysis: Analysis) -> list[dict[str, str]]:
         if stray.kind == ACTOR:
             raise NoAnswer(f"the actors cannot be read: {stray.path} {stray.why}")
     pattern = schemas.id_pattern(ACTOR)
+    stated, names = _stated(analysis)
     mapped = [
-        reader_of(actor.id, actor.fields)
+        reader_of(actor.id, actor.fields, stated.get(actor.id, ()))
         for actor in analysis.of_kind(ACTOR)
         if not actor.withdrawn and actor.id is not None and pattern.match(actor.id)
+    ]
+    mapped += [
+        reader_of(actor_id, {"name": names[actor_id]}, needs)
+        for actor_id, needs in stated.items()
+        if analysis.find(actor_id) is None
     ]
     return sorted(mapped, key=lambda reader: reader["id"])
 
 
-def reader_of(actor_id: str, fields: Mapping[str, Any]) -> dict[str, str]:
-    """One actor, by its id and its own fields, as a reader of the documentation."""
-    return {"id": reader_id(actor_id), "description": _description(actor_id, fields)}
+def _stated(analysis: Analysis) -> tuple[dict[str, list[str]], dict[str, str]]:
+    """The needs each analysis states for an actor of another analysis it lists in its
+    glossary's head, by the actor's id, and the name the first head gives it (DEC-001
+    point 2): an actor's reader carries them beside its own (point 8)."""
+    stated: dict[str, list[str]] = {}
+    names: dict[str, str] = {}
+    for path in sorted(analysis.glossaries):
+        head = analyses.head(analysis, analysis.folders.get(path))
+        for taken in head.taken if head is not None else ():
+            for actor in taken.actors:
+                stated.setdefault(actor.id, []).extend(actor.needs)
+                names.setdefault(actor.id, actor.name)
+    return stated, names
+
+
+def reader_of(
+    actor_id: str, fields: Mapping[str, Any], stated: Sequence[str] = ()
+) -> dict[str, str]:
+    """One actor, by its id and its own fields, as a reader of the documentation, with
+    the needs other analyses state for it, `stated`, after its own."""
+    return {"id": reader_id(actor_id), "description": _description(actor_id, fields, stated)}
 
 
 def reader_id(actor_id: str) -> str:
@@ -91,16 +120,20 @@ def envelope(value: Iterable[Mapping[str, str]]) -> dict[str, Any]:
     return {"schema_version": POINT_VERSION, "value": list(value)}
 
 
-def _description(actor_id: str, fields: Mapping[str, Any]) -> str:
+def _description(actor_id: str, fields: Mapping[str, Any], stated: Sequence[str] = ()) -> str:
     """`<name>, the analysis' actor <id>. Needs: <need>; <need>.` The check holds
-    the fields to their schema; what is missing here is left out, never refused."""
+    the fields to their schema; what is missing here is left out, never refused. The
+    needs are its own, then those other analyses state for it, each once."""
     name = fields.get("name")
     name = name.strip() if isinstance(name, str) and name.strip() else actor_id
     listed = fields.get("needs")
-    needs = [
-        need.strip().rstrip(".")
-        for need in (listed if isinstance(listed, list) else [])
-        if isinstance(need, str) and need.strip().rstrip(".")
-    ]
+    own = listed if isinstance(listed, list) else []
+    needs = list(
+        dict.fromkeys(
+            need.strip().rstrip(".")
+            for need in [*own, *stated]
+            if isinstance(need, str) and need.strip().rstrip(".")
+        )
+    )
     described = f"{name}, the analysis' actor {actor_id}."
     return f"{described} Needs: {'; '.join(needs)}." if needs else described

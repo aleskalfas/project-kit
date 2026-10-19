@@ -106,6 +106,18 @@ each with what it reads:
 - **`definition`**, a term's front-matter `definition`: a phrase whose first
   word is no article, `a`, `an` or `the`, whose last character is no full
   stop, and that holds no whole word of the term's own `name`, in any case.
+- **`builds-on-matches-front-matter`**, a glossary's opening: where the
+  glossary's front matter lists what its analysis takes from the analyses it
+  builds on, `builds-on` (DEC-001 point 2), one top-level item for each entry,
+  in the same order, opening `**From <analysis> at <version>:**`, then the
+  area it builds on in words. Nested in it, one item for each term,
+  `**Term:** [<name>](<link>)`, then one for each actor, `**Actor:**
+  [<name>](<link>)`, each name its entry's, exactly, and each link to its
+  home in that analysis. Nested in an actor's item, one item for each need
+  its entry gives, the need's words, exactly, white space aside. Only items
+  opening `**From ` stand for an entry, so a list of the writer's own in the
+  opening stays content. Where `builds-on` lists nothing, the form asks
+  nothing.
 
 What no form checks is whether the words are true: friction flags the artefact
 when what it rests on changes, and a person rereads it (DEC-001 point 4).
@@ -127,6 +139,10 @@ STEPS_MATCH = "steps-match-front-matter"
 OUTCOMES_MATCH = "outcomes-match-front-matter"
 GAPS_MATCH = "gaps-match-outcomes"
 DEFINITION = "definition"
+BUILDS_ON_MATCH = "builds-on-matches-front-matter"
+
+#: The glossary's front-matter key its head data lies under (DEC-001 point 2).
+BUILDS_ON = "builds-on"
 
 #: The forms of a part whose items are the steps a variant branches from.
 STEP_FORMS = frozenset({NUMBERED_STEPS, STEPS_MATCH})
@@ -448,6 +464,8 @@ def judge(form: str | None, part: Part, context: Context) -> list[Breach]:
         return _outcomes_match(part, context)
     if form == GAPS_MATCH:
         return _gaps_match(part, context)
+    if form == BUILDS_ON_MATCH:
+        return _builds_on_match(part, context)
     return []
 
 
@@ -1099,6 +1117,155 @@ def definition_problems(text: str, name: object) -> list[str]:
             shown = ", ".join(f"`{w}`" for w in held)
             problems.append(f"it holds {shown}, a word of the term's name")
     return problems
+
+
+# --- a glossary's head ---------------------------------------------------------------------------
+
+_FROM = re.compile(r"^\*\*From (?P<label>[^*\n]*?):\*\*")
+_TAKEN = re.compile(
+    r"^\*\*(?P<what>Term|Actor):\*\*\s*\[(?P<name>[^\]\n]*)\]\((?P<link>[^)\s]+)\)$"
+)
+
+
+def _builds_on_match(part: Part, context: Context) -> list[Breach]:
+    """A glossary's opening against what its front matter's `builds-on` lists: one
+    top-level item opening `**From <analysis> at <version>:**` for each entry, in order,
+    with the entry's terms, its actors and each actor's needs nested in it."""
+    entries = _entries(context.fields.get(BUILDS_ON))
+    if not entries:
+        return []
+    items = [item for item in listing(part).items if _FROM.match(_item_text(item))]
+    found: list[Breach] = []
+    for n, entry in enumerate(entries):
+        label = f"**From {entry['analysis']} at {entry['version']}:**"
+        if n >= len(items):
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    part.line,
+                    f"`builds-on` lists {entry['analysis']}, and no item stands for it: write "
+                    f"`- {label}` and the area it builds on, with its terms and actors nested "
+                    f"in it",
+                )
+            )
+            continue
+        item = items[n]
+        opening = _FROM.match(_item_text(item))
+        if opening is None or opening.group(0) != label:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    item.line,
+                    f"the {_ordinal(n + 1)} item reads `{_shown(_item_text(item))}`, where it "
+                    f"opens `{label}`: the {_ordinal(n + 1)} entry of `builds-on`, its analysis "
+                    f"and the version its links name",
+                )
+            )
+        found += _taken_items(item, entry)
+    for item in items[len(entries) :]:
+        found.append(
+            Breach(
+                BREAKS_FORM,
+                item.line,
+                f"the item `{_shown(_item_text(item))}` stands for no entry of `builds-on`: "
+                f"list the analysis there, or remove the item",
+            )
+        )
+    return found
+
+
+def _entries(value: object) -> list[Mapping[str, Any]]:
+    """`builds-on`'s entries of the shape the form reads: each with its analysis and its
+    version. Its schema reports any other shape."""
+    if not isinstance(value, list):
+        return []
+    return [
+        entry
+        for entry in value
+        if isinstance(entry, Mapping)
+        and isinstance(entry.get("analysis"), str)
+        and isinstance(entry.get("version"), (str, int, float))
+    ]
+
+
+def _taken_items(item: Item, entry: Mapping[str, Any]) -> list[Breach]:
+    """What an analysis's item breaks of its entry: one nested item for each of its
+    terms, then each of its actors, an actor's needs nested in its own."""
+    wanted: list[tuple[str, str, list[str] | None]] = [
+        ("Term", str(t.get("name")), None)
+        for t in entry.get("terms") or []
+        if isinstance(t, Mapping)
+    ] + [
+        ("Actor", str(a.get("name")), [str(n) for n in a.get("needs") or []])
+        for a in entry.get("actors") or []
+        if isinstance(a, Mapping)
+    ]
+    written = nested(item).items
+    found: list[Breach] = []
+    for k, (what, name, needs) in enumerate(wanted):
+        line = f"**{what}:** [{name}](<its link>)"
+        if k >= len(written):
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    item.line,
+                    f"`builds-on` lists the {what.lower()} {name}, and the item holds no "
+                    f"`- {line}` for it, in `builds-on`'s order",
+                )
+            )
+            continue
+        text = _item_text(written[k])
+        taken = _TAKEN.match(text)
+        if taken is None or taken["what"] != what or taken["name"] != name:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    written[k].line,
+                    f"the item reads `{_shown(text)}`, where it is `{line}`: each term, then each "
+                    f"actor, by its name in `builds-on` and a link to its home in that analysis",
+                )
+            )
+            continue
+        if needs is not None:
+            found += _needs(written[k], name, needs)
+    for extra in written[len(wanted) :]:
+        found.append(
+            Breach(
+                BREAKS_FORM,
+                extra.line,
+                f"the item `{_shown(_item_text(extra))}` stands for no term or actor `builds-on` "
+                f"lists: list it there, or remove the item",
+            )
+        )
+    return found
+
+
+def _needs(item: Item, actor: str, needs: Sequence[str]) -> list[Breach]:
+    """An actor's item against the needs its entry gives: one nested item each, in order."""
+    written = [" ".join(_item_text(n).split()) for n in nested(item).items]
+    wanted = [" ".join(need.split()) for need in needs]
+    if written == wanted:
+        return []
+    return [
+        Breach(
+            BREAKS_FORM,
+            item.line,
+            f"the needs under {actor} ({len(written)} item(s)) are not those `builds-on` gives "
+            f"it ({len(wanted)}): one nested item for each need, its words exactly, in order",
+        )
+    ]
+
+
+def _item_text(item: Item) -> str:
+    """An item's own text: its first paragraph, up to a blank line or a nested item, white
+    space runs read as one space."""
+    lines = [item.rows[0].text] if item.rows else []
+    for row in item.rows[1:]:
+        text = row.text.expandtabs(4)
+        if not text.strip() or _opens_item(text):
+            break
+        lines.append(text)
+    return " ".join(" ".join(lines).split())
 
 
 # --- shown in a message ------------------------------------------------------------------------

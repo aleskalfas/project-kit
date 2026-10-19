@@ -147,6 +147,21 @@ def errors(kind: str, fields: Mapping[str, Any]) -> list[tuple[str, str]]:
     )
 
 
+@functools.cache
+def _head() -> Draft202012Validator:
+    return Draft202012Validator(
+        {"$ref": f"{_schemas()[SHARED]['$id']}#/$defs/builds-on"}, registry=_registry()
+    )
+
+
+def head_errors(value: object) -> list[tuple[str, str]]:
+    """Each way a glossary's head data, its `builds-on`, falls short of its shape
+    (DEC-001 point 2): a JSON Pointer into it and the message, in a stable order."""
+    return sorted(
+        (_pointer(error.absolute_path), error.message) for error in _head().iter_errors(value)
+    )
+
+
 def config_errors(config: object) -> list[tuple[str, str]]:
     """Each way a project configuration falls short of its companion: a JSON Pointer
     into it and the message, in a stable order."""

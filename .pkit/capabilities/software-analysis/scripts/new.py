@@ -57,12 +57,20 @@ Usage:
       [--actor <ACT-id>]... [--refines <REQ-id>]... [--area <area>]
       [--title <text>] [--unanchored-because <text>]
   each also: [--path <glob>]... [--record <id>]... [--base <ref>]
+      [--analysis <component>]
 
   pkit analysis new revalidation <slug> --change <ref> --trigger <trigger>
       --outcome <id>=<outcome>... --because <id>=<text>...
       [--reviewed-against "<title> @ <version> [@ <link>]"]...
       [--gap "<ids>: <gap> => <resolution>"]... [--by <who> | --by-agent <name>]
-      [--confirmed-by <who>] [--title <text>]
+      [--confirmed-by <who>] [--title <text>] [--analysis <component>]
+
+Where the project lists several analyses in its configuration, one per component
+(DEC-001 point 2), `--analysis` names the one to write in, and what is written
+lies in that analysis's folder; it may be left out where the list holds one. An
+actor of an analysis it builds on is named with that analysis, such as
+`--actor core:ACT-developer`, and resolves against the actors its glossary's head
+lists from it; nothing anchors it, so `--record` names the records behind it.
 
 Exit codes:
   0  stamped, with any warning on standard error
@@ -136,6 +144,7 @@ def _parser() -> argparse.ArgumentParser:
             help="A branch whose ids count as taken beside the default branch's, which always "
             "do; $PKIT_CHECK_BASE never does.",
         )
+        _analysis_argument(sub)
         return sub
 
     use_case = kind(USE_CASE, "A use case: one actor's goal and how it is fulfilled.", "title")
@@ -259,8 +268,20 @@ def _parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _analysis_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--analysis",
+        metavar="COMPONENT",
+        default=None,
+        help="The analysis to write in, by its component, where the project lists several in "
+        "its configuration (DEC-001 point 2): its folder takes what is written. Needed where "
+        "it lists more than one.",
+    )
+
+
 def _revalidation_arguments(record: argparse.ArgumentParser) -> None:
     record.add_argument("slug", help="A word naming its subject: the record is <date>-<slug>.md.")
+    _analysis_argument(record)
     record.add_argument("--title", metavar="TEXT", help="Its subject (default: the slug).")
     record.add_argument(
         "--change",
@@ -373,6 +394,7 @@ def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:
         because=tuple(args.because),
         gaps=tuple(_gap(value) for value in args.gaps),
         reviewed_against=tuple(args.reviewed_against),
+        analysis=args.analysis,
     )
     return revalidation.stamp_record(backbone.project_root(), request)
 
@@ -393,6 +415,7 @@ def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
         actors=tuple(getattr(args, "actors", ())),
         refines=tuple(getattr(args, "refines", ())),
         requirements=tuple(getattr(args, "requirements", ())),
+        analysis=args.analysis,
     )
     return stamp.stamp(backbone.project_root(), request, args.base)
 

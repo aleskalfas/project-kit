@@ -102,13 +102,21 @@ def test_the_package_declares_the_analysis_location_and_one_place_per_kind(
     assert location == dr.Location(Path(ANALYSIS), dr.Source.DERIVED)
     settings = fd.read_friction_settings(project.root)
     ours = [p.resolved for p in settings.places if p.source == "capability:software-analysis"]
-    assert ours == [GLOSSARY, ACTORS, USE_CASES, JOURNEYS, QUALITY, FUNCTIONAL, CONSTRAINTS]
+    top = [GLOSSARY, ACTORS, USE_CASES, JOURNEYS, QUALITY, FUNCTIONAL, CONSTRAINTS]
+    # The same places one folder down, one analysis per component (DEC-001 point 2).
+    nested = [
+        f"{ANALYSIS}/*/{place.removeprefix(f'{ANALYSIS}/')}"
+        + ("" if place.endswith(".md") else "/**")
+        for place in top
+    ]
+    assert ours == [*top, *nested]
     assert not any(RECORDS in place for place in ours)  # an act, not an anchored artefact
     # The folder that holds the three kinds of requirement is no place (DEC-002 point 3).
     assert f"{ANALYSIS}/requirements" not in ours
-    # ... so the records' folder is held (COR-050 point 1): no place reads a record.
+    # ... so the records' folders are held (COR-050 point 1): no place reads a record.
     assert [(h.source, h.resolved) for h in settings.held] == [
-        ("capability:software-analysis", RECORDS)
+        ("capability:software-analysis", RECORDS),
+        ("capability:software-analysis", f"{ANALYSIS}/*/revalidations"),
     ]
     assert [p.resolved for p in settings.surface if p.source.startswith("capability:")] == []
 
@@ -128,10 +136,14 @@ def _model_value(name: str) -> ast.expr:
 
 
 def _kind_of_place_keys() -> list[str]:
-    """The places `_lib/model.py` knows: the keys of its KIND_OF_PLACE."""
-    value = _model_value("KIND_OF_PLACE")
-    assert isinstance(value, ast.Dict)
-    return [str(ast.literal_eval(key)) for key in value.keys if key is not None]
+    """The places `_lib/model.py` knows: the keys of its KIND_OF_PLACE and its
+    NESTED_PLACES, the same places one folder down (DEC-001 point 2)."""
+    keys: list[str] = []
+    for table in ("KIND_OF_PLACE", "NESTED_PLACES"):
+        value = _model_value(table)
+        assert isinstance(value, ast.Dict)
+        keys += [str(ast.literal_eval(key)) for key in value.keys if key is not None]
+    return keys
 
 
 def _kind_names() -> dict[str, str]:
@@ -152,15 +164,19 @@ def _kind_names() -> dict[str, str]:
 
 
 def _kind_of_place() -> dict[str, str]:
-    """`_lib/model.py`'s KIND_OF_PLACE: each place's path, and the kind it holds."""
-    value = _model_value("KIND_OF_PLACE")
-    assert isinstance(value, ast.Dict)
+    """`_lib/model.py`'s KIND_OF_PLACE and NESTED_PLACES: each place's path, and the kind
+    it holds."""
     names = _kind_names()
-    return {
-        str(ast.literal_eval(key)): names[kind.id]
-        for key, kind in zip(value.keys, value.values, strict=True)
-        if key is not None and isinstance(kind, ast.Name)
-    }
+    found: dict[str, str] = {}
+    for table in ("KIND_OF_PLACE", "NESTED_PLACES"):
+        value = _model_value(table)
+        assert isinstance(value, ast.Dict)
+        found |= {
+            str(ast.literal_eval(key)): names[kind.id]
+            for key, kind in zip(value.keys, value.values, strict=True)
+            if key is not None and isinstance(kind, ast.Name)
+        }
+    return found
 
 
 def _model_constant(name: str) -> Any:
@@ -283,8 +299,10 @@ def test_the_scripts_know_the_records_folder_by_the_package_s_own_words() -> Non
     package declares (`_lib/model.py`'s REVALIDATIONS), the one the stamp writes into."""
     package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     held: list[dict[str, str]] = package["friction"]["held"]
+    records = _model_constant("REVALIDATIONS")
     assert [(h["location"], h["path"]) for h in held] == [
-        ("analysis", _model_constant("REVALIDATIONS"))
+        ("analysis", records),
+        ("analysis", f"*/{records}"),  # NESTED_REVALIDATIONS: each component's analysis
     ]
 
 

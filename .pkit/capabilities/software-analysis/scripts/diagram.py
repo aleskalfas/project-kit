@@ -22,10 +22,14 @@ Usage:
 
 The subject is `use-cases`, `journeys`, `requirements`, a journey's id or a
 requirement's id; with none, every diagram the analysis has something for.
+Where the project lists several analyses (DEC-001 point 2), `--analysis
+<component>` names the one drawn (DEC-003 point 6); it may be left out where
+the list holds one.
 
 Exit codes:
   0  answered, an analysis with nothing to draw included
-  1  no answer: the analysis could not be read, a file of a place a diagram
+  1  no answer: `--analysis` names no analysis the project lists, or none
+     where it lists several; the analysis could not be read, a file of a place a diagram
      reads cannot be read as its kind, gives no id of its kind's shape or a
      list a diagram reads that is no list of ids, or the subject names no
      diagram, or a journey or a requirement the analysis does not hold in force
@@ -40,7 +44,7 @@ from pathlib import Path
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import backbone, diagrams, structure
+from _lib import analyses, backbone, diagrams, structure
 from _lib.model import REQUIREMENTS, Unreadable
 
 #: What is said when the subject's diagrams have nothing to draw.
@@ -75,17 +79,27 @@ def main() -> int:
         help="Print the document {schema_version, diagrams}, each diagram with its id, title, "
         "description and mermaid text.",
     )
+    parser.add_argument(
+        "--analysis",
+        metavar="COMPONENT",
+        default=None,
+        help="The analysis to draw, by its component, where the project lists several in its "
+        "configuration (software-analysis DEC-001 point 2, DEC-003 point 6). Needed where it "
+        "lists more than one.",
+    )
     args = parser.parse_args()
 
     try:
+        root = backbone.project_root()
+        folder = analyses.folder_named(analyses.read(root), args.analysis, "to draw")
         kinds = structure.read_kinds()
-        analysis = backbone.read_analysis(backbone.project_root())
+        analysis = backbone.read_analysis(root)
         shown_as = {kind: kinds[kind].shown_as or kind for kind in REQUIREMENTS if kind in kinds}
-        found = diagrams.diagrams(analysis, args.subject, shown_as)
+        found = diagrams.diagrams(analysis, args.subject, shown_as, folder)
     except structure.Unreadable as exc:
         print(f"error: the kinds' structures cannot be read: {exc}", file=sys.stderr)
         return 1
-    except (Unreadable, diagrams.NoAnswer) as exc:
+    except (Unreadable, diagrams.NoAnswer, analyses.Unnamed) as exc:
         print(f"error: {exc}; nothing is drawn.", file=sys.stderr)
         return 1
     if args.json:

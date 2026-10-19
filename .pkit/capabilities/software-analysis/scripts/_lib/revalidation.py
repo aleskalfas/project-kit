@@ -59,10 +59,18 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from _lib import backbone, forms, pointers, render, schemas, structure
+from _lib import analyses, backbone, forms, pointers, render, schemas, structure
 from _lib.model import PLANNED, REVALIDATIONS, Unreadable
 from _lib.placeholder import unfilled
-from _lib.stamp import Recorder, Refused, Stamped, declared, dump, write_and_record
+from _lib.stamp import (
+    Recorder,
+    Refused,
+    Stamped,
+    analysis_folder,
+    declared,
+    dump,
+    write_and_record,
+)
 
 #: The outcomes that are something to say (DEC-001 point 6): a regression or a gap
 #: found. A planned revalidation always is (`PLANNED`).
@@ -125,6 +133,7 @@ class RecordRequest:
     gaps: tuple[Gap, ...] = ()
     reviewed_against: tuple[str, ...] = ()  # each as `--reviewed-against` takes it
     date: str = field(default_factory=utc_today)
+    analysis: str | None = None  # the listed analysis whose records take it, by component
 
 
 def stamp_record(
@@ -139,6 +148,7 @@ def stamp_record(
         raise Refused(
             "the backbone's reading holds no place of software-analysis; `pkit validate` says why"
         )
+    folder = analysis_folder(analyses.read(root), request.analysis)
     if not schemas.slug_pattern().match(request.slug):
         raise Refused(
             f"the slug {request.slug!r} is not a word: a lowercase letter, then lowercase "
@@ -182,7 +192,8 @@ def stamp_record(
     kind = declared(structure.RECORD, root)
     text = f"---\n{dump(data)}---\n\n{_body(request, outcomes, because, kind)}"
     _gaps_hold(text, kind, data, request.gaps)
-    location = f"{analysis.location}/{REVALIDATIONS}/{request.date}-{request.slug}.md"
+    records = REVALIDATIONS if folder is None else f"{folder}/{REVALIDATIONS}"
+    location = f"{analysis.location}/{records}/{request.date}-{request.slug}.md"
     target = root / location
     if target.exists():
         raise Refused(f"{location} exists already: name the subject with another slug")
