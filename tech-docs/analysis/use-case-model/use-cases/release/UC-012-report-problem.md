@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-18T21:26:57Z
+      at: 2026-10-19T06:13:47Z
       outcome: unchanged
-      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report
