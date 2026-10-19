@@ -24,6 +24,10 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
         - ACT-ai-agent
+    revalidated:
+      at: 2026-10-19T06:13:45Z
+      outcome: unchanged
+      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

@@ -61,7 +61,9 @@ The obligation itself, its measure and where it holds are front-matter fields, w
 - **Body parts:**
   - **What verifies it today,** shipped as *Verified by* (point 5). It may read `None.`.
   - **Why it is needed,** shipped as *Rationale*, on a quality or a functional requirement. On a constraint, **who or what imposes it** instead, and why the design cannot choose otherwise, shipped as *Imposed by*. Each may read `None.`.
-- **What triggers the core's signal.** The core may give a signal from a link's source to its targets ([project-kit#1667](https://github.com/aleskalfas/project-kit/issues/1667)). Where the capability declares it for these kinds, a change to the statement, the measure or where it holds triggers it. A change of where it holds changes the obligation, as a change of the statement or the measure does. This record decides which of the capability's fields trigger the signal, and nothing of its shape.
+- **The core's signal.** The capability declares the core's signal for these kinds, a link whose source's change asks for a revisit of its targets (COR-050 point 16).
+  - **What triggers it:** a change to the statement, the measure or where it holds. A change of where it holds changes the obligation, as a change of the statement or the measure does.
+  - **What it reaches:** the requirement's anchors outside the analysis (point 6). The anchors that its `actors` and `refines` list stay out. So the link names those two fields as the ones that list what stays out, and no field lists its targets.
 - **What the declaration leaves out:**
   - a change to a body part, such as the wording of the reason. It still flags each use case and journey that lists the requirement (point 7).
   - a change of kind, or a withdrawal, which leaves the three fields as they were.
@@ -74,7 +76,7 @@ The obligation itself, its measure and where it holds are front-matter fields, w
 
 - **In words.** The part on what verifies the requirement names each test, check or review by what it does, never by its path.
 - **As anchors.** The file of each test or check it names is a path anchor of the requirement.
-- **What that gives.** A changed test flags the requirement, as any changed anchor does (COR-050). And where the core's signal reaches a requirement's anchors, its tests are among them.
+- **What that gives.** A changed test flags the requirement, as any changed anchor does (COR-050). And a change to the requirement's obligation asks for a revisit of its tests, as of its other anchors outside the analysis (point 4).
 - **`None.`** says nothing verifies the requirement yet. So a requirement nothing checks is seen.
 - **What no check holds.** No check matches the tests that part names against the requirement's path anchors. A reviewer does.
 
@@ -118,9 +120,15 @@ A requirement points at the solution, and nothing in the solution points back at
 
 **Why one numbering.** The line between the kinds blurs. A property with a measure and a limit taken as given can describe one obligation, and a project's understanding of it moves. With a number per kind, moving a requirement would change its id, and everything that cites it. One numbering keeps the id, and showing the kind beside it keeps what a separate prefix would show.
 
-**Why the statement, the measure and where it holds are front-matter fields.** A tool reads data from an artefact's front matter only, and a body's parts serve readers and the check (DEC-001 point 1). Should the core give a signal, it is a tool's, so the parts that trigger it are fields. The statement is the obligation, and the measure is what a solution must reach. Where it holds is the obligation's scope. Moving it binds code and tests it did not bind before, or frees those it did. A new reason explains the same obligation.
+**Why the statement, the measure and where it holds are front-matter fields.** A tool reads data from an artefact's front matter only, and a body's parts serve readers and the check (DEC-001 point 1). The core's signal is a tool's, so the parts that trigger it are fields. The statement is the obligation, and the measure is what a solution must reach. Where it holds is the obligation's scope. Moving it binds code and tests it did not bind before, or frees those it did. A new reason explains the same obligation.
 
 **Why the declaration leaves the other changes out.** The fields that trigger are the three that state the obligation: what it asks, what shows it is met, and where it holds. A body part explains the obligation or says what verifies it, and changes none of it. A change of kind or a withdrawal is rare, and is reviewed as a change of its own. So each leaves the revisiting to whoever makes it.
+
+**Why the signal reaches every anchor outside the analysis.** A changed obligation can leave behind each part of the solution it anchors. A test may still check the old measure. A record that answers it, a view that realises it, or the code that holds it may no longer meet it. A record it rests on may no longer agree with it. The record wins, so the requirement changes or the record is changed first (point 8). So the revisit asks the change to change the record, or to say why the record still stands. It may also name the follow-up that will revisit the record (COR-050 point 16).
+
+**Why a requirement's anchors within the analysis are no targets.** An actor and a requirement it refines stand upstream of it (DEC-001 point 4, and "Why `actors` and `refines`" below). A change to its obligation leaves what the actor needs, and what the broader requirement asks, as they were.
+
+**Why the declaration names what stays out.** A field that listed the targets would hold the paths of its tests. No field holds them ("Why tests are named in words and anchored by path"). It would also copy the anchors. The check holds the requirement's artefact anchors within the analysis equal to `actors` and `refines` (point 6). So the anchors those two fields do not list are those outside the analysis, where the requirement keeps to point 6. A test anchored later is a target with no second edit.
 
 **Why a measure may read `None.`.** A requirement found before its measure is still worth keeping. `None.` says the measure was considered and is missing, so the gap is seen.
 
@@ -153,6 +161,8 @@ A requirement points at the solution, and nothing in the solution points back at
 - **One collection file, as RUP's single document.** Rejected. Each entry carries a friction block and several parts, so the file grows long and cannot be grouped by area.
 - **The statement, the measure and where it holds as body parts.** Rejected. No tool but the check reads a body's parts, so the core's signal could not follow a change to one.
 - **A change of kind or a withdrawal that a declaration of the signal names.** Not taken. Each is rare and reviewed as a change of its own, and neither changes the fields that state the obligation.
+- **A field listing the targets, which the stamp writes and the check holds equal to the anchors outside the analysis.** Rejected. It holds a test's path in a field, and copies the anchors. Every test added or renamed would flag each use case and journey that lists the requirement.
+- **Every anchor but the artefact anchors as the targets.** Rejected. A view a place holds takes an artefact anchor (DEC-001 point 11), and would never be revisited.
 - **Where it holds, naming the use cases it binds.** Rejected. It would store a copy of what lists the requirement, which goes stale unflagged.
 - **A test's path in the body, or in a field.** Rejected. A renamed test would flag every use case and journey that lists the requirement.
 - **A kind of anchor for tests, which the capability registers (COR-050 point 2), so a test is told from code.** Not taken. It needs a resolver command for what a path anchor already resolves, and a testing component is likelier to own it.
@@ -165,7 +175,7 @@ A requirement points at the solution, and nothing in the solution points back at
 
 ## Implications
 
-- **The capability ships** for each kind its structure, template, companion schema, place and type. It ships the stamp of each kind and `requirements` on use cases and journeys. It ships the check of the ids, fields and parts, and a query that lists what meets each requirement. The README gives the layout, and says that behaviour serving one actor's goal is a use case.
+- **The capability ships** for each kind its structure, template, companion schema, place and type. It ships the stamp of each kind and `requirements` on use cases and journeys. It ships the check of the ids, fields and parts, and a query that lists what meets each requirement. It declares the core's signal on each kind's place (point 4). So it needs a backbone that reads a link whose fields list what stays out. The README gives the layout, and says that behaviour serving one actor's goal is a use case.
 - **DEC-001 governs its four kinds, and this record the three it adds.**
 - **`SAN`:**
   - its format rule covers the new kinds as it covers every kind.

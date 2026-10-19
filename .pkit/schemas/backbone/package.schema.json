@@ -321,6 +321,10 @@
         },
         "mandatory": {
           "$ref": "#/$defs/mandatory"
+        },
+        "question": {
+          "description": "The point's question (COR-061): a command of this component's that asks the person about the point and records each answer they give. Must exist in `commands:` and must not declare the query contract, since it writes (checked in Python). The backbone runs it at the end of a capability's install or upgrade and of a transition of the backbone, only where standard input and standard output are both terminals, and prints `pkit <component> <command>` to run later where they are not. Sync never runs it.",
+          "$ref": "#/$defs/command-reference"
         }
       }
     },
@@ -663,15 +667,36 @@
     "friction-link": {
       "title": "One link that revisits its targets (COR-050 point 16)",
       "type": "object",
+      "description": "A link chooses its targets in one of two ways, so it names exactly one of `targets` and `all-but`.",
       "additionalProperties": false,
       "required": [
-        "targets",
         "when"
+      ],
+      "oneOf": [
+        {
+          "required": [
+            "targets"
+          ]
+        },
+        {
+          "required": [
+            "all-but"
+          ]
+        }
       ],
       "properties": {
         "targets": {
           "description": "The source's own field that lists the link's targets, each by its anchor's value: a value names every anchor of the source that has it.",
           "$ref": "#/$defs/own-field"
+        },
+        "all-but": {
+          "description": "The source's own fields that list the anchors that stay out, each by its anchor's value: the link's targets are every other anchor of the source.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/$defs/own-field"
+          }
         },
         "when": {
           "description": "The trigger fields: the source's own fields whose change, compared parsed between the base and the head, revisits the link's targets.",

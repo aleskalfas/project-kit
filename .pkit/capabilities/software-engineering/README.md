@@ -13,9 +13,8 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-18T17:49:16Z
-      outcome: unchanged
-      unchanged-because: It cites DEC-055 point 3 for who checks a change's answers and point 5 for a sentence edited after the verdict. This change refines which later heads an authorisation covers, and leaves both as the README states them.
+      at: 2026-10-18T18:53:43Z
+      outcome: updated
 ---
 
 # software-engineering capability
@@ -48,7 +47,7 @@ The panel ([software-engineering:DEC-002-code-review-panel]) closes bug #715: be
 
 **The reviewer of a change's answers.** A change may carry answers on the documents its edits affect: a revalidation, which says a document was updated or still holds, and a deferral, which leaves it out of date until a follow-up. It may also carry revisits ("Revisits" below). The agent making the change writes these answers without asking first, and a reviewer other than that agent checks them (COR-050 point 3, [project-management:DEC-055] point 3). Which reviewer is the project's choice. `docs-reviewer` checks them wherever it reviews a pull request, as its docs-match-behaviour lens applied to the change's own claims about its documents ([software-engineering:DEC-002] D1). It reads the answers from the change check's own list (`pkit friction check`, "Answers written in this change"), never from an account the author wrote.
 
-**Revisits.** An installed component may declare a link on the place that holds a document. The document then lists the link's targets, such as the tests that verify it. A change to the link's trigger fields asks for a revisit of each target (COR-050 point 16). The change revisits a target by changing it, or by a revisit entry on the document. The entry says `unchanged`, why the target still stands, or `deferred`, the open follow-up that will revisit it.
+**Revisits.** An installed component may declare a link on the place that holds a document. The link takes some of the document's anchors as its targets, such as the tests that verify it. A change to the link's trigger fields asks for a revisit of each target (COR-050 point 16). The change revisits a target by changing it, or by a revisit entry on the document. The entry says `unchanged`, why the target still stands, or `deferred`, the open follow-up that will revisit it.
 
 Each of these is a `[block]` finding in `docs-reviewer`'s verdict:
 

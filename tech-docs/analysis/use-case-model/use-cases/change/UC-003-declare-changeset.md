@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T20:52:51Z
+      at: 2026-10-19T06:13:40Z
       outcome: unchanged
-      unchanged-because: This change stops release apply writing, and release plan listing, the note of a none changeset. The use case covers declaring changesets and the guard that checks them, which this change leaves as they were.
+      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. Declaring a changeset and the release check this use case describes are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release
