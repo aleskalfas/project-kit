@@ -1,0 +1,21 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The Claude Code adapter ships its agent runner, `run-agent.py`, registered
+  in its `package.yaml` under `commands:` as `run-agent` (ADR-066 points 1, 4
+  and 10). The backbone's `pkit agents run` starts it, and it starts
+  `claude -p --agent <agent>`, with `--effort <level>` where the run sets one,
+  in the run's folder, with the brief on standard input. Those flags are the
+  closed set: it builds no command line with any other, so no flag that
+  bypasses permissions is ever passed. It refuses a run when `claude` is not on
+  `PATH`, when the agent is not deployed under `.claude/agents/`, or when the
+  request carries a key it does not run. At the limit, or asked to stop, it
+  ends the harness and every process still descended from it, a shell command
+  Claude Code started in a session of its own included. It finds them through
+  `ps`, and a process that left the harness's tree before then is not reached.
+  It runs under the system `python3`, standard library only, as the permission
+  hook does. The adapter's README documents it, with the closed set of flags
+  ("The agent runner"). Upgrade the adapter with the backbone that ships
+  `pkit agents run`: without the runner, the command refuses every run.
