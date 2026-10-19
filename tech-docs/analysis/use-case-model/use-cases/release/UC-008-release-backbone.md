@@ -29,9 +29,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T08:30:00Z
+      at: 2026-10-19T19:45:25Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py. The release commands, and the steps of a backbone release, are untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it

@@ -19,9 +19,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-19T08:30:03Z
+      at: 2026-10-19T19:45:29Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py. How a maintainer receives a report and links it to its fix is untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix

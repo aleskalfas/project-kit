@@ -25,9 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T08:30:01Z
+      at: 2026-10-19T19:45:26Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py, and needs no migration since every change adds. pkit new migration and the migration checks are untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

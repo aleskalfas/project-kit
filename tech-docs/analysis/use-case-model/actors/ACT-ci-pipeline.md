@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-18T18:53:59Z
+      at: 2026-10-19T19:45:41Z
       outcome: unchanged
-      unchanged-because: COR-050 point 16 gains a second way for a link to choose its targets, and point 12 splits one validation bullet in two. Unattended runs gated on exit status, a named base, offline runs and machine-readable findings are untouched.
+      unchanged-because: COR-050 gains an anchor on a shared id, warned of by both checks and never failed. The pipeline runs the checks as it did, and nothing it does or answers for changes.
 ---
 
 # ACT-ci-pipeline — CI pipeline

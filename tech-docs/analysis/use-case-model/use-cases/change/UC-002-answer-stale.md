@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-19T07:05:51Z
+      at: 2026-10-19T19:45:38Z
       outcome: unchanged
-      unchanged-because: software-analysis DEC-001 point 5 gains a paragraph on its agent as the fixer a command starts on the default branch's stale artefacts. The four outcomes, their mapping and the rule that a person decides stale against regressed, which variant 5b takes, are unchanged, and how a change answers what it made stale is untouched.
+      unchanged-because: The change check gains a reported-only warning on an anchor on a shared id, which asks no answer of a document. A shared id that moves an anchor to another artefact raises friction, answered as this use case says.
 ---
 
 # UC-002 — Answer what my change made stale

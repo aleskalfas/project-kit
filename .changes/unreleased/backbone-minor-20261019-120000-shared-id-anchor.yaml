@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  An `artefact` anchor on an id two artefacts share names no one artefact, as
+  one on a point id or a slug two share names no one part, and is reported
+  instead of being read silently as naming the first artefact found (COR-050
+  points 7 and 12, #1818). It is warned of and fails nothing: both friction checks report it as the new
+  finding kind `shared-id`, naming every artefact with the id and the one the
+  anchor stands on, and enforcing mode passes it. The anchor stands on the
+  first artefact with the id in walk order, as it did. The change check
+  reports it where the change added the anchor, shared an id that was not
+  shared, or changed which artefact the anchor stands on; the whole-repository
+  check reports every one; validation does not report it. Ids no two
+  artefacts share mend it, as does naming a document by its path.
