@@ -43,7 +43,7 @@ pkit:
 **Assumptions:**
 
 - The author judges what breaks the projects that installed the component. The check reads only renames and removals of files, in the trees it reads as the backbone's, an adapter's or a capability's (`migrations.py`). Another break, such as a key whose meaning changes, rests on that judgement (COR-010).
-- Only the release step writes versions (PRJ-002 D3). The component's changeset for the change declares `minor` or above, so the release step that ships the change raises the component's minor or major. A patch release carries no migration (COR-010).
+- Only the release step writes versions (PRJ-002 D3). The component's changeset for the change declares `minor` or above, so the release step that ships the change raises the component's minor or major. A new patch version of the component carries no migration (COR-010).
 
 **Trigger:** The author's change breaks what the projects that installed the component hold, such as renaming or removing one of the component's files.
 
