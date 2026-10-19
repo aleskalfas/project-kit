@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
-      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T07:05:54Z
+      at: 2026-10-19T07:21:35Z
       outcome: updated
 ---
 
@@ -55,7 +55,13 @@ Install it with `pkit capabilities install software-analysis`. Then:
    - keep the shipped parts, or change them in `project/structures.yaml` ("A project's own structures", below). You may relabel a part or replace its hint, and add parts of your own to an artefact kind.
 
    The `analysis-author` skill walks you through it, one kind at a time, in its `choose-templates.md`. A shipped part you find wrong is a change you propose to the capability.
-3. **Write the analysis** with the `analysis-author` skill: actors first, then use cases, then the journeys through them. Write terms whenever a word needs pinning down, and requirements whenever something binds many use cases at once.
+3. **Build the analysis from its concepts up,** with the `analysis-author` skill, as its `build-analysis.md` walks it (DEC-001 point 12):
+   1. the concepts and how they relate, in the glossary, then the actors
+   2. the requirements that bind the whole system
+   3. the use cases, area by area, each area after the areas it builds on
+   4. the journeys, last
+
+   It holds for an area you add later too, and for the artefacts an agent derives on a brownfield project. `build-analysis.md` says what each artefact may use, when to go back, and when each step is done.
 
 Steps 2 and 3 may interleave: choose a kind's parts before you write its first artefact, or its first record. A candidate that describes your project truly can be that first one. The analysis's location needs no step: it is recorded the first time you stamp an artefact ("Where things live", below).
 
@@ -693,14 +699,15 @@ It is a query: read-only and offline. It reads the working tree through the core
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds seven rules. Each has DEC-001 or DEC-002 as its origin, save the source rule, which names who decided it and when.
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds eight rules. Each has DEC-001 or DEC-002 as its origin, save the source rule, which names who decided it and when.
 
 - **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
-- **Five proposed judgement rules,** which declare no check. They cover:
+- **Six proposed judgement rules,** which declare no check. They cover:
   - a use case's actors and its goal (DEC-001 points 1 and 4)
   - what an artefact's anchors name (DEC-001 points 2, 4, 9 and 11, and DEC-002 points 5 to 7)
   - a requirement against the records it rests on (DEC-002 point 8)
   - the source of each goal, minimal guarantee and requirement
+  - the domain concepts an artefact uses, which the glossary defines (DEC-001 point 12)
 
 | Rule | Status | Statement |
 |---|---|---|
@@ -711,6 +718,7 @@ It is a query: read-only and offline. It reads the working tree through the core
 | `RS-SAN-005` | proposed | An analysis artefact's anchors name what its statements rest on. A use case's or a requirement's anchors also name the decisions that answer it and the architecture views that realise it. |
 | `RS-SAN-006` | proposed | A requirement never contradicts an accepted decision record it rests on. |
 | `RS-SAN-007` | proposed | Each goal, minimal guarantee and requirement names its source. |
+| `RS-SAN-008` | proposed | An analysis artefact uses a domain concept only where a term of the glossary defines it, and names the concept by that term's name. No two terms define one concept. |
 
 - **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
 - **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
@@ -724,14 +732,16 @@ It is a query: read-only and offline. It reads the working tree through the core
     - a filled *Rationale* or *Imposed by*
     - anchored code that already does it
     - a person's decision quoted in the artefact, with their name and the date
+  - Each artefact uses a concept of your domain only where a term defines it, and names it by that term's name. A term's definition is judged too, and no two terms define one concept. A name a term replaces, or a word of the writer's own for a defined concept, breaks the rule. Its *How* says what uses no concept, such as an actor's name, quoted words and code. The rule holds what the build order leaves in the analysis ("Adopting it", above) (`RS-SAN-008`).
 - **What judges them.** They declare no check, so a reviewer judges each where it binds, such as the rule-set reviewer (COR-057). While the rules are proposed, they bind nothing, and nothing judges them.
   - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
   - **A change to anchors alone.** It alters no artefact's content, so the rule-set reviewer judges nothing there (COR-057 point 1). The friction check asks for the artefact's revalidation instead (COR-050 point 6).
   - **A break that starts outside a use case.** A change that records a decision answering a use case, or adds a view that realises it, alters no use case. So the rule-set reviewer does not judge the use case's missing anchor there (COR-057 point 1). Add that anchor in the same change.
+  - **A break that starts in the glossary.** A change that renames, withdraws or redefines a term alters only the term. So the rule-set reviewer judges none of the artefacts that still use its old name or meaning (COR-057 point 1). A rename the rule-set reviewer judges on the term itself, which breaks `RS-SAN-008` while an artefact in force uses a name it replaces. Find each use of the term's name, and of the names it replaces, and mend them in the same change.
   - **A break that starts outside a requirement.** A change that accepts or changes a record a requirement rests on alters no requirement. So the rule-set reviewer judges no contradiction there (COR-057 point 1). The friction check flags the requirement instead, so check it against the record when you revalidate it (COR-050).
-  - **Moving your pin.** Accepting a judgement rule gives `SAN` a new major. The change that moves your set's pin to it brings every artefact the rule binds on under the rule. Each break the rule's text settles is then that change's, and withholds the rule-set reviewer's approval (COR-060 point 1). It weighs most for `RS-SAN-007`, since every goal, guarantee and requirement without a source breaks it. Besides mending each in that change, COR-060 point 2 gives these ways out:
-    - leave a file out of your set's scope until it is mended
+  - **Moving your pin.** Accepting a judgement rule gives `SAN` a new major. The change that moves your set's pin to it brings every artefact the rule binds on under the rule. Each break the rule's text settles is then that change's, and withholds the rule-set reviewer's approval (COR-060 point 1). It weighs most for `RS-SAN-007`, since every goal, guarantee and requirement without a source breaks it, and for `RS-SAN-008`, since every concept of your domain, in the rule's sense, that the glossary does not define breaks it. Besides mending each in that change, COR-060 point 2 gives these ways out:
+    - leave a file out of your set's scope until it is mended, such as one area at a time, in the order the analysis is built
     - propose a change to the rule, or do not inherit `SAN`
     - where a gate requires the reviewer, override a judgement held wrong, as that gate allows
 - **What each gates.** The format rule gates the check of each artefact kind's structure, since that structure binds at the rule's status (DEC-001 point 1). The append-only rule gates the check that keeps a use case's steps and variants append-only. The format rule and the append-only rule are accepted, so each check fails on what it finds where its rule binds. While a rule is proposed, its check reports nothing (COR-051 point 4). `pkit analysis validate --preview` shows what the structure check would report ("Each body against its structure", above), and `pkit analysis check-numbers --preview` what the append-only check would ("Steps and variants stay append-only", below). A kind's schema checks the front matter of an artefact or a record whatever any rule's status.
@@ -912,7 +922,7 @@ The capability's skills, deployed by `pkit sync` with the others (in Claude Code
 
 | Skill | Paired with | Use it to |
 |---|---|---|
-| `analysis-author` — composite: `choose-templates`, `actor`, `term`, `use-case`, `journey`, `requirement`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability ("Adopting it", above). Write an actor, a term, a use case, a journey, a requirement of each of the three kinds, or a revalidation record. Choose the slug, the area, the actor and the steps, a requirement's kind, and what the artefact anchors to, or why an actor, a term or a requirement stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
+| `analysis-author` — composite: `choose-templates`, `build-analysis`, `actor`, `term`, `use-case`, `journey`, `requirement`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability, and build the analysis in its order ("Adopting it", above). Write an actor, a term, a use case, a journey, a requirement of each of the three kinds, or a revalidation record. Choose the slug, the area, the actor and the steps, a requirement's kind, and what the artefact anchors to, or why an actor, a term or a requirement stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
 
 The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it.
 
@@ -920,6 +930,7 @@ The command owns each file's correctness — its id, its place, the anchors the 
 - **The skill lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
 - **The skill runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its `preview:` reports never fail, and the check's own findings and exit status stand ("Each body against its structure", above).
 - **Sources.** The skill writes no item it cannot source. It asks the person who decides instead, and quotes the answer, as `RS-SAN-007` asks ("The method rule set: `SAN`", above).
+- **Terms.** The skill stamps a missing term before it uses the concept, and writes each concept as `RS-SAN-008` asks ("The method rule set: `SAN`", above).
 - **One choice matters to revalidation later:** **quote the code you describe** in backticks. What an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
 
 ## Revalidation: four outcomes, two answers

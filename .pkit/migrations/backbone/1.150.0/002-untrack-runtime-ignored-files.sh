@@ -35,6 +35,12 @@
 #     tracked, and the removal is only staged, so the operator's commit is the
 #     point of decision.
 #
+# ORDER. It runs after `001-keep-process-journal-logging.sh`, by its number. That
+# migration decides `committed` from the journals git tracks, and drops the
+# journal ignore line from `.pkit/.gitignore` while they are tracked. Run first,
+# this one would untrack those journals while the line still ignores them, and
+# logging would be recorded as not committed.
+#
 # OTHER CLONES. The staged removal, once committed, reaches other clones as a
 # deletion. A clone that pulls it while the file is still tracked there has git
 # delete its own copy (#284); a clone that untracks the same paths first keeps

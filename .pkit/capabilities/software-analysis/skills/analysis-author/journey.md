@@ -33,7 +33,7 @@ pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> 
 
 ## 6. Fill it
 
-Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`. Keep them as written. The goal and each minimal guarantee name their source (the shared framing's "Name the source of what the system must do").
+Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. The stamp writes the step lines under **Steps**, one for each use case of `steps`. Keep them as written. The goal and each minimal guarantee name their source (the shared framing's "Name the source of what the system must do"). Write each concept by its term (the shared framing's "Use the glossary's terms").
 
 Then run the checks in the shared framing's "After stamping": `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging. A hand-over the check refuses is named in its message, with the label it expects.
 

@@ -25,9 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:13:44Z
+      at: 2026-10-19T06:40:55Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: release.py now also warns of a component's migration folder the release does not cut, and migrations check-diff in cli.py also fails a script whose number its folder holds. This use case names no migration folder, and the versions, floors, changelog and notes it describes the release writing for a component are untouched.
 ---
 
 # UC-009 — Release my component on its own version
@@ -36,13 +36,13 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the release pull request that carries the component's release. That pull request carries the releases of the backbone and of other components too (UC-008).
+- **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the release pull request that carries the component's new version. That pull request carries the new versions of the backbone and of other components too (UC-008).
 
-**Preconditions:** The component's repository declares its releases in changesets under `.changes/unreleased/`, as project-kit does (PRJ-002 D1). Changesets naming the component wait there (UC-003), and the component's `package.yaml` gives its `version` and a `requires_backbone` range.
+**Preconditions:** The component's repository declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1). Changesets naming the component wait there (UC-003), and the component's `package.yaml` gives its `version` and a `requires_backbone` range.
 
 **Assumptions:**
 
-- The author has run the component on the backbone the repository carries. The release claims that the component works with that backbone, and the author owns that claim (COR-041).
+- The author has run the component on the backbone the repository carries. The new version claims that the component works with that backbone, and the author owns that claim (COR-041).
 
 **Trigger:** The component author decides to release what the component's changesets declare.
 
@@ -56,28 +56,28 @@ pkit:
 6. The system raises each floor a changeset declares for the component, on the backbone or on another capability. It also widens each upper bound on a capability that a changeset says the component runs on (PRJ-002 D4).
 7. The system adds an entry at the top of `CHANGELOG.md`, headed by the date, since the backbone does not move. The system heads each of the component's notes with `**<component> <version>**`, and states each raised floor, such as `Requires backbone >=1.149.0.`
 8. The system deletes the changesets it consumed.
-9. The author commits the release, and merges the release into the default branch. The release cuts no tag, since a tag names a backbone version, read from `.pkit/VERSION` (PRJ-004 and `versioning.py`).
+9. The author commits the release step's writes, and merges them into the default branch. They get no tag, since a tag names a backbone version, read from `.pkit/VERSION` (PRJ-004 and `versioning.py`).
 
 **Variants:**
 
-- **1a.** In project-kit, `release-pr.yml` plans and applies the component's release, with the backbone's release where the backbone moves (UC-008). A release that moves no backbone takes the branch `release/<run id>`. The maintainer merges the release pull request as UC-008 says, and the use case ends with no tag cut.
+- **1a.** In project-kit, `release-pr.yml` runs the release step for the component, with the backbone where the backbone moves (UC-008). A release step that moves no backbone takes the branch `release/<run id>`. The maintainer merges the release pull request as UC-008 says, and the use case ends with no tag cut.
 - **3a.** The author runs `pkit release apply --no-broaden`, to keep the upper bound as written, such as for a patch known not to work on the newest backbone. Step 5 is skipped, and each declared floor and upper bound is still written.
-- **3b.** A changeset declares `requires_backbone: release`, and the release moves no backbone. The floor rises to the current backbone. The plan adds `backbone does not move this release`, asking the author to confirm that the needed surface shipped there.
-- **3c.** On the path of 3b, the current backbone is a pre-release, such as `1.150.0rc1`. The system refuses the release before writing anything, since no floor rises to a pre-release (PRJ-002 D4). The use case ends.
-- **3d.** A changeset declares a floor or an upper bound the release cannot write. Examples are an explicit floor above the backbone the tree carries, and a `release` floor on a capability the release does not move. The system refuses before writing anything, and the use case ends (PRJ-002 D4).
-- **3e.** A declared floor would leave a range that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release before writing anything, and the use case ends.
-- **3f.** The release would leave another capability whose range excludes the component's new version. The system refuses before writing anything, naming that capability, its range and the version (PRJ-002 D4). The use case ends.
-- **3g.** The release moves the backbone too. Step 5 instead widens every component's upper bound to cover the new backbone's minor, and the backbone is released as UC-008 says.
+- **3b.** A changeset declares `requires_backbone: release`, and the release step moves no backbone. The floor rises to the current backbone. The plan adds `backbone does not move this release`, asking the author to confirm that the needed surface shipped there.
+- **3c.** On the path of 3b, the current backbone is a pre-release, such as `1.150.0rc1`. The system refuses the release step before writing anything, since no floor rises to a pre-release (PRJ-002 D4). The use case ends.
+- **3d.** A changeset declares a floor or an upper bound the release step cannot write. Examples are an explicit floor above the backbone the tree carries, and a `release` floor on a capability the release step does not move. The system refuses before writing anything, and the use case ends (PRJ-002 D4).
+- **3e.** A declared floor would leave a range that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release step before writing anything, and the use case ends.
+- **3f.** The release step would leave another capability whose range excludes the component's new version. The system refuses before writing anything, naming that capability, its range and the version (PRJ-002 D4). The use case ends.
+- **3g.** The release step moves the backbone too. Step 5 instead widens every component's upper bound to cover the new backbone's minor, and the backbone is released as UC-008 says.
 - **6a.** A floor already stands at or above the version a changeset declares. The floor stays as it is, and the plan says `requires_backbone floor stays`.
 
 **Postconditions:**
 
 - The component's `package.yaml` carries its new version. The component's `requires_backbone` range admits the backbone it was released under, unless the author kept the upper bound.
 - The changelog entry says what changed in the component, and what the component now requires.
-- A repository that pulls the component whole receives the new version once that repository pins a ref holding it (COR-041). In project-kit, a release that moves only components reaches a tagged install with the next backbone release (PRJ-004).
+- A repository that pulls the component whole receives the new version through a transition of the component. The transition moves the component to a ref holding that version (COR-041 and COR-059 point 3). In project-kit, a release step that moves only components reaches a tagged install with the next release (PRJ-004).
 
 **Minimal guarantees:**
 
-- No floor rises unless a changeset declares it, so a release never claims a need no changeset declared (`release.py` and PRJ-002 D4).
-- The release only widens an upper bound, and never narrows one (`versioning.py` and PRJ-002 D4).
-- A release the system refuses for a changeset's declaration, or for a range, writes nothing. Each of those refusals comes before the first write (`release.py`).
+- No floor rises unless a changeset declares it, so a release step never claims a need no changeset declared (`release.py` and PRJ-002 D4).
+- The release step only widens an upper bound, and never narrows one (`versioning.py` and PRJ-002 D4).
+- A release step the system refuses for a changeset's declaration, or for a range, writes nothing. Each of those refusals comes before the first write (`release.py`).

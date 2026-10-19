@@ -1,4 +1,4 @@
-"""Backbone migration 1.150.0/001-untrack-runtime-ignored-files.sh (#288).
+"""Backbone migration 1.150.0/002-untrack-runtime-ignored-files.sh (#288).
 
 An adopter who committed a runtime-local file before its `runtime_ignore`
 declaration shipped keeps it tracked: the rendered `.pkit/.gitignore` ignores it,
@@ -16,13 +16,15 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from project_kit import visibility
 from project_kit.migrations import pending_migration_scripts
 from tests.adopter_repo import GitRepo
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS_ROOT = REPO_ROOT / ".pkit" / "migrations" / "backbone"
-MIGRATION = MIGRATIONS_ROOT / "1.150.0" / "001-untrack-runtime-ignored-files.sh"
+MIGRATION = MIGRATIONS_ROOT / "1.150.0" / "002-untrack-runtime-ignored-files.sh"
 
 # Declared by the backbone's runtime-ignore seam.
 LEDGER = ".pkit/permissions/project/sandbox-provenance.yaml"
@@ -51,10 +53,11 @@ def _adopter(tmp_path: Path, files: dict[str, bytes]) -> GitRepo:
     return repo
 
 
-def _run(root: Path, **env: str) -> subprocess.CompletedProcess[str]:
-    """Run the migration as the upgrade runner does: bash, `ROOT` set, cwd root."""
+def _run(root: Path, script: Path = MIGRATION, **env: str) -> subprocess.CompletedProcess[str]:
+    """Run the migration, or another `script`, as the upgrade runner does: bash,
+    `ROOT` set, cwd root."""
     return subprocess.run(
-        ["bash", str(MIGRATION)],
+        ["bash", str(script)],
         env={**os.environ, "ROOT": str(root), **env},
         cwd=root,
         capture_output=True,
@@ -78,6 +81,32 @@ def _index(repo: GitRepo) -> str:
 def test_migration_is_registered_for_the_next_backbone_minor() -> None:
     """`pkit upgrade` from 1.149.x runs every script in the 1.150.0 window."""
     assert MIGRATION in pending_migration_scripts(MIGRATIONS_ROOT, "1.149.0", "1.150.0")
+
+
+KEEP_JOURNAL_LOGGING = MIGRATIONS_ROOT / "1.150.0" / "001-keep-process-journal-logging.sh"
+JOURNAL = ".pkit/capabilities/project-management/project/process/issue-lifecycle/42.journal.jsonl"
+
+
+@pytest.mark.parametrize("journal_logging_first", [True, False])
+def test_it_runs_after_keep_process_journal_logging_so_committed_journals_stay_tracked(
+    tmp_path: Path, journal_logging_first: bool
+) -> None:
+    """The runner runs the folder in the order of the scripts' numbers. After
+    `001-keep-process-journal-logging.sh`, which records committed journals and drops
+    their ignore line, this migration leaves them tracked. Run first, it would untrack
+    them while the line still ignores them, and logging would be recorded as not
+    committed: the order the numbers state is the one that keeps them."""
+    folder = pending_migration_scripts(MIGRATIONS_ROOT, "1.149.0", "1.150.0")
+    assert folder.index(KEEP_JOURNAL_LOGGING) < folder.index(MIGRATION)
+    order = folder if journal_logging_first else folder[::-1]
+    repo = _adopter(tmp_path, {JOURNAL: b'{"to": "done"}\n'})
+
+    for script in order:
+        assert _run(repo.root, script).returncode == 0
+
+    config = (repo.root / ".pkit" / "project" / "config.yaml").read_text(encoding="utf-8")
+    assert f"committed: {str(journal_logging_first).lower()}" in config
+    assert (JOURNAL in _tracked(repo)) is journal_logging_first
 
 
 def test_tracked_before_declaration_is_untracked_and_working_copy_kept(

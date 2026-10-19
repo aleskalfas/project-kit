@@ -1272,9 +1272,12 @@ def test_shipped_capabilities_wire_clean(make_adopter_repo: MakeAdopterRepo) -> 
         "pkit::work-tracking:fixers",
         "pkit::work-tracking:use-cases",
     ]
+    # A static value, such as living-docs' fixers (#1746), names no command.
     assert sorted(
-        (b.counterpart.capability, b.counterpart.command, b.status) for b in wiring.bindings
+        ((b.counterpart.capability, b.counterpart.command, b.status) for b in wiring.bindings),
+        key=lambda binding: (binding[0], binding[1] or ""),
     ) == [
+        ("living-docs", None, cx.BindingStatus.BOUND),
         ("living-docs", "fill-doc-check", cx.BindingStatus.BOUND),
         ("project-management", "fill-doc-check", cx.BindingStatus.BOUND),
         ("software-analysis", "fill-readers", cx.BindingStatus.BOUND),

@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  Each migration folder numbers its scripts once. The runner runs a folder's
+  scripts in the order of their names, so two scripts of one number ran in the
+  order their slugs gave. `pkit migrations check-diff` now fails a script a
+  change adds, or moves in, whose number another script in its folder holds,
+  including one the base took since the branch left it, and names the number to
+  take. A script your project receives by sync is not judged. `pkit release
+  plan` now also warns of an adapter's or a capability's migration folder that
+  does not match the version the release computes for it, as it did for the
+  backbone's.

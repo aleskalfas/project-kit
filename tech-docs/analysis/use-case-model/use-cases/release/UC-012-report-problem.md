@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-19T06:13:47Z
+      at: 2026-10-19T06:40:56Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: cli.py changed only in migrations check-diff, which also fails a script whose number its folder holds. The report command this use case describes is untouched.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

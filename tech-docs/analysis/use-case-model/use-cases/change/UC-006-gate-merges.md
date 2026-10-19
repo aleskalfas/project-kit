@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:13:41Z
+      at: 2026-10-19T06:39:12Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability commands, which now end with the questions a data point declares. They ask nothing without a terminal and pkit sync never asks, so the CI pipeline still runs every check with no terminal and no question, and the merge waits on the checks as this use case says.
+      unchanged-because: This change makes pkit migrations check-diff also fail a migration script whose number another script in its folder holds. This use case names that check only among the project's other checks, each exiting non-zero on what fails it, and how pkit validate and pkit friction check hold a merge is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks
