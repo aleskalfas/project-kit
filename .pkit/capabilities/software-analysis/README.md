@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
-      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
       at: 2026-10-18T18:27:41Z
       outcome: updated
@@ -30,7 +30,7 @@ Install it when your project is past the point where one person holds the whole 
 Each artefact declares what makes it true — its anchors — and when it was last revalidated, in the core friction block (COR-050). The core friction check flags it when an anchor changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
 - **Write** the analysis with the `analysis-author` skill, which walks each kind through its stamp, `pkit analysis new` ("Authoring" below).
-- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence and the commands you run to record it, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below). It is also the fixer of your analysis, which a command may start after each merge where you grant it ("As the fixer of your analysis" below).
+- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence and the commands you run to record it, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below). It is also the fixer of your analysis: where you grant it, project-management's command that starts fixers may run it after a merge ("As the fixer of your analysis" below).
 
 ## How it meets your decisions
 
@@ -1002,13 +1002,12 @@ Its scripted flows — a drift resolved, the stop, a regression recorded with it
 
 ### As the fixer of your analysis
 
-The capability declares the agent as the *fixer* of each of its artefact types, in the work-tracking role's fixers point ("Connections" below). With project-management installed, that means:
+Where you grant it, the agent can run on its own after a merge, on the analysis artefacts the merge left out of date, and it only proposes. That makes it the *fixer* of your analysis, declared for each artefact type in the work-tracking role's fixers point ("Connections" below). With project-management installed, that means:
 
-- **Nothing starts until you grant it.** `pkit pm ask-fixers` asks you once whether software-analysis may keep your analysis true on its own. Its words are built from the declaration, which names each type. You may instead grant it with `pkit pm grant-fixer analysis-resolver`, or grant only some types with `--type`. How grants are kept and revoked is project-management's ([project-management:DEC-056-drift-fixers] point 2).
-- **The command that starts it is not shipped yet.** project-management's command that starts fixers is still to come. Until it ships, a grant starts nothing, and you run the agent yourself as above.
-- **What a run will do.** Once that command ships and your grant is on the default branch, the command runs the agent on the default branch's stale analysis artefacts, with nobody watching. The agent runs the same judgment as above, on the artefacts the command names.
+- **Nothing starts until you grant it.** How you are asked, and how you grant or revoke a fixer, is in project-management's README, [8. (Optional) Grant the fixers your capabilities declare](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare). Only your answer grants it ([project-management:DEC-056-drift-fixers] point 2).
+- **What a run does.** A command of project-management starts the fixers you granted, once your grant is on the default branch (DEC-056 point 3). It runs the agent on the default branch's stale analysis artefacts, with nobody watching. The agent runs the same judgment as above, on the artefacts the command names. That command is still to come. Until it ships, a grant starts nothing, and you run the agent yourself as above.
 - **What it can't do in a run.** It can't ask you, and it can't read a pull request or a work item. Where it would ask, the artefact waits with its question, and your answer goes with the artefact's next run. A call the run refuses, such as a command it needs, leaves the artefact unjudged, with the reason.
-- **What it hands back.** Each answer it proposes is data, never a command: a JSON file of its fields, the diff of any edit, and the evidence for you to read. The command reads one result line per artefact: proposed, held with its question, or none with its reason. The agent's body gives its side of these forms, under "When a command starts you", until project-management states them in full.
+- **What it hands back.** Each answer it proposes is data, never a command: a file of its fields, the diff of any edit, and the evidence for you to read. An artefact it holds carries its question, and one it cannot judge carries the reason. The agent's body says what a run takes and returns, under "When a command starts you".
 - **Nothing is applied until you decide.** project-management brings the proposals to you together, and applies only what you accept. A regression's defect and a revalidation record stay yours to write.
 
 ### What the evidence decides: `pkit analysis propose`
@@ -1118,10 +1117,10 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
     # quality-requirement, functional-requirement and constraint
 ```
 
-- **A static value.** It reads in the package metadata, and resolving it runs nothing. Each `description` says what the agent keeps true, and the question that asks you to grant it is built from them.
-- **Granted by you alone.** The point says only which agent fixes which type. A provider of the role starts the agent only where you granted it ("As the fixer of your analysis", above).
+- **A static value.** It reads in the package metadata, and resolving it runs nothing. Each `description` says what the agent keeps true.
+- **Not a grant.** The point says only which agent fixes which type ("As the fixer of your analysis", above).
 - **Yours to replace.** Your own filler of the point may give a type to another deployed agent.
-- **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, and this capability never requires one. A provider that does not define the point yet, such as an older project-management, warns that the contribution names a point it does not define, and the contribution stays inert.
+- **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, and this capability never requires one.
 
 ## The review contribution
 
