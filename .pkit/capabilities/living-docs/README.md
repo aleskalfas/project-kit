@@ -14,9 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T19:45:58Z
+      at: 2026-10-19T20:58:20Z
       outcome: unchanged
-      unchanged-because: COR-050 gains a warning on an anchor on a shared id, never failed. The README's account of pages, their anchors and their revalidation is untouched.
+      unchanged-because: A document a component holds in a folder it declares is still that component's; the folder may now be a glob of folders, which the README does not detail.
 ---
 
 # living-docs capability

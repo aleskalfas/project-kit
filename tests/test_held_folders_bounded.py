@@ -5,13 +5,17 @@ could empty the checks and the measures with nothing reported against it. The
 bounds, judged once by friction discovery (`held_folders`) and reported by the
 packages pass at the declaration:
 
-- it **names the location it lies within** and is a folder there (the friction
-  pass's `malformed-held` otherwise, `test_friction_validate.py`);
+- it **names the location it lies within** and is a folder there, or a glob of
+  folders at one depth (#1821; the friction pass's `malformed-held` otherwise,
+  `test_friction_validate.py`);
 - it **never equals or encloses a documentation root** — `.` in a location at
-  a root included — **nor another declaration's place**; lying inside
-  another's place, a root's say, is what it is for;
-- **one holder per file**: it shares no file with another held folder — two
-  components', or its own two — nor with its own component's place;
+  a root included — **nor any declaration's place**, its own component's
+  included; lying inside a place, a root's say, or sharing some of its files,
+  as its own component's place glob may, is what it is for: the held folder
+  wins (#1821);
+- **one holder per file**: it shares no file with another component's held
+  folder, and is not nested in or around another of its own; two of its own
+  that share only some files hold them for it, the first declared each;
 - **rules stay artefacts**: it shares no file with a rule-set folder (COR-051
   point 2).
 
@@ -21,6 +25,7 @@ walk them as artefacts — and the error stands at its `friction.held` entry.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from click.testing import CliRunner
@@ -96,9 +101,10 @@ def test_held_dot_in_a_location_at_the_root_equals_the_roots_and_holds_nothing(
     )
     assert message.endswith(
         ", so it holds nothing and the places matching its files read them as artefacts: a "
-        "held folder never equals or encloses a documentation root or another declaration's "
-        "place, and shares no file with its own component's place, another held folder or a "
-        "rule-set folder (COR-050 point 1)."
+        "held folder never equals or encloses a documentation root or any declaration's place, "
+        "its own component's included, shares no file with another component's held folder or "
+        "a rule-set folder, and is not nested with another of its own held folders (COR-050 "
+        "point 1)."
     )
     assert (_package(EVIDENCE), "/friction/held/0") in found  # the shape pass: no location
 
@@ -198,12 +204,14 @@ def test_a_held_folder_enclosing_another_component_s_place_is_refused_and_one_in
     assert discovery.artefacts == ()
 
 
-def test_a_held_folder_sharing_files_with_its_own_place_is_refused(
+def test_a_held_folder_wins_over_its_own_place_and_one_it_would_empty_is_refused(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
-    """A component's own place and held folder never share a file — equal, one
-    inside the other, or a glob reaching into the folder — while a glob that
-    cannot match beneath the folder is no overlap."""
+    """A component's own place that only shares files with its held folder — a glob
+    reaching into it — leaves them to the folder: no finding, and the record is
+    held, with that place among those that left it out (#1821). A place of its own
+    the folder equals or encloses would be emptied: refused, as another
+    declaration's place is, and the folder holds nothing."""
     repo = _repo(make_adopter_repo)
     _declares(
         repo,
@@ -213,18 +221,41 @@ def test_a_held_folder_sharing_files_with_its_own_place_is_refused(
         "    runs: {path: evidence}\n"
         "friction:\n"
         "  places:\n"
-        "    - {location: runs, path: records}\n"
         "    - {location: runs, path: '**/*.md'}\n"
         "    - {location: runs, path: 'pages/*.md'}\n"
         "  held:\n"
         "    - {location: runs, path: records}\n",
     )
+    repo.write(
+        {
+            "docs/evidence/records/run.md": "---\ndate: '2026-10-01'\n---\n",
+            "docs/evidence/pages/page.md": "---\ntitle: A page\n---\n",
+        }
+    )
+    assert _unbounded(repo.root) == {}
+    discovery = fd.discover_artefacts(repo.root)
+    (held,) = discovery.held
+    assert (held.path, held.component) == ("docs/evidence/records/run.md", EVIDENCE)
+    assert [p.pattern for p in held.places] == ["docs/evidence/**/*.md"]
+    assert [a.path for a in discovery.artefacts] == ["docs/evidence/pages/page.md"]
+
+    package = repo.root / _package(EVIDENCE)
+    package.write_text(
+        package.read_text(encoding="utf-8").replace(
+            "    - {location: runs, path: 'pages/*.md'}\n",
+            "    - {location: runs, path: 'pages/*.md'}\n    - {location: runs, path: records}\n",
+        ),
+        encoding="utf-8",
+    )
     assert {k: _detail(v) for k, v in _unbounded(repo.root).items()} == {
         (_package(EVIDENCE), "/friction/held/0"): (
-            "held folder 'records' (at 'docs/evidence/records') overlaps its own place "
-            "'docs/evidence/records'; overlaps its own place 'docs/evidence/**/*.md'"
+            "held folder 'records' (at 'docs/evidence/records') equals or encloses its own "
+            "place 'docs/evidence/records'"
         )
     }
+    discovery = fd.discover_artefacts(repo.root)
+    assert discovery.held == ()
+    assert "docs/evidence/records/run.md" in [a.path for a in discovery.artefacts]
 
 
 def test_two_held_folders_sharing_files_are_refused_at_both(
@@ -273,7 +304,7 @@ def test_two_held_folders_sharing_files_are_refused_at_both(
 def test_one_component_s_two_held_folders_sharing_files_are_refused_at_both(
     make_adopter_repo: MakeAdopterRepo,
 ) -> None:
-    """One declaration per held file, even within one component: a folder nested in
+    """No held folder is emptied, even within one component: a folder nested in
     another of the same component's is refused, and so is the enclosing one."""
     repo = _repo(make_adopter_repo)
     _declares(
@@ -335,4 +366,174 @@ def test_a_held_folder_sharing_files_with_a_rule_set_folder_is_refused_and_rules
     assert discovery.held == ()
     (read,) = [f for f in discovery.files if f.path == rules]
     assert read.rule_set is not None
+    assert [a.location for a in discovery.artefacts] == [f"{rules}#RS-RUNS-001"]
+
+
+# --- a glob of folders (#1821) ---------------------------------------------------------
+
+#: One analysis per component beside the root's (software-analysis DEC-001 point 2):
+#: a glossary and a folder of records at the location's top and in each component's
+#: folder, and a place of the component's own reaching into both folders of records.
+ANALYSIS = (
+    "docs:\n"
+    "  locations:\n"
+    "    analysis: {path: analysis}\n"
+    "friction:\n"
+    "  places:\n"
+    "    - {location: analysis, path: glossary.md}\n"
+    "    - {location: analysis, path: '*/glossary.md'}\n"
+    "    - {location: analysis, path: '**/*.md'}\n"
+    "  held:\n"
+    "    - {location: analysis, path: revalidations}\n"
+    "    - {location: analysis, path: '*/revalidations'}\n"
+)
+
+
+def test_a_glob_held_folder_holds_each_component_s_records_and_wins_over_its_own_places(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A held folder may be a glob of folders, `*/revalidations`, and holds every
+    Markdown file beneath each folder it names. Its own component's place that
+    reaches into it — `**/*.md` here — leaves those files to it, as the project's
+    place does, so no bound is overstepped. Its two folders share a file only at
+    `revalidations/revalidations/`, and neither lies within the other: the first
+    declared holds that file for the component."""
+    repo = _repo(make_adopter_repo, "name: adopter\nfriction:\n  places: [docs]\n")
+    _declares(repo, EVIDENCE, ANALYSIS)
+    record = "---\ndate: '2026-10-01'\n---\n"
+    repo.write(
+        {
+            "docs/analysis/glossary.md": "---\ntitle: Glossary\n---\n",
+            "docs/analysis/billing/glossary.md": "---\ntitle: Billing glossary\n---\n",
+            "docs/analysis/revalidations/r1.md": record,
+            "docs/analysis/billing/revalidations/r2.md": record,
+            "docs/analysis/revalidations/revalidations/r3.md": record,
+        }
+    )
+
+    assert _unbounded(repo.root) == {}
+    discovery = fd.discover_artefacts(repo.root)
+    assert [(h.path, h.folder.declaration.pointer) for h in discovery.held] == [
+        ("docs/analysis/billing/revalidations/r2.md", "/friction/held/1"),
+        ("docs/analysis/revalidations/r1.md", "/friction/held/0"),
+        ("docs/analysis/revalidations/revalidations/r3.md", "/friction/held/0"),
+    ]
+    assert {h.component for h in discovery.held} == {EVIDENCE}
+    assert [p.pattern for p in discovery.held[0].places] == ["docs", "docs/analysis/**/*.md"]
+    assert [a.path for a in discovery.artefacts] == [
+        "docs/analysis/billing/glossary.md",
+        "docs/analysis/glossary.md",
+    ]
+
+    cli = CliRunner().invoke(main, ["friction", "artefacts", "--json"])
+    assert cli.exit_code == 0, cli.output
+    document = json.loads(cli.output)
+    assert [(h["written"], h["path"], h["files"], h["skipped"]) for h in document["held"]] == [
+        (
+            "revalidations",
+            "docs/analysis/revalidations",
+            [
+                "docs/analysis/revalidations/r1.md",
+                "docs/analysis/revalidations/revalidations/r3.md",
+            ],
+            None,
+        ),
+        (
+            "*/revalidations",
+            "docs/analysis/*/revalidations",
+            ["docs/analysis/billing/revalidations/r2.md"],
+            None,
+        ),
+    ]
+
+
+def test_a_glob_held_folder_never_empties_a_place_its_own_component_s_included(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A glob held folder is bounded as a folder is: a place every file of which lies
+    beneath a folder it names — another component's, or its own — would be emptied,
+    so it is refused and holds nothing, and its files stay artefacts."""
+    repo = _repo(make_adopter_repo)
+    _declares(
+        repo,
+        DEMO,
+        "docs:\n"
+        "  locations:\n"
+        "    demos: {path: analysis/billing/revalidations/demos}\n"
+        "friction:\n"
+        "  places:\n"
+        "    - {location: demos, path: .}\n",
+    )
+    _declares(
+        repo,
+        EVIDENCE,
+        ANALYSIS.replace(
+            "    - {location: analysis, path: '**/*.md'}\n",
+            "    - {location: analysis, path: '*/revalidations/*.md'}\n",
+        ),
+    )
+    assert {k: _detail(v) for k, v in _unbounded(repo.root).items()} == {
+        (_package(EVIDENCE), "/friction/held/1"): (
+            "held folder '*/revalidations' (at 'docs/analysis/*/revalidations') equals or "
+            "encloses demo-recording's place 'docs/analysis/billing/revalidations/demos'; "
+            "equals or encloses its own place 'docs/analysis/*/revalidations/*.md'"
+        )
+    }
+    repo.write({"docs/analysis/billing/revalidations/r2.md": "---\ndate: '2026-10-01'\n---\n"})
+    discovery = fd.discover_artefacts(repo.root)
+    assert discovery.held == ()
+    assert [a.path for a in discovery.artefacts] == ["docs/analysis/billing/revalidations/r2.md"]
+
+
+def test_a_glob_held_folder_shares_no_file_with_another_component_s_or_a_rule_set_folder(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """One component holds each held file, and rules stay artefacts, whichever of
+    two folders is a glob: a glob that could name a folder beneath another
+    component's held folder, or beneath a rule-set folder, is refused, and so is
+    the other component's folder."""
+    repo = _repo(make_adopter_repo)
+    _declares(
+        repo,
+        EVIDENCE,
+        "docs:\n"
+        "  locations:\n"
+        "    whole: {path: .}\n"
+        "friction:\n"
+        "  held:\n"
+        "    - {location: whole, path: '*/drafts'}\n",
+    )
+    _declares(
+        repo,
+        DEMO,
+        "docs:\n"
+        "  locations:\n"
+        "    notes: {path: notes}\n"
+        "friction:\n"
+        "  held:\n"
+        "    - {location: notes, path: drafts}\n",
+    )
+    rules = "docs/rule-sets/drafts/runs.md"
+    repo.write(
+        {
+            rules: (
+                "---\nrule-set: RUNS\nrules:\n  RS-RUNS-001:\n    status: accepted\n"
+                "    pkit:\n      friction:\n        anchors: {path: [src/**]}\n---\n\n"
+                "## RS-RUNS-001 — A rule\n\nA statement.\n"
+            )
+        }
+    )
+    assert {k: _detail(v) for k, v in _unbounded(repo.root).items()} == {
+        (_package(EVIDENCE), "/friction/held/0"): (
+            "held folder '*/drafts' (at 'docs/*/drafts') overlaps the rule-set folder "
+            "'docs/rule-sets', whose files are rules (COR-051 point 2); overlaps "
+            "demo-recording's held folder 'docs/notes/drafts'"
+        ),
+        (_package(DEMO), "/friction/held/0"): (
+            "held folder 'drafts' (at 'docs/notes/drafts') overlaps evidence's held folder "
+            "'docs/*/drafts'"
+        ),
+    }
+    discovery = fd.discover_artefacts(repo.root)
+    assert discovery.held == ()
     assert [a.location for a in discovery.artefacts] == [f"{rules}#RS-RUNS-001"]

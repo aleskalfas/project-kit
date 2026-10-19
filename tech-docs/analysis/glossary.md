@@ -48,9 +48,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-19T19:44:53Z
+        at: 2026-10-19T20:57:58Z
         outcome: unchanged
-        unchanged-because: This change adds a warning on an artefact anchor whose id two artefacts share, and an index behind the artefact lookup. The term's example and its distinctions, a citation, a dead anchor and a registered kind, are untouched.
+        unchanged-because: A held folder may now be a glob of folders and wins over its own component's places; what an anchor is and what it names is untouched.
 TERM-answer:
   name: answer
   status: active
@@ -89,9 +89,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-19T19:44:55Z
+        at: 2026-10-19T20:58:04Z
         outcome: unchanged
-        unchanged-because: Discovery gains an index of artefacts by the names an anchor may give them, and its lookup returns the same artefact as before. What an artefact is, a document or a collection entry in a place, is untouched.
+        unchanged-because: A held document is still never an artefact; the change only lets a held folder be a glob of folders and win over its own component's places.
 TERM-artefact-type:
   name: artefact type
   status: active
@@ -107,9 +107,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-19T19:44:57Z
+        at: 2026-10-19T20:58:07Z
         outcome: unchanged
-        unchanged-because: Discovery gains an index of artefacts by the names an anchor may give them. Types, and the places that declare them, are untouched.
+        unchanged-because: Types and how a place gives one are untouched; the change widens only the shape and bounds of a held folder.
 TERM-backbone:
   name: backbone
   status: active
@@ -501,6 +501,10 @@ TERM-package-metadata:
           - COR-021
           - COR-053#3
           - COR-056#2
+      revalidated:
+        at: 2026-10-19T20:58:09Z
+        outcome: unchanged
+        unchanged-because: Package metadata still declares a component's places and held folders; the change widens only what a held folder's path may be, which the term does not detail.
 TERM-place:
   name: place
   status: active
@@ -514,9 +518,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-19T19:45:11Z
+        at: 2026-10-19T20:58:11Z
         outcome: unchanged
-        unchanged-because: Discovery gains an index of artefacts by the names an anchor may give them. Places, how they are declared and how they are walked, are untouched.
+        unchanged-because: A held folder still keeps its files from every place; that it may now be a glob of folders, and wins over its own component's places as well, leaves the distinction true as written.
 TERM-point:
   name: point
   status: active
