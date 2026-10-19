@@ -437,7 +437,9 @@ def test_a_run_inside_a_run_with_no_time_left_does_not_start_its_command(
 ) -> None:
     # A margin as long as the bound: the caller is told a deadline already due.
     # The bound is a run's own, so a busy machine still starts the caller in it.
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", _STARTED_WITHIN)
+    monkeypatch.setattr(
+        command_runner, "ANSWER_MARGIN_SECONDS", command_runner.COMMAND_TIMEOUT_SECONDS
+    )
     touch = _script(tmp_path / "touch.py", "open(__file__ + '.ran', 'w')\nprint('{}')\n")
     run = run_command(_nested_runner(tmp_path / "caller.py"), [str(touch)], cwd=tmp_path)
     assert run.ending is Ending.ANSWERED, run.stderr
@@ -562,7 +564,9 @@ def test_what_a_nested_run_killed_by_anyone_else_started_ends_with_the_outermost
 ) -> None:
     # A validator that starts `pkit` under a timeout of its own kills it without a
     # word to the runner. The killed run's marker stays, so the outermost run,
-    # whose command answers in time, ends what the killed run had started.
+    # whose command answers in time, ends what the killed run had started. The
+    # killer waits for the filler until the deadline its run told it, so a busy
+    # machine still starts the filler, and a filler that never starts is named.
     filler = _script(tmp_path / "filler.py", _STARTS_A_CHILD)
     caller = _nested_runner(tmp_path / "caller.py")
     record = f"{filler}.pids"
@@ -571,7 +575,8 @@ def test_what_a_nested_run_killed_by_anyone_else_started_ends_with_the_outermost
         tmp_path / "killer.py",
         "import os, subprocess, time\n"
         f"caller = subprocess.Popen({argv!r}, stdout=subprocess.DEVNULL)\n"
-        f"for _ in range({_STARTED_WITHIN * 10}):\n"
+        f"deadline = float(os.environ[{command_runner.DEADLINE_ENV!r}])\n"
+        "while time.time() < deadline:\n"
         f"    if os.path.isfile({record!r}) and open({record!r}).read():\n"
         "        break\n"
         "    time.sleep(0.1)\n"
