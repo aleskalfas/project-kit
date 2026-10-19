@@ -455,6 +455,10 @@ TERM-migration:
           - .pkit/capabilities/project-management/migrations/0.55.0/001-pm-reviewer-agent-rename.sh
         record:
           - COR-010
+      revalidated:
+        at: 2026-10-19T06:40:58Z
+        outcome: unchanged
+        unchanged-because: migrations.py now also fails a script a change lands with a number its folder holds, and the example's 001 script keeps its number. What a migration is, a script an upgrade crossing its version runs, is untouched.
 TERM-operational-rule:
   name: operational rule
   status: active
@@ -598,6 +602,10 @@ TERM-release:
           - COR-059#1
           - COR-059#7
           - PRJ-004
+      revalidated:
+        at: 2026-10-19T06:40:59Z
+        outcome: unchanged
+        unchanged-because: release.py now also warns of an adapter's or a capability's migration folder the release does not cut, and goes on. What a release writes and lands is untouched.
 TERM-release-step:
   name: release step
   status: active
@@ -741,9 +749,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-18T20:02:46Z
+        at: 2026-10-19T06:39:10Z
         outcome: unchanged
-        unchanged-because: This change alters which changesets reach the changelog. What counts as a surface change, and that a person judges it, stays as it was.
+        unchanged-because: This change makes the release's migration-dir warning cover adapter and capability folders, and adds a number check to migrations check-diff. What an adopter could observe, depend on or break against, and the surface paths the changeset guard reads, are as the term says.
 TERM-sync:
   name: sync
   status: active

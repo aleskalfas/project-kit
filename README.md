@@ -19,8 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-19T06:13:53Z
-      outcome: updated
+      at: 2026-10-19T06:39:18Z
+      outcome: unchanged
+      unchanged-because: migrations.py now also fails a migration script whose number another script in its folder holds. This page names pkit migrations check-diff as the migration-coverage check CI can run and says pkit upgrade runs migrations automatically, which both still hold.
 ---
 
 # project-kit
