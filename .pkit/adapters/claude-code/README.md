@@ -13,8 +13,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-19T08:29:55Z
-      outcome: updated
+      at: 2026-10-19T09:38:23Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 now says a run's output is the agent's final message, refuses a definition that fails its check, reads an agent's methodology fields without passing them, and ends every process of the run it can reach, naming what it cannot in point 11. This page already says the runner ends the harness and every process still descended from it and names what it cannot reach. Its closed set of flags and the unconfined form read as before, and the definition check belongs to the confined form, which #1744 builds."
 ---
 
 # Claude Code adapter

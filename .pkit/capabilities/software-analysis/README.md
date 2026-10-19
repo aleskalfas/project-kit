@@ -15,8 +15,9 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T08:41:11Z
-      outcome: updated
+      at: 2026-10-19T09:38:28Z
+      outcome: unchanged
+      unchanged-because: "DEC-056 gains the fixer run's contract: one brief, which carries each commit's pull-request text as data, an answer of fields under a schema, three result-line forms and fixed none reasons. This page says the agent hands back a file of fields, the diff and the evidence, and that it reads no pull request itself, which still holds. Using the brief's pull-request text and the none codes is #1801's change to the agent and to this page."
 ---
 
 # software-analysis capability
