@@ -378,10 +378,17 @@ def _nested_runner(path: Path, then: str = "") -> Path:
     return path
 
 
+# How long a test waits for the processes a run starts: a run's own bound, read
+# before any test shortens it. A shorter wait is one a machine busy with other
+# test workers misses.
+_STARTED_WITHIN = command_runner.COMMAND_TIMEOUT_SECONDS
+
+
 def _pids(script: Path) -> list[int]:
     """The pids a `_STARTS_A_CHILD` script recorded, once it has."""
     record = script.with_name(script.name + ".pids")
-    for _ in range(100):
+    deadline = time.monotonic() + _STARTED_WITHIN
+    while time.monotonic() < deadline:
         if record.is_file() and record.read_text():
             return [int(pid) for pid in record.read_text().split()]
         time.sleep(0.1)
@@ -429,8 +436,8 @@ def test_a_run_inside_a_run_with_no_time_left_does_not_start_its_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     # A margin as long as the bound: the caller is told a deadline already due.
-    monkeypatch.setattr(command_runner, "COMMAND_TIMEOUT_SECONDS", 10)
-    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", 10)
+    # The bound is a run's own, so a busy machine still starts the caller in it.
+    monkeypatch.setattr(command_runner, "ANSWER_MARGIN_SECONDS", _STARTED_WITHIN)
     touch = _script(tmp_path / "touch.py", "open(__file__ + '.ran', 'w')\nprint('{}')\n")
     run = run_command(_nested_runner(tmp_path / "caller.py"), [str(touch)], cwd=tmp_path)
     assert run.ending is Ending.ANSWERED, run.stderr
@@ -564,7 +571,7 @@ def test_what_a_nested_run_killed_by_anyone_else_started_ends_with_the_outermost
         tmp_path / "killer.py",
         "import os, subprocess, time\n"
         f"caller = subprocess.Popen({argv!r}, stdout=subprocess.DEVNULL)\n"
-        "for _ in range(100):\n"
+        f"for _ in range({_STARTED_WITHIN * 10}):\n"
         f"    if os.path.isfile({record!r}) and open({record!r}).read():\n"
         "        break\n"
         "    time.sleep(0.1)\n"
