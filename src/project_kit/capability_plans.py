@@ -586,6 +586,7 @@ class PointView:
     policy: str | None  # a data point's combination policy in force
     mandatory: str | None  # the reason, when the mark is set
     process: str | None  # an offered process's definition id
+    question: str | None = None  # a data point's question, the definer's command (COR-061)
 
 
 @dataclass(frozen=True)
@@ -672,6 +673,7 @@ def _point_view(point: cx.Point) -> PointView:
         policy=point.policy,
         mandatory=point.mandatory,
         process=point.process_id,
+        question=point.question,
     )
 
 
@@ -982,6 +984,8 @@ def _point_text(point: PointView) -> str:
         parts.append(f"process {point.process}")
     if point.mandatory:
         parts.append(f"mandatory: {point.mandatory}")
+    if point.question:
+        parts.append(f"question: {point.question}")
     text = f"{point.address} ({', '.join(parts)})"
     return f"{text} — {point.description}" if point.description else text
 

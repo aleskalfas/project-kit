@@ -19,9 +19,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-18T21:26:58Z
+      at: 2026-10-19T06:13:48Z
       outcome: unchanged
-      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix
