@@ -133,8 +133,9 @@ def test_the_package_provides_the_role_and_declares_both_points_and_the_contribu
         assert point["description"].strip()
         assert (CAPABILITY / "schemas" / point["schema"]).is_file()
 
-    contribution, fixers = connections["extensions"]["contributes"]
-    assert fixers["point"] == FIXERS
+    contributes = {c["point"]: c for c in connections["extensions"]["contributes"]}
+    assert set(contributes) == {DOC_CHECK, FIXERS}
+    contribution = contributes[DOC_CHECK]
     assert contribution == {
         "point": DOC_CHECK,
         "schema_version": 1,

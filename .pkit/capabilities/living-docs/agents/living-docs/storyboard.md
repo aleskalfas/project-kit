@@ -211,7 +211,7 @@ The single approval gate of Scenario 3 is a turn the agent waits on. Booted as t
 - **What only the person can settle is held, with one question.** Where Scenario 4 asks what changed in the source, or Scenario 1 leaves the call to the person, the page is held, and the question goes on its result line. The question stands alone, naming the anchor and the commit. A page the brief brings with an earlier question, the person's answer and who gave it is judged from that answer, as Scenario 4 does once the person has answered.
 - **A page that waits for its upstream** gets none: an artefact it anchors is stale, or is in the brief too.
 - **The diff stays in the page's own file**, its text and the anchors of its friction block. It never touches `revalidated`, `revisited`, `unanchored-because` or `last-check`, since an answer goes into the answer's fields. A fix that needs another file is held, its question naming the file.
-- **Each page gets its folder in the workspace,** `<page>/`, named by the page's location, so no two pages share one. A held page's folder holds its evidence and no answer. A page with an answer gets three files:
+- **Each page gets its folder in the workspace,** `<page>/`, named by the page's location, so no two pages share one. A held page's folder holds its evidence and no answer. A page with an answer gets these files:
   - `evidence.md`, the evidence as Scenario 1's pull-request body gives it. It names the answer by its outcome and holds no command.
   - the diff, as in Scenario 1, for an `updated` answer.
   - `answer.json`, the answer's fields as the agent body lists them.

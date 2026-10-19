@@ -3,8 +3,8 @@ kind: minor
 custom:
   category: Added
 body: >
-  living-docs declares its agent as the fixer of your pages (DEC-001 points 5
-  and 7). It contributes to the work-tracking role's fixers point,
+  The capability declares its agent as the fixer of your pages (DEC-001 points
+  5 and 7). It contributes to the work-tracking role's fixers point,
   `pkit::work-tracking:fixers`, a static value naming the `living-docs` agent
   for the type `living-docs:page`, described as "your pages". Only pages of
   that type are its: a page in a place that gives no type is not. You grant
@@ -12,8 +12,8 @@ body: >
   running `pkit pm grant-fixer living-docs`. No command that starts granted
   fixers ships yet, so a grant starts nothing until one does. The agent's body
   and storyboard say what it takes from such a command and what it returns.
-  In such a run it proposes friction fixes and nothing else, each page's
-  answer written as fields rather than as a command, holds with one question
-  a page whose fix needs what only a person knows, and ends with one line per
+  In such a run it proposes friction fixes and nothing else. It writes each
+  page's answer as fields, never as a command. It holds with one question a
+  page whose fix needs what only a person knows. It ends with one line per
   page: proposed, held, or none. The contribution is inert without a
   work-tracking capability.
