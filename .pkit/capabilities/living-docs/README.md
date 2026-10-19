@@ -14,9 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-18T18:02:33Z
+      at: 2026-10-18T19:57:01Z
       outcome: unchanged
-      unchanged-because: The schemas README's friction-block section now names the artefacts document's list of the files of a capability's location that no place or held folder of it holds. Living-docs reads nothing of that list, so what this README says it reads and checks still holds.
+      unchanged-because: COR-050 point 16, and the schemas README's paragraph on links, gain a second way for a link to choose its targets. This capability declares no link, so nothing this page says of the friction block changes.
 ---
 
 # living-docs capability

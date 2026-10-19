@@ -12,9 +12,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-18T17:44:37Z
+        at: 2026-10-18T19:56:45Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds. What an anchor is, and how discovery reads one, is unchanged.
+        unchanged-because: "This change lets a link take every anchor but those some own fields list, in friction_discovery.py. It changes no anchor: what an anchor is, a dead anchor and a registered kind read as they did."
 TERM-answer:
   name: answer
   status: active
@@ -27,6 +27,10 @@ TERM-answer:
         record:
           - COR-050#3
           - COR-050#4
+      revalidated:
+        at: 2026-10-18T21:14:51Z
+        outcome: unchanged
+        unchanged-because: This change rewords only the revisit writer's refusal of a target no link takes, in friction_write.py. A revalidation, a deferral and the list of answers read as they did.
 TERM-artefact:
   name: artefact
   status: active
@@ -39,9 +43,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-18T17:44:38Z
+        at: 2026-10-18T19:56:50Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds, never as artefacts. What an artefact is, and where discovery finds one, is unchanged.
+        unchanged-because: This change adds a second way for a link to choose its targets, in friction_discovery.py. What an artefact is, and how a decision record and a held document differ from one, is untouched.
 TERM-base:
   name: base
   status: active
@@ -92,6 +96,10 @@ TERM-conventions-corpus:
           - software-engineering:DEC-001#4
           - software-engineering:DEC-002#4
           - ADR-013
+      revalidated:
+        at: 2026-10-18T18:53:58Z
+        outcome: unchanged
+        unchanged-because: The software-engineer agent's revisit paragraph says a link takes some of an artefact's anchors as its targets. What the agent reads as the conventions corpus, and the distinctions, are untouched.
 TERM-debt:
   name: debt
   status: active
@@ -119,6 +127,10 @@ TERM-friction:
           - COR-050#5
           - COR-050#6
           - COR-050#9
+      revalidated:
+        at: 2026-10-18T18:53:52Z
+        outcome: unchanged
+        unchanged-because: This change words the change check's finding on a target that a link takes by what stays out, in friction_check.py. Friction, debt and the friction block mean what they did.
 TERM-methodology:
   name: methodology
   status: active
@@ -126,6 +138,18 @@ TERM-methodology:
   pkit:
     friction:
       unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
+TERM-migration:
+  name: migration
+  status: active
+  definition: script that carries an installed project's state across a version of the backbone or of a component, run by an upgrade that crosses that version
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/migrations.py
+          - .pkit/capabilities/project-management/migrations/0.55.0/001-pm-reviewer-agent-rename.sh
+        record:
+          - COR-010
 TERM-place:
   name: place
   status: active
@@ -139,9 +163,48 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-18T17:44:40Z
+        at: 2026-10-18T21:26:52Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that none of its places or held folders holds. What a place is, and which files it matches, is unchanged.
+        unchanged-because: A capability's place may declare a link of a second shape, read in friction_discovery.py. What a place is, and how it differs from a root, a synced tree and a held folder, is untouched.
+TERM-range:
+  name: range
+  status: active
+  definition: set of versions of the backbone or of another capability that a component declares it works with, from a floor to any upper bound
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/versioning.py
+        record:
+          - PRJ-002#D4
+          - COR-010
+          - COR-030
+TERM-release:
+  name: release
+  status: active
+  definition: step that writes new versions from the pending changesets, with their changelog entry, and lands those versions on the default branch
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/release.py
+        record:
+          - PRJ-002#D1
+          - PRJ-002#D3
+          - PRJ-004
+TERM-report:
+  name: report
+  status: active
+  definition: "issue an adopter composes with the system and files on the repository of the distribution they use: a bug, a change request or feedback"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/report.py
+        record:
+          - PRJ-008
+          - ADR-047#3
+          - COR-043#3
 TERM-surface-change:
   name: surface change
   status: active
@@ -155,6 +218,10 @@ TERM-surface-change:
           - PRJ-002#D1
           - PRJ-002#D2
           - COR-050#8
+      revalidated:
+        at: 2026-10-18T20:02:46Z
+        outcome: unchanged
+        unchanged-because: This change alters which changesets reach the changelog. What counts as a surface change, and that a person judges it, stays as it was.
 TERM-system:
   name: system
   status: active
@@ -264,6 +331,15 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The methodology maintainer:** an actor, "whoever maintains a distribution of the methodology" (`ACT-methodology-maintainer`). The role also works on parts of the system, such as the backbone and its releases. So its name, which the maintainer kept (PR #1374), uses the word more widely than this term.
 - **A capability's discipline:** what one capability packages, for a project to install or leave out (COR-017). A capability the system ships carries one part of the methodology, never the whole. A capability a project or its organisation writes is their own (COR-031 and COR-041).
 
+## TERM-migration — migration
+
+**Example:** project-management renamed its reviewer agent from `reviewer` to `pm-reviewer`. So the capability's migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each project's own settings, which sync never touches.
+
+**Distinctions:**
+
+- **Sync:** the command that refreshes what a project receives from the system, at the versions the project records. It runs no migration. A migration changes what sync cannot derive, such as a project's own settings (COR-010).
+- **The migration check:** `pkit migrations check-diff`, which finds the renames and removals of a change that no migration covers. It runs no migration.
+
 ## TERM-place — place
 
 **Example:** project-kit lists `.pkit/cli/README.md` in `friction.places`, so the backbone reads that page's anchors.
@@ -273,6 +349,38 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Documentation root:** where a project keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced tree:** a folder that sync copies into the project from elsewhere, such as the methodology's records. It is never a place, or each refresh would read as friction (COR-050 point 14).
 - **Held folder:** a folder a component declares for its held documents. No place reads a file in it as an artefact (COR-050 point 1).
+
+## TERM-range — range
+
+**Example:** the `software-analysis` capability declares `requires_backbone: ">=1.149.0,<2.0.0"`, a range on the backbone whose floor is 1.149.0.
+
+**Distinctions:**
+
+- **Floor:** the lowest version a range admits, its `>=X.Y.Z`. At a release, a floor rises only where a changeset declares that the component needs a newer version (PRJ-002 D4).
+- **Upper bound:** the version a range stops below, its `<A.B.C`. A release widens an upper bound on the backbone with no declaration. It widens an upper bound on another capability only on a changeset's declaration (PRJ-002 D4).
+- **A component's version:** the one number the component carries in its `package.yaml`, as the backbone carries its own in `.pkit/VERSION`. A range names versions of what the component depends on (COR-010 and COR-030).
+
+## TERM-release — release
+
+**Example:** the release of 24 August 2026 moved the backbone to 1.149.0, and moved project-management to 0.54.0. The release commit carries the tag `v1.149.0`.
+
+**Distinctions:**
+
+- **Changeset:** a change's declaration for the next release. A release consumes every changeset waiting for it (PRJ-002 D1).
+- **Release pull request:** the pull request that carries one release's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
+- **Release tag:** the annotated tag `v<version>` on the release commit. Only a release that moves the backbone gets one (PRJ-004).
+- **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
+
+## TERM-report — report
+
+**Example:** an adopter's `pkit report bug` files an issue titled `[Bug] …` on project-kit's repository, with the adopter's versions attached.
+
+**Distinctions:**
+
+- **Report target:** the one repository a distribution's reports go to, project-kit's own for project-kit. An adopter cannot name another (ADR-047 point 3).
+- **Tracked fix:** an issue the maintainer lists under a report's `## Tracked by` heading. One issue may fix several reports (PRJ-008).
+- **Reported note:** a scratchpad note attached to a report. Once the report is posted, the note moves to `reported/` (COR-043 point 3).
+- **The whole-repository report:** what the whole-repository check publishes for the default branch, such as project-kit's tracking issue. It is no report in this sense.
 
 ## TERM-surface-change — surface change
 

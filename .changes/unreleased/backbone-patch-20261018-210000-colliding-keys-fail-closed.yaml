@@ -1,0 +1,14 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit friction since` finds a `revalidated` block or a `revisited` list under
+  the keys discovery reads it by, each rendered as text, never a key merely
+  written the same (#1750). Where two keys on its path are read alike, as `1`
+  and `"1"` are, or a mapping on the path holds a merge key (`<<` or
+  `!!merge`), the file now lies outside, with why, where a change to text no
+  tool reads could count as inside. `pkit friction resolve` leaves such a file
+  as git left it. Front matter holding a value YAML cannot build, such as the
+  key `? [{a: 1}]` or the value `!!int x`, now reads as front matter that does
+  not parse, where it raised an error.
