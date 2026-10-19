@@ -103,17 +103,20 @@ Adopter content — a file that is not such a symlink, a symlink pointing anywhe
 
 ### The agent runner (`run-agent.py`)
 
-The one place `claude` is started for an agent nobody watches ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) points 1 and 10). The adapter registers it in its `package.yaml` under `commands:` as `run-agent`, and the backbone's `pkit agents run` starts it. No command calls `claude` itself: project-management's `review-pr` starts its reviewers through it. The contract every adapter's runner answers is the adapters README's ("The agent runner"). This section is how this one answers it.
+The one place `claude` is started for an agent nobody watches ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) points 1 and 10). The adapter registers it in its `package.yaml` under `commands:` as `run-agent`, and the backbone's `pkit agents run` starts it. No command calls `claude` itself: project-management's `review-pr` starts its reviewers through it. The contract every adapter's runner answers is [the adapters README's, "The agent runner"](../README.md#the-agent-runner). This section is how this one answers it.
 
 It runs under the system `python3` with the standard library only, as the permission hook does, so it needs no `uv` and nothing to provision.
 
 **What it does with a request:**
 
 - It refuses the run when `claude` is not on `PATH`, or when the agent is not deployed. Deployed means `.claude/agents/<agent>.md` exists in the run's folder or a folder above it, or in the person's own agents folder (`$CLAUDE_CONFIG_DIR/agents`, else `~/.claude/agents`).
-- It refuses a request that carries any key of the confined form, or any other key it does not run. The confined form arrives with the drift command.
+- It refuses a request that carries any key of the confined form, or any other key it does not run. The confined form is not built yet.
 - It starts `claude` in the run's folder, in a session of its own, and writes the brief to its standard input. So no word of the brief is read as a flag.
-- At the limit it ends that session's whole process group: the harness and every process it started. Asked to stop (`SIGTERM`, `SIGHUP`, `SIGINT`), it ends that group first, and exits with no answer.
-- The harness gets the runner's environment, less the backbone's own variables for its run of the runner (`PKIT_COMMAND_DEADLINE`, `PKIT_COMMAND_STRAYS`, `PKIT_RUN_CACHE`). So a `pkit` the agent runs starts as a run of its own, as in a session a person started.
+- At the limit it ends the harness and every process still descended from it. Claude Code starts each shell command in a session of its own, which a kill of the harness's process group would not reach. So the runner first stops the harness's group, so it starts nothing more. It then reads the process table with `ps`, and stops the group of each process descended from the harness, until a reading finds no new one. Then it kills every group it stopped.
+- **What it cannot reach.** A process that left the harness's tree before the limit is not found: one that daemonises, or whose parent ended and left it to the system. Where no `ps` can be read, the runner ends the harness's own group alone.
+- Asked to stop (`SIGTERM`, `SIGHUP`, `SIGINT`), it ends the harness the same way, and exits with no answer.
+- The harness gets the runner's environment, less the backbone's own variables for its run of the runner (`PKIT_COMMAND_DEADLINE`, `PKIT_COMMAND_STRAYS`, `PKIT_RUN_CACHE`).
+- It starts the `claude` it found on `PATH`, made absolute. So a relative `PATH` entry never runs a `claude` that the run's folder holds.
 
 **The closed set of flags** (ADR-066 point 4). The runner passes only these, and refuses to build a command line with any other:
 
@@ -123,9 +126,9 @@ It runs under the system `python3` with the standard library only, as the permis
 | `--agent <agent>` | always |
 | `--effort <level>` | where the run sets an effort |
 
-None of them approves a call or loads configuration other than what a session in that folder loads. Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir`, `--settings`, `--agents` and `--mcp-config`.
+None of them approves a call by itself. `--agent` makes the agent's definition the session's agent, so a field that definition carries, such as a permission mode, hooks or MCP servers, applies as in any session started with it. Checking a definition's fields comes with the confined form (ADR-066 point 3). Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir`, `--settings`, `--agents` and `--mcp-config`.
 
-**The unconfined form.** Today every run takes the form the review command's runs take (ADR-066 point 10). The run takes the person's and the project's settings in its folder, as a session started there would. It starts in the mode those settings or the harness choose, and the runner passes no settings of its own. That form is not confined: a run may write in the folder, and may start in a mode that approves calls no rule allows (ADR-066 point 11). The hook judges a run's calls as it judges a person's session. `--agent` does not change the `agent` key the hook reads, so which subject it judges there is not yet known (the permissions README, "Default-agent subject resolution"). The confined form's settings arrive with the drift command.
+**The unconfined form.** Today every run takes the form the review command's runs take (ADR-066 point 10). The run takes the person's and the project's settings in its folder, as a session started there would. It starts in the mode those settings or the harness choose, and the runner passes no settings of its own. That form is not confined: a run may write in the folder, and may start in a mode that approves calls no rule allows (ADR-066 point 11). The hook judges a run's calls as it judges a person's session. `--agent` does not change the `agent` key the hook reads, so which subject it judges there is not yet known ([the permissions README, "Default-agent subject resolution"](../../permissions/README.md#default-agent-subject-resolution)). The confined form's settings are not built yet.
 
 ### Live permission enforcement (`permission-hook.py`)
 

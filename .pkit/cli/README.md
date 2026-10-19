@@ -62,6 +62,8 @@ pkit:
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
+        - .pkit/adapters/README.md#the-agent-runner
+        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#what-sync-writes
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
@@ -909,15 +911,16 @@ With the bounds as they stand, a dry run takes at most `98` seconds, and a landi
 
 ## Agent runs
 
-A command that starts an agent with nobody watching never calls a harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). It asks the backbone, and the backbone starts the runner the project's adapter registers, which starts the harness (`src/project_kit/agent_runs.py`). project-management's `review-pr` starts its reviewers this way. What the runner owes is the adapters README's ("The agent runner"), and how the backbone runs it is the lifecycle README's agent-run policy ("How a registered command is run").
+A command that starts an agent with nobody watching never calls a harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). It asks the backbone, and the backbone starts the runner the project's adapter registers, which starts the harness (`src/project_kit/agent_runs.py`). project-management's `review-pr` starts its reviewers this way. What the runner owes is in [the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner). How the backbone runs it is the agent-run policy in [the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run).
 
 ### `agents run <agent> --folder <dir> --limit <seconds> [--effort <level>] [--json]`
 
-Runs `<agent>` once, on the brief read from standard input, in `<dir>`, and ends it at `<seconds>`. This is the unconfined form, the one the review command's runs take (ADR-066 point 10): the run takes the person's and the project's settings in `<dir>`, and starts in the mode those settings or the harness choose, as a session started there would. The confined form, and the marker that refuses a run inside a run, arrive with the drift command.
+Runs `<agent>` once, on the brief read from standard input, in `<dir>`, and ends it at `<seconds>`. This is the unconfined form, the one the review command's runs take (ADR-066 point 10): the run takes the person's and the project's settings in `<dir>`, and starts in the mode those settings or the harness choose, as a session started there would. The confined form, and the marker that refuses a run inside a run, are not built yet.
 
 - **The runner.** The backbone finds the command a registered adapter registers in its `commands:` tree under `run-agent`, through its one lookup of that tree. A capability's command of that name is no runner. With none, the run is refused and the reason names the registered adapters. With more than one, it is refused too, until a record says how a project names its harness.
 - **What it passes.** The runner reads the request on its standard input: the agent, the brief, the folder, the limit and the effort. No flag that bypasses permissions reaches any run (ADR-066 point 4). The runner passes only the flags its adapter's README lists.
-- **The bounds.** At the limit the runner ends the harness and every process it started. The backbone gives the runner thirty seconds more to answer, then asks it to stop and kills it two seconds later. `SIGTERM` or `SIGHUP` to the command stops the runner the same way, so a caller that ends the command at its own bound ends the harness too.
+- **The bounds.** At the limit the runner ends the harness and the processes still descended from it, as the adapters README says. The backbone gives the runner thirty seconds more to answer, then asks it to stop and kills it two seconds later. `SIGTERM` or `SIGHUP` to the command stops the runner the same way, so a caller that ends the command at its own bound ends the harness too. In a project pinned to another backbone version, the router runs the command through `uvx`, and such a signal to the router does not reach it. The runner still ends the harness at the limit.
+- **Inside a command the backbone runs**, such as a validator or a predicate, the run is refused before anything else. That run's kill asks nothing first, so the harness would outlive it.
 - **Usage errors, exit 2.** An agent name that is not a letter or digit followed by letters, digits, `.`, `_` or `-`; an empty brief, or one holding a NUL character; a folder that does not exist; a limit outside 1 second to a week; an effort outside `low`, `medium`, `high`, `xhigh`, `max`.
 - **With `--json`**, one line of JSON, keys sorted: `schema_version` (`1`; a reader refuses a version it does not know), `agent`, `runner` (the adapter whose runner ran it, or `null`), `ending`, `exit_code`, `output` (the agent's), `diagnostics` (what the harness wrote on standard error), `reason`. The endings:
 
@@ -926,7 +929,7 @@ Runs `<agent>` once, on the brief read from standard input, in `<dir>`, and ends
 | `finished` | the harness ran and exited | the harness's |
 | `not-started` | the harness, or the runner, could not be started | `null` |
 | `timed-out` | stopped at the limit, by the runner or, past its thirty seconds, by the backbone | `null` |
-| `refused` | refused before it started, with the reason: no runner or more than one, a runner whose script is gone, a harness or an agent the runner cannot find, a request the runner does not run | `null` |
+| `refused` | refused before it started, with the reason: a run inside a command the backbone runs, no runner or more than one, a runner whose script is gone or lies outside its adapter's folder, a harness or an agent the runner cannot find, a request the runner does not run | `null` |
 | `no-answer` | the runner ended without an answer the backbone can read; whether the harness ran is not known | `null` |
 
 - **Without `--json`**, the agent's output on standard output, and `agent <agent>: <how it ended>` on standard error.

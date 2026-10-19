@@ -10,7 +10,7 @@ pkit:
         - .pkit/schemas/harness-requirements.schema.json
         - src/project_kit/agent_runs.py
       record: [COR-005, COR-006, COR-047, ADR-066]
-      artefact: [.pkit/adapters/claude-code/README.md]
+      artefact: [.pkit/adapters/claude-code/README.md, ".pkit/lifecycle/README.md#how-a-registered-command-is-run"]
     revalidated:
       at: 2026-10-14T08:38:50Z
       outcome: unchanged
@@ -37,7 +37,7 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Currently shipped
 
-- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, "The agent runner" below), and the runtime conventions Claude Code expects.
+- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, ["The agent runner"](#the-agent-runner) below), and the runtime conventions Claude Code expects.
 
 ## Primitives the lifecycle calls
 
@@ -52,11 +52,11 @@ Some commands start an agent with nobody watching: project-management's `review-
 
 **What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by file name:
 
-- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree (the lifecycle README, "How a registered command is run"). A capability's command of that name is no runner.
-- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner: no arguments, the request on standard input, from the project root.
+- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). A capability's command of that name is no runner.
+- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner, which the lifecycle README states: no arguments, the request on standard input, from the project root.
 - **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
 
-**The request**, one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `folder` (an absolute path), `limit_seconds` and `effort` (a level, or `null`). A runner refuses a request with any other key, rather than run it without that key. The confined form, and its keys, arrive with the drift command (ADR-066, Implications).
+**The request**, one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `folder` (an absolute path), `limit_seconds` and `effort` (a level, or `null`). A runner refuses a request with any other key, rather than run it without that key. The confined form and its keys are not built yet (ADR-066, Implications).
 
 **The answer**, one JSON document on standard output, exit 0: `schema_version` (`1`), `ending`, `exit_code`, `output`, `diagnostics` and `reason`. The endings:
 
@@ -64,7 +64,7 @@ Some commands start an agent with nobody watching: project-management's `review-
 |---|---|---|
 | `finished` | the harness ran and exited | the harness's |
 | `not-started` | the harness could not be started | `null` |
-| `timed-out` | the harness was ended at the limit, with every process it started | `null` |
+| `timed-out` | the harness was ended at the limit, as "The limit" below says | `null` |
 | `refused` | the run was refused before it started, with the reason: the harness or the agent is not found, or the request is one the runner does not run | `null` |
 
 Anything else the runner prints, or an exit other than 0, is a run with no answer.
@@ -72,12 +72,12 @@ Anything else the runner prints, or an exit other than 0, is a run with no answe
 **What a runner owes:**
 
 - **No bypass.** It passes the harness only flags from a closed set, which its adapter's README lists. No member of the set approves a call, or loads configuration other than the run's own (ADR-066 point 4).
-- **The limit.** At `limit_seconds` it ends the harness and every process the harness started. The backbone gives it thirty seconds past the limit to do that and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later. So a runner that started the harness in a session of its own ends that session when asked to stop.
-- **The environment.** It does not pass on the backbone's own variables for its run of the runner. So a `pkit` the agent runs starts as a run of its own.
+- **The limit.** At `limit_seconds` it ends the harness and every process still descended from the harness, one the harness started in a session of its own included. A process that left that tree before the limit, as one that daemonises leaves it, is not reached, and the adapter's README says so. The backbone gives the runner thirty seconds past the limit to do this and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later ([the lifecycle README, "How a registered command is run"](../lifecycle/README.md#how-a-registered-command-is-run)). Asked to stop, a runner ends the harness the same way.
+- **The environment.** It does not pass on the backbone's own variables for its run of the runner.
 
-**Not yet built.** A run's marker makes a runner refuse inside a run, and it arrives with the drift command (ADR-066 point 8). So does the confined form: its clone, its settings and the check after the run. Until then, every run takes the unconfined form the review command's runs take (ADR-066 point 10).
+**Not yet built.** A run's marker, which makes a runner refuse inside a run (ADR-066 point 8), is not built yet. Neither is the confined form: its clone, its settings and the check after the run. Until they are, every run takes the unconfined form the review command's runs take (ADR-066 point 10).
 
-The Claude Code adapter's runner is `claude-code/run-agent.py` (its README, "The agent runner"). The command is the CLI README's ("Agent runs").
+The Claude Code adapter's runner is `claude-code/run-agent.py` ([its README, "The agent runner"](claude-code/README.md#the-agent-runner-run-agentpy)). The command is the [CLI README's, "Agent runs"](../cli/README.md#agent-runs).
 
 ## Harness requirements
 

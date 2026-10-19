@@ -12,7 +12,7 @@ pkit:
         - .pkit/adapters/claude-code/permission-hook.py
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
-      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
+      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
     revalidated:
       at: 2026-10-18T20:32:48Z
       outcome: unchanged
@@ -125,8 +125,8 @@ order (per issue #57):
 session runs *as* the agent.
 
 **A session started with `--agent`.** The review command's runs name their
-agent on the command line, through the agent runner (the adapters README, "The
-agent runner"). That sets the session's agent without changing
+agent on the command line, through the agent runner ([the adapters README, "The
+agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing
 `.claude/settings.json`, the file rule 2 reads. So the hook may judge such a
 run as the project's default agent, or as `operator`, rather than as the agent
 it names. No grant for one agent counts in those runs until the probe shows
