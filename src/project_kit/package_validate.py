@@ -68,8 +68,9 @@ was free — which is why `pkit new capability` refuses such a name and install
 and register do not. One that declares no `commands:` block surfaces no
 namespace and is not reported. And a folder of held documents that oversteps
 its bounds (COR-050 point 1) — equal to or enclosing a documentation root or
-another declaration's place, or sharing files with its own component's place,
-another held folder or a rule-set folder — is an ERROR at its `friction.held`
+any declaration's place, its own component's included, sharing files with
+another component's held folder or a rule-set folder, or equal to, enclosing
+or within another of its own held folders — is an ERROR at its `friction.held`
 entry, read from friction discovery's one judgment of it
 (`friction_discovery.held_folders`), which also leaves it holding nothing:
 every held file has one holder, and no declaration empties another's. And an
@@ -576,8 +577,9 @@ def _repository_findings(
     if isinstance(friction, Mapping):
         # A held folder is written as a place is (COR-050 point 1), so both lists
         # are held to the same two checks; a held folder also names the location
-        # it lies within, and is a folder there, never a glob — which the schema
-        # says too, and this pass repeats for a tree without one.
+        # it lies within, and is a folder there, or a glob of folders at one
+        # depth, never `**` and never a glob in its last segment — which the
+        # schema says too, and this pass repeats for a tree without one.
         for key, noun in (("places", "place"), ("held", "held folder")):
             for index, entry in enumerate(_items(friction.get(key))):
                 if not isinstance(entry, Mapping):
@@ -596,11 +598,19 @@ def _repository_findings(
                         "held folder names no `location`: a held folder lies within one of the "
                         "component's `docs.locations` (COR-050 point 1).",
                     )
-                if key == "held" and relative and any(c in "*?[" for c in str(path)):
+                if key == "held" and relative and "**" in str(path):
                     _error(
                         f"/friction/{key}/{index}/path",
-                        f"held folder {path!r} is a glob: a held folder is a folder "
-                        f"(COR-050 point 1).",
+                        f"held folder {path!r} spans folders with `**`: a held folder is a "
+                        f"folder, or a glob of folders at one depth (COR-050 point 1).",
+                    )
+                elif (
+                    key == "held" and relative and _GLOB.intersection(PurePosixPath(str(path)).name)
+                ):
+                    _error(
+                        f"/friction/{key}/{index}/path",
+                        f"held folder {path!r} ends in a glob: only the segments before the "
+                        f"folder's own name may be globs (COR-050 point 1).",
                     )
                 location = place.get("location")
                 if isinstance(location, str) and location not in location_names:
@@ -1336,6 +1346,10 @@ def _shadowed_alias_findings(
     return out
 
 
+#: The characters that make a path a glob, as friction discovery reads one.
+_GLOB = frozenset("*?[")
+
+
 def _held_folder_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
     """Each installed capability's held folders that overstep their bounds, as errors
     located at the entry, keyed by the capability (COR-050 point 1).
@@ -1360,8 +1374,9 @@ def _held_folder_findings(target_root: Path) -> dict[str, list[PackageFinding]]:
                 f"held folder {declared.value!r} (at {declared.resolved!r}) "
                 f"{folder.skipped.detail}, so it holds nothing and the places matching its files "
                 f"read them as artefacts: a held folder never equals or encloses a documentation "
-                f"root or another declaration's place, and shares no file with its own "
-                f"component's place, another held folder or a rule-set folder (COR-050 point 1).",
+                f"root or any declaration's place, its own component's included, shares no file "
+                f"with another component's held folder or a rule-set folder, and is not nested "
+                f"with another of its own held folders (COR-050 point 1).",
             )
         )
     return out
