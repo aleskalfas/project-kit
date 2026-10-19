@@ -61,18 +61,21 @@ A user story, in the sense of a need stated in one sentence, is an actor's need 
 - **Chosen at adoption.** Adopting the capability includes choosing each kind's parts. A project reviews each kind's shipped structure, and keeps it, relabels it or, for an artefact kind, adds parts of its own. A shipped part it finds wrong is a change it proposes to the capability. The shipped structure is a starting point a project reviews, never a default it skips.
 - **When a structure changes.** Live artefacts, the actors, use cases, journeys and terms in force, describe the system as it is, so they are always migrated to the current structure. A revalidation record is the log of a revalidation that happened: it stays as written, and is checked against the structure in force when it was written. A withdrawn artefact is history too, and the check holds it to no part or form that came after its withdrawal.
 
+**Diagrams.** A part may hold a diagram, written as a Mermaid fence, that shows only what its own artefact, or an analysis artefact it anchors, states. No kind ships a part for one, and no diagram is a fact's home. The capability's diagrams of the analysis's relations are drawn from front matter, and never stored in an artefact (refinement per [software-analysis:DEC-003-analysis-diagrams]).
+
 ### 2. Where it keeps them
 
 Everything lives under the project's internal documentation root (COR-049), in an `analysis` folder. The folder holds one analysis for each component that keeps one (below). Each analysis is laid out after a use-case model (refinement per [software-analysis:DEC-002-analysis-requirements]):
 - the glossary is one collection file, serving everything;
 - the use-case model holds a folder of actors, one file each, a folder of use cases (optionally grouped by functional area), and a folder of journeys;
-- revalidation records are kept in a folder of their own.
+- revalidation records are kept in a folder of their own;
+- a generated overview of its diagrams is kept in a folder of its own (refinement per [software-analysis:DEC-003-analysis-diagrams]).
 
 **A kind with many files gets its own folder; a kind with one file is a file.** Folders appear only when something goes into them.
 - **Numbered areas.** An area's folder name may open with a number, such as `010-`. The number gives one valid order in which the areas build on each other, never their importance (point 12). It is no part of any id (point 3).
 
 - **Location.** The `analysis` sub-path is declared in the capability's package metadata. Its location is recorded on first use in the capability's own project configuration, as the documentation-roots record requires (COR-049). A later change of root therefore never moves an existing analysis.
-- **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act and are not anchored artefacts, so their folder is not a place: the capability declares it as a folder of held documents (COR-050 point 1), so the records are listed as this capability's and no place reads them as artefacts.
+- **Places.** The capability declares the glossary, actors, use cases and journeys as places holding anchored artefacts (COR-050). Revalidation records describe an act and are not anchored artefacts, so their folder is not a place: the capability declares it as a folder of held documents (COR-050 point 1), so the records are listed as this capability's and no place reads them as artefacts. The overview's folder is held in the same way (refinement per [software-analysis:DEC-003-analysis-diagrams]).
 - **Types.** Each place gives its artefacts a type (COR-056). So a rule set selects the analysis's artefacts by what they are, without naming where they lie.
   - **The type registry.** The capability's type registry, in its package metadata, declares one type for each kind of anchored artefact. They are `actor`, `use-case`, `journey` and `term`, each with a description (refinement per [software-analysis:DEC-002-analysis-requirements]). A scope names them `software-analysis:actor` and so on.
   - **Each place's type.** The actors' place gives `actor`, the use cases' place `use-case` and the journeys' place `journey`. The glossary gives its entries `term`.
@@ -233,8 +236,8 @@ The analysis keeps to the requirements, and points at the solution by anchors, n
 - **Every kind the same way.** Actors, terms and journeys anchor the decisions point 4 gives them, and so will any kind a later decision adds. Within the analysis, anchors run as point 4 gives.
 - **The solution never points back.** No decision record and no architecture view anchors an analysis artefact. So no cycle runs between the two, and a record that ships needs no exception.
 - **Kept by its writers.** Whoever writes a record or a view keeps to this direction, since no check finds such an anchor in general. This capability's check reads only the analysis. Validation reports one only where it closes a cycle of artefact anchors, such as from a view a place holds (COR-050 points 5 and 12).
-- **What a view says of the analysis.** A view, one kept as a documentation page included, builds on no analysis artefact. It names one only by its id and states none of its facts, so it has nothing there to anchor.
-- **A context view** shows the system among the people and systems around it. Where the project keeps one, it names the analysis's actors by their ids, in its text only, and does not describe them again.
+- **What a view says of the analysis.** A view, one kept as a documentation page included, builds on no analysis artefact. It names one only by its id and states none of its facts, so it has nothing there to anchor. Nor does it show a diagram the capability draws from the analysis, since such a diagram states those facts (refinement per [software-analysis:DEC-003-analysis-diagrams]).
+- **A context view** shows the system as one whole among the people and systems around it. Where the project keeps one, it names the analysis's actors by their ids, in its text only, and does not describe them again. The use-case diagram the capability draws is no context view. Each of its nodes is an artefact of the analysis, and each of its lines is a relation the analysis's front matter holds (refinement per [software-analysis:DEC-003-analysis-diagrams]).
 - **The reverse is computed, never stored.** A page that shows a record or a view may show what anchors it, such as "Serves: UC-003", worked out from the analysis's anchors. Neither the record nor the view holds it.
 
 **Where a statement belongs.** Each piece of content has one home (COR-006), and three kinds of statement are told apart:

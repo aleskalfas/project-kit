@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-19T16:10:19Z
+      at: 2026-10-19T17:53:31Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 1 gains that a documentation site serves one space, and that an image both spaces show lies beside a user page (DEC-002). Setting up a space with its own location and a scoped definition, and bringing existing documents into spaces, read as before, so the adopter's needs still hold.
+      unchanged-because: DEC-001 point 1 gains a paragraph on diagrams in an artefact's parts, and says nothing new of an actor or its needs. The adopter's needs hold as written.
 ---
 
 # ACT-adopter — Adopter

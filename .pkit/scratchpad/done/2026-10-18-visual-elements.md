@@ -2,6 +2,10 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-18
+retired: 2026-10-19
+produced:
+  - living-docs:DEC-002
+  - software-analysis:DEC-003
 ---
 
 # Visual elements: diagrams, images, captured output and callouts

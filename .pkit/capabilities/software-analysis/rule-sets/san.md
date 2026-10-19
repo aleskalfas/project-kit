@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-19T14:38:31Z
+          at: 2026-10-19T17:53:56Z
           outcome: unchanged
-          unchanged-because: DEC-001 refines points 1 to 4, 8 and 12 for preconditions, several analyses, ids across them and the order of the areas, and adds no part or form to any kind's structure yet. Point 1's rule that an analysis artefact carries its kind's declared structure is unchanged, so this format rule holds as written.
+          unchanged-because: DEC-001 gains diagrams in a part's text, the overview's held folder and the use-case diagram's line from a context view. No kind gains a part or a form, so this format rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,8 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-19T14:38:13Z
-          outcome: updated
+          at: 2026-10-19T17:53:57Z
+          outcome: unchanged
+          unchanged-because: DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder. Whose goal a use case is stays as decided, so this rule holds as written.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -39,8 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-19T14:38:14Z
-          outcome: updated
+          at: 2026-10-19T17:53:58Z
+          outcome: unchanged
+          unchanged-because: DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder. A goal and its actor's needs stay as decided, so this rule holds as written.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -59,8 +61,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-19T14:38:15Z
-          outcome: updated
+          at: 2026-10-19T17:53:59Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 2 gains the overview's held folder, and point 11 keeps generated diagrams out of views and tells the use-case diagram from a context view. What an artefact anchors is unchanged.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -86,9 +89,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-19T14:38:34Z
+          at: 2026-10-19T17:54:08Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 says what makes a precondition true, point 4 lets an artefact name another analysis's actor while anchoring the records behind it, and DEC-002 points 6 and 7 keep their lists within one analysis. None changes what a goal, a minimal guarantee or a requirement is, or what sources one, so this rule holds as written.
+          unchanged-because: DEC-001 point 1 gains diagrams in a part's text, and point 11 keeps generated diagrams out of views. What names the source of a goal, a guarantee or a requirement is unchanged.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -101,8 +104,9 @@ rules:
             - "software-analysis:DEC-001#12"
             - "software-analysis:DEC-002#4"
         revalidated:
-          at: 2026-10-19T14:38:16Z
-          outcome: updated
+          at: 2026-10-19T17:54:09Z
+          outcome: unchanged
+          unchanged-because: "DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder, and say nothing of terms. DEC-003 point 10 has a diagram's labels read as statements, which SAN's diagram rules carry in #1806."
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -113,6 +117,10 @@ rules:
             - "software-analysis:DEC-001#1"
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
+        revalidated:
+          at: 2026-10-19T17:54:10Z
+          outcome: unchanged
+          unchanged-because: DEC-001 points 1 and 2 gain diagrams in a part's text and the overview's held folder. Preconditions, their producers and after stay as decided, so this rule holds as written.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -123,6 +131,10 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#4"
             - "COR-030"
+        revalidated:
+          at: 2026-10-19T17:54:11Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 2 gains a held folder for the generated overview of each analysis's diagrams. Which analyses one may name is unchanged, so this rule holds as written.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
