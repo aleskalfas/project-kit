@@ -70,7 +70,7 @@ TERM-answer:
 TERM-area:
   name: area
   status: active
-  definition: "top-level slice of the methodology's tree, with a README that declares its layout, which every project holds without installing it"
+  definition: "top-level slice of a project's `.pkit/` tree, with a README declaring its layout, which needs no install: the methodology's areas, and any the project adds"
   pkit:
     friction:
       anchors:
@@ -1513,7 +1513,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A rule set's version:** its own, apart from its component's. An inheriting set pins its major (COR-051 point 7).
 - **A connection point's version:** an integer that rises only on a change that breaks its counterparts (COR-053 point 5).
 - **A schema version:** the integer a schema and the data it checks each carry (COR-052 point 5 and COR-023).
-- **Recorded version:** the number or ref a project keeps for what it installed. An externally-sourced component's ref is no version in this sense.
+- **Recorded version:** the number or ref a project keeps for what it installed. An externally-sourced component's ref is no version in the sense of this term.
 
 ## TERM-version-pin — version pin
 
