@@ -12,9 +12,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-18T17:44:37Z
+        at: 2026-10-18T19:56:45Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds. What an anchor is, and how discovery reads one, is unchanged.
+        unchanged-because: "This change lets a link take every anchor but those some own fields list, in friction_discovery.py. It changes no anchor: what an anchor is, a dead anchor and a registered kind read as they did."
 TERM-answer:
   name: answer
   status: active
@@ -28,9 +28,9 @@ TERM-answer:
           - COR-050#3
           - COR-050#4
       revalidated:
-        at: 2026-10-18T19:14:44Z
+        at: 2026-10-18T21:14:51Z
         outcome: unchanged
-        unchanged-because: "The definition still holds: this change only alters where the reading of friction since and friction resolve finds a block or list, not what an answer is or what the writers write."
+        unchanged-because: This change rewords only the revisit writer's refusal of a target no link takes, in friction_write.py. A revalidation, a deferral and the list of answers read as they did.
 TERM-artefact:
   name: artefact
   status: active
@@ -43,9 +43,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-18T17:44:38Z
+        at: 2026-10-18T19:56:50Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that no place or held folder of it holds, never as artefacts. What an artefact is, and where discovery finds one, is unchanged.
+        unchanged-because: This change adds a second way for a link to choose its targets, in friction_discovery.py. What an artefact is, and how a decision record and a held document differ from one, is untouched.
 TERM-base:
   name: base
   status: active
@@ -96,6 +96,10 @@ TERM-conventions-corpus:
           - software-engineering:DEC-001#4
           - software-engineering:DEC-002#4
           - ADR-013
+      revalidated:
+        at: 2026-10-18T18:53:58Z
+        outcome: unchanged
+        unchanged-because: The software-engineer agent's revisit paragraph says a link takes some of an artefact's anchors as its targets. What the agent reads as the conventions corpus, and the distinctions, are untouched.
 TERM-debt:
   name: debt
   status: active
@@ -123,6 +127,10 @@ TERM-friction:
           - COR-050#5
           - COR-050#6
           - COR-050#9
+      revalidated:
+        at: 2026-10-18T18:53:52Z
+        outcome: unchanged
+        unchanged-because: This change words the change check's finding on a target that a link takes by what stays out, in friction_check.py. Friction, debt and the friction block mean what they did.
 TERM-methodology:
   name: methodology
   status: active
@@ -155,9 +163,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-18T17:44:40Z
+        at: 2026-10-18T21:26:52Z
         outcome: unchanged
-        unchanged-because: The change lists the files of a capability's documentation location that none of its places or held folders holds. What a place is, and which files it matches, is unchanged.
+        unchanged-because: A capability's place may declare a link of a second shape, read in friction_discovery.py. What a place is, and how it differs from a root, a synced tree and a held folder, is untouched.
 TERM-range:
   name: range
   status: active

@@ -63,8 +63,9 @@ settings that declare them, this pass reports:
 - **a dangling or repeated revisit, and a link's field that lists no anchor**
   (`_link_findings`) — read with the links the artefact's places declare
   (`Discovery.links`): a `revisited[]` entry naming no target of them, a
-  second entry for one target, and a link's field that is no list of texts
-  or lists a value no anchor of the artefact has (COR-050 point 16). Entries
+  second entry for one target, a link's field that is no list of texts, and a
+  value no anchor of the artefact has in a field that lists a link's targets
+  (COR-050 point 16). Entries
   on an artefact whose places declare no link are a **report**, never an
   error: the component that declared it may be uninstalled;
 - **an anchor kind nothing resolves** — a kind outside the backbone's three
@@ -161,9 +162,10 @@ from project_kit.friction_discovery import (
     RevisitLink,
     SettingsPath,
     UnreadableFile,
+    field_values,
     is_inside_repository,
     link_targets,
-    link_values,
+    links_said,
     registered_anchor_kinds,
     shared_discovery,
     synced_copy_test,
@@ -763,10 +765,13 @@ def _duplicate_deferrals(artefact: Artefact) -> Iterable[FrictionFinding]:
 def _link_findings(artefact: Artefact, links: Sequence[RevisitLink]) -> Iterable[FrictionFinding]:
     """What the links the artefact's places declare find in it (COR-050 points 12 and 16).
 
-    - **A link's field** that is no list of texts (`malformed-link-field`), or
-      that lists a value no anchor of the artefact has (`unanchored-target`),
-      once per field, however many links name it: a target the field names and
-      the anchors leave out would be skipped silently.
+    - **A link's field** that is no list of texts (`malformed-link-field`), once
+      per field, however many links name it, whichever way they read it. A field
+      that lists a link's targets is also failed for a value no anchor of the
+      artefact has (`unanchored-target`): a target the field names and the
+      anchors leave out would be skipped silently. A field that lists what stays
+      out is not: a value no anchor has keeps nothing out, so the check asks
+      more, never less.
     - **A revisit entry** that names no target of a link (`dangling-revisit`),
       and an entry for a target an earlier entry already names
       (`duplicate-revisit`). Each pointer carries the entry's index as written
@@ -778,22 +783,30 @@ def _link_findings(artefact: Artefact, links: Sequence[RevisitLink]) -> Iterable
       again once a place declares a link.
     """
     values = {value for written in artefact.anchors.values() for value in written}
-    for field in dict.fromkeys(link.targets for link in links):
-        named = next(link for link in links if link.targets == field)
-        listed = link_values(artefact, named)
+    for field in dict.fromkeys(f for link in links for f in link.fields):
+        named = next(link for link in links if field in link.fields)
+        listed = field_values(artefact, field)
         pointer = f"/{_pointer_token(field)}"
+        lists_targets = any(link.targets == field for link in links)
         if listed is None:
+            role = (
+                "the targets of a link that revisits them"
+                if lists_targets
+                else "the anchors that stay out of a link that revisits every other one"
+            )
             yield FrictionFinding(
                 location=artefact.location,
                 pointer=pointer,
                 severity=Severity.ERROR,
                 kind=FrictionFindingKind.MALFORMED_LINK_FIELD,
                 message=(
-                    f"`{field}` lists the targets of a link that revisits them (declared at "
-                    f"{named.file}:{named.pointer}), and is no list of anchor values; write "
-                    f"each target as its anchor's value (COR-050 point 16)."
+                    f"`{field}` lists {role} (declared at {named.file}:{named.pointer}), and "
+                    f"is no list of anchor values; write each anchor as its value (COR-050 "
+                    f"point 16)."
                 ),
             )
+            continue
+        if not lists_targets:
             continue
         for value in listed:
             if value in values:
@@ -845,8 +858,7 @@ def _link_findings(artefact: Artefact, links: Sequence[RevisitLink]) -> Iterable
             continue
         if anchor in targets:
             continue
-        fields = ", ".join(f"`{f}`" for f in dict.fromkeys(link.targets for link in links))
-        why = f"no link's field ({fields}) lists it among the artefact's anchors"
+        why = f"the artefact's links take {links_said(links)}, and none takes it"
         yield FrictionFinding(
             location=artefact.location,
             pointer=pointer,

@@ -24,6 +24,10 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
         - ACT-ai-agent
+    revalidated:
+      at: 2026-10-18T21:26:55Z
+      outcome: unchanged
+      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

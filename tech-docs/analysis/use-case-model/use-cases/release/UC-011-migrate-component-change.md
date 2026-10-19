@@ -24,6 +24,10 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
         - ACT-ai-agent
+    revalidated:
+      at: 2026-10-18T21:26:56Z
+      outcome: unchanged
+      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

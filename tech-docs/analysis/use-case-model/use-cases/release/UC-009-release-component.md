@@ -24,6 +24,10 @@ pkit:
       artefact:
         - ACT-component-author
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-18T21:26:54Z
+      outcome: unchanged
+      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-009 — Release my component on its own version

@@ -213,10 +213,12 @@ PROJECT_PLACES_KEY = "project-places"
 
 # A link whose source's change revisits its targets (COR-050 point 16): the key
 # of a component's place that declares its links, the keys of one link — the
-# source's own field listing the targets, and its trigger fields — and the key of
-# the source's block that holds a reason for each target left as it was.
+# source's own field listing the targets, or the own fields listing the anchors
+# that stay out, and its trigger fields — and the key of the source's block that
+# holds a reason for each target left as it was.
 REVISITS_KEY = "revisits"
 LINK_TARGETS_KEY = "targets"
+LINK_ALL_BUT_KEY = "all-but"
 LINK_WHEN_KEY = "when"
 REVISITED_KEY = "revisited"
 
@@ -340,16 +342,26 @@ class RevisitLink:
     """One link a component's place declares whose source's change revisits its
     targets (COR-050 point 16).
 
-    `targets` is the source's own field that lists the link's targets, each by its
-    anchor's value, and `when` the trigger fields, the source's own fields whose
-    change revisits them. `file` is the package metadata declaring it, relative to
-    the project root, and `pointer` a JSON Pointer to the link there.
+    The link's own fields choose its targets in one of two ways. `targets` is the
+    source's own field that lists them, each by its anchor's value. Or `all_but`
+    names the own fields that list the anchors that stay out, and every other anchor
+    of the source is a target; `targets` is then `None`. `when` holds the trigger
+    fields, the source's own fields whose change revisits the targets. `file` is the
+    package metadata declaring it, relative to the project root, and `pointer` a JSON
+    Pointer to the link there.
     """
 
-    targets: str
+    targets: str | None
     when: tuple[str, ...]
     file: str
     pointer: str
+    all_but: tuple[str, ...] = ()
+
+    @property
+    def fields(self) -> tuple[str, ...]:
+        """The own fields the link reads to choose its targets: the one that lists
+        them, or those that list what stays out."""
+        return (self.targets,) if self.targets is not None else self.all_but
 
 
 @dataclass(frozen=True)
@@ -898,29 +910,43 @@ def _own_field(value: Any) -> str | None:
     return None
 
 
+def _link_fields(value: Any) -> tuple[str, ...] | None:
+    """`value` when it is a list of at least one own field (`_own_field`), each read
+    once, in written order; else `None`."""
+    if not isinstance(value, list) or not value:
+        return None
+    fields = [_own_field(field) for field in cast(list[Any], value)]
+    if any(field is None for field in fields):
+        return None
+    return tuple(dict.fromkeys(field for field in fields if field is not None))
+
+
 def _revisit_links(value: Any, package_file: str, place_pointer: str) -> tuple[RevisitLink, ...]:
-    """A capability place's `revisits` (COR-050 point 16), read forgivingly: a link
-    whose `targets` is not one own field, or whose `when` is not a list of own
-    fields with at least one, declares nothing, and the package schema refuses it.
-    A field `when` repeats is read once."""
+    """A capability place's `revisits` (COR-050 point 16), read forgivingly. A link
+    chooses its targets either by `targets`, one own field, or by `all-but`, a list
+    of own fields with at least one. A link that names both or neither, either in
+    another shape, or a `when` that is not a list of own fields with at least one,
+    declares nothing, and the package schema refuses it. A field `when` or `all-but`
+    repeats is read once."""
     if not isinstance(value, list):
         return ()
     links: list[RevisitLink] = []
     for index, raw in enumerate(cast(list[Any], value)):
         entry = _mapping_or_empty(raw)
-        targets = _own_field(entry.get(LINK_TARGETS_KEY))
-        when_raw = entry.get(LINK_WHEN_KEY)
-        if targets is None or not isinstance(when_raw, list) or not when_raw:
+        when = _link_fields(entry.get(LINK_WHEN_KEY))
+        if when is None or (LINK_TARGETS_KEY in entry) == (LINK_ALL_BUT_KEY in entry):
             continue
-        when = [_own_field(field) for field in cast(list[Any], when_raw)]
-        if any(field is None for field in when):
+        targets = _own_field(entry.get(LINK_TARGETS_KEY))
+        all_but = _link_fields(entry.get(LINK_ALL_BUT_KEY))
+        if targets is None and all_but is None:
             continue
         links.append(
             RevisitLink(
                 targets=targets,
-                when=tuple(dict.fromkeys(field for field in when if field is not None)),
+                when=when,
                 file=package_file,
                 pointer=f"{place_pointer}/{REVISITS_KEY}/{index}",
+                all_but=all_but or (),
             )
         )
     return tuple(links)
@@ -2504,11 +2530,11 @@ def own_field(artefact: Artefact, name: str) -> tuple[bool, Any]:
     return True, artefact.carrier[name]
 
 
-def link_values(artefact: Artefact, link: RevisitLink) -> tuple[str, ...] | None:
-    """The anchor values the field of `link` lists on the artefact, each once, in written
+def field_values(artefact: Artefact, name: str) -> tuple[str, ...] | None:
+    """The anchor values the artefact's own field `name` lists, each once, in written
     order (COR-050 point 16): none where the artefact does not write the field, and
     `None` where the field is no list of texts — a validation error."""
-    present, value = own_field(artefact, link.targets)
+    present, value = own_field(artefact, name)
     if not present:
         return ()
     if not isinstance(value, list):
@@ -2520,16 +2546,49 @@ def link_values(artefact: Artefact, link: RevisitLink) -> tuple[str, ...] | None
 
 
 def link_targets(artefact: Artefact, link: RevisitLink) -> tuple[Anchor, ...]:
-    """The artefact's anchors the field of `link` lists, in the anchors' written order: a
-    value names every anchor of the artefact that has it, whatever its kind (COR-050
-    point 16). A field that is no list of texts lists none."""
-    values = frozenset(link_values(artefact, link) or ())
+    """The artefact's anchors `link` takes, in the anchors' written order (COR-050 point
+    16): those its field lists, or, for a link whose fields list what stays out, every
+    anchor none of them lists. A value names every anchor of the artefact that has it,
+    whatever its kind. A field that is no list of texts lists nothing: a link's field
+    then gives no target, and a field that lists what stays out keeps none out."""
+    listed = frozenset(
+        value for field in link.fields for value in (field_values(artefact, field) or ())
+    )
+    lists_targets = link.targets is not None
     return tuple(
         Anchor(kind, value)
         for kind, written in artefact.anchors.items()
         for value in written
-        if value in values
+        if (value in listed) == lists_targets
     )
+
+
+def links_said(links: Sequence[RevisitLink]) -> str:
+    """What `links` take, as a message says it (COR-050 point 16): `` the anchors
+    `verified-by` lists `` for links whose field lists their targets, `` every anchor
+    `actors` and `refines` do not list `` for links whose fields list what stays out,
+    the two joined by "and"."""
+    listing = list(dict.fromkeys(link.targets for link in links if link.targets is not None))
+    left_out = list(
+        dict.fromkeys(f for link in links if link.targets is None for f in link.all_but)
+    )
+    said: list[str] = []
+    if listing:
+        said.append(
+            f"the anchors {fields_named(listing)} {'lists' if len(listing) == 1 else 'list'}"
+        )
+    if left_out:
+        verb = "does" if len(left_out) == 1 else "do"
+        said.append(f"every anchor {fields_named(left_out)} {verb} not list")
+    return " and ".join(said)
+
+
+def fields_named(fields: Sequence[str]) -> str:
+    """Own fields as a message names them: `` `statement`, `measure` and `applies-to` ``."""
+    named = [f"`{field}`" for field in fields]
+    if len(named) <= 1:
+        return "".join(named)
+    return f"{', '.join(named[:-1])} and {named[-1]}"
 
 
 @dataclass(frozen=True)

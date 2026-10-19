@@ -26,6 +26,10 @@ pkit:
         - ACT-adopter
         - ACT-ai-agent
         - ACT-methodology-maintainer
+    revalidated:
+      at: 2026-10-18T21:26:57Z
+      outcome: unchanged
+      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report
