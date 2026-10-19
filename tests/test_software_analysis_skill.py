@@ -77,14 +77,31 @@ CHOOSING = "choose-templates.md"
 #: sub-procedures in the order DEC-001 point 12 gives (#1784).
 BUILDING = "build-analysis.md"
 
-#: The build's four steps, in DEC-001 point 12's order, each with the kinds'
-#: sub-procedures it walks, in the order it first names them.
+#: The build's four steps, each with the words that tie it to its item of DEC-001 point
+#: 12's list, and the kinds' sub-procedures it walks, in the order it first names them.
 BUILD_STEPS = (
-    ("## 1. The concepts, then the actors", ("term.md", "actor.md")),
-    ("## 2. The requirements that bind the whole system", ("requirement.md",)),
-    ("## 3. The use cases, area by area", ("requirement.md", "use-case.md")),
-    ("## 4. The journeys, last", ("journey.md",)),
+    ("## 1. The concepts, then the actors", "concepts", ("term.md", "actor.md")),
+    (
+        "## 2. The requirements that bind the whole system",
+        "requirements that bind the whole system",
+        ("requirement.md",),
+    ),
+    (
+        "## 3. The use cases, area by area",
+        "use cases, area by area",
+        ("requirement.md", "use-case.md"),
+    ),
+    ("## 4. The journeys, last", "journeys, last", ("journey.md",)),
 )
+DECISION = CAPABILITY / "decisions" / "DEC-001-software-analysis-discipline.md"
+
+
+def _point_12_items() -> list[str]:
+    """The four numbered items of DEC-001 point 12's order, read from the record."""
+    text = DECISION.read_text(encoding="utf-8")
+    point = text.split("### 12. ", 1)[1].split("What the order binds:", 1)[0]
+    return [line for line in point.splitlines() if re.match(r"\d\. ", line)]
+
 
 _FENCE = re.compile(r"^```\n(?P<block>.*?)^```", re.MULTILINE | re.DOTALL)
 
@@ -114,9 +131,14 @@ def test_the_build_walks_dec_001_point_12_s_order_and_says_when_each_step_is_don
     text = (SKILL / BUILDING).read_text(encoding="utf-8")
     assert "[software-analysis:DEC-001-software-analysis-discipline] point 12" in text
     steps = [line for line in text.splitlines() if re.match(r"## \d\. ", line)]
-    assert steps == [heading for heading, _walks in BUILD_STEPS]
+    assert steps == [heading for heading, _ties, _walks in BUILD_STEPS]
+    # Each step is the record's item at the same place, so the two cannot drift apart.
+    items = _point_12_items()
+    assert len(items) == len(BUILD_STEPS)
+    for item, (heading, ties, _walks) in zip(items, BUILD_STEPS, strict=True):
+        assert ties in item, (heading, item)
     sections = {s.splitlines()[0]: s for s in re.split(r"(?m)^(?=## )", text) if s[:3] == "## "}
-    for heading, walks in BUILD_STEPS:
+    for heading, _ties, walks in BUILD_STEPS:
         section = sections[heading]
         assert re.search(r"\*\*(?:An area is )?[Dd]one when:\*\*", section), heading
         named = [n for n in re.findall(r"`([a-z-]+\.md)`", section) if n in SUB_PROCEDURES]
@@ -127,10 +149,10 @@ def test_the_build_walks_dec_001_point_12_s_order_and_says_when_each_step_is_don
     assert "but the order does not ask it." in flat
 
 
-def test_the_dispatcher_routes_to_the_build_and_keeps_no_copy_of_its_order() -> None:
-    """The dispatcher routes, and the order has its one home in the sub-procedure (COR-020,
-    COR-006): the actors no longer come before the glossary, and no second list of the
-    steps."""
+def test_the_dispatcher_routes_to_the_build_and_keeps_no_list_of_its_steps() -> None:
+    """The dispatcher routes, and the steps have their one home in the sub-procedure
+    (COR-020, COR-006): the actors no longer come before the glossary, and the dispatcher
+    holds no numbered list of the steps."""
     text = DISPATCHER.read_text(encoding="utf-8")
     assert f"| `{BUILDING}` |" in text
     assert "actors first (a use case names one)" not in text
@@ -140,7 +162,9 @@ def test_the_dispatcher_routes_to_the_build_and_keeps_no_copy_of_its_order() -> 
         f"For a part of the product not yet described, follow `{BUILDING}`, which builds it "
         "from its concepts up (DEC-001 point 12)"
     ) in flat
-    assert "the requirements that bind the whole system" not in flat
+    numbered = [line for line in text.splitlines() if re.match(r"\d\. ", line)]
+    for _heading, ties, _walks in BUILD_STEPS[1:]:
+        assert not [line for line in numbered if ties in line], ties
     # Every kind's walkthrough points at the shared framing on the glossary's terms.
     assert "### Use the glossary's terms" in text
     for name in ("actor.md", "use-case.md", "journey.md", "requirement.md"):

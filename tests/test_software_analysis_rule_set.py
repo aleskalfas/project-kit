@@ -60,7 +60,7 @@ SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
 STEPS_RULE = "RS-SAN-002"
-#: The judgement rules (#1577, #1695, #1681): each statement, and the record points it
+#: The judgement rules (#1577, #1695, #1681, #1784): each statement, and the record points it
 #: anchors to.
 JUDGEMENT_RULES = {
     "RS-SAN-003": (
@@ -352,10 +352,10 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
 def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     """The maintainer's three judgement rules (8 October, on #1360), proposed until he
     accepts them (#1577), each with DEC-001 as its origin. Beside them the record rule,
-    from DEC-002 point 8 (#1695), and the source rule (#1681), proposed until all are
-    accepted in one major. Each anchors to the points it rests on. None declares a
-    check: a reviewer judges each (COR-057). A proposed rule moves no version (COR-051
-    point 7), so `SAN` stays at 1.0.0."""
+    from DEC-002 point 8 (#1695), the source rule (#1681) and the concept rule, from
+    DEC-001 point 12 (#1784), proposed until all are accepted in one major. Each anchors
+    to the points it rests on. None declares a check: a reviewer judges each (COR-057).
+    A proposed rule moves no version (COR-051 point 7), so `SAN` stays at 1.0.0."""
     data, body = _shipped()
     assert data["version"] == "1.0.0"
     assert set(ORIGINS) | {SOURCE_RULE} == set(JUDGEMENT_RULES)
