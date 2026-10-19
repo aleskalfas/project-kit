@@ -124,6 +124,16 @@ order (per issue #57):
 `!`-typed command is also bound to that agent's grants — consistent, because the
 session runs *as* the agent.
 
+**A session started with `--agent`.** The review command's runs name their
+agent on the command line, through the agent runner (the adapters README, "The
+agent runner"). That sets the session's agent without changing
+`.claude/settings.json`, the file rule 2 reads. So the hook may judge such a
+run as the project's default agent, or as `operator`, rather than as the agent
+it names. No grant for one agent counts in those runs until the probe shows
+which subject the hook judges
+([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md)
+point 11).
+
 Without this resolution (the pre-#57 behaviour), the main session always resolved
 to `operator` even when `settings.json` set `agent: project-manager`, making
 every per-agent grant inert for the primary execution context.

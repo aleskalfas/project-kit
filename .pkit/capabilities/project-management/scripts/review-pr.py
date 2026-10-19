@@ -74,10 +74,13 @@ Side-effects:
     PR's verdicts cannot be read, every required reviewer runs.
 
 Agent invocation:
-  At v1, the kit invokes Claude Code agents via the `claude` CLI when
-  available. Adopters with non-Claude-Code harnesses or custom invocation
-  flows can subclass / override by editing this script's `_invoke_agent`
-  function. Per DEC-028, this capability ships a default `pm-reviewer` agent
+  Each reviewer runs through the backbone's run command, `pkit agents run`,
+  reached through `_lib.agent_runs` (ADR-066 point 10). The backbone starts
+  the runner the project's adapter registers, and the runner starts the
+  harness; this script calls no harness. A project whose registered adapters
+  have no runner gets no reviews, and each reviewer's line says why. A project
+  with another harness answers through its own adapter's runner, not by
+  editing this script. Per DEC-028, this capability ships a default `pm-reviewer` agent
   at `.pkit/capabilities/project-management/agents/pm-reviewer.md` that emits
   the local-path verdict format and applies pm conventions; adopters may
   configure `local_registered: name: pm-reviewer` to use it, register their
@@ -101,8 +104,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
-import subprocess
 import sys
 from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
@@ -113,7 +114,7 @@ from ruamel.yaml import YAML
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, issue_branch, session_guard
+from _lib import agent_runs, bootstrap_gate, issue_branch, session_guard
 from _lib.agent_verdicts import PATH_LOCAL, gate_candidates, stamp_verdict
 from _lib.audit import short_sha
 from _lib.author_delta import author_delta, base_kept
@@ -147,7 +148,7 @@ from _lib.verdict_freshness import FreshnessRule, head_sha
 
 # ---- per-agent reviewer timeout (issue #766) -------------------------
 #
-# The `claude` subprocess invoking each reviewer is capped by a wall-clock
+# The run of each reviewer (`_lib.agent_runs`) is capped by a wall-clock
 # timeout. It is a SINGLE uniform knob applied to every reviewer — deliberately
 # not a per-agent map (COR-007: one value, not a table to maintain). Reviewer
 # agent runs are slow AND variable (observed 300s to >600s on the same
@@ -177,7 +178,7 @@ EFFORT_LEVELS = ("low", "medium", "high", "xhigh", "max")
 # ---- how many reviewers run at once (issue #1594) ----------------------
 #
 # The reviewers a run invokes start together, so the run waits for the slowest
-# of them, not for their sum. Each is a `claude` subprocess of its own, so a
+# of them, not for their sum. Each is a subprocess of its own, so a
 # thread per reviewer is all the run holds. A cap limits how many run at once:
 # `1` runs them in turn, in the order of the required set. Like the timeout it
 # is one value, resolved once in `review()`. Precedence: `--parallel` flag >
@@ -195,6 +196,9 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
     A non-integer, zero, or negative value is a usage error and raises
     `ValueError` with a helpful message (fail fast) rather than silently
     falling back to the default — a bad knob should be corrected, not ignored.
+    So is a value above the longest limit the backbone's run command takes
+    (`agent_runs.MAX_LIMIT_SECONDS`, a week): every reviewer's run would be
+    refused.
     """
     if cli_value is not None:
         raw: object = cli_value
@@ -215,6 +219,11 @@ def _resolve_agent_timeout(cli_value: str | None, env: dict) -> int:
         raise ValueError(
             f"invalid reviewer timeout from {source}: {value} — must be a "
             "positive number of seconds."
+        )
+    if value > agent_runs.MAX_LIMIT_SECONDS:
+        raise ValueError(
+            f"invalid reviewer timeout from {source}: {value} — must be at most "
+            f"{agent_runs.MAX_LIMIT_SECONDS} seconds (a week), the longest limit a run takes."
         )
     return value
 
@@ -743,7 +752,7 @@ def _run_at_once(
     None), each result by name once every one has ended.
 
     They start in the order of `names`, so a cap of 1 runs them in turn, in
-    that order. Each reviewer is a `claude` subprocess, so a thread that waits
+    that order. Each reviewer is a subprocess, so a thread that waits
     on it is all a reviewer needs here. `review_one` holds its own failures.
     """
     workers = min(cap or len(names), len(names))
@@ -772,20 +781,26 @@ def _invoke_agent(
     sha: str = "",
     say: Callable[..., None] = print,
 ) -> tuple[str | None, str]:
-    """Invoke a Claude Code agent against the PR diff.
+    """Run a reviewer agent against the PR diff.
 
     Returns (verdict, body) — verdict is "APPROVED" or "CHANGES_REQUESTED"
     or None on failure. Body is the agent's freeform commentary.
 
+    The reviewer runs through the backbone's run command (`_lib.agent_runs`,
+    ADR-066 point 10), in the working folder, as it ran before: the backbone
+    starts the runner the project's adapter registers, and the runner starts
+    the harness. No harness is called here.
+
     `timeout` is the per-agent wall-clock cap in seconds (issue #766); a
-    reviewer that runs longer is killed and yields no verdict. The caller
-    resolves the value once (`_resolve_agent_timeout`) and passes the same
-    uniform value for every reviewer.
+    reviewer that runs longer is ended, with every process it started, and
+    yields no verdict. The caller resolves the value once
+    (`_resolve_agent_timeout`) and passes the same uniform value for every
+    reviewer.
 
     `effort` is the effort level the reviewer reasons at (issue #1046),
-    passed to the harness as `--effort`; None passes nothing and the harness
-    default applies. Resolved once by the caller (`_resolve_agent_effort`),
-    the same uniform value for every reviewer.
+    passed on to the run; None passes nothing and the reviewer's own, else
+    the harness default, applies. Resolved once by the caller
+    (`_resolve_agent_effort`), the same uniform value for every reviewer.
 
     `base` and `head` are the PR's base branch and its branch, named in the
     brief's local-diff fallback (see `_review_brief`); `sha` is the PR head
@@ -796,43 +811,26 @@ def _invoke_agent(
     run at once do not interleave (#1594). It is called from the thread the
     reviewer runs on.
 
-    At v1 this uses the `claude` CLI when available. Adopters with
-    custom harnesses or invocation patterns override by editing this
-    function. Per DEC-028's Implications, the methodology specifies
-    the verdict-comment contract; the agent implementations are
-    adopter / kit-side.
+    Per DEC-028's Implications, the methodology specifies the
+    verdict-comment contract; the agent implementations are adopter /
+    kit-side. A project with another harness answers through its own
+    adapter's runner, not by editing this function (ADR-066 point 10).
     """
-    claude_bin = shutil.which("claude")
-    if claude_bin is None:
-        say(
-            "  [warn] `claude` CLI not on PATH. The kit's review-pr.py at v1 "
-            "invokes Claude Code agents via the `claude` CLI; for adopters "
-            "with other harnesses, edit `_invoke_agent` in review-pr.py to "
-            "call your invocation flow.",
-            file=sys.stderr,
-        )
-        return None, ""
-
     prompt = _review_brief(name, pr_number, base=base, head=head, sha=sha)
 
-    try:
-        command = [claude_bin, "-p", prompt, "--agent", name]
-        if effort is not None:
-            command += ["--effort", effort]
-        proc = subprocess.run(
-            command,
-            capture_output=True,
-            text=True,
-            check=False,
-            timeout=timeout,
-        )
-    except (subprocess.TimeoutExpired, FileNotFoundError) as exc:
-        say(f"  [{name}] invocation error: {exc}", file=sys.stderr)
+    run = agent_runs.run_agent(
+        name, prompt, folder=Path.cwd(), limit_seconds=timeout, effort=effort
+    )
+    if run.ending == agent_runs.REFUSED:
+        say(f"  [{name}] invocation refused: {run.reason}", file=sys.stderr)
+        return None, ""
+    if run.ending != agent_runs.FINISHED:
+        say(f"  [{name}] invocation error: {run.reason}", file=sys.stderr)
         return None, ""
 
-    if proc.returncode != 0:
+    if run.exit_code != 0:
         say(
-            f"  [{name}] agent exited {proc.returncode}: {proc.stderr.strip()}",
+            f"  [{name}] agent exited {run.exit_code}: {run.diagnostics.strip()}",
             file=sys.stderr,
         )
         return None, ""
@@ -854,7 +852,7 @@ def _invoke_agent(
     #
     # Fail-closed: if NO line matches the grammar anywhere, return no verdict
     # so the caller posts nothing and the merge gate stays blocked.
-    output = proc.stdout
+    output = run.output
     expected_approved = f"Reviewer agent (local, {name}): APPROVED"
     expected_changes = f"Reviewer agent (local, {name}): CHANGES_REQUESTED"
     lines = output.splitlines()
