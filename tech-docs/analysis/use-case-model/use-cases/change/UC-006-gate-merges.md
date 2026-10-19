@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T08:29:53Z
+      at: 2026-10-19T19:45:36Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py. pkit config set, pkit validate and pkit friction check, which a merge waits on here, are untouched.
+      unchanged-because: The change check gains a shared-id finding that enforcing mode never fails, so what the gate fails on is untouched. The CLI change is the friction check's help text alone.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

@@ -675,6 +675,12 @@ def _explained(
             f"narrow {_label(anchor)} in the block, then revalidate (a changed anchor list "
             f"needs a revalidation)"
         )
+    elif kind is _Kind.SHARED_ID and anchor is not None:
+        clears = (
+            f"give the artefacts that share its id ids no two share; or, where {_label(anchor)} "
+            f"means a document, name the document by its path in the block, then revalidate (a "
+            f"changed anchor list needs a revalidation)"
+        )
     elif kind is _Kind.UNREACHABLE:
         clears = "fetch the full history (`git fetch --unshallow`) and run again"
     else:

@@ -1874,15 +1874,17 @@ def friction_check_command(
     word: each revalidation, deferral and reason for having no anchors. Exit 1
     in enforcing mode on friction, a dead anchor, an unresolved kind, a
     resolver's missing answer (no-answer) or a bump; an outdated base never
-    fails, nor a dead anchor it cannot lay at the change (dead-unattributed).
+    fails, nor a dead anchor it cannot lay at the change (dead-unattributed),
+    nor an anchor on an id two artefacts share (shared-id).
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against its revalidation point — the commit where it first carried the
     `at` it carries (derived from git, renames followed) — an anchor stale
     where what it stands on differs between the two. Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
-    unanchored artefacts — those accepted with a reason listed apart, never
-    counted — and uncovered surface. Reads each artefact's history back to
+    anchors on an id two artefacts share, unanchored artefacts — those
+    accepted with a reason listed apart, never counted — and uncovered
+    surface. Reads each artefact's history back to
     where it was last added; in a shallow clone it marks what the cut hides,
     and exits 0 in either mode.
     """

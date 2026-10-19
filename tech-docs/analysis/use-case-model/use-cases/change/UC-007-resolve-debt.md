@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T08:41:08Z
+      at: 2026-10-19T19:45:39Z
       outcome: unchanged
-      unchanged-because: The analysis-resolver's body gains how a command that starts fixers runs it, and software-analysis DEC-001 point 5 says so. No such command ships yet, so the developer still dispatches the agent at variant 3a, and it still proposes each outcome with its evidence and runs no command. Debt, its listing and how it is answered are untouched.
+      unchanged-because: The whole-repository check and the explanation gain a warning on an anchor on a shared id, with what mends it. It is no debt, so how a developer resolves debt is untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

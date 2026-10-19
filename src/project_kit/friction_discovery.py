@@ -2682,11 +2682,28 @@ class Discovery:
         return not self.places or (not self.with_container and not self.unreadable)
 
     def find(self, reference: str) -> Artefact | None:
-        """The artefact an `anchors.artefact` value names, or None; first in walk order wins."""
+        """The artefact an `anchors.artefact` value names, or None; first in walk order wins.
+
+        Where two artefacts or more share the name (`named`), an anchor on it is
+        ambiguous: the checks warn of it, naming the one this gives (COR-050 point 7).
+        """
+        named = self.named(reference)
+        return named[0] if named else None
+
+    def named(self, reference: str) -> tuple[Artefact, ...]:
+        """Every artefact an `anchors.artefact` value names, in walk order: more than one
+        where two artefacts share the id (COR-050 point 7)."""
+        return self._identified.get(reference, ())
+
+    @functools.cached_property
+    def _identified(self) -> Mapping[str, tuple[Artefact, ...]]:
+        """The artefacts by each name an `anchors.artefact` value may give them
+        (`Artefact.identifiers`), each name's in walk order, read once."""
+        found: dict[str, list[Artefact]] = {}
         for artefact in self.artefacts:
-            if reference in artefact.identifiers:
-                return artefact
-        return None
+            for name in artefact.identifiers:
+                found.setdefault(name, []).append(artefact)
+        return {name: tuple(artefacts) for name, artefacts in found.items()}
 
     def holding(self, path: str) -> HeldFile | None:
         """The held file at the repository-relative `path`, or None."""

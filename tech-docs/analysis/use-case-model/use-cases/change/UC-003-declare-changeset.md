@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T08:29:54Z
+      at: 2026-10-19T19:45:23Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command and its stop signals to cli.py. How a contributor declares a changeset, and how pkit release check judges one, are untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

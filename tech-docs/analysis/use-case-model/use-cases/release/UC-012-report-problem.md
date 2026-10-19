@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-19T08:30:02Z
+      at: 2026-10-19T19:45:28Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py. The pkit report verbs, and how a report is staged and submitted, are untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

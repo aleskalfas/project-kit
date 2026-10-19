@@ -25,9 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T08:29:51Z
+      at: 2026-10-19T19:45:20Z
       outcome: unchanged
-      unchanged-because: This change adds the pkit agents run command to cli.py. How a component is released on its own version, and the backbone range it declares, are untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-009 — Release my component on its own version

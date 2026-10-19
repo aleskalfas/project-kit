@@ -15,8 +15,9 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T17:54:16Z
-      outcome: updated
+      at: 2026-10-19T19:45:55Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains a warning on an artefact anchor on an id two artefacts share, never failed. The README keeps ids unique across a repository's analyses (DEC-001 point 3), so its account holds and no anchor of an analysis meets the warning.
 ---
 
 # software-analysis capability

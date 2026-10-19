@@ -130,7 +130,11 @@ collection file or a collection entry (point 12); an
 anchor kind no installed component resolves, separately, where the diff added
 the anchor or took the kind's resolver away; an anchor whose resolver gave no
 answer; a widening
-that asks nothing; an outdated base; front matter that does not parse.
+that asks nothing; an outdated base; front matter that does not parse; and,
+reported only, an artefact anchor on an id two artefacts share, read as naming
+the first in walk order, where the diff added the anchor, gave a second
+artefact the id, or changed which of them the anchor stands on (`shared-id`,
+point 7; `_made_shared`).
 Findings run upstream first along the anchors between artefacts (truth-chain
 order): artefact anchors, and record anchors on a record whose file is an
 artefact, read from the one edge set the cycle check reads too
@@ -309,6 +313,9 @@ class FindingKind(Enum):
     # answered by a revisit entry the diff wrote — and one with neither.
     REVISITED = "revisited"
     UNREVISITED = "unrevisited"
+    # An artefact anchor on an id two artefacts share, which the diff made so: ambiguous,
+    # warned of and never failed (COR-050 point 7).
+    SHARED_ID = "shared-id"
 
 
 #: The findings enforcing mode fails on (COR-050 point 12). An unresolved kind
@@ -2035,10 +2042,13 @@ def _judge(
         problem = _anchor_problem(anchor, added, head, base, kinds, resolved_at_base)
         if problem is None:
             resolving.add(anchor)
-            continue
-        kind, message = problem
-        if message is not None:
-            findings.append(finding(kind, message, anchor))
+        else:
+            kind, message = problem
+            if message is not None:
+                findings.append(finding(kind, message, anchor))
+        shared = _made_shared(anchor, added, head, base, diff)
+        if shared is not None:
+            findings.append(finding(FindingKind.SHARED_ID, shared, anchor))
 
     if before is None:
         if artefact.excluded:
@@ -2267,6 +2277,32 @@ def _made_refused(anchor: Anchor, head: Side, base: Side) -> str | None:
     if base.part_of(anchor.value).state is PartState.REFUSED:
         return None
     return f"{found.name} {found.refusal.value}"
+
+
+def _made_shared(anchor: Anchor, added: bool, head: Side, base: Side, diff: Diff) -> str | None:
+    """The warning on an artefact anchor on an id two artefacts share at head, where the
+    diff made it so (COR-050 points 7 and 12): it added the anchor; no two artefacts had
+    the id at the base; or the artefact the anchor stands on — the first in walk order —
+    differs between the base and head, a file renamed in the diff read as itself.
+    Otherwise it is the whole-repository check's. It is given whatever else the anchor
+    finds, and fails nothing."""
+    if anchor.kind != "artefact":
+        return None
+    found = head.part_of(anchor.value)
+    warning = found.shared_id
+    if warning is None:
+        return None
+    if added:
+        return f"{warning}; the anchor was added in this diff"
+    before = base.part_of(anchor.value)
+    if not before.namesakes:
+        return f"{warning}; no two artefacts had the id at the base"
+    if found.target is None or before.target is None:
+        return None
+    was = diff.renamed_from.get(found.target.path, found.target.path)
+    if (was, found.target.id) != (before.target.path, before.target.id):
+        return f"{warning}; the diff changed which of them it stands on"
+    return None
 
 
 def _made_ambiguous(anchor: Anchor, head: Side, base: Side) -> bool:
@@ -2964,6 +3000,10 @@ _LEGEND: dict[FindingKind, str] = {
     FindingKind.UNREVISITED: (
         "a target of a link the diff triggered that neither changed nor carries an answer on "
         "the source"
+    ),
+    FindingKind.SHARED_ID: (
+        "the diff left an anchor on an id two artefacts share, read as naming the first: "
+        "reported only"
     ),
 }
 
