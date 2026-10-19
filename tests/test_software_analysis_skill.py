@@ -6,6 +6,9 @@ record. Held here:
 
 - **its shape** — a composite skill (COR-020) whose `composes` is exactly its
   sub-procedures, clean under `pkit refs validate`, deployed beside them;
+- **it builds an analysis from its concepts up** (#1784) — `build-analysis.md` walks
+  the four steps of DEC-001 point 12 in order, each through the kinds'
+  sub-procedures and each saying when it is done, and the dispatcher routes to it;
 - **it matches the command it pairs with** — every `pkit analysis new` form its
   walkthroughs give names a kind the stamp has, with flags that kind takes, so
   the skill cannot drift from the CLI unnoticed;
@@ -70,6 +73,19 @@ SUB_PROCEDURES = {
 #: kind's parts, and stamps through the sub-procedures above (DEC-001 point 1).
 CHOOSING = "choose-templates.md"
 
+#: The sub-procedure that builds an analysis from its concepts up, walking the kinds'
+#: sub-procedures in the order DEC-001 point 12 gives (#1784).
+BUILDING = "build-analysis.md"
+
+#: The build's four steps, in DEC-001 point 12's order, each with the kinds'
+#: sub-procedures it walks, in the order it first names them.
+BUILD_STEPS = (
+    ("## 1. The concepts, then the actors", ("term.md", "actor.md")),
+    ("## 2. The requirements that bind the whole system", ("requirement.md",)),
+    ("## 3. The use cases, area by area", ("requirement.md", "use-case.md")),
+    ("## 4. The journeys, last", ("journey.md",)),
+)
+
 _FENCE = re.compile(r"^```\n(?P<block>.*?)^```", re.MULTILINE | re.DOTALL)
 
 
@@ -81,14 +97,56 @@ def _front(path: Path) -> dict[str, Any]:
 # --- its shape ---------------------------------------------------------------------------------
 
 
-def test_the_skill_composes_one_sub_procedure_per_kind_and_the_choice() -> None:
+def test_the_skill_composes_one_sub_procedure_per_kind_the_build_and_the_choice() -> None:
     front = _front(DISPATCHER)
     assert front["name"] == "analysis-author"
-    assert sorted(front["composes"]) == sorted([*SUB_PROCEDURES, CHOOSING])
+    assert sorted(front["composes"]) == sorted([*SUB_PROCEDURES, CHOOSING, BUILDING])
     on_disk = sorted(p.name for p in SKILL.iterdir())
-    assert on_disk == sorted([*SUB_PROCEDURES, CHOOSING, DISPATCHER.name])
+    assert on_disk == sorted([*SUB_PROCEDURES, CHOOSING, BUILDING, DISPATCHER.name])
     assert "pkit analysis new" in front["metadata"]["wraps_commands"]
     assert "pkit analysis validate" in front["metadata"]["wraps_commands"]
+
+
+def test_the_build_walks_dec_001_point_12_s_order_and_says_when_each_step_is_done() -> None:
+    """`build-analysis.md` (#1784): its four steps in point 12's order, each walking the
+    kinds' sub-procedures in that order, each with what makes it done. A step that needs
+    more goes back, and no step waits on another being closed."""
+    text = (SKILL / BUILDING).read_text(encoding="utf-8")
+    assert "[software-analysis:DEC-001-software-analysis-discipline] point 12" in text
+    steps = [line for line in text.splitlines() if re.match(r"## \d\. ", line)]
+    assert steps == [heading for heading, _walks in BUILD_STEPS]
+    sections = {s.splitlines()[0]: s for s in re.split(r"(?m)^(?=## )", text) if s[:3] == "## "}
+    for heading, walks in BUILD_STEPS:
+        section = sections[heading]
+        assert re.search(r"\*\*(?:An area is )?[Dd]one when:\*\*", section), heading
+        named = [n for n in re.findall(r"`([a-z-]+\.md)`", section) if n in SUB_PROCEDURES]
+        assert list(dict.fromkeys(named)) == list(walks), heading
+    flat = " ".join(text.split())
+    assert "go back and write it there first" in flat
+    # A person confirms a brownfield project's candidates, with no step gate (point 9).
+    assert "but the order does not ask it." in flat
+
+
+def test_the_dispatcher_routes_to_the_build_and_keeps_no_copy_of_its_order() -> None:
+    """The dispatcher routes, and the order has its one home in the sub-procedure (COR-020,
+    COR-006): the actors no longer come before the glossary, and no second list of the
+    steps."""
+    text = DISPATCHER.read_text(encoding="utf-8")
+    assert f"| `{BUILDING}` |" in text
+    assert "actors first (a use case names one)" not in text
+    assert "Write terms whenever a word needs pinning down" not in text
+    flat = " ".join(text.split())
+    assert (
+        f"For a part of the product not yet described, follow `{BUILDING}`, which builds it "
+        "from its concepts up (DEC-001 point 12)"
+    ) in flat
+    assert "the requirements that bind the whole system" not in flat
+    # Every kind's walkthrough points at the shared framing on the glossary's terms.
+    assert "### Use the glossary's terms" in text
+    for name in ("actor.md", "use-case.md", "journey.md", "requirement.md"):
+        assert "(the shared framing's \"Use the glossary's terms\")" in (SKILL / name).read_text(
+            encoding="utf-8"
+        ), name
 
 
 def test_refs_find_nothing_in_the_skill() -> None:
@@ -100,7 +158,7 @@ def test_refs_find_nothing_in_the_skill() -> None:
 
 def test_the_skill_is_deployed_beside_its_sub_procedures() -> None:
     assert (DEPLOYED / "SKILL.md").resolve() == DISPATCHER.resolve()
-    for name in [*SUB_PROCEDURES, CHOOSING]:
+    for name in [*SUB_PROCEDURES, CHOOSING, BUILDING]:
         assert (DEPLOYED / name).resolve() == (SKILL / name).resolve()
 
 
