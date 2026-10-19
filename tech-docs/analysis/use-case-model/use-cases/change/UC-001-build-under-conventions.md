@@ -43,7 +43,7 @@ pkit:
 
 **Assumptions:**
 
-- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
+- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent definition's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
 - Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too (software-engineering DEC-002 point 4).
 - The change builds only on accepted decision records (core rule 2).
 - The agent asks before a destructive operation, such as `git push --force` or deleting files outside `project/` (core rule 8).

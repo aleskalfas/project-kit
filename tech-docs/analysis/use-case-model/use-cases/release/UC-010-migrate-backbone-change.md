@@ -44,7 +44,7 @@ pkit:
 **Assumptions:**
 
 - The maintainer judges what breaks installed projects. The check reads only renames and removals of files, in the trees it reads as the backbone's, an adapter's or a capability's (`migrations.py`). Another break, such as a flag whose meaning inverts, rests on that judgement (COR-010).
-- Only the release step writes versions (PRJ-002 D3). The backbone's changeset for the change declares `minor` or above, so the release that ships the change raises the backbone's minor or major. A patch release carries no migration (COR-010).
+- Only the release step writes versions (PRJ-002 D3). The backbone's changeset for the change declares `minor` or above, so the release step that ships the change raises the backbone's minor or major. A patch release carries no migration (COR-010).
 
 **Trigger:** The maintainer's change breaks what installed projects hold, such as renaming or removing a file in a tree the backbone ships.
 
@@ -63,7 +63,7 @@ pkit:
 
 - **1a.** The change only adds, such as a new skill or a new schema, or it refines a document. It needs no migration (COR-010). The check reports `No migration-triggering changes in diff.`, and the use case ends.
 - **1b.** The change renames or removes a decision record. The check finds no trigger in the decision record (`migrations.py`), and the use case ends.
-- **1c.** The maintainer passes `--version <X.Y.0>`, as the `migration-author` skill asks where the release will raise the major and no folder of that major waits. At step 2, the system stamps the script in that version's folder.
+- **1c.** The maintainer passes `--version <X.Y.0>`, as the `migration-author` skill asks where the release step will raise the major and no folder of that major waits. At step 2, the system stamps the script in that version's folder.
 - **2a.** A folder of the next major already waits, in the working tree or on the default branch. The system takes that major instead, and prints `Version: <N.0.0>, the next major past backbone <version>, whose folder <N.0.0>/ already waits.` So the script runs after the migrations of the change that made the folder.
 - **2b.** The default branch has commits but resolves to none in this clone, or the default branch's tree cannot be read. The system warns that `The migration's version is judged against the working tree alone, so it may name a version the default branch has released`, and takes the next minor past the working tree's `.pkit/VERSION`. The check of step 7 still reads the target's tip (7a).
 - **2c.** On the path of 1c, the version given is at or below the backbone version that the default branch records. The system refuses with `--version <X.Y.0> is already released`, and names the version the system picks without `--version`. The path rejoins at step 1.
@@ -75,7 +75,7 @@ pkit:
 - **7a.** After the branch was cut, a release landed on the target with the backbone at the version of the script's folder or above. The check lists the script with `targets <X.Y.0>, but <base> already records backbone <version>, so a project at <version> never runs it. Move it to <next>/ or a later folder.` The check ends with `Verdict: RELEASED. Move each script above to a version not yet released before merging.` and exits 1. The maintainer moves the script to the folder the check names, and the path rejoins at step 4.
 - **8a.** The release step computes another version than the folder names. `pkit release plan` warns that the folder `does not match the computed backbone release`, and the release step goes on. The release pull request's body shows the warning for the maintainer to judge.
 
-**Postconditions:** The release that ships the breaking change ships the change's migration, in the folder of the backbone version that the release step computes for it. A project's upgrade across that version runs the migration.
+**Postconditions:** The release that ships the breaking change ships the change's migration, in the folder of the backbone version the release step computes for that release. A project's upgrade across that version runs the migration.
 
 **Minimal guarantees:**
 

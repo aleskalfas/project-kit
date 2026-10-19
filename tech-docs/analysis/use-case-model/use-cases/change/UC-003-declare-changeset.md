@@ -35,7 +35,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the changeset guard on the pull request with no person to answer. It reads the `skip-changeset` label as the guard's escape hatch.
 
-**Preconditions:** The project declares its releases in changesets under `.changes/unreleased/`, as project-kit does (PRJ-002 D1).
+**Preconditions:** The project declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
 
 **Assumptions:**
 

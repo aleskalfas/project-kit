@@ -54,7 +54,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement in an artefact's `friction` block, made once what its anchors stand on changed: a revalidation with its outcome, or a deferral with its reason"
+  definition: "statement in an artefact's `friction` block that settles its friction, or a revisit its links ask for: a revalidation, a deferral or a revisit entry"
   pkit:
     friction:
       anchors:
@@ -95,7 +95,7 @@ TERM-artefact:
 TERM-artefact-type:
   name: artefact type
   status: active
-  definition: "declared name of what a document or a collection entry is, given by the place holding its file, by which rule sets select"
+  definition: "declared name of what a document or collection entry is, given by the place holding its file, which a rule set's scope may select by"
   pkit:
     friction:
       anchors:
@@ -109,7 +109,7 @@ TERM-artefact-type:
 TERM-backbone:
   name: backbone
   status: active
-  definition: "part of the system that ships whole at one version: the command line, the core records and areas, and the engines every component builds on"
+  definition: "part of the system that ships whole at one version: the CLI, the core records and areas, and the engines every component builds on"
   pkit:
     friction:
       anchors:
@@ -119,7 +119,7 @@ TERM-backbone:
 TERM-backbone-configuration:
   name: backbone configuration
   status: active
-  definition: "project-owned file of declarations the system reads, each key owned by a decision record, which sync never writes and validation checks as a whole"
+  definition: "project-owned file, never written by sync, holding the declarations the system reads, each key owned by a decision record, all checked by validation"
   pkit:
     friction:
       anchors:
@@ -159,7 +159,7 @@ TERM-capability:
 TERM-change:
   name: change
   status: active
-  definition: "unit of work, compared from its base to its head, that lands on the default branch through a pull request or a direct commit"
+  definition: "unit of work, compared from its base to its head, that lands on the branch it targets through a pull request or a direct commit"
   pkit:
     friction:
       anchors:
@@ -196,7 +196,7 @@ TERM-changeset:
 TERM-component:
   name: component
   status: active
-  definition: "installable part of the system, versioned apart from the backbone, that declares a range of backbone versions it works with: a capability or an adapter"
+  definition: "part of the system, versioned apart from the backbone, that declares a range of backbone versions it works with: a capability or an adapter"
   pkit:
     friction:
       anchors:
@@ -208,7 +208,7 @@ TERM-component:
 TERM-component-origin:
   name: component origin
   status: active
-  definition: "property the manifest records for each installed capability, saying whether the methodology ships it, the repository authors it, or an external source supplies it"
+  definition: "property the manifest records for an installed capability or adapter: shipped by its distribution, authored in the project, or supplied by an external source"
   pkit:
     friction:
       anchors:
@@ -222,7 +222,7 @@ TERM-component-origin:
 TERM-connection-point:
   name: connection point
   status: active
-  definition: "declared interface under a role that other components fill, depend on or subscribe to without naming the capability that provides it"
+  definition: "declared interface that a role's provider defines and other components fill, depend on or subscribe to, without naming that provider"
   pkit:
     friction:
       anchors:
@@ -233,6 +233,17 @@ TERM-connection-point:
           - COR-053#3
           - COR-053#5
           - COR-053#6
+TERM-consent:
+  name: consent
+  status: active
+  definition: "person's agreement to a write, given by a reply when asked, an explicit confirmation flag, or running a command that a record says carries it"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-048#5
+          - COR-059#4
+          - COR-002
 TERM-conventions-corpus:
   name: conventions corpus
   status: active
@@ -254,7 +265,7 @@ TERM-conventions-corpus:
 TERM-data-point:
   name: data point
   status: active
-  definition: "input that a role's provider accepts, which project files, installed capabilities and the provider's own default fill, and the backbone resolves"
+  definition: "declared interface through which a role's provider accepts input, filled by project files, installed capabilities and the provider's own default, which the backbone resolves"
   replaces:
     - slot
   pkit:
@@ -268,6 +279,7 @@ TERM-data-point:
           - COR-052#3
           - COR-052#6
           - COR-053#2
+          - COR-061#1
 TERM-debt:
   name: debt
   status: active
@@ -296,7 +308,7 @@ TERM-decision-record:
 TERM-default-branch:
   name: default branch
   status: active
-  definition: "line of history a project declares in its backbone configuration, where changes land, and which every reader resolves one way, from the shared remote's copy"
+  definition: "line of history where a project's changes land, `main` unless its backbone configuration names another, which every reader resolves from the shared remote's copy"
   pkit:
     friction:
       anchors:
@@ -321,7 +333,7 @@ TERM-distribution:
 TERM-documentation-root:
   name: documentation root
   status: active
-  definition: "folder a project declares in its backbone configuration for internal or user-facing readers, from which locations for documents are derived unless set explicitly"
+  definition: "folder for internal or for user-facing readers, `docs/` unless the backbone configuration names another, from which locations for documents are derived unless set explicitly"
   pkit:
     friction:
       anchors:
@@ -377,7 +389,7 @@ TERM-harness:
 TERM-head:
   name: head
   status: active
-  definition: "latest commit of the branch a change is built on, the later state a check compares with the base"
+  definition: "latest commit of the branch that carries a change, the later state a check compares with the base"
   pkit:
     friction:
       anchors:
@@ -401,7 +413,7 @@ TERM-install:
 TERM-manifest:
   name: manifest
   status: active
-  definition: "file of a project that registers the backbone and each installed component, with its recorded version, its origin and any artefacts its install skipped"
+  definition: "file where a project records what it installed, and at which version, kept for the backbone and for each shipped component"
   pkit:
     friction:
       anchors:
@@ -411,6 +423,7 @@ TERM-manifest:
           - COR-010
           - COR-031#D2
           - COR-059#1
+          - ADR-065#2
 TERM-merge-delivery:
   name: merge delivery
   status: active
@@ -426,7 +439,7 @@ TERM-merge-delivery:
 TERM-methodology:
   name: methodology
   status: active
-  definition: body of decision records, rules, operational rules and conventions the system ships and enforces, with the skills and agent definitions that apply them
+  definition: body of decision records, rules, operational rules and conventions the system ships and enforces
   pkit:
     friction:
       unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
@@ -487,7 +500,7 @@ TERM-place:
 TERM-point:
   name: point
   status: active
-  definition: "numbered or labelled part of a decision record's Decision, under a heading that opens with an id it keeps for good"
+  definition: "numbered or labelled part of a decision record's Decision, whose id names it for good once the record writes it as a heading"
   pkit:
     friction:
       anchors:
@@ -500,7 +513,7 @@ TERM-point:
 TERM-project:
   name: project
   status: active
-  definition: "repository the system is installed into, holding the methodology's synced copies beside content of its own"
+  definition: "repository the system is installed into, holding the methodology's files beside content of its own"
   pkit:
     friction:
       anchors:
@@ -510,7 +523,7 @@ TERM-project:
 TERM-project-owned-content:
   name: project-owned content
   status: active
-  definition: "files the adopting repository writes and keeps, which sync never removes and the methodology writes only through writers its records name"
+  definition: "files the methodology does not own in an installed repository, which sync never removes and the system writes only through writers records name"
   pkit:
     friction:
       anchors:
@@ -520,10 +533,23 @@ TERM-project-owned-content:
           - COR-001
           - COR-003
           - COR-059#2
+TERM-propagation:
+  name: propagation
+  status: active
+  definition: "operation that writes the methodology's files into a project verbatim, at the recorded versions or a transition's target, over whatever stands at those paths"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/sync.py
+        record:
+          - COR-001
+          - COR-059#2
+          - ADR-065#1
 TERM-pull-request:
   name: pull request
   status: active
-  definition: "proposal on the hosting service to land one change on a target branch, reviewed there and merged as one squash commit"
+  definition: "proposal on the hosting service to land one change on a target branch, reviewed there and merged, by default, as one squash commit"
   pkit:
     friction:
       anchors:
@@ -550,7 +576,7 @@ TERM-range:
 TERM-recorded-version:
   name: recorded version
   status: active
-  definition: "entry of the manifest naming the release whose content a project holds, for the backbone or one component, which sync reads and never moves"
+  definition: "number or ref a project keeps for the backbone or an installed component, naming the content it holds, which sync reads and never moves"
   pkit:
     friction:
       anchors:
@@ -560,10 +586,11 @@ TERM-recorded-version:
           - COR-059#1
           - COR-059#2
           - COR-059#6
+          - ADR-065#2
 TERM-release:
   name: release
   status: active
-  definition: "set of versions shipped together: one of the backbone, and one of each component the methodology ships with it"
+  definition: "set of versions shipped together, named by its backbone version: one of the backbone, and one of each component its distribution ships with it"
   pkit:
     friction:
       anchors:
@@ -574,7 +601,7 @@ TERM-release:
 TERM-release-step:
   name: release step
   status: active
-  definition: "procedure on the default branch that consumes every pending changeset and writes the new versions, raised floors, widened bounds and changelog entries"
+  definition: "procedure that consumes every pending changeset and writes the new versions, raised floors, widened bounds and changelog entries, which land only on the default branch"
   pkit:
     friction:
       anchors:
@@ -600,7 +627,7 @@ TERM-report:
 TERM-reviewer:
   name: reviewer
   status: active
-  definition: "agent or person, not the author, who judges a draft or a change within a remit, reporting findings and changing nothing it judged"
+  definition: "AI agent or person, not the author, who reports findings on a draft or a change within a remit, leaving each fix to the author"
   pkit:
     friction:
       anchors:
@@ -625,7 +652,7 @@ TERM-role:
 TERM-rule:
   name: rule
   status: active
-  definition: "statement under a permanent id and a recorded origin that every artefact it binds on must satisfy, once accepted"
+  definition: "statement, under a permanent id and with a recorded origin, that every artefact it binds on must satisfy once accepted"
   pkit:
     friction:
       anchors:
@@ -639,7 +666,7 @@ TERM-rule:
 TERM-rule-set:
   name: rule set
   status: active
-  definition: "collection file of named statements that artefacts must satisfy, with its own version, a scope selecting artefacts, and the collections of its kind it inherits"
+  definition: "collection file of named statements that artefacts must satisfy, with its own version, the collections of its kind it inherits, and any scope selecting artefacts"
   pkit:
     friction:
       anchors:
@@ -649,6 +676,20 @@ TERM-rule-set:
           - COR-051#2
           - COR-051#6
           - COR-051#7
+TERM-seeding:
+  name: seeding
+  status: active
+  definition: "operation that creates a declared seed path from its template where the path is missing, at first install and at each backbone transition"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/install.py
+          - src/project_kit/upgrade.py
+        record:
+          - COR-001
+          - COR-003
+          - COR-059#8
 TERM-skill:
   name: skill
   status: active
@@ -706,7 +747,7 @@ TERM-surface-change:
 TERM-sync:
   name: sync
   status: active
-  definition: "operation that rewrites a project's synced copies at its recorded versions and regenerates its derivable state, moving no version and running no migration"
+  definition: "operation that runs propagation at a project's recorded versions and regenerates what derives from its declarations, moving no version and running no migration"
   replaces:
     - reconciliation
   pkit:
@@ -721,7 +762,7 @@ TERM-sync:
 TERM-synced-copy:
   name: synced copy
   status: active
-  definition: "file that sync writes into a project from the methodology or an externally-sourced component, at the recorded versions, and that the project never edits"
+  definition: "file that propagation writes into a project from the methodology or an externally-sourced component, and that the project never edits"
   pkit:
     friction:
       anchors:
@@ -753,10 +794,20 @@ TERM-validation:
           - COR-055#2
           - COR-055#3
           - COR-055#5
+TERM-version:
+  name: version
+  status: active
+  definition: "number of the form major.minor.patch that names one state of the backbone or of a component, as semantic versioning reads it"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - COR-010
+          - PRJ-002#D2
 TERM-version-pin:
   name: version pin
   status: active
-  definition: "project-owned file naming the release whose system runs every command in the project, whatever release is installed on the machine"
+  definition: "project-owned file naming the release whose system runs the project's commands instead of the installed one, while that release can be fetched"
   pkit:
     friction:
       anchors:
@@ -767,10 +818,11 @@ TERM-version-pin:
           - ADR-049#2
           - ADR-049#3
           - ADR-064#1
+          - ADR-064#3
 TERM-version-transition:
   name: version transition
   status: active
-  definition: "operation that moves a project's recorded versions to a target release, running every pending migration and recording its completion only after they have run"
+  definition: "operation that moves a project's recorded versions to a target, running every pending migration and recording its completion only after they have run"
   pkit:
     friction:
       anchors:
@@ -805,7 +857,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Acceptance:** a record's or a rule's status moved from `proposed` to `accepted` in a reviewed change. Where that path involves a person, the person's review accepts it (COR-051 point 4).
+- **Acceptance:** a record's or a rule's status moved from `proposed` to `accepted` in a reviewed change. Where that path involves a person, the person's review accepts the record or the rule (COR-051 point 4).
 - **Merge gate:** the checks and approvals a pull request waits for before it merges (project-management DEC-028). It judges a change, not what the change builds on.
 - **A process's gate:** a condition on one move of a subject between states (COR-033 P4).
 
@@ -846,7 +898,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Revalidation:** an answer saying the artefact was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds (COR-050 point 3).
-- **Deferral:** an answer that puts off one anchor's change, with a reason naming the follow-up that will answer it (COR-050 point 4).
+- **Deferral:** an answer that puts off one anchor's friction, with a reason naming the follow-up that will answer it (COR-050 point 4).
+- **Revisit entry:** an answer on a link's source, saying why a target still stands or which follow-up will revisit it (COR-050 point 16).
 - **The list of answers:** the change check's list of every answer a change wrote, word for word, which a reviewer works from (COR-050 point 3). The answers themselves live on the artefacts.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 
@@ -887,8 +940,12 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Component:** a part of the system with a version of its own, which declares the backbone versions it works with. The backbone depends on no component (COR-010).
-- **Core:** no single thing in the analysis. The backbone is the part, a core record is one of its decision records, and an area's `core/` folder holds synced copies.
-- **Methodology:** the body of records, rules and conventions. The backbone carries its core, and each capability one part more.
+- **Core:** no single thing in the analysis. The word names four things:
+  - the backbone, the part
+  - a core record, one of the backbone's decision records
+  - an area's `core/` folder, which holds the methodology's files
+  - COR-001's core layer, the methodology as the side that ships content and writes into a project
+- **Methodology:** the body of decision records, rules, operational rules and conventions the system ships and enforces. The backbone carries the part every project gets, and each capability carries one part more.
 
 ## TERM-backbone-configuration — backbone configuration
 
@@ -912,7 +969,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-capability — capability
 
-**Example:** project-kit installs the `software-analysis` capability, which brings the analysis's stamps and checks and the method rule set `SAN`.
+**Example:** an adopter installs the `software-analysis` capability, which brings the analysis's stamps and checks and the method rule set `SAN`.
 
 **Distinctions:**
 
@@ -923,7 +980,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-change — change
 
-**Example:** the developer's change adds a command, revalidates the page that describes it and declares a changeset, then lands in one pull request.
+**Example:** the developer's change adds a command and revalidates the page that describes it. The change declares a changeset, then lands in one pull request.
 
 **Distinctions:**
 
@@ -937,7 +994,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Whole-repository check:** measures every artefact from its own revalidation point on the default branch, and never fails (COR-050 point 6).
+- **Whole-repository check:** measures every artefact from its own revalidation point at the latest commit, and never fails (COR-050 points 6 and 12).
 - **Warning or enforcing:** in warning mode the change check reports and passes, and in enforcing mode it fails. It binds once CI requires it (COR-050 point 12).
 - **The list of answers:** the answers that the change check reports a change wrote, word for word, which a reviewer works from (COR-050 point 3).
 
@@ -958,7 +1015,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Backbone:** the part every component depends on, released whole at one version of its own (COR-010).
 - **A changeset's `component`:** the field names the backbone too, as `backbone`. So a changeset names the backbone or a component.
-- **Component origin:** whether the methodology ships a component, the project authors it or an external source supplies it (COR-031 and COR-041).
+- **Component origin:** where a component came from, which the manifest records (COR-031 and COR-041).
 
 ## TERM-component-origin — component origin
 
@@ -966,7 +1023,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **The three origins:** `kit-shipped`, the default, `incubated-in-repo` and `externally-sourced` (COR-031 and COR-041).
+- **The three origins:** `kit-shipped`, `incubated-in-repo` and `externally-sourced`. An entry that names none reads as `kit-shipped` (COR-031 point D2 and COR-041).
 - **A rule's origin:** when, by whom and why a rule was decided (COR-051 point 5). It shares only the word.
 - **Source repository:** where a component is authored. The component is `incubated-in-repo` there, and `externally-sourced` in the projects that pull it (COR-041).
 
@@ -976,10 +1033,23 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Its three kinds:** a data point takes data in, and a process is offered for others to depend on. An event signals that a writing command finished (COR-053 point 2).
+- **Data point, process and event:** the three kinds of connection point (COR-053 point 2):
+  - a data point takes data in
+  - a process is offered for others to depend on
+  - an event signals that a writing command finished
 - **Point:** a part of a decision record's Decision (COR-058 point 1). It shares only the word.
-- **Extension point:** what a rule offers a rule set that inherits it to fill (COR-051 point 3). It shares only the word.
-- **Hook:** a named entry point between an agent definition and what provides it (COR-013 point 4). It is no connection point.
+- **Extension point:** COR-053's key in package metadata for the connection points a capability defines, beside `extensions` for those it plugs into (COR-053 point 3). A rule's extension point is a place an inheriting rule set may fill, and shares only the word (COR-051 point 3).
+- **Hook:** a named entry point that an agent definition needs and a skill or a command provides (COR-013 point 4). It is no connection point.
+
+## TERM-consent — consent
+
+**Example:** choosing `pkit upgrade`'s target is the one consent for every migration the transition runs (COR-059 point 4).
+
+**Distinctions:**
+
+- **With nobody to ask:** nothing is written, and the default applies (COR-048 point 5).
+- **A choice that keeps its own:** such as merge delivery's tier that asks, or a data point's question. A transition's one consent does not cover it (COR-059 point 4 and COR-061).
+- **A person's decision:** an answer on an artefact that the person was shown word for word and accepted before it was written (COR-050 point 3).
 
 ## TERM-conventions-corpus — conventions corpus
 
@@ -997,8 +1067,12 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Connection point:** its broader kind. A data point is the kind that takes data in (COR-053 point 2).
-- **Combination policy:** how the fillers combine. One filler answers alone, entries merge by id, or entries merge and any collision fails (COR-052 point 3).
+- **Combination policy:** how the fillers combine (COR-052 point 3):
+  - `single`: one filler answers alone
+  - `union`: entries merge by id
+  - `additive`: entries merge, and any collision fails
 - **Inert filler:** a filler that cannot answer, such as one out of step with the point's version. Its failure is never read as an empty answer (COR-052 point 6).
+- **Question:** a command of the point's definer that asks the person about the point, and records each reply. It runs after an install, an upgrade or a backbone transition (COR-061 points 1 and 2).
 
 ## TERM-debt — debt
 
@@ -1016,7 +1090,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Namespace:** COR for core records, PRJ for the project's, ADR for its architecture and DEC for each capability's (COR-025). Each numbers on its own.
+- **Namespace:** COR for core records, PRJ for the project's, ADR for its architecture and DEC for each capability's (COR-025 and COR-017). Each numbers on its own.
 - **Point:** a part of a record's Decision, under an id it keeps for good (COR-058 point 1).
 - **Rule:** a statement in a rule set of what must hold of an artefact (COR-051 point 1). A record chooses and says why, and a rule's origin may cite it.
 - **Status:** `proposed`, `accepted` or `superseded`. Work builds only on an accepted record, as the acceptance gate asks.
@@ -1027,7 +1101,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Base:** the commit a check compares with. The default branch is every check's base unless a run names another (COR-054 point 3).
+- **Base:** what a check compares a change with. The default branch is every check's base unless a run names another (COR-054 point 3).
 - **Settled state:** what the default branch holds. A data point's filler reads it, and never a base named for one run (COR-052 point 6).
 - **The local branch:** read only where the project has no remote, and the reader says so (COR-054 point 2).
 
@@ -1050,7 +1124,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Place:** a path declared to hold anchored artefacts (COR-050 point 1). A root may hold files that no place reads.
 - **Space:** living-docs' body of pages for one audience, under a root or in places assigned to it (living-docs DEC-001 point 1).
-- **A recorded location:** a location derived from a root is recorded when first used, so a later change of root moves nothing (COR-049 point 5).
+- **A recorded location:** a location derived from a root is recorded when first used, so changing the root later moves nothing (COR-049 point 5).
 
 ## TERM-finding — finding
 
@@ -1102,6 +1176,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Uninstall:** removes a component's registration and its copied files, and never the project's own content (COR-010). An incubated capability's files stay where they are (COR-031).
 - **Installing the CLI:** puts the system's command on a machine (PRJ-004). It acts on no project (COR-059 point 5).
 - **Version transition:** moves what is installed to another version. Install adds what was not there.
+- **Registration:** how a project adds a capability it authors itself. Registration copies nothing (COR-031 point D3).
 
 ## TERM-manifest — manifest
 
@@ -1109,6 +1184,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
+- **The backbone's:** `.pkit/manifest.yaml`. It holds the backbone's target and completion. It lists each component with its origin and the path of the component's own (COR-010 and ADR-065 point 2).
+- **A shipped component's:** under the component's `project/` folder, with its recorded version and the files its install skipped (COR-059 point 7 and ADR-065 point 2).
 - **Package metadata:** what a component declares about itself as it ships. A manifest is what the project recorded when it installed the component.
 - **Version pin:** a directive naming the release whose system runs the project's commands (ADR-049 point 1). A manifest records what content the project holds.
 - **The methodology's path lists:** COR-001 and COR-002 call the lists of synced and seeded paths manifests too. They are lists the methodology keeps, not a project's file.
@@ -1121,7 +1198,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Merge:** landing a change on the default branch. The analysis writes merge delivery in full for this operation.
 - **The tier that asks:** entries put to a person once, at install, by the merge command or in a version transition. Sync runs only the tier that asks nothing (COR-059 point 2).
-- **Seeding:** writing a missing file once from a template, never over a file that exists (COR-059 point 8). Merge delivery revisits its file on each run.
+- **Seeding:** creates a missing declared seed path from its template, never over a file that exists (COR-059 point 8). Merge delivery revisits its file on each run.
 
 ## TERM-methodology — methodology
 
@@ -1135,7 +1212,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-migration — migration
 
-**Example:** project-management renamed its reviewer agent from `reviewer` to `pm-reviewer`. So the capability's migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each project's own settings, which sync never touches.
+**Example:** project-management renamed its reviewer's agent definition from `reviewer` to `pm-reviewer`. So the capability's migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each project's own settings, which sync never touches.
 
 **Distinctions:**
 
@@ -1149,8 +1226,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Rule:** a statement in a rule set, with an id, an origin and a status (COR-051). An operational rule shares only the word.
-- **Citing one:** by its file and its number, as *core rule 2* or *project rule 4*.
-- **Core or project:** the methodology's file holds what fits any project, and the project's file what fits only that project (COR-014).
+- **Core rule and project rule:** the analysis's names for an operational rule of the methodology's file and of the project's, cited by number, as in *core rule 2*. Neither is a rule of a rule set.
+- **Core or project:** the methodology's file holds what fits any project, and the project's file holds what fits only that project (COR-014).
 
 ## TERM-package-metadata — package metadata
 
@@ -1159,7 +1236,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Manifest:** the project's record of what it installed, at which version. COR-017 calls the package metadata a manifest too, and the analysis keeps that word for the project's record.
-- **Read before install:** a plan reads a capability's connection points from its package metadata without installing the capability (COR-053 point 8).
+- **Plan:** a dry run that reads a capability's connection points from its package metadata, before the capability is installed (COR-053 point 8).
 
 ## TERM-place — place
 
@@ -1168,7 +1245,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Documentation root:** where a project keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
-- **Synced copy:** a file that sync writes into the project, such as a core record. A folder of synced copies is never a place, or each sync would read as friction (COR-050 point 14).
+- **Synced copy:** a file that propagation writes into the project, such as a core record. A folder of synced copies is never a place, or each sync would read as friction (COR-050 point 14).
 - **Held folder:** a folder a component declares for its held documents. No place reads a file in it as an artefact (COR-050 point 1).
 
 ## TERM-point — point
@@ -1189,8 +1266,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Adopter:** the person who adopts the methodology for a project and keeps its setup (`ACT-adopter`). A project is the repository, never the person.
-- **Source repository:** where a distribution or a component is authored. project-kit's own repository is a source repository and a project at once, since it installs what it builds.
-- **Project-owned content:** what a project writes and keeps in itself. Each file a project tracks is project-owned content or a synced copy, never both (the no-shared-files invariant).
+- **Source repository:** where a distribution or a component is authored. project-kit's own repository is a source repository and a project at once, so the methodology's files there are originals, not synced copies.
+- **Project-owned content:** what a project writes and keeps in itself. Each file a project tracks has one owner, the methodology or the project, never both (the no-shared-files invariant).
 - **The `project/` folder:** an area's half for a project's own content (COR-003). It is part of a project, and no project of its own.
 
 ## TERM-project-owned-content — project-owned content
@@ -1199,10 +1276,25 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Synced copy:** the methodology's file in a project, which sync rewrites. A project adds its own content beside a synced copy, and never edits one (COR-003).
-- **Writers a record names:** seeding, merge delivery, a migration within what the records allow, and a capability's install of the rule set it declares (COR-001). Each writes with the consent its record sets.
-- **Extension:** COR-001's name for this content. A rule's extension point is another thing (COR-051 point 3).
-- **Suspension:** project-owned content that its consumer reads in place of a synced copy of the same name, where the artefact's kind allows that (COR-001).
+- **Project:** the repository that holds this content. The definition says *installed repository*, since a definition holds no word of its term's name.
+- **Synced copy:** the methodology's file in a project, which propagation rewrites. A project adds its own content beside a synced copy, and never edits one (COR-003).
+- **Writers a record names:** among them these, each writing with the consent its record sets (COR-001):
+  - seeding and merge delivery
+  - a migration, within what the records owning the written content allow
+  - a capability's install, of the rule set the capability declares
+  - the configuration commands (COR-048 point 5)
+- **Extension:** COR-001's name for this content. COR-053's `extensions` and a rule's extension point are other things (COR-053 point 3 and COR-051 point 3).
+- **Suspension:** project-owned content that its consumer reads in place of a synced copy of the same name. The record governing that kind of file must allow it (COR-001).
+
+## TERM-propagation — propagation
+
+**Example:** `pkit capabilities install` runs propagation for one capability, copying its subtree from the bundle at the backbone the project records (ADR-065 point 1).
+
+**Distinctions:**
+
+- **Synced copy:** a file that propagation writes into a project.
+- **Sync:** propagation at the recorded versions, with the deployed copies regenerated and merge delivery's tier that asks nothing (COR-059 point 2).
+- **Seeding:** creates a missing project-owned file once, and never writes over one that exists (COR-059 point 8).
 
 ## TERM-pull-request — pull request
 
@@ -1227,13 +1319,16 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-recorded-version — recorded version
 
-**Example:** project-kit's manifest records backbone 1.149.0, so `pkit sync` writes the content of that release and moves no version.
+**Example:** an adopter's manifest records backbone 1.149.0, so `pkit sync` there writes the content of that release and moves no version.
 
 **Distinctions:**
 
 - **Version pin:** a directive the project owns, naming the release whose system runs its commands (ADR-049 point 1). A recorded version records the content held.
-- **Target and completion:** a transition of the backbone records its target first and its completion last. A project is at a version only when both name it (COR-059 point 6).
-- **An external source's pin:** COR-041's word for the ref an externally-sourced component is pulled at. It is that component's recorded version (COR-059 point 1).
+- **Where it is kept** (ADR-065 point 2):
+  - the backbone's and a shipped component's, in their manifests
+  - an incubated capability's, in its package metadata, where the project moves it by editing it (COR-059 point 1)
+  - an externally-sourced component's, as its pin, COR-041's word for the ref the component is pulled at
+- **Completion:** the state a transition of the backbone records last. While a transition is incomplete, the backbone's recorded version names its target (COR-059 points 1 and 6).
 
 ## TERM-release — release
 
@@ -1242,7 +1337,10 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **Release step:** the procedure that makes a release from the pending changesets. To release a component is to run the release step for that component's changesets.
-- **Changeset:** a change's declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 D1).
+- **Changeset:** a change's declaration for the next release. The release step consumes every changeset waiting for it (PRJ-002 D1 and D3).
+- **A release step that moves no backbone:** writes new versions of components and makes no release of its own. Those versions reach a tagged install with the next release (PRJ-004).
+- **A component's release:** PRJ-002's name for one new version of one component (PRJ-002 D4). The analysis calls it the component's new version.
+- **An externally-sourced component's version:** written in the component's own source repository, and reached by a project's transition of that component (COR-041).
 - **Release pull request:** the pull request that carries one release step's writes, on a `release/` branch under a `chore(release):` title. It closes no issue, so `pkit release merge` lands it.
 - **Release tag:** the annotated tag `v<version>` on the release commit. Only a release that moves the backbone gets one (PRJ-004).
 - **GitHub release:** the page the hosting service shows for a tag. Its notes are the version's changelog section, and it carries no file (PRJ-004).
@@ -1253,8 +1351,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Release:** the set of versions that a release step makes.
-- **A branch's versions:** a branch never writes a version number, and declares a changeset instead (PRJ-002 D1).
+- **Release:** the set of versions a release step makes when it moves the backbone. A release step that moves only components makes none of its own (PRJ-004).
+- **Changeset:** what a branch writes in place of a version number, declaring its change for the release step (PRJ-002 D1).
 - **Release pull request:** the pull request that carries one release step's writes onto the default branch (PRJ-002 D3).
 
 ## TERM-report — report
@@ -1274,7 +1372,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **The reviewer stack:** the core's critic and architect advise on a draft. Its methodology, convention-compliance and rule-set reviewers judge an artefact or a diff (COR-024 and COR-057).
+- **The reviewer stack:** the critic and the architect advise on a draft, and the methodology, convention-compliance and rule-set reviewers judge an artefact or a diff. The backbone ships all five (COR-024 and COR-057).
 - **Verdict:** a reviewer agent's judgement of a pull request, posted where a merge gate reads it (project-management DEC-028).
 - **The answers' reviewer:** the reviewer the project chooses to check the answers an agent wrote for its own change (COR-050 point 3).
 - **Merge authoriser:** the person who authorises a merge (`ACT-merge-authoriser`). A reviewer's approval is never that authorisation (project-management DEC-055 point 3).
@@ -1285,7 +1383,9 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Actor:** a person or a system that uses the system, which software-analysis DEC-001 point 1 calls a named role. The analysis calls it an actor.
+- **Actor:** a person, or other software such as a CI pipeline, that uses the system. software-analysis DEC-001 point 1 calls an actor a named role.
+- **A role in a record:** the part a record names in place of whatever plays it today (COR-046 point 1). It is a part of the design, not a capability's role.
+- **An artefact's role:** the kind of content that one artefact shape carries, such as a skill's procedure (COR-006).
 - **Agent definition:** what COR-006 calls a persistent role with boundaries. The analysis calls it an agent definition.
 - **Provider:** the installed capability that supplies a role's connection points. Where two installed capabilities provide one role, the project selects one (COR-053 points 1 and 7).
 
@@ -1298,7 +1398,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Rule set:** the collection file that holds rules, each an artefact of its own (COR-051 point 2).
 - **Operational rule:** an instruction every AI agent session loads, with no id, origin or status. COR-051 point 1 does not govern it.
 - **Decision record:** chooses among alternatives and says why. A rule says what must hold, and its origin may cite the record (COR-051 point 5).
-- **Where it binds:** only once accepted, and only on the artefacts that a rule set of the project's own reaches (COR-051 points 4 and 7).
+- **Proposed rule:** one that binds nothing until it is accepted. An accepted rule binds only on the artefacts that a rule set of the project's own reaches (COR-051 points 4 and 7).
 
 ## TERM-rule-set — rule set
 
@@ -1311,9 +1411,20 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Pin:** the major version an inheriting set names for each set it inherits, as in `WRITE@2`. No rule binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
 - **Version pin:** the release a project's commands run at (ADR-049 point 1). It is no rule set's pin.
 
+## TERM-seeding — seeding
+
+**Example:** a project that deleted its agents overlay gets it back from the template at its next `pkit upgrade` (COR-059 point 8).
+
+**Distinctions:**
+
+- **The seeded file:** project-owned content from the moment it is written (COR-001).
+- **Merge delivery:** revisits its file on every run to add entries. Seeding never writes over a file that exists (COR-059 point 8).
+- **Sync:** creates no seed path (COR-059 point 8).
+- **Stamp:** writes a new file when a person or an agent asks for one.
+
 ## TERM-skill — skill
 
-**Example:** the `analysis-author` skill walks an agent through a term's slug and anchors, then runs the stamp `pkit analysis new term`.
+**Example:** the `analysis-author` skill walks an AI agent through a term's slug and anchors, then runs the stamp `pkit analysis new term`.
 
 **Distinctions:**
 
@@ -1327,7 +1438,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Synced copy:** a file that sync writes into a project from what a source repository authored. One tree is source in its own repository and a synced copy in every other (COR-050 point 14).
+- **Synced copy:** a file that sync writes into a project from what a source repository authored. One tree is source in its own repository, and its files are synced copies in every other (COR-050 point 14).
 - **Project:** a source repository that installs what it builds is a project too, as project-kit's is.
 - **Component origin:** a component authored in a repository is `incubated-in-repo` there, and `externally-sourced` in the projects that pull it (COR-041).
 
@@ -1339,7 +1450,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Skill:** the procedure a stamp pairs with. The skill chooses the slug and fills the body, and the stamp writes what it can compute (COR-005).
 - **Provenance stamp:** project-management's record of the versions an issue or a pull request was filed under (project-management DEC-041). It is no command.
-- **Seeding:** the methodology's write of a missing file into a project from a template (COR-001). A stamp writes a new file when a person or an agent asks for one.
+- **Seeding:** creates a missing declared seed path from its template (COR-059 point 8). A stamp writes a new file when a person or an AI agent asks for one.
 
 ## TERM-surface-change — surface change
 
@@ -1381,7 +1492,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **pkit:** the product's name, kept in prose and in commands. The analysis says *the system* for the same software (PR #1374).
 - **A system:** other software, such as the hosting service or the harness. The analysis names it for what it is, never a system (PR #1345, question 12).
 - **A platform:** in COR-009, the hosting service a project's remote lives on. It is other software, never the system.
-- **The methodology:** the body of decision records, rules and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* point back here.
+- **The methodology:** the body of decision records, rules, operational rules and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* point back here.
 
 ## TERM-validation — validation
 
@@ -1393,6 +1504,17 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Whole-repository check:** reports debt on the default branch, and never fails (COR-055 point 1).
 - **Validator:** a command a component registers, whose findings validation reads. A validator that gives no answer yields a failing finding (COR-055 points 3 and 6).
 
+## TERM-version — version
+
+**Example:** backbone 1.149.0 and project-management 0.54.0 are versions, and a `minor` changeset moves the backbone to 1.150.0 at the next release step.
+
+**Distinctions:**
+
+- **A rule set's version:** its own, apart from its component's. An inheriting set pins its major (COR-051 point 7).
+- **A connection point's version:** an integer that rises only on a change that breaks its counterparts (COR-053 point 5).
+- **A schema version:** the integer a schema and the data it checks each carry (COR-052 point 5 and COR-023).
+- **Recorded version:** the number or ref a project keeps for what it installed.
+
 ## TERM-version-pin — version pin
 
 **Example:** `pkit upgrade` writes `.pkit/version-pin` at the release it brought the project to, so each later command there runs at that release.
@@ -1402,7 +1524,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Recorded version:** a record of the content a project holds. A version pin is a directive the project owns (ADR-049 point 1).
 - **A rule set's pin:** the major version an inheriting rule set names for a set it inherits (COR-051 point 7). The analysis writes *version pin* in full for this term.
 - **An external source's pin:** the ref an externally-sourced component is pulled at, which is that component's recorded version (COR-041).
-- **The installed CLI:** the command on the machine. A pinned project runs its pin, whatever is installed (ADR-064 point 5).
+- **The installed CLI:** the command on the machine. A pinned project runs the installed CLI only where its pin cannot be fetched, and is warned (ADR-064).
+- **The source repository:** never pinned (ADR-064 point 3).
 
 ## TERM-version-transition — version transition
 
@@ -1423,4 +1546,4 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Change check:** compares one change with its base, and fails in enforcing mode (COR-050 point 12).
 - **Debt:** what the whole-repository check reports, derived from git on each run (COR-050 point 9).
-- **Tool-written status:** the `last-check` that an after-merge job writes from the check's result. No check reads it (COR-050 point 10).
+- **Tool-written status:** the `last-check` that an after-merge job writes from the check's result. The checks never read it for friction (COR-050 point 10).
