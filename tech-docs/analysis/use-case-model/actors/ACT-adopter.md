@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-18T20:10:02Z
+      at: 2026-10-19T14:38:29Z
       outcome: unchanged
-      unchanged-because: What COR-059 point 3 stands on changed only in the Decision's guide sentence, which now names a data point's question beside a transition and an update of the CLI. Points 4 and 5 gained the question too. Point 3, what a version transition is, says what it said, so the adopter's needs this actor states still hold.
+      unchanged-because: "software-analysis DEC-001 point 1 gains what makes a use case's precondition true: its producers, the environment stated once, and the optional after field. Choosing each kind's parts as the capability is adopted rests on the kinds' declared structures, which point 1 leaves as they were, so the adopter's need still holds."
 ---
 
 # ACT-adopter — Adopter
