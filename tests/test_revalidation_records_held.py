@@ -93,11 +93,18 @@ def _record(repo: AdopterRepo) -> str:
 def test_a_record_is_held_by_its_owner_and_walked_by_no_place(project: AdopterRepo) -> None:
     record = _record(project)
     document = _json("friction", "artefacts")
-    (folder,) = document["held"]
+    # The records' folder at the location's top, and its glob one folder down, one
+    # analysis per component (software-analysis DEC-001 point 2), which holds none here.
+    folder, nested = document["held"]
     assert (folder["source"], folder["path"], folder["files"], folder["skipped"]) == (
         "capability:software-analysis",
         RECORDS,
         [record],
+        None,
+    )
+    assert (nested["source"], nested["files"], nested["skipped"]) == (
+        "capability:software-analysis",
+        [],
         None,
     )
     (held,) = document["held_files"]

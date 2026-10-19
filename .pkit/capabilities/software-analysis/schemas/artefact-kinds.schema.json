@@ -242,6 +242,10 @@
         "stamp": {
           "description": "The words the stamp writes for the element when it creates the file: a heading's text without its `#`, or the opening.",
           "$ref": "#/$defs/line"
+        },
+        "form": {
+          "description": "A check on what the element holds, as a body's element takes one. A glossary's opening takes `builds-on-matches-front-matter` (DEC-001 point 2).",
+          "$ref": "#/$defs/form"
         }
       },
       "if": {
@@ -314,6 +318,10 @@
         {
           "const": "gaps-match-outcomes",
           "description": "A record's gaps: the part reads `None.`, or holds one top-level item for each gap. Each item opens with a bold label of one or more ids from `outcomes`, separated by commas and ended by a colon, and holds `**Resolution:**` with text after it. Each artefact whose outcome is `code-regressed` or `gap-found` is named by a gap (DEC-001 point 6)."
+        },
+        {
+          "const": "builds-on-matches-front-matter",
+          "description": "A glossary's opening, where its front matter's `builds-on` lists what its analysis takes from the analyses it builds on (DEC-001 point 2): one top-level item for each entry, in the same order, opening `**From <analysis> at <version>:**`. Nested in it, one item for each of its terms, `**Term:** [<name>](<link>)`, then for each of its actors, `**Actor:** [<name>](<link>)`, each name exactly its entry's, and nested in an actor's item, one item for each need its entry gives, exactly. Only an item opening `**From ` stands for an entry. Where `builds-on` lists nothing, the form asks nothing."
         },
         {
           "const": "definition",

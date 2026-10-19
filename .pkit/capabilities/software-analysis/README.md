@@ -15,9 +15,8 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T19:50:14Z
-      outcome: unchanged
-      unchanged-because: "Revalidated over the merge with the domain-model views: COR-050 gains a warning on an artefact anchor on an id two artefacts share, never failed. The README keeps ids unique across a repository's analyses (DEC-001 point 3), so its account holds and no anchor of an analysis meets the warning."
+      at: 2026-10-19T22:10:24Z
+      outcome: updated
 ---
 
 # software-analysis capability
@@ -95,11 +94,40 @@ analysis/
 
 A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
-**Decided, not built yet.** DEC-001 decides how a project whose system has several components keeps its analyses, how areas are numbered, and what a use case starts from. DEC-004 decides a domain model of views written by hand. The capability reads none of it yet, so keep one analysis at the folder's root, as above, and no domain model.
+### One analysis per component
 
-- **One analysis per component** (DEC-001 point 2). A component may keep an analysis of its own, and you choose which do. Each takes a folder named after its component, with the layout above, its own glossary, actors, areas and revalidation records. It lives where its component is developed, and never ships with it.
-- **Dependencies between analyses** follow the components' (DEC-001 point 2). An analysis builds only on the analyses of the components its component depends on. Its glossary's head lists the terms and actors it takes from them, by name with a link. Beside each such actor, it states the needs that actor brings to it. Only the actors that a use case, a journey or a requirement names may be another analysis's, and the artefact anchors the records behind them. A journey's steps, and a precondition's producers, stay within one analysis.
-- **Ids unique across a repository's analyses,** of every kind, with one numbering of each numbered kind (DEC-001 point 3). A component that moves to its own repository leaves a withdrawn stub for each of its artefacts.
+A project whose system has several components may keep one analysis for each, and chooses which keep one (DEC-001 point 2). A component is a part of the system developed and versioned on its own, such as a methodology's core or one of its capabilities.
+
+- **One analysis, as today.** A project that keeps one keeps it at the folder's top, as above, and lists nothing. It needs no change.
+- **Several.** List them in the capability's settings file, `analyses` ("Configuration", below). Each lies in a folder named after its component, with the layout above:
+
+  ```
+  analysis/
+  ├── core/
+  │   ├── glossary.md
+  │   ├── use-case-model/ …
+  │   └── revalidations/
+  └── billing/
+      ├── glossary.md
+      ├── use-case-model/ …
+      ├── requirements/ …
+      └── revalidations/
+  ```
+
+  A project that adds a second analysis moves the first into its own folder. Revalidate each artefact you move in the same change (COR-050 point 3).
+- **Its own artefacts.** Each analysis has artefacts of every kind of its own, its own areas and its own revalidation records. Validation refuses a file that no analysis holds: one in a folder below the top while nothing is listed, and one at the top or in an unlisted folder while the analyses are listed.
+- **Ids unique across them,** of every kind, with one numbering of each numbered kind, its history included (DEC-001 point 3). The stamp refuses an id another analysis holds, and the check refuses an id two analyses share.
+- **Where it lives.** An analysis lives where its component is developed, and never ships with it. A component that moves to a repository of its own takes its analysis's folder with it, and leaves a withdrawn stub for each of its artefacts.
+
+**What an analysis builds on.** An analysis builds only on the analyses of the components its component depends on (DEC-001 point 2).
+
+- **The list.** Each entry of `analyses` names the analyses it builds on. Where a component declares its dependencies, as a capability does in its package metadata, validation holds the list to them. The analysis whose component is `core` is the backbone's, so a capability's `requires_backbone` is a required dependency on it. Elsewhere, the list is your own statement of them.
+- **The glossary's head** lists what the analysis takes from each one it builds on: the area, the terms and the actors. It copies no definition. Its front matter holds the data, `builds-on`: the version its links name, the terms, the actors and the needs beside each. The check holds the head's text to it ("The glossary's head", below).
+- **An actor of another analysis** is named with that analysis, such as `core:ACT-developer`, where the head lists it. A use case, a journey and a requirement may name one this way. Each anchors the records behind it, never the actor.
+- **Every other field** names artefacts of its own analysis alone, such as a journey's steps and a use case's requirements.
+
+**Decided, not built yet.** DEC-001 decides how areas are numbered and what a use case starts from. DEC-004 decides a domain model of views written by hand. The capability reads none of it yet, so keep no domain model.
+
 - **Numbered areas,** such as `010-develop` (DEC-001 point 2). An area's number gives one valid order in which the areas build on each other, and is no part of any id. The stamp takes only a word as an area today.
 - **A domain model** (DEC-004). An analysis may keep a few views of its concepts beside the glossary, in a folder `domain-model/`, one for each group of related concepts.
   - **A view** is a file such as `010-orders-and-payments.md`, with the id `VIEW-orders-and-payments`. Its number gives the order the views build in, in a form you choose, and is no part of its id.
@@ -109,7 +137,7 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
   - **The glossary stays as it is.** A term a view explains links to its section, on a line under the term's heading.
 - **What a use case starts from** (DEC-001 point 1). Each line of its *Preconditions* names the use cases that make it true, such as `**From UC-003:**`, and an optional `after` lists them as data.
 
-**What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the seven places inside it that hold anchored artefacts — the glossary, the actors, the use cases, the journeys, and a folder for each kind of requirement (DEC-002 point 3). The revalidation records describe an act rather than an anchored artefact, so their folder is not a place: the capability declares it as a folder of **held documents** (`friction.held`; DEC-001 point 2, COR-050 point 1). The core lists each record with this capability as its owner, and no place reads one as an artefact — not your documentation root, not another capability's place — so a record is never an unanchored artefact in the friction measures, nor a document a documentation capability asks you to classify. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. Each requirement place also declares a link (COR-050 point 16): a change to a requirement's `statement`, `measure` or `applies-to` asks for a revisit of every anchor but those its `actors` and `refines` list (DEC-002 point 4). The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
+**What the capability declares for you**, in its package metadata: the location `analysis`, a sub-path of the internal root, and the seven places inside it that hold anchored artefacts — the glossary, the actors, the use cases, the journeys, and a folder for each kind of requirement (DEC-002 point 3). It declares the same seven one folder down too, such as `*/glossary.md` and `*/use-case-model/actors/**`, so the places match both layouts (DEC-001 point 2). The revalidation records describe an act rather than an anchored artefact, so their folder is not a place: the capability declares it, at the top and one folder down (`*/revalidations`), as a folder of **held documents** (`friction.held`; DEC-001 point 2, COR-050 point 1). The core lists each record with this capability as its owner, and no place reads one as an artefact — not your documentation root, not another capability's place — so a record is never an unanchored artefact in the friction measures, nor a document a documentation capability asks you to classify. The location is **recorded the first time you stamp an artefact**, in `.pkit/capabilities/software-analysis/project/docs-locations.yaml`, so changing the root later moves nothing already written. Each requirement place also declares a link (COR-050 point 16): a change to a requirement's `statement`, `measure` or `applies-to` asks for a revisit of every anchor but those its `actors` and `refines` list (DEC-002 point 4). The capability declares no surface: the code your analysis ought to cover is yours to declare, in the `friction.surface` key of `.pkit/project/config.yaml`.
 
 **The types its places give.** Each place names a type from the capability's type registry, `friction.types` in its package metadata (DEC-001 point 2, COR-056). So a rule set's scope selects the analysis's artefacts by what they are, without naming the folder your analysis lies in.
 
@@ -123,6 +151,7 @@ A kind with many files gets a folder, and a kind with one file is a file. Folder
 | `requirements/functional/` | a file, one in an area's folder included | `software-analysis:functional-requirement` |
 | `requirements/constraints/` | a file, one in an area's folder included | `software-analysis:constraint` |
 
+- **One folder down,** each place gives the same type: a use case of any listed analysis is `software-analysis:use-case`.
 - **A scope names a type in full**, as `software-analysis:use-case`. The alias `analysis` names no type.
 - **No project place may give one.** None of the seven admits a project place, since the capability checks only the artefacts in its own places. `pkit validate` fails a place in `.pkit/project/config.yaml` that gives one. While the capability is installed, it also fails a bare type of your own that takes one of their names: `actor`, `use-case`, `journey`, `term`, `quality-requirement`, `functional-requirement` or `constraint`. A bare `constraint` of your own is the likeliest to clash.
 - **No kind field.** The check holds every file in a place to that place's kind, so each artefact takes the place's type without declaring anything.
@@ -146,6 +175,13 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 | `pkit analysis new revalidation <slug> --change <ref> --trigger <trigger> --outcome <id>=<outcome> … --because <id>=<why> … [--reviewed-against "<title> @ <version> [@ <link>]"]… [--gap "<ids>: <gap> => <resolution>"]…` | a revalidation record, `revalidations/<date>-<slug>.md` — only one with something to say ("Revalidation records" below) |
 
 Every artefact form also takes `--path <glob>` and `--record <id>`, each repeatable: the code that makes the artefact true and the decisions it relies on, written as its path and record anchors. For a use case, those decisions are each record it rests on and each record that answers it ("How it meets your decisions", above). For a requirement, the paths are the files that verify it, the narrow code that holds it and any architecture view that realises it. The records are each record it rests on or that answers it (DEC-002 points 5 and 6). Without them an actor or term is stamped unanchored, and so is a requirement with no actor and nothing it refines — the core reports that, and never fails on it. An actor, a term or a requirement nothing embodies takes `--unanchored-because <why>` instead: the reason is written as `unanchored-because` in its friction block — the core's key (COR-050 point 1), so the core's unanchored measure lists the artefact apart, with its reason, rather than counting it — and the stamp refuses it beside `--path` or `--record`, or beside a requirement's `--actor` or `--refines`.
+
+**Several analyses.** Every form, the record's included, also takes `--analysis <component>`: the listed analysis to write in (DEC-001 point 2).
+
+- **Where it writes.** What it writes goes in that analysis's folder, with the layout above, such as `billing/use-case-model/actors/ACT-clerk.md`.
+- **When it is needed.** Name it where your settings list more than one analysis. Where they list one, the stamp writes in it. Where they list none, the stamp refuses `--analysis`, since the one analysis lies at the top.
+- **What it names.** Each actor, use case and requirement it names is one of that analysis. An actor of an analysis it builds on is named with it, such as `--actor core:ACT-developer`, and the glossary's head of the analysis must list it. Nothing anchors that actor, so a use case or a journey names the records behind it with `--record`, and the stamp refuses one without.
+- **Ids.** An id another analysis holds is held for every analysis, and a number runs on across them all.
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case, a journey or a requirement takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since included; when the history's number is the one it follows, the stamp says which file it was given to. Only your numbering setting frees a number ("Configuration" below): an id it frees is not counted, and the stamp says so, naming the commit, when it is the number it would have followed. A requirement's number is one numbering across the three kinds, so the stamp reads their three places as one: a number any of the three folders holds, or their history gave, is taken for all three, and a requirement moved to another kind keeps its number (DEC-002 point 2). A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's or term's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its file or its glossary entry, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. What the stamp numbers past is the default branch — `repository.default-branch` in the backbone configuration, `main` when undeclared, read as its upstream or `origin/<name>`, and as the local branch only in a clone with no remote (COR-054) — and, when you name one, the base `--base <ref>` names too; the stamp never reads `$PKIT_CHECK_BASE`, the base a pipeline sets for its checks, so a pipeline's base never moves where it numbers from (COR-054 point 3). When the default branch or the base names no commit here, the stamp refuses with the core's reason and fix — fetch it, declare the right one — rather than number from the working tree alone. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
 - **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's, journey's or requirement's title, and an actor's name, in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for (DEC-001 point 4). A use case anchors to its actor and to each other actor who takes part, which `--other-actor` names and the stamp writes in its `other-actors`. A journey anchors to its actor, and to the use cases of its steps and of its `relies-on`: those outside the journey that a step relies on, which `--relies-on` names. A use case and a journey also anchor each requirement they must meet, which `--requirement` names and the stamp writes in their `requirements` (DEC-002 point 7). A requirement anchors to each actor whose need it meets and each requirement it refines, which `--actor` and `--refines` name and the stamp writes in its `actors` and `refines` (DEC-002 point 6). Its heading shows its kind between its id and its title, `# REQ-004 · Quality · <title>`. Its body is rendered from its kind's structure, every part in its order, each holding its hint ("Templates and hints" below). Under a journey's *Steps* it writes one line for each of its `steps`, the use case's id and title, as the part's form asks.
@@ -323,6 +359,38 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **Its front matter** maps each term's id to its entry. Each entry has a `name`, a `status` and a `definition`. The definition takes the form `definition` ("Each kind's structure", below). On a rename, the entry keeps the former names in `replaces`, newest first. The id never changes.
 - **Its body** opens with the file's head, which the stamp writes once. Then it has one `## <id> — <name>` section per entry.
+
+**The glossary's head.** In an analysis that builds on others, the head lists what it takes from each (DEC-001 point 2). Its front matter holds the data, `builds-on`, a list, so no reader takes it for a term. The opening below the heading shows it:
+
+```markdown
+---
+builds-on:
+  - analysis: core
+    version: 1.149.0                # the version its links name
+    terms:
+      - {id: TERM-change, name: change}
+    actors:
+      - id: ACT-developer
+        name: Developer
+        needs: [Know which bills a change made stale.]
+TERM-bill:
+  …
+---
+
+# Glossary
+
+The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
+
+- **From core at 1.149.0:** the area `change`.
+  - **Term:** [change](https://example.org/v1.149.0/analysis/core/glossary.md#term-change--change)
+  - **Actor:** [Developer](https://example.org/v1.149.0/analysis/core/use-case-model/actors/ACT-developer.md)
+    - Know which bills a change made stale.
+```
+
+- **The data.** Each entry names the analysis by its component, the version its links name, each term and actor by its id there and its name, and the needs each actor brings to this analysis. No definition is copied. Its shape is checked always, as a kind's schema checks front matter.
+- **The text.** One top-level item per entry, in order, opens `**From <analysis> at <version>:**`, then the area it builds on in words. Nested in it, one `**Term:**` item per term, then one `**Actor:**` item per actor, each its name as a link to its home in that analysis. Each actor's needs are nested under it, exactly. The check holds the text to the data where the format rule binds, as a part's form (`builds-on-matches-front-matter`). An item that does not open `**From ` is the writer's own.
+- **What the check holds.** Only a listed analysis builds on another, and its head names only analyses its entry builds on. A term of its own never takes the name of a term its head lists. Where its component declares the lowest version it needs of the other, a link naming another version is warned of.
+- **What reads it.** An actor named with another analysis, such as `core:ACT-developer`, resolves against the head's actors. The readers point gives each actor the needs every head states for it ("Connections", below).
 
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
 
@@ -637,6 +705,19 @@ While any of these stands, none of the file applies: the check holds no body to 
 - **an evidence entry whose `id` is not its own `<artefact>@<commit>#<check>`** — the entry's `artefact`, `commit` and `check`: the id is the three parts the result is for, and whether the id or those fields are meant cannot be told, so nothing else is read from that entry;
 - **a journey's evidence naming a step that is no use case of the analysis** — a journey's `steps` are the use cases its run passed through. Withdrawn ones are fine, and the journey's steps as they stand now are never compared: the record is history.
 
+Where you keep several analyses, it also fails on (DEC-001 points 2 and 3):
+
+- **a file no analysis holds** — one in a folder below the top while your settings list no analyses, and one at the top, or in a folder no entry lists, while they do. A revalidation record included;
+- **an entry of `analyses` listed twice** — a component or a folder named by two entries, and an analysis that builds on itself or names one twice;
+- **an analysis building on one its component does not depend on** — where the component declares its dependencies, as a capability does in its package metadata, each analysis its entry builds on is a dependency's, and optional where that one is. The analysis whose component is `core` is the backbone's;
+- **an id two analyses share** — of any kind, since one numbering runs across them and an id read anywhere in the repository names one artefact;
+- **a field naming another analysis's artefact** — every field names its own analysis's artefacts, but for an actor named with an analysis it builds on, such as `core:ACT-developer`;
+- **an actor named with another analysis that it may not name** — its analysis is not listed, does not build on that one, or its glossary's head does not list the actor from it;
+- **a glossary's head data that breaks its shape**, or that lists what the analysis takes from one its entry does not build on. A head is only a listed analysis's;
+- **a term whose name is that of a term its head lists.**
+
+It warns, and never fails, on **a head whose links name another version than the floor its component declares** of the analysis it builds on. Which version a link names is your choice.
+
 It warns, and never fails, on:
 
 - **a result at odds with its outcome** — a `failed` result copied for an artefact whose outcome is `holds`, or a `passed` one for `code-regressed`: a passing result supports *holds* and a failing one is a regression's proof, so the outcome or the evidence is likely wrong;
@@ -732,6 +813,7 @@ flowchart LR
   - **A journey's flow:** its actor, then its `steps` in order. The use cases of its `relies-on` stand in a group of their own, with no arrow, since which step relies on which is in its body.
   - **The requirement map:** each requirement, the use cases and journeys that list it in `requirements`, the requirements it `refines` and its `actors`.
 - **The subject.** `use-cases`, `journeys` or `requirements` names a diagram. A journey's id names its flow, and a requirement's id its map. With no subject, it prints every diagram the analysis has something to draw for.
+- **One analysis each** (DEC-003 point 6). Where your settings list several analyses, `--analysis <component>` names the one it draws, and the command refuses to guess. Where they list one, it draws that one. An actor of another analysis, such as `core:ACT-developer`, is the one node drawn from beyond the analysis's edge, among the actors, by that id alone.
 - **Front matter only.** No diagram draws a use case's main path or a journey's seams, which lie in the body (DEC-003 point 3).
 - **Only what is in force.** A withdrawn artefact draws nothing. A reference to an artefact the analysis does not hold in force draws nothing either, and the check reports it. A journey's step keeps its place in the order, drawn by its id alone.
 - **Its text alternative.** Each diagram opens with an `accTitle` that names it and an `accDescr` that says in words what it shows. It holds no styling, so it looks as GitHub, or your site, draws it.
@@ -840,6 +922,8 @@ rules: {}
 
 Requirements share one numbering across the three kinds' folders (DEC-002 point 2). So a quality requirement your branch numbers `REQ-002` collides with a constraint the default branch numbered `REQ-002`. And a requirement moved to another kind's folder keeps its number, and collides with nothing.
 
+Where you keep several analyses, each numbered kind has one numbering across them (DEC-001 point 3). So a use case your branch numbers `UC-007` in one analysis collides with a `UC-007` the default branch gave another.
+
 It knows an artefact by its id, never by its path, and tells your own work landed from another line of work's by the default branch's file for the number — its bytes, then its name:
 
 | Case | Outcome |
@@ -923,16 +1007,32 @@ It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 The capability's project tier, `.pkit/capabilities/software-analysis/project/`, holds three files of yours, which sync never touches: the settings file, `config.yaml`, the recorded location, `docs-locations.yaml`, and your own structures, `structures.yaml` ("A project's own structures", above).
 
-The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off. There is one setting:
+The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off. There are two settings:
 
 ```yaml
 pkit_schema: software-analysis:config
 schema_version: 1
+analyses:
+  - component: core
+    folder: core
+  - component: billing
+    folder: billing
+    builds-on:
+      - analysis: core
+      - analysis: reporting
+        optional: true
 numbering:
   freed-by:
     - commit: "78981922613b2afb6025042ff6bd878ac1994e85"   # a commit's full id, quoted
       ids: [UC-001, UC-002, JRN-001]
 ```
+
+**`analyses`** lists the analyses you keep, one for each component that keeps one (DEC-001 point 2). Leave it out to keep one analysis, at the top of the analysis location.
+
+- **`component`** names the component the analysis describes. `core` names a methodology's core, the backbone, and a capability goes by its own name.
+- **`folder`** is the folder of the analysis location it lies in, one word, named after its component.
+- **`builds-on`** lists the analyses it builds on, each by its component's name. Mark one `optional: true` where its component is an optional dependency. Where the component declares its dependencies, as a capability does in its package metadata, the check holds this list to them. Elsewhere, the list is your statement of them.
+- **What it changes.** The stamp, the check and the diagrams then read each analysis in its folder. An artefact no listed analysis holds is refused ("Where things live", above).
 
 **`numbering.freed-by`** lists ids you declare free again: the ids of artefacts that nothing cites, removed from the default branch — a pilot abandoned before anything cited it, say (DEC-001 point 3). Each entry names the commit that removed the artefacts and lists their ids: a use case's, a journey's or a requirement's. Only a listed id is freed; the tools never infer one. Name the commit by its full id: an abbreviation can come to name two commits as the history grows.
 
@@ -1154,6 +1254,7 @@ The point is `union`: entries from every filler merge by id, and yours replaces 
 | its id, `ACT-tester` | `act-tester` — the id in lower case: a word, as the point asks, under the `act-` prefix, beside whatever readers the documentation provider supplies (living-docs: `user`, `maintainer`). The prefix is kept rather than stripped: `ACT-user` read as `user` would silently replace a provider's default reader in the point's `union`. The mapping is stable, since pages persist a reader's id |
 | its name and needs | the description: `Test author, the analysis' actor ACT-tester. Needs: Run the suite against a clean sandbox; Read a failure's cause.` |
 | withdrawn | no reader: it is history. A page still naming it as its reader fails the documentation provider's check (living-docs' validator), while `pkit analysis validate` passes: withdrawing the actor is sound analysis, and the page is what must change |
+| listed by another analysis | the needs that analysis states beside it, in its glossary's head, after its own (DEC-001 point 8). An actor a head lists whose own analysis this repository does not hold is a reader too, by the name and needs the heads give it |
 
 A page names an actor as its reader by that id (`reader: act-tester`). `pkit analysis fill-readers` prints the readers for you, `--json` the envelope the backbone reads. The filler reads the analysis through the core's reading command, `pkit friction artefacts`, and never walks the folders.
 
@@ -1217,7 +1318,7 @@ When that floor requires the reviewer, and what it reads locally, is in [project
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted, and its judgement rules proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`, and the fixers contribution, which declares the `analysis-resolver` the fixer of each of its types; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. `SAN` holds proposed rules on what a requirement anchors and the records it never contradicts. The stamp writes a requirement of each kind, numbered as `REQ-NNN` across the three kinds. The check holds a requirement to its schema, its file's name and its heading to its id and its kind, what its `actors` and `refines` name and its anchors to the two, and its body to its structure where the format rule binds. It also fails a file under `requirements/` outside the three kinds' folders. Each kind's place declares the core's link, so a changed obligation asks for a revisit of its anchors outside the analysis. The number check, `pkit analysis check-numbers`, compares its number across the three kinds. A use case and a journey list the requirements they must meet in `requirements`, each anchored, which the stamp writes and the check holds. `pkit analysis met-by` lists what meets each requirement, computed from those lists. `pkit analysis diagram` prints the analysis's diagrams, drawn from its front matter ("Diagrams", above). Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted, and its judgement rules proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`, and the fixers contribution, which declares the `analysis-resolver` the fixer of each of its types; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. `SAN` holds proposed rules on what a requirement anchors and the records it never contradicts. The stamp writes a requirement of each kind, numbered as `REQ-NNN` across the three kinds. The check holds a requirement to its schema, its file's name and its heading to its id and its kind, what its `actors` and `refines` name and its anchors to the two, and its body to its structure where the format rule binds. It also fails a file under `requirements/` outside the three kinds' folders. Each kind's place declares the core's link, so a changed obligation asks for a revisit of its anchors outside the analysis. The number check, `pkit analysis check-numbers`, compares its number across the three kinds. A use case and a journey list the requirements they must meet in `requirements`, each anchored, which the stamp writes and the check holds. `pkit analysis met-by` lists what meets each requirement, computed from those lists. `pkit analysis diagram` prints the analysis's diagrams, drawn from its front matter ("Diagrams", above). One analysis per component is shipped: the places one folder down, the `analyses` setting, `--analysis` on the stamp and the diagrams, ids and numbers across the analyses, an actor of another analysis named with it, and each glossary's head checked against its data ("Where things live", above). Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
 
 ## Citing this capability's decisions
 

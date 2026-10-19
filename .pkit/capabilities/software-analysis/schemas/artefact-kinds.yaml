@@ -184,6 +184,7 @@ kinds:
       - id: file-opening
         type: opening
         stamp: The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
+        form: builds-on-matches-front-matter
     sections:
       - id: heading
         type: heading

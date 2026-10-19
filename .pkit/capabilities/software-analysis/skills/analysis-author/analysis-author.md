@@ -86,6 +86,14 @@ The stamp does what a copied template gets wrong:
 
 Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. So does each front-matter field you fill: an actor's `needs`, as its one item, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`.
 
+### Several analyses
+
+Where the project lists several analyses, one per component, in the capability's settings (`analyses`, DEC-001 point 2), name the one you write in on every stamp: `--analysis <component>`. Write each artefact in the analysis of the component whose behaviour it states.
+
+- **What it names** is its own analysis's: actors, steps, the use cases it relies on and the requirements it lists.
+- **An actor of an analysis it builds on** is the one exception. Name it with that analysis, `--actor core:ACT-developer`, once its glossary's head lists it, with the needs it brings here. Anchor the records behind it with `--record`, never the actor.
+- **Ids and numbers** run across every analysis, so the stamp refuses an id another analysis holds.
+
 ### Choosing the slug
 
 A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens.

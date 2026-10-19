@@ -81,6 +81,7 @@ taken literally, never as a pattern.
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import subprocess
@@ -90,7 +91,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from _lib.model import CAPABILITY, LOCATION, Analysis, Unreadable, analysis_of
+from _lib.model import CAPABILITY, LOCATION, Analysis, Unreadable, analysis_of, under_place
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
 
@@ -394,8 +395,12 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
     `git log`; empty when there are no folders, or git cannot answer. The folders
     are the places the backbone's reading names, taken as written: every path
     beneath them, whatever it is — which were files of a place is the backbone's
-    reading at the commit to say."""
-    pathspecs = [f":(literal){folder}" for folder in sorted(set(folders))]
+    reading at the commit to say. A nested place's folder holds a `*` segment for the
+    folder of each analysis below the location's top (`Analysis.place_folders`): git is
+    asked for every path beneath the folders before it, and a path is kept where it lies
+    beneath one of `folders` (`under_place`)."""
+    wanted = sorted(set(folders))
+    pathspecs = _pathspecs(wanted)
     if not pathspecs or not revisions or revisions.startswith("-"):
         return []
     listed = _git(
@@ -410,7 +415,19 @@ def added(root: Path, revisions: str, folders: Iterable[str]) -> list[tuple[str,
         "--",
         *pathspecs,
     )
-    return _listing(listed)
+    return [(c, p) for c, p in _listing(listed) if any(under_place(p, f) for f in wanted)]
+
+
+def _pathspecs(folders: Iterable[str]) -> list[str]:
+    """Git's pathspecs for every path beneath `folders`, each taken literally: a folder,
+    or the folders before a `*` segment of one — a nested place's folder of each
+    analysis — which hold every path beneath it and more."""
+    literal = {
+        ("/".join(segments[: segments.index("*")]) or ".") if "*" in segments else folder
+        for folder in folders
+        if (segments := folder.split("/"))
+    }
+    return [f":(literal){folder}" for folder in sorted(literal)]
 
 
 class GitFailed(Exception):
@@ -606,8 +623,10 @@ def blobs_written(root: Path, since: str, folders: Iterable[str]) -> set[str]:
     """Every version of a file under `folders` a commit after `since` up to HEAD wrote,
     by its blob — through one `git log`; empty when there are no folders, or git
     cannot answer. A file's content, not its path, is what two histories share when
-    one landed the other's work under another commit, as a squash does."""
-    pathspecs = [f":(literal){folder}" for folder in sorted(set(folders))]
+    one landed the other's work under another commit, as a squash does. A folder with a
+    `*` segment is read as `added` reads it."""
+    wanted = sorted(set(folders))
+    pathspecs = _pathspecs(wanted)
     if not pathspecs or not since or since.startswith("-"):
         return set()
     listed = _git(
@@ -618,13 +637,20 @@ def blobs_written(root: Path, since: str, folders: Iterable[str]) -> set[str]:
         "--format=",
         "--raw",
         "--no-abbrev",
+        "-z",  # every path as written, never quoted, after its line of modes and blobs
         "--",
         *pathspecs,
     )
     written: set[str] = set()
-    for line in (listed or "").splitlines():
-        fields = line.split("\t", 1)[0].split()
-        if line.startswith(":") and len(fields) >= 4 and fields[3].strip("0"):
+    parts = [part.lstrip("\n") for part in (listed or "").split("\0")]
+    for line, path in itertools.pairwise(parts):
+        fields = line.split()
+        if (
+            line.startswith(":")
+            and len(fields) >= 4
+            and fields[3].strip("0")
+            and any(under_place(path, folder) for folder in wanted)
+        ):
             written.add(fields[3])
     return written
 

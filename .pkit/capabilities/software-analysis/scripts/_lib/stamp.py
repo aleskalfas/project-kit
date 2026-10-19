@@ -33,6 +33,14 @@ analysis location. Its front matter comes from its kind's template in
   share one numbering: its number is counted as a use case's is, over the
   three kinds' places read as one.
 
+Where the project lists several analyses, one per component (DEC-001 point 2),
+the stamp writes in the one `--analysis` names — needed where more than one is
+listed — in that analysis's folder, with the same layout (`analysis_folder`,
+`place_of`). What it names is that analysis's, but for an actor of an analysis
+it builds on, named with it, `core:ACT-developer`, which its glossary's head
+lists and nothing anchors: a use case or a journey names the records behind it.
+Ids are held, and numbers given, across every analysis (point 3).
+
 It writes the anchors DEC-001 point 4 asks for, beside the paths and records it
 is given: a use case's actor and each other actor it involves, written in its
 `other-actors`, and a journey's actor and the use cases of its steps and of
@@ -108,6 +116,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from _lib import (
+    analyses,
     backbone,
     forms,
     history,
@@ -124,6 +133,7 @@ from _lib.model import (
     COLLECTIONS,
     CONTAINER,
     JOURNEY,
+    KIND_OF_PLACE,
     MUST_MEET,
     NOUN,
     NUMBERED,
@@ -139,6 +149,7 @@ from _lib.model import (
     identity,
     number_of,
     one_actor,
+    qualified,
     with_article,
 )
 from _lib.placeholder import left_in
@@ -187,6 +198,7 @@ class Request:
     actors: tuple[str, ...] = ()  # a requirement's actors, whose need it meets
     refines: tuple[str, ...] = ()  # the requirements a requirement refines
     requirements: tuple[str, ...] = ()  # those a use case or a journey must meet
+    analysis: str | None = None  # the listed analysis to write in, by its component
 
 
 @dataclass(frozen=True)
@@ -217,23 +229,20 @@ def stamp(
     except Unreadable as exc:
         raise Refused(f"the analysis could not be read: {exc}") from exc
     kind = request.kind
-    place = analysis.places.get(kind)
-    if place is None:
-        raise Refused(
-            "the backbone's reading holds no place of software-analysis for "
-            f"{NOUN[kind]}s; `pkit validate` says why"
-        )
+    listing = analyses.read(root)
+    folder = analysis_folder(listing, request.analysis)
+    place = place_of(analysis, kind, folder)
     _check_words(request)
     _check_placeholders(request)
     _check_unanchored(request)
-    _check_references(analysis, request)
+    _check_references(analysis, request, Within(listing, folder))
 
     notes: list[str] = []
     branch, tips = _settled(root, base)
     named = " and ".join(dict.fromkeys(ref for ref, _commit in tips))
     held, past, freed = _held(root, analysis, kind, branch, tips, notes)
     new_id = _new_id(kind, request.slug, held, named)
-    _check_refines(analysis, request, new_id)
+    _check_refines(analysis, request, new_id, folder)
     if past is not None:
         notes.append(
             f"{new_id} follows {past.id}, the number {named}'s history gave {past.path} (commit "
@@ -269,6 +278,47 @@ def stamp(
     if recorded:
         notes.insert(0, recorded)
     return Stamped(id=new_id, location=location, notes=tuple(notes))
+
+
+@dataclass(frozen=True)
+class Within:
+    """The analysis a stamp writes in: the listed analyses, and the folder of the
+    location that holds it, `None` the top (DEC-001 point 2)."""
+
+    listing: analyses.Listing
+    folder: str | None
+
+
+def analysis_folder(listing: analyses.Listing, named: str | None) -> str | None:
+    """The folder of the location the analysis `named` — by its component, from
+    `--analysis` — lies in, `None` for the one analysis at the top where the project lists
+    none; refused where it names none the project lists, or none where it lists several
+    (DEC-001 point 2)."""
+    try:
+        return analyses.folder_named(listing, named, "to write in")
+    except analyses.Unnamed as exc:
+        raise Refused(str(exc)) from exc
+
+
+#: Each kind's place as the package writes it inside the analysis location, at its top.
+WRITTEN = {kind: written for written, kind in KIND_OF_PLACE.items()}
+
+
+def place_of(analysis: Analysis, kind: str, folder: str | None) -> str:
+    """Where a new artefact of `kind` goes: its place at the top of the analysis location,
+    or, for an analysis kept in `folder`, the same place in that folder, one the nested
+    places hold (`NESTED_PLACES`); refused where the backbone's reading holds no such
+    place."""
+    declared = analysis.places if folder is None else analysis.nested
+    if kind not in declared or analysis.location is None:
+        nested = "" if folder is None else ", one folder down,"
+        raise Refused(
+            f"the backbone's reading holds no place of software-analysis{nested} for "
+            f"{NOUN[kind]}s; `pkit validate` says why"
+        )
+    if folder is None:
+        return analysis.places[kind]
+    return f"{analysis.location}/{folder}/{WRITTEN[kind]}"
 
 
 def write_and_record(
@@ -414,25 +464,35 @@ def _check_unanchored(request: Request) -> None:
         )
 
 
-def _check_references(analysis: Analysis, request: Request) -> None:
+def _check_references(analysis: Analysis, request: Request, within: Within) -> None:
     """A use case's and a journey's actor, a use case's other actors, and a journey's
     steps and the use cases it relies on are artefacts in force: what it stamps is in
-    force, and the check holds it to the same rule (`Analysis.unfit`). Each of a
-    journey's steps is a use case of its actor, as the check holds a journey in force
-    (`Analysis.another_actor`). The other actors leave out the use case's own actor,
-    and what a journey relies on leaves out its steps, as the check holds both. Each
-    actor a requirement names is in force too, and so is each requirement a use case
-    or a journey must meet (DEC-002 point 7). What a requirement refines is checked
-    once its id is known (`_check_refines`)."""
+    force, and the check holds it to the same rule (`Analysis.unfit`). Each is an
+    artefact of the analysis it writes in, but for an actor of an analysis it builds on,
+    named with that analysis, which its glossary's head lists (DEC-001 point 2). Each
+    of a journey's steps is a use case of its actor, as the check holds a journey in
+    force (`Analysis.another_actor`). The other actors leave out the use case's own
+    actor, and what a journey relies on leaves out its steps, as the check holds both.
+    Each actor a requirement names is in force too, and so is each requirement a use
+    case or a journey must meet (DEC-002 point 7). What a requirement refines is
+    checked once its id is known (`_check_refines`)."""
     if request.kind in ALWAYS_ANCHORED:
         if request.actor is None:
             raise Refused(f"{with_article(request.kind)} is one actor's: name it with --actor")
-        _in_force(analysis, request.actor, ACTOR)
+        _in_force(analysis, request.actor, ACTOR, within)
+        if qualified(request.actor)[0] is not None and not request.records:
+            raise Refused(
+                f"--actor {request.actor} is an actor of another analysis, which "
+                f"{with_article(request.kind)} anchors by the records behind it, never itself: "
+                f"name them with --record (DEC-001 point 4)"
+            )
         for listed in request.requirements:
-            _requirement_in_force(analysis, listed, f"{with_article(request.kind)} lists")
+            _requirement_in_force(
+                analysis, listed, f"{with_article(request.kind)} lists", within.folder
+            )
     if request.kind in REQUIREMENTS:
         for actor in request.actors:
-            _in_force(analysis, actor, ACTOR)
+            _in_force(analysis, actor, ACTOR, within)
     if request.kind == USE_CASE:
         for other in request.other_actors:
             if other == request.actor:
@@ -440,7 +500,7 @@ def _check_references(analysis: Analysis, request: Request) -> None:
                     f"--other-actor {other} is the use case's own actor: name each other actor "
                     f"who takes part, beside {other}"
                 )
-            _in_force(analysis, other, ACTOR)
+            _in_force(analysis, other, ACTOR, within)
     if request.kind == JOURNEY:
         for outside in request.relies_on:
             if outside in request.steps:
@@ -448,14 +508,14 @@ def _check_references(analysis: Analysis, request: Request) -> None:
                     f"--relies-on {outside} is a step of the journey: name only the use cases "
                     f"outside it that a step relies on"
                 )
-            _in_force(analysis, outside, USE_CASE)
+            _in_force(analysis, outside, USE_CASE, within)
         if len(request.steps) < 2:
             raise Refused(
                 "a journey passes through several use cases: name them in order, "
                 "--step <UC-id> --step <UC-id> …"
             )
         for step in request.steps:
-            _in_force(analysis, step, USE_CASE)
+            _in_force(analysis, step, USE_CASE, within)
         for number, step in enumerate(request.steps, 1):
             other = analysis.another_actor(step, str(request.actor))
             if other is not None:
@@ -465,39 +525,60 @@ def _check_references(analysis: Analysis, request: Request) -> None:
                 )
 
 
-def _in_force(analysis: Analysis, artefact_id: str, kind: str) -> None:
-    problem = analysis.unfit(artefact_id, kind, in_force=True)
+def _in_force(analysis: Analysis, artefact_id: str, kind: str, within: Within) -> None:
+    """Refused unless `artefact_id` is an artefact of `kind` in force of the analysis the
+    stamp writes in; or, for an actor named with another analysis, one its glossary's head
+    lists from an analysis it builds on (DEC-001 point 2)."""
+    if kind == ACTOR and qualified(artefact_id)[0] is not None:
+        problem = analyses.actor_problem(within.listing, analysis, artefact_id, within.folder)
+        if problem is not None:
+            raise Refused(problem)
+        return
+    problem = analysis.unfit(artefact_id, kind, in_force=True, within=within.folder)
     if problem is None:
         return
     if analysis.of(artefact_id, kind) is None:
         problem += f": stamp it first, `pkit analysis new {kind} <slug>`"
+    elif analysis.elsewhere(artefact_id, within.folder):
+        problem += (
+            ": an artefact names its own analysis's alone, but for an actor of an analysis it "
+            "builds on, named with that analysis, such as `core:ACT-developer` (DEC-001 point 2)"
+        )
     raise Refused(problem)
 
 
-def _check_refines(analysis: Analysis, request: Request, new_id: str) -> None:
-    """Each requirement a requirement refines is one of the analysis, of any of the three
-    kinds, and in force, since what the stamp writes is in force; and none is the
-    requirement itself, whose id is `new_id` (DEC-002 points 6 and 7). A requirement
-    refined in a circle is the core's validation to refuse (COR-050 point 5), and a new
-    requirement closes none, since nothing refines it yet. The rule is the check's
-    (`Analysis.unfit_requirement`)."""
+def _check_refines(
+    analysis: Analysis, request: Request, new_id: str, folder: str | None = None
+) -> None:
+    """Each requirement a requirement refines is one of the analysis it writes in, of any
+    of the three kinds, and in force, since what the stamp writes is in force; and none
+    is the requirement itself, whose id is `new_id` (DEC-002 points 6 and 7). A
+    requirement refined in a circle is the core's validation to refuse (COR-050 point
+    5), and a new requirement closes none, since nothing refines it yet. The rule is the
+    check's (`Analysis.unfit_requirement`)."""
     for refined in request.refines:
         if identity(refined) == new_id:
             raise Refused(
                 f"--refines {refined} is the id this requirement takes: a requirement never "
                 f"refines itself (DEC-002 point 6)"
             )
-        _requirement_in_force(analysis, refined, "a requirement refines")
+        _requirement_in_force(analysis, refined, "a requirement refines", folder)
 
 
-def _requirement_in_force(analysis: Analysis, listed: str, lister: str) -> None:
-    """Refused unless `listed` is a requirement of the analysis, of any of the three
-    kinds, in force: what the stamp writes is in force, and `lister`, such as `a use
-    case lists`, names only requirements in force (DEC-002 point 7). The rule is the
-    check's (`Analysis.unfit_requirement`)."""
-    problem = analysis.unfit_requirement(listed, in_force=True)
+def _requirement_in_force(
+    analysis: Analysis, listed: str, lister: str, folder: str | None = None
+) -> None:
+    """Refused unless `listed` is a requirement of the analysis in `folder`, of any of the
+    three kinds, in force: what the stamp writes is in force, and `lister`, such as `a
+    use case lists`, names only requirements in force of its own analysis (DEC-002 point
+    7; DEC-001 point 2). The rule is the check's (`Analysis.unfit_requirement`)."""
+    problem = analysis.unfit_requirement(listed, in_force=True, within=folder)
     if problem is None:
         return
+    if analysis.elsewhere(listed, folder):
+        raise Refused(
+            f"{problem}: {lister} only requirements of its own analysis (DEC-001 point 2)"
+        )
     found = analysis.find(listed)
     if found is None or found.kind not in REQUIREMENTS:
         kinds = ", ".join(REQUIREMENTS[:-1])
@@ -571,7 +652,7 @@ def _held(
     if kind not in NUMBERED:
         return held, None, None
     setting = numbering.resolve(root, numbering.read(root), branch)
-    numbered = {analysis.places[k] for k in NUMBERED if k in analysis.places}
+    numbered = analysis.place_folders(NUMBERED)
     freeing = numbering.freeing(root, setting, branch.commit, numbered)
     problems = (*setting.problems, *freeing.problems)
     if problems:
@@ -584,7 +665,7 @@ def _held(
             f"history (`git fetch --unshallow`) to count every one"
         )
     sharing = [k for k in NUMBERED if PREFIX[k] == PREFIX[kind]]
-    folders = {state.places[k] for state in readings for k in sharing if k in state.places}
+    folders = {folder for state in readings for folder in state.place_folders(sharing)}
     top = max(_numbers(kind, held), default=0)
     judge = history.Judge(root, readings, freeing.files)
     given = [number for _ref, tip in tips for number in history.given(root, tip, folders)]
@@ -642,7 +723,7 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         data["title"] = _title(request)
         data[ACTORS] = list(dict.fromkeys(request.actors))
         data[REFINES] = list(dict.fromkeys(request.refines))
-        anchored = list(dict.fromkeys([*request.actors, *request.refines]))
+        anchored = _own([*request.actors, *request.refines])
     else:
         data["title"] = _title(request)
         data["actor"] = request.actor
@@ -655,11 +736,18 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
             data[OTHER_ACTORS] = list(dict.fromkeys(request.other_actors))
             named = list(request.other_actors)
         data[MUST_MEET] = list(dict.fromkeys(request.requirements))
-        anchored = list(dict.fromkeys([str(request.actor), *named, *request.requirements]))
+        anchored = _own([str(request.actor), *named, *request.requirements])
     data[CONTAINER] = _container(request, anchored)
     heading = render.title_heading(structured, new_id, _title(request))
     body = render.body(structured, heading, written)
     return f"---\n{dump(data)}---\n\n{body}"
+
+
+def _own(named: Sequence[str]) -> list[str]:
+    """The artefacts of `named` an artefact anchors, each once: those of its own analysis.
+    An actor of another analysis, named with it, is anchored by the records behind it,
+    never itself, so it would anchor nothing after a move (DEC-001 points 2 and 4)."""
+    return list(dict.fromkeys(n for n in named if qualified(n)[0] is None))
 
 
 def _step_lines(kind: structure.Kind, steps: Sequence[str], analysis: Analysis) -> dict[str, str]:
@@ -803,7 +891,7 @@ def _inserted(text: str, place: str, kind: str, new_id: str, added: str, section
         raise Refused(f"{place}'s front matter is not a mapping of entries by id")
     if new_id in existing:
         raise Refused(f"{new_id} is held already, in {place}")
-    entry_at = _entry_at(text, start, end, lines, new_id)
+    entry_at = _entry_at(text, start, end, lines, new_id, kind)
     closing = text.find("\n", end)
     section_at = None if closing == -1 else _section_at(text, closing + 1, kind, new_id)
     if section_at is None:
@@ -837,10 +925,15 @@ def _after(text: str, section: str) -> str:
     return text + ("\n" if text.endswith("\n") else "\n\n") + section
 
 
-def _entry_at(text: str, start: int, end: int, lines: Mapping[str, int], new_id: str) -> int:
-    """Where in `text` the new entry goes: at the line of the first key that sorts
-    after `new_id`, or at the end of the front matter, which spans `start:end`."""
-    after = [line for key, line in lines.items() if key > new_id]
+def _entry_at(
+    text: str, start: int, end: int, lines: Mapping[str, int], new_id: str, kind: str
+) -> int:
+    """Where in `text` the new entry goes: at the line of the first entry, an id of
+    `kind`, that sorts after `new_id`, or at the end of the front matter, which spans
+    `start:end`. A key that is no entry, such as the glossary's head data, `builds-on`
+    (DEC-001 point 2), stays where it is."""
+    pattern = schemas.id_pattern(kind)
+    after = [line for key, line in lines.items() if pattern.match(key) and key > new_id]
     if not after:
         return end
     return start + sum(len(line) for line in text[start:end].splitlines(True)[: min(after)])

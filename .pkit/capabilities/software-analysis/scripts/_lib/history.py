@@ -85,9 +85,7 @@ class Judge:
         states = tuple(present)
         self._root = root
         self._left_out = frozenset().union(*(state.excluded for state in states))
-        self._kind_of_place = {
-            place: kind for state in states for kind, place in state.places.items()
-        }
+        self._present = states
         self._freed = dict(freed or {})
         self._at: dict[str, Analysis | None] = {}
 
@@ -104,9 +102,9 @@ class Judge:
         """Whether the file the history gave `number` held it, the setting aside."""
         if number.path in self._left_out:
             return False
+        now = next((w for state in self._present if (w := state.where(number.path))), None)
         state = self._reading(number.commit)
-        place = next((p for p in self._kind_of_place if number.path.startswith(f"{p}/")), None)
-        if state is None or place is None or state.places.get(self._kind_of_place[place]) != place:
+        if state is None or now is None or state.where(number.path) != now:
             return True  # a reading that cannot speak for the path never frees its number
         return number.path in state.files
 

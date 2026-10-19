@@ -18,14 +18,14 @@
       "$ref": "analysis.schema.json#/$defs/status"
     },
     "actor": {
-      "description": "The actor whose goal this is, by id.",
-      "$ref": "analysis.schema.json#/$defs/actor-id"
+      "description": "The actor whose goal this is, by id: an actor of its analysis, or one of an analysis it builds on, named with that analysis (DEC-001 points 2 and 4).",
+      "$ref": "analysis.schema.json#/$defs/actor-ref"
     },
     "other-actors": {
-      "description": "Each other actor who takes part in the use case, by id: an actor of the analysis, never the use case's own `actor`. The body's *Other actors* says what the use case must protect for each. The capability's check resolves each to an actor and requires it among the use case's artefact anchors, so a changed actor flags every use case it takes part in (DEC-001 point 4). Absent, or empty, where no other actor takes part.",
+      "description": "Each other actor who takes part in the use case, by id: an actor of the analysis, never the use case's own `actor`. The body's *Other actors* says what the use case must protect for each. The capability's check resolves each to an actor and requires it among the use case's artefact anchors, so a changed actor flags every use case it takes part in (DEC-001 point 4). An actor of an analysis it builds on is named with that analysis, such as `core:ACT-developer`, and the use case anchors the records behind it instead (DEC-001 point 2). Absent, or empty, where no other actor takes part.",
       "type": "array",
       "uniqueItems": true,
-      "items": { "$ref": "analysis.schema.json#/$defs/actor-id" }
+      "items": { "$ref": "analysis.schema.json#/$defs/actor-ref" }
     },
     "requirements": {
       "description": "Each requirement the use case must meet, by id: a requirement of the analysis, of any of the three kinds, never withdrawn while the use case is in force (software-analysis DEC-002 point 7). Each is an artefact anchor of the use case, and the capability's check requires the requirement anchors to match the list exactly, so a changed requirement flags every use case that lists it. What meets a requirement is computed from these lists, and the requirement stores none of it. Absent, or empty, where it lists none.",

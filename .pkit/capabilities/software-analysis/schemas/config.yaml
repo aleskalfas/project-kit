@@ -2,6 +2,11 @@
 # project chooses. The capability's README describes each, in its section
 # "Configuration".
 #
+# - `analyses` — the analyses the project keeps, one per component that keeps
+#   one (software-analysis DEC-001 point 2): each with its component, the
+#   folder of the analysis location it lies in, named after the component, and
+#   the analyses it builds on. Left out, the project keeps one analysis, at the
+#   top of the analysis location.
 # - `numbering.freed-by` — ids a person declares free again, declaring that
 #   nothing cites them: a pilot abandoned before anything cited it, say
 #   (software-analysis DEC-001 point 3). Each entry names the commit that
@@ -28,6 +33,8 @@ binds_to:
 pkit_schema: software-analysis:config
 
 # --- reference instance -------------------------------------------------
+
+analyses: []
 
 numbering:
   freed-by: []
