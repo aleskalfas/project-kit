@@ -12,10 +12,10 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
-      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "living-docs:DEC-001#9"]
-      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008]
+      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T07:21:35Z
+      at: 2026-10-19T08:41:11Z
       outcome: updated
 ---
 
@@ -30,7 +30,7 @@ Install it when your project is past the point where one person holds the whole 
 Each artefact declares what makes it true — its anchors — and when it was last revalidated, in the core friction block (COR-050). The core friction check flags it when an anchor changes. A **revalidation** then checks it, and ends as *holds*, *analysis was stale*, *code regressed* or *gap found*. A record is kept only when there's something to report. The full rule is in the decision.
 
 - **Write** the analysis with the `analysis-author` skill, which walks each kind through its stamp, `pkit analysis new` ("Authoring" below).
-- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence and the commands you run to record it, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below).
+- **Resolve** friction with the `analysis-resolver` agent: it proposes each flagged artefact's outcome with its evidence and the commands you run to record it, and asks you whenever it can't tell a stale analysis from regressed code ("The agent" below). It is also the fixer of your analysis: where you grant it, project-management's command that starts fixers may run it after a merge ("As the fixer of your analysis" below).
 
 ## How it meets your decisions
 
@@ -1016,7 +1016,17 @@ For each flagged artefact, upstream first, it reads `pkit friction explain`, the
 - **It asks where it can't tell stale from regressed.** That artefact, the artefacts downstream of it through the cascade and the record carry the question instead of commands — what disagrees, the commit, and the two readings; every other artefact gets its commands. Your answer is the quote it proposes from next.
 - **Not for** another component's artefacts, writing new analysis (the skill's), reviewing a change, planned revalidations or onboarding, or running the software.
 
-Its scripted flows — a drift resolved, the stop, and a regression recorded with its gap — are in [`agents/analysis-resolver/storyboard.md`](agents/analysis-resolver/storyboard.md).
+Its scripted flows — a drift resolved, the stop, a regression recorded with its gap, and a run a command started — are in [`agents/analysis-resolver/storyboard.md`](agents/analysis-resolver/storyboard.md).
+
+### As the fixer of your analysis
+
+Where you grant it, the agent can run on its own after a merge, on the analysis artefacts the merge left out of date, and it only proposes. That makes it the *fixer* of your analysis, declared for each artefact type in the work-tracking role's fixers point ("Connections" below). With project-management installed, that means:
+
+- **Nothing starts until you grant it.** How you are asked, and how you grant or revoke a fixer, is in project-management's README, [8. (Optional) Grant the fixers your capabilities declare](../project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare). Only your answer, or your running the grant command, grants it ([project-management:DEC-056-drift-fixers] point 2).
+- **What a run does.** A command of project-management starts the fixers you granted, once your grant is on the default branch ([project-management:DEC-056-drift-fixers] point 3). It runs the agent on the default branch's stale analysis artefacts, with nobody watching. The agent runs the same judgment as above, on the artefacts the command names. That command is still to come. Until it ships, a grant starts nothing, and you run the agent yourself as above.
+- **What it can't do in a run.** It can't ask you, and it can't read a pull request or a work item. Where it would ask, the artefact waits with its question, and your answer goes with the artefact's next run. A call the run refuses that the judgment needs leaves the artefact unjudged, with the reason. Without `pkit analysis propose`, it judges nothing by reading alone, and each artefact carries that reason. A run cannot start it where its confinement cannot host the `uv` the command starts.
+- **What it hands back.** Each answer it proposes is data, never a command: a file of its fields, the diff of any edit, and the evidence for you to read. The agent's body says what a run takes and returns, under "When a command starts you".
+- **Nothing is applied until you decide.** project-management brings the proposals to you together, and applies only what you accept. A regression's defect and a revalidation record stay yours to write.
 
 ### What the evidence decides: `pkit analysis propose`
 
@@ -1112,6 +1122,25 @@ An install plan predicts the wiring, not the data (COR-053 point 7): it shows th
 - **Empty is an answer.** A default branch nothing has been committed to, or one holding no use case yet, gives the empty list: there are none yet.
 - **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, its command never runs, and this capability never requires one.
 
+**Contributes to `pkit::work-tracking:fixers`** (version 1), the work-tracking role's point for which agent fixes the artefacts of each type. It names the `analysis-resolver` for each of this capability's seven types (DEC-001 points 5 and 8).
+
+```yaml
+- point: pkit::work-tracking:fixers
+  schema_version: 1
+  description: The analysis-resolver fixes the analysis's artefacts of every type.
+  value:
+    - id: software-analysis:actor
+      agent: analysis-resolver
+      description: your actors
+    # … one entry each for use-case, journey, term,
+    # quality-requirement, functional-requirement and constraint
+```
+
+- **A static value.** It reads in the package metadata, and resolving it runs nothing. Each `description` says what the agent keeps true.
+- **Not a grant.** The point says only which agent fixes which type ("As the fixer of your analysis", above).
+- **Yours to replace.** Your own filler of the point may give a type to another deployed agent.
+- **Inert when no capability provides the work-tracking role**: the contribution is reported as having no active provider, and this capability never requires one.
+
 ## The review contribution
 
 Where the project-management capability is installed, this capability contributes the core `rule-set-reviewer` to its merge gate (DEC-001 point 10). The reviewer judges a change against the accepted rules that bind on what it alters or brings under a rule (COR-057). The contribution is `review-contributions.yaml`, with one rule:
@@ -1131,7 +1160,7 @@ When that floor requires the reviewer, and what it reads locally, is in [project
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted, and its judgement rules proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. `SAN` holds proposed rules on what a requirement anchors and the records it never contradicts. The stamp writes a requirement of each kind, numbered as `REQ-NNN` across the three kinds. The check holds a requirement to its schema, its file's name and its heading to its id and its kind, what its `actors` and `refines` name and its anchors to the two, and its body to its structure where the format rule binds. It also fails a file under `requirements/` outside the three kinds' folders. Each kind's place declares the core's link, so a changed obligation asks for a revisit of its anchors outside the analysis. The number check, `pkit analysis check-numbers`, compares its number across the three kinds. A use case and a journey list the requirements they must meet in `requirements`, each anchored, which the stamp writes and the check holds. `pkit analysis met-by` lists what meets each requirement, computed from those lists. Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted, and its judgement rules proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`, and the fixers contribution, which declares the `analysis-resolver` the fixer of each of its types; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. `SAN` holds proposed rules on what a requirement anchors and the records it never contradicts. The stamp writes a requirement of each kind, numbered as `REQ-NNN` across the three kinds. The check holds a requirement to its schema, its file's name and its heading to its id and its kind, what its `actors` and `refines` name and its anchors to the two, and its body to its structure where the format rule binds. It also fails a file under `requirements/` outside the three kinds' folders. Each kind's place declares the core's link, so a changed obligation asks for a revisit of its anchors outside the analysis. The number check, `pkit analysis check-numbers`, compares its number across the three kinds. A use case and a journey list the requirements they must meet in `requirements`, each anchored, which the stamp writes and the check holds. `pkit analysis met-by` lists what meets each requirement, computed from those lists. Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
 
 ## Citing this capability's decisions
 
@@ -1141,4 +1170,4 @@ Shipped: the decision; the method rule set `SAN`, its format rule and its append
 
 None required. It works without any work-tracking, documentation or testing capability, and each of them can enrich it.
 
-project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10). Install and upgrade hold an installed project-management to that range, so the floor never meets a release that does not know it (COR-030). Without project-management, nothing reads the review contribution.
+project-management is an optional dependency, from its first release with the floor `touches-ruled-artefact` (DEC-001 point 10) and the fixers point (DEC-001 point 8). Install and upgrade hold an installed project-management to that range, so neither the review contribution nor the fixers contribution meets a release that does not know it (COR-030). Without project-management, nothing reads them.

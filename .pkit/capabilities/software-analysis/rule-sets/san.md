@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-19T07:21:33Z
+          at: 2026-10-19T08:41:20Z
           outcome: unchanged
-          unchanged-because: DEC-001 gains point 12, the order an analysis is built in, and point 9 derives its candidates in that order. Neither adds or changes a part, a form or a structure of any kind, and point 1, which this format rule carries, is unchanged, so the rule holds as written.
+          unchanged-because: DEC-001 gains its agent as the fixer of the capability's types in points 5 and 8, with a rationale, an alternative and a line in its Implications. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
