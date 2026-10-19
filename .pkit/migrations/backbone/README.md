@@ -1,7 +1,10 @@
 # Backbone migrations
 
-Per-version migration scripts for the kit's backbone, organised as `<major>.<minor>.0/<NNN>-<slug>.sh` (per COR-010 and `.pkit/lifecycle/README.md`).
+The backbone's migration scripts, one folder per version, as `<major>.<minor>.0/<NNN>-<slug>.sh`. Your project receives them by sync, and a version transition runs them. [COR-010](../../decisions/core/COR-010-resource-lifecycle.md) sets the rules, and the lifecycle README's [migration framework](../../lifecycle/README.md#migration-framework) is the spec.
 
-Empty today — the backbone is at `0.1.0` (see `.pkit/VERSION`) with no prior version to migrate from. The first migration directory lands when the backbone reaches `0.2.0` (or later) and an upgrade requires a manifest-schema, structural, or resource-scoped migration.
+- **When a folder runs:** a version transition runs each folder above the backbone version the project last completed, up to its target. Where the project records no completed transition, it runs every folder up to the target once ([the replay](../../lifecycle/README.md#the-replay-a-missing-completion)).
+- **The order within a folder:** the runner runs a folder's scripts in the order of their names. Each name opens with a zero-padded number, used once in its folder. The numbers follow COR-010's order of scopes: manifest-schema first, then structural, then resource-scoped.
+- **Safe over any state:** a backbone migration acts only on a positive sign that its change is needed, since a transition may run it again over a project whose migration history is unknown.
+- **Patch releases** have no migrations. A folder covers every patch of its minor line.
 
-Each version directory holds scripts that run when an adopter upgrades into that version's `<major>.<minor>` line. Within a directory, scope ordering is `manifest-schema → structural → resource-scoped`, by the `NNN` index within each scope. Patches don't have migrations (per the lifecycle spec — backward-compatible bug fixes by semver convention).
+These scripts are the methodology's. Migrations for a component your project authors live with that component ([directory layout](../../lifecycle/README.md#directory-layout)).

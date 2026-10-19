@@ -4755,6 +4755,8 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         from project_kit import visibility
 
         click.echo(visibility.render_runtime_ignore(target_root))
+    # Last, the questions its points declare (COR-061).
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 @main.command()
@@ -5112,11 +5114,19 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
     receives by sync is not judged, nor one the tip already holds, at its
     path or renamed in its folder with the same content.
 
-    Exits 0 when covered or no triggers exist and no script targets a
-    released version; exits 1 when triggers exist without matching
-    migrations, listing the affected tiers so the author can land the
-    missing scripts, or when a script targets a released version, naming
-    the version to move it to.
+    It also fails a migration script the change adds, or moves in, whose
+    number another script in its folder holds, as merging the base would
+    leave the folder: the runner orders a folder's scripts by name, so two of
+    one number run in an order nobody chose. A number another change took on
+    the base since the branch left it counts. A script the project receives
+    by sync is not judged.
+
+    Exits 0 when covered or no triggers exist, no script targets a released
+    version and none takes a number its folder holds; exits 1 when triggers
+    exist without matching migrations, listing the affected tiers so the
+    author can land the missing scripts, when a script targets a released
+    version, naming the version to move it to, or when a script takes a
+    number its folder holds, naming the number to take.
     """
     from project_kit import migrations as migrations_mod
 
@@ -5138,9 +5148,18 @@ def migrations_check_diff(base_ref: str | None, include_working_tree: bool) -> N
         tip=found.tip,
         head=None if include_working_tree else "HEAD",
     )
+    clashes = migrations_mod.number_clashes(
+        target_root,
+        report.landed,
+        base=found.ref,
+        fork=found.fork,
+        tip=found.tip,
+        head=None if include_working_tree else "HEAD",
+    )
     migrations_mod.render_coverage_report(report)
     migrations_mod.render_released_targets(released)
-    if not report.is_covered or released:
+    migrations_mod.render_number_clashes(clashes)
+    if not report.is_covered or released or clashes:
         raise SystemExit(1)
 
 
@@ -6518,6 +6537,8 @@ def install_capability_cmd(
         # capability's query commands, so an offline `pkit validate` answers
         # without a `pkit sync` first (#1090).
         _deploy_capability(target_root, source_kit, name)
+    # Last, the questions its points declare (COR-061).
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 def _install_capability_in_source(
@@ -6560,6 +6581,7 @@ def _install_capability_in_source(
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 def _create_declared_rule_set(
@@ -6861,6 +6883,8 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
         # is identical regardless of origin) — its query-command provisioning
         # included (#1090).
         _deploy_capability(target_root, source_kit, name)
+    # Last, the questions its points declare (COR-061).
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 def _upgrade_incubated_capability(
@@ -6902,6 +6926,7 @@ def _upgrade_incubated_capability(
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+    _ask_point_questions(target_root, name, dry_run=dry_run)
 
 
 def _upgrade_capability_in_source(
@@ -6944,6 +6969,7 @@ def _upgrade_capability_in_source(
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+    _ask_point_questions(target_root, name, dry_run=dry_run)
 
 
 def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
@@ -6964,6 +6990,27 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     )
     install_mod.run_installed_adapter_primitives(ctx)
     install_mod.provision_query_commands(ctx, component=name)
+
+
+def _ask_point_questions(
+    target_root: Path,
+    name: str,
+    *,
+    dry_run: bool,
+    source: CapabilitySource | None = None,
+) -> None:
+    """The last step of a capability's install, register or upgrade (COR-061):
+    the questions of the points it defines and of the points its contributions
+    reach, asked where a person can answer and named otherwise. Once the
+    operation has run, they are read from the live wiring. A dry run names them
+    from the wiring with `source`, the version it would bring, in place."""
+    from project_kit import point_questions
+
+    sources = [source] if dry_run and source is not None else []
+    wiring = point_questions.wiring_after(target_root, sources)
+    point_questions.ask(
+        target_root, point_questions.questions_for(wiring, capability=name), dry_run=dry_run
+    )
 
 
 def _check_backbone_satisfied(target_root: Path, capability_source: CapabilitySource) -> None:

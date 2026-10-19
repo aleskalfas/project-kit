@@ -29,9 +29,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T21:26:53Z
+      at: 2026-10-19T06:40:54Z
       outcome: unchanged
-      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: release.py now also warns of an adapter's or a capability's migration folder the release does not cut, and migrations check-diff in cli.py also fails a script whose number its folder holds. The backbone folder's warning this use case names reads as before, and the release, changelog and tag steps are untouched.
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it

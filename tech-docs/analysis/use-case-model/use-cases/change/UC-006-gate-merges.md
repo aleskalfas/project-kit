@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T21:14:53Z
+      at: 2026-10-19T06:39:12Z
       outcome: unchanged
-      unchanged-because: This change words the friction revisit help in cli.py and the revisit finding in friction_check.py, and splits one validation bullet of COR-050 point 12. How a merge waits on pkit validate and pkit friction check is untouched.
+      unchanged-because: This change makes pkit migrations check-diff also fail a migration script whose number another script in its folder holds. This use case names that check only among the project's other checks, each exiting non-zero on what fails it, and how pkit validate and pkit friction check hold a merge is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

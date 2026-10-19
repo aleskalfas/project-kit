@@ -25,9 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T21:26:54Z
+      at: 2026-10-19T06:40:55Z
       outcome: unchanged
-      unchanged-because: This change alters only the help text of friction revisit in cli.py. The release, migration and report commands this use case describes are untouched.
+      unchanged-because: release.py now also warns of a component's migration folder the release does not cut, and migrations check-diff in cli.py also fails a script whose number its folder holds. This use case names no migration folder, and the versions, floors, changelog and notes it describes the release writing for a component are untouched.
 ---
 
 # UC-009 — Release my component on its own version

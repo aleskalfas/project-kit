@@ -1,6 +1,6 @@
 """Migration runtime + authoring-time coverage check (per COR-010).
 
-Two responsibilities:
+Four responsibilities:
 
 1. **Runtime execution** — a migration is a per-minor-version script
    that bridges adopter state from one version to the next. The runner
@@ -31,6 +31,12 @@ Two responsibilities:
    change lands at or below it. Both read the released version through
    `recorded_version`, from a tree: the stamp from the default branch, as an
    allocator (COR-054 point 3), the check from its base's tip.
+
+4. **Each number once in a folder** — the runner runs a folder's scripts in
+   the order of their names, so their numbers order them only while each is
+   used once. The stamp numbers past the highest in the folder, and the check
+   (`number_clashes`) fails a script a change lands with a number its folder
+   holds, read as merging the base would leave it.
 """
 
 from __future__ import annotations
@@ -97,6 +103,9 @@ def parse_version_tuple(value: str) -> tuple[int, int, int]:
 
 # A full commit id, as a pipeline names a base; a line names it shortened.
 _FULL_COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
+
+# A script the runner runs (`[0-9]*.sh`), the digits its name opens with as its number.
+_SCRIPT_NUMBER_RE = re.compile(r"^(\d+).*\.sh$")
 
 # A released version: `major.minor.patch`, with a pre-release or build suffix allowed.
 _RELEASE_RE = re.compile(r"^(\d+)\.(\d+)\.(\d+)(?:[-+][0-9A-Za-z.+-]*)?$")
@@ -736,6 +745,124 @@ def released_targets(
     return tuple(found)
 
 
+def script_number(name: str) -> int | None:
+    """The number of a script the runner runs (`[0-9]*.sh`): the digits its file name
+    opens with. `None` for a file the runner does not run."""
+    match = _SCRIPT_NUMBER_RE.match(name)
+    return int(match.group(1)) if match else None
+
+
+@dataclass(frozen=True)
+class NumberClash:
+    """A migration script a change lands whose number another script in its folder
+    holds; `line` names the other and the number to take."""
+
+    path: str
+    tier: Tier
+    component: str | None
+    line: str
+
+
+def number_clashes(
+    target_root: Path,
+    landed: Sequence[str],
+    *,
+    base: str,
+    fork: str,
+    tip: str,
+    head: str | None = None,
+) -> tuple[NumberClash, ...]:
+    """Each script of `landed` whose number another script in its folder holds. The
+    runner runs a folder's scripts in the order of their names, so two of one number
+    run in the order the rest of their names gives, which nobody chose.
+
+    The folder is read as merging the base would leave it: its scripts at commit
+    `head`, or in the working tree when `head` is `None`, less those the base's tip
+    `tip` removed since the branch point `fork`, and with those the tip added since.
+    So a number another change took on the base since the branch left it clashes
+    too. Of two scripts the change lands with one number and no other beside them,
+    only the later by name is named, so one renumbering mends it. Each script named
+    is told a number of its own past the folder's highest. Skipped: a script
+    in no `X.Y.0` folder, a file the runner does not run, and a script the project
+    receives by sync (`is_synced_copy`). `base` is the base as named, for the line, a
+    commit id shortened."""
+    judged = [
+        path
+        for path in landed
+        if _VERSION_DIR_RE.match(PurePosixPath(path).parent.name)
+        and script_number(PurePosixPath(path).name) is not None
+    ]
+    if not judged:
+        return ()
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    judged = [
+        path
+        for path in judged
+        if ownership is None or not ownership.is_synced_copy(target_root, path)
+    ]
+    if not judged:
+        return ()
+    folders = {PurePosixPath(path).parent.as_posix() for path in judged}
+    at_head = _folder_scripts(target_root, head, folders)
+    at_tip = _folder_scripts(target_root, tip, folders)
+    at_fork = at_tip if fork == tip else _folder_scripts(target_root, fork, folders)
+    taken_since = at_tip - at_fork
+    merged = (at_head - (at_fork - at_tip)) | taken_since
+    if _FULL_COMMIT_RE.match(base):
+        base = base[:SHORT]
+
+    def number(rel: str) -> int:
+        return script_number(PurePosixPath(rel).name) or 0
+
+    def named(rel: str) -> str:
+        name = PurePosixPath(rel).name
+        return f"{name} ({base} took it since this branch left it)" if rel in taken_since else name
+
+    found: list[NumberClash] = []
+    # The number each folder hands out next: one past its highest, then on, so two
+    # scripts named in one folder are never told to take one number.
+    upcoming: dict[str, int] = {}
+    for path in sorted(judged):
+        folder = PurePosixPath(path).parent.as_posix()
+        beside = sorted(
+            {*(r for r in merged if PurePosixPath(r).parent.as_posix() == folder), path}
+        )
+        others = [rel for rel in beside if rel != path and number(rel) == number(path)]
+        if not others or (all(rel in judged for rel in others) and path < min(others)):
+            continue
+        take = upcoming.get(folder, max(number(rel) for rel in beside) + 1)
+        upcoming[folder] = take + 1
+        tier, component = _migration_path_tier(path), _migration_path_component(path)
+        label = tier + (":" + component if component else "")
+        line = (
+            f"[{label}] {path}: its number {number(path):03d} is also held by "
+            f"{' and '.join(named(rel) for rel in others)}, so the order they run in falls "
+            f"to the rest of their names. Renumber it to {take:03d}, a number its folder "
+            f"does not hold."
+        )
+        found.append(NumberClash(path, tier, component, line))
+    return tuple(found)
+
+
+def _folder_scripts(target_root: Path, ref: str | None, folders: set[str]) -> set[str]:
+    """The scripts the runner runs in `folders`, each a path from the project root: at
+    commit `ref`, or in the working tree when `ref` is `None`."""
+    if ref is None:
+        return {
+            f"{folder}/{file.name}"
+            for folder in folders
+            if (target_root / folder).is_dir()
+            for file in (target_root / folder).iterdir()
+            if file.is_file() and script_number(file.name) is not None
+        }
+    return {
+        rel
+        for rel in CommitTree(target_root, ref).files()
+        if PurePosixPath(rel).parent.as_posix() in folders
+        and script_number(PurePosixPath(rel).name) is not None
+    }
+
+
 def _git_diff_name_status(
     target_root: Path, base_ref: str, *, include_working_tree: bool = False
 ) -> list[tuple[str, str, str | None]]:
@@ -968,6 +1095,31 @@ def render_released_targets(found: Sequence[ReleasedTarget]) -> None:
             "strong",
             "Verdict: RELEASED. Move each script above to a version not yet released "
             "before merging.",
+        )
+    )
+    click.echo()
+
+
+def render_number_clashes(found: Sequence[NumberClash]) -> None:
+    """Render what `number_clashes` found, with its own verdict; nothing when it found
+    nothing."""
+    if not found:
+        return
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong",
+            f"{len(found)} migration script(s) in diff take a number their folder holds:",
+        )
+    )
+    for clash in found:
+        click.echo(f"    {clash.line}")
+    click.echo()
+    click.echo(
+        "  "
+        + cli_render.style(
+            "strong",
+            "Verdict: NUMBER TAKEN. Renumber each script above before merging.",
         )
     )
     click.echo()
