@@ -1,6 +1,6 @@
 ---
 name: analysis-author
-description: Author the software analysis — an actor, a glossary term, a use case, a journey, a quality requirement, a functional requirement, a constraint, or a revalidation record — through `pkit analysis new`, choosing the slug, the area, the actor and the steps, a requirement's kind, what each artefact anchors to (code, decisions) or why an actor, a term or a requirement stays unanchored, and whether a revalidation leaves a record at all. Also choose each kind's parts, the structure its template shows, as a project adopts the capability, from a candidate filled with its own example. Composite skill per COR-020, paired with `pkit analysis new`, with one sub-procedure per kind and one for the choice. Use when adopting software-analysis, adding to a project's analysis, or recording a revalidation that found something.
+description: Author the software analysis — an actor, a glossary term, a use case, a journey, a quality requirement, a functional requirement, a constraint, or a revalidation record — through `pkit analysis new`, choosing the slug, the area, the actor and the steps, a requirement's kind, what each artefact anchors to (code, decisions) or why an actor, a term or a requirement stays unanchored, and whether a revalidation leaves a record at all. Also build an analysis bottom-up, from its concepts in the glossary to the journeys last, and choose each kind's parts, the structure its template shows, as a project adopts the capability, from a candidate filled with its own example. Composite skill per COR-020, paired with `pkit analysis new`, with one sub-procedure per kind, one for the build order and one for the choice. Use when adopting software-analysis, building or adding to a project's analysis, or recording a revalidation that found something.
 metadata:
   wraps_commands:
     - pkit analysis new
@@ -8,6 +8,7 @@ metadata:
     - pkit analysis check-numbers
 composes:
   - choose-templates.md
+  - build-analysis.md
   - actor.md
   - term.md
   - use-case.md
@@ -38,7 +39,7 @@ This is the **software-analysis** capability's authoring skill. It covers what a
 - a requirement of each of three kinds
 - a revalidation record
 
-It also covers the choice of each kind's parts, which comes first when a project adopts the capability. The command owns the file's correctness: its id, its place, the anchors the rule asks for. This skill owns the choices behind it: which slug, which actor, which steps, what the artefact rests on, and whether a revalidation has anything to record (COR-005's skill and command pairing).
+It also covers the choice of each kind's parts, which comes first when a project adopts the capability, and the order an analysis is built in. The command owns the file's correctness: its id, its place, the anchors the rule asks for. This skill owns the choices behind it: which slug, which actor, which steps, what the artefact rests on, and whether a revalidation has anything to record (COR-005's skill and command pairing).
 
 The rule is [software-analysis:DEC-001-software-analysis-discipline], and the rule for requirements is [software-analysis:DEC-002-analysis-requirements]. The layout, every field and every command are in `.pkit/capabilities/software-analysis/README.md`.
 
@@ -57,6 +58,7 @@ Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `supe
 | You want to | Sub-procedure | Command |
 |---|---|---|
 | Choose each kind's parts, as you adopt the capability | `choose-templates.md` | `pkit analysis validate --preview`, on a candidate stamped as the kind's sub-procedure says |
+| Build an analysis, or an area of it, from its concepts up | `build-analysis.md` | the commands of each kind it walks, in its order |
 | Name a role that uses the system, and what it needs | `actor.md` | `pkit analysis new actor <slug>` |
 | Pin down a domain word, or rename one | `term.md` | `pkit analysis new term <slug>` |
 | Describe one actor's goal and how the system fulfils it | `use-case.md` | `pkit analysis new use-case <slug> --actor <ACT-id>` |
@@ -66,7 +68,7 @@ Verify each record in `gates:` is `accepted`; halt if any is `proposed` or `supe
 
 A kind's parts are chosen before its first artefact or record is written, with `choose-templates.md`. The shipped parts are a starting point the project reviews, never a default it skips (DEC-001 point 1).
 
-For a part of the product not yet described, go in that order: actors first (a use case names one), then use cases, then the journeys through them. Write terms whenever a word needs pinning down. Write requirements whenever something must hold beyond one actor's goal. Open the matching sub-procedure in this folder and follow it; the framing below applies to all of them.
+For a part of the product not yet described, follow `build-analysis.md`, which builds it from its concepts up (DEC-001 point 12): the glossary and the actors first, the journeys last. Open the matching sub-procedure in this folder and follow it. The framing below applies to all of them.
 
 Judging whether existing artefacts still hold after a change is the capability's `analysis-resolver` agent's work. This skill writes what it, or you, decided.
 
@@ -115,6 +117,17 @@ Analysis written first lets an agent invent what the system must do, and everyth
 - **A quoted decision:** the words of the person who decided, quoted in the artefact, with their name and the date. Quote a requirement's in its *Rationale* or *Imposed by*, and a guarantee's beside it. A goal holds one sentence, so quote its decision under a heading of your own after the last part, such as `## Sources`, and name the goal in plain words. The check never reports a heading of your own. Where the project closes the kind's labels, it reports a bold label of your own, so write none there.
 
 A source covers only what it bears out, so a requirement's sources together cover what its `statement` asks and any value its `measure` sets. Nothing else is a source: not the need a goal states, and not a proposed record. A *Rationale* or an *Imposed by* counts once it is filled, so write in it the reason the person who decides or a record gives, never one you supply. Where you find no source, do not write the item. Ask the person who decides, and quote the answer. `SAN`'s `RS-SAN-007` asks the same. While it is proposed, it binds nothing.
+
+### Use the glossary's terms
+
+Each artefact you write uses a concept of the domain only where a term of the glossary defines it, and names the concept by that term's name. A term's definition does the same. `SAN`'s `RS-SAN-008` asks it, and its *How* says what counts. While it is proposed, it binds nothing.
+
+- **No term yet.** Stamp the term first (`term.md`), then use the concept.
+- **One name.** Never name a defined concept by another word, a name the term replaces included. Never use a term's name in another meaning, unless the term tells that meaning apart from its own.
+- **One term.** Before you stamp a term, check that no term in force defines its concept already.
+- **A definition.** It names the concepts it uses by their terms too. It holds no word of its own term's name, so it names a concept whose term's name is such a word in other words.
+- **A changed term.** A rename, a withdrawal or a changed definition flags none of the artefacts that use the term, so find and mend them in the same change (`term.md`, "Later").
+- **What uses no concept.** An actor's name, an artefact's id, a proper name, the names of the analysis's own kinds and parts, words you quote from a person or a document, and code you quote in backticks.
 
 ### An actor, a term or a requirement nothing embodies
 

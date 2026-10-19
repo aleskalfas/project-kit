@@ -87,7 +87,7 @@ pkit:
 - **5e.** The artefact carries deferrals. The revalidation keeps only those `--keep` names, or those a prompt at a terminal keeps, and removes the rest. The revalidation itself then answers what each removed deferral had put off (COR-050 point 4).
 - **6a.** The run has no terminal, and neither `--yes` nor `--dry-run` is given. The system refuses and writes nothing. It names the command to run with `--dry-run`, and the path rejoins at step 5.
 - **6b.** The artefact's block would not pass validation once written. The system refuses and writes nothing. The developer mends the block that `pkit validate` names, and the path rejoins at step 5.
-- **7a.** The check reports a `bump`: `at` changed with nothing behind it, such as `updated` with no change to the content. The developer corrects the answer, and the path rejoins at step 5.
+- **7a.** The check reports a `bump`: `at` changed with nothing behind it, such as `updated` while the content stayed as it was. The developer corrects the answer, and the path rejoins at step 5.
 - **9a.** The project runs the change check in `warning` mode. The check reports what it finds and passes, so nothing holds the merge on it.
 - **9b.** The pull request's target moved on, and merging the target into the branch conflicts inside a `revalidated` block. `pkit friction resolve` resolves the block's text, and writes no answer of its own. It names the revalidation still owed, and the path rejoins at step 5.
 - **10a.** The reviewer finds a passage that does not hold:

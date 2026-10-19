@@ -39,11 +39,11 @@ pkit:
 
 - **AI agent** (`ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
 
-**Preconditions:** The project has installed the software-engineering capability, and the adapter has deployed its `software-engineer` agent.
+**Preconditions:** The project has installed the software-engineering capability, and the adapter has deployed its `software-engineer` agent definition.
 
 **Assumptions:**
 
-- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
+- The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent definition's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
 - Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too (software-engineering DEC-002 point 4).
 - The change builds only on accepted decision records (core rule 2).
 - The agent asks before a destructive operation, such as `git push --force` or deleting files outside `project/` (core rule 8).
@@ -75,4 +75,4 @@ pkit:
 
 **Minimal guarantees:**
 
-- A project that names no corpus still gets the agent deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points 3 and 6, and `_resolve_agent.py`).
+- A project that names no corpus still gets the agent definition deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points 3 and 6, and `_resolve_agent.py`).
