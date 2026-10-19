@@ -59,7 +59,7 @@ It takes the next free number across the three kinds, on the default branch and 
 
 ## 7. Fill it
 
-Each field and part you fill holds its hint, which says what goes there and gives an example. Fill each as its hint says, and delete the hint. That covers the statement, the measure and where it holds, in the front matter, and each part of the body. Your answers from step 2 go in the parts on what verifies it and on why it is needed, or who imposes it.
+Each field and part you fill holds its hint, which says what goes there and gives an example. Fill each as its hint says, and delete the hint. That covers the statement, the measure and where it holds, in the front matter, and each part of the body. Your answers from step 2 go in the parts on what verifies it and on why it is needed, or who imposes it. Write each concept by its term (the shared framing's "Use the glossary's terms").
 
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging.
 
