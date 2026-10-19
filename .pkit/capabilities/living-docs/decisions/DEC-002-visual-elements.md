@@ -61,7 +61,7 @@ A page may rest on what holds the truth about the software, beyond decision reco
 - **The page may state such a fact.** It needs no link to another page that states it, and no anchor on one, as DEC-001 point 3 says of a decision record.
 - **A user page and the internal root.** A page of the user space may rest on a home under the internal root. It anchors that home, and links nothing under the internal root (DEC-001 point 1).
 - **Never a home of this kind:** a page, which is a home only among the pages (DEC-001 point 3), and a diagram in any form, such as a fence, a diagram's source file or an image.
-- **Every other fact** has its home among the pages, as DEC-001 point 3 says. It is the one page that states the fact in full. For a fact with a home of the kinds above, it is a page that states the fact in full. A page is a fact's home only where it states the fact in prose.
+- **Every other fact** has its home among the pages, as DEC-001 point 3 says: the one page that states the fact in full. A page that does not anchor the home above that holds a fact takes, as that fact's home, a page that states it in full. A page is a fact's home only where it states the fact in prose.
 - **A diagram shows only facts with a home elsewhere.** Each fact it shows has its home in what the page anchors, or in prose on a page. A fact that only a diagram states has no home, and breaks the rule.
 - **A diagram of its own page's prose** is a view of that prose, not a second statement of its facts. Where the two disagree, the rule is broken.
 - **A diagram of another page's fact** is a summary of it, with the link and the anchor a summary takes (DEC-001 point 3).
