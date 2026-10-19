@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-18T17:35:45Z
+      at: 2026-10-19T08:10:15Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 4 gains that a document lying only in an untyped place of rule sets outside every root, with no assignment, is no page. The developer's needs on pages, writing one for its reader with grounding anchors, having a stale page's fix proposed and having a page read as its reader, hold for every page, and this changes only which documents are pages, so they still hold.
+      unchanged-because: software-analysis DEC-001 point 9 now derives the candidates in the order point 12 gives, of every kind, restates its reversed order as the analysis drawn from what exists, and cites COR-050 point 8. An agent still derives the candidates from the code, the documents and the decisions, and a person still confirms them, so the developer's need to describe an existing project that way still holds.
 ---
 
 # ACT-developer — Developer

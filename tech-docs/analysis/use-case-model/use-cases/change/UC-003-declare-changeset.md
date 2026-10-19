@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:13:40Z
+      at: 2026-10-19T06:39:15Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. Declaring a changeset and the release check this use case describes are untouched.
+      unchanged-because: This change makes the release's migration-dir warning cover adapter and capability folders, and adds a number check to pkit migrations check-diff in cli.py. The changesets, the changeset guard and the release commands this use case describes behave as before, and the warning writes no version.
 ---
 
 # UC-003 — Declare what my change means for the next release
@@ -35,12 +35,12 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the changeset guard on the pull request with no person to answer. It reads the `skip-changeset` label as the guard's escape hatch.
 
-**Preconditions:** The project declares its releases in changesets under `.changes/unreleased/`, as project-kit does (PRJ-002 D1).
+**Preconditions:** The project declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
 
 **Assumptions:**
 
 - Surface is a person's judgement (PRJ-002 D2). The guard reads only paths, so it can flag a change that moves no surface, or miss one that does (`release.py`).
-- The change edits no version number, such as `.pkit/VERSION` or a component's `version`, since only the release writes them (PRJ-002 D1).
+- The change edits no version number, such as `.pkit/VERSION` or a component's `version`, since only the release step writes them (PRJ-002 D1).
 
 **Trigger:** The developer's change touches the surface of the backbone or of a component.
 
@@ -58,7 +58,7 @@ pkit:
 
 - **1a.** The change touches no path of the backbone or of a component, such as a change to `tech-docs/` alone. The developer adds no changeset, and the path goes on at step 4.
 - **1b.** The change moves no surface, yet touches a component's paths, such as an internal refactor under `src/project_kit/`. The developer adds a `none` changeset for it, and the path goes on at step 3.
-- **1c.** What the change moves comes to need a backbone, or a version of another capability. Its changeset says so in `requires_backbone`, `requires_capabilities` or `runs_on_capabilities`, as `release` or a shipped version. The release then raises the floor, or widens the bound (PRJ-002 D4).
+- **1c.** What the change moves comes to need a backbone, or a version of another capability. Its changeset says so in `requires_backbone`, `requires_capabilities` or `runs_on_capabilities`, as `release` or a shipped version. The release step then raises the floor, or widens the bound (PRJ-002 D4).
 - **2a.** The change records a decision. Its changeset declares `none` where the decision's feature ships in a later change. Where the decision's text itself changes what adopters do, it declares `patch` or above (PRJ-002).
 - **3a.** A changeset's format is wrong, such as a `body` that is no sentence. `pkit release lint` names it, and the path rejoins at step 2.
 - **4a.** The base resolves to no commit. The guard refuses and names the fix. The use case ends.
@@ -70,7 +70,7 @@ pkit:
 - **7a.** The pull request carries the `skip-changeset` label. The CI pipeline passes it to the guard as `PKIT_CHANGESET_SKIP`, which skips the surface check. The guard still checks floors, bounds and range edits.
 - **7b.** The pull request reaches a merge queue. The guard does not run on the queue's merge, which carries no labels, since it judged the pull request's diff already.
 
-**Postconditions:** For the backbone and each component whose surface the change moves, a changeset in the change names it and its segment. Each waits under `.changes/unreleased/` for the release.
+**Postconditions:** For the backbone and each component whose surface the change moves, a changeset in the change names it and its segment. Each waits under `.changes/unreleased/` for the next release step.
 
 **Minimal guarantees:**
 

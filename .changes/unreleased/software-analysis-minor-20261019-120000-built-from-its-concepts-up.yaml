@@ -1,0 +1,31 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  An analysis is built from its concepts up (#1784). DEC-001 point 12 gives
+  the order. First come the concepts and how they relate, in the glossary,
+  and then the actors. The requirements that bind the whole system follow.
+  Then come the use cases, area by area, each area after the areas it builds
+  on, and the journeys come last. An artefact uses only what the order puts
+  before it. One that needs something there, and finds it missing, goes back
+  and writes it there first. The order holds for a new analysis, for an area
+  added later and for a brownfield project's candidates (point 9). The
+  `analysis-author` skill walks it in a new sub-procedure,
+  `build-analysis.md`, which says when each step is done, and the README's
+  "Adopting it" says so.
+  `SAN` holds a new judgement rule, `RS-SAN-008`, proposed: an analysis
+  artefact uses a domain concept only where a term of the glossary defines
+  it, and names it by that term's name, and no two terms define one concept.
+  A term's definition is judged too. The rule declares no check and binds
+  nothing while proposed, so `SAN` stays at 1.0.0.
+  **The cost, once it is accepted:** accepting it gives `SAN` a new major.
+  Moving your set's pin to that major brings every artefact of your analysis
+  under the rule, not only those a change alters. On that change, each use of
+  a concept of your domain, in the rule's sense, that the glossary does not
+  define is a break: settled where the rule's text settles it, which
+  withholds the rule-set reviewer's approval (COR-060 point 1), and
+  otherwise a passage for a person.
+  Define the terms in that change, or leave a file out of your set's scope
+  until it is mended, such as one area at a time. COR-060 point 2 gives the
+  other ways out.

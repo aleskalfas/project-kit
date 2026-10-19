@@ -4,7 +4,9 @@ The capability provides the `pkit::documentation` role and defines two data
 points under it — `readers` (`union`, the default `user` and `maintainer`
 always included, inert `fail`) and `reading-evidence` (`union`, no default,
 inert `fallback`) — and contributes to the work-tracking role's
-`pkit::work-tracking:doc-check` with its command filler, `fill-doc-check`.
+`pkit::work-tracking:doc-check` with its command filler, `fill-doc-check`, and
+to its `pkit::work-tracking:fixers` with a static value naming its agent as the
+fixer of pages (#1746; DEC-001 points 5 and 7).
 
 Three layers:
 
@@ -18,7 +20,10 @@ Three layers:
 - the contribution through the real backbone: obligations in
   project-management's shape, read from the whole-repository friction check,
   and inert when no work-tracking provider is installed; and project-management's
-  check over them, where an uncovered path is met only once a page anchors it.
+  check over them, where an uncovered path is met only once a page anchors it;
+- the fixer through the real backbone: project-management's checks pass the
+  declaration with the agent as deployed, and report it were the agent to do
+  more than propose.
 
 The capability's scripts are pointed at this interpreter in the adopter copy,
 and the `pkit` they read through is the real CLI under this interpreter
@@ -62,6 +67,10 @@ ROLE = "pkit::documentation"
 READERS = "pkit::documentation:readers"
 EVIDENCE = "pkit::documentation:reading-evidence"
 DOC_CHECK = "pkit::work-tracking:doc-check"
+FIXERS = "pkit::work-tracking:fixers"
+PAGE_TYPE = "living-docs:page"
+AGENT = "living-docs"
+DEPLOYED_AGENT = REPO / ".claude" / "agents" / f"{AGENT}.md"
 READERS_FILLER = "tech-docs/pkit/fillers/pkit/documentation/readers.yaml"
 
 
@@ -124,7 +133,9 @@ def test_the_package_provides_the_role_and_declares_both_points_and_the_contribu
         assert point["description"].strip()
         assert (CAPABILITY / "schemas" / point["schema"]).is_file()
 
-    (contribution,) = connections["extensions"]["contributes"]
+    contributes = {c["point"]: c for c in connections["extensions"]["contributes"]}
+    assert set(contributes) == {DOC_CHECK, FIXERS}
+    contribution = contributes[DOC_CHECK]
     assert contribution == {
         "point": DOC_CHECK,
         "schema_version": 1,
@@ -137,6 +148,25 @@ def test_the_package_provides_the_role_and_declares_both_points_and_the_contribu
     # base: the base a pull request is compared with bounds the consumer's diff.
     assert command["reads"] == ["history"]
     assert (CAPABILITY / command["script"]).is_file()
+
+
+def test_the_agent_is_declared_the_fixer_of_pages_as_a_static_value() -> None:
+    """DEC-001 points 5 and 7; project-management DEC-056 point 1: one entry, for a
+    type of the capability's own registry, naming an agent it ships, given as a
+    static value that project-management's companion schema takes."""
+    package = _package()
+    (fixers,) = [
+        c for c in package["connections"]["extensions"]["contributes"] if c["point"] == FIXERS
+    ]
+    assert "command" not in fixers
+    assert fixers["schema_version"] == 1
+    assert fixers["value"] == [{"id": PAGE_TYPE, "agent": AGENT, "description": "your pages"}]
+    assert fixers["description"].strip()
+    assert _schema(PM_CAPABILITY, "fixers.schema.json").is_valid(fixers["value"])
+    owner, _, name = PAGE_TYPE.partition(":")
+    assert owner == package["component"]["name"]
+    assert name in package["friction"]["types"]
+    assert (CAPABILITY / "agents" / AGENT / f"{AGENT}.md").is_file()
 
 
 def test_the_default_readers_fit_the_readers_schema() -> None:
@@ -1169,3 +1199,100 @@ def test_an_uncovered_path_is_unmet_until_a_page_on_the_branch_anchors_it(
         "check-doc-mapping: all touched mappings satisfied.\n",
         "",
     )
+
+
+# --- the contribution to the fixers point ------------------------------------------------
+
+
+def _fixer_verb(repo: AdopterRepo, verb: str) -> dict[str, Any]:
+    """A fixer command of project-management, with `--json`, reading the point and
+    the type registries through the real `pkit` first on PATH."""
+    completed = subprocess.run(
+        [sys.executable, str(repo.root / PM / "scripts" / f"{verb}.py"), "--json"],
+        cwd=repo.root,
+        stdin=subprocess.DEVNULL,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def _deploy_agent(repo: AdopterRepo, text: str) -> None:
+    """The agent's file as the harness runs it, deployed in the adopter."""
+    target = repo.root / ".claude" / "agents" / f"{AGENT}.md"
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(text, encoding="utf-8")
+
+
+def _our_fixer(listed: dict[str, Any]) -> dict[str, Any]:
+    (fixer,) = [f for f in listed["fixers"] if f["agent"] == AGENT]
+    (entry,) = fixer["types"]
+    return entry
+
+
+def test_the_fixer_of_pages_passes_project_management_s_checks(
+    tracked_project: AdopterRepo,
+) -> None:
+    """The declaration through the real backbone, with project-management's checks:
+    the capability's own type, an agent it ships and deploys, a static value, and an
+    agent that only proposes. Nobody was asked, so nothing is granted."""
+    _track(tracked_project, "")
+    _deploy_agent(tracked_project, DEPLOYED_AGENT.read_text(encoding="utf-8"))
+    listed = _fixer_verb(tracked_project, "list-fixers")
+    assert listed["resolved"], listed["why"]
+    assert _our_fixer(listed) == {
+        "type": PAGE_TYPE,
+        "description": "your pages",
+        "origin": "living-docs",
+        "answer": None,
+        "problems": [],
+    }
+    checked = _fixer_verb(tracked_project, "check-fixers")
+    assert checked["findings"] == []
+    assert checked["summary"] == [
+        f"{FIXERS}: 1 type(s) for 1 agent(s); 1 pass the checks, 0 granted"
+    ]
+
+
+@pytest.mark.parametrize(
+    ("change", "problem"),
+    [
+        (
+            (
+                "tools: [Read, Glob, Grep, Bash, Write]",
+                "tools: [Read, Glob, Grep, Bash, Write, Edit]",
+            ),
+            "holds Edit, a tool that changes existing files",
+        ),
+        (
+            (
+                "tools: [Read, Glob, Grep, Bash, Write]",
+                "tools: [Read, Glob, Grep, Bash, Write, Agent]",
+            ),
+            "holds Agent, a tool that starts agents",
+        ),
+        (("owns: []", "owns: [docs/**]"), "claims paths (docs/**)"),
+        (("tools: [Read, Glob, Grep, Bash, Write]\n", ""), "lists no tools"),
+    ],
+    ids=["edit", "agent", "owns", "no-tools"],
+)
+def test_a_fixer_of_pages_that_does_more_than_propose_starts_no_agent(
+    tracked_project: AdopterRepo, change: tuple[str, str], problem: str
+) -> None:
+    """Were the agent's definition to change files, start agents, claim paths or take
+    every tool, the checks would report the capability's entry, and it would start
+    no agent."""
+    _track(tracked_project, "")
+    text = DEPLOYED_AGENT.read_text(encoding="utf-8")
+    old, new = change
+    assert text.count(old) == 1
+    _deploy_agent(tracked_project, text.replace(old, new))
+    (reported,) = _our_fixer(_fixer_verb(tracked_project, "list-fixers"))["problems"]
+    assert problem in reported["text"], reported
+    assert reported["severity"] == "report"
+    checked = _fixer_verb(tracked_project, "check-fixers")
+    assert checked["summary"] == [
+        f"{FIXERS}: 1 type(s) for 1 agent(s); 0 pass the checks, 0 granted"
+    ]

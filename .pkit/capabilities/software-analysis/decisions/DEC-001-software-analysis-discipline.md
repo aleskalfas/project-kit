@@ -21,7 +21,7 @@ The core layer supplies the machinery this needs:
 - artefact types, which name what an artefact is, so a rule set can select it (COR-056);
 - connection points, through which components exchange knowledge and signals without depending on each other: data slots (COR-052) as one kind, addressed by role (COR-053).
 
-This record decides what the capability keeps, in what shape, where, how it stays true, and how it meets the project's decisions and architecture.
+This record decides what the capability keeps, in what shape, where, how it stays true, in what order an analysis is built, and how it meets the project's decisions and architecture.
 
 ## Decision
 
@@ -133,9 +133,28 @@ The slots record (COR-052) allows three kinds of filler: a project file, a capab
 
 The capability contributes to the documentation role's readers point, `<methodology>::documentation:readers`, by mapping its actors and their needs onto that point's shape (refinement per COR-053). It contributes to the work-tracking role's use-case point, `<methodology>::work-tracking:use-cases`, every use case the default branch holds, withdrawn ones included, each under its id. Once settled, an id names one use case for good; the only id that later names another is one the project freed, declaring that nothing cites it (point 3). Its filler reads settled state alone, and gives the whole set or no answer when a reading it relies on fails (refinement per COR-052 point 6 and COR-054). Each contribution addresses a role, not a capability, so any provider of that role receives it. A contribution is inert whenever no provider of its role is installed, and the capability never requires one.
 
+### 12. An analysis is built from its concepts up
+
+An analysis is built bottom-up, from the concepts it uses. Whoever writes it, a person or an agent, keeps to this order:
+1. **The concepts and how they relate,** in the glossary. Each term's definition gives its broader kind and what sets it apart (point 1), and names the concepts it relates to by their terms, wherever its form allows. The actors follow, with their needs.
+2. **The requirements that bind the whole system,** of the kinds [software-analysis:DEC-002-analysis-requirements] gives.
+3. **The use cases, area by area.** An area is written only after the areas it builds on.
+   - **Builds on.** An area builds on another where its use cases rely on what that area's use cases make true, such as a precondition.
+   - **Together.** Areas that build on each other are written together.
+   - **Their requirements.** A requirement that binds one area comes before that area's use cases. One that binds some areas comes before the first of them.
+   - **No areas.** A project that groups no use cases into areas writes them as one area.
+4. **The journeys, last,** across the areas they pass through.
+
+What the order binds:
+- **What each artefact uses.** An artefact uses only what the order puts before it: what an earlier step wrote, or what its own step wrote first. So a definition uses terms already defined, an actor's needs use the glossary's terms, and an area uses the areas it builds on. Each artefact names a concept by the one term that defines it.
+- **Going back.** An artefact that needs something the order puts before it, and finds it missing, goes back and writes it there first. That may be a concept, an actor, a requirement, or a use case of an area it builds on. So the order binds what an artefact uses, not when a step is closed.
+- **Every analysis.** The order holds for a new analysis and for an area added later. It holds for a brownfield project's candidates (point 9), and for an artefact a revalidation updates.
+- **What a reviewer checks.** A judgement rule of `SAN` holds the result the order leaves in the analysis. An artefact uses a domain concept only where a term of the glossary defines it, and names the concept by that term's name. No two terms define one concept. A term's definition is judged too, and a term breaks the rule while an artefact in force uses a name it replaces.
+- **What the writer keeps.** The order in which the steps and the areas are written leaves nothing in the analysis a reviewer could read. So the writer keeps it, and judges which area builds on which, as the authoring skill walks them. No rule holds them.
+
 ### 9. Brownfield onboarding
 
-A project with no analysis starts with nothing anchored, so friction reads zero. The signal is uncovered surface: the paths the project declares its analysis should cover (point 2), against what the artefacts anchor to (COR-050). An agent derives candidate actors, use cases and terms from the code, the existing documents and the project's decisions. On a brownfield project these are the ground truth, so the usual order is reversed. A person confirms the candidates. Onboarding needs a non-empty declared surface, and it is complete when that surface is covered. Every artefact must be either anchored, or explicitly accepted as unanchored with a reason recorded on the artefact, such as an actor that no code embodies. The reason is the core friction block's `unanchored-because` (COR-050 point 1), so an accepted actor or term is listed apart and never counted as unanchored work left to do (point 8).
+A project with no analysis starts with nothing anchored, so friction reads zero. The signal is uncovered surface: the paths the project declares its analysis should cover (point 2), against what the artefacts anchor to (COR-050). An agent derives candidate artefacts from the code, the existing documents and the project's decisions, in the order point 12 gives, the concepts first. On a brownfield project these sources are the ground truth, so the analysis is drawn from what exists. A planned change, by contrast, reviews the analysis before the code (point 5). A person confirms the candidates. Onboarding needs a non-empty declared surface, and it is complete when that surface is covered. Every artefact must be either anchored, or explicitly accepted as unanchored with a reason recorded on the artefact, such as an actor that no code embodies. The reason is the core friction block's `unanchored-because` (COR-050 point 1), so an accepted actor or term is listed apart and never counted as unanchored work left to do (COR-050 point 8).
 
 ### 10. Independent
 
@@ -200,6 +219,27 @@ So a decision names a requirement rather than restating its measure, and the ana
 
 **Why the actor's voice ships.** A need in the actor's first-person voice is how user stories state one, and a goal that starts with its verb is how use cases name one. Neither is one project's style, so the capability ships both in its hints, and a project that writes them otherwise replaces the hints.
 
+**Why an analysis is built from its concepts up.** Written top-down, an analysis defines its words on the way. Each area names what it meets in words of its own. So two areas name one thing differently, and a reader cannot tell one thing named twice from two things. An agent that writes the analysis makes this worse, since it fills each part plausibly, in whatever words come to it.
+
+Built from its concepts, each later artefact uses words the glossary already gives one meaning:
+- **The requirements that bind the whole system** come before the areas, so no area states them again in its own way.
+- **An area that builds on another** relies only on use cases already written.
+- **The journeys** come last, since their steps are use cases.
+- **The actors** come with the concepts, because a requirement names the actors whose needs it meets, and a use case names its actor.
+- **The anchors' direction.** Each later step anchors what an earlier one wrote: a use case its actor and its requirements, a journey its use cases. So the order writes first what others depend on, the order friction is reported in (COR-050 point 11).
+
+The capability's maintainer decided the order of the concepts, the requirements, the use cases and the journeys as a rule of the method, not as advice ([project-kit#1784](https://github.com/aleskalfas/project-kit/issues/1784)).
+
+**Why a rule holds the result, and the writer the order.** Advice gives way wherever it costs time, and the cost shows only later, as two names for one thing. A rule a reviewer checks holds what the order leaves: each artefact uses the glossary's one name for each concept. What an artefact uses is in the analysis at every commit. Which file was written first is not, and it tells a reader nothing. A term added in the same change as the use case that first needs it keeps the order.
+
+**Why the glossary is judged too.** A term's definition uses concepts as any artefact does, and the definitions are where the concepts relate. Two terms for one concept would let two areas each use a defined term, and still name one thing differently. So the rule judges each term's definition, and holds that no two terms define one concept. It judges the definition alone: a term's example illustrates the definition, and its distinctions tell words apart, so neither says how the concept relates to others.
+
+**What the rule costs.**
+- **Many terms.** Each concept of the project's domain, in the rule's sense, needs a term before an artefact uses it. An analysis written before the rule meets many breaks at once, when it comes under the rule. COR-060 point 2 gives the ways out, such as bringing the analysis under the rule one area at a time.
+- **A changed term.** Using a term asks for no anchor on it. So renaming, withdrawing or redefining a term flags none of the artefacts that use it, and a reviewer judges none of them in that change. Whoever changes the term finds its uses, and mends them in the same change. A rename the rule holds on the term itself: the term breaks it while an artefact in force uses a name it replaces.
+- **A term's name in an everyday sense.** It breaks the rule, unless the term tells that sense apart from its own.
+- **Readings for a person.** Whether a word is a concept of the project's domain is often a reading the rule does not settle. So many of its findings wait for a person (COR-057), and a gate that holds a merge for such a finding holds changes to the analysis more often.
+
 **Why revalidation owns both planned and drift-triggered checks.** Checking before code and checking after an unplanned change are the same act with different triggers. One record shape, and one set of outcomes, serve both.
 
 **Why records only with findings.** Most revalidations find that everything holds. Writing a file each time would bury the few that matter. Git already records the routine ones through the revalidation recorded on the artefact.
@@ -237,6 +277,14 @@ So the direction from the analysis treats a record that ships as it treats the p
 
 ### Alternatives considered
 
+- **Top-down, from the use cases, defining terms on the way.** Rejected. It is the order in which two areas name one thing differently.
+- **The order as advice in the authoring skill alone.** Rejected. Advice gives way where it costs time, and nothing would check it.
+- **A check that a term was committed before what uses it.** Rejected. The order binds what an artefact uses, which the analysis shows. A term added in the same change as its first use keeps the order.
+- **Each step closed before the next starts.** Rejected. A later step finds concepts the first one missed, and going back to define them keeps the order without freezing the glossary.
+- **A rule that holds which area is written before which.** Not taken. The analysis shows which use case a precondition relies on, but not which area was written first.
+- **Leaving the glossary unjudged.** Rejected. Two terms could define one concept, and each area could use its own.
+- **Marking each use of a term, so a script checks it.** Rejected. Every artefact would carry markup for a script, and whether a word is a domain concept would still be a reader's judgement.
+- **Each artefact anchoring the terms it uses.** Rejected. The anchors would be a second list of what the text names, and no check could hold the two together, since whether a word is a use is a judgement. Every edit to a term, a reworded example included, would also flag every artefact that uses it, an anchor broader than what makes the artefact true (COR-050 point 7).
 - **Use-case sets per design, validated once.** Rejected. The knowledge would be scattered across designs and would stop being maintained after each one shipped.
 - **A flat analysis folder.** Rejected. Actors and terms get lost among many use cases, and there is no natural place for grouping or later modules.
 - **Actors kept in one collection file.** Rejected. An actor's needs would sit far from its description, and keeping them beside it in the body would make a tool read data from a body, or keep one fact in two places.
@@ -279,12 +327,12 @@ So the direction from the analysis treats a record that ships as it treats the p
 
 ## Implications
 
-- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that guides revalidation. It also ships a type registry, and each place names a type from it. It ships its contribution of the rule-set reviewer too, with an optional dependency on project-management (point 10).
+- **The capability ships** the layout for its artefacts, a declared structure per kind with the template rendered from it, its method rule set with the format rule and its judgement rules, the declaration of its places and connections, commands to stamp artefacts and check their shape (friction itself is the core check), and an authoring skill that walks the order of point 12 and guides revalidation. It also ships a type registry, and each place names a type from it. It ships its contribution of the rule-set reviewer too, with an optional dependency on project-management (point 10).
 - **Installing the capability** creates the project rule set it declares (COR-017). The set is the project's own. It selects the analysis by the capability's types (point 2), and inherits `SAN` at its major when the set is created.
   - Install creates it only where no set of the project's own inherits `SAN`, directly or not. So a project that chose where `SAN` binds keeps its own set.
   - A migration creates it, on the same condition, for a project that installed the capability before it declared the set.
   - From then on the set's pin decides when a new major of `SAN` binds (point 1).
-- **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
+- **Projects** keep their analysis under their internal documentation root, choose each kind's parts when they adopt the capability, build the analysis from its concepts up (point 12), keep their own additions in its project tier, and wire the core friction check into their continuous integration if they want it enforced.
 - **A project's use cases** anchor the records they rest on or are answered by, and the views that realise them. The project's records and views carry no anchor on the analysis (point 11).
 - **A change to a kind's structure** carries the migration of the live artefacts with it, and settles how a part it adds is answered and what friction the migration raises on their dependants.
 - **History kept as it was written:** the way a record, or a withdrawn artefact, is checked against the structure in force when it was written or withdrawn comes with the first change to a kind's structure that needs it.
