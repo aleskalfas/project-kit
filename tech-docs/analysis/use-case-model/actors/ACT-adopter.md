@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-19T14:38:29Z
+      at: 2026-10-19T16:10:19Z
       outcome: unchanged
-      unchanged-because: "software-analysis DEC-001 point 1 gains what makes a use case's precondition true: its producers, the environment stated once, and the optional after field. Choosing each kind's parts as the capability is adopted rests on the kinds' declared structures, which point 1 leaves as they were, so the adopter's need still holds."
+      unchanged-because: living-docs DEC-001 point 1 gains that a documentation site serves one space, and that an image both spaces show lies beside a user page (DEC-002). Setting up a space with its own location and a scoped definition, and bringing existing documents into spaces, read as before, so the adopter's needs still hold.
 ---
 
 # ACT-adopter — Adopter

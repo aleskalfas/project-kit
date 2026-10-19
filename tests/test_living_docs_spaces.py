@@ -1644,17 +1644,26 @@ def test_ldoc_validates_as_a_method_rule_set_with_its_origins(project: AdopterRe
         "1.0.0",
         ".pkit/capabilities/living-docs/rule-sets/ldoc.md",
     )
-    assert [rule.id for rule in ldoc.rules] == [f"RS-LDOC-00{n}" for n in range(1, 7)]
-    # Each rule anchors the point of DEC-001 that states it (point 3), and the two whose
-    # field the page's front matter carries also the point that gives the field (point 4).
+    assert [rule.id for rule in ldoc.rules] == [f"RS-LDOC-00{n}" for n in range(1, 9)]
+    # Each rule DEC-001 gives anchors the point of DEC-001 that states it (point 3), and
+    # the two whose field the page's front matter carries also the point that gives the
+    # field (point 4).
     with_field = {"RS-LDOC-003", "RS-LDOC-004"}
-    for rule in ldoc.rules:
+    for rule in ldoc.rules[:6]:
         assert rule.status == "accepted"
         assert rule.origin == {"decision": "living-docs:DEC-001"}
         expected = ("living-docs:DEC-001#3",)
         if rule.id in with_field:
             expected += ("living-docs:DEC-001#4",)
         assert rule.anchors("record") == expected
+    # DEC-002's two rules land proposed, for LDOC's next major to accept (its point 10):
+    # the successor of the rule on one home, and the rule on text alternatives.
+    home, alternative = ldoc.rules[6:]
+    for rule in (home, alternative):
+        assert rule.status == "proposed"
+        assert rule.origin == {"decision": "living-docs:DEC-002"}
+    assert home.anchors("record") == ("living-docs:DEC-001#3", "living-docs:DEC-002#3")
+    assert alternative.anchors("record") == ("living-docs:DEC-002#8",)
 
 
 def test_ldoc_declares_the_parts_its_validation_enforces(project: AdopterRepo) -> None:
@@ -1673,6 +1682,7 @@ def test_ldoc_declares_the_parts_its_validation_enforces(project: AdopterRepo) -
     assert declared == {
         "RS-LDOC-003": [("living-docs", "validate")],
         "RS-LDOC-004": [("living-docs", "validate")],
+        "RS-LDOC-008": [("living-docs", "validate")],
     }
     format_rule, reader_rule = ldoc.rule("RS-LDOC-004"), ldoc.rule("RS-LDOC-003")
     assert format_rule is not None and reader_rule is not None
@@ -1680,6 +1690,10 @@ def test_ldoc_declares_the_parts_its_validation_enforces(project: AdopterRepo) -
     assert "sections its kind's declared structure names" in structure.part
     (field,) = reader_rule.checks
     assert "`reader` field" in field.part
+    alternative_rule = ldoc.rule("RS-LDOC-008")
+    assert alternative_rule is not None
+    (fence,) = alternative_rule.checks
+    assert "`mermaid` fence" in fence.part and "`accTitle`" in fence.part
 
 
 def test_a_space_definition_from_the_template_inherits_ldoc(project: AdopterRepo) -> None:
@@ -2042,14 +2056,174 @@ def test_where_the_rules_bind_unread_is_one_error_and_no_structure_or_reader_che
     assert location == CONFIG
     assert message == (
         "where living-docs:LDOC's rules bind cannot be read — `pkit rule-sets reach --json` "
-        "exited 2 without its document: no reach here. No page's structure or reader is "
-        "checked until it can: living-docs checks each part of a rule only where the rule "
+        "exited 2 without its document: no reach here. No page's structure, reader or diagram "
+        "is checked until it can: living-docs checks each part of a rule only where the rule "
         "binds, read through the backbone's `pkit rule-sets reach --json` (DEC-001 point 3; "
         "COR-051 point 7)."
     )
     assert _format_line(document) == (
         "page formats: not checked — where RS-LDOC-004 binds cannot be read."
     )
+    assert _diagram_line(document) == (
+        "diagrams: not checked — where RS-LDOC-008 binds cannot be read."
+    )
+
+
+# --- diagrams' text alternatives (RS-LDOC-008; living-docs DEC-002 point 8; #1802) -------
+
+
+def _diagram_line(document: Mapping[str, Any]) -> str:
+    (line,) = [line for line in document["summary"] if line.startswith("diagrams")]
+    return line
+
+
+#: A diagram with no text alternative, and one with both halves of it.
+BARE = "```mermaid\nflowchart LR\n    A --> B\n```\n"
+DESCRIBED = (
+    "```mermaid\nflowchart LR\n    accTitle: Two steps\n    accDescr: A leads to B.\n"
+    "    A --> B\n```\n"
+)
+
+
+def _accept_alternative_rule(repo: AdopterRepo) -> None:
+    """The adopter's copy of LDOC with RS-LDOC-008 accepted, as its next major will
+    accept it (DEC-002 point 10): the rule then binds through the spaces' definitions."""
+    ldoc = repo.root / LD / "rule-sets" / "ldoc.md"
+    text = ldoc.read_text(encoding="utf-8")
+    proposed = "  RS-LDOC-008:\n    status: proposed\n"
+    assert proposed in text
+    ldoc.write_text(
+        text.replace(proposed, "  RS-LDOC-008:\n    status: accepted\n"), encoding="utf-8"
+    )
+
+
+def _lacks(rel: str, line: int, lacks: str) -> tuple[str, str]:
+    return (
+        rel,
+        f"{rel}: the `mermaid` fence at line {line} lacks {lacks} followed by text that is not "
+        "blank, so the diagram has no text alternative. Add `accTitle: <what the diagram is>` and "
+        "`accDescr: <what it shows>` inside the fence, after its first line (RS-LDOC-008; "
+        "DEC-002 point 8).",
+    )
+
+
+def test_the_rule_on_text_alternatives_ships_proposed_and_checks_no_diagram(
+    project: AdopterRepo,
+) -> None:
+    """RS-LDOC-008 binds nothing while it is proposed (COR-051 point 4), so a diagram
+    without a text alternative fails no page, and the summary says why."""
+    front, _body = document_parts.split_front_matter(LDOC.read_text(encoding="utf-8"))
+    assert front is not None
+    rules = YAML(typ="safe").load(front)["rules"]
+    assert rules[formats.ALTERNATIVE_RULE]["status"] == "proposed"
+    project.write({"docs/flow.md": _page("signpost", f"# Flow\n\n{BARE}")})
+    document = run(project)
+    assert document["findings"] == []
+    assert _diagram_line(document) == (
+        "diagrams: not checked — RS-LDOC-008 is proposed, so it binds nothing (COR-051 point 4)."
+    )
+
+
+def test_where_the_rule_binds_a_diagram_without_a_text_alternative_fails(
+    project: AdopterRepo,
+) -> None:
+    _accept_alternative_rule(project)
+    titled_only = "```mermaid\nflowchart LR\n  accTitle: Two steps\n  A --> B\n```\n"
+    project.write(
+        {
+            "docs/flow.md": _page("signpost", f"# Flow\n\n{BARE}\n{DESCRIBED}\n{titled_only}"),
+            "docs/ok.md": _page("signpost", f"# Ok\n\n{DESCRIBED}"),
+        }
+    )
+    document = run(project)
+    assert errors(document) == [
+        _lacks("docs/flow.md", 8, "an `accTitle` and an `accDescr`"),
+        _lacks("docs/flow.md", 20, "an `accDescr`"),
+    ]
+    assert _diagram_line(document) == (
+        "diagrams (RS-LDOC-008, accepted): 4 `mermaid` fence(s) in 5 page(s) checked for a "
+        "text alternative, 2 lacking one."
+    )
+    result = CliRunner().invoke(
+        main, ["--color", "never", "validate", "--only", "living-docs:spaces"]
+    )
+    assert result.exit_code == 1
+    assert "docs/flow.md: the `mermaid` fence at line 8 lacks" in result.output
+
+
+@pytest.mark.parametrize(
+    "fence",
+    [
+        # the description as a block
+        "```mermaid\nflowchart LR\n  accTitle: Steps\n  accDescr {\n    A leads to B.\n  }\n```\n",
+        "```mermaid\nflowchart LR\n  accTitle: Steps\n  accDescr { A leads to B. }\n```\n",
+        # in a callout, a tilde fence, under a list item, an info string of more words
+        "> [!NOTE]\n> ```mermaid\n> pie\n>   accTitle: Share\n>   accDescr: Half each.\n> ```\n",
+        "~~~mermaid\npie\naccTitle: Share\naccDescr: Half each.\n~~~\n",
+        "- A step:\n\n  ```mermaid\n  pie\n    accTitle: Share\n    accDescr: Half each.\n  ```\n",
+        "```mermaid title\npie\n  accTitle  :  Share\n  accDescr: Half each.\n```\n",
+        # not a diagram: a fence of another language, code that shows one, a comment
+        "```text\nflowchart LR\n```\n",
+        "````markdown\n```mermaid\nflowchart LR\n```\n````\n",
+        "<!--\n```mermaid\nflowchart LR\n```\n-->\n",
+    ],
+)
+def test_a_diagram_with_its_alternative_or_no_diagram_passes(
+    project: AdopterRepo, fence: str
+) -> None:
+    _accept_alternative_rule(project)
+    project.write({"docs/flow.md": _page("signpost", f"# Flow\n\n{fence}")})
+    assert errors(run(project)) == []
+
+
+@pytest.mark.parametrize(
+    ("fence", "lacks"),
+    [
+        ("```mermaid\npie\n  accTitle:\n  accDescr: Half each.\n```\n", "an `accTitle`"),
+        ("```mermaid\npie\n  accTitle: Share\n  accDescr {\n  }\n```\n", "an `accDescr`"),
+        (
+            "```mermaid\npie\n  %% accTitle: Share\n  %% accDescr: Half each.\n```\n",
+            "an `accTitle` and an `accDescr`",
+        ),
+        ("```mermaid\npie\n  accTitle: Share\n  accDescr: Half each.\n", "nothing"),
+    ],
+)
+def test_an_empty_or_commented_alternative_is_none(
+    project: AdopterRepo, fence: str, lacks: str
+) -> None:
+    """Each half is followed by text that is not blank. A Mermaid comment holds neither. A fence
+    never closed runs to the end of the file, and is read as far as it goes."""
+    _accept_alternative_rule(project)
+    project.write({"docs/flow.md": _page("signpost", f"# Flow\n\n{fence}")})
+    expected = [] if lacks == "nothing" else [_lacks("docs/flow.md", 8, lacks)]
+    assert errors(run(project)) == expected
+
+
+def test_a_page_the_rule_does_not_bind_on_is_not_read_for_diagrams(
+    project: AdopterRepo,
+) -> None:
+    _accept_alternative_rule(project)
+    outside_every_space(project)
+    project.write({"docs/drafts/flow.md": _page("signpost", f"# Flow\n\n{BARE}")})
+    document = run(project)
+    assert errors(document) == []
+    assert _diagram_line(document) == (
+        "diagrams (RS-LDOC-008, accepted): 0 `mermaid` fence(s) in 3 page(s) checked for a "
+        "text alternative, 0 lacking one; 1 page(s) RS-LDOC-008 does not bind on, not checked."
+    )
+
+
+def test_the_diagrams_of_a_body_and_what_each_carries() -> None:
+    """`formats.diagrams` reads each `mermaid` fence below the front matter, with its
+    opening line and the halves of its text alternative it carries."""
+    text = f"---\nkind: signpost\n---\n\n# Flow\n\n{BARE}\n{DESCRIBED}"
+    assert formats.diagrams(text) == [
+        formats.Diagram(7, titled=False, described=False),
+        formats.Diagram(12, titled=True, described=True),
+    ]
+    assert formats.Diagram(1, titled=True, described=False).lacking == ("accDescr",)
+    # The headings are read as before: a `#` line inside a diagram is no heading.
+    assert [h.text for h in formats.headings(text + "```mermaid\n# no\n```\n")] == ["Flow"]
 
 
 binding = _library("binding")

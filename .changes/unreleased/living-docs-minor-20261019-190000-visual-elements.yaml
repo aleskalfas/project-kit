@@ -1,0 +1,20 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  The new record living-docs DEC-002 decides how a page shows diagrams, images, console
+  output and callouts. Each is neutral content with no styling, and your
+  presentation decides how it looks. A diagram is a `mermaid` fence in the
+  page by default, and never a fact's home. A screenshot or a recording is
+  anchored at the script that produced it, never at the file. A command and
+  its output sit in a shell-session fence, such as `console`, which your own
+  runner checks, and a callout uses the standard `[!NOTE]` syntax. `LDOC`
+  gains two proposed rules, which bind nothing until a major of the set
+  accepts them. `RS-LDOC-007` succeeds `RS-LDOC-002`: an accepted record or
+  rule, an analysis artefact, a captured source or code the page anchors may
+  be a fact's home, and a diagram never is. `RS-LDOC-008` asks a text
+  alternative of each diagram, image or recording that carries meaning.
+  `pkit living-docs validate` fails a `mermaid` fence without an `accTitle`
+  or an `accDescr` on each page where `RS-LDOC-008` binds. While the rule is
+  proposed it binds on no page, and the summary's new line says so.
