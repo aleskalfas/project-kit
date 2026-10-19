@@ -14,8 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T06:33:01Z
-      outcome: updated
+      at: 2026-10-19T08:50:57Z
+      outcome: unchanged
+      unchanged-because: "DEC-056 gains the fixer run's contract: one brief, an answer of fields held by a schema, one result line per artefact and a fixed list of none reasons. This page says the agent writes the evidence, the answer as fields and a diff for an updated answer, holds with one question what only the person knows, and that nothing is applied until the person accepts it. Each of those still holds under the contract, and the page names no part of it the change altered."
 ---
 
 # living-docs capability

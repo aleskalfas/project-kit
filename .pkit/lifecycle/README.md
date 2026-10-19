@@ -35,8 +35,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-19T08:29:56Z
-      outcome: updated
+      at: 2026-10-19T09:38:25Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 changes points 2, 3, 10, 11 and 12: the run's output, the definition check, the fields read and never passed, and what the limit reaches. The agent-run row here rests on point 1, the backbone's run command, and its bound, standard input and environment read as before."
 ---
 
 # Lifecycle

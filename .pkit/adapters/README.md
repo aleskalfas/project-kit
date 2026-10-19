@@ -12,8 +12,9 @@ pkit:
       record: [COR-005, COR-006, COR-047, ADR-066]
       artefact: [.pkit/adapters/claude-code/README.md, ".pkit/lifecycle/README.md#how-a-registered-command-is-run"]
     revalidated:
-      at: 2026-10-19T07:10:46Z
-      outcome: updated
+      at: 2026-10-19T09:38:24Z
+      outcome: unchanged
+      unchanged-because: ADR-066 now says a run's output is the agent's final message, refuses a definition that fails its check, reads an agent's methodology fields without passing them, and names in point 11 what the limit cannot reach. The contract here already says the limit ends every process still descended from the harness and names one that left the tree. The request, the closed set of flags and what is not yet built read as before.
 ---
 
 # Adapters

@@ -86,8 +86,9 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-19T08:30:04Z
-      outcome: updated
+      at: 2026-10-19T09:38:27Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 now says a run's output is the agent's final message, refuses a definition that fails its check, and ends every process of the run it can reach. The agents run section says the runner ends the harness and the processes still descended from it, and its refusals and JSON document match the unconfined form today. The definition check belongs to the confined form, which #1744 builds."
 ---
 
 # Command-line interface
