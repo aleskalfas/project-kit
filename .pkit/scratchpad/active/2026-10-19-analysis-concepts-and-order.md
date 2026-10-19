@@ -371,11 +371,16 @@ One short round, at low effort, on the revision. It found no new conflict with a
 
 Each question gives a recommendation, in the order the build needs the answers. Question 3 is the choice the maintainer left to this note. Questions 2 and 4 to 10 come from places where a decision of 19 October, read as stated, meets an accepted record or another decision.
 
+**All ten are answered, each as it recommends.** The maintainer's delegate answered them on 19 October, under the maintainer's standing delegation. Step 1 writes them into software-analysis DEC-001 and DEC-002, `SAN` and `ANA` (#1809). Each question's last line says where its answer lies.
+
 1. **Adapters.** Confirm that each adapter may keep an analysis of its own, since an adapter is a component. Recommended: yes, on a capability's terms, once an adapter needs one (COR-007).
+   - **Answered:** as recommended, in `ANA`'s RS-ANA-004. DEC-001 point 2 leaves to each project which components keep an analysis.
 2. **Dependencies between capabilities' analyses.** The decision allows them only as an option. But a capability may require another (COR-030), as software-engineering requires project-management.
    - **Recommended:** an analysis builds on the analyses of the components its component depends on, required or optional. A required one is its environment, as the core is. An optional one is used "where it is installed".
    - **What follows:** the head's list, the versioned links and the record anchors serve any analysis depended on, not only the core's.
+   - **Answered:** as recommended, in DEC-001 points 2 and 4, and `SAN`'s RS-SAN-010.
 3. **The one-way rule between analyses:** general, in `SAN`, or project-kit's, in `ANA`? Recommended: `SAN`. Any project with several analyses meets it, and it follows the direction of a component's dependencies (COR-030). In `SAN` it reads without the core's name. An analysis names only analyses of components its own component depends on, and an optional one only as an option.
+   - **Answered:** as recommended, as `SAN`'s RS-SAN-010.
 4. **Ids across a repository's analyses.** "Its own numbering" lets project-kit hold several `UC-001`, and two analyses could each hold `TERM-gate` or an actor for the core. Three readers take an id across the repository:
    - **the anchor lookup,** which takes the first artefact with the id, so an anchor could silently reach another analysis's.
    - **work tracking,** which receives every use case under its id, an id naming one use case for good (DEC-001 point 8).
@@ -387,20 +392,28 @@ Each question gives a recommendation, in the order the build needs the answers. 
    - **The backbone:** an artefact anchor on an id two artefacts share becomes ambiguous, as a point or a slug two share already is (COR-050 point 7). It warns first, so nothing fails an adopter.
 
    **The alternative:** each analysis numbers alone, and the backbone reads an artefact as `<analysis>:<id>`. That adds a concept to places, which moves them into a functionality of their own (COR-056 point 7). It also changes work tracking's point and project-management.
+
+   **Answered:** as recommended. DEC-001 point 3 and DEC-002 point 2 hold the ids. The view's prefix comes with the view kind's record (step 3), and the backbone's warning with COR-050 point 7.
 5. **A capability's analysis leaving the repository.** Taking the folder away deletes cited artefacts, which append-only ids forbid (DEC-001 point 3). Issues cite its use cases, which work tracking's point promises to keep (project-management DEC-054 point 2). Their numbers could also be given again.
    - **Recommended:** the repository a capability leaves keeps each moved artefact as a withdrawn stub that says where it went. That uses withdrawal as it stands, and adds no concept.
+   - **Answered:** as recommended, in DEC-001 point 3.
 6. **The term's link to its view.** The decision gives a term a link to its concept's section. The link is the reverse of the view's anchor, which the records compute and never store (DEC-001 point 11, DEC-002 point 7). As body text it is the term's content, so renumbering a view or renaming its heading changes every term it explains.
    - **Recommended:** keep the link as a named exception, a copy for navigation that the stamp writes from the views' headings and the check holds equal. Record its cost: such a change flags whatever anchors those terms. Readers want the link where they read the term.
    - **The alternative:** compute the link where the glossary is shown, such as in the overview, and store none.
+   - **Answered:** as recommended. The view kind's record carries it (step 3).
 7. **The environment in a use case.** DEC-001 point 1's Assumptions part already holds what the environment gives, with its record. The decision also puts `**Environment:** … (record)` in the Preconditions part, so two parts could hold one fact.
    - **Recommended:** each environment fact is stated once. Alone, it sits in the Assumptions part, and `after` does not list it. As an alternative beside a use case, it sits in that precondition's line, as `**From UC-059, or Environment:**`. An initial use case then writes no `after`, and its Preconditions part reads `None.`.
    - **The alternative:** the Preconditions part takes every environment line, and the Assumptions part is retired. Every live use case would then need a migration.
+   - **Answered:** as recommended, in DEC-001 point 1 and `SAN`'s RS-SAN-009.
 8. **The check, where producers are alternatives.** "No producer lies in a later-numbered area folder" refuses an alternative that comes later, such as install for "a project holding the system". The map gives that precondition to some 58 use cases. The same alternative closes a loop, release to install to release, so "leaving out implied arrows" has no single answer.
    - **Recommended:** read the check as "each precondition has at least one producer in its own area or an earlier one". The overview reduces over those earliest producers, and draws the later ones dotted.
    - **And a seventh limit:** a loop of use cases inside one area, with no way out to the environment, passes the check. So nothing proves that each chain ends at an initial use case, and a reviewer judges it.
+   - **Answered:** as recommended, in `SAN`'s RS-SAN-009 and DEC-001's rationale. The overview's dotted arrows come with #1804's record.
 9. **A core actor's needs in a capability.** A use case's goal is one of its actor's needs (RS-SAN-004), and an actor carries its needs (DEC-001 point 1). A capability lists core actors by name only, and the core's analysis never names a capability's. So a capability's use case for a core actor has no need to meet. `ACT-developer` holds about 14 needs today that only capabilities meet.
    - **Recommended:** beside each core actor it lists, a capability's analysis states the needs that actor brings to it, and RS-SAN-004 reads them there. The core actor's needs that only a capability meets move to that capability's analysis.
    - **The readers point:** software-analysis gives each core actor once, with the needs every analysis states for it (DEC-001 point 8).
+   - **Answered:** as recommended, in DEC-001 points 2 and 8, and `SAN`'s RS-SAN-004.
 10. **The version of the links to the core's glossary.** A capability's backbone floor rises only when a change declares it (PRJ-002 D4), and a floor is project-kit's mechanism, not every adopter's (COR-014). A floor set before the core's analysis existed links to no file.
     - **Recommended:** `SAN` says only that the head links to the glossary of the analysis depended on. `ANA` pins project-kit's links to the capability's backbone floor, once in the head. software-analysis's validation warns where the head's version differs from the floor. The release never writes it.
     - **Before the core's analysis exists at the floor,** the head names the first release that holds it, and says why.
+    - **Answered:** as recommended, in DEC-001 point 2 and `ANA`'s RS-ANA-006.
