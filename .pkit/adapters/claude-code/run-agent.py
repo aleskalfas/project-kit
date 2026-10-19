@@ -92,8 +92,8 @@ AGENT_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,127}")
 #: is not part of that run, so they are not passed on.
 RUN_VARIABLES = ("PKIT_COMMAND_DEADLINE", "PKIT_COMMAND_STRAYS", "PKIT_RUN_CACHE")
 
-#: Where the process table is read: the system's own `ps` first, so no `ps`
-#: earlier on the run's PATH stands in for it.
+#: Where the process table is read: the system's own `ps` only, so no `ps` on
+#: the run's PATH stands in for it.
 PS_CANDIDATES = ("/bin/ps", "/usr/bin/ps")
 
 #: How many times the runner walks the process table for descendants it has not
@@ -212,11 +212,10 @@ def harness_environment(env: dict[str, str]) -> dict[str, str]:
 
 
 def process_table() -> dict[int, tuple[int, int]]:
-    """Each process's parent and process group, as `ps` lists them, by pid.
-    Empty when no `ps` can be read: the harness's own group is then all the
-    runner ends."""
+    """Each process's parent and process group, as the system's `ps` lists
+    them, by pid. Empty when no such `ps` can be read: the harness's own group
+    is then all the runner ends."""
     ps = next((path for path in PS_CANDIDATES if os.access(path, os.X_OK)), None)
-    ps = ps or shutil.which("ps")
     if ps is None:
         return {}
     try:
