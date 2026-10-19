@@ -909,3 +909,61 @@ def test_a_run_reports_rather_than_raises(tmp_path: Path) -> None:
     run = run_command(tmp_path / "absent.py", [], cwd=tmp_path)
     assert isinstance(run, CommandRun)
     assert run.ending is Ending.NOT_STARTED
+
+
+# --- what a policy sets: its own bound, standard input, a grace (#1742) ----------
+
+
+def test_a_policy_sets_the_runs_own_bound(tmp_path: Path) -> None:
+    script = _script(tmp_path / "slow.py", "import time\ntime.sleep(30)\n")
+    started = time.monotonic()
+    run = run_command(script, [], cwd=tmp_path, bound_seconds=1)
+    assert time.monotonic() - started < 15
+    assert (run.ending, run.bound_seconds, run.own_bound_seconds) == (Ending.TIMED_OUT, 1, 1)
+    # Its own bound, not the time a caller had left: the run is not clipped.
+    assert not run.clipped
+    assert run.ending_described == "did not answer within 1 s and was stopped"
+
+
+def test_a_policy_writes_the_commands_standard_input(tmp_path: Path) -> None:
+    script = _script(
+        tmp_path / "echo.py", "import json, sys\nprint(json.dumps({'read': sys.stdin.read()}))\n"
+    )
+    run = run_command(script, [], cwd=tmp_path, stdin='{"brief": "é"}'.encode())
+    assert run.ending is Ending.ANSWERED
+    assert run.document == {"read": '{"brief": "é"}'}
+
+
+def test_with_a_grace_the_group_is_asked_to_stop_before_it_is_killed(tmp_path: Path) -> None:
+    asked = tmp_path / "asked"
+    script = _script(
+        tmp_path / "slow.py",
+        "import signal, sys, time\n"
+        "def stop(signum, frame):\n"
+        f"    open({str(asked)!r}, 'w').write(str(signum))\n"
+        "    sys.exit(0)\n"
+        "signal.signal(signal.SIGTERM, stop)\n"
+        "time.sleep(30)\n",
+    )
+    run = run_command(script, [], cwd=tmp_path, bound_seconds=3, grace_seconds=5)
+    assert run.ending is Ending.TIMED_OUT
+    assert asked.read_text() == str(int(signal.SIGTERM))
+
+
+def test_without_a_grace_the_group_is_killed_unasked(tmp_path: Path) -> None:
+    asked = tmp_path / "asked"
+    script = _script(
+        tmp_path / "slow.py",
+        "import signal, time\n"
+        f"signal.signal(signal.SIGTERM, lambda *a: open({str(asked)!r}, 'w').write('x'))\n"
+        "time.sleep(30)\n",
+    )
+    run = run_command(script, [], cwd=tmp_path, bound_seconds=1)
+    assert run.ending is Ending.TIMED_OUT
+    assert not asked.exists()
+
+
+def test_a_nested_run_is_bounded_by_its_own_bound_when_its_caller_has_more_time() -> None:
+    now = 1_000.0
+    assert command_runner._remaining(now + 500, now, 120) == 120
+    assert command_runner._remaining(now + 50.07, now, 120) == 50.0

@@ -8,7 +8,8 @@ pkit:
       path:
         - .pkit/schemas/harness-requirements.yaml
         - .pkit/schemas/harness-requirements.schema.json
-      record: [COR-005, COR-006, COR-047]
+        - src/project_kit/agent_runs.py
+      record: [COR-005, COR-006, COR-047, ADR-066]
       artefact: [.pkit/adapters/claude-code/README.md]
     revalidated:
       at: 2026-10-14T08:38:50Z
@@ -36,7 +37,7 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Currently shipped
 
-- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), and the runtime conventions Claude Code expects.
+- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, "The agent runner" below), and the runtime conventions Claude Code expects.
 
 ## Primitives the lifecycle calls
 
@@ -44,6 +45,39 @@ The lifecycle drives an adapter through scripts it finds **by name** in the adap
 
 - **Deploy primitives** — `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh`, `deploy-agents.sh`, run in that order with no arguments whenever the harness side needs (re-)materialising: init, sync, and a capability's install, register, upgrade and uninstall. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`, and an absent one is skipped.
 - **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active.
+
+## The agent runner
+
+Some commands start an agent with nobody watching: project-management's `review-pr` starts its reviewers that way. No such command calls a harness. It asks the backbone's run command, `pkit agents run`, and the backbone starts the runner the project's adapter registers. The runner starts the harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). So the tie to a harness's command line lives in its adapter, as every other tie does.
+
+**What makes a runner.** Unlike the primitives above, the lifecycle never runs it, and the backbone never finds it by file name:
+
+- **A registered command.** The adapter registers it in its package's `commands:` tree under the one reference `run-agent`. The backbone finds it through its one lookup of that tree (the lifecycle README, "How a registered command is run"). A capability's command of that name is no runner.
+- **Run once for each run.** Each call starts one agent, so a runner is not idempotent. The backbone runs it under the agent-run policy of its one command runner: no arguments, the request on standard input, from the project root.
+- **One runner for a project.** Where no registered adapter registers one, the run is refused, and the command that asked starts no agent and says why. Where more than one does, the run is refused too, until a record says how a project names its harness.
+
+**The request**, one JSON document on standard input: `schema_version` (`1`), `agent`, `brief`, `folder` (an absolute path), `limit_seconds` and `effort` (a level, or `null`). A runner refuses a request with any other key, rather than run it without that key. The confined form, and its keys, arrive with the drift command (ADR-066, Implications).
+
+**The answer**, one JSON document on standard output, exit 0: `schema_version` (`1`), `ending`, `exit_code`, `output`, `diagnostics` and `reason`. The endings:
+
+| `ending` | When | `exit_code` |
+|---|---|---|
+| `finished` | the harness ran and exited | the harness's |
+| `not-started` | the harness could not be started | `null` |
+| `timed-out` | the harness was ended at the limit, with every process it started | `null` |
+| `refused` | the run was refused before it started, with the reason: the harness or the agent is not found, or the request is one the runner does not run | `null` |
+
+Anything else the runner prints, or an exit other than 0, is a run with no answer.
+
+**What a runner owes:**
+
+- **No bypass.** It passes the harness only flags from a closed set, which its adapter's README lists. No member of the set approves a call, or loads configuration other than the run's own (ADR-066 point 4).
+- **The limit.** At `limit_seconds` it ends the harness and every process the harness started. The backbone gives it thirty seconds past the limit to do that and answer. Then it asks the runner to stop with `SIGTERM`, and kills it two seconds later. So a runner that started the harness in a session of its own ends that session when asked to stop.
+- **The environment.** It does not pass on the backbone's own variables for its run of the runner. So a `pkit` the agent runs starts as a run of its own.
+
+**Not yet built.** A run's marker makes a runner refuse inside a run, and it arrives with the drift command (ADR-066 point 8). So does the confined form: its clone, its settings and the check after the run. Until then, every run takes the unconfined form the review command's runs take (ADR-066 point 10).
+
+The Claude Code adapter's runner is `claude-code/run-agent.py` (its README, "The agent runner"). The command is the CLI README's ("Agent runs").
 
 ## Harness requirements
 

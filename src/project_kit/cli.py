@@ -14,7 +14,7 @@ import math
 import os
 import shlex
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 from project_kit import (
     __version__,
+    agent_runs,
     cli_render,
     default_branch,
     friction_check,
@@ -323,6 +324,122 @@ def agents_adopt(agent_name: str, yes: bool) -> None:
         lines.append("")
         lines.append(cli_render.style("strong", f"agent {agent_name!r} deployed."))
     click.echo("\n".join(lines))
+
+
+class _AskedToStop(BaseException):
+    """`SIGTERM` or `SIGHUP` reached `agents run`. Raised so the run stops its
+    runner as an interrupt would, rather than leaving it behind."""
+
+    def __init__(self, signum: int) -> None:
+        super().__init__(signum)
+        self.signum = signum
+
+
+@contextlib.contextmanager
+def _stops_on_signal() -> Generator[None]:
+    """While the block runs, `SIGTERM` and `SIGHUP` raise `_AskedToStop`.
+
+    A caller that ends `agents run` at its own bound, as project-management
+    does, asks it to stop with `SIGTERM`. Python would otherwise exit at once,
+    and the runner, in a session of its own, would run on. Raised here, the
+    signal stops the runner as an interrupt does. Off the main thread no
+    handler can be set, and the block runs without one."""
+    import signal
+
+    def asked_to_stop(signum: int, _frame: object) -> None:
+        raise _AskedToStop(signum)
+
+    previous: dict[int, Any] = {}
+    try:
+        for signum in (signal.SIGTERM, signal.SIGHUP):
+            previous[signum] = signal.signal(signum, asked_to_stop)
+    except ValueError:  # not the main thread
+        pass
+    try:
+        yield
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+@agents.command("run")
+@click.argument("agent_name", metavar="AGENT")
+@click.option(
+    "--folder",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    required=True,
+    help="The folder the run runs in. The run takes the person's and the project's settings "
+    "there, as a session started in it would.",
+)
+@click.option(
+    "--limit",
+    "limit_seconds",
+    type=click.IntRange(1, agent_runs.MAX_LIMIT_SECONDS),
+    required=True,
+    metavar="SECONDS",
+    help="The run's wall-clock limit. At it the runner ends the harness and every process "
+    "it started.",
+)
+@click.option(
+    "--effort",
+    type=click.Choice(agent_runs.EFFORT_LEVELS),
+    default=None,
+    help="The effort level the agent reasons at. Unset: the agent's own, else the harness default.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def agents_run(
+    agent_name: str, folder: Path, limit_seconds: int, effort: str | None, as_json: bool
+) -> None:
+    """Run AGENT once, with nobody watching, on the brief read from standard input.
+
+    The one way a command starts an agent (ADR-066 point 1). The backbone
+    starts the runner the project's adapter registers in its `commands:` tree
+    as `run-agent`, and the runner starts the harness in FOLDER. With no
+    adapter's runner, or more than one, the run is refused and the refusal
+    names the adapters. A run nobody watches cannot answer a question, so a
+    call the harness would ask about is never approved in a person's place: no
+    runner passes a flag that bypasses permissions (ADR-066 point 4).
+
+    \b
+    With --json, one line of JSON, keys sorted: `schema_version` (1), `agent`,
+    `runner` (the adapter, or null), `ending` (`finished`, `not-started`,
+    `timed-out`, `refused`, `no-answer`), `exit_code` (the harness's, when it
+    finished), `output` (the agent's), `diagnostics`, `reason`. Without it,
+    the agent's output, and how the run ended on standard error.
+
+    Exit 0 when the harness finished and exited 0; 1 on any other ending; 2 on a
+    usage error. A caller decides on the document's `ending`, never on the exit.
+    Reference: `.pkit/cli/README.md`, "Agent runs".
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    brief = click.get_binary_stream("stdin").read().decode("utf-8", errors="replace")
+    request = agent_runs.Request(
+        agent=agent_name,
+        brief=brief,
+        folder=folder.resolve(),
+        limit_seconds=limit_seconds,
+        effort=effort,
+    )
+    problem = request.problem()
+    if problem is not None:
+        raise click.UsageError(problem)
+
+    try:
+        with _stops_on_signal():
+            run = agent_runs.run_agent(target_root, request)
+    except _AskedToStop as stopped:
+        sys.exit(128 + stopped.signum)
+    if as_json:
+        click.echo(agent_runs.render_json(run), nl=False)
+    else:
+        if run.output:
+            click.echo(run.output, nl=not run.output.endswith("\n"))
+        click.echo(f"agent {run.agent}: {run.described}", err=True)
+    sys.exit(0 if run.succeeded else 1)
 
 
 def _target_kit() -> Path:

@@ -12,6 +12,7 @@ pkit:
         - src/project_kit/dispatcher.py
         - src/project_kit/router.py
         - src/project_kit/cli_render.py
+        - src/project_kit/agent_runs.py
         - src/project_kit/install.py
         - src/project_kit/capabilities.py
         - src/project_kit/sync.py
@@ -58,7 +59,7 @@ pkit:
         - src/project_kit/backbone_schemas.py
         - src/project_kit/artefact_parts.py
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
-      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064]
+      record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/decisions/README.md#checking-a-changes-numbering
@@ -189,6 +190,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `agents` | report which kit-shipped agents will deploy vs. be skipped — and why, per COR-013. An agent is skipped only when it references an overlay category `.pkit/agents/project/overlay.yaml` doesn't define through a **hard** channel (`owns`/`needs`/`answers`/`reads.paths`/`reads.records`); a category referenced *only* via `reads.patterns` is an **optional** read (ADR-052) whose absence never skips — the agent deploys without it, and the undefined optional categories are surfaced in their own footer state (`Optional \| N categor(ies) undefined \| agents deploy without them`) rather than as a skip cause. Each row also shows the agent's **effective model and effort** (`model inherit`, `effort high (overlay)`) — the overlay's `overrides.<agent>` value, else the front matter's, else `inherit`; a value the harness does not accept is shown refused (the deploy drops it and the agent inherits). Deployment itself happens in `sync`; this is the diagnostic | no | yes (read-only) |
 | `agents reconcile [--write]` | surface referenced-but-undefined overlay categories into `overlay.yaml` as commented stubs (explicit; `sync` never mutates the seeded overlay). Dry-run by default: a category whose conventional directory exists is shown as `category = path`, with the agents that reach it once recorded. `--write` records what the dry run showed, and is itself the consent to record over a directory that already holds documents. Where the overlay is missing, `--write` creates it from its seed, and records nothing in that run ([the agents README, "Diagnosing + repairing the overlay"](../agents/README.md#diagnosing--repairing-the-overlay)) | yes (with `--write`) | yes — idempotent (skips already-present categories) |
 | `agents adopt <agent> [--yes]` | create the conventional directory of each overlay category the agent needs and has undefined, record each in `overlay.yaml`, and deploy the agent. Recording over a directory that already holds documents takes consent. A terminal is asked once for the run, and `--yes` consents. Off a terminal without `--yes` it refuses and writes nothing ([the agents README, "Diagnosing + repairing the overlay"](../agents/README.md#diagnosing--repairing-the-overlay)) | yes | yes — a re-run asks nothing and re-deploys |
+| `agents run <agent> --folder <dir> --limit <seconds> [--effort <level>] [--json]` | run one agent with nobody watching, on the brief read from standard input, through the runner the project's adapter registers (ADR-066); the one way a command starts an agent. See "Agent runs" | what the agent does | no — each call is one run |
 | `config set <key> <value> [--yes]` | set one backbone-owned key of `.pkit/project/config.yaml` (dotted, e.g. `docs.internal`) through the consent-gated writer (COR-048 point 5): the key must exist in the configuration schema and hold a single value, the result is validated before anything is written, the reserved `project` block is refused. Setting `docs.internal` also declares the old root's `rule-sets/` as a place in `friction.places`, where a rule-set file there would go unfound under the new root (COR-051 point 6). Asks once on a terminal; `--yes` consents non-interactively; without either it refuses and names the command to run. See "Configuration file" | yes | yes — same value, same file |
 | `docs record-location <capability> <name> [--dry-run]` | record where an installed capability's documentation location `<name>` now lies (COR-049 point 5): a location derived from a root is written to the capability's `project/docs-locations.yaml`, so a later root change moves nothing; one already recorded is never overwritten. Running it is the consent: the value recorded is the one already in use, so it asks nothing, at a terminal or off one, and `--yes` is accepted with no effect (COR-049 point 5). What a capability's stamping command runs when it places the first document there. See "Configuration file" | yes | yes — a recorded location is left as it is |
 | `repository base [--base <ref>] [--json]` | what is settled (COR-054 point 5): the default branch — declared, and resolved to a commit — and the base a comparison reads — `<ref>`, else `$PKIT_CHECK_BASE`, else the default branch — with its commit and where HEAD left it; a branch read from the local branch, and a declaration read as the default, are said on standard error. Runs no discovery. `--json` is the stable document a capability's own script reads instead of resolving a branch or computing a merge-base, and adds HEAD — its commit, none yet, or why git cannot read it. See "Configuration file" | no | yes (read-only) |
@@ -905,6 +907,31 @@ The tests hold the decoder to one shared table of valid and invalid end document
 - taking the PR out of the queue, less the guard.
 
 With the bounds as they stand, a dry run takes at most `98` seconds, and a landing `932` plus the wait's limit: `2732` by default, `932` with `--seconds 0`.
+
+## Agent runs
+
+A command that starts an agent with nobody watching never calls a harness ([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) point 1). It asks the backbone, and the backbone starts the runner the project's adapter registers, which starts the harness (`src/project_kit/agent_runs.py`). project-management's `review-pr` starts its reviewers this way. What the runner owes is the adapters README's ("The agent runner"), and how the backbone runs it is the lifecycle README's agent-run policy ("How a registered command is run").
+
+### `agents run <agent> --folder <dir> --limit <seconds> [--effort <level>] [--json]`
+
+Runs `<agent>` once, on the brief read from standard input, in `<dir>`, and ends it at `<seconds>`. This is the unconfined form, the one the review command's runs take (ADR-066 point 10): the run takes the person's and the project's settings in `<dir>`, and starts in the mode those settings or the harness choose, as a session started there would. The confined form, and the marker that refuses a run inside a run, arrive with the drift command.
+
+- **The runner.** The backbone finds the command a registered adapter registers in its `commands:` tree under `run-agent`, through its one lookup of that tree. A capability's command of that name is no runner. With none, the run is refused and the reason names the registered adapters. With more than one, it is refused too, until a record says how a project names its harness.
+- **What it passes.** The runner reads the request on its standard input: the agent, the brief, the folder, the limit and the effort. No flag that bypasses permissions reaches any run (ADR-066 point 4). The runner passes only the flags its adapter's README lists.
+- **The bounds.** At the limit the runner ends the harness and every process it started. The backbone gives the runner thirty seconds more to answer, then asks it to stop and kills it two seconds later. `SIGTERM` or `SIGHUP` to the command stops the runner the same way, so a caller that ends the command at its own bound ends the harness too.
+- **Usage errors, exit 2.** An agent name that is not a letter or digit followed by letters, digits, `.`, `_` or `-`; an empty brief, or one holding a NUL character; a folder that does not exist; a limit outside 1 second to a week; an effort outside `low`, `medium`, `high`, `xhigh`, `max`.
+- **With `--json`**, one line of JSON, keys sorted: `schema_version` (`1`; a reader refuses a version it does not know), `agent`, `runner` (the adapter whose runner ran it, or `null`), `ending`, `exit_code`, `output` (the agent's), `diagnostics` (what the harness wrote on standard error), `reason`. The endings:
+
+| `ending` | When | `exit_code` |
+|---|---|---|
+| `finished` | the harness ran and exited | the harness's |
+| `not-started` | the harness, or the runner, could not be started | `null` |
+| `timed-out` | stopped at the limit, by the runner or, past its thirty seconds, by the backbone | `null` |
+| `refused` | refused before it started, with the reason: no runner or more than one, a runner whose script is gone, a harness or an agent the runner cannot find, a request the runner does not run | `null` |
+| `no-answer` | the runner ended without an answer the backbone can read; whether the harness ran is not known | `null` |
+
+- **Without `--json`**, the agent's output on standard output, and `agent <agent>: <how it ended>` on standard error.
+- **Exit** `0` when the harness finished and exited `0`, `1` on any other ending, `2` on a usage error. A caller decides on the document's `ending`, never on the exit.
 
 ## Authoring commands
 

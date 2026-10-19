@@ -228,6 +228,8 @@ src = ["src", "tests"]
 # `python3` inside the macOS sandbox (ADR-014) — Python 3.9 on a stock macOS.
 ".pkit/adapters/claude-code/permission-hook.py" = "py39"
 ".pkit/permissions/*.py" = "py39"
+# The agent runner runs under the same bare `python3` (ADR-066 point 1).
+".pkit/adapters/claude-code/run-agent.py" = "py39"
 
 [tool.ruff.lint]
 select = [
