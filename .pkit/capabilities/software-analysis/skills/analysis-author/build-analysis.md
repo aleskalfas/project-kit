@@ -73,4 +73,4 @@ You may not know every concept yet. A concept a later step finds is added then, 
 
 ## What a reviewer checks
 
-A reviewer judges what the order leaves in the analysis under `SAN`'s `RS-SAN-008`, as the shared framing's "Use the glossary's terms" gives it. The order you write in, and which area builds on which, are yours to keep, and no rule holds them.
+A reviewer judges what the order leaves in the analysis under `SAN`'s `RS-SAN-008`, as the shared framing's "Use the glossary's terms" gives it. While the rule is proposed, it binds nothing, and this procedure asks the same of you. The order you write in, and which area builds on which, are yours to keep, and no rule holds them.

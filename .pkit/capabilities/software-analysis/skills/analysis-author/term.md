@@ -6,7 +6,7 @@ A term is a word of the domain and what it means. It is an entry of the glossary
 
 Add a term when a word or a phrase is used in a meaning of the project's domain, one a general dictionary does not give it. Add one too when two words are used for one thing, or one word for two. A word used as a dictionary has it needs no entry.
 
-Before you stamp it, check that no term in force defines the concept already. A second term for one concept is a break of `RS-SAN-008` (the shared framing's "Use the glossary's terms"), so give each concept one term.
+Before you stamp it, check that no term in force defines the concept already. DEC-001 point 12 gives no concept a second term, so give each concept one term (the shared framing's "Use the glossary's terms").
 
 ## 2. Choose the slug and the name
 

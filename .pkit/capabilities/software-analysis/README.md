@@ -922,16 +922,15 @@ The capability's skills, deployed by `pkit sync` with the others (in Claude Code
 
 | Skill | Paired with | Use it to |
 |---|---|---|
-| `analysis-author` — composite: `choose-templates`, `build-analysis`, `actor`, `term`, `use-case`, `journey`, `requirement`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability ("Adopting it", above). Build the analysis from its concepts up. Write an actor, a term, a use case, a journey, a requirement of each of the three kinds, or a revalidation record. Choose the slug, the area, the actor and the steps, a requirement's kind, and what the artefact anchors to, or why an actor, a term or a requirement stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
+| `analysis-author` — composite: `choose-templates`, `build-analysis`, `actor`, `term`, `use-case`, `journey`, `requirement`, `revalidation-record` ([`skills/analysis-author/`](skills/analysis-author/analysis-author.md)) | `pkit analysis new` | choose each kind's parts as you adopt the capability, and build the analysis in its order ("Adopting it", above). Write an actor, a term, a use case, a journey, a requirement of each of the three kinds, or a revalidation record. Choose the slug, the area, the actor and the steps, a requirement's kind, and what the artefact anchors to, or why an actor, a term or a requirement stays unanchored. Fill each part as its hint says, then run `pkit analysis validate --preview` on what you wrote. |
 
 The command owns each file's correctness — its id, its place, the anchors the rule asks for — and the skill the choices behind it.
 
 - **Each kind's parts come first.** Before a kind's first artefact or record, `choose-templates` walks its shipped parts, a candidate of your own checked with the preview, and your choice. Each kind ends with its shipped parts kept, or with your relabels and additions in `project/structures.yaml`.
-- **The analysis is built from its concepts up.** `build-analysis` walks the four steps of "Adopting it", above, and says when each is done: what each step writes, what each artefact may use, and the checks that pass. Where an artefact needs something the order puts before it, and finds it missing, it goes back and writes it there first.
 - **The skill lists no kind's parts.** You fill each part as its hint says, since the hint is the part's one description, in the kind's structure ("Templates and hints", above). The check's messages repeat it.
 - **The skill runs the check with `--preview`.** Where the format rule would bind, the preview shows what you wrote against its kind's structure, even while the rule is proposed. Its `preview:` reports never fail, and the check's own findings and exit status stand ("Each body against its structure", above).
 - **Sources.** The skill writes no item it cannot source. It asks the person who decides instead, and quotes the answer, as `RS-SAN-007` asks ("The method rule set: `SAN`", above).
-- **Terms.** The skill names each concept by its term, and stamps a missing term before it uses the concept, as `RS-SAN-008` asks. It gives no concept a second term.
+- **Terms.** The skill stamps a missing term before it uses the concept, and writes each concept as `RS-SAN-008` asks ("The method rule set: `SAN`", above).
 - **One choice matters to revalidation later:** **quote the code you describe** in backticks. What an artefact quotes from its anchored code is the first thing the agent reads when that code changes ("The agent" below).
 
 ## Revalidation: four outcomes, two answers
