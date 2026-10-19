@@ -5,9 +5,10 @@ software-analysis DEC-001 points 5 and 8; project-management DEC-056 points 1, 3
   the version project-management defines the point at, one entry for each type of
   the capability's registry, each naming the analysis-resolver, valid under the
   point's companion schema;
-- the agent's definition: what the point's checks read — no claimed paths, a tool
-  list, no tool that changes existing files or starts agents — and no field a
-  confined run refuses;
+- the agent's definition: project-management's own checks of it pass — no claimed
+  paths, a tool list, no tool that changes existing files or starts agents — and
+  fail on a definition that does more; it holds only the tools a confined run gives
+  and no field such a run refuses (ADR-066 points 3 and 4);
 - the point's checks through the real backbone, in an adopter with
   project-management and software-analysis installed and the agent deployed: every
   entry passes, and the same declaration over an agent that holds Edit starts no
@@ -22,6 +23,7 @@ reaches `uv` or the network.
 
 from __future__ import annotations
 
+import io
 import json
 import re
 import shutil
@@ -39,6 +41,11 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 REPO = Path(__file__).resolve().parent.parent
 SA = REPO / ".pkit" / "capabilities" / "software-analysis"
 PM = REPO / ".pkit" / "capabilities" / "project-management"
+
+sys.path.insert(0, str(PM / "scripts"))
+
+from _lib import fixers  # noqa: E402  (project-management's own checks of the point)
+
 AGENT_DIR = SA / "agents" / "analysis-resolver"
 AGENT = AGENT_DIR / "analysis-resolver.md"
 STORYBOARD = AGENT_DIR / "storyboard.md"
@@ -48,15 +55,20 @@ CHECK_REL = Path(".pkit") / "capabilities" / "project-management" / "scripts" / 
 POINT = "pkit::work-tracking:fixers"
 RESOLVER = "analysis-resolver"
 
-#: The tools a fixer may not hold: those that change existing files or start agents
-#: (DEC-056 point 1), in the harness's own names.
-DOES_MORE = frozenset({"Edit", "MultiEdit", "NotebookEdit", "Agent", "Task"})
+#: The tools a confined run gives: reading, searching, writing new files and the shell.
+#: None of them starts an agent, edits an existing file or reaches the web (ADR-066
+#: point 4).
+RUN_TOOLS = frozenset({"Read", "Glob", "Grep", "Write", "Bash"})
 
-#: The fields of an agent's definition that a confined run refuses rather than trims:
-#: hooks, MCP servers, a permission mode, memory, skills and isolation.
-REFUSED_FIELDS = frozenset(
-    {"hooks", "mcpServers", "permissionMode", "memory", "skills", "isolation"}
-)
+#: What a confined run keeps of a definition: its name for the run, the description,
+#: the tool list and the model, beside the body. Any other field of the harness's,
+#: such as hooks, MCP servers, a permission mode, memory, skills or isolation, is
+#: refused, not trimmed (ADR-066 point 3).
+KEPT_FIELDS = frozenset({"name", "description", "tools", "model"})
+
+#: The methodology's own fields of an agent's front matter, which the deploy reads and
+#: the harness ignores (COR-013).
+OWN_FIELDS = frozenset({"storyboards", "reads", "owns"})
 
 #: The section of the body that says what a command's run takes and returns.
 RUN_SECTION = "## When a command starts you"
@@ -116,42 +128,64 @@ def test_the_package_declares_the_resolver_the_fixer_of_each_of_its_types() -> N
 # --- the agent's definition ----------------------------------------------------------
 
 
-def _does_more_than_propose(front: dict[str, Any]) -> list[str]:
-    """What the point's checks find in a definition (DEC-056 point 1): claimed paths,
-    no tool list, or a tool that changes existing files or starts agents."""
-    found: list[str] = []
-    if front.get("owns"):
-        found.append("owns")
-    tools = front.get("tools")
-    if not tools:
-        found.append("no tools")
-        return found
-    names = {str(t).split("(", 1)[0].strip() for t in tools}
-    found += sorted(names & DOES_MORE)
-    return found
+def _deploy(front: dict[str, Any], root: Path) -> None:
+    """Write `front` as the agent's definition into `root`, both where the capability
+    ships it and where the adapter deploys it."""
+    stream = io.StringIO()
+    YAML(typ="safe").dump(front, stream)
+    text = f"---\n{stream.getvalue()}---\n\n# {RESOLVER}\n"
+    for relative in (AGENT.relative_to(REPO), DEPLOYED_REL):
+        (root / relative).parent.mkdir(parents=True, exist_ok=True)
+        (root / relative).write_text(text, encoding="utf-8")
 
 
-def test_the_definition_only_proposes_and_carries_no_field_a_run_refuses() -> None:
+def _problems(front: dict[str, Any], root: Path) -> list[str]:
+    """What project-management's own checks of the point find in one of this
+    capability's entries, over `front` as the agent's deployed definition (DEC-056
+    point 1)."""
+    _deploy(front, root)
+    entry = fixers.Entry(
+        type="software-analysis:actor",
+        agent=RESOLVER,
+        description="your actors",
+        origin="software-analysis",
+        supplies="value",
+    )
+    (checked,) = fixers.check(
+        fixers.Point(resolved=True, entries=(entry,)),
+        root,
+        types=lambda: {entry.type: "software-analysis"},
+    )
+    return [problem.text for problem in checked.problems]
+
+
+def test_the_definition_only_proposes_and_carries_no_field_a_run_refuses(
+    tmp_path: Path,
+) -> None:
     for path in (AGENT, REPO / DEPLOYED_REL):
         front, _body = _front_and_body(path)
-        assert _does_more_than_propose(front) == [], path
-        assert sorted(REFUSED_FIELDS & set(front)) == [], path
+        assert _problems(front, tmp_path / path.name) == [], path
+        assert isinstance(front["tools"], list), path
+        assert set(front["tools"]) <= RUN_TOOLS, path
+        assert set(front) <= KEPT_FIELDS | OWN_FIELDS, path
 
 
 @pytest.mark.parametrize(
     ("change", "found"),
     [
-        ({"tools": ["Read", "Grep", "Bash", "Write", "Edit"]}, ["Edit"]),
-        ({"tools": ["Read", "Agent(worker)"]}, ["Agent"]),
-        ({"tools": []}, ["no tools"]),
-        ({"owns": ["tech-docs/analysis/**"]}, ["owns"]),
+        ({"tools": ["Read", "Grep", "Bash", "Write", "Edit"]}, "holds Edit, a tool that changes"),
+        ({"tools": "Read, Grep, MultiEdit"}, "holds MultiEdit, a tool that changes"),
+        ({"tools": ["Read", "Agent(worker)"]}, "holds Agent, a tool that starts agents"),
+        ({"tools": []}, "lists no tools"),
+        ({"owns": ["tech-docs/analysis/**"]}, "claims paths (tech-docs/analysis/**)"),
     ],
 )
 def test_a_definition_that_does_more_than_propose_is_found(
-    change: dict[str, Any], found: list[str]
+    change: dict[str, Any], found: str, tmp_path: Path
 ) -> None:
     front, _body = _front_and_body(AGENT)
-    assert _does_more_than_propose({**front, **change}) == found
+    (problem,) = _problems({**front, **change}, tmp_path)
+    assert found in problem and problem.endswith("a fixer only proposes")
 
 
 # --- the point's checks through the real backbone ------------------------------------
