@@ -102,7 +102,7 @@ A command of this capability, the drift command, starts the fixers. The harness'
   - **What a line must match:** `<agent>` is the fixer the command started, and `<artefact>` is one of the brief's names, compared exactly. `<reason>` is one of the list below.
   - **What gives an artefact no result:**
     - no line for it, or more than one
-    - a proposed line whose answer is missing, refused by the schema (point 6), or written for another artefact
+    - a proposed line whose answer is missing, refused by the schema (point 6), written for another artefact, or naming a diff outside the artefact's folder
     - a held or none line whose artefact's folder holds an answer
     - a run that reached its wall-clock limit (point 4)
 
