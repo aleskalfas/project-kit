@@ -8,473 +8,399 @@ started: 2026-10-19
 
 ## The question
 
-How is an analysis built from its concepts? The maintainer decided on 19 October that a concept is not a term, that concepts explain the domain with diagrams, and that an analysis follows by logical consequence. This note designs that for software-analysis, for any project, with project-kit as the worked example.
+How is an analysis built from its concepts, in what order, and where does each component keep its own? The maintainer decided all three on 19 October. This note designs those decisions for software-analysis, for any project, with project-kit as the worked example.
 
-It weighs six things, each with options and a recommendation:
-
-1. the concept kind
-2. term and concept, and the glossary entries merged on 19 October
-3. the rule of logical consequence
-4. areas, folders and numbering
-5. concepts as living-docs' background
-6. what changes, and the order to build it
-
-The maintainer's decisions are at the end, in "For the maintainer".
-
-## What the maintainer has decided
-
-These bind the design. They are constraints here, not open questions.
-
-- **Concepts are not terms** (19 October). The glossary lists terms, each pointing at its concept. "Define what concept is first."
-- **What a concept is** (19 October, the definition he took):
-  - one thing the domain deals with
-  - described by what kind of thing it is, what it consists of, its relations to other concepts, the states it goes through and what is always true of it
-  - anchored to the records that decide it
-  - the concepts together form the domain model
-- **Concepts use diagrams heavily** (19 October): "pure explanation of thoughts easy to read and understand for innocent reader". They are "good background for living docs".
-- **Order by logical consequence** (19 October), as a general rule of building an analysis, to be written down:
-  - each precondition of a use case is the postcondition of another use case, or an assumption about the environment
-  - followed back, every precondition ends at the initial use cases
-  - project-kit's analysis starts "from development of the pkit itself"
-- **Folders** (19 October): he is unsure whether use-case folders carry numbers, since "everything came up from concepts".
-- **An analysis is built bottom-up** (18 October), as a rule of the method: software-analysis DEC-001 point 12, on main. This note refines it.
-- **Diagrams** (19 October): the 13 recommendations of the note on visual elements, taken as they stand (#1770, built by #1802 to #1807). Those that bind here:
-  - a diagram is a `mermaid` fence with no styling, carrying `accTitle` and `accDescr` (its decisions 1 and 11)
-  - a diagram is never a fact's home, and a page may anchor any record, artefact or code as the home of what it states (decision 2)
-  - the generator reads front matter only (decision 3)
-  - generated diagrams show on demand and in a generated overview, a held document of the analysis, and never inside an analysis artefact (decision 5)
-  - a hand-drawn diagram in an artefact shows only what its artefact states (its piece 1)
+- **The design, as decided:** the domain model, numbering, one analysis per component, and the rule of logical consequence. Each is a constraint here, not an open option.
+- **What changes, and the order to build it.**
+- **Weighed and set aside:** one line for each alternative, with why.
+- **The reviews,** and the questions left for the maintainer.
 
 ## Where things stand
 
-- **The glossary holds 65 terms.** 48 of them landed on 19 October (#1785). Each has a definition in ISO 1087's form, its broader kind and then what sets it apart, and anchors the records that decide it (software-analysis DEC-001 point 1).
-- **Seven kinds, and no domain model.** DEC-001 keeps actors, use cases, journeys and terms, and DEC-002 adds three kinds of requirement. A new kind needs a decision of its own (DEC-001 points 1 and 11). The note on visual elements found that a domain model passes the analysis's membership test, since a change to the software can make it false, and left it waiting for a project that asks. The maintainer now asks.
-- **A use case already splits what holds before it starts** (DEC-001 point 1). A precondition is a state the system or an earlier use case made true. An assumption is what nothing in the system secures, with the record that admits it. Both are prose. Nothing says which use case made a precondition true.
-- **Point 12 orders the kinds, and the writer orders the areas.** An area is written after the areas it builds on, and areas that build on each other are written together. Which area builds on which is the writer's judgement. No rule holds it (DEC-001 point 12, "What the writer keeps").
-- **RS-SAN-008, proposed, holds what the order leaves.** An artefact uses a domain concept only where a term defines it, by that term's name. A term's statement is its definition alone.
-- **A tool reads front matter only** (DEC-001 point 1). A body's parts serve readers and the check.
-- **The check may hold a part to front matter.** A journey's Steps part must match its `steps` field, by the form `steps-match-front-matter` (DEC-001 point 4).
-- **Text the stamp writes from another artefact** is a precedent: a journey's step line copies a use case's title, and RS-SAN-008 reads it as that artefact's. So are a journey's use-case anchors, which the stamp writes into its front matter from its steps (DEC-001 point 4).
-- **An anchor may name a section or the lead of an artefact** (COR-050 point 2). Such an anchor changes only when that part's text, or the artefact's own fields, change. A part opened by a bold label is no section.
-- **A cycle of artefact anchors is an error** (COR-050 point 5).
-- **A page's anchors ground every statement it makes,** analysis artefacts among them (living-docs DEC-001 point 3). An analysis artefact as the home of a page's fact comes with #1802.
-- **#1804 leaves room for concept diagrams.** It builds the query that prints the analysis's diagrams, and decides nothing about the concept kind.
+The design builds on what main holds today, and on a map of project-kit's chain of use cases.
 
-## The worked example: project-kit's chain
+- **Seven kinds, and no domain model.** DEC-001 keeps actors, use cases, journeys and terms, and DEC-002 adds three kinds of requirement. A new kind needs a decision of its own (DEC-001 point 11).
+- **The glossary holds 65 terms.** Each definition takes ISO 1087's form: its broader kind, then what sets it apart (DEC-001 point 1). #1785 settled six groups of them: the whole and its ownership, the parts, records and rules, the checks, change over time, and work.
+- **A use case splits what holds before it starts.** A precondition is a state the system or an earlier use case made true. An assumption is what nothing in the system secures, with the record that admits it (DEC-001 point 1). Nothing says which use case made a precondition true.
+- **An analysis is built bottom-up** (DEC-001 point 12). The glossary comes first, then the requirements, the use cases area by area, and the journeys. Which area builds on which is the writer's judgement.
+- **A concept is used only as the glossary defines it** (RS-SAN-008, proposed). A reviewer reads the glossary of the analysis that holds the artefact.
+- **One analysis per repository.** project-kit's lies under `tech-docs/analysis/`, with two use-case areas, `change` and `release`.
+- **Ids are kept apart within one analysis.** Each kind has its prefix (DEC-001 point 3), and the analysis's validation refuses an id two of its artefacts share.
+- **The backbone looks an artefact anchor up across the repository.** Its lookup takes the first artefact it finds with that id (`find` in `friction_discovery.py`). Friction knows no analysis.
+- **Use cases reach work tracking by id.** The analysis gives each use case to work tracking under its id, and an id names one use case for good (DEC-001 point 8). project-management reads that id as `UC-` and three or more digits (project-management DEC-054 point 1).
+- **The reverse of an anchor is computed, never stored** (DEC-001 point 11, DEC-002 point 7).
 
-A working map of project-kit's use cases as a chain of preconditions was drawn on 19 October, from main at `b41cf6ec`. It is not part of this note. What it found bears on every item below.
+**The chain, mapped on 19 October** from main at `b41cf6ec`, over the use cases written and planned:
 
-- **One initial use case.** "Develop the methodology in its source repository" needs only two assumptions: the source repository, and Python with `uv`. Every other use case follows from it.
-- **70 use cases in 12 layers.** A use case's layer is one more than the highest layer of the use cases its preconditions follow from. 58 can first run in the source repository, 4 ship the system out, and 7 need an adopter's project.
-- **Ten environment assumptions.** They include git and GitHub, the harness, a CI service and the operating system's sandbox. No use case makes them true.
-- **Five cycles, each broken by a fact:**
-  - **The system develops itself.** Use cases need "a project holding the system". Install makes it true in an adopter's project, and install needs a release, which needs those same use cases. The source repository holds the system from the initial use case, with no release and no install (ADR-059). So that precondition has two producers, and the earlier one breaks the cycle.
-  - **A capability judges its own change,** **the first required check,** **planning and revising the analysis,** and **each release starting from the last.** Each is broken by a precondition that holds only in some cases, or by an environment assumption.
-- **Gaps it found:**
-  - **Two needs no actor states.** Putting the tool on a machine at a release, and readying a repository's tracker for project-management. Use cases need both.
-  - **Four preconditions nothing produces,** such as a capability from another repository, whose fetch is not built.
-  - **Seven use cases on main read "None."** under Preconditions, but rely on what another use case makes true. Four of them rely on an area not yet written.
-- **The plan's ten areas give no order.** Eight of them build on each other in one cycle, since four areas hold use cases at both ends of the chain. Moving eleven use cases between the existing areas, adding none, gives an order in five steps.
-- **Layers make poor folders.** Layer 2 alone holds 18 use cases from seven areas, and a layer moves whenever a precondition changes.
+- **One initial use case.** "Develop the methodology in its source repository" needs only two assumptions: the source repository, and Python with `uv`.
+- **Cycles, each broken by a fact.** A project holds the system after install, and install needs a release, which needs those same use cases. The source repository holds the system from the start, with no install (ADR-059). So that precondition has two producers.
+- **Gaps:** two needs no actor states, four preconditions nothing produces, and seven use cases that read "None." under Preconditions but rely on another use case.
+- **Three cycles among the glossary's definitions:** base, head and change, anchor and artefact, and answer and friction. Point 12 rules them out, but RS-SAN-008 judges what a definition uses, not its order, so they passed.
 
-The same reading finds cycles among the glossary's definitions, which point 12 already rules out ("a definition uses terms already defined"):
+## 1. The domain model
 
-- **base and head** use change, and change uses base and head
-- **anchor** uses artefact, and artefact uses anchors
-- **answer** uses friction, and friction uses answer
+The domain model explains the domain's concepts and how they relate, in a few hand-written views beside the glossary. It takes known methods, and keeps the glossary as it is.
 
-RS-SAN-008 judges what a definition uses, not its order, so the cycles passed.
+### The methods it takes
 
+- **The Unified Process's domain model** (Larman, *Applying UML and Patterns*): conceptual classes, their associations and attributes, and no operations. It uses UML's class-diagram notation, and describes the domain, never the software.
+- **ICONIX's order:** the domain model first, with the glossary, before the use cases.
+- **ISO 704 and ISO 1087:** a concept is distinct from the term that names it. Concepts relate in three ways, generic, partitive and associative, and a concept diagram draws them.
+- **State models** (Shlaer–Mellor, UML state machines): a concept's life cycle, as states and the events that move it.
+- **Note:** Domain-Driven Design's "domain model" is solution design, which the analysis keeps out (DEC-001 point 11). So it is not this artefact.
 
-## 1. The concept kind
+### The glossary and the views
 
-A concept is one thing the domain deals with. Its kind holds the maintainer's five descriptions, the records that decide it, and an explanation for a reader new to the domain.
+- **The glossary stays as it is.** A term's definition, in ISO 1087's form, defines its concept.
+- **A term gains a link to its concept's section** in a view. The link is the reverse of the view's anchor on the term, which the records compute and never store. So the link is a named exception, or is computed where the glossary is shown (question 6).
+- **The domain model is a folder of views,** `domain-model/`, one view per group of related concepts. project-kit's core has about six, from the groups #1785 settled.
+- **What a view holds:**
+  - **Its group's diagrams,** hand-drawn Mermaid. A class diagram shows what relates to what, with attributes where they matter. A state diagram shows a concept's life cycle, where it has one. Each fence carries `accTitle` and `accDescr`, and no styling (#1770 decisions 1 and 11).
+  - **One section per concept,** headed by its term's name. It opens with a plain explanation for a newcomer. It then gives the concept's attributes, relations and states in words, and what is always true of it.
+  - **Anchors** on the terms it explains and the records it rests on. So a changed definition or record flags the view for review.
+- **What is always true of a concept** is what its records decide, such as "a rule has one status at a time" (COR-051 point 4). An obligation the system must keep, such as a business rule across use cases, stays a functional requirement (DEC-002 point 1). The requirement uses the concept's term.
+- **A diagram is never a fact's home** (#1770 decision 2). A view's diagram restates what the terms, the records and its own sections state. Its sections state each attribute, relation and state in words, so the diagram shows only what its view states (#1770 piece 1).
+- **Generated views per concept may come later,** if hand-drawn views prove a burden (COR-007).
 
-A concept describes the domain, not the code. Its parts and relations are the domain's, never the classes or tables that build them, which belong to the solution (DEC-001 point 11).
+### The view as a kind
 
-### Its parts
+The domain-model view is a new kind of analysis artefact, so a record of its own decides it (DEC-001 point 11).
 
-What a tool reads is data, in front matter. What a reader reads is prose, in the body (DEC-001 point 1).
-
-| Part | Data or prose | What it holds |
-|---|---|---|
-| `broader` | data | its broader concept, by id. Absent where the broader kind is a dictionary word, such as "file". |
-| `consists-of` | data | the concepts it is made of, by id, each with how many |
-| `relates-to` | data | each other concept it relates to, by id, with a verb phrase and how many |
-| `states` | data | each state it goes through, the states it moves to, and the event that moves it |
-| the lead | copied | its term's name in the heading and its term's definition under it, which the stamp writes (item 2), and a link to its view (below) |
-| Explanation | prose | plain words for a reader new to the domain: what it is for, and how it fits. It may hold hand-drawn diagrams. |
-| Always true | prose | what holds of it by the records that decide it, each with that record |
-
-- **Sections, not labels.** The two prose parts are headed `## Explanation` and `## Always true`. So an anchor can name either one, or the lead, which holds only what the stamp writes. An anchor on the lead then changes only when the concept's data or its term's definition change, never on an edit of its explanation (COR-050 point 2).
-- **The names.** `broader` is the thesaurus word for a broader concept, as SKOS uses it. `consists-of` avoids "parts", the word for a kind's parts. Both are the kind's own words, so RS-SAN-008 reads neither as a domain concept.
-- **Always true, and requirements.** A concept states what holds of it by its records and is no part of its definition, such as "a rule has one status at a time" (COR-051 point 4). An obligation the system must keep, such as a business rule across use cases, is a functional requirement (DEC-002 point 1). Requirements come after concepts (point 12), so the requirement uses the concept's term, and the concept never names the requirement.
-- **One home among concepts.** A fact belongs to the concept it is about. Another concept names that concept, and never states the fact again. So a decision record's page names the acceptance gate, and the acceptance gate's concept holds the condition.
-- **States name events, not use cases.** Concepts come before use cases (point 12), so a concept names no use case. An event may be a concept of its own, such as install, which moves a project into holding the system. Linking a use case to the state it reaches waits for item 3's option C, since postconditions are prose a tool does not read.
-- **Anchors.** The records that decide it, and the code that embodies it, as a term anchors today (DEC-001 point 4). Also the lead of each concept its `broader`, `consists-of` and `relates-to` name, which the stamp writes from those fields, as it writes a journey's anchors. So a change to what an earlier concept is flags the concepts built on it, and an edit of its explanation flags none.
-- **Where it lives.** One file each, `CONCEPT-<slug>.md`, in a `domain-model` folder beside the use-case model. The folder is a place whose type is `software-analysis:concept`.
+- **Its type:** `software-analysis:domain-model-view`, given by the `domain-model/` place of each analysis.
+- **Its id:** the file's name without its number. `010-records-and-rules.md` is `records-and-rules`, so a view moved to another number keeps its id. Whether it also takes a prefix is question 4.
+- **Its parts:** a lead that says what the group covers, the diagrams, then one section per concept.
+  - **A concept's section** opens with its explanation, then the labels **Attributes:**, **Relations:**, **States:** and **Always true:**.
+  - **The structure** declares a section that repeats once per concept, which is new for a document kind (DEC-001 point 1).
+- **What it anchors:** each term it explains, by an artefact anchor, and each record it rests on. RS-SAN-005's list of what each kind anchors gains it.
+  - **Why a view anchors its terms:** using a term asks for no anchor (RS-SAN-008). A view explains what the term defines, so a changed definition asks whether its section still holds.
+  - **The cost:** a term is anchored whole, as a collection entry is (COR-050 point 2). A reworded example flags the view too, and costs a short answer.
+- **What anchors it:** a living-docs page may anchor one concept's section (below). Nothing in the analysis anchors a view. A term's link to its section is no anchor, so the view's anchor on the term closes no cycle.
+- **What a reviewer reads:** RS-SAN-008 reads a view's sections as statements. It also reads the labels in a view's diagrams, which needs RS-SAN-008, proposed, to stop leaving every fenced block out.
 
 ### The order inside the domain model
 
-Point 12 asks that "a definition uses terms already defined". The concepts keep that order where they build on each other, and nowhere else.
+- **A view uses only views with lower numbers.** Its sections and diagrams may name a concept of a lower view, to show a relation. A relation between two views' concepts is stated in the higher view.
+- **A reviewer judges it,** under a judgement rule of `SAN` that comes with the view kind's record. A view's uses of other views lie in prose and diagrams, which draw no anchor, so no check sees them.
+- **The three definition cycles are broken when project-kit's views are written.** One term of each pair is defined first, and the other's definition names it. For example, base and head become the commits a comparison starts and ends at, and change names both.
 
-- **What the order binds:** a term's definition, and a concept's `broader`, `consists-of` and `relates-to`. Each names only concepts before it. Each relation is listed once, on the later concept, and the reverse is computed.
-- **What it does not bind:** a concept's `states`, its explanation and what is always true of it. They may name any concept of the model. What a concept is for, and the event that moves it, are often later concepts. A foundational concept such as change could not say what it is for otherwise.
-- **How it is held:**
-  - **The structure, by validation.** The anchors follow `broader`, `consists-of` and `relates-to`, so validation's refusal of a cycle holds their order (COR-050 points 5 and 12). States and prose draw no anchors.
-  - **The definitions, by a reviewer.** A definition's uses of other terms are prose, so they draw no anchor, and no check sees a cycle between two definitions. The new judgement rule of item 3 holds it: no two definitions use each other, directly or through others. The base, anchor and answer cycles above are what it finds.
+### In living docs
 
-This refines point 12's step 1, whose "uses" covers every statement of an artefact.
+- **A page that states a concept's facts** anchors that concept's section of its view, once #1802's record is accepted (#1770 decision 2). The page never becomes the home of those facts.
+- **A renamed term** renames its section's heading. Each page anchor on that section is then dead, and validation fails until the same change mends it (COR-050 point 7). Renames are rare, and the failure is loud.
+- **living-docs stays independent.** Without an analysis, a page's facts keep their homes among records and pages (living-docs DEC-001 point 9).
 
-### Its diagrams
+## 2. Numbering
 
-**Generated, from front matter only** (#1770 decision 3):
+Numbers go in names only where a real order exists. They show the order things build on each other.
 
-- **The domain model:** a Mermaid class diagram, UML's notation for a domain model. A broader concept is a generalisation, `consists-of` a composition, and `relates-to` an association with its verb and how many.
-- **A concept's states:** a Mermaid state diagram, drawn from `states`.
-- **Where they show: one view per concept,** held in the overview's folder of held documents (#1770 decision 5, built by #1805). Each view draws the concept's neighbourhood both ways: its broader and narrower concepts, what it consists of, each concept related to it in either direction, and its states. The overview's index lists every concept with its view.
-- **Why a view per concept:** 65 concepts in one diagram are unreadable, and one file of some 130 diagrams would conflict on every branch that edits a concept. A view changes only when its concept or a neighbour changes. It is drawn both ways, so a foundational concept's view shows what builds on it.
-- **Never inside a concept,** as #1770 decided for every artefact. The concept's lead holds a link to its view, which the stamp writes from its id, so the link never changes.
+- **The form:** three digits, in steps of 10, such as `010-` and `020-`, with the same width in every folder. A new item between two takes a free number between them, so nothing is renamed.
+- **No part of an id.** A view's id stays `records-and-rules` in `010-records-and-rules.md`. A use case keeps its permanent `UC-NNN` id, whatever its area's number (DEC-001 point 3).
+- **What is numbered:** the domain-model views and the use-case area folders, and nothing else.
+- **What a number means:** one valid order of a partial order, never importance.
+- **What holds it:**
+  - **Views:** a view uses only views with lower numbers, and a reviewer judges it.
+  - **Areas:** an area builds only on lower-numbered areas. The `after` check holds it for use cases (item 4).
+- **Two areas that build on each other** cannot both keep their numbers. The project cuts them again, or makes them one. So point 12's "areas that build on each other are written together" falls away.
+- **Its two homes, kept apart:**
+  - **General:** what a leading number means, and that the check reads it where a folder has one. DEC-001 points 2 and 12, and `SAN`, hold it.
+  - **project-kit's own:** that project-kit numbers its views and areas, and the form above. `ANA` holds it.
 
-**Hand-drawn, to explain a thought:**
+## 3. One analysis per component
 
-- **Where:** in the Explanation section, as #1770's piece 1 allows in free text.
-- **What it may show:** only what its concept states, and the concepts it names. A diagram is never a fact's home, so it adds no fact that the concept or its records do not state.
-- **Its form:** a `mermaid` fence with `accTitle` and `accDescr`, and no styling.
-- **What goes elsewhere:** a picture across several concepts, such as how a change becomes a release, goes on a living-docs page (item 5).
+Each component owns its analysis, as each capability owns its decision records. The core has one, and each capability has one. There is no monolith, since a capability may move to another repository (COR-041).
 
-### Options
+- **Adapters:** an adapter is a component too, so it may keep an analysis of its own. That follows from the decision, and waits for the maintainer's confirmation (question 1).
 
-- **A. A kind of its own,** with the parts above, one file per concept in `domain-model/`. Generated diagrams show in one held view per concept, drawn both ways, and hand-drawn ones in its explanation.
-- **B. A, but each concept's own diagrams generated into a part of its body,** from its own front matter. A reader opening the file on GitHub sees them there.
-  - **What it refines:** #1770's line that a generated diagram never shows inside an artefact. That line's reason was another artefact's edit changing a body. A concept's own front matter is not another artefact.
-  - **What it costs:** it can draw only one way, since its own data names only earlier concepts. So a foundational concept's diagram shows almost nothing. Each edit of its data also rewrites its body.
-- **C. One domain-model file,** a collection like the glossary, each concept a keyed entry. One file of 65 sections, each with its explanation, is long to read and to review.
+### Where
 
-**Recommended: A.** A view drawn both ways shows a newcomer what a concept is for, which B cannot. A keeps the line #1770 drew, and a reader reaches each concept's diagrams in one click from its file. C loses the page per concept that a newcomer reads.
+An analysis lives in the internal documentation of the repository where its component is developed, and never ships with it.
 
-## 2. Term and concept
+```
+tech-docs/analysis/
+  core/
+    glossary.md
+    domain-model/010-….md …
+    use-case-model/actors/, use-cases/010-develop/ … 050-adopt/, journeys/
+    requirements/
+  project-management/
+    glossary.md, domain-model/, use-case-model/, requirements/
+  software-analysis/
+  …
+```
 
-A term is a word. A concept is the thing it names. The glossary is the domain's terminology, and the concepts are its model.
+- **Why internal:** an analysis is documentation for those who develop the system (COR-049).
+- **A move:** a capability that moves to its own repository takes its analysis folder with it, as it already takes its tests from `tests/`. What the repository it leaves keeps is question 5.
+- **Install is unchanged.** An adopter receives no analysis of the methodology.
+- **The core's use-case areas:** `010-develop`, `020-set-up`, `030-change`, `040-release` and `050-adopt`, the five stages of the chain.
+- **A capability's areas:** a capability with several areas numbers its own. One with a single area needs no area folders.
+- **What marks an analysis:** the capability's project configuration lists the analyses, each with its folder and the analyses it builds on. That configuration already records the analysis's location (DEC-001 point 2).
+- **A project with one analysis** keeps it at the analysis area's root, as today. Several analyses each take a folder named after their component. The places match both layouts, so a single analysis stays in them after an upgrade.
+- **Revalidation records:** each analysis keeps its own folder of them, which moves with it.
+- **The cost of moving in:** each artefact a project moves into such a folder is revalidated in the same change (COR-050 point 3). For project-kit, that is 65 terms, 9 actors and 13 use cases, and moving use cases into numbered areas is the same.
 
-### Options
+### Dependencies go one way
 
-- **A. One concept for each term, with the definition moved to the concept.** The term keeps only the word: its name, the names it replaces, and its distinctions. The glossary shows each definition as a copy the stamp writes from the concept.
-  - **What it costs:** a term's `definition` is the writer's until its concept is written, and the stamp's after. RS-SAN-008, which reads a term's definition as its statement, moves to the concept.
-- **B. One concept for each term, sharing its slug, with the definition kept on the term.**
-  - **The term holds the word and its meaning:** its name, its definition, its example, the names it replaces and its distinctions, as today. It gains `concept`, which `pkit analysis new concept` writes when the concept is written, and which must name the concept of the same slug.
-  - **The concept holds the model:** its broader concept, what it consists of, its relations and states, what is always true of it, its explanation, and the records that decide it.
-  - **The copy:** the concept's lead shows its term's name and definition, which the stamp writes. A check holds them equal, as a journey's anchors are held to its steps.
-  - **Kept together by a form:** where a concept has a `broader`, its term's definition opens with that concept's name, or a form of it. So the definition's first words and `broader` cannot part, and a script sees it.
-  - **A term stands alone** until its concept is written. Where the analysis holds at least one concept, validation reports each term that has none, and never fails it.
-  - **Withdrawing a term** withdraws its concept with it. Merging two terms keeps one, and its concept takes what still holds of the other.
-- **C. Fewer, larger concepts.** A term names a concept, or one part, state or relation of a concept, and keeps its definition.
-  - **What it gives:** about twenty pages for project-kit, where B gives 65.
-  - **What it costs:** "concept" then means two things, what a term defines in RS-SAN-008's sense and a page of the domain model.
-- **D. One entry per concept, holding its names, as terminology practice keeps them** (ISO 704, and the TermBase eXchange format). The concept carries its name and the names it replaces, and the glossary becomes a listing the stamp generates.
-  - **What it gives:** no copies.
-  - **What it costs:** the term kind is withdrawn. It can be staged term by term, but each converted term is withdrawn and kept as history in the glossary (DEC-001 point 3). So the glossary ends as a file of withdrawn entries beside a generated listing. It reaches DEC-001 points 1 and 2, RS-SAN-008 and `ANA`'s scope.
-- **E. B, and a term may name a state, an event or an invariant of a concept** instead of a concept of its own, such as acceptance gate as a condition on a decision record. Fewer, fuller concepts, but each such term's definition sits inside another concept's data, and "concept" again means two things.
+- **A capability's analysis builds on the core's.** The core's analysis never names a capability's.
+- **Between capabilities, only as an option:** "uses X where it is installed, and works without it". A capability may also require another (COR-030), which question 2 weighs.
+- **Its head:** a capability's analysis states, at its head, which core stage it builds on. Recommended: the head of its glossary, which then lists all the analysis takes from the core, the stage, the terms and the actors.
+  - **The cost:** the stage names a core area folder, which carries no anchor. A re-cut of the core's areas leaves the head stale with no signal, until a reviewer reads it.
 
-**Recommended: B.** The glossary keeps every term as it reads today, so nothing changes for a project that keeps terms alone. The concept adds what a term cannot hold: the model, its diagrams and its explanation. Each fact keeps one home: the meaning on the term and the model on the concept. The one fact they share, the broader kind, is held by a form. A has the same homes with the copy reversed, but a field that changes owner and a rule that moves. D is the cleanest end state, at the cost of withdrawing the term kind. C and E give fewer pages, at the cost of a word with two meanings.
+### The core as a capability's environment
 
-**Its costs:**
-- **One copy,** the term's name and definition in the concept's lead. A changed definition rewrites the lead, which flags the concepts built on it. That is right: they build on what the concept is.
-- **Many short concepts,** such as head or base. Each view shows them in their neighbourhood.
+- **Assumptions:** a capability's use cases state what the core provides as assumptions, each naming the record that admits it.
+- **Terms:** a capability's glossary lists, at its head, the core terms it uses. It gives names only, each with a link to the core's glossary at the backbone version the capability requires. It copies no definition.
+  - **Its reviewer** reads those core terms as defined, so RS-SAN-008's glossary to read takes them in.
+  - **No clash:** a capability's own term never takes the name of a core term it lists.
+  - **The version:** question 10.
+- **Anchors:** its artefacts anchor the core's records behind those terms and assumptions. Record anchors cross a sync, and artefact anchors do not (COR-050 point 14).
+  - **Where they sit:** the glossary's head belongs to no term and carries no anchors (DEC-001 point 1). So a capability's own term that builds on a core term anchors the records behind it. A use case anchors the records its assumptions name.
+  - **The cost:** a changed core actor or term flags no capability artefact, even in project-kit. Only a changed record behind it does.
+- **The same form everywhere:** project-kit and any other repository use it alike, so a move changes nothing in the analysis.
+- **Actors:**
+  - **Core actors:** a capability's analysis lists those it uses by name with a link, as for terms. It defines only actors of its own, such as project-management's project manager and implementer.
+  - **A use case whose actor is the core's** names it with its analysis, as `core:ACT-developer`. Validation resolves it against the capability's list. The use case anchors the records behind that actor, not the actor. This refines what a use case names and anchors (DEC-001 point 4).
+  - **Their needs:** question 9.
+  - **The core as an actor:** where the core triggers a capability, such as validation running a capability's check, the core is a secondary actor of that capability's analysis.
 
-### The glossary's entries
+### Tooling
 
-With B, each of the 65 terms, the 48 of 19 October among them, keeps everything it holds today. project-kit gives each its concept, in the concepts' order:
+- **Several analyses:** software-analysis supports one analysis per component under its analysis area. Each has its own glossary, domain model, actors and numbering.
+- **A reference across analyses** names the analysis, in the form a capability's decision is cited: `core:TERM-change`, `project-management:ACT-implementer`.
+- **Per analysis:** the kinds' places and types, the stamp and validation.
+- **Across the repository:** the friction checks are the backbone's, and read every place at once. So do work tracking's use cases. Whether ids may repeat across analyses is question 4.
 
-- **written by the stamp:** the concept file, its lead, and the term's `concept`
-- **written by hand:** its broader concept, what it consists of, its relations and states, what is always true, its explanation, and the records that decide it
-- **the cycles above broken:** one term of each pair is defined first, and the other's definition names it. For example, base and head become the commit a comparison starts from and the commit it ends at, and change names both.
+## 4. The rule of logical consequence
 
-**What changes in the rules:**
-- **RS-SAN-008, proposed,** also reads a concept's prose as statements.
-- **RS-SAN-005, proposed,** whose list of what each kind anchors is whole, gains a concept resting on its records, its code and the leads of the concepts it builds on.
+A use case starts only from what is already true: what another use case made true, or what the environment gives. The maintainer chose the minimal form, one optional field and one check.
 
-**The six groups #1785 settled** read as the model's first cut: the whole and its ownership, the parts, records and rules, the checks, change over time, and work.
+### The rule
 
-## 3. The rule of logical consequence
+For any project's analysis:
 
-### The statement
+- **Each precondition** of a use case is a state another use case makes true, by its postconditions or a guarantee. Otherwise it is an assumption about the environment, with the record that admits it.
+- **Followed back,** every precondition ends at the initial use cases, whose preconditions are all assumptions.
+  - **In most projects,** they rest on an assumption such as "the system is deployed".
+  - **A project that develops its own system** starts from developing it, as project-kit does.
+- **A condition that holds only in some cases** is a variant's, not a precondition.
+- **What it narrows:** DEC-001 point 1's precondition, "a state the system or an earlier use case made true".
 
-The general rule, for any project's analysis:
+**Its grounding:**
 
-- **Each use case follows from what is already true.** Each of its preconditions is a state another use case makes true, by its postconditions or by a guarantee it gives, in its minimal guarantees or to its other actors. Anything else it needs is an assumption about the environment, listed with the record that admits it.
-- **Followed back, every precondition ends at the initial use cases,** whose preconditions are all assumptions. An analysis starts from them.
-  - **In most projects,** the initial use cases rest on an assumption such as "the system is deployed".
-  - **A project that develops its own system,** as project-kit does, starts from developing it.
-- **A precondition may have several producers,** any one of which is enough. At least one must come earlier.
-  - **Two use cases:** the source repository and an install both make a project hold the system.
-  - **A use case or the environment:** a change in the working tree comes from a person's edit, or from an agent that builds it.
-  - **The use case itself, or the environment:** each release step starts from the last release, and the first version stands in the source repository before any release.
-- **A condition that holds only in some cases is no precondition.** It is a variant's condition.
-- **Concepts follow the same rule** where they build on each other (item 1).
+- **Cockburn's precondition** (*Writing Effective Use Cases*): what another use case has already set up.
+- **Use-case contracts in a light form** (Nebut et al. 2006, and Ryser and Glinz's dependency charts), which link use cases through their conditions.
+- **Set aside:** the contracts' formal-predicate form, as too heavy.
 
 ### The data
 
-A use case's front matter gains `after`, an optional field. Each entry is one precondition's producers, any of which is enough: use case ids, and `environment` where an assumption may stand in.
+A use case's optional `after` lists, for each precondition, its producers. Any one of them is enough.
+
+- **A producer** is a use-case id of the same analysis, `environment`, or the use case itself, as a release starts from the last.
+- **The words:** the Preconditions part names the same producers, such as `**From UC-003:** …` and `**Environment:** … (record)`.
+- **The Assumptions part** already holds what the environment gives, with its record. How the two parts share the environment is question 7.
+- **No anchor.** `after` draws no anchor, since a use case naming itself, or a loop of producers, would be a cycle (COR-050 point 5). So a changed postcondition flags nothing, and a reviewer of that change reads what follows from it.
+
+In a release use case, say `UC-059`, the planned ids of the map:
 
 ```yaml
 after:
-  - [UC-001, UC-064]        # a project holding the system
-  - [UC-033, environment]   # a change in the working tree
-```
-
-In the release use case, say `UC-059`, the last release is its own:
-
-```yaml
-after:
+  - [UC-001, UC-064]        # a project holding the system: the source repository, or an install
   - [UC-059, environment]   # the last release, or the first version in the source repository
 ```
 
-- **The Preconditions part names them too.** Each precondition opens with its producers, such as `**From UC-001 or UC-064:** a project holding the system.` A form holds the part and the field to each other, as `steps-match-front-matter` holds a journey's.
-- **An `environment` producer** is matched by an assumption in the Assumptions part, with the record that admits it.
-- **What it refines in DEC-001 point 1:** a precondition narrows from a state "the system, or an earlier use case" made true to one another use case, or the environment, makes true. A condition that holds only in some cases moves to a variant. The hint of the Preconditions part changes with it.
+```markdown
+**Preconditions:**
 
-### Friction on the chain
+- **From UC-001 or UC-064:** the project holds the system.
+- **From UC-059, or Environment:** the last release, or the first version in the source repository (ADR-059).
+```
 
-- **No anchors in the first build.** A changed postcondition can leave a precondition untrue, so the chain should carry friction. But a use case's parts are labels, not sections, so an anchor on a producer names its whole file. Anchoring each precondition's first producer would flag a use case on every edit of that producer. In project-kit, every edit of the initial use case would flag 58 use cases.
-- **A report instead.** `pkit analysis check-numbers`, which compares a change with its base, also reports a change to a use case's postconditions or guarantees, with the use cases that follow from it. It reports and never fails. It runs where the project runs `check-numbers`, in its check gate, since `pkit validate` never runs it. The change's reviewer reads what it lists.
-- **Anchors later,** once a use case's postconditions can be anchored apart from the rest of it, as a concept's sections can (item 1). Only the first producer of each precondition would be anchored. It comes earlier, so the anchors form no cycle.
+Install, `UC-064`, lies in `050-adopt`, after the release's `040-release`. Read literally, the check below refuses this entry, and some 58 entries like it (question 8).
 
-### What the checks hold
+### The check
 
-Offline, from front matter and the Preconditions part:
+One check, and nothing more:
 
-- **Each producer resolves** to a use case in force, or is `environment`. This holds always, wherever `after` is written, as each of a use case's other actors resolves (DEC-001 point 4).
-- **The part and the field agree,** and a part that reads `None.` goes with an empty `after`.
-- **Every use case traces back to an initial one.** Taking each precondition at its earliest producer, and `environment` at the start, the check gives every use case a layer. A use case it cannot place fails, with the preconditions that loop.
+- each producer resolves to a use case in force of the same analysis, or is `environment`
+- the field and the words agree
+- no producer lies in a later-numbered area folder
 
-The last two are declared under the new rule's `checks` in `SAN`, as RS-SAN-002's comparison is, and not in a kind's structure, which RS-SAN-001 holds. So they bind only once the new rule is accepted, through a set of the project's own, at its pin (DEC-001 point 1, "When it binds"; COR-051 point 7). A project that does not inherit `SAN` is not held to the method, and a use case with no `after` fails nothing.
+It reads only use cases that write `after`. It binds at the new rule's status, through a set of the project's own (DEC-001 point 1).
 
-**Computed and shown, never stored:** the initial use cases, each use case's layer, which area builds on which, and the order of the areas. Areas that build on each other are reported, never failed, so the project draws the line between them again or writes them together.
+- **Generated:** the overview (#1805) draws the chain from `after`, grouped by area, leaving out implied arrows. #1804's record gains that picture.
+- **Dropped:** the report on changed postconditions, the layer computation and the trace check.
 
-### What a reviewer judges
+### Its limits
 
-A new judgement rule of `SAN`, proposed beside RS-SAN-008, with the checks above as its checkable part:
+The rule states its limits, since the maintainer asked whether it is naive.
 
-- **The producer makes the precondition true,** by its postconditions or its guarantees. The check sees only that the ids resolve.
-- **A precondition that no use case must make true** is an assumption, or has `environment` among its producers. One that nothing in the environment gives and no use case makes true is a missing use case or a missing need, as the tool on the machine and the tracker's bootstrap were.
-- **Nothing the main path relies on is left out** of both parts.
-- **A condition that holds only in some cases** sits in a variant.
-- **The initial use cases are where the project's system begins.**
-- **No two terms' definitions use each other,** directly or through others, since no check sees what a definition's prose uses (item 1).
+1. **The link checks structure, not meaning.** A reviewer judges that the producer's postcondition makes the precondition true. The check proves no consistency.
+2. **Real dependencies hold alternatives and loops.** So the list allows "any one of", the environment and the use case itself.
+3. **"Environment" is no escape hatch.** Each assumption names its record, and a reviewer checks it.
+4. **Dependencies form a partial order.** The numbers show one valid order.
+5. **A generated picture** leaves out implied arrows, and groups by area.
+6. **Splitting or merging use cases** leaves a list incomplete. The check cannot see it, and a reviewer must.
 
-### How it refines DEC-001 point 12
+### Where the rules go
 
-- **"Builds on" is computed where it can be.** Point 12 says today that the writer judges which area builds on which, and that no rule holds it. Where a use case writes `after` and the new rule binds, the check computes it from preconditions. Elsewhere the writer judges, as today. The rationale "Why a rule holds the result, and the writer the order" is rewritten with it.
-- **Only preconditions order the areas.** Point 12 says an area builds on another where its use cases "rely on" what that area's use cases make true, which a variant does too. Refined, only preconditions count. A variant that relies on a later area's use case is written once that use case exists. Its cost: a reader of the earlier area meets a variant that names a later use case. In project-kit, planning names use cases of `analysis`, written later, only in a variant.
-- **The order of writing stays the writer's.** Which file was written first is in no artefact, so the alternative "a rule that holds which area is written before which" stays not taken.
-- **Step 1 becomes the terms and their concepts,** then the actors (items 1 and 2).
-- **Brownfield candidates** (point 9) are traced back from the use cases the code shows, to the initial ones, as the worked example was.
+- **`SAN`, proposed, beside RS-SAN-008:** the rule of logical consequence, its limits and its check, and what a leading number means.
+- **`ANA`, proposed:** project-kit's own choices. These are the numbering, the analyses it keeps and the core's five areas. Its scope also gains the view's type.
+- **The one-way rule between analyses:** recommended for `SAN` (question 3).
 
-### Options
+## 5. What changes, and the order to build it
 
-- **A. A rule with a checkable part:** `after`, the checks and the reviewer's judgement above.
-- **B. A judgement rule only.** The Preconditions part names producers in prose, and a reviewer follows them back. No field, no check and no computed order. The order of areas stays the writer's, and nothing draws the chain.
-- **C. Conditions as states of concepts.** Each precondition and postcondition names a concept's state, and the check matches them. It is the most exact, and it would link each use case to the states it moves. But every condition becomes data, which DEC-001 point 1 keeps apart from the readers' text, and every concept's states must be complete first.
+The work is staged, so nothing fails an adopter after upgrading.
 
-**Recommended: A, with C as a later refinement once concepts carry their states.** A gives the order as data, which the overview draws and the area order reads. B leaves the chain to each reviewer's patience. C waits for a project whose concepts are complete (COR-007).
+### The upgrade path
 
-## 4. Areas, folders and numbering
+- **Optional:** the domain model, `after` and several analyses.
+- **When checks bind:** the new checks bind at the new rules' status.
+- **The new type:** a project's own set must select it for `SAN` to reach views, as DEC-002's Implications say for its kinds. A project's own type of the same name is refused (COR-056 point 2), and the release says so.
+- **Several analyses:** a project that moves to them revalidates each artefact it moves, in the same change.
 
-A use case's id is global and append-only (DEC-001 point 3), so it never shows an order. The question is what the folders show.
+### What the records refine
 
-### Options
+- **software-analysis DEC-001:**
+  - point 1, the precondition, `after` and its words
+  - point 2, several analyses, their layout and configuration, and the view's place and type
+  - point 3, ids across a repository's analyses, and a move out (questions 4 and 5)
+  - point 4, what a view anchors, and a core actor in a capability's use case
+  - point 8, the readers point where an actor's needs span analyses (question 9)
+  - point 12, the order
+- **software-analysis DEC-002 point 2,** a requirement's numbering, as for use cases.
+- **`SAN`:** the consequence rule, proposed. RS-SAN-005 gains the view, and RS-SAN-008 reads a view's diagrams and a capability's core terms. RS-SAN-003's actor and the validation behind it take a core actor.
+- **`ANA`:** project-kit's choices, proposed.
+- **COR-050 point 7,** if question 4 is taken: an artefact anchor on an id two artefacts share is ambiguous.
 
-- **A. Areas named by their goal, with no numbers.**
-  - **The cut:** areas are drawn so that they follow the chain, as the worked example's re-cut does.
-  - **The order:** computed from `after`, and shown by a query and in the overview. The overview draws the order of the areas as one small diagram, then each area's use cases by layer, with the producers they need from outside it. A chain of 70 use cases in one diagram is as unreadable as 65 concepts.
-  - **What moves:** no file, when the order changes.
-  - **What it costs:** GitHub lists folders by name, so the file list never shows the order. Only the overview does. A re-cut also moves use cases whose goal the old name no longer fits, so an area may need a new name.
-- **B. Numbered area folders,** such as `1-components/`. A file listing shows the order.
-  - **What it costs:** each change of order renames folders, and links by path break. A new area between two renumbers those after it. Two areas written together need one number.
-- **C. Areas named after the concept their use cases act on,** as "everything came up from concepts" suggests.
-  - **What it costs:** a concept's use cases span the chain. A project's settings come at layer 1 and its install at layer 9. A capability is added at layer 2 and upgraded alone at layer 11. Such areas build on each other, and give no order.
-- **D. No areas.** One folder, and the order only computed. Point 12 allows it, but 70 files in one folder hide what belongs together.
+### DEC-001 point 12, refined
 
-**Recommended: A.** It shows the order without renaming files, and keeps a folder stable. The concepts still name the areas: an area's name uses the glossary's term where one fits, such as `capabilities`, `change` or `release`. For project-kit, the five steps of the worked example's re-cut:
+- **Step 1:** the glossary and the domain-model views, then the actors.
+- **The areas** follow their numbered order, which `after` holds.
+- **The rest of the order stays.**
 
-1. `components`
-2. `agents` and `capabilities`
-3. `change`, `decisions` and `work`
-4. `analysis`, `docs` and `release`
-5. `adoption`
+### The order to build
 
-The re-cut moves eleven use cases, each answering in the same change what its move raises (COR-050 point 3). Where the moves leave a name that no longer reads as its goal, such as the project's settings under `capabilities`, the area is renamed in the same change.
+1. **The foundation:** software-analysis DEC-001 points 1, 2, 3 and 12 refined, for the precondition, several analyses, their ids and the order. The `SAN` rule is proposed in the same change.
+2. **The diagram records,** #1802 and #1804. #1804 gains the chain picture from `after`. #1805's overview holds it, and no views per concept.
+3. **A record for the domain model,** the view kind. Several analyses are already in step 1.
+4. **The build, one task after another:** several analyses, then `after` and its check, then the view kind and its skill, then #1805's overview.
+5. **project-kit's core analysis, bottom-up:**
+   - the move into `core/`, each moved artefact revalidated in that change
+   - the glossary's cycles broken, then the domain-model views and the actors
+   - the requirements (#1786, held), then the five areas in order, then the journeys
+   - existing work realigned to this layout: #1685, #1712 to #1715, #1719 and #1720
+6. **Each capability's analysis,** after the core stage it builds on.
 
-## 5. Concepts as living-docs' background
+`SAN`'s changes ride one major, with #1727 and #1806 (#1770 decision 12).
 
-A concept explains the domain once. A page explains it to its own reader. The page must not become a second home for what the concept states.
+**What each step waits for:**
 
-### Options
+- **Step 1:** the answers to questions 2 to 5, 7 and 8.
+- **Step 4:** the view kind's record accepted, with question 6 answered.
+- **Step 5:** `ANA`'s choices accepted, and #1802's record before any page anchors a view's section.
+- **Step 6:** the answers to questions 1, 9 and 10.
 
-- **A. A page states what a concept states, for its reader, and anchors the part of the concept that states it.**
-  - **Its ground:** #1770 decision 2, which #1802 builds: a page may anchor any artefact as the home of what it states. A changed concept flags the page, and two statements that disagree break the rule on a fact's home.
-  - **The part it anchors:** the concept's lead, for what it is and how it relates, or the section that states the fact, as a page anchors one point of a record. An anchor on the whole concept would flag the page on every edit of its explanation, which living-docs rejects for a summary of a home (living-docs DEC-001 point 3).
-  - **What #1802 must give:** an artefact as a home works as a record does. The page may state the fact, and needs no link to it. Otherwise a page of the user space would need a link into the internal root.
-  - **Its links:** a page of the technical space may link to the concept. A page of the user space anchors it and links nothing in the internal root, since user navigation never leads there (living-docs DEC-001 point 1). An anchor is no link.
-  - **Its diagrams:** a page may draw a concept by hand, with the concept as the home of what it shows. Generated concept diagrams reach a page later, through the data point #1770 describes.
-  - **Its kind:** living-docs ships reference and signpost pages. An explanation kind comes with the first page that needs one (COR-007).
-- **B. The concept files are the background pages,** with the domain-model folder as a place of the technical space. Ruled out: a document of another component's type is that component's, never a page (living-docs DEC-001 point 1). The user space could not reach it either.
-- **C. A page links to the concept, and states nothing of it.** Nothing is repeated. But a page of the user space cannot link into the internal root, and a page that must explain a concept to its reader cannot.
+## Weighed and set aside
 
-**Recommended: A, once #1802's record is accepted.** The concept stays the one home, and each page is held to it by its anchor. A page never becomes the home of a concept's fact.
-- **living-docs stays independent.** Without an analysis, a page's facts keep their homes among records and pages (living-docs DEC-001 point 9).
-- **`docs-author`'s guidance applies only where an analysis exists:** read the concepts a page touches first, and name each by its term.
-
-## 6. What changes, and the order to build it
-
-### What changes
-
-**software-analysis's records:**
-- **DEC-001 points 1 and 12, refined in place,** for the rule of logical consequence: the narrower precondition, `after`, the checks, the reviewer's part, and "builds on" computed from preconditions where it can be.
-- **`SAN`:** the consequence rule proposed, with its checks.
-- **#1804's record,** on the analysis's diagrams.
-- **A new record on concepts:** the kind, term and concept, the layout, ids, anchors, the order inside the domain model, and the concept diagrams with their views. A new kind needs a decision of its own (DEC-001 point 11), and one topic takes one record, as #1770 decision 13 chose. It refines:
-  - DEC-001 point 1, the kinds and their parts
-  - DEC-001 point 2, the layout, the places and the type registry, which gains `concept`
-  - DEC-001 point 3, the `CONCEPT-` ids
-  - DEC-001 point 4, what a concept anchors
-  - DEC-001 point 12, step 1
-  - #1804's record, for the concept and state diagrams, and #1805's overview, for a view per concept
-  - RS-SAN-005 and RS-SAN-008, both proposed
-- **All `SAN` changes ride one major,** which accepts its proposed rules with #1727 and #1806 (#1770 decision 12).
-
-**software-analysis's build:**
-- `after`, its form, its checks, the report on changed postconditions, and the query of the order
-- the concept's schema, structure and template, `pkit analysis new concept`, and the form that ties a definition to `broader`
-- the views and the chain in the overview (#1805)
-- `analysis-author`: a sub-procedure for concepts, and `build-analysis.md` and `use-case.md` updated for the initial use cases and `after`
-
-**For adopters, nothing fails after an upgrade:**
-- a term may stand without a concept
-- `after` is optional, and the consequence checks bind only at the new rule's status
-- the release says that a project's own set must select the new type `concept` for `SAN` to reach concepts, as DEC-002's Implications say for its kinds
-- a project with a type of its own named `concept` is refused, as COR-056 point 2 refuses such a collision, and the release says so
-
-**living-docs:** nothing beyond #1802's homes, and the guidance in `docs-author`. An explanation kind comes later.
-
-**project-kit's own analysis:**
-- its domain model, from its 65 terms, with the three cycles broken
-- `after` on UC-001 to UC-013, mending the seven that read "None."
-- the two needs the chain found, in the maintainer's own words (RS-WRITE-013)
-- the areas re-cut as item 4 gives, then the requirements of #1786, then the areas in the chain's order from the initial use case, then the journeys, #1685 renumbered among them
-
-### Options for the order
-
-- **A. The foundation, then the diagram records, then the concept record, then the build, then project-kit's analysis bottom-up.**
-  1. **The foundation:** DEC-001 points 1 and 12 refined, and the consequence rule proposed, in one change the maintainer accepts.
-  2. **#1802 and #1804,** the diagram records.
-  3. **The concept record,** which can then decide its own diagrams, citing only accepted records.
-  4. **The build,** one task after the other, since each touches the kinds' structure, the validator and the stamp: first `after` and its checks, then the concept kind and its skill, then #1805's overview with the views.
-  5. **project-kit's analysis:** its domain model, then #1786, then the areas in the chain's order, then the journeys.
-- **B. project-kit's analysis first, by hand, and the capability after.** Hand-stamped artefacts break core rule 3, nothing checks them, and they are rewritten once the kind lands.
-- **C. The consequence rule first, the concepts later.** The areas could start sooner. But they would use terms whose concepts are not built, against "everything came up from concepts" and point 12's order.
-
-**Recommended: A.** It follows the sequence the maintainer agreed on 19 October: the analysis's foundation, then the diagram records, then the concept kind, the requirements and the areas in the chain's order. Until the concept record lands, this note is where the direction on concepts' diagrams is written. #1786 stays held until project-kit's concepts land.
-
-## Where the recommendations fall short of the direction
-
-- **"Concepts use diagrams heavily."** A concept's file holds only hand-drawn diagrams. Its generated ones are one click away, in its view. To meet it in the file: item 1, option B, which draws one way only.
-- **"The glossary lists terms, each pointing at its concept."** A term may stand without a concept until one is written, so an adopter's glossary may point at none. project-kit gives every term its concept. To meet it everywhere: fail a term with no concept once a rule binds, at the cost of a breaking change for adopters.
-- **"Each precondition is the postcondition of another use case."** The rule also admits a guarantee, the environment, and the use case's own last run, since the worked example's chain does not close without them.
-- **Friction on the chain.** A changed postcondition is reported, not flagged, until a use case's postconditions can be anchored apart.
-- **The order of the areas** is computed from preconditions only, so a variant may name a later area's use case.
+- **One file per concept, with relations and states as data, and generated views per concept:** more structure than the domain needs. Hand-drawn views come first (COR-007).
+- **A form tying a definition to a broader-concept field:** dropped with the fields.
+- **One domain-model file, a collection like the glossary:** some 65 sections are long to read, and conflict on every branch.
+- **One entry per concept holding its names (ISO 704, TBX), with the glossary generated:** it withdraws the term kind.
+- **Areas named by their goal, unnumbered, with the order computed:** a file listing never shows the order.
+- **Layers computed from preconditions, as folders:** a layer moves whenever a precondition changes.
+- **Areas named after the concepts they act on:** a concept's use cases span the chain, so such areas give no order.
+- **A judgement rule alone, with no field:** it leaves the chain to each reviewer, and the overview has nothing to draw.
+- **The full trace, with layers and a report on changed postconditions:** more than the order needs.
+- **Conditions as formal predicates on concepts' states:** too heavy.
+- **One analysis for the whole repository:** a capability could not move, and nothing would keep dependencies one way.
+- **A component's analysis shipped with it:** an analysis is internal documentation for its developers (COR-049).
+- **A capability's glossary copying the core's definitions:** two homes for one definition.
+- **A capability's artefacts anchoring the core's artefacts:** the core's analysis never ships, so after a move they would anchor nothing.
 
 ## Review
 
-The architect reviewed the first draft, and the critic the second. Each finding follows, with what the note did with it.
-
-### The architect
-
-The architect found the direction sound: a kind of its own, the consequence relation as data with a computed order, unnumbered areas, and the concept as a page's home. It raised one objection, and asked for the maintainer's authorisation on four points.
-
-- **Objection, item 2: no migration can write a valid concept.** A hint left in is refused, and writing `None.` records a judgement nobody made. Taken. A term stands alone until its concept is written, and no migration writes concepts.
-- **Concerns, item 1:**
-  - **"Always true" overlaps the functional requirement** (DEC-002 point 1). Taken. A concept states what holds by its records, and a business rule stays a requirement. It is decision 2. The requirement uses the concept's term, and the concept never names the requirement, which comes later in point 12's order.
-  - **"Which use case moves a concept is computed" had no front-matter source.** Taken. It now waits for item 3's option C.
-- **Notes, item 1, all taken:**
-  - a second check on concept cycles is dropped, since validation's refusal of a cycle holds the order
-  - a concept describes the domain, not the code
-  - the growth of the overview is stated as a cost, and answered by a view per concept
-  - the type `concept` and a project's set are in item 6
-- **Concerns, item 2:**
-  - **The copies ran both ways,** so a rename changed the concept too. Answered by the critic's finding below: the definition stays on the term, and the one copy runs from the term into the concept.
-  - **An alternative not weighed:** one entry per concept, holding its names, as terminology practice keeps them. Now option D. It is not recommended, since it withdraws the term kind.
-  - **A copy in front matter is stored derived data.** No copy is left in a term. The concept's copy is in its lead, as body text.
-  - **Withdrawing or merging a term** is now covered.
-- **Concerns, item 3:**
-  - **No anchors means no friction on the chain.** Weighed. Anchoring each precondition's first producer would flag a use case on every edit of that producer, 58 of them for project-kit's initial use case. So the first build reports a changed postcondition with what follows from it, and anchors wait until a postcondition can be anchored apart.
-  - **Where each check binds.** Taken. A producer resolves always. The form and the trace are the new rule's checks, binding only at its status through the project's set.
-  - **Breaking adopters.** Taken. `after` is optional, and nothing fails an adopter after upgrading. It is decision 8.
-  - **It also refines DEC-001 point 1:** the precondition narrows. Taken. It is decision 6.
-  - **The point 12 reversal** must be shown to the maintainer, with its rationale rewritten. Taken. It is decision 7.
-  - **The rule read as project-kit's self-hosting** (COR-014). Taken. Most projects' initial use cases rest on an assumption such as "the system is deployed".
-- **Notes, items 4 and 5, taken:**
-  - the re-cut's moves owe answers
-  - the chain is drawn area by area, since 70 use cases in one diagram are unreadable
-  - item 5 waits for #1802's record, which must treat an artefact as a record is treated, with no link needed
-  - `docs-author`'s guidance applies only where an analysis exists
-- **Concerns, item 6:**
-  - **The acceptance gate.** The concept record leaned on #1770's decisions, which no accepted record holds yet. Taken. The concept record now comes after the diagram records, and decides its own diagrams.
-  - **The list of records was short.** Taken: RS-SAN-005, DEC-001 points 1 and 2, the type and the project's set are now listed. No breaking change remains, since nothing fails an adopter.
-  - **The two build tasks share files.** Taken. They run one after the other.
-- **Escalation: yes,** on the upgrade path, the narrower precondition, what is always true against requirements, and the point 12 reversal. Each is now a decision of its own: 2, 6, 7 and 8.
+The critic reviewed the revised note, and the architect the note revised for the critic. Every finding is taken below, into the design or as a question. No decision of 19 October was changed.
 
 ### The critic
 
-The critic found three red flags, each changing a recommendation, and said decisions 8 to 10 stood.
+- **Red flag 1, the note's own example failed its check.** A release's precondition has install, in a later area, as one producer, and the map gives that precondition to some 58 use cases. Taken as question 8, with the example kept to show it.
+- **Red flag 2, nothing held the needs a core actor brings to a capability.** RS-SAN-004 asks a goal to be one of its actor's needs. Taken as question 9. Validation's resolving of the actor is now named as refined.
+- **Red flag 3, the question on ids counted only anchors.** Taken: the question, now question 4, counts work tracking's ids, project-management's id pattern and a new concept on places (COR-056 point 7). Its recommendation moved to one numbering across a repository's analyses. The anchor lookup is now cited to the code, not to COR-050 point 2.
+- **Gaps, each taken:**
+  - **Numbering's two homes:** what a number means is general, and project-kit's form is `ANA`'s.
+  - **The term's link as a stored reverse:** no field stores it now. The architect took it further (question 6).
+  - **A renamed term** kills page anchors on its section. The cost is named.
+  - **No home for the record anchors behind core terms:** a capability's own terms and its use cases carry them.
+  - **Diagram labels:** RS-SAN-008's fenced-block exemption is named for amending, and the diagram is held to what its view states.
+  - **The links' version lags the floor:** question 10.
+  - **Names clashing across glossaries:** a capability's term never takes a core term's name.
+  - **Refined points missing from the foundation:** DEC-001 points 3, 4 and 8, DEC-002 point 2, and RS-SAN-003 are listed.
+  - **`after` details:** it draws no anchor, and a producer resolves to a use case in force.
+  - **The move costs revalidations:** named for project-kit's move and for the upgrade path.
+  - **The view's id has no prefix:** in question 4.
+- **Weak reasoning, each taken:** question 7 now states each environment fact once. A view anchors only the terms it explains, and says why. The last set-aside line now gives the real reason.
+- **Cuts, taken:** Domain-Driven Design appears once, and the precedent sentence is gone.
 
-- **Red flag 1, decision 1 narrowed "diagram-heavy, for an innocent reader".** A concept's file showed no generated diagram, and the order kept a foundational concept from saying what it is for. Taken, by its counter-alternative and its relaxed order:
-  - **A view per concept,** held in the overview's folder, drawn both ways, so a foundational concept shows what builds on it. One file of 130 diagrams is gone.
-  - **The order binds definitions and structure only.** A concept's states, explanation and what is always true may name any concept of the model.
-  - **"Where the recommendations fall short of the direction"** is back.
-  - Its option B, diagrams in the concept's own file, stays an option. It draws one way only, so a foundational concept's diagram would show almost nothing.
-- **Red flag 2, decision 4: `after` could not express the worked example.** Several preconditions there have a use case or the environment as alternatives, and one release starts from the last. Taken. An entry may name `environment`, and a use case may name itself. The judgement rule now reads "a precondition that no use case must make true".
-- **Red flag 3, decisions 2 and 3: the one example of "Always true" had three homes.** Taken in part:
-  - **The example** is replaced by one that no definition states.
-  - **One home among concepts** is now stated: a fact belongs to the concept it is about, and others name that concept.
-  - **Its counter-alternative,** a term naming a state, event or invariant of a concept, is now option E. It is not recommended, since such a term's definition would sit inside another concept's data, and "concept" would mean two things.
-- **Gaps, all taken:**
-  - **States broke the order unchecked.** States now stand outside the order, and draw no anchors.
-  - **Whole-file anchors were judged two ways.** A concept's prose parts are now sections. Concepts, terms and pages anchor its lead or a section, never its whole file.
-  - **The narrower precondition had no producer for a guarantee.** A precondition may follow from a use case's postconditions or its guarantees.
-  - **What variants rely on dropped out of "builds on".** Now stated as a refinement of point 12 and decision 7, with its cost.
-  - **Staging did not deliver "nothing fails".** The form and the trace are declared under the new rule's checks, not in a kind's structure that RS-SAN-001 holds. A term keeps its definition, so no part is present only sometimes. COR-056 point 2 refuses a colliding type, and the note now says so.
-  - **The reversal bound everywhere at once.** The writer still judges where `after` is absent or the rule does not bind.
-  - **Nothing ran the postcondition report.** It runs where the project runs `check-numbers`.
-  - **Item 4's costs** are now stated: GitHub lists folders by name, and a re-cut may need a new name.
-- **Weak reasoning:**
-  - **D was dismissed on its framing.** Taken. D can be staged, but each converted term stays as withdrawn history beside a generated listing.
-  - **The scale of the overview was hidden.** Answered by the views.
-  - **"Only a reviewer holds" the definition and `broader` together.** Taken. A form now holds them, which also makes the definition's staying on the term the better choice. Decision 3 moves from A to B.
-  - **A report on every term without a concept is noise.** Taken. It reports only where the analysis holds a concept.
-  - **"Four kinds" was wrong.** Seven, after DEC-002.
+### The architect
+
+The architect found the view kind's place in software-analysis right, and the upgrade path sound. It raised four conflicts with accepted records, which need the maintainer's authorisation.
+
+- **A1, "between capabilities, only as an option" against COR-030.** software-engineering requires project-management. Taken as question 2.
+- **A2, a move out breaks append-only ids** (DEC-001 point 3, project-management DEC-054 point 2). Taken as question 5. The move now cites COR-041.
+- **A3, question 4 covered numbered kinds only.** Named ids collide too, and the lookup belongs to the backbone. Taken: the question now covers every kind, and recommends the core refinement of ambiguous anchors.
+- **A4, the term's link stores the reverse of an anchor.** The note had cited DEC-002 point 7 for the opposite. Taken as question 6, and the citation is mended.
+- **Fit issues, taken:**
+  - **Question 10 had the release write a capability's file.** It now keeps the pin in `ANA` and in software-analysis's validation.
+  - **Nothing marked a folder as an analysis.** The capability's configuration now lists the analyses, and the places match both layouts.
+  - **Two misstatements:** the merge gate is project-management's, so the example of the core as an actor is now validation. The friction checks run across the repository, not per analysis.
+- **Gaps, taken:**
+  - the readers point (question 9), and revalidation records kept per analysis
+  - a loop inside one area (question 8)
+  - the costs of a changed core actor, and of the head's stage
+- **Build order:** several analyses now have one home, step 1. "What each step waits for" lists the answers and acceptances each step needs.
+- **Escalation: yes,** on A1 to A4, now questions 2, 4, 5 and 6.
 
 ### The critic's confirmation
 
-The critic read the third draft once more, since its findings had changed three recommendations.
+One short round, at low effort, on the revision. It found no new conflict with an accepted record, and three slips, each mended:
 
-- **Its three red flags:** resolved.
-- **One new red flag: the note claimed a check held the order of definitions.** Validation's refusal of a cycle follows anchors, and a definition's prose draws none. So the base, anchor and answer cycles would still pass. Taken. Item 1 now says validation holds the structure's order and a reviewer the definitions', and the new judgement rule of item 3 carries it. Decision 4 says so.
-- **A small point:** the example of `after` showed no use case naming itself. Taken, with the release use case.
+- the Review section named the question on ids by its old number
+- the tooling section stated question 4's recommendation as decided
+- the questions' lead-in counted question 3 among the conflicts, though it is the choice left to this note
 
 ## For the maintainer
 
-Eleven decisions, in order. Each builds on the ones before it.
+Each question gives a recommendation, in the order the build needs the answers. Question 3 is the choice the maintainer left to this note. Questions 2 and 4 to 10 come from places where a decision of 19 October, read as stated, meets an accepted record or another decision.
 
-1. **The concept kind:** take item 1's A, a kind of its own in `domain-model/`, with its broader concept, what it consists of, relations and states as data, an explanation and what is always true as prose, and its generated diagrams in one view per concept, drawn both ways.
-2. **What is always true of a concept:** take what holds of it by its records, and leave an obligation the system must keep to a functional requirement, which uses the concept's term.
-3. **Term and concept:** take item 2's B, one concept for each term, sharing its slug, with the meaning on the term, the model on the concept, a form holding the definition to `broader`, and a term standing alone until its concept is written.
-4. **The order inside the domain model:** let the order bind a term's definition and a concept's broader concept, what it consists of and its relations, held by validation for the structure and by a reviewer for the definitions, while a concept's states and prose may name any concept.
-5. **The rule of logical consequence:** take item 3's A, a use case's `after` naming the use cases or the environment its preconditions follow from, a check that traces every use case back to an initial one, a judgement rule for the rest, and a report, not anchors, when a postcondition changes.
-6. **What a precondition is:** narrow DEC-001 point 1, so that a precondition is what another use case makes true, by its postconditions or its guarantees, or the environment gives, and a condition that holds only in some cases is a variant's.
-7. **Who judges "builds on":** let the check compute it from preconditions where `after` is written and the rule binds, and the writer judge it elsewhere, reversing point 12's sentence for those use cases.
-8. **The upgrade path:** take the staged path, where nothing fails an adopter after upgrading, since a term may stand without a concept, `after` is optional and the consequence checks bind only at the new rule's status.
-9. **Areas and folders:** take item 4's A, areas named by their goal with no numbers, re-cut to follow the chain, with the order computed and shown in the overview.
-10. **Living docs:** take item 5's A, once #1802's record is accepted, so that a page stating a concept's facts anchors the part of the concept that states them, and never becomes their home.
-11. **The order to build:** take item 6's A, the foundation first, then the diagram records, then the concept record, then the build, then project-kit's analysis bottom-up.
+1. **Adapters.** Confirm that each adapter may keep an analysis of its own, since an adapter is a component. Recommended: yes, on a capability's terms, once an adapter needs one (COR-007).
+2. **Dependencies between capabilities' analyses.** The decision allows them only as an option. But a capability may require another (COR-030), as software-engineering requires project-management.
+   - **Recommended:** an analysis builds on the analyses of the components its component depends on, required or optional. A required one is its environment, as the core is. An optional one is used "where it is installed".
+   - **What follows:** the head's list, the versioned links and the record anchors serve any analysis depended on, not only the core's.
+3. **The one-way rule between analyses:** general, in `SAN`, or project-kit's, in `ANA`? Recommended: `SAN`. Any project with several analyses meets it, and it follows the direction of a component's dependencies (COR-030). In `SAN` it reads without the core's name. An analysis names only analyses of components its own component depends on, and an optional one only as an option.
+4. **Ids across a repository's analyses.** "Its own numbering" lets project-kit hold several `UC-001`, and two analyses could each hold `TERM-gate` or an actor for the core. Three readers take an id across the repository:
+   - **the anchor lookup,** which takes the first artefact with the id, so an anchor could silently reach another analysis's.
+   - **work tracking,** which receives every use case under its id, an id naming one use case for good (DEC-001 point 8).
+   - **project-management,** which reads that id as `UC-` and digits (DEC-054 point 1). A qualified `core:UC-001` would need a new version of the point's schema (COR-052 point 5).
+
+   **Recommended:** ids unique across a repository's analyses, of every kind, so no reader changes.
+   - **Numbered kinds:** one numbering of each across the repository. "Its own numbering" then means its own areas and views.
+   - **Named kinds:** software-analysis's validation refuses an id two analyses share. A view's id takes a prefix, as every kind's does (DEC-001 point 3), such as `VIEW-records-and-rules`.
+   - **The backbone:** an artefact anchor on an id two artefacts share becomes ambiguous, as a point or a slug two share already is (COR-050 point 7). It warns first, so nothing fails an adopter.
+
+   **The alternative:** each analysis numbers alone, and the backbone reads an artefact as `<analysis>:<id>`. That adds a concept to places, which moves them into a functionality of their own (COR-056 point 7). It also changes work tracking's point and project-management.
+5. **A capability's analysis leaving the repository.** Taking the folder away deletes cited artefacts, which append-only ids forbid (DEC-001 point 3). Issues cite its use cases, which work tracking's point promises to keep (project-management DEC-054 point 2). Their numbers could also be given again.
+   - **Recommended:** the repository a capability leaves keeps each moved artefact as a withdrawn stub that says where it went. That uses withdrawal as it stands, and adds no concept.
+6. **The term's link to its view.** The decision gives a term a link to its concept's section. The link is the reverse of the view's anchor, which the records compute and never store (DEC-001 point 11, DEC-002 point 7). As body text it is the term's content, so renumbering a view or renaming its heading changes every term it explains.
+   - **Recommended:** keep the link as a named exception, a copy for navigation that the stamp writes from the views' headings and the check holds equal. Record its cost: such a change flags whatever anchors those terms. Readers want the link where they read the term.
+   - **The alternative:** compute the link where the glossary is shown, such as in the overview, and store none.
+7. **The environment in a use case.** DEC-001 point 1's Assumptions part already holds what the environment gives, with its record. The decision also puts `**Environment:** … (record)` in the Preconditions part, so two parts could hold one fact.
+   - **Recommended:** each environment fact is stated once. Alone, it sits in the Assumptions part, and `after` does not list it. As an alternative beside a use case, it sits in that precondition's line, as `**From UC-059, or Environment:**`. An initial use case then writes no `after`, and its Preconditions part reads `None.`.
+   - **The alternative:** the Preconditions part takes every environment line, and the Assumptions part is retired. Every live use case would then need a migration.
+8. **The check, where producers are alternatives.** "No producer lies in a later-numbered area folder" refuses an alternative that comes later, such as install for "a project holding the system". The map gives that precondition to some 58 use cases. The same alternative closes a loop, release to install to release, so "leaving out implied arrows" has no single answer.
+   - **Recommended:** read the check as "each precondition has at least one producer in its own area or an earlier one". The overview reduces over those earliest producers, and draws the later ones dotted.
+   - **And a seventh limit:** a loop of use cases inside one area, with no way out to the environment, passes the check. So nothing proves that each chain ends at an initial use case, and a reviewer judges it.
+9. **A core actor's needs in a capability.** A use case's goal is one of its actor's needs (RS-SAN-004), and an actor carries its needs (DEC-001 point 1). A capability lists core actors by name only, and the core's analysis never names a capability's. So a capability's use case for a core actor has no need to meet. `ACT-developer` holds about 14 needs today that only capabilities meet.
+   - **Recommended:** beside each core actor it lists, a capability's analysis states the needs that actor brings to it, and RS-SAN-004 reads them there. The core actor's needs that only a capability meets move to that capability's analysis.
+   - **The readers point:** software-analysis gives each core actor once, with the needs every analysis states for it (DEC-001 point 8).
+10. **The version of the links to the core's glossary.** A capability's backbone floor rises only when a change declares it (PRJ-002 D4), and a floor is project-kit's mechanism, not every adopter's (COR-014). A floor set before the core's analysis existed links to no file.
+    - **Recommended:** `SAN` says only that the head links to the glossary of the analysis depended on. `ANA` pins project-kit's links to the capability's backbone floor, once in the head. software-analysis's validation warns where the head's version differs from the floor. The release never writes it.
+    - **Before the core's analysis exists at the floor,** the head names the first release that holds it, and says why.
