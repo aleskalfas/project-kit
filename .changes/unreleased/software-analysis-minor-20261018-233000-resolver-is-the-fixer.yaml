@@ -2,6 +2,8 @@ component: software-analysis
 kind: minor
 custom:
   category: Added
+  requires_capabilities:
+    project-management: release
 body: >
   software-analysis declares the `analysis-resolver` the fixer of each of its
   seven artefact types, in the work-tracking role's point
@@ -16,6 +18,7 @@ body: >
   answer as a JSON file of fields, the diff of any edit and the evidence, and
   never a command. It ends with one result line per artefact: proposed, held
   with its question, or none with its reason. It never asks, since nobody
-  watches the run, and never runs a writer. A provider of the work-tracking
-  role that does not define the point yet warns of the contribution, which
-  stays inert.
+  watches the run, never proposes a deferral, and never runs a writer. Where
+  the run cannot start `pkit analysis propose`, it judges nothing. The
+  optional dependency on project-management starts from its first release
+  with the fixers point.
