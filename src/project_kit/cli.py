@@ -1558,7 +1558,7 @@ def friction_defer_command(
     metavar="ANCHOR",
     required=True,
     help="The target answered for: `kind:value`, or a value only one target has. It must be "
-    "an anchor a link of the artefact lists.",
+    "an anchor a link of the artefact takes.",
 )
 @click.option(
     "--outcome",
@@ -1580,7 +1580,8 @@ def friction_revisit_command(
     """Answer for one target of ARTEFACT's links (COR-050 point 16): add its entry to
     `revisited`, or rewrite the entry already there.
 
-    A link a place declares lists targets in one of ARTEFACT's own fields; when a
+    A link a place declares takes some of ARTEFACT's anchors as its targets: those
+    one own field lists, or every anchor but those its own fields list. When a
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
@@ -4754,6 +4755,8 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
         from project_kit import visibility
 
         click.echo(visibility.render_runtime_ignore(target_root))
+    # Last, the questions its points declare (COR-061).
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 @main.command()
@@ -6534,6 +6537,8 @@ def install_capability_cmd(
         # capability's query commands, so an offline `pkit validate` answers
         # without a `pkit sync` first (#1090).
         _deploy_capability(target_root, source_kit, name)
+    # Last, the questions its points declare (COR-061).
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 def _install_capability_in_source(
@@ -6576,6 +6581,7 @@ def _install_capability_in_source(
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 def _create_declared_rule_set(
@@ -6877,6 +6883,8 @@ def register_capability_cmd(name: str, dry_run: bool, force: bool) -> None:
         # is identical regardless of origin) — its query-command provisioning
         # included (#1090).
         _deploy_capability(target_root, source_kit, name)
+    # Last, the questions its points declare (COR-061).
+    _ask_point_questions(target_root, name, dry_run=dry_run, source=capability_source)
 
 
 def _upgrade_incubated_capability(
@@ -6918,6 +6926,7 @@ def _upgrade_incubated_capability(
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+    _ask_point_questions(target_root, name, dry_run=dry_run)
 
 
 def _upgrade_capability_in_source(
@@ -6960,6 +6969,7 @@ def _upgrade_capability_in_source(
 
     if not dry_run:
         _deploy_capability(target_root, source_kit, name)
+    _ask_point_questions(target_root, name, dry_run=dry_run)
 
 
 def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
@@ -6980,6 +6990,27 @@ def _deploy_capability(target_root: Path, source_kit: Path, name: str) -> None:
     )
     install_mod.run_installed_adapter_primitives(ctx)
     install_mod.provision_query_commands(ctx, component=name)
+
+
+def _ask_point_questions(
+    target_root: Path,
+    name: str,
+    *,
+    dry_run: bool,
+    source: CapabilitySource | None = None,
+) -> None:
+    """The last step of a capability's install, register or upgrade (COR-061):
+    the questions of the points it defines and of the points its contributions
+    reach, asked where a person can answer and named otherwise. Once the
+    operation has run, they are read from the live wiring. A dry run names them
+    from the wiring with `source`, the version it would bring, in place."""
+    from project_kit import point_questions
+
+    sources = [source] if dry_run and source is not None else []
+    wiring = point_questions.wiring_after(target_root, sources)
+    point_questions.ask(
+        target_root, point_questions.questions_for(wiring, capability=name), dry_run=dry_run
+    )
 
 
 def _check_backbone_satisfied(target_root: Path, capability_source: CapabilitySource) -> None:

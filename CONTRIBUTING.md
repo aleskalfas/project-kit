@@ -24,9 +24,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-18T16:38:26Z
+      at: 2026-10-19T06:13:50Z
       outcome: unchanged
-      unchanged-because: COR-050 changes what a path anchor and a registered kind's anchor stand on in a file a place holds, its containers left out. This page cites its points 3, 4, 12 and 16 on answers, deferrals, the required status and a target not revisited, all unchanged.
+      unchanged-because: "COR-004 gained two sentences: the rule lists the core layer's operations, and a data point's question is the definer's command and none of them. This page cites COR-004 as an example of design rules for the command surface that list no commands, which still holds."
 ---
 
 # Contributing to project-kit

@@ -87,6 +87,7 @@ The code behind `pkit sync` splits in two: a propagation step, and the sync comm
   - `pkit capabilities upgrade <name>` is a transition of one shipped capability, to the version the project's recorded release ships. It finishes an interrupted transition of that capability, or a capability an untagged install left behind.
   - `pkit init` is first install. It records the two states in a transition's order (point 4).
   - `pkit capabilities install` propagates one capability at the recorded backbone, under the guard (point 7).
+  - `pkit upgrade` and `pkit capabilities install`, `register` and `upgrade` each run, after their one operation, the questions the data points declare ([COR-061](../../../.pkit/decisions/core/COR-061-point-questions.md) point 2). A question is its definer's command, and no second operation (COR-059 point 5).
 
 ### 2. Each component records its own version, and only a transition moves it
 
@@ -161,7 +162,9 @@ A project already current returns after these checks, before step 1, and only wr
 7. **Seed paths are created where missing** (point 11), never over one that exists.
 8. **Derivable state:** merge delivery, deploy, `.pkit/.gitignore` rendered again, the agent workspace and provisioning.
 9. **The completion is recorded:** `completed_version` becomes the target.
-10. **The pin,** last, as ADR-049 point 1 and ADR-064 point 1 set.
+10. **The pin,** the last of the upgrade's writes, as ADR-049 point 1 and ADR-064 point 1 set.
+
+**After the pin, the questions.** Once the pin is written, `pkit upgrade` runs every question a data point declares where a person can answer, and otherwise prints the command to run each later (COR-061 points 2 and 3). They are no step of the transition (COR-059 point 5). Every write of the upgrade is made before the first question starts, so a question that fails, is stopped or is killed leaves nothing of the upgrade to finish. Following the pin, a `pkit` that a question runs never routes to the release the project left. A project already current returns before step 1, and runs no question.
 
 - **Why the render runs twice:** `1.150.0/002-untrack-runtime-ignored-files` reads the render of the target's declarations, so the first render follows propagation. The second is part of derivable state, which COR-010's order regenerates after every migration.
 - **Why seed paths follow the migrations:** a migration that moves a project's file to a seed path would otherwise find a fresh seed there. COR-010 left this place open.
@@ -169,17 +172,20 @@ A project already current returns after these checks, before step 1, and only wr
 - **A capability's files are copied before its migrations,** as COR-010's order sets. Project-management's `0.15.0/001` and `0.24.0/001` are fixed for this order.
 - **The adapter copy carries every file the core layer reads from the project's copy of an adapter.** One is the adapter's declaration of which permission dimensions its harness enforces.
 - **Merge delivery runs its auto-add tier.** A tier that prompts runs only where a person can answer, and none is built (COR-002, COR-059 point 2).
-- **Where a person can answer:** standard input and standard output are both terminals, as ADR-063 point 3 tests. The collision flow uses the same test.
+- **Where a person can answer:** standard input and standard output are both terminals, as ADR-063 point 3 tests. The collision flow and the questions use the same test.
 - **A migration that exits non-zero stops the transition.** The completion is not recorded, and the next upgrade runs the migration again.
 - **First install records the same two states.** It writes the target before it copies anything, registers the adapters after the copy, and writes `completed_version` last. The next `pkit upgrade` finishes an interrupted install. That upgrade also pins the project by ADR-064's default, while a finished init writes no pin (ADR-064 point 3).
 - **A transition of one capability** (`pkit capabilities upgrade <name>`) runs in the same order for that capability alone (COR-010). It writes neither of the backbone's two keys. Its steps:
   1. the guard (point 7), then step 1 for that capability. Each may refuse, and none writes.
   2. its manifest moves under `project/` where it is still at the root, and each skip chosen in step 1 is recorded
   3. steps 3, 6 and 8, for that capability
+
+  After them, outside the transition, it runs the questions of the points that capability defines and of those its contributions reach (COR-061 point 2), as `pkit capabilities install` and `register` do after their deploy.
 - **What the report and the dry run show:**
   - the target, and each component's move
   - the replay, where `completed_version` is missing (point 5)
   - each component's migrations, and any collision the transition would ask about
+  - each question the upgrade would run after the transition. The dry run names them and runs none (COR-061 point 2).
   - in the report, each widening the settings merge brings: an added allow entry, or an added top-level key such as `hooks`. An `ask` rule in the project's additions brings the question back (#1454).
 
 ### 5. A missing completion runs every backbone migration once
@@ -324,6 +330,7 @@ The core layer writes a project-owned path only through a writer a record names 
 | `.pkit/agents/project/overlay.yaml` | also `pkit agents reconcile --write`, where the overlay is missing (COR-013) | its own `--write` |
 | the project rule set a capability declares, in `rule-sets/` under the internal documentation root | the capability's install, once for each install, where no rule set of the project's own inherits the capability's method set, directly or not (COR-017). A migration of that capability, inside a transition and on the same condition, for a project that installed the capability before it declared the set. | the command's own, or choosing the target for the migration (COR-059 point 4) |
 | any file a migration writes | a migration, inside a transition, within what the owning record allows, such as COR-048 point 5 for the configuration file | choosing the target |
+| the answers to a data point's question, where its definer records them | the definer's question command, which `pkit upgrade` and a capability's install, register and upgrade start once their operation is complete (COR-061) | the person's answer, given where a person can answer |
 
 - **The seed paths** are what one seeding step creates, in first install and in a transition of the backbone alike. Sync creates none. Their kinds:
   - each area's `project/` folder, and the scratchpad's state folders
@@ -496,5 +503,5 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - `pkit agents reconcile --write` stops on a missing overlay, and names `pkit init`.
   - The install code's override copies the capability's artefact and leaves the project's in place, unlike point 6's. How the install code comes into line is an open question for a follow-up.
 - **Stands on these records, all accepted:**
-  - COR-001, COR-002, COR-004, COR-010, COR-011, COR-013, COR-017, COR-030, COR-031, COR-041, COR-048, COR-053 and COR-059
+  - COR-001, COR-002, COR-004, COR-010, COR-011, COR-013, COR-017, COR-030, COR-031, COR-041, COR-048, COR-053, COR-059 and COR-061
   - ADR-009, ADR-033, ADR-039, ADR-049, ADR-057, ADR-059, ADR-063, ADR-064, PRJ-004 and PRJ-007

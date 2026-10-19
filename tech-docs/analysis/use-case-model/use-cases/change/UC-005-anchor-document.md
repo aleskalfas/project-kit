@@ -23,9 +23,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-18T17:44:49Z
+      at: 2026-10-18T19:56:59Z
       outcome: unchanged
-      unchanged-because: The change adds to pkit friction artefacts a list of the files of a capability's documentation location that no place or held folder of it holds. How a developer declares and checks a document's anchors, and the places the command lists, are unchanged.
+      unchanged-because: This change adds a second way for a link to choose its targets, and splits one validation bullet of COR-050 point 12. Writing anchors, and the block faults this use case says validation fails on, are untouched.
 ---
 
 # UC-005 — Say what my document rests on

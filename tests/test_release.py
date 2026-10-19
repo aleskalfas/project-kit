@@ -155,6 +155,50 @@ def test_apply_generates_changelog_from_notes(tmp_path: Path) -> None:
     assert "- Add `pkit release`." in changelog
 
 
+@pytest.mark.parametrize(("component", "moving"), [("backbone", "minor"), ("claude-code", "patch")])
+def test_apply_writes_no_changelog_line_for_a_none_changeset(
+    tmp_path: Path, component: str, moving: str
+) -> None:
+    """PRJ-002: a `none` changeset is recorded but adds no changelog line, even
+    when another changeset moves its component (#1753)."""
+    source_kit = _make_kit(tmp_path)
+    _add(source_kit, component, moving, "Add a command.", "a.yaml")
+    _write_categorised(
+        source_kit, component, "none", "Record a design-ahead decision.", "Added", "b.yaml"
+    )
+
+    plan = release.compute_release(source_kit)
+    (rel,) = plan.releases
+    assert rel.notes == ["Add a command."]
+    release.apply_release(source_kit, plan, tag=False, today=date(2026, 10, 18))
+
+    changelog = (tmp_path / "CHANGELOG.md").read_text(encoding="utf-8")
+    assert "Add a command." in changelog
+    assert "design-ahead" not in changelog
+    assert "### Added" not in changelog  # the none changeset's category opens no group
+    assert list(changesets.unreleased_dir(tmp_path).glob("*.yaml")) == []  # both consumed
+
+
+def test_a_none_changeset_links_no_pull_request_and_is_not_counted_unlinked(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A `none` changeset's `pr` labels nothing: its entry is not written, so no
+    reference is either, and the warning counts only the numbers that label one."""
+    source_kit = _make_kit(tmp_path)  # no remote: bare numbers link nowhere
+    _write_categorised(source_kit, "backbone", "patch", "A fix.", "Fixed", "a.yaml", pr="503")
+    _write_categorised(source_kit, "backbone", "none", "Design ahead.", "Fixed", "b.yaml", pr="504")
+    plan = release.compute_release(source_kit)
+
+    entry = release.render_changelog_entry(
+        plan, date(2026, 10, 18), repository_url="https://github.com/owner/repo"
+    )
+    assert "[#503]: https://github.com/owner/repo/pull/503" in entry
+    assert "#504" not in entry
+
+    release.apply_release(source_kit, plan, tag=False)
+    assert "1 pull-request number(s)" in capsys.readouterr().err
+
+
 def test_apply_prepends_new_entry_above_existing(tmp_path: Path) -> None:
     source_kit = _make_kit(tmp_path)
     (source_kit.parent / "CHANGELOG.md").write_text(

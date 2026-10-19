@@ -17,7 +17,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-18T21:07:00Z
+      at: 2026-10-18T20:02:39Z
       outcome: updated
 ---
 
@@ -54,12 +54,15 @@ body: Add the `pkit release` command.   # the note (a changelog line)
   unknown component is refused.
 - **`kind`** — the segment, a **human surface judgment** (PRJ-002 D2), *not*
   inferred from the commit type. `none` declares "this touched a component's
-  tree but is not a surface change" (the escape hatch; consumed without moving
-  a version).
-- **`body`** — the human-readable note; becomes a changelog line.
+  tree but is not a surface change" (the escape hatch). The release consumes a
+  `none` changeset without moving a version, and adds no changelog line for
+  it, even when another changeset moves its component (PRJ-002).
+- **`body`** — the human-readable note. It becomes a changelog line, unless
+  the changeset is `none`.
 
 Several changesets may name the same component (e.g. two PRs each touch the
-backbone); the release takes the **highest** segment and lists every note.
+backbone). The release takes the **highest** segment, and the changelog lists
+the note of each changeset but a `none` one.
 
 ### Declaring that a component needs a backbone
 
@@ -468,7 +471,7 @@ Two optional fields on a changeset drive the format:
   `kind` segment**: a `patch` may be `Fixed` *or* `Changed`, a `minor` may be
   `Added` *or* `Changed` — **never derive one from the other**. `category` is
   **optional** (defaults to `Changed` at render) and **irrelevant for `none`**
-  changesets, which move no version.
+  changesets, which move no version and add no changelog line.
 - **`pr`** — the PR reference for the `([#N])` link. It is **optional and
   captured at author time**: the release step does *not* derive it, because
   squash / rebase makes the commit→PR mapping unreliable (the same reason

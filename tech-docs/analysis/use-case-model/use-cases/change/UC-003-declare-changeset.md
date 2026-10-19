@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-18T21:06:53Z
+      at: 2026-10-19T06:13:40Z
       outcome: unchanged
-      unchanged-because: This change makes the release's migration-dir warning cover adapter and capability folders, and adds a number check to pkit migrations check-diff in cli.py. The changesets, the changeset guard and the release commands this use case describes behave as before, and the warning writes no version.
+      unchanged-because: cli.py changed only in the capability install, register and upgrade commands, which now end with the questions a data point declares. Declaring a changeset and the release check this use case describes are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

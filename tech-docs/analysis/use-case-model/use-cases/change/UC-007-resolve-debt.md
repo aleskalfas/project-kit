@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-18T18:34:32Z
+      at: 2026-10-18T19:06:27Z
       outcome: unchanged
-      unchanged-because: Core rule 20 now names revisit entries. This use case cites it only for an answer no change of the writer's own owes being a person's decision, shown word for word first, which the rule still says. Only the change check asks for a revisit entry, never the debt this use case resolves (COR-050 point 16).
+      unchanged-because: This branch words the change check's revisit finding, which the whole-repository check never reads, and splits one validation bullet of COR-050 point 12. Debt, its listing, how it is answered and what this use case takes from core rule 20 are untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

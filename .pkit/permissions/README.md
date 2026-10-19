@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/workspace.py
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
     revalidated:
-      at: 2026-10-18T21:06:56Z
+      at: 2026-10-18T20:32:48Z
       outcome: unchanged
-      unchanged-because: ADR-009 now names the 1.150.0 migration that untracks runtime-ignored files by its new number, 002, and decides nothing new. This page relies on its visibility and untrack rules, which read as before, and names no migration file.
+      unchanged-because: "ADR-060 point 6 gains one sentence: in a confined agent run, where the harness approves no write by itself, the Claude Code adapter emits a path rule for the run's workspace (refinement per ADR-066). This page states the contract every adapter meets: a path-scoped grant is realised by the hook, and an adapter emits the narrowest path-scoped rule only where its harness does not approve the folder itself. A confined run is such a case, so the sentence applies that contract, and nothing the page says changes."
 ---
 
 # Permissions — decision core

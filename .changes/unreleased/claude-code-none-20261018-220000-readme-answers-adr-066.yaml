@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  The adapter's README records an unchanged revalidation against ADR-060,
+  which ADR-066 refines for a confined agent run that no change has built
+  yet (#1741). The README's text is unchanged, so no surface moves.
