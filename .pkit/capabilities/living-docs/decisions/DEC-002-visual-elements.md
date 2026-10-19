@@ -1,7 +1,7 @@
 ---
 id: DEC-002
 title: Pages show diagrams, images, console output and callouts as neutral content
-status: proposed
+status: accepted
 date: 2026-10-19
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
