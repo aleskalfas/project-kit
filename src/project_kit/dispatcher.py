@@ -34,7 +34,7 @@ from __future__ import annotations
 
 import subprocess
 import sys
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -410,10 +410,22 @@ def _make_proxy_command(name: str, script_path: Path, help_text: str) -> click.C
     def cmd(args: tuple[str, ...]) -> None:
         if not script_path.is_file():
             raise click.ClickException(f"script not found: {script_path}")
-        result = subprocess.run([str(script_path), *args])
-        sys.exit(result.returncode)
+        sys.exit(run_as_typed(script_path, args))
 
     return cmd
+
+
+def run_as_typed(script: Path, args: Sequence[str] = (), *, cwd: Path | None = None) -> int:
+    """Run a capability's command as a person typed it, and answer its exit status.
+
+    The proxy's one run: an explicit argument list, the terminal's streams
+    inherited, nothing captured and no time bound. A data point's question runs
+    through it too, from the project root (`point_questions`, COR-061), so what
+    the proxy's run gains reaches a question alike. Raises `OSError` when the
+    script cannot be started."""
+    return subprocess.run(
+        [str(script), *args], cwd=None if cwd is None else str(cwd), check=False
+    ).returncode
 
 
 def _short_help(text: str) -> str:

@@ -569,6 +569,66 @@ def test_a_validator_names_a_declared_command_that_declares_the_query_contract(
     }
 
 
+_ACCEPTED = "/connections/extension-points/accepts/pkit::documentation:reading-evidence"
+
+
+def _asking(question: Any) -> dict[str, Any]:
+    """The package whose data point names `question` as its question (COR-061)."""
+    connections = _connections()
+    connections["extension-points"]["accepts"]["pkit::documentation:reading-evidence"][
+        "question"
+    ] = question
+    return _package(connections=connections)
+
+
+def test_a_data_points_question_names_a_declared_command(
+    schema: dict[str, Any], component_dir: Path
+) -> None:
+    assert _validate(_asking("create page"), schema, component_dir) == []
+    errors = _messages(_validate(_asking("ask"), schema, component_dir), pv.Severity.ERROR)
+    assert errors == {
+        f"{_ACCEPTED}/question": (
+            "command 'ask' is not declared in `commands:` (declared: ['create page', 'publish'])."
+        )
+    }
+
+
+def test_a_data_points_question_is_no_query(schema: dict[str, Any], component_dir: Path) -> None:
+    raw = _asking("publish")
+    raw["commands"]["publish"]["query-contract"] = True
+    errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
+    assert errors == {
+        f"{_ACCEPTED}/question": (
+            "point 'pkit::documentation:reading-evidence' names command 'publish' as its "
+            "question, which declares the query contract (`query-contract: true`): a question "
+            "records the person's answers, so it writes and is no query (COR-061 point 1). "
+            "Drop the declaration, or name another command."
+        )
+    }
+
+
+def test_only_a_data_point_takes_a_question(schema: dict[str, Any], component_dir: Path) -> None:
+    connections = _connections()
+    connections["extension-points"]["offers"] = {
+        "pkit::documentation:page-created": {
+            "kind": "event",
+            "schema_version": 1,
+            "description": "A page landed.",
+            "command": "publish",
+            "schema": "reading-evidence.schema.json",
+            "subject": "page",
+            "question": "publish",
+        }
+    }
+    errors = _messages(
+        _validate(_package(connections=connections), schema, component_dir), pv.Severity.ERROR
+    )
+    assert list(errors) == [
+        "/connections/extension-points/offers/pkit::documentation:page-created/question"
+    ]
+    assert "unknown key 'question'" in next(iter(errors.values()))
+
+
 def _reading(reads: Any, *, contract: bool = True) -> dict[str, Any]:
     """The package with `publish` declaring `reads` (COR-052 point 6)."""
     raw = _package()

@@ -845,6 +845,22 @@ def _connection_findings(
                     continue
                 if group == "accepts":
                     check_companion(f"{path}/schema", point.get("schema"))
+                    question: object = cast("Mapping[str, Any]", point).get("question")
+                    check_command(f"{path}/question", question)
+                    leaf = (
+                        resolve_command(command_leaves, question)
+                        if isinstance(question, str)
+                        else None
+                    )
+                    if leaf is not None and leaf.get(QUERY_CONTRACT_KEY) is True:
+                        _error(
+                            f"{path}/question",
+                            f"point {address!r} names command {question!r} as its question, "
+                            f"which declares the query contract (`{QUERY_CONTRACT_KEY}: true`): "
+                            "a question records the person's answers, so it writes and is no "
+                            "query (COR-061 point 1). Drop the declaration, or name another "
+                            "command.",
+                        )
                 elif point.get("kind") == "event":
                     check_companion(f"{path}/schema", point.get("schema"))
                     check_command(f"{path}/command", point.get("command"))
@@ -983,7 +999,8 @@ def undeclared_command(
 ) -> str | None:
     """Why `reference` — a path through `commands:`, tokens separated by spaces —
     names no leaf, or None when it does. One check for every command reference:
-    an offered event's emitter, a filler, a subscriber, a validator."""
+    an offered event's emitter, a filler, a subscriber, a point's question, a
+    validator."""
     if resolve_command(command_leaves, reference) is not None:
         return None
     known = sorted(" ".join(t) for t in command_leaves)
