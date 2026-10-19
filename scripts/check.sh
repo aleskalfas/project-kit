@@ -52,9 +52,25 @@
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
+#
+# `--short` runs the short check (ADR-067): every line but the test suite, and of
+# the suite only the tests marked `answers`, which read the repository's own
+# answers. CI runs it on a pull request whose only changes since its most recent
+# full run, which passed, are answers (`scripts/short_check.py` decides). The
+# pre-push hook passes no argument, so it always runs the whole aggregator.
 
 set -uo pipefail
 cd "$(git rev-parse --show-toplevel)"
+
+short=0
+case "$*" in
+  "") ;;
+  --short) short=1 ;;
+  *)
+    echo "usage: scripts/check.sh [--short]" >&2
+    exit 2
+    ;;
+esac
 
 # The diff-scoped checks (migration coverage, record numbering, friction, the
 # prose lint, analysis numbers and pointers, doc check) and the type check's guard on its
@@ -161,13 +177,24 @@ run_tests() {
   return "${failed}"
 }
 
+# The short check's test step: the tests marked `answers` alone, in one process.
+# Exit 5 is pytest's "no tests collected": no test is marked `answers`.
+run_answer_tests() {
+  uv run pytest -q -m answers
+  case $? in 0 | 5) return 0 ;; *) return 1 ;; esac
+}
+
 # The query commands `pkit validate` runs offline are provisioned by `pkit sync`
 # (the lifecycle README, "How dependencies are provisioned before an offline
 # run") — which CI runs on checkout, and a clone runs once — not by this gate.
 run "lint"               uv run ruff check .
 run "format"             uv run ruff format --check .
 run "types"              uv run python scripts/pyright_ratchet.py
-run "tests"              run_tests
+if [ "${short}" -eq 1 ]; then
+  run "tests (the short check: only those marked answers)" run_answer_tests
+else
+  run "tests"            run_tests
+fi
 run "validate"           uv run pkit validate
 run "deployed agents"    uv run python scripts/check_deployed_agents.py
 run "migrations check"   uv run pkit migrations check-diff
@@ -184,4 +211,8 @@ if [ "${fail}" -ne 0 ]; then
   echo "✗ checks FAILED"
   exit 1
 fi
-echo "✓ all checks passed"
+if [ "${short}" -eq 1 ]; then
+  echo "✓ all checks passed (the short check: the test suite was skipped, ADR-067)"
+else
+  echo "✓ all checks passed"
+fi

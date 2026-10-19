@@ -7,6 +7,10 @@ name: checks
 # now steps inside the aggregator).
 # The whole-repository friction report, which gates nothing, is its own
 # workflow: friction-report.yml.
+#
+# On a pull request whose only changes since its most recent full run, which
+# passed, are answers, the job runs the short check instead: the aggregator
+# without its test suite (ADR-067). Every other run, and every doubt, is full.
 
 on:
   pull_request:
@@ -26,11 +30,21 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    # Read only: the checkout, and what the step that decides the short check
+    # reads (ADR-067) — the record of this workflow's runs, and the pull
+    # request's branch and timeline.
+    permissions:
+      contents: read
+      actions: read
+      pull-requests: read
     steps:
+      # The token stays out of the clone's configuration, so no later step that
+      # runs the project's code holds it, but the deciding step.
       - name: Checkout (full history so the migration-diff base ref resolves)
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -51,7 +65,38 @@ jobs:
       - name: Sync (provisions the query commands)
         run: uv run pkit sync
 
+      # Full or short (ADR-067). Only a pull request may run the short check:
+      # the two steps below gate on the event themselves. The decider says
+      # `short` where GitHub's record shows the most recent full run on the pull
+      # request passed, and `pkit friction since` says only answers changed
+      # since that run's head. On a pull request the decider, and the `pkit` it
+      # asks, are the base's, checked out beside this tree and run against it,
+      # so a pull request never decides its own run with its own code. A base
+      # with no decider leaves the run full. On any other event this tree's
+      # decider only says why the run is full. The decider writes `mode=short`
+      # last, and only then. A failure here fails nothing: with no answer, the
+      # run is full. Of the steps that run the project's code, only this one
+      # holds the token.
+      - name: Decide the full run or the short check
+        id: form
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PKIT_DECIDER_BASE: ${{ github.event.pull_request.base.ref }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != pull_request ]; then
+            exec uv run python scripts/short_check.py
+          fi
+          decider="$RUNNER_TEMP/decider"
+          git worktree add --detach --quiet "$decider" "refs/remotes/origin/$PKIT_DECIDER_BASE"
+          if [ ! -f "$decider/scripts/short_check.py" ]; then
+            printf '### `checks`: the full run\n\nThe base holds no decider of the short check (ADR-067).\n' >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          exec uv run --project "$decider" --frozen python "$decider/scripts/short_check.py"
+
       - name: Run the check aggregator
+        if: github.event_name != 'pull_request' || steps.form.outputs.mode != 'short'
         env:
           # PR: diff against the PR base. Merge queue: against the commit the
           # queued merge is built on (`merge_group.base_sha` — `main`, or the
@@ -60,6 +105,15 @@ jobs:
           # (no-op diff).
           PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
         run: ./scripts/check.sh
+
+      # Every line of the aggregator but the test suite, of which it runs only
+      # the tests marked `answers` (ADR-067). Its name is the mark the deciding
+      # step reads on earlier runs, with the step above's: keep both.
+      - name: Run the short check
+        if: github.event_name == 'pull_request' && steps.form.outputs.mode == 'short'
+        env:
+          PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
+        run: ./scripts/check.sh --short
 
       # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the
       # PR labels (the `skip-changeset` escape hatch), neither of which a local
