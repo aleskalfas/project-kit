@@ -13,8 +13,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-19T14:38:17Z
-          outcome: updated
+          at: 2026-10-19T17:53:40Z
+          outcome: unchanged
+          unchanged-because: DEC-001 points 1 and 2 gain diagrams in an artefact's parts and the overview's held folder. Neither touches the voice of a need or a goal, so this rule holds as written.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}
@@ -30,6 +31,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
+        revalidated:
+          at: 2026-10-19T17:53:41Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 2 gains a held folder for the generated overview of an analysis's diagrams. What an area's number means is unchanged, so this rule holds as written.
   RS-ANA-004:
     status: proposed
     origin: {why: "Each component owns its analysis, as it owns its decision records. A capability may move to a repository of its own (software-analysis DEC-001 point 2). On 19 October the maintainer decided that project-kit keeps one analysis for its core and one for each capability. The maintainer's delegate decided that an adapter keeps one once it needs one. The design note on analysis concepts and order records both (PR #1808)."}
@@ -37,6 +42,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2"]
+        revalidated:
+          at: 2026-10-19T17:53:42Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 2 gains a held folder for the generated overview of each analysis's diagrams. Which analysis an artefact lies in is unchanged, so this rule holds as written.
   RS-ANA-005:
     status: proposed
     origin: {why: "On 19 October, a map of project-kit's chain of use cases on main found five stages, each building on the ones before it. The maintainer took them as the core's areas (the design note on analysis concepts and order, PR #1808)."}
@@ -44,6 +53,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
+        revalidated:
+          at: 2026-10-19T17:53:43Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 2 gains a held folder for the generated overview of an analysis's diagrams, and no change to areas. The core's five areas hold as written.
   RS-ANA-006:
     status: proposed
     origin: {why: "A link at the version a capability requires of another component names the definitions the capability was written against. software-analysis leaves the links' version to each project (software-analysis DEC-001 point 2). A floor is project-kit's mechanism, raised only when a change declares it (PRJ-002 D4). The maintainer's delegate chose the floor on 19 October, under the maintainer's standing delegation (the design note on analysis concepts and order, PR #1808)."}
@@ -51,6 +64,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#2", "PRJ-002#D4"]
+        revalidated:
+          at: 2026-10-19T17:53:44Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 2 gains a held folder for the generated overview of an analysis's diagrams. The links to another analysis and their version are unchanged, so this rule holds as written.
 ---
 
 # ANA — project-kit's rules for its analysis

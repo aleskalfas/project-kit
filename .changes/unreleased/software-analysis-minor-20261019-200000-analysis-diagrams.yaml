@@ -1,0 +1,22 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  The analysis's diagrams are decided, and `pkit analysis diagram` prints
+  three of them (#1804, software-analysis DEC-003). The new record draws
+  four diagrams from the analysis's front matter, each for one analysis: a
+  use-case diagram, a journey's flow, a requirement map, and the chain of
+  use cases from `after`. It decides that a diagram is never a fact's home,
+  and that a diagram written in an artefact shows only what that artefact,
+  or an analysis artefact it anchors, states. A generated overview of an analysis's diagrams, and two proposed
+  rules of `SAN` with this record as their origin, come in later changes.
+  `pkit analysis diagram [<subject>] [--json]` prints the use-case diagram,
+  each journey's flow and the requirement map as Mermaid fences, each with
+  its `accTitle` and `accDescr` and no styling. The subject is `use-cases`,
+  `journeys`, `requirements`, a journey's id or a requirement's id. Only
+  artefacts in force are drawn, the same analysis prints the same bytes,
+  and a file it cannot read is no answer. It is computed from the working
+  tree each time, and writes nothing. The chain's query comes with the
+  build that reads `after`. The record refines software-analysis DEC-001
+  points 1, 2 and 11.

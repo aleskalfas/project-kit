@@ -12,10 +12,10 @@ pkit:
         - .pkit/capabilities/software-analysis/agents/**
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
-      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
+      record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T14:38:18Z
+      at: 2026-10-19T17:54:16Z
       outcome: updated
 ---
 
@@ -23,7 +23,7 @@ pkit:
 
 Keep a written, checkable account of **what your software must do**, and keep it true as the software changes. The account covers who uses it (actors), what they're trying to achieve and how (use cases), the end-to-end paths across several use cases (journeys), and what the words mean (glossary). It also covers what binds many use cases at once: how well the system behaves, behaviour that holds across use cases, and limits on the solution (requirements).
 
-Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline], and the requirements' in [software-analysis:DEC-002-analysis-requirements].
+Install it when your project is past the point where one person holds the whole picture. That's when newcomers and agents need to learn the system from something more reliable than the code alone, and when you want to know if a change makes the description false. The rule is in [software-analysis:DEC-001-software-analysis-discipline], the requirements' in [software-analysis:DEC-002-analysis-requirements], and the diagrams' in [software-analysis:DEC-003-analysis-diagrams].
 
 ## How it stays true
 
@@ -94,7 +94,7 @@ analysis/
 
 A kind with many files gets a folder, and a kind with one file is a file. Folders appear only when something goes into them. These files belong to your project: uninstalling the capability leaves them in place.
 
-**Decided, not built yet.** DEC-001 decides how a project whose system has several components keeps its analyses. The capability reads none of it yet, so keep one analysis at the folder's root, as above.
+**Decided, not built yet.** DEC-001 decides how a project whose system has several components keeps its analyses, how areas are numbered, and what a use case starts from. The capability reads none of it yet, so keep one analysis at the folder's root, as above.
 
 - **One analysis per component** (DEC-001 point 2). A component may keep an analysis of its own, and you choose which do. Each takes a folder named after its component, with the layout above, its own glossary, actors, areas and revalidation records. It lives where its component is developed, and never ships with it.
 - **Dependencies between analyses** follow the components' (DEC-001 point 2). An analysis builds only on the analyses of the components its component depends on. Its glossary's head lists the terms and actors it takes from them, by name with a link. Beside each such actor, it states the needs that actor brings to it. Only the actors that a use case, a journey or a requirement names may be another analysis's, and the artefact anchors the records behind them. A journey's steps, and a precondition's producers, stay within one analysis.
@@ -705,6 +705,39 @@ REQ-004 · Quality · Show a run's result quickly
 
 It is a query: read-only and offline. It reads the working tree through the core's reading command, `pkit friction artefacts`, as the check does.
 
+## Diagrams: `pkit analysis diagram`
+
+`pkit analysis diagram [<subject>] [--json]` prints the analysis's diagrams as Mermaid, drawn from its front matter each time ([software-analysis:DEC-003-analysis-diagrams]). Nothing is stored, so a diagram never goes stale. GitHub draws each fence it prints. Here is the flow of the journey above:
+
+```mermaid
+flowchart LR
+  accTitle: JRN-001 — Run the suite and read why it failed
+  accDescr: The flow of JRN-001: ACT-tester takes 2 steps in order, UC-003, UC-005.
+  ACT_tester["ACT-tester — Test author"]
+  step_1(["1. UC-003 — Run a test suite against a sandbox"])
+  step_2(["2. UC-005 — Read a failure's cause"])
+  ACT_tester --> step_1
+  step_1 --> step_2
+```
+
+- **What it draws** (DEC-003 point 4):
+  - **The use-case diagram:** the system's boundary, the use cases inside it and the actors around it. An arrow joins each use case to its `actor`, and a line joins it to each of its `other-actors`. An analysis with no use case in force has none.
+  - **A journey's flow:** its actor, then its `steps` in order. The use cases of its `relies-on` stand in a group of their own, with no arrow, since which step relies on which is in its body.
+  - **The requirement map:** each requirement, the use cases and journeys that list it in `requirements`, the requirements it `refines` and its `actors`.
+- **The subject.** `use-cases`, `journeys` or `requirements` names a diagram. A journey's id names its flow, and a requirement's id its map. With no subject, it prints every diagram the analysis has something to draw for.
+- **Front matter only.** No diagram draws a use case's main path or a journey's seams, which lie in the body (DEC-003 point 3).
+- **Only what is in force.** A withdrawn artefact draws nothing. A reference to an artefact the analysis does not hold in force draws nothing either, and the check reports it. A journey's step keeps its place in the order, drawn by its id alone.
+- **Its text alternative.** Each diagram opens with an `accTitle` that names it and an `accDescr` that says in words what it shows. It holds no styling, so it looks as GitHub, or your site, draws it.
+- **The same bytes.** The same analysis prints the same text, its nodes sorted and its node ids stable.
+- **Where a copy may go.** Never into an analysis artefact, and never into a view of the solution, such as an architecture page or a record (DEC-003 point 9). A copy on any other page is that page's diagram, and the page anchors each artefact it draws.
+- **Complete, or no answer.** A file of a place a diagram reads that holds no artefact of its kind gives no answer. So does an artefact there with no id of its kind's shape, or one in force whose list a diagram reads that is no list of ids. The command exits 1 and names the file, and `pkit analysis validate` says what is wrong with it. A subject that names no diagram, and a journey or a requirement not in force, give no answer too.
+- **`--json`** prints `{schema_version, diagrams}`. Each diagram is `{id, title, description, mermaid}`, its `mermaid` text without the fence.
+- **What comes later:**
+  - **The chain of use cases,** drawn from each use case's `after`, comes with the build that reads `after` (DEC-003 point 5). Until then, `pkit analysis diagram chain` says so.
+  - **A generated overview** of the analysis's diagrams, kept fresh in a folder of its own, comes after this query (DEC-003 point 8).
+
+It is a query: read-only and offline. It reads the working tree through the core's reading command, `pkit friction artefacts`, as the check does.
+
 ## The method rule set: `SAN`
 
 `rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds ten rules. Each has DEC-001 or DEC-002 as its origin, save the source rule, which names who decided it and when.
@@ -1174,11 +1207,11 @@ When that floor requires the reviewer, and what it reads locally, is in [project
 
 ## What's shipped now, what's next
 
-Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted, and its judgement rules proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`, and the fixers contribution, which declares the `analysis-resolver` the fixer of each of its types; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. `SAN` holds proposed rules on what a requirement anchors and the records it never contradicts. The stamp writes a requirement of each kind, numbered as `REQ-NNN` across the three kinds. The check holds a requirement to its schema, its file's name and its heading to its id and its kind, what its `actors` and `refines` name and its anchors to the two, and its body to its structure where the format rule binds. It also fails a file under `requirements/` outside the three kinds' folders. Each kind's place declares the core's link, so a changed obligation asks for a revisit of its anchors outside the analysis. The number check, `pkit analysis check-numbers`, compares its number across the three kinds. A use case and a journey list the requirements they must meet in `requirements`, each anchored, which the stamp writes and the check holds. `pkit analysis met-by` lists what meets each requirement, computed from those lists. Decided, and built later: several analyses, ids unique across them, numbered areas, and a use case's `after` with its check ("Where things live", above). Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
+Shipped: the decision; the method rule set `SAN`, its format rule and its append-only rule accepted, and its judgement rules proposed; each kind's declared structure, `schemas/artefact-kinds.yaml`, and a project's own changes to it, `project/structures.yaml`; the analysis location, its places and the types they give; a companion schema and a template for each artefact kind and for the revalidation record; the stamp, `pkit analysis new`, revalidation records included; the check, `pkit analysis validate`, a member of `pkit validate`, which holds each record's body to its structure always, and each artefact's where the format rule is accepted and binds through a set of the project's own, and previews it with `--preview` before; the number check, `pkit analysis check-numbers`, a check-gate line of its own, which also keeps a use case's steps and variants append-only; the numbering setting, `numbering.freed-by`; the `analysis-author` skill; the `analysis-resolver` agent with `pkit analysis propose`; and the connections above — the analysis role, the evidence point with its companion schema, the readers contribution with its filler, `pkit analysis fill-readers`, and the use-case contribution with its filler, `pkit analysis fill-use-cases`, and the fixers contribution, which declares the `analysis-resolver` the fixer of each of its types; and the contribution of the core rule-set reviewer to project-management's merge gate. Of the three kinds of requirement ([software-analysis:DEC-002-analysis-requirements]), shipped: each kind's declared structure, template, companion schema, place and type, the type in the set install creates, and a requirement's id in revalidation records and evidence. `SAN` holds proposed rules on what a requirement anchors and the records it never contradicts. The stamp writes a requirement of each kind, numbered as `REQ-NNN` across the three kinds. The check holds a requirement to its schema, its file's name and its heading to its id and its kind, what its `actors` and `refines` name and its anchors to the two, and its body to its structure where the format rule binds. It also fails a file under `requirements/` outside the three kinds' folders. Each kind's place declares the core's link, so a changed obligation asks for a revisit of its anchors outside the analysis. The number check, `pkit analysis check-numbers`, compares its number across the three kinds. A use case and a journey list the requirements they must meet in `requirements`, each anchored, which the stamp writes and the check holds. `pkit analysis met-by` lists what meets each requirement, computed from those lists. `pkit analysis diagram` prints the analysis's diagrams, drawn from its front matter ("Diagrams", above). Named for later: planned-revalidation and onboarding lifecycles, executable use cases, and evidence kept on the artefact itself. Architecture views are no part of the analysis ("How it meets your decisions", above).
 
 ## Citing this capability's decisions
 
-`[software-analysis:DEC-001-software-analysis-discipline]` and `[software-analysis:DEC-002-analysis-requirements]`.
+`[software-analysis:DEC-001-software-analysis-discipline]`, `[software-analysis:DEC-002-analysis-requirements]` and `[software-analysis:DEC-003-analysis-diagrams]`.
 
 ## Dependencies
 
