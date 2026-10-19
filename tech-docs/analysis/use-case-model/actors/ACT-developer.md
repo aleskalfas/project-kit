@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-19T08:41:07Z
+      at: 2026-10-19T14:38:30Z
       outcome: unchanged
-      unchanged-because: "software-analysis DEC-001 point 5 gains a paragraph: its agent is also the fixer of its types, which a command may start where the project granted it, and in such a run it judges only through the capability's own reading and leaves each answer as data for a person. The developer's need to revalidate from an agent's proposed outcome, never rewriting the analysis to match broken code, holds in a session and in such a run alike."
+      unchanged-because: software-analysis DEC-001 point 3 numbers ids within the repository, unique across its analyses, and keeps a leaving component's artefacts as withdrawn stubs. The exception that frees the ids of artefacts nothing cites reads as before, so the developer's need to free such ids still holds.
 ---
 
 # ACT-developer — Developer
