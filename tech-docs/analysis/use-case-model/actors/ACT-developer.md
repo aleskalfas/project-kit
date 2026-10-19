@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-19T06:33:07Z
+      at: 2026-10-19T08:10:15Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 5 gains that the capability declares its agent the fixer of the page type, so a work-tracking command may start it on stale pages in a run nobody watches. The agent still only proposes there, and nothing is applied until the person accepts it, so the developer's need to have a stale page's fix proposed with its evidence, and to review it before it is applied, still holds.
+      unchanged-because: software-analysis DEC-001 point 9 now derives the candidates in the order point 12 gives, of every kind, restates its reversed order as the analysis drawn from what exists, and cites COR-050 point 8. An agent still derives the candidates from the code, the documents and the decisions, and a person still confirms them, so the developer's need to describe an existing project that way still holds.
 ---
 
 # ACT-developer — Developer
