@@ -10,8 +10,8 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 A page often explains best with more than prose. It draws a diagram, shows a screenshot, quotes a command with its output, or marks a warning. Each of these can drift from the software as prose can, and each can carry styling that belongs to one host or one theme.
 
-[living-docs:DEC-001-living-docs-discipline] keeps each page true through its anchors, and gives each fact one home. It says nothing yet about visual elements:
-- **A fact's home** is a decision record the page anchors, or a page (DEC-001 point 3). Any other home waits for a page that needs it.
+[living-docs:DEC-001-living-docs-discipline] keeps each page true through its anchors, and gives each fact one home. Three of its decisions bear on visual elements:
+- **A fact's home** is a decision record the page anchors, or a page (DEC-001 point 3). It weighs other homes as an alternative, for a page that needs them.
 - **An image is never an artefact,** since it has no front matter (COR-050 point 1). So it is never a page either (DEC-001 point 4).
 - **The capability never runs the product.** Executed checks belong to another component, and their results arrive as reading evidence (DEC-001 points 6 and 7).
 
@@ -24,7 +24,7 @@ A design note weighed the options against established practice: docs-as-code, di
 
 ## Decision
 
-**A page shows a diagram, an image, console output or a callout as neutral content, and each project's presentation layer decides how it looks. A diagram is Mermaid text in the page by default, and never a fact's home. A page anchors the source of an image or a recording it shows, never the file a tool produced.**
+**A page shows a diagram, an image, console output or a callout as neutral content, and each project's presentation layer decides how it looks. A diagram is Mermaid text in the page by default, and never a fact's home. For every statement, prose or diagram, a fact's home may also be what the page anchors that decides or states it. A page anchors the source of an image or a recording it shows, never the file a tool produced.**
 
 ### 1. Content and presentation stay apart
 
@@ -61,7 +61,7 @@ A page may rest on what holds the truth about the software, beyond decision reco
 - **The page may state such a fact.** It needs no link to another page that states it, and no anchor on one, as DEC-001 point 3 says of a decision record.
 - **A user page and the internal root.** A page of the user space may rest on a home under the internal root. It anchors that home, and links nothing under the internal root (DEC-001 point 1).
 - **Never a home of this kind:** a page, which is a home only among the pages (DEC-001 point 3), and a diagram in any form, such as a fence, a diagram's source file or an image.
-- **Every other fact** has its home among the pages, as DEC-001 point 3 says. A page is a fact's home only where it states the fact in prose.
+- **Every other fact** has its home among the pages, as DEC-001 point 3 says. It is the one page that states the fact in full. For a fact with a home of the kinds above, it is a page that states the fact in full. A page is a fact's home only where it states the fact in prose.
 - **A diagram shows only facts with a home elsewhere.** Each fact it shows has its home in what the page anchors, or in prose on a page. A fact that only a diagram states has no home, and breaks the rule.
 - **A diagram of its own page's prose** is a view of that prose, not a second statement of its facts. Where the two disagree, the rule is broken.
 - **A diagram of another page's fact** is a summary of it, with the link and the anchor a summary takes (DEC-001 point 3).
@@ -70,7 +70,7 @@ A page may rest on what holds the truth about the software, beyond decision reco
 
 ### 4. A produced image or recording is anchored at its source
 
-An image a renderer writes, a screenshot or a recording is never anchored. The page anchors what produced it, and the homes of what it shows.
+An image a renderer writes, a screenshot a script takes, or a recording is never anchored. The page anchors what produced it, and the homes of what it shows.
 - **What produced it:** a diagram's source file, a capture script, or a recording's script or storyboard.
 - **No exclusion from friction.** Such a file is no artefact (COR-050 point 1). So it flags nothing unless something anchors it.
 - **An exclusion from the measures,** where the project's declared surface covers such files. Nothing anchors them, so they would count as uncovered surface. The project excludes them (COR-050 points 8 and 14).
@@ -153,7 +153,7 @@ Until a major accepts them, they bind nothing, and the rule on one home binds as
 - **The order picks one.** What decides a fact is where a change to it is made, before what states or carries it out.
 - **The cost.** Where code is the only home a page anchors, the page follows the code, and a regression could be written into the page. The person who reviews each proposed fix is the guard against that (DEC-001 point 5).
 
-**Why this refines DEC-001 rather than overturning it.** DEC-001 left other homes "not taken yet", waiting for a page that needs them. This record takes them, and keeps every home DEC-001 gives.
+**Why this refines DEC-001 rather than overturning it.** DEC-001 weighed other homes as an alternative, for a page that needs them. This record takes that alternative, and keeps every home DEC-001 gives.
 
 **Why a produced image or recording is never anchored.** The anchor on what produced it already carries every change that matters. A render or a capture may write new bytes with nothing changed in what it shows. An anchor on it would then flag the page for nothing, and people would learn to answer blindly, which COR-050 point 7 warns of.
 
