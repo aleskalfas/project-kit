@@ -52,7 +52,7 @@ pkit:
 6. The system raises each floor a changeset declares for the component, on the backbone or on another capability. It also widens each upper bound on a capability that a changeset says the component runs on (PRJ-002 D4).
 7. The system adds an entry at the top of `CHANGELOG.md`, headed by the date, since the backbone does not move. The system heads each of the component's notes with `**<component> <version>**`, and states each raised floor, such as `Requires backbone >=1.149.0.`
 8. The system deletes the changesets it consumed.
-9. The author commits the release, and merges the release into the default branch. The release cuts no tag, since a tag names a backbone version, read from `.pkit/VERSION` (PRJ-004 and `versioning.py`).
+9. The author commits the release, and merges the release into the default branch. The release gets no tag, since a tag names a backbone version, read from `.pkit/VERSION` (PRJ-004 and `versioning.py`).
 
 **Variants:**
 
@@ -60,7 +60,7 @@ pkit:
 - **3a.** The author runs `pkit release apply --no-broaden`, to keep the upper bound as written, such as for a patch known not to work on the newest backbone. Step 5 is skipped, and each declared floor and upper bound is still written.
 - **3b.** A changeset declares `requires_backbone: release`, and the release moves no backbone. The floor rises to the current backbone. The plan adds `backbone does not move this release`, asking the author to confirm that the needed surface shipped there.
 - **3c.** On the path of 3b, the current backbone is a pre-release, such as `1.150.0rc1`. The system refuses the release before writing anything, since no floor rises to a pre-release (PRJ-002 D4). The use case ends.
-- **3d.** A changeset declares a floor or an upper bound the release cannot write. Examples are an explicit floor above the backbone the tree carries, and a `release` floor on a capability the release does not move. The system refuses before writing anything, and the use case ends (PRJ-002 D4).
+- **3d.** A changeset declares a floor or an upper bound the release step cannot write. Examples are an explicit floor above the backbone the tree carries, and a `release` floor on a capability the release does not move. The system refuses before writing anything, and the use case ends (PRJ-002 D4).
 - **3e.** A declared floor would leave a range that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release before writing anything, and the use case ends.
 - **3f.** The release would leave another capability whose range excludes the component's new version. The system refuses before writing anything, naming that capability, its range and the version (PRJ-002 D4). The use case ends.
 - **3g.** The release moves the backbone too. Step 5 instead widens every component's upper bound to cover the new backbone's minor, and the backbone is released as UC-008 says.
@@ -70,10 +70,10 @@ pkit:
 
 - The component's `package.yaml` carries its new version. The component's `requires_backbone` range admits the backbone it was released under, unless the author kept the upper bound.
 - The changelog entry says what changed in the component, and what the component now requires.
-- A repository that pulls the component whole receives the new version once that repository pins a ref holding it (COR-041). In project-kit, a release that moves only components reaches a tagged install with the next backbone release (PRJ-004).
+- A repository that pulls the component whole receives the new version once that repository's recorded version for the component names a ref holding it (COR-041). In project-kit, a release that moves only components reaches a tagged install with the next backbone release (PRJ-004).
 
 **Minimal guarantees:**
 
 - No floor rises unless a changeset declares it, so a release never claims a need no changeset declared (`release.py` and PRJ-002 D4).
-- The release only widens an upper bound, and never narrows one (`versioning.py` and PRJ-002 D4).
+- The release step only widens an upper bound, and never narrows one (`versioning.py` and PRJ-002 D4).
 - A release the system refuses for a changeset's declaration, or for a range, writes nothing. Each of those refusals comes before the first write (`release.py`).

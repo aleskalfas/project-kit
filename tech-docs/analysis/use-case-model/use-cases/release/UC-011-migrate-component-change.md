@@ -40,7 +40,7 @@ pkit:
 **Assumptions:**
 
 - The author judges what breaks the projects that installed the component. The check reads only renames and removals of files, in the trees it reads as the backbone's, an adapter's or a capability's (`migrations.py`). Another break, such as a key whose meaning changes, rests on that judgement (COR-010).
-- Only the release writes versions (PRJ-002 D3). The component's changeset for the change declares `minor` or above, so the release that ships the change raises the component's minor or major. A patch release carries no migration (COR-010).
+- Only the release step writes versions (PRJ-002 D3). The component's changeset for the change declares `minor` or above, so the release that ships the change raises the component's minor or major. A patch release carries no migration (COR-010).
 
 **Trigger:** The author's change breaks what the projects that installed the component hold, such as renaming or removing one of the component's files.
 
@@ -53,7 +53,7 @@ pkit:
 5. The system matches each rename and removal in the component's folder with a migration of the same tier and component. It ends with `Verdict: COVERED (every tier:component with triggers has a matching migration).`
 6. The author commits the change with its migration and the component's changeset (UC-003).
 7. The CI pipeline runs `pkit migrations check-diff` on the pull request, and the check passes.
-8. The release that ships the change writes, for the component, the version the migration's folder names (UC-009).
+8. For the release that ships the change, the release step writes the component's version that the migration's folder names (UC-009).
 
 **Variants:**
 
@@ -68,9 +68,9 @@ pkit:
 - **5c.** The change breaks the projects in a way the check cannot see, such as a key whose meaning changes. The check finds no trigger and passes, whether or not the change holds a migration. The path goes on at step 6.
 - **5d.** The change moves a file out of the component's folder, or into another component's folder. The check reads a rename by its new path alone. So the check finds no trigger, or asks a migration of the component the file moved to. The path goes on at step 6.
 - **7a.** After the branch was cut, a release landed on the target with the component at the version of the script's folder or above. The check reads the target's tip, and lists the script with `targets <X.Y.0>, but <base> already records capability <name> <version>, so a project at <version> never runs it. Move it to <next>/ or a later folder.` The check ends with `Verdict: RELEASED. Move each script above to a version not yet released before merging.` and exits 1. The author moves the script to the folder the check names, and the path rejoins at step 4.
-- **8a.** The release writes another version for the component than the folder names. The release plan compares only the backbone's folders, so nothing reports the mismatch (`release.py`).
+- **8a.** The release step writes another version for the component than the folder names. The release plan compares only the backbone's folders, so nothing reports the mismatch (`release.py`).
 
-**Postconditions:** The release that moves the component ships the component's migration, in the folder of the version that release writes for the component. A project's upgrade of the component across that version runs the migration.
+**Postconditions:** The release that moves the component ships the component's migration, in the folder of the version that the release step writes for the component. A project's upgrade of the component across that version runs the migration.
 
 **Minimal guarantees:**
 

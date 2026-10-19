@@ -42,7 +42,7 @@ pkit:
 
 **Assumptions:**
 
-- Each changeset's segment is a person's judgement of the change's surface, and the release takes the segment as written (PRJ-002 D2).
+- Each changeset's segment is a person's judgement of the change's surface, and the release step takes the segment as written (PRJ-002 D2).
 - Where the release ships a backbone migration that adds a missing default, the changelog entry names that default, from a pending changeset. No command checks for that sentence, so the maintainer looks for it at step 8 (COR-010).
 
 **Trigger:** The weekly schedule of `release-pr.yml` comes round, or the maintainer starts that workflow by hand.
@@ -77,9 +77,9 @@ pkit:
 - **1b.** On the path of 1a, no pending changeset moves a version. `pkit release apply` asks nothing, writes no version and no changelog entry, and deletes the pending `none` changesets. The use case ends.
 - **2a.** No pending changeset moves a version, as when only `none` changesets wait. `release-pr.yml` ends with `No pending changesets move a version — nothing to release.` The `none` changesets wait for the next release, and the use case ends.
 - **2b.** A changeset names a component the tree does not hold. The system refuses the release, naming the changeset and the components it knows. `release-pr.yml` opens no pull request, and the use case ends.
-- **2c.** A changeset declares a floor or an upper bound the release cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
+- **2c.** A changeset declares a floor or an upper bound the release step cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
 - **2d.** The release would leave a capability whose range excludes the version of a capability it depends on. The system refuses before writing anything, listing each such range, and the use case ends (PRJ-002 D4).
-- **2e.** A backbone migration's folder names a version above the current backbone's version, and the release does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
+- **2e.** A backbone migration's folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
 - **7a.** The project gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
 - **9a.** The pull request is no release pull request. The system refuses it, and points to `pkit project-management merge-pr` for an issue's pull request. The use case ends.

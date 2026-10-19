@@ -39,7 +39,7 @@ pkit:
 
 - **AI agent** (`ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
 
-**Preconditions:** The project has installed the software-engineering capability, and the adapter has deployed its `software-engineer` agent.
+**Preconditions:** The project has installed the software-engineering capability, and the adapter has deployed its `software-engineer` agent definition.
 
 **Assumptions:**
 
@@ -75,4 +75,4 @@ pkit:
 
 **Minimal guarantees:**
 
-- A project that names no corpus still gets the agent deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points 3 and 6, and `_resolve_agent.py`).
+- A project that names no corpus still gets the agent definition deployed. The deployed definition drops the read, and the agent works as a generalist (ADR-052 points 3 and 6, and `_resolve_agent.py`).
