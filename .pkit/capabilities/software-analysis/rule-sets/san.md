@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-18T11:57:54Z
+          at: 2026-10-19T07:21:33Z
           outcome: unchanged
-          unchanged-because: DEC-001 changed only by pointers to software-analysis DEC-002 on points 2, 4 and 11, and point 11 names constraints and quality requirements as examples of further kinds. Point 1, the kinds' declared structures this format rule carries, is unchanged, so the rule holds as written.
+          unchanged-because: DEC-001 gains point 12, the order an analysis is built in, and point 9 derives its candidates in that order. Neither adds or changes a part, a form or a structure of any kind, and point 1, which this format rule carries, is unchanged, so the rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -53,9 +53,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-18T18:54:25Z
+          at: 2026-10-19T07:21:34Z
           outcome: unchanged
-          unchanged-because: DEC-002 point 5 says a change to the obligation asks for a revisit of the requirement's tests. This rule asks which anchors a requirement carries, the files that verify it among them, which point 5 still asks for.
+          unchanged-because: Point 9 changed only in the order its candidates are derived in, their kinds and its citation of COR-050 point 8. The reason for having no anchors that this rule rests on, the core's unanchored-because accepted by a person, reads as before, so the rule holds as written.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
