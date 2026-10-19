@@ -1,7 +1,7 @@
 ---
 id: DEC-004
 title: An analysis explains its concepts in a few hand-written domain-model views
-status: proposed
+status: accepted
 date: 2026-10-19
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
