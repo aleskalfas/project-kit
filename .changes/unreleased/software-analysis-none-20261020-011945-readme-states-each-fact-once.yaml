@@ -1,0 +1,3 @@
+component: software-analysis
+kind: none
+body: The README states each fact once, and links to its home elsewhere on the page. No fact changes, so no adopter-facing surface moves.

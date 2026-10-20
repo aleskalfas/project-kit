@@ -1,0 +1,16 @@
+component: living-docs
+kind: patch
+custom:
+  category: Changed
+body: >
+  The `living-docs` agent ends a fixer run in the exact forms of
+  project-management's run contract (DEC-056 point 3), so the command that
+  starts fixers reads every line it writes. Its `none` line carries one of the
+  contract's reasons before the reason in words: `not-mine` for a location
+  that is no page, `not-stale` for a page `explain` reports current or
+  unresolved, `refused` for a call the run refused, `out-of-step` for a
+  friction document of a version it does not read, `upstream` for a page that
+  waits for its upstream, and `failed`. A brief that says a command started it
+  as a fixer starts a fixer run, whatever words name the type. Its storyboard
+  shows the result lines in a fenced block of their own, never behind a
+  quote's `>`, which the contract would not count.
