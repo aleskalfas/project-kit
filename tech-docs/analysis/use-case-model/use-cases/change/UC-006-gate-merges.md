@@ -27,9 +27,9 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:36Z
+      at: 2026-10-20T03:23:10Z
       outcome: unchanged
-      unchanged-because: The change check gains a shared-id finding that enforcing mode never fails, so what the gate fails on is untouched. The CLI change is the friction check's help text alone.
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. What the merge gate fails on is untouched.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

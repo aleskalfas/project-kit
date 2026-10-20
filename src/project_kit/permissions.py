@@ -92,6 +92,20 @@ def _projection_mod(target_root: Path):
     return mod
 
 
+def decision_core(target_root: Path) -> Any:
+    """The target tree's decision core (`_decide_mod`), for a caller outside
+    this module: the rules of an agent run read their session catalog and
+    model through it, at the run's pinned commit (ADR-066 point 3)."""
+    return _decide_mod(target_root)
+
+
+def projection_core(target_root: Path) -> Any:
+    """The target tree's projection core (`_projection_mod`), for a caller
+    outside this module: the rules of an agent run are projected through it,
+    at the run's pinned commit (ADR-066 point 5)."""
+    return _projection_mod(target_root)
+
+
 def _load_model(target_root: Path) -> dict[str, Any]:
     catalog = _load_catalog(target_root)
     return _decide_mod(target_root).load_model(str(target_root), catalog)
@@ -254,6 +268,8 @@ def explain(target_root: Path, agent: str | None) -> str:
             "above)"
         )
 
+    lines += _run_rules_lines(target_root)
+
     lines += [
         "",
         cli_render.style("heading", _EXPLAIN_LEGEND[0]),
@@ -263,6 +279,38 @@ def explain(target_root: Path, agent: str | None) -> str:
         *_EXPLAIN_COMMANDS[1:],
     ]
     return "\n".join(lines) + "\n"
+
+
+def _run_rules_lines(target_root: Path) -> list[str]:
+    """The rules of each agent run an installed capability declares (ADR-066
+    point 5, "Shown, not hidden"): every rule, with the capability that
+    contributed it. No session's model holds them, so they are listed apart,
+    and `pkit agents rules` shows what each run is allowed. Empty when no
+    capability declares one."""
+    from project_kit import run_rules
+
+    runs = run_rules.declared_runs(target_root)
+    if not runs:
+        return []
+    lines = [
+        "",
+        cli_render.style(
+            "heading",
+            "RULES OF AGENT RUNS — denies each command's unwatched runs take, in their own "
+            "settings alone (ADR-066)",
+        ),
+    ]
+    for run in runs:
+        named = f"{run.capability}:{run.command}" if run.command else run.capability
+        lines.append(f"  {named}  (contributed by capability: {run.capability})")
+        if run.problem:
+            lines.append(f"    ⚠ no run starts under these rules: {run.problem}")
+        for rule in run.rules:
+            privs = ", ".join(_grant_priv_ids(rule.get("privilege")))
+            lines.append(f"    {rule.get('subject', '?')} — DENY {privs}")
+        if run.command:
+            lines.append(f"    what a run is allowed: `pkit agents rules {named}`")
+    return lines
 
 
 # ---- catalog ---------------------------------------------------------------
@@ -497,6 +545,8 @@ def overview(target_root: Path) -> str:
             cap = g.get("_capability", "?")
             privs = ", ".join(_grant_priv_ids(g.get("privilege")))
             lines.append(f"  {subj} — DENY {privs}  (contributed by capability: {cap})")
+
+    lines += _run_rules_lines(target_root)
 
     cap_note = "ships with core; capability:<name> = added by an installed capability"
     lines += [
@@ -4005,6 +4055,14 @@ def _uv_required_exclusion(target_root: Path) -> bool:
     # Gate on the FIXED release: no fix known (None) → every readable version is
     # affected → required; otherwise required iff still below the fix.
     return _UV_KNOWN_FIXED_RELEASE is None or installed < Version(_UV_KNOWN_FIXED_RELEASE)
+
+
+def uv_required_exclusion(target_root: Path) -> bool:
+    """ADR-027's test for the macOS `uv` exclusion, for a caller outside this
+    module: the backbone's run command, which applies the exclusion to a
+    confined agent run (ADR-066 point 6). It reads the test at call time, so a
+    test that replaces the test replaces it here too."""
+    return _uv_required_exclusion(target_root)
 
 
 def _gh_required_exclusion(target_root: Path) -> bool:

@@ -29,9 +29,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:25Z
+      at: 2026-10-20T03:23:03Z
       outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it

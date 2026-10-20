@@ -227,6 +227,14 @@ def _namespace_capabilities(target_root: Path) -> list[_NamespaceCapability]:
     return out
 
 
+def namespace_capabilities(target_root: Path) -> list[_NamespaceCapability]:
+    """Every installed capability that surfaces a namespace, in manifest order
+    (`_namespace_capabilities`), for a caller outside this module: the rules of
+    an agent run name each query another capability declares by the words that
+    run it (ADR-066 point 5)."""
+    return _namespace_capabilities(target_root)
+
+
 def _alias_table(capabilities: list[_NamespaceCapability], static: Collection[str]) -> AliasTable:
     return resolve_aliases(
         {capability.name for capability in capabilities},

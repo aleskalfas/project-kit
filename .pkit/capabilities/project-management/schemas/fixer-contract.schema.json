@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://project-kit/capabilities/project-management/fixer-contract.schema.json",
+  "title": "Fixer contract — schema companion",
+  "description": "JSON Schema for `.pkit/capabilities/project-management/schemas/fixer-contract.yaml`: the run's contract of a fixer as data (project-management:DEC-056 points 3 and 6). It holds the lead every result line starts with, the three forms of a result line, and the fixed list of `none` reasons, each with what clears it. The drift command reads them from the YAML, never from prose. `contract_version` is the version of `pkit::work-tracking:fixers` the contract belongs to.",
+  "type": "object",
+  "required": ["schema_version", "contract_version", "lead", "forms", "reasons"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "contract_version": {
+      "description": "The version of the fixers point this contract is the point's at (DEC-056 point 1).",
+      "type": "integer",
+      "minimum": 1
+    },
+    "lead": {
+      "description": "What a result line starts with, once the whitespace around it is stripped. Every form starts with it.",
+      "type": "string",
+      "minLength": 1
+    },
+    "forms": {
+      "description": "The three forms of a result line, one for each state a fixer gives an artefact. Each holds the placeholders `<agent>` and `<artefact>`.",
+      "type": "object",
+      "required": ["proposed", "held", "none"],
+      "additionalProperties": false,
+      "properties": {
+        "proposed": { "$ref": "#/$defs/form" },
+        "held": { "$ref": "#/$defs/form" },
+        "none": { "$ref": "#/$defs/form" }
+      }
+    },
+    "reasons": {
+      "description": "The `none` reasons, each keyed by the code a `none` line carries, with what clears it: the artefact's friction, the setup, or the next run.",
+      "type": "object",
+      "minProperties": 1,
+      "propertyNames": { "pattern": "^[a-z]+(?:-[a-z]+)*$" },
+      "additionalProperties": {
+        "type": "object",
+        "required": ["cleared-by"],
+        "additionalProperties": false,
+        "properties": {
+          "cleared-by": { "enum": ["artefact", "setup", "next-run"] }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "form": {
+      "type": "string",
+      "pattern": "<agent>.*`<artefact>`"
+    }
+  }
+}

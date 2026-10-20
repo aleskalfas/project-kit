@@ -1,0 +1,53 @@
+# The run's contract of a fixer, as data (project-management DEC-056 points 3 and 6).
+#
+# What the drift command reads of what a fixer hands back: the lead each result
+# line starts with, the three forms of a result line, and the fixed list of
+# `none` reasons, each with what clears it. The command reads these lines and
+# the answers' fields, never prose, so it reads them from here
+# (`scripts/_lib/fixer_contract.py`). The answer's fields are
+# `fixer-answer.schema.json`.
+#
+# The fixers point's version covers this contract (DEC-056 point 1), so
+# `contract_version` is the version project-management accepts the point at. A
+# change here that breaks a fixer which conforms raises it.
+#
+# Tests hold DEC-056 and this capability's README to this file, both ways
+# (COR-018): `tests/test_pm_fixer_contract.py`.
+
+schema_version: 1
+
+# The version of `pkit::work-tracking:fixers` this contract is the point's at.
+contract_version: 1
+
+# What a result line starts with, once the whitespace around it is stripped.
+# Every line of the fixer's final message that does is read as a result line.
+lead: "Fixer result ("
+
+# The three forms, one line each. `<agent>` is the fixer the command started,
+# `<artefact>` one of the brief's names, compared exactly, and `<reason>` one
+# of `reasons` below. `<the question>` and `<the reason in words>` are the
+# fixer's words, never empty.
+forms:
+  proposed: "Fixer result (<agent>): proposed `<artefact>` in `<artefact>/answer.json`"
+  held: "Fixer result (<agent>): held `<artefact>`: <the question>"
+  none: "Fixer result (<agent>): none `<artefact>`: <reason>: <the reason in words>"
+
+# The `none` reasons, each with what clears it:
+# - artefact: the reason stands for that fixer until the artefact's friction changes.
+# - setup: it stands until the setup changes, and the command reports it at
+#   every run as a fault of the setup.
+# - next-run: the artefact is dispatched again at the next run. One that fails
+#   at two runs in a row then stands as a setup's fault does, under `failed`.
+reasons:
+  not-mine:
+    cleared-by: artefact
+  not-stale:
+    cleared-by: artefact
+  refused:
+    cleared-by: setup
+  out-of-step:
+    cleared-by: setup
+  upstream:
+    cleared-by: next-run
+  failed:
+    cleared-by: next-run

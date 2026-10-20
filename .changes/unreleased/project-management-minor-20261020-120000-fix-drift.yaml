@@ -1,0 +1,27 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A new command, `pkit pm fix-drift`, starts each fixer you granted on what
+  the default branch left out of date, and gathers its proposals for you
+  (DEC-056 points 3 to 6). It pins the default branch's commit and reads, at
+  it, the whole-repository check, each artefact's type, the fixers point and
+  the grant list. It dispatches only stale artefacts whose fixer you granted,
+  upstream first, within a cap per fixer, and lists every other artefact with
+  its reason. Each fixer runs confined through `pkit agents run`, under the
+  rules the new `permissions/runs.yaml` declares, with one brief that quotes
+  each pull request behind the friction as data. Its result lines and answers
+  are read by the run's contract, which `schemas/fixer-contract.yaml` holds
+  as data. A breach, or a diff that reaches beyond its artefact, sets the
+  fixer's files aside. Proposals wait in the main working tree's agent
+  workspace, under `project-management/drift/`, with an index. `land-work`
+  prints how many wait, and lists a change to the grant list before it stops
+  ready, asks or merges. The fixers point names `ask-fixers` as its question,
+  so install and upgrade ask it where a person can answer. `grant-fixer` and
+  `revoke-fixer` with `--dry-run` check the configuration exists, and
+  `check-fixers` reports a refusal for a type no entry gives the agent. The
+  command needs the backbone this release ships, for the confined run and
+  `pkit agents rules`: upgrade the capability with the backbone and the
+  claude-code adapter.

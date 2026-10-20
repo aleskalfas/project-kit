@@ -16,6 +16,8 @@ the drift command calls too.
   point gives it and every type it is granted, or only the types named. It works
   while the point does not resolve, on the grant list alone, since a grant
   validation reports must stay revocable.
+- **--dry-run**, on either, says what would be written and writes nothing. It
+  refuses where the configuration does not exist, as the write does.
 
 - **ask-fixers** asks one question for each agent about the types nobody was
   asked about, where a person can answer: at a terminal, both standard input
@@ -132,7 +134,13 @@ def run_answer_verb(*, verb: str, answer: str, argv: Sequence[str] | None = None
         print(f"Nothing to write: the grant list already has {what}.")
         return 0
     if args.dry_run:
-        print(f"Would record in {shown}: {what}. Nothing was written (--dry-run).")
+        # The write refuses a configuration that does not exist, so the dry run
+        # checks it too, and says so.
+        missing = fixers.missing_config(config_path)
+        if missing is not None:
+            print(f"error: {missing}. Nothing was written (--dry-run).", file=sys.stderr)
+            return 1
+        print(f"Would record in {shown}, which exists: {what}. Nothing was written (--dry-run).")
         return 0
     if not session_guard.enforce(override=args.allow_foreign_repo):
         return 1
