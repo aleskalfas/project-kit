@@ -1,6 +1,6 @@
 # Adding a domain-model view
 
-A domain-model view explains a group of related concepts, one section for each, and draws how they relate ([software-analysis:DEC-004-domain-model-views]). It is a file of its own, `domain-model/<number>-<slug>.md`, beside the glossary. The glossary defines each concept, and the view explains it. A project keeps views only where it chooses: a term no view explains stays as it is.
+A domain-model view explains a group of related concepts, one section for each, and draws how they relate ([software-analysis:DEC-004-domain-model-views]). It explains purpose first: the problem its concepts solve, then what each is for, then what each is. It is a file of its own, `domain-model/<number>-<slug>.md`, beside the glossary. The glossary defines each concept, and the view explains it. A project keeps views only where it chooses: a term no view explains stays as it is.
 
 ## 1. Is it a view?
 
@@ -28,6 +28,9 @@ Name each with `--explains <TERM-id>`, in the order of its sections.
 
 The stamp anchors each term it explains, from `explains`. Add as `--record` each record its statements cite or apply. Each fact a section states under *Always true* rests on the record that decides it. A view anchors no code, so the stamp takes no `--path`: the term anchors the code that embodies it.
 
+- **Its reasons.** The view explains purpose first, so read the records its concepts rest on before you stamp it. Their Context and their Rationale say why the project has each concept. Anchor each record a reason comes from.
+- **A reason no record gives** is no view's to state. The *Why* reads `None.` until a record gives it.
+
 ## 5. Stamp it
 
 ```
@@ -45,9 +48,28 @@ The stamp writes the view, with one section for each term, headed by the term's 
 
 Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint.
 
-- **The opening** says what the group covers, then draws its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Draw a concept of another view, or a term no view explains, by its name alone.
+- **The opening** states the problem the group's concepts solve together, as a record the view anchors gives it, then names the concepts as the parts of its answer. Where no record gives the problem, say what the group covers instead. Then it draws its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Draw a concept of another view, or a term no view explains, by its name alone.
 - **Each concept's box** is labelled as its section is headed, by its term's name in sentence case, such as `class Order` or ``class DecisionRecord["Decision record"]``. No check reads a diagram, so you keep to it.
-- **Each section** explains its concept for a newcomer, then gives its *Attributes*, its *Relations*, its *States* and what is *Always true* of it. Where the concept has a life cycle, draw its states after the text of *States*.
+- **Each section's first part is its *Why*:** what the concept is for, the problem it answers, in one paragraph of plain words. Start it on the label's line. State its own part of the problem the opening states.
+  - **Its ground.** Say again, in plain words, a reason the Context or the Rationale of a record the view anchors gives. Give none they do not give.
+  - **No record gives one?** Write `None.`, never a reason of your own. Where your project wants the reason stated, record it first, then say it again here.
+  - **No actor and no need.** The actors come after the views, so name no actor, and cite no actor's need. Name a role the domain holds by its term, such as a customer.
+- **Then what it is.** Below the *Why*, after a blank line, explain the concept for a newcomer, with no label. A *Why* that runs into it, with no blank line, leaves the explanation missing. Text above the *Why* belongs to no part, so write none there.
+- **Then its facts:** its *Attributes*, its *Relations*, its *States* and what is *Always true* of it. Where the concept has a life cycle, draw its states after the text of *States*.
+
+A section, filled:
+
+```markdown
+## Order
+
+Defined in [TERM-order](../glossary.md#term-order--order).
+
+**Why:** A shop must know what a [customer](../glossary.md#term-customer--customer) asked for before it takes any money or sends any goods.
+
+An order is what a customer asks the shop to send, before anything is paid or sent.
+
+**Attributes:** Each order holds its lines, the customer who placed it and the day it was placed.
+```
 - **One home for each fact.** A diagram shows only what the sections state. What a section states fits exactly what the term's definition fits, never more and never less. An obligation the system must keep is a functional requirement, which names the concept by its term (`requirement.md`).
 - **Its terms.** Write each concept by its term, a diagram's labels included (the shared framing's "Use the glossary's terms").
 
@@ -61,7 +83,7 @@ Run `pkit analysis link`. The first view an analysis holds turns the links on fo
 - **A wrong link** is a finding: the section uses a term's name in another sense, so reword it (`RS-SAN-008`). The escape `<!-- pkit:not-the-term -->` right before a mention serves last, such as for a word in a quotation.
 - **Each later edit** of a view or an entry may move a link, so run the command again before the checks.
 
-Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first. Where the format rule binds, the check holds each section's heading to the name of the term `explains` lists in its place, in sentence case. Whatever any rule's status, it holds the links.
+Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first. Where the format rule binds, the check holds each section's heading to the name of the term `explains` lists in its place, in sentence case. It holds each section's parts too: its *Why* first and filled, or `None.`, then its explanation below it. Whatever any rule's status, it holds the links.
 
 ## Later
 
@@ -69,4 +91,5 @@ Then run the checks in the shared framing's "After stamping", `pkit analysis val
 - **Renumbering or renaming its file** keeps its id where the slug stays. Each term it explains then links to the new file: write each link the check names.
 - **Withdrawing** — set `status: withdrawn`, and remove each term's link to it. A withdrawn view explains nothing, so its terms may be explained by another view.
 - **A term renamed** renames its section's heading, in sentence case, and its link's section. A page anchored on the section's old slug is then dead, and validation fails until the change mends it.
+- **A record it anchors changed** flags the view. Read again each reason it takes from that record, in its opening and each *Why*.
 - **Revalidating a term** reads the section that explains it too. A change of code reaches a view only through a term whose revalidation changes it.

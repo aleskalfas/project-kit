@@ -17,8 +17,10 @@
 #   once shipped, and a `type`:
 #   - `heading`: a heading's `level` and, where the kind fixes it, its `text`
 #   - `label`: a bold label, `**<text>:**`, that opens a paragraph or a
-#     top-level list item
-#   - `opening`: the text before the body's first label
+#     top-level list item. A label listed right before an opening holds its
+#     paragraph alone, as a domain-model view's `why` does (DEC-004 point 2).
+#   - `opening`: the text before the body's first label, or below the
+#     paragraph of the label listed right before it
 #   - `repeated`: a section that repeats, once for each term a domain-model
 #     view's `explains` lists, each headed at its `level` by the term's name
 #     with its first letter capitalized. Its own `sections` give the parts
@@ -232,8 +234,8 @@ kinds:
         example: "# VIEW-orders-and-payments — Orders and payments"
       - id: opening
         type: opening
-        hint: What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized.
-        example: The concepts of ordering goods and paying for them, and how a payment settles an order.
+        hint: The problem the group's concepts solve together, then each concept named as a part of the answer. Then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized.
+        example: A shop must know what each customer asked for, and whether it is paid, before it sends anything. An order holds what was asked for, and a payment settles it.
       - id: concept
         type: repeated
         level: 2
@@ -241,9 +243,15 @@ kinds:
         hint: One section for each term `explains` lists, in its order, headed by the term's name with its first letter capitalized.
         example: "## Order"
         sections:
+          - id: why
+            type: label
+            text: Why
+            allows-none: true
+            hint: What the concept is for, the problem it answers, in one paragraph of plain words. Say again a reason the Context or the Rationale of a record the view anchors gives. Name no actor, and cite no actor's need. Write `None.` when no record gives one.
+            example: A shop must know what a customer asked for before it takes any money or sends any goods.
           - id: explanation
             type: opening
-            hint: What the concept is, in plain words for a newcomer. What it says fits exactly what the term's definition fits.
+            hint: What the concept is, in plain words for a newcomer, below the Why part and a blank line. What it says fits exactly what the term's definition fits.
             example: An order is what a customer asks the shop to send, before anything is paid or sent.
           - id: attributes
             type: label

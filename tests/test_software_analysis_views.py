@@ -20,6 +20,7 @@ Held to software-analysis DEC-004:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 from pathlib import Path
@@ -132,6 +133,11 @@ def test_a_view_is_stamped_with_its_terms_their_sections_and_their_links(
     body = _read(project, VIEW).split("\n---\n", 1)[1]
     headings = [line for line in body.splitlines() if line.startswith("#")]
     assert headings == [f"# {VIEW_ID} — Orders and payments", "## Order", "## Payment"]
+    # Each section opens with its link to its term, then its *Why*, then its explanation.
+    order = body.split("## Order\n", 1)[1].split("\n## ", 1)[0].strip("\n").split("\n\n")
+    assert order[0] == "Defined in [TERM-order](../glossary.md#term-order--order)."
+    assert order[1].startswith("**Why:** A shop must know")
+    assert order[2].startswith("An order is")
     glossary = _read(project, GLOSSARY)
     assert f"## TERM-order — order\n\n{ORDER_LINK}\n\n**Example:** " in glossary
     assert f"## TERM-payment — payment\n\n{PAYMENT_LINK}\n\n**Example:** " in glossary
@@ -379,6 +385,28 @@ def test_a_view_s_parts_are_held_in_each_section(project: AdopterRepo) -> None:
     assert len(messages) == 1, messages
 
 
+def test_a_section_s_why_is_held_where_the_format_rule_binds(project: AdopterRepo) -> None:
+    """A section with no *Why*, or whose *Why* runs into its explanation, is reported, and
+    the message says where the part goes (DEC-004 point 2)."""
+    text = _read(project, VIEW)
+    why = next(line for line in text.splitlines() if line.startswith("**Why:**"))
+    _edit(project, VIEW, f"{why}\n\n", "")
+    link(project)  # the first mention of a term the *Why* held moves to the explanation
+    assert _found(_validate(project)) == []  # no set of the project's own selects it yet
+    project.write(accepting_san(project))
+    messages = [m for location, m in _found(_validate(project)) if location == VIEW]
+    assert len(messages) == 1, messages
+    assert messages[0].startswith("`**Why:**` in the section `## Order` is missing"), messages
+    assert "(RS-SAN-001)" in messages[0]
+    project.write({VIEW: text.replace(f"{why}\n\n", f"{why}\n", 1)})
+    messages = [m for location, m in _found(_validate(project)) if location == VIEW]
+    assert len(messages) == 1, messages
+    assert messages[0].startswith("the text before `**Attributes:**` in the section `## Order`")
+    assert (
+        "is missing, and it comes after the paragraph of `**Why:**`, a blank line" in (messages[0])
+    )
+
+
 def test_a_project_s_own_label_goes_in_the_opening_or_each_section_never_a_heading(
     project: AdopterRepo,
 ) -> None:
@@ -448,6 +476,8 @@ What ordering and paying cover.
 
 ## Order
 
+**Why:** A shop must know what a customer asked for.
+
 An order is what a customer asks for.
 
 **Attributes:** Its lines.
@@ -459,6 +489,8 @@ An order is what a customer asks for.
 **Always true:** None.
 
 ## Payment
+
+**Why:** A shop must know which orders are paid.
 
 A payment settles an order.
 
@@ -497,14 +529,14 @@ def test_the_headings_follow_explains_and_give_one_slug_each() -> None:
     swapped = {"explains": ["TERM-payment", "TERM-order"]}
     assert _departures(BODY, swapped) == [
         ("concept", "breaks-its-form", 5, None),
-        ("concept", "breaks-its-form", 17, None),
+        ("concept", "breaks-its-form", 19, None),
     ]
     one = {"explains": ["TERM-order"]}
-    assert _departures(BODY, one) == [("concept", "breaks-its-form", 17, None)]
+    assert _departures(BODY, one) == [("concept", "breaks-its-form", 19, None)]
     three = {"explains": ["TERM-order", "TERM-payment", "TERM-customer"]}
-    assert _departures(BODY, three) == [("concept", "breaks-its-form", 17, None)]
+    assert _departures(BODY, three) == [("concept", "breaks-its-form", 19, None)]
     twice = BODY.replace("## Payment", "## order")
-    assert ("concept", "breaks-its-form", 17, None) in _departures(
+    assert ("concept", "breaks-its-form", 19, None) in _departures(
         twice, {"explains": ["TERM-order", "TERM-x"]}
     )
 
@@ -514,7 +546,7 @@ def test_each_heading_is_its_term_s_name_in_sentence_case() -> None:
     in title case. A name whose first word holds a capital already stands as it is
     (DEC-004 point 2)."""
     assert _departures(BODY.replace("## Payment", "## payment")) == [
-        ("concept", "breaks-its-form", 17, None)
+        ("concept", "breaks-its-form", 19, None)
     ]
     assert _departures(BODY.replace("## Order", "## ORDER")) == [
         ("concept", "breaks-its-form", 5, None)
@@ -556,12 +588,57 @@ def test_sentence_case_capitalizes_the_first_letter_alone(name: str, heading: st
 
 def test_a_section_is_held_to_its_parts_and_names_its_heading() -> None:
     empty = BODY.replace("**Attributes:** Its amount.", "**Attributes:**")
-    assert _departures(empty) == [("attributes", "empty", 21, "Payment")]
+    assert _departures(empty) == [("attributes", "empty", 25, "Payment")]
     unexplained = BODY.replace("An order is what a customer asks for.\n", "")
     assert _departures(unexplained) == [("explanation", "missing", None, "Order")]
     assert _departures(BODY.split("## Order", 1)[0]) == [("concept", "missing", None, None)]
     no_opening = BODY.replace("What ordering and paying cover.\n", "")
     assert _departures(no_opening) == [("opening", "missing", None, None)]
+
+
+WHY = "**Why:** A shop must know what a customer asked for.\n"
+
+
+def test_each_section_opens_with_its_why_present_and_filled() -> None:
+    """Each section's first part is its *Why*, what the concept is for, before its
+    explanation: missing or empty, it departs, naming its section. It reads `None.` where
+    no record gives the concept's reason (DEC-004 points 2 and 3)."""
+    assert _departures(BODY.replace(WHY, "")) == [("why", "missing", None, "Order")]
+    assert _departures(BODY.replace(WHY, "**Why:**\n")) == [("why", "empty", 7, "Order")]
+    assert _departures(BODY.replace(WHY, "**Why:** None.\n")) == []
+    after = BODY.replace(WHY, "").replace(
+        "An order is what a customer asks for.\n", f"An order is what a customer asks for.\n\n{WHY}"
+    )
+    assert _departures(after) == [("explanation", "missing", None, "Order")]
+
+
+def test_the_why_holds_its_paragraph_and_the_explanation_follows_it() -> None:
+    """*Why* is a label listed right before an opening, so it holds its paragraph alone, up
+    to the first blank line, and the explanation is the text below it. A *Why* written
+    over two lines, or holding a fence or a comment with a blank line, is still one
+    paragraph. One that runs into the explanation leaves the explanation missing, and one
+    written below its label, after a blank line, leaves the *Why* empty (DEC-004 point 2)."""
+    wrapped = BODY.replace(WHY, "**Why:** A shop must know\nwhat a customer asked for.\n")
+    assert _departures(wrapped) == []
+    fenced = BODY.replace(WHY, f"{WHY}```text\nan order\n\nits lines\n```\n")
+    assert _departures(fenced) == []
+    commented = BODY.replace(WHY, f"{WHY}<!-- a note\n\nof two paragraphs -->\n")
+    assert _departures(commented) == []
+    below = BODY.replace(WHY, "**Why:**\n\nA shop must know what a customer asked for.\n")
+    assert _departures(below) == [("why", "empty", 7, "Order")]
+    joined = BODY.replace(
+        f"{WHY}\nAn order is", "**Why:** A shop must know what a customer asked for.\nAn order is"
+    )
+    assert _departures(joined) == [("explanation", "missing", None, "Order")]
+    lines = list(enumerate(BODY.splitlines(), 1))
+    kind = KINDS["domain-model-view"]
+    section = dataclasses.replace(kind, sections=structure.section_elements(kind.sections[2]))
+    held = {
+        element.id: [row.text for row in part.rows if row.text.strip()]
+        for element, part in structure.parts(lines[4:18], section)
+    }
+    assert held["why"] == []  # its text is on the label's line
+    assert held["explanation"] == ["An order is what a customer asks for."]
 
 
 project_structure: Any
@@ -586,8 +663,9 @@ def _own(tmp_path: Path, after: str) -> Any:
 
 def test_a_project_relabels_and_adds_to_each_section_of_a_view(tmp_path: Path) -> None:
     """A relabel and an addition after a part of a concept's section apply in each section
-    (DEC-004 point 2). One placed between a section's heading and its explanation would
-    take the explanation's lines, and is refused, naming the part to place it after."""
+    (DEC-004 point 2). Each section opens with its *Why* and its explanation, so an
+    addition placed after its heading or its *Why* is refused, naming the part to place it
+    after."""
     own = _own(tmp_path, "attributes")
     assert own.problems == ()
     groups = own.of("domain-model-view")
@@ -596,6 +674,7 @@ def test_a_project_relabels_and_adds_to_each_section_of_a_view(tmp_path: Path) -
     )
     (concept,) = [e for e in view.sections if e.type == "repeated"]
     assert [(p.id, p.text) for p in concept.parts] == [
+        ("why", "Why"),
         ("explanation", None),
         ("attributes", "Holds"),
         ("examples", "Examples"),
@@ -604,5 +683,8 @@ def test_a_project_relabels_and_adds_to_each_section_of_a_view(tmp_path: Path) -
         ("always-true", "Always true"),
     ]
     assert {"holds", "examples"} <= view.labels
-    (problem,) = _own(tmp_path, "concept").problems
-    assert "name `explanation`" in problem.message
+    for after in ("concept", "why"):
+        (problem,) = _own(tmp_path, after).problems
+        assert "`why` and the opening text below its paragraph" in problem.message
+        assert "name `explanation`" in problem.message
+        assert problem.location.endswith("/tighten/0/add/0/after")
