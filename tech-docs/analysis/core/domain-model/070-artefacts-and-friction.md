@@ -20,6 +20,7 @@ pkit:
       record:
         - COR-017
         - COR-021
+        - COR-030
         - COR-050#1
         - COR-050#2
         - COR-050#3
@@ -28,6 +29,7 @@ pkit:
         - COR-050#6
         - COR-050#7
         - COR-050#9
+        - COR-050#10
         - COR-050#12
         - COR-050#14
         - COR-050#16
@@ -40,6 +42,7 @@ pkit:
         - COR-056#1
         - COR-056#2
         - COR-056#3
+        - COR-056#4
         - COR-056#5
       artefact:
         - TERM-anchor
@@ -57,12 +60,12 @@ pkit:
 
 # VIEW-artefacts-and-friction — Artefacts and friction
 
-How the system keeps documents true as what they rest on changes. An artefact in a place declares its anchors, the things that make it true. When one of them changes, the artefact has friction until an answer stands for the edit. The change check finds the friction a change brings, and the whole-repository check reports the debt left on the default branch. Rule sets hold the rules artefacts must satisfy, and select them by path or by artefact type.
+How the system finds where a document has drifted from what it rests on. An artefact in a place declares its anchors, the things that make it true. When one of them changes, the artefact has friction until an answer stands for the edit. The change check finds the friction a change brings, and the whole-repository check reports the debt left on the default branch. Rule sets hold the rules artefacts must satisfy, and select the artefacts their rules bind on, by path or by artefact type.
 
 ```mermaid
 classDiagram
   accTitle: Artefacts and friction
-  accDescr: A place holds artefacts and gives them their artefact type. An artefact carries its anchors and its answers. Friction is a finding on an artefact, and an answer settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
+  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors and its answers. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
   class Place["place"]
   class Artefact["artefact"]
   class Anchor["anchor"]
@@ -75,7 +78,7 @@ classDiagram
   ChangeCheck : mode
   class WholeRepositoryCheck["whole-repository check"]
   class Debt["debt"]
-  Debt : stale or deferred
+  Debt : kind
   class RuleSet["rule set"]
   RuleSet : version
   RuleSet : scope
@@ -83,7 +86,7 @@ classDiagram
   class ArtefactType["artefact type"]
   class PackageMetadata["package metadata"]
   class Component["component"]
-  Place "1" o-- "*" Artefact : holds
+  Place o-- Artefact : holds
   Place --> ArtefactType : gives
   Artefact "1" *-- "*" Anchor : carries
   Artefact "1" *-- "*" Answer : carries
@@ -93,7 +96,7 @@ classDiagram
   ChangeCheck --> Friction : finds
   WholeRepositoryCheck --> Debt : reports
   Debt --|> Finding
-  RuleSet "1" *-- "*" Rule : holds
+  RuleSet *-- Rule : holds
   RuleSet ..> ArtefactType : may select by
   Component --> PackageMetadata : ships
   PackageMetadata --> Place : declares
@@ -106,7 +109,11 @@ An anchor is a declared link from a document, or a collection entry, to what mak
 
 **Attributes:**
 
-- its kind: a path, a record or one of its points, or another artefact or one of its sections (COR-050 point 2)
+- its kind (COR-050 point 2):
+  - a path
+  - a record, or one of its points
+  - another artefact, or one of its sections, or its lead
+  - a kind a capability registers
 - its value, written as its kind writes it, such as `COR-058#4` (COR-050 point 2)
 
 **Relations:**
@@ -144,7 +151,7 @@ A place is a path or glob that the project or a component declares, within which
 
 ## artefact
 
-An artefact is a document with front matter, or a keyed entry of a collection file, in a declared place. It carries its own anchors. Each entry of the core's glossary is one, and so is each page a place holds.
+An artefact is a document with front matter, or a keyed entry of a collection file, in a declared place. It carries its own anchors. Each entry of this analysis's glossary is one.
 
 **Attributes:**
 
@@ -162,8 +169,7 @@ An artefact is a document with front matter, or a keyed entry of a collection fi
 
 **Always true:**
 
-- Moving it, by renaming its file or moving its entry, needs a revalidation in the same change (COR-050 point 3).
-- Changing its own list of anchors needs a revalidation too (COR-050 point 6).
+- The change check asks a revalidation of a change that moves it, by renaming its file or moving its entry (COR-050 point 3). It asks one too of a change to its own list of anchors (COR-050 point 6).
 - An artefact with no anchors is unanchored: the backbone reports it, and never fails on it (COR-050 point 2).
 
 ## answer
@@ -172,20 +178,21 @@ An answer is a statement in an artefact's `friction` block. It settles an edit t
 
 **Attributes:**
 
-- a revalidation: its time, `at`, and its outcome, `updated` or `unchanged`, with why the artefact still holds where it is `unchanged` (COR-050 point 3)
-- a deferral: the anchor it puts off, and a reason naming the follow-up that will answer it (COR-050 point 4)
+- a revalidation: the record that the artefact was reviewed against what changed. It holds its time, `at`, and its outcome, `updated` or `unchanged`, with why the artefact still holds where it is `unchanged` (COR-050 point 3).
+- a deferral: the anchor whose friction it puts off, and a reason (COR-050 point 4)
 - a revisit entry: the target it stands for, its outcome and its reason (COR-050 point 16)
 
 **Relations:**
 
 - It lives on its artefact, never in a pull request's description (COR-050 point 6).
+- A revalidation or a deferral clears friction (COR-050 point 5).
+- A revisit entry answers a link. A component may declare one on a place. An edit to chosen fields of an artefact there then asks for a revisit of what its anchors name (COR-050 point 16).
 - The change check lists every answer a change wrote, word for word, and a reviewer works from that list (COR-050 point 3).
 
 **States:** None.
 
 **Always true:**
 
-- A deferral's reason names an open follow-up (COR-050 points 3 and 4).
 - An `unchanged` revalidation says why the artefact still holds, in words that change with it (COR-050 point 3).
 - An outcome is a record of what happened, and is never read to work out friction (COR-050 point 3).
 
@@ -195,19 +202,19 @@ Friction is a finding that something an artefact rests on changed, with no answe
 
 **Attributes:**
 
-- the artefact it is on, and the anchor whose target changed (COR-050 point 5)
+- the artefact it is on, and what changed: an anchor's target, or the list of anchors (COR-050 points 5 and 6)
 
 **Relations:**
 
 - The change check and the whole-repository check each find it (COR-050 point 6).
-- An answer clears it (COR-050 point 5).
+- A revalidation or a deferral clears it (COR-050 point 5).
 - Friction nobody answered stays on the default branch as debt (COR-050 point 9).
 
 **States:** None.
 
 **Always true:**
 
-- It is worked out from git on each run, and never stored (COR-050 point 3).
+- It is worked out from git on each run. A status a job writes back after a merge is never read for it (COR-050 points 3 and 10).
 - An edit undone before the later state brings none (COR-050 point 5).
 - It never reads an artefact type (COR-056 point 5).
 
@@ -229,13 +236,13 @@ The change check compares a head with its base. It finds the friction and dead a
 
 **Always true:**
 
-- Every artefact with an anchor that changed must carry an answer in the same change (COR-050 point 6).
+- It reports each artefact that has an anchor the change altered, and no answer in the same change (COR-050 point 6).
 - An artefact new in the change counts as revalidated (COR-050 point 6).
 - It reads the artefacts, never a pull request's description, so it runs the same anywhere (COR-050 point 6).
 
 ## whole-repository check
 
-The whole-repository check compares every artefact, at the latest commit, with its revalidation point. It reports, and never fails. `pkit friction check --all` runs it on the default branch.
+The whole-repository check compares every artefact, at the latest commit, with its revalidation point. Its revalidation point is the commit where the artefact first carried its latest revalidation (COR-050 point 3). It reports, and never fails. `pkit friction check --all` runs it.
 
 **Attributes:** None.
 
@@ -267,7 +274,7 @@ Debt is a finding of the whole-repository check, dated from the commit it origin
 
 **Always true:**
 
-- No file lists it: each run derives it from git again (COR-050 point 9).
+- No ledger keeps it: each run derives it from git again (COR-050 point 9).
 - A deferral never expires on its own, and its age is shown (COR-050 point 4).
 
 ## rule set
@@ -290,13 +297,13 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 
 **Always true:**
 
-- A project never edits a rule set it did not write, and extends one by inheriting it (COR-051 point 6).
-- An inheriting set may not contradict or relax a rule it inherits (COR-051 point 7).
+- A project never edits a rule set the backbone or a component ships, and extends one by inheriting it (COR-051 point 6).
+- A set takes every rule of the sets it inherits unchanged (COR-051 point 7).
 - While a pin is behind its set's version, no rule binds through it (COR-051 point 7).
 
 ## artefact type
 
-An artefact type is the declared name of what a document or a collection entry is. The place holding its file gives it, and a rule set's scope may select by it. The glossary's place gives each entry the type `software-analysis:term`.
+An artefact type is the declared name of what a document or a collection entry is. The place holding its file gives it, save for a rule, which always takes `backbone:rule`, and a type that a kind field gates. A rule set's scope may select by it. The glossary's place gives each entry the type `software-analysis:term`.
 
 **Attributes:**
 
@@ -304,7 +311,7 @@ An artefact type is the declared name of what a document or a collection entry i
 
 **Relations:**
 
-- A place gives it to the artefacts it holds (COR-056 point 1).
+- A place gives it to the artefacts it holds (COR-056 point 1). Where the type names a kind field, an artefact takes it only when it declares that kind (COR-056 point 4).
 - A component declares its types in its package metadata (COR-056 point 2).
 - A rule set's scope may select by it (COR-051 point 2).
 
@@ -322,14 +329,14 @@ Package metadata is the file a component ships that declares its version, its ra
 
 **Attributes:**
 
-- the component's name, kind and version, and the backbone versions it works with (COR-017)
+- the component's name, kind and version, and its ranges: on the backbone, and on other capabilities (COR-017, COR-030)
 - its commands (COR-021)
 - its connections: the connection points it defines and those it plugs into (COR-053 point 3)
 - its places, and its artefact types (COR-050 point 1, COR-056 point 2)
 
 **Relations:**
 
-- A component ships it, and owns it (COR-017).
+- A component ships it (COR-017). COR-017 calls it the capability's manifest, a word the analysis keeps for the project's record.
 - It is no manifest: a manifest is what the project recorded when it installed the component.
 
 **States:** None.

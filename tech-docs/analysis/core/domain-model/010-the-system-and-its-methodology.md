@@ -17,7 +17,6 @@ pkit:
       record:
         - COR-006
         - COR-014
-        - COR-025
         - COR-047#1
         - COR-047#3
         - COR-051#1
@@ -28,6 +27,7 @@ pkit:
         - COR-058#3
         - COR-058#4
         - COR-058#5
+        - COR-058#9
       artefact:
         - TERM-system
         - TERM-harness
@@ -41,12 +41,12 @@ pkit:
 
 # VIEW-the-system-and-its-methodology — The system and its methodology
 
-What the system is, the harness it works in, and the methodology it ships and enforces. The methodology is made of decision records with their points, rules, operational rules and conventions. The acceptance gate says which of them work may build on.
+What the system is, the methodology it ships and enforces, and the harness that hosts the sessions where the methodology is used. The methodology is made of decision records with their points, rules, operational rules and conventions. The acceptance gate says which records and rules work may build on.
 
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules and operational rules. A decision record holds points. The acceptance gate lets work build only on accepted decision records and rules. A harness loads the operational rules through its include.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
   class System["system"]
   class Harness["harness"]
   class Methodology["methodology"]
@@ -89,9 +89,11 @@ The system is the software this analysis describes: the one you install, run and
 
 ## harness
 
-A harness is an external tool that hosts working sessions and runs the tool calls made in them. Claude Code is one. The methodology works in whichever harness is in use, and sets none of that harness's own properties.
+A harness is an external tool that hosts working sessions and runs the tool calls made in them. Claude Code is one. The methodology depends on how the harness behaves, which the methodology cannot set.
 
-**Attributes:** None.
+**Attributes:**
+
+- its include: the line in its instruction file that pulls another file into each session, as `@.pkit/rules/core.md` does
 
 **Relations:**
 
@@ -103,7 +105,7 @@ A harness is an external tool that hosts working sessions and runs the tool call
 **Always true:**
 
 - What the methodology needs of a harness is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 point 1).
-- A need that nothing declares a harness meets is unknown for that harness, never met (COR-047 point 3).
+- A need that no declaration covers for the harness in use is unknown, never met (COR-047 point 3).
 
 ## decision record
 
@@ -117,9 +119,9 @@ A decision record is a document that states one choice among alternatives, with 
 
 **Relations:**
 
-- It belongs to one namespace, which numbers its records on its own (COR-025). COR is the namespace of the records the system ships.
-- Its decision may hold points, each under an id of its own (COR-058 point 1).
-- A rule's origin may cite it. The record then says what was chosen and why, and the rule says what must hold (COR-051 point 5).
+- It belongs to one namespace, which numbers its records on its own. COR, the namespace of the core records, is one.
+- Its decision may hold points (COR-058 point 1).
+- A rule's origin may cite it. The record says what was chosen and why, and the rule says what must hold (COR-051 point 1).
 
 **States:** A record is `proposed` until it is accepted in review, and `accepted` until a newer record supersedes it. It never moves back, and a superseded record is kept.
 
@@ -138,32 +140,32 @@ stateDiagram-v2
 
 ## point
 
-A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as COR-050 point 3 stays true.
+A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as COR-050 point 3 stays true. A record that writes its points as a numbered list still works, but its numbers may move until it is converted (COR-058 point 9).
 
 **Attributes:**
 
 - an id: a number, such as `3`, or a label, such as `D1`
-- a title of a few words, and its text, which runs to the next heading of its level (COR-058 point 1)
+- a title of a few words, and its text, which runs to the next heading of the same or a higher level (COR-058 point 1)
 
 **Relations:**
 
 - It belongs to one decision record, inside that record's Decision (COR-058 point 1).
-- A retired point names the points of the same record that continue it, where any do (COR-058 points 4 and 5).
+- A retired point names the points that took its text, where any did (COR-058 points 4 and 5).
 
-**States:** A point is live until no point continues what it says. It is then retired: a stub stays where it stood, and its id stays in the record's front matter (COR-058 point 4).
+**States:** A point written as a heading is live until it is retired, by being dropped, split or merged. A stub then stays where it stood, and its id stays in the record's front matter (COR-058 point 4).
 
 ```mermaid
 stateDiagram-v2
-  accTitle: The states of a point
-  accDescr: A point is live until no point continues what it says, then retired. A retired point never returns.
+  accTitle: The states of a point written as a heading
+  accDescr: A point is live until it is dropped, split or merged, and then retired. A retired point never returns.
   [*] --> live
-  live --> retired : no point continues it
+  live --> retired : it is dropped, split or merged
 ```
 
 **Always true:**
 
-- No point is renumbered, and no id is used again, a retired one included (COR-058 point 3).
-- A new point takes the next unused number (COR-058 point 3).
+- In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included (COR-058 point 3).
+- In such a record, a new point takes the next unused number (COR-058 point 3).
 
 ## rule
 
@@ -181,7 +183,7 @@ A rule is a statement that every document or collection entry it binds on must s
 - Its origin may cite a decision record, which must be accepted whenever the rule is (COR-051 point 5).
 - A superseded rule names the rule that succeeds it (COR-051 point 4).
 
-**States:** A rule is proposed until it is accepted in review. An accepted rule may be superseded, naming its successor, or withdrawn, naming none. Either way it stays where it is, under its id (COR-051 point 4).
+**States:** A rule is proposed until it is accepted in review. Where a person takes part, that person's review accepts it. An accepted rule may be superseded, naming its successor, or withdrawn, naming none. Either way it stays where it is, under its id (COR-051 point 4).
 
 ```mermaid
 stateDiagram-v2
@@ -207,22 +209,22 @@ The acceptance gate is the condition that work builds only on what is already ac
 
 **Relations:**
 
-- It reads the status of decision records and of rules.
+- It holds for decision records and for rules alike, a repository's own as well as the methodology's.
 
 **States:** None.
 
 **Always true:**
 
-- A rule is accepted only in review. Where a person takes part, that person's review accepts it (COR-051 point 4).
+- An accepted rule whose origin cites a decision record cites an accepted one (COR-051 point 5).
 
 ## operational rule
 
-An operational rule is a short instruction that every session loads through the harness's include. It is cited by its number in its file, such as core rule 8, and carries no id, origin or status.
+An operational rule is an instruction that every session loads through the harness's include. It is cited by its number in its file, such as core rule 8, and carries no id, origin or status.
 
 **Attributes:**
 
 - its number in its file
-- its statement, and a pointer to the record or document that holds its reasons
+- its statement, mostly with a pointer to where its reasons are
 
 **Relations:**
 
@@ -237,7 +239,7 @@ An operational rule is a short instruction that every session loads through the 
 
 ## methodology
 
-The methodology is the body of decision records, rules, operational rules and conventions that the system ships and enforces. It is the content the system carries, as against the software itself.
+The methodology is the body of decision records, rules, operational rules and conventions that the system ships and enforces. Its conventions are agreed ways of working, such as how a commit's message is written. A repository keeps its own records, rules and operational rules beside the methodology's. They are no part of it, yet the acceptance gate holds for them too.
 
 **Attributes:** None.
 
