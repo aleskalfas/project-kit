@@ -1515,8 +1515,9 @@ def _link_message(d: links.Departure) -> str:
                 f"`{d.wanted}` — {mend}"
             )
         return (
-            f"line {d.line} links the section to its term, `{d.written}`, a term not in "
-            f"force — {mend}"
+            f"line {d.line} links the section to a term where no such link belongs, "
+            f"`{d.written}`: a section's one link to its term is its first line below its "
+            f"heading, to its own term while that term is in force — {mend}"
         )
     if d.how == links.MISSING:
         return (

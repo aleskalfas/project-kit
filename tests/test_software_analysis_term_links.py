@@ -377,6 +377,51 @@ def test_a_writer_s_line_that_opens_with_defined_in_is_left_as_written(
     assert link(project).stdout.strip() == "Every link is as it should be; nothing written."
 
 
+#: Each section's link to its term, as the command writes it, and what the check says of
+#: one in that form where none belongs.
+OWN_ORDER = "Defined in [TERM-order](../glossary.md#term-order--order)."
+OWN_PAYMENT = "Defined in [TERM-payment](../glossary.md#term-payment--payment)."
+NOT_BELONGING = "links the section to a term where no such link belongs"
+
+
+def test_a_later_line_in_the_form_of_a_section_s_link_is_extra(project: AdopterRepo) -> None:
+    """A line in the command's form below a section's own link, naming another term, is a
+    link to a glossary entry written by hand where the command writes none: the check
+    reports it as extra, and the command takes it out (DEC-004 point 7)."""
+    link(project)
+    amount = "**Attributes:** Its amount."
+    project.write({VIEW: _read(project, VIEW).replace(amount, f"{OWN_ORDER}\n\n{amount}", 1)})
+    found = [m.split(" — ")[0] for _l, m in _validate(project)]
+    assert len(found) == 1 and f"{NOT_BELONGING}, `{OWN_ORDER}`" in found[0], found
+    link(project)
+    assert _body(project, VIEW) == VIEW_LINKED
+    assert _validate(project) == []
+
+
+def test_two_sections_naming_each_other_s_terms_are_each_mended(project: AdopterRepo) -> None:
+    """Two sections whose lines in the command's form name each other's terms hold no link
+    to their own: the check reports each missing, and each line naming the other term
+    extra, and the command writes each section's own and takes the other out."""
+    link(project)
+    swapped = _read(project, VIEW).replace(OWN_ORDER, "\0").replace(OWN_PAYMENT, OWN_ORDER)
+    project.write({VIEW: swapped.replace("\0", OWN_PAYMENT)})
+    found = sorted(m.split(" — ")[0].split(" ", 2)[2] for _l, m in _validate(project))
+    assert len(found) == 4, found
+    assert [m for m in found if m.startswith("heads a section with no link")] == [
+        f"heads a section with no link to its term: each section opens with `{own}`"
+        for own in (OWN_ORDER, OWN_PAYMENT)
+    ], found
+    assert sorted(m for m in found if m.startswith(NOT_BELONGING)) == sorted(
+        f"{NOT_BELONGING}, `{own}`: a section's one link to its term is its first line below "
+        "its heading, to its own term while that term is in force"
+        for own in (OWN_ORDER, OWN_PAYMENT)
+    ), found
+    link(project)
+    assert _body(project, VIEW) == VIEW_LINKED
+    assert _validate(project) == []
+    assert link(project).stdout.strip() == "Every link is as it should be; nothing written."
+
+
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
     """A glossary with no view beside it is never linked nor held, a link written in it by
     hand included (DEC-004 point 7)."""
@@ -499,8 +544,8 @@ def _defined(term: str, anchor: str | None = None) -> str:
 
 def test_the_command_writes_mends_and_takes_out_a_section_s_link_to_its_term() -> None:
     """A section with no link to its term gets one right below its heading; a stale one is
-    rewritten in its place; one to a term no longer wanted is taken out. A second pass
-    finds nothing (DEC-004 point 7)."""
+    rewritten in its place; one to a term no longer wanted is taken out, with a blank line
+    beside it. A second pass finds nothing (DEC-004 point 7)."""
     stale = _defined("TERM-payment", "term-payment--old")
     lines = ["# V", "", "## Order", "", "An order.", "", "## Payment", "", stale, "", "Paid."]
     lines += ["", "## Gone", "", _defined("TERM-gone"), "", "Gone."]
@@ -510,7 +555,7 @@ def test_the_command_writes_mends_and_takes_out_a_section_s_link_to_its_term() -
     assert out == [
         *("# V", "", "## Order", "", _defined("TERM-order"), "", "An order.", ""),
         *("## Payment", "", _defined("TERM-payment"), "", "Paid.", ""),
-        *("## Gone", "", "", "Gone."),
+        *("## Gone", "", "Gone."),
     ]
     assert found == [
         (links.MISSING, 3, None, _defined("TERM-order")),
@@ -522,9 +567,10 @@ def test_the_command_writes_mends_and_takes_out_a_section_s_link_to_its_term() -
 
 def test_a_line_that_opens_with_defined_in_is_the_section_s_link_only_at_its_top() -> None:
     """Only the section's first line that is not blank, in the command's form, leading
-    from its own term, is its link to its term. A sentence that opens with `Defined in [`,
-    the line in fenced code, and a line leading from another term are the writer's, left
-    as written, and a section that holds no link of its own gets one above them."""
+    from its own term, is its link to its term. A sentence that opens with `Defined in [`
+    and the line in fenced code are the writer's, left as written; a line in the
+    command's form leading from another term is extra, and taken out; and a section that
+    holds no link of its own gets one right below its heading."""
     prose = "Defined in [ISO 4217](https://www.iso.org/iso-4217), a currency is a code."
     fence = ["```markdown", _defined("TERM-payment"), "```"]
     lines = ["# V", "", "## Currency", "", prose, "", "## Order", "", _defined("TERM-order")]
@@ -533,13 +579,19 @@ def test_a_line_that_opens_with_defined_in_is_the_section_s_link_only_at_its_top
     owners = ["TERM-currency", "TERM-order", "TERM-payment", "TERM-refund"]
     wanted = [_defined(term) for term in owners]
     out, found = _definitions(lines, owners, wanted)
-    assert [how for how, *_rest in found] == [links.MISSING] * 3
+    assert [(how, number) for how, number, *_rest in found] == [
+        (links.MISSING, 3),
+        (links.MISSING, 17),
+        (links.MISSING, 23),
+        (links.EXTRA, 25),
+    ]
     assert out == [
         *("# V", "", "## Currency", "", wanted[0], "", prose, ""),
         *("## Order", "", _defined("TERM-order"), "", prose, "", "```", _defined("TERM-order")),
         *("```", "", "## Payment", "", wanted[2], "", *fence, ""),
-        *("## Refund", "", wanted[3], "", _defined("TERM-payment"), ""),
+        *("## Refund", "", wanted[3], ""),
     ]
+    assert _definitions(out, owners, wanted) == (out, [])
 
 
 def _front(repo: AdopterRepo, old: str, new_text: str) -> None:

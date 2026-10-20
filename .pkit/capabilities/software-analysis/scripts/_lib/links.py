@@ -10,7 +10,9 @@ reads back, the two others:
   below its heading. The k-th section links the k-th term `explains` lists. The line
   read back as one is only the section's first line that is not blank, written in
   that form, its link a link to a glossary entry from the section's own term
-  (`defined_at`). Any other line that opens with `Defined in` is the writer's, and is
+  (`defined_at`). Any other line of a view in that form, outside fenced code, is a
+  link written by hand where the command writes none: it is extra, and the command
+  takes it out. A line in another form, or in fenced code, is the writer's, and is
   left as written.
 - **A mention's link to its term.** In a view's opening and each of its sections,
   and in each glossary entry's section below its heading, the first mention of a
@@ -55,7 +57,7 @@ text is skipped.
 The rewrite reads a body only to place its links, and takes its data from front
 matter alone: each term's id, name, noun forms and other senses, and each view's
 `explains` (DEC-001 point 1). It never changes the number of a body's lines, but
-where it adds a section's link to its term.
+where it adds a section's link to its term, or takes out a line in that form.
 """
 
 from __future__ import annotations
@@ -64,7 +66,7 @@ import dataclasses
 import posixpath
 import re
 from collections import Counter
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
 from _lib import analyses, forms
@@ -92,9 +94,11 @@ _ENTRY = r"(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*"
 _TERM_LINK = re.compile(rf"(?<!!)\[(?P<text>[^\[\]]+)\]\((?P<target>{_ENTRY})\)")
 
 #: A line in the form of a section's link to its term, on its own: the term's id, and its
-#: link to a glossary entry. Neither it nor a line that links a term to its section is
-#: read for mentions.
+#: link to a glossary entry. In a view, outside fenced code, it is read for no mention:
+#: it is the section's link, or one the command takes out (`with_definitions`).
 DEFINED_LINE = re.compile(rf"^{DEFINED} \[(?P<id>[^\[\]\s]+)\]\((?P<target>{_ENTRY})\)\.\s*$")
+
+#: A line that links a term to its section, read for no mention.
 _EXPLAINED_LINE = re.compile(r"^[ \t]*Explained in \[")
 
 #: What hides a whole line from the mentions: the opening of fenced code, a heading,
@@ -335,10 +339,11 @@ def _char(ch: str, *, first: bool) -> str:
     return re.escape(ch)
 
 
-def _strip(text: str) -> tuple[str, list[_Found]]:
+def _strip(text: str, hide: Collection[int]) -> tuple[str, list[_Found]]:
     """`text` with each link to a glossary entry outside code and comments unwritten, its
-    text kept, and each such link, by where its text lies in what is left."""
-    hidden = _hidden_lines(text)
+    text kept, and each such link, by where its text lies in what is left; the lines
+    `hide` gives are kept as written."""
+    hidden = _hidden_lines(text, hide)
     code = [
         (m.start(), m.end())
         for pattern in (_INLINE[0], _INLINE[1])
@@ -359,30 +364,43 @@ def _strip(text: str) -> tuple[str, list[_Found]]:
     return "".join(out), found
 
 
-def _hidden_lines(text: str) -> list[tuple[int, int]]:
+def _hidden_lines(text: str, hide: Collection[int]) -> list[tuple[int, int]]:
     """The spans of the whole lines no mention is read on: fenced code with its fences,
-    headings, the lines that link a term and its section, and reference definitions."""
+    headings, a term's link to its section, reference definitions, and the lines of
+    `text` `hide` gives, counted from 0."""
     spans: list[tuple[int, int]] = []
-    fence: tuple[str, int] | None = None
+    lines = text.split("\n")
     at = 0
-    for line in text.split("\n"):
+    for index, (line, fenced) in enumerate(zip(lines, _fenced(lines), strict=True)):
         end = at + len(line)
-        if fence is not None:
+        if (
+            fenced
+            or index in hide
+            or any(p.match(line) for p in (_HEADING, _EXPLAINED_LINE, _REFERENCE))
+        ):
             spans.append((at, end))
+        at = end + 1
+    return spans
+
+
+def _fenced(lines: Sequence[str]) -> list[bool]:
+    """Whether each of `lines` lies in fenced code, its fences included."""
+    found: list[bool] = []
+    fence: tuple[str, int] | None = None
+    for line in lines:
+        if fence is not None:
+            found.append(True)
             stripped = line.strip()
             if stripped and set(stripped) == {fence[0]} and len(stripped) >= fence[1]:
                 fence = None
-        else:
-            opening = _FENCE.match(line)
-            if opening is not None and not (
-                opening.group(1).startswith("`") and "`" in opening.group(2)
-            ):
-                fence = (opening.group(1)[0], len(opening.group(1)))
-                spans.append((at, end))
-            elif any(p.match(line) for p in (_HEADING, _EXPLAINED_LINE, DEFINED_LINE, _REFERENCE)):
-                spans.append((at, end))
-        at = end + 1
-    return spans
+            continue
+        opening = _FENCE.match(line)
+        if opening is not None and not (
+            opening.group(1).startswith("`") and "`" in opening.group(2)
+        ):
+            fence = (opening.group(1)[0], len(opening.group(1)))
+        found.append(fence is not None)
+    return found
 
 
 def _masked(text: str, spans: Sequence[tuple[int, int]]) -> str:
@@ -395,9 +413,9 @@ def _masked(text: str, spans: Sequence[tuple[int, int]]) -> str:
     return "".join(chars)
 
 
-def _skipped(text: str) -> tuple[list[tuple[int, int]], list[int]]:
+def _skipped(text: str, hide: Collection[int]) -> tuple[list[tuple[int, int]], list[int]]:
     """The spans of `text` no mention is read in, and where each escape ends."""
-    hidden = _hidden_lines(text)
+    hidden = _hidden_lines(text, hide)
     masked = _masked(text, hidden)
     spans = list(hidden)
     for pattern in _INLINE:
@@ -418,9 +436,11 @@ class _Mention:
     term: str
 
 
-def _chosen(text: str, vocabulary: Vocabulary) -> tuple[list[_Mention], list[int]]:
+def _chosen(
+    text: str, vocabulary: Vocabulary, hide: Collection[int]
+) -> tuple[list[_Mention], list[int]]:
     """The mentions in `text`, the longest first, and where each escape ends."""
-    skipped, escapes = _skipped(text)
+    skipped, escapes = _skipped(text, hide)
     blocked: dict[str, list[tuple[int, int]]] = {}
     for term in vocabulary.terms:
         for phrase in term.other_senses:
@@ -446,10 +466,12 @@ def _chosen(text: str, vocabulary: Vocabulary) -> tuple[list[_Mention], list[int
     return chosen, escapes
 
 
-def _wanted(text: str, own: str | None, vocabulary: Vocabulary, path: str) -> list[_Wanted]:
+def _wanted(
+    text: str, own: str | None, vocabulary: Vocabulary, path: str, hide: Collection[int]
+) -> list[_Wanted]:
     """The links the command writes in one section's `text`: the first mention of each term
     that is not the section's own and no escape marks."""
-    mentions, escapes = _chosen(text, vocabulary)
+    mentions, escapes = _chosen(text, vocabulary, hide)
     linked: set[str] = set()
     wanted: list[_Wanted] = []
     for mention in mentions:
@@ -475,13 +497,20 @@ def _render(text: str, wanted: Sequence[_Wanted]) -> str:
 
 
 def section(
-    text: str, own: str | None, vocabulary: Vocabulary, path: str, first_line: int
+    text: str,
+    own: str | None,
+    vocabulary: Vocabulary,
+    path: str,
+    first_line: int,
+    hide: Collection[int] = (),
 ) -> tuple[str, list[Difference]]:
     """One section's `text`, its links to terms written as the command writes them, and how
     the links it holds depart from those; `first_line` is the line `text` starts on in
-    the file at `path`, and `own` the id of the section's own term."""
-    plain, found = _strip(text)
-    wanted = _wanted(plain, own, vocabulary, path)
+    the file at `path`, `own` the id of the section's own term, and `hide` the lines of
+    `text`, counted from 0, that link a view's section to a term, which are neither read
+    nor rewritten here (`with_definitions`)."""
+    plain, found = _strip(text, hide)
+    wanted = _wanted(plain, own, vocabulary, path, hide)
 
     def line(offset: int) -> int:
         return first_line + plain.count("\n", 0, offset)
@@ -523,23 +552,12 @@ def view_sections(lines: Sequence[str], start: int) -> list[tuple[int, int]]:
     `start`: its opening, from the body's start to its first section, then each section,
     from its heading to the next one, each as the index of its first line and the index
     past its last. A heading inside fenced code opens no section."""
-    starts: list[int] = []
-    fence: tuple[str, int] | None = None
-    for index in range(start, len(lines)):
-        line = lines[index]
-        if fence is not None:
-            stripped = line.strip()
-            if stripped and set(stripped) == {fence[0]} and len(stripped) >= fence[1]:
-                fence = None
-            continue
-        opening = _FENCE.match(line)
-        if opening is not None and not (
-            opening.group(1).startswith("`") and "`" in opening.group(2)
-        ):
-            fence = (opening.group(1)[0], len(opening.group(1)))
-            continue
-        if re.match(r"^##(?:[ \t]|$)", line):
-            starts.append(index)
+    body = lines[start:]
+    starts = [
+        start + index
+        for index, (line, fenced) in enumerate(zip(body, _fenced(body), strict=True))
+        if not fenced and re.match(r"^##(?:[ \t]|$)", line)
+    ]
     bounds = [start, *starts, len(lines)]
     return [(bounds[k], bounds[k + 1]) for k in range(len(bounds) - 1)]
 
@@ -558,6 +576,18 @@ def defined_at(lines: Sequence[str], first: int, past: int, own: str | None) -> 
     return None
 
 
+def definition_lines(lines: Sequence[str], first: int, past: int) -> list[int]:
+    """The indices of the lines of a part of a view, from index `first` to `past`, in the
+    form of a section's link to its term, outside fenced code: the section's own link
+    (`defined_at`), and each line the command takes out. A part opens outside any fence."""
+    part = lines[first:past]
+    return [
+        first + index
+        for index, (line, fenced) in enumerate(zip(part, _fenced(part), strict=True))
+        if not fenced and DEFINED_LINE.match(line)
+    ]
+
+
 def with_definitions(
     lines: list[str],
     sections: Sequence[tuple[int, int]],
@@ -567,19 +597,26 @@ def with_definitions(
     """A view's `lines` with each section's link to its term as `wanted` gives it, the
     k-th section's the k-th, its own term `owners`' k-th: the link the section holds
     (`defined_at`) rewritten to it, or taken out where none is wanted, and one written
-    right below the heading where the section holds none. No other line is touched.
-    Returns the lines, and how the section's links departed: `(how, line number,
-    written, wanted)`, each line counted in the lines as given."""
+    right below the heading where the section holds none. Any other line of a section in
+    the form of the link, outside fenced code (`definition_lines`), is a link written by
+    hand where the command writes none: it is extra, and taken out. No other line is
+    touched, but a blank line beside one taken out. Returns the lines, and how the
+    section's links departed: `(how, line number, written, wanted)`, each line counted in
+    the lines as given."""
     out = list(lines)
     differences: list[tuple[str, int, str | None, str | None]] = []
     for k, (first, past) in reversed(list(enumerate(sections))):
         want = wanted[k] if k < len(wanted) else None
         held = defined_at(lines, first, past, owners[k] if k < len(owners) else None)
+        for index in reversed(definition_lines(lines, first, past)):
+            if index != held:
+                differences.append((EXTRA, index + 1, lines[index].strip(), None))
+                _take_out(out, index)
         if held is not None:
             line = lines[held].strip()
             if want is None:
                 differences.append((EXTRA, held + 1, line, None))
-                del out[held]
+                _take_out(out, held)
             elif line != want:
                 differences.append((STALE, held + 1, line, want))
                 out[held] = want
@@ -588,6 +625,14 @@ def with_definitions(
             out[first + 1 : first + 1] = ["", want]
     differences.sort(key=lambda d: d[1])
     return out, differences
+
+
+def _take_out(lines: list[str], index: int) -> None:
+    """Take the line at `index` out of `lines`, and the blank line after it where a blank
+    line stands on either side, so no two blank lines are left where one stood."""
+    del lines[index]
+    if 0 < index < len(lines) and not lines[index - 1].strip() and not lines[index].strip():
+        del lines[index]
 
 
 # --- a file ------------------------------------------------------------------------------------
@@ -650,20 +695,23 @@ def view(
     vocabulary: Vocabulary,
 ) -> Linked:
     """A view in force, LF `text`, with each section's link to its term and the mentions'
-    links written: its opening and each section below its heading."""
+    links written: its opening and each section below its heading. A line in the form of
+    a section's link to its term in the opening is taken out, as one below a section's
+    own link is."""
     path = artefact.path
     written = text.split("\n")
     start = body_start(written)
     explains = artefact.fields.get(EXPLAINS)
     listed = [t for t in explains if isinstance(t, str)] if isinstance(explains, list) else []
-    concept = view_sections(written, start)[1:]
+    parts = view_sections(written, start)
+    concept = parts[1:]
     wanted_lines: list[str | None] = []
     for k in range(len(concept)):
         term_id = listed[k] if k < len(listed) else None
         term = vocabulary.term(term_id) if term_id is not None else None
         wanted_lines.append(defined(term, path) if term is not None else None)
     owners: list[str | None] = [None, *(listed[: len(concept)])]
-    lines, held = with_definitions(written, concept, owners[1:], wanted_lines)
+    lines, held = with_definitions(written, parts, owners, [None, *wanted_lines])
     departures = [
         Departure(artefact.location, how, number, line or "", line, want, None, True)
         for how, number, line, want in held
@@ -692,13 +740,16 @@ def _mentions(
 ) -> list[tuple[str, list[Difference]]]:
     """Each part of a view's body among `lines`, its opening then each section, with its
     mentions' links written, and how the links it holds depart from those. A part's own
-    term is `owners`' entry in its place: none for the opening."""
+    term is `owners`' entry in its place: none for the opening. Its lines in the form of
+    a section's link to its term are `with_definitions`', and read for no mention."""
     found: list[tuple[str, list[Difference]]] = []
     for k, (first, past) in enumerate(view_sections(lines, start)):
         if first == past:
             continue  # an opening with no line holds nothing to link
         own = owners[k] if k < len(owners) else None
-        found.append(section("\n".join(lines[first:past]), own, vocabulary, path, first + 1))
+        hide = [index - first for index in definition_lines(lines, first, past)]
+        text = "\n".join(lines[first:past])
+        found.append(section(text, own, vocabulary, path, first + 1, hide))
     return found
 
 
