@@ -32,6 +32,15 @@
         "$ref": "#/$defs/analysis"
       }
     },
+    "areas": {
+      "description": "Each area's goal of the one analysis at the top of the analysis location, where the project lists no analyses (DEC-003 point 8). A listed analysis keeps its own in its entry's `areas`, and this key is refused beside a list. See `$defs/areas`.",
+      "$ref": "#/$defs/areas"
+    },
+    "overview": {
+      "description": "Whether each analysis keeps its generated overview, `overview/README.md` in its folder, the reader's entry point (DEC-003 point 8). True unless set. Set to false, the stamp writes none, `pkit analysis overview` refuses, and `pkit analysis validate` asks for none.",
+      "type": "boolean",
+      "default": true
+    },
     "numbering": {
       "description": "How use cases, journeys and requirements are numbered (DEC-001 point 3, DEC-002 point 2).",
       "type": "object",
@@ -87,7 +96,22 @@
               }
             }
           }
+        },
+        "areas": {
+          "description": "Each area's goal of this analysis (DEC-003 point 8). See `$defs/areas`.",
+          "$ref": "#/$defs/areas"
         }
+      }
+    },
+    "areas": {
+      "description": "Each area of the analysis's use cases with its goal: the area's folder name, a word that may open with a number and a hyphen, such as `010-develop`, and beside it one line that says what the area makes possible. The overview shows each goal beside its area, so a reader sees why the use cases are cut as they are. `pkit analysis validate` fails a goal that names no folder of the use cases and, where the overview is kept, warns of an area of the use cases in force without a goal. An analysis whose use cases lie in no area keeps none.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(?:[0-9]+-)?[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[^\\n]*\\S[^\\n]*$"
       }
     },
     "entry": {

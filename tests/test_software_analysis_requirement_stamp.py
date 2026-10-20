@@ -38,6 +38,7 @@ from tests.analysis_repo import (
     MAIN,
     QUALITY,
     SA,
+    SETTINGS_TEXT,
     actor_at,
     below_floor,
     field_hint,
@@ -163,7 +164,7 @@ def test_requirements_share_one_numbering_with_the_default_branch_and_its_histor
 def _freed_by(repo: AdopterRepo, commit: str, ids: tuple[str, ...]) -> None:
     """The numbering setting, one entry freeing `ids` by `commit`."""
     written = f'    - commit: "{commit}"\n      ids: [{", ".join(ids)}]\n'
-    repo.write({SETTING: f"schema_version: 1\nnumbering:\n  freed-by:\n{written}"})
+    repo.write({SETTING: f"{SETTINGS_TEXT}numbering:\n  freed-by:\n{written}"})
 
 
 # Slow by design: four stamps, each a script that starts several `pkit` processes.
@@ -209,7 +210,7 @@ def test_a_requirement_moved_to_another_kind_then_deleted_is_not_freed(
         completed.stderr
     )
     assert f"to {first} too (commit " in completed.stderr
-    project.write({SETTING: None})
+    project.write({SETTING: SETTINGS_TEXT})
     assert stamped(project, "quality-requirement", "again") == "REQ-002"
 
 

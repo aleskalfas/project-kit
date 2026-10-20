@@ -48,6 +48,14 @@ CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
 #: The project's own structures, in the capability's project tier (DEC-001 point 1).
 STRUCTURES = f"{SA.as_posix()}/project/structures.yaml"
+#: The capability's settings file, and the setting `prepare` writes there: no overview
+#: (DEC-003 point 8). The overview's own tests keep one
+#: (`test_software_analysis_overview.py`), so a test of any other rule sees no finding,
+#: no file and no line of the stamp's that the overview adds. A test that writes the
+#: settings file writes the setting too.
+SETTINGS = f"{SA.as_posix()}/project/config.yaml"
+NO_OVERVIEW = "overview: false\n"
+SETTINGS_TEXT = "pkit_schema: software-analysis:config\nschema_version: 1\n" + NO_OVERVIEW
 
 ANALYSIS = "tech-docs/analysis"
 ACTORS = f"{ANALYSIS}/use-case-model/actors"
@@ -57,6 +65,9 @@ DOMAIN_MODEL = f"{ANALYSIS}/domain-model"
 USE_CASES = f"{ANALYSIS}/use-case-model/use-cases"
 JOURNEYS = f"{ANALYSIS}/use-case-model/journeys"
 RECORDS = f"{ANALYSIS}/revalidations"
+#: The overview's folder of held documents, and its file (software-analysis DEC-003 point 8).
+OVERVIEW = f"{ANALYSIS}/overview"
+OVERVIEW_FILE = f"{OVERVIEW}/README.md"
 #: The three kinds of requirement's places, one folder each under `requirements/`, which
 #: is no place itself (software-analysis DEC-002 point 3).
 QUALITY = f"{ANALYSIS}/requirements/quality"
@@ -153,11 +164,18 @@ def load(text: str) -> Any:
 
 def prepare(repo: AdopterRepo) -> AdopterRepo:
     """The adopter's scripts pointed at this interpreter, the internal root at
-    `tech-docs/`, `src/` holding code to anchor, and all of it committed on `main`."""
+    `tech-docs/`, `src/` holding code to anchor, the settings keeping no overview
+    (`SETTINGS_TEXT`), and all of it committed on `main`."""
     for script in sorted((repo.root / SA / "scripts").glob("*.py")):
         body = script.read_text(encoding="utf-8").split("\n", 1)[1]
         script.write_text(f"#!{sys.executable}\n{body}", encoding="utf-8")
-    repo.write({CONFIG: "docs:\n  internal: tech-docs\n", "src/run.py": "print('run')\n"})
+    repo.write(
+        {
+            CONFIG: "docs:\n  internal: tech-docs\n",
+            "src/run.py": "print('run')\n",
+            SETTINGS: SETTINGS_TEXT,
+        }
+    )
     repo.commit("install")
     return repo
 
@@ -293,9 +311,10 @@ def requirement(
 def fill(repo: AdopterRepo) -> None:
     """Every placeholder the stamp left in the analysis written over with its own words,
     as a person fills each — the check fails an artefact still holding one. Each part's
-    hint is written over with its example."""
+    hint is written over with its example. The overview is generated, and holds nothing a
+    person fills (DEC-003 point 8)."""
     for path in sorted((repo.root / ANALYSIS).rglob("*.md")):
-        if (repo.root / RECORDS) in path.parents:
+        if (repo.root / RECORDS) in path.parents or (repo.root / OVERVIEW) in path.parents:
             continue
         text = HINT.sub(r"\g<example>", path.read_text(encoding="utf-8"))
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
