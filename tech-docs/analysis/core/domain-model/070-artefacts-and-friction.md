@@ -66,26 +66,26 @@ How the system finds where a document has drifted from what it rests on. An arte
 classDiagram
   accTitle: Artefacts and friction
   accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors and its answers. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
-  class Place["place"]
-  class Artefact["artefact"]
-  class Anchor["anchor"]
+  class Place["Place"]
+  class Artefact["Artefact"]
+  class Anchor["Anchor"]
   Anchor : kind
   Anchor : value
-  class Answer["answer"]
-  class Friction["friction"]
-  class Finding["finding"]
-  class ChangeCheck["change check"]
+  class Answer["Answer"]
+  class Friction["Friction"]
+  class Finding["Finding"]
+  class ChangeCheck["Change check"]
   ChangeCheck : mode
-  class WholeRepositoryCheck["whole-repository check"]
-  class Debt["debt"]
+  class WholeRepositoryCheck["Whole-repository check"]
+  class Debt["Debt"]
   Debt : kind
-  class RuleSet["rule set"]
+  class RuleSet["Rule set"]
   RuleSet : version
   RuleSet : scope
-  class Rule["rule"]
-  class ArtefactType["artefact type"]
-  class PackageMetadata["package metadata"]
-  class Component["component"]
+  class Rule["Rule"]
+  class ArtefactType["Artefact type"]
+  class PackageMetadata["Package metadata"]
+  class Component["Component"]
   Place o-- Artefact : holds
   Place --> ArtefactType : gives
   Artefact "1" *-- "*" Anchor : carries
@@ -103,7 +103,7 @@ classDiagram
   PackageMetadata --> ArtefactType : declares
 ```
 
-## anchor
+## Anchor
 
 An anchor is a declared link from a document, or a collection entry, to what makes it true. That may be a path, a record, or another document or entry. It says: if this changes, check me. A page that anchors `src/project_kit/changesets.py` is asked whether it still holds when that file is edited.
 
@@ -128,7 +128,7 @@ An anchor is a declared link from a document, or a collection entry, to what mak
 - An anchor that resolves to nothing is an error, never silence (COR-050 point 7).
 - An anchor on its own artefact, or on a section of it, is a cycle, and an error (COR-050 point 5).
 
-## place
+## Place
 
 A place is a path or glob that the project or a component declares, within which the backbone looks for documents that carry anchors. project-kit lists `.pkit/cli/README.md` among its places, so the backbone reads that page's anchors.
 
@@ -149,7 +149,7 @@ A place is a path or glob that the project or a component declares, within which
 - The backbone looks for artefacts only in places (COR-050 point 1).
 - A folder of synced copies is never a place, or each sync would read as friction (COR-050 point 14).
 
-## artefact
+## Artefact
 
 An artefact is a document with front matter, or a keyed entry of a collection file, in a declared place. It carries its own anchors. Each entry of this analysis's glossary is one.
 
@@ -172,7 +172,7 @@ An artefact is a document with front matter, or a keyed entry of a collection fi
 - The change check asks a revalidation of a change that moves it, by renaming its file or moving its entry (COR-050 point 3). It asks one too of a change to its own list of anchors (COR-050 point 6).
 - An artefact with no anchors is unanchored: the backbone reports it, and never fails on it (COR-050 point 2).
 
-## answer
+## Answer
 
 An answer is a statement in an artefact's `friction` block. It settles an edit to what the artefact rests on, or a revisit its links ask for. It is a revalidation, a deferral or a revisit entry.
 
@@ -196,7 +196,7 @@ An answer is a statement in an artefact's `friction` block. It settles an edit t
 - An `unchanged` revalidation says why the artefact still holds, in words that change with it (COR-050 point 3).
 - An outcome is a record of what happened, and is never read to work out friction (COR-050 point 3).
 
-## friction
+## Friction
 
 Friction is a finding that something an artefact rests on changed, with no answer standing for it. What changed may be what an anchor names, or the list of anchors. A change that edits `src/project_kit/release.py` brings friction to `.pkit/release/README.md` until the page carries an answer.
 
@@ -218,7 +218,7 @@ Friction is a finding that something an artefact rests on changed, with no answe
 - An edit undone before the later state brings none (COR-050 point 5).
 - It never reads an artefact type (COR-056 point 5).
 
-## change check
+## Change check
 
 The change check compares a head with its base. It finds the friction and dead anchors the diff brings, and lists every answer the diff wrote. `pkit friction check` runs it.
 
@@ -240,7 +240,7 @@ The change check compares a head with its base. It finds the friction and dead a
 - An artefact new in the change counts as revalidated (COR-050 point 6).
 - It reads the artefacts, never a pull request's description, so it runs the same anywhere (COR-050 point 6).
 
-## whole-repository check
+## Whole-repository check
 
 The whole-repository check compares every artefact, at the latest commit, with its revalidation point. Its revalidation point is the commit where the artefact first carried its latest revalidation (COR-050 point 3). It reports, and never fails. `pkit friction check --all` runs it.
 
@@ -256,7 +256,7 @@ The whole-repository check compares every artefact, at the latest commit, with i
 
 - It never fails, since friction already there holds no other work back (COR-050 point 12).
 
-## debt
+## Debt
 
 Debt is a finding of the whole-repository check, dated from the commit it originates in. It is stale, where a change nobody answered left an artefact behind, or deferred, where a deferral put an answer off.
 
@@ -277,7 +277,7 @@ Debt is a finding of the whole-repository check, dated from the commit it origin
 - No ledger keeps it: each run derives it from git again (COR-050 point 9).
 - A deferral never expires on its own, and its age is shown (COR-050 point 4).
 
-## rule set
+## Rule set
 
 A rule set is a collection file of rules that artefacts must satisfy. It has its own version, the rule sets it inherits, and any scope that selects the artefacts its rules bind on. `ANA` is project-kit's rule set for its analysis.
 
@@ -301,7 +301,7 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 - A set takes every rule of the sets it inherits unchanged (COR-051 point 7).
 - While a pin is behind its set's version, no rule binds through it (COR-051 point 7).
 
-## artefact type
+## Artefact type
 
 An artefact type is the declared name of what a document or a collection entry is. The place holding its file gives it, save for a rule, which always takes `backbone:rule`, and a type that a kind field gates. A rule set's scope may select by it. The glossary's place gives each entry the type `software-analysis:term`.
 
@@ -323,7 +323,7 @@ An artefact type is the declared name of what a document or a collection entry i
 - Friction never reads a type, so giving a place a type flags nothing (COR-056 point 5).
 - Every rule takes the type `backbone:rule`, whatever place holds it (COR-056 point 3).
 
-## package metadata
+## Package metadata
 
 Package metadata is the file a component ships that declares its version, its ranges and what it adds to the backbone. It may add places, types, roles, commands and validators. The `package.yaml` of `software-analysis` declares the glossary as a place.
 

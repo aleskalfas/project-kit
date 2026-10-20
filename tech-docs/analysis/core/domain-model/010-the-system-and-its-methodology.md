@@ -47,20 +47,20 @@ What the system is, the methodology it ships and enforces, and the harness that 
 classDiagram
   accTitle: The system and its methodology
   accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
-  class System["system"]
-  class Harness["harness"]
-  class Methodology["methodology"]
-  class DecisionRecord["decision record"]
+  class System["System"]
+  class Harness["Harness"]
+  class Methodology["Methodology"]
+  class DecisionRecord["Decision record"]
   DecisionRecord : id
   DecisionRecord : status
-  class Point["point"]
+  class Point["Point"]
   Point : id
-  class Rule["rule"]
+  class Rule["Rule"]
   Rule : id
   Rule : origin
   Rule : status
-  class AcceptanceGate["acceptance gate"]
-  class OperationalRule["operational rule"]
+  class AcceptanceGate["Acceptance gate"]
+  class OperationalRule["Operational rule"]
   OperationalRule : number
   System --> Methodology : ships and enforces
   Methodology o-- DecisionRecord
@@ -72,7 +72,7 @@ classDiagram
   Harness ..> OperationalRule : loads
 ```
 
-## system
+## System
 
 The system is the software this analysis describes: the one you install, run and extend. The analysis calls it *the system*, and keeps the product's name, pkit, for prose about the product and for commands.
 
@@ -87,7 +87,7 @@ The system is the software this analysis describes: the one you install, run and
 
 **Always true:** None.
 
-## harness
+## Harness
 
 A harness is an external tool that hosts working sessions and runs the tool calls made in them. Claude Code is one. The methodology depends on how the harness behaves, which the methodology cannot set.
 
@@ -107,7 +107,7 @@ A harness is an external tool that hosts working sessions and runs the tool call
 - What the methodology needs of a harness is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 point 1).
 - A need that no declaration covers for the harness in use is unknown, never met (COR-047 point 3).
 
-## decision record
+## Decision record
 
 A decision record is a document that states one choice among alternatives, with the context that called for it and the reasons for it. It binds only once it is accepted, so work builds on it only from then.
 
@@ -138,7 +138,7 @@ stateDiagram-v2
 
 - It says why a choice was made, and holds no procedure (COR-006).
 
-## point
+## Point
 
 A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as COR-050 point 3 stays true. A record that writes its points as a numbered list still works, but its numbers may move until it is converted (COR-058 point 9).
 
@@ -167,7 +167,7 @@ stateDiagram-v2
 - In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included (COR-058 point 3).
 - In such a record, a new point takes the next unused number (COR-058 point 3).
 
-## rule
+## Rule
 
 A rule is a statement that every document or collection entry it binds on must satisfy, once it is accepted. It has a permanent id, such as RS-WRITE-005, and a recorded origin that says when, by whom and why it was decided.
 
@@ -201,7 +201,7 @@ stateDiagram-v2
 - Its id is never renumbered, and a retired id is never used again (COR-051 point 3).
 - An accepted rule has a complete origin (COR-051 point 5).
 
-## acceptance gate
+## Acceptance gate
 
 The acceptance gate is the condition that work builds only on what is already accepted. A decision record or a rule that is still proposed is a draft. Work that would rest on it waits, or has it accepted first.
 
@@ -217,7 +217,7 @@ The acceptance gate is the condition that work builds only on what is already ac
 
 - An accepted rule whose origin cites a decision record cites an accepted one (COR-051 point 5).
 
-## operational rule
+## Operational rule
 
 An operational rule is an instruction that every session loads through the harness's include. It is cited by its number in its file, such as core rule 8, and carries no id, origin or status.
 
@@ -237,7 +237,7 @@ An operational rule is an instruction that every session loads through the harne
 
 - An operational rule that fits any repository is in the file the system ships. One that fits only one repository is in that repository's own file (COR-014).
 
-## methodology
+## Methodology
 
 The methodology is the body of decision records, rules, operational rules and conventions that the system ships and enforces. Its conventions are agreed ways of working, such as how a commit's message is written. A repository keeps its own records, rules and operational rules beside the methodology's. They are no part of it, yet the acceptance gate holds for them too.
 

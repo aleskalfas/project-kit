@@ -50,22 +50,22 @@ The parts the system is made of, the documents it deploys into a harness, and ho
 classDiagram
   accTitle: Parts of the system, and projects
   accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
-  class System["system"]
-  class Harness["harness"]
-  class Methodology["methodology"]
-  class Version["version"]
+  class System["System"]
+  class Harness["Harness"]
+  class Methodology["Methodology"]
+  class Version["Version"]
   Version : major.minor.patch
-  class Backbone["backbone"]
-  class Component["component"]
-  class Skill["skill"]
+  class Backbone["Backbone"]
+  class Component["Component"]
+  class Skill["Skill"]
   Skill : gates
-  class AgentDefinition["agent definition"]
+  class AgentDefinition["Agent definition"]
   AgentDefinition : reads
   AgentDefinition : owns
-  class Stamp["stamp"]
-  class Adapter["adapter"]
-  class Install["install"]
-  class Project["project"]
+  class Stamp["Stamp"]
+  class Adapter["Adapter"]
+  class Install["Install"]
+  class Project["Project"]
   System *-- Backbone
   System *-- Component
   Backbone --> Version : ships at one
@@ -82,7 +82,7 @@ classDiagram
   Project o-- Methodology : holds the files of
 ```
 
-## version
+## Version
 
 A version is a number of the form major.minor.patch that names one state of a top-level part of the system: the backbone, or a component. It is read as semantic versioning reads it, so backbone 1.149.0 and project-management 0.54.0 are versions.
 
@@ -101,7 +101,7 @@ A version is a number of the form major.minor.patch that names one state of a to
 - The backbone and every component use semantic versioning (COR-010).
 - Which segment moves is a person's judgement of the effect, never read from a commit's type (PRJ-002 D2).
 
-## backbone
+## Backbone
 
 The backbone is the part of the system that ships whole, at one version: the CLI, the core records and the engines. Every component builds on it.
 
@@ -121,7 +121,7 @@ The backbone is the part of the system that ships whole, at one version: the CLI
 
 - The dependency never runs the other way: a component depends on the backbone, never the backbone on a component (COR-010).
 
-## component
+## Component
 
 A component is a part of the system with a version of its own, apart from the backbone's. It declares which backbone versions it works with. An adapter is one kind of component.
 
@@ -141,7 +141,7 @@ A component is a part of the system with a version of its own, apart from the ba
 
 - Its version is its own, independent of the backbone's (COR-017).
 
-## skill
+## Skill
 
 A skill is a document that holds a procedure, loaded when a task matches it. It is deployed where the harness looks for it. The `analysis-author` skill, for one, walks through choosing a term's slug.
 
@@ -163,7 +163,7 @@ A skill is a document that holds a procedure, loaded when a task matches it. It 
 - It refuses to run unless each record its `gates` names is accepted (COR-013 point 2).
 - Each reference it declares, its body cites, and the other way round (COR-013 point 3).
 
-## agent definition
+## Agent definition
 
 An agent definition is a document that sets one standing remit, with its boundaries: what it reads and the paths it owns. It is deployed for a harness to delegate work to. `critic.md` is the critic's.
 
@@ -186,7 +186,7 @@ An agent definition is a document that sets one standing remit, with its boundar
 - What its front matter declares, its body cites, and the other way round (COR-013 point 3).
 - It cites the rules and documents it relies on, rather than copying them (COR-006).
 
-## stamp
+## Stamp
 
 A stamp is an authoring command that writes a new file with its id, its front matter and its location right. It pairs with a skill, which carries the disciplines the command cannot check, such as choosing a slug. `pkit analysis new term` is one.
 
@@ -202,7 +202,7 @@ A stamp is an authoring command that writes a new file with its id, its front ma
 
 - Every authoring command of the CLI ships with a paired skill (COR-005).
 
-## adapter
+## Adapter
 
 An adapter is a component that carries the methodology into one harness. It translates skills, agent definitions and permissions into the forms that harness reads. The `claude-code` adapter, for one, serves Claude Code.
 
@@ -224,7 +224,7 @@ An adapter is a component that carries the methodology into one harness. It tran
 - A bound on the harness versions its declaration holds for is never widened by itself, only by an author who tested it (COR-047 point 2).
 - It enforces the permission model in its harness, and the model, never the harness's settings, is the source of truth (COR-028 point 2).
 
-## install
+## Install
 
 Install is the operation that adds the backbone, or a component, to a repository. Before it writes anything, it checks that nothing it brings collides by name with what is there. The first install, `pkit init`, adds the backbone, and the repository is a project from then on.
 
@@ -243,7 +243,7 @@ Install is the operation that adds the backbone, or a component, to a repository
 - On a collision, a person chooses for each file whether to override it, skip it or look at it first (COR-017).
 - `pkit init` refuses to run again in a project (COR-004).
 
-## project
+## Project
 
 A project is a repository the system is installed into. It holds the methodology's files beside content of its own. A repository becomes one when `pkit init` installs the system there, and project-kit's own repository is one too.
 

@@ -58,20 +58,20 @@ How a project's content moves from one version to the next. A project records wh
 classDiagram
   accTitle: Versions and copies
   accDescr: A project keeps manifests, which record the recorded version of the backbone and of each shipped component, and each component's origin. A recorded version names the release whose content the project holds. A version transition moves recorded versions, runs migrations and writes its target's content by propagation. Sync runs propagation at the recorded versions. Propagation writes synced copies, whose originals lie in a source repository. A distribution ships releases from one source repository.
-  class Project["project"]
-  class Manifest["manifest"]
-  class RecordedVersion["recorded version"]
-  class Release["release"]
+  class Project["Project"]
+  class Manifest["Manifest"]
+  class RecordedVersion["Recorded version"]
+  class Release["Release"]
   Release : backbone version
-  class Migration["migration"]
-  class VersionTransition["version transition"]
+  class Migration["Migration"]
+  class VersionTransition["Version transition"]
   VersionTransition : target
-  class Propagation["propagation"]
-  class Sync["sync"]
-  class SyncedCopy["synced copy"]
-  class SourceRepository["source repository"]
-  class Distribution["distribution"]
-  class ComponentOrigin["component origin"]
+  class Propagation["Propagation"]
+  class Sync["Sync"]
+  class SyncedCopy["Synced copy"]
+  class SourceRepository["Source repository"]
+  class Distribution["Distribution"]
+  class ComponentOrigin["Component origin"]
   Project "1" --> "*" Manifest : keeps
   Manifest --> RecordedVersion : records
   Manifest --> ComponentOrigin : records
@@ -86,7 +86,7 @@ classDiagram
   Distribution --> SourceRepository : ships from one
 ```
 
-## manifest
+## Manifest
 
 A manifest is the file where a project records what it installed, and at which version. The backbone has one, `.pkit/manifest.yaml`, and each shipped component has its own.
 
@@ -107,7 +107,7 @@ A manifest is the file where a project records what it installed, and at which v
 - It holds only what cannot be derived again from the methodology at the recorded version and the project's own configuration (COR-010).
 - No copying of the methodology's content writes or removes a recorded version in it (COR-059 point 1).
 
-## release
+## Release
 
 A release is a set of versions shipped together, named by its backbone version. It holds one version of the backbone, and one of each component shipped with it. The release of 24 August 2026 holds backbone 1.149.0 and, among its components, project-management 0.54.0.
 
@@ -128,7 +128,7 @@ A release is a set of versions shipped together, named by its backbone version. 
 
 - A transition of the backbone moves every shipped component the project installed to its version in the target release. It holds none back (COR-059 point 7).
 
-## recorded version
+## Recorded version
 
 A recorded version is the number or ref a project keeps for the backbone or for an installed component. It names the content the project holds. After `pkit sync`, a project holds the content of exactly its recorded versions.
 
@@ -159,7 +159,7 @@ stateDiagram-v2
 - A project is at a version only when its target and its completion both name it (COR-059 point 6).
 - No copying of the methodology's content writes or removes it (COR-059 point 1).
 
-## migration
+## Migration
 
 A migration is a script that carries a project's state across a version of the backbone or of a component. It changes what writing the methodology's files again cannot, such as a project's own settings. A version transition runs it.
 
@@ -180,7 +180,7 @@ A migration is a script that carries a project's state across a version of the b
 - A backbone migration acts only on a positive sign that it is needed, and never deletes by a path's name or position alone (COR-010).
 - What it writes stays within what the records owning that content allow (COR-059 point 3).
 
-## version transition
+## Version transition
 
 A version transition moves a project's recorded versions to a target. It runs every migration that is pending, and records its completion only after they have run. `pkit upgrade` runs a transition of the backbone.
 
@@ -213,7 +213,7 @@ stateDiagram-v2
 - A transition of the backbone only moves forward (COR-059 point 9).
 - Where a collision needs a person and nobody can reply, it refuses before it writes anything (COR-059 point 7).
 
-## propagation
+## Propagation
 
 Propagation writes the methodology's files into a project verbatim, at the recorded versions or at a transition's target. It writes over whatever stands at those paths.
 
@@ -232,7 +232,7 @@ Propagation writes the methodology's files into a project verbatim, at the recor
 - It stops and writes nothing when the CLI is at another version than the project records, or the last transition is incomplete (COR-059 point 9).
 - It leaves out a capability the project authors (COR-031 point D1), and copies a component pulled from an external source only from that source (COR-041).
 
-## sync
+## Sync
 
 Sync runs propagation at a project's recorded versions, and regenerates what derives from the project's declarations, such as the deployed skills. It moves no version and runs no migration. After a fresh clone, `pkit sync` puts the skills, the agent definitions and the core records back.
 
@@ -251,7 +251,7 @@ Sync runs propagation at a project's recorded versions, and regenerates what der
 - Under a CLI at another version than the project records, or over an incomplete transition, it stops and writes nothing (COR-059 point 9).
 - It creates no seed path (COR-059 point 8).
 
-## synced copy
+## Synced copy
 
 A synced copy is a file that propagation writes into a project, from the methodology or from a component pulled from an external source. The project never edits it: the next sync would write over the edit.
 
@@ -271,7 +271,7 @@ A synced copy is a file that propagation writes into a project, from the methodo
 - Each sync writes it again at the recorded version, and each transition at its target (COR-001).
 - It holds only its original's content (COR-001).
 
-## source repository
+## Source repository
 
 A source repository is the versioned tree where the backbone or a component is authored. Its files are the originals that synced copies in other projects come from. project-kit's repository is the source repository of its distribution.
 
@@ -289,7 +289,7 @@ A source repository is the versioned tree where the backbone or a component is a
 
 - No sync ever copies into the methodology's own source repository, since its files are the originals (ADR-059 point 1).
 
-## distribution
+## Distribution
 
 A distribution is one edition of the methodology and of the system that carries it, released from one source repository through one channel. project-kit is one, and a fork that releases from its own repository is another.
 
@@ -308,7 +308,7 @@ A distribution is one edition of the methodology and of the system that carries 
 
 - Only a CLI taken from a release's tag has a version that vouches for its content (PRJ-004).
 
-## component origin
+## Component origin
 
 A component origin is where an installed capability or adapter came from, as the manifest records it. It was shipped by its distribution, authored in the project, or supplied by an external source. project-kit's manifest marks `software-analysis` as authored in the project.
 

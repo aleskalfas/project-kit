@@ -51,22 +51,22 @@ What a project holds beyond the backbone and its adapters: the capabilities it c
 classDiagram
   accTitle: Capabilities, areas and connection points
   accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in.
-  class Component["component"]
-  class Backbone["backbone"]
-  class Project["project"]
-  class Capability["capability"]
-  class Range["range"]
+  class Component["Component"]
+  class Backbone["Backbone"]
+  class Project["Project"]
+  class Capability["Capability"]
+  class Range["Range"]
   Range : floor
   Range : upper bound
-  class Area["area"]
+  class Area["Area"]
   Area : README
-  class ConnectionPoint["connection point"]
+  class ConnectionPoint["Connection point"]
   ConnectionPoint : address
   ConnectionPoint : kind
   ConnectionPoint : version
-  class Role["role"]
+  class Role["Role"]
   Role : qualified name
-  class DataPoint["data point"]
+  class DataPoint["Data point"]
   DataPoint : combination policy
   Capability --|> Component
   Project o-- Capability : installs
@@ -80,7 +80,7 @@ classDiagram
   DataPoint --|> ConnectionPoint
 ```
 
-## capability
+## Capability
 
 A capability is a component that packages one discipline: its decision records, skills, agent definitions, scripts and schemas. Each project chooses whether to install it. `software-analysis` is one.
 
@@ -104,7 +104,7 @@ A capability is a component that packages one discipline: its decision records, 
 - It owns its subtree, and puts nothing into the backbone's own folders (COR-017).
 - Registering a capability the project authors copies nothing (COR-031 point D3).
 
-## range
+## Range
 
 A range is the set of versions a component declares it works with: of the backbone, or of another capability. It runs from a floor to any upper bound, as in `>=1.149.0,<2.0.0`.
 
@@ -126,7 +126,7 @@ A range is the set of versions a component declares it works with: of the backbo
 - A capability installs only where what it depends on falls within its ranges. Install never proceeds silently past one, and never installs a dependency by itself (COR-030).
 - A floor rises only where a declaration asks for it, never by itself (PRJ-002 D4).
 
-## area
+## Area
 
 An area is a top-level slice of a project's `.pkit/` tree, such as `.pkit/decisions/`. Its README declares its layout. Every project holds each area the methodology ships, with no install, and may add areas of its own.
 
@@ -149,7 +149,7 @@ An area is a top-level slice of a project's `.pkit/` tree, such as `.pkit/decisi
 - An area a project adds is the project's own, and cannot take the name of an area the methodology ships (COR-011).
 - Tools read an area's layout from its README, never from the files they find in it (COR-011).
 
-## connection point
+## Connection point
 
 A connection point is a declared interface that one installed capability defines. Other components fill it, depend on it or subscribe to it, without naming that capability. Its address names its role, as in `pkit::analysis:revalidation-evidence`.
 
@@ -177,7 +177,7 @@ A connection point is a declared interface that one installed capability defines
 - Two of its versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
-## role
+## Role
 
 A role is a name under which one installed capability provides connection points, so that others use them without naming that capability. The publisher that coined the name qualifies it, as in `pkit::documentation`.
 
@@ -199,7 +199,7 @@ A role is a name under which one installed capability provides connection points
 - One installed capability at most provides each role: two are an error until the project selects one (COR-053 points 1 and 7).
 - An installed capability the project did not select connects nothing under that role, while its own commands still run (COR-053 point 1).
 
-## data point
+## Data point
 
 A data point is a declared interface through which the capability providing a role accepts input. A project file, installed capabilities and that capability's own default fill it, and the backbone resolves what it holds. It is the kind of connection point that takes data in.
 

@@ -62,25 +62,25 @@ How work lands, is reviewed and is released. A change lands on the branch it tar
 classDiagram
   accTitle: Changes, review and releases
   accDescr: A pull request lands one change on its target branch. A check compares the change's head with its base, by default the default branch. A reviewer reports findings on a draft or a change. A change declares a surface change in a changeset. The release step consumes the pending changesets, writes new versions and lands only on the default branch. A report is filed on the repository of a distribution.
-  class Change["change"]
-  class PullRequest["pull request"]
+  class Change["Change"]
+  class PullRequest["Pull request"]
   PullRequest : title
-  class Base["base"]
-  class Head["head"]
-  class DefaultBranch["default branch"]
-  class Report["report"]
+  class Base["Base"]
+  class Head["Head"]
+  class DefaultBranch["Default branch"]
+  class Report["Report"]
   Report : kind
-  class Reviewer["reviewer"]
+  class Reviewer["Reviewer"]
   Reviewer : remit
-  class Finding["finding"]
+  class Finding["Finding"]
   Finding : severity or kind
-  class SurfaceChange["surface change"]
-  class Changeset["changeset"]
+  class SurfaceChange["Surface change"]
+  class Changeset["Changeset"]
   Changeset : segment
   Changeset : note
-  class ReleaseStep["release step"]
-  class Version["version"]
-  class Distribution["distribution"]
+  class ReleaseStep["Release step"]
+  class Version["Version"]
+  class Distribution["Distribution"]
   PullRequest "1" --> "1" Change : lands
   Change --> Base : compared from
   Change --> Head : compared at
@@ -95,7 +95,7 @@ classDiagram
   Report ..> Distribution : filed on the repository of
 ```
 
-## change
+## Change
 
 A change is a unit of work that lands on the branch it targets. It lands through a pull request, or as a direct commit where the project allows it. A check compares it from its base to its head.
 
@@ -116,7 +116,7 @@ A change is a unit of work that lands on the branch it targets. It lands through
 - Merged through a pull request, it lands on the default branch as one squash commit (COR-009 point 1).
 - It edits no version number, and declares a surface change in a changeset instead (PRJ-002 D1).
 
-## pull request
+## Pull request
 
 A pull request is a proposal, on the hosting service, to land one change on a target branch. It is reviewed there, and merged, by default, as one squash commit whose subject is its title.
 
@@ -138,7 +138,7 @@ A pull request is a proposal, on the hosting service, to land one change on a ta
 - Its title follows conventional commits (COR-009 point 2).
 - It is recommended, never required: work done alone may land directly (COR-009 point 5).
 
-## base
+## Base
 
 A base is the branch, or other reference, that a check compares a change with. The check measures from the commit where the change's branch left the base, which may have moved on since.
 
@@ -160,7 +160,7 @@ A base is the branch, or other reference, that a check compares a change with. T
 - A base that cannot be resolved is reported with the references tried, never guessed (COR-054 point 4).
 - A check's result holds only against an up-to-date base (COR-050 point 6).
 
-## head
+## Head
 
 The head is the latest commit of the branch that carries a change. It is the later state a check compares with the base, so each push gives a pull request a new head.
 
@@ -176,7 +176,7 @@ The head is the latest commit of the branch that carries a change. It is the lat
 
 - An edit undone before the head counts as no edit, however many commits made and undid it (COR-050 point 5).
 
-## default branch
+## Default branch
 
 The default branch is the line of history where a project's changes land. It is `main`, unless the backbone configuration names another. Every reader resolves it from the shared remote's copy.
 
@@ -197,7 +197,7 @@ The default branch is the line of history where a project's changes land. It is 
 - Every reader resolves it the same way: the shared remote's copy first, and the local branch only where there is no remote (COR-054 point 2).
 - Where it cannot be resolved, the reader says so, and never falls back to another branch (COR-054 point 4).
 
-## report
+## Report
 
 A report is an issue composed with the system and filed on the repository of the distribution in use. It is a bug, a change request or feedback. `pkit report bug` files one titled `[Bug] …`, with the versions in use attached.
 
@@ -218,7 +218,7 @@ A report is an issue composed with the system and filed on the repository of the
 - Its distribution sets its target, and no one filing it can name another (ADR-047 point 3).
 - Posting it is never silent: a person confirms the target each time, or it stays a draft (PRJ-008).
 
-## reviewer
+## Reviewer
 
 A reviewer is whoever, other than the author, reports on a draft or a change within a remit, and leaves each fix to the author. The rule-set reviewer, for one, judges a change against the rules that bind on what it alters.
 
@@ -239,7 +239,7 @@ A reviewer is whoever, other than the author, reports on a draft or a change wit
 - It reports, and leaves each fix to the author (COR-024).
 - A reviewer the backbone ships only advises, unless a gate requires its verdict (COR-024, COR-057 point 5).
 
-## finding
+## Finding
 
 A finding is a statement that a check or a reviewer reports on what it judged. Its severity, or its kind, says whether it fails the check or withholds an approval.
 
@@ -260,7 +260,7 @@ A finding is a statement that a check or a reviewer reports on what it judged. I
 - Exactly one severity fails validation, and every other only prints (COR-055 point 5).
 - Of a reviewer's findings, only a settled break withholds its approval (COR-057 point 3).
 
-## surface change
+## Surface change
 
 A surface change is an alteration of the system that someone using it could observe, depend on or break against. A new subcommand of `pkit` is one, so the pull request that adds it declares it in a changeset.
 
@@ -280,7 +280,7 @@ A surface change is an alteration of the system that someone using it could obse
 - Which segment it moves is a person's judgement, never read from the commit type (PRJ-002 D2).
 - An edit to a component's surface paths only suggests one, and a person judges it (PRJ-002 D2).
 
-## changeset
+## Changeset
 
 A changeset is a file naming the backbone or a component, the version segment a change moves it by, and a note for the changelog. A change that adds a command to `software-analysis` declares one naming `software-analysis` and `minor`.
 
@@ -302,7 +302,7 @@ A changeset is a file naming the backbone or a component, the version segment a 
 - Its segment is a person's judgement of the change's surface, never read from the commit type (PRJ-002 D2).
 - No branch edits a version number: a branch declares its change in a changeset (PRJ-002 D1).
 
-## release step
+## Release step
 
 The release step is the procedure that consumes every pending changeset. It writes the new versions, raised floors, widened bounds and changelog entries, which land only on the default branch. `pkit release plan` previews it, and `pkit release apply` writes it on a `release/` branch.
 

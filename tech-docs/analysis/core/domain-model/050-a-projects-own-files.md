@@ -57,20 +57,20 @@ The files a project owns, and how the methodology writes into them. Seeding crea
 classDiagram
   accTitle: A project's own files
   accDescr: A project holds project-owned content beside its synced copies. Seeding creates a missing seed path, and merge delivery adds the methodology's entries to a project-owned file. Merge delivery's tier that asks needs consent. The version pin and the backbone configuration are project-owned files. The backbone configuration declares the documentation roots. Validation checks the project's own files, the backbone configuration among them.
-  class Project["project"]
-  class SyncedCopy["synced copy"]
-  class ProjectOwnedContent["project-owned content"]
-  class Seeding["seeding"]
-  class MergeDelivery["merge delivery"]
+  class Project["Project"]
+  class SyncedCopy["Synced copy"]
+  class ProjectOwnedContent["Project-owned content"]
+  class Seeding["Seeding"]
+  class MergeDelivery["Merge delivery"]
   MergeDelivery : tier
-  class Consent["consent"]
+  class Consent["Consent"]
   Consent : form
-  class VersionPin["version pin"]
+  class VersionPin["Version pin"]
   VersionPin : release
-  class Validation["validation"]
-  class BackboneConfiguration["backbone configuration"]
+  class Validation["Validation"]
+  class BackboneConfiguration["Backbone configuration"]
   BackboneConfiguration : keys
-  class DocumentationRoot["documentation root"]
+  class DocumentationRoot["Documentation root"]
   DocumentationRoot : kind
   DocumentationRoot : path
   Project *-- ProjectOwnedContent
@@ -84,7 +84,7 @@ classDiagram
   Validation ..> ProjectOwnedContent : checks
 ```
 
-## project-owned content
+## Project-owned content
 
 Project-owned content is the files of a project that the methodology does not own. Sync never removes them, and the system writes into them only through the writers its records name. A project's own decision records, its backbone configuration and its root `CLAUDE.md` are such files.
 
@@ -105,7 +105,7 @@ Project-owned content is the files of a project that the methodology does not ow
 - The project may add, edit and remove it freely, and the methodology never takes away what the project wrote (COR-001).
 - Sync writes into it only through merge delivery, and seeds nothing (COR-059 point 2).
 
-## seeding
+## Seeding
 
 Seeding creates a declared seed path from its template where the path is missing. It runs at first install and at each transition of the backbone. A project that deleted `.pkit/agents/project/overlay.yaml` gets it back at its next `pkit upgrade`.
 
@@ -124,7 +124,7 @@ Seeding creates a declared seed path from its template where the path is missing
 - Sync creates no seed path (COR-059 point 8).
 - A seed the project deleted on purpose comes back at the next transition of the backbone (COR-059 point 8).
 
-## merge delivery
+## Merge delivery
 
 Merge delivery adds the methodology's baseline entries to a project-owned file, such as `.claude/settings.json`, and restores its safety entries. It never removes an entry the project wrote.
 
@@ -146,7 +146,7 @@ Merge delivery adds the methodology's baseline entries to a project-owned file, 
 - Run again with nothing missing, it changes nothing (COR-002).
 - Its tier that asks writes nothing where nobody can reply (COR-059 point 4).
 
-## consent
+## Consent
 
 Consent is a person's agreement to a write. The person gives it by a reply when asked, by an explicit confirmation flag, or by running a command that a record says carries it. Choosing the target of `pkit upgrade` is one consent for every migration the transition runs.
 
@@ -167,7 +167,7 @@ Consent is a person's agreement to a write. The person gives it by a reply when 
 - With nobody to ask and no flag, nothing is written, and the default applies (COR-048 point 5).
 - No consent is taken silently: each is a person's reply or an explicit override (COR-059 point 4).
 
-## version pin
+## Version pin
 
 A version pin is a project-owned file, `.pkit/version-pin`, that names a release. While that release can be fetched, its system runs the project's commands instead of the installed one.
 
@@ -199,7 +199,7 @@ stateDiagram-v2
 - It is never lowered: naming an older release is refused (ADR-049 point 3).
 - `pkit init` and `pkit sync` write no pin (ADR-064 point 3).
 
-## validation
+## Validation
 
 Validation checks a project's own files against the invariants its records own. Each installed component may join it with a validator. It fails on one severity alone, so `pkit validate` fails on a dangling deferral, and only warns that a documentation root does not exist yet.
 
@@ -221,7 +221,7 @@ Validation checks a project's own files against the invariants its records own. 
 - It fails when one of its results carries the failing severity, and only then (COR-055 point 5).
 - A validator that cannot run, or gives no result, fails it, never passes it (COR-055 point 6).
 
-## backbone configuration
+## Backbone configuration
 
 The backbone configuration is the project-owned file, `.pkit/project/config.yaml`, that holds the declarations the system reads. A decision record owns each of its keys, sync never writes it, and validation checks it all.
 
@@ -244,7 +244,7 @@ The backbone configuration is the project-owned file, `.pkit/project/config.yaml
 - Validation fails on an unknown key or an invalid value (COR-048 point 4).
 - A key is written only by the writers its record names, and only with consent (COR-048 point 5).
 
-## documentation root
+## Documentation root
 
 A documentation root is the folder for internal readers, or the one for user-facing readers. It is `docs/` unless the backbone configuration names another. Locations for documents are derived from it, unless one is set explicitly, so project-kit's analysis lives in `tech-docs/analysis/` under its internal root, `tech-docs/`.
 
