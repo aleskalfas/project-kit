@@ -13,6 +13,7 @@ pkit:
         - src/project_kit/router.py
         - src/project_kit/cli_render.py
         - src/project_kit/agent_runs.py
+        - src/project_kit/agent_confinement.py
         - src/project_kit/install.py
         - src/project_kit/capabilities.py
         - src/project_kit/capability_plans.py
@@ -86,7 +87,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-20T03:23:26Z
+      at: 2026-10-20T03:31:56Z
       outcome: updated
 ---
 

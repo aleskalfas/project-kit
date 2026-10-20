@@ -12,9 +12,11 @@ pkit:
         - .pkit/adapters/claude-code/permission-hook.py
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
+        - src/project_kit/run_rules.py
+        - .pkit/schemas/permission-runs.schema.json
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
     revalidated:
-      at: 2026-10-20T03:23:24Z
+      at: 2026-10-20T03:31:55Z
       outcome: updated
 ---
 
