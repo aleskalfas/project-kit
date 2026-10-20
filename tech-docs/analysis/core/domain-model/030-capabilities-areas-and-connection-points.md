@@ -20,17 +20,8 @@ pkit:
         - COR-027
         - COR-030
         - COR-031#D3
-        - COR-052#1
-        - COR-052#3
-        - COR-052#4
-        - COR-052#5
-        - COR-052#6
-        - COR-053#1
-        - COR-053#2
-        - COR-053#3
-        - COR-053#5
-        - COR-053#6
-        - COR-053#7
+        - COR-052
+        - COR-053
         - COR-061#1
         - COR-061#5
         - PRJ-002#D4
@@ -45,7 +36,9 @@ pkit:
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
 
-What a project holds beyond the backbone and its adapters: the capabilities it chooses to install, and the areas every project has. A component's ranges say which versions of what it builds on it works with. Capabilities work together through roles and connection points, without naming each other.
+Some disciplines suit only some projects, yet forcing them on every [project](../glossary.md#term-project--project) is wrong, and copying them into each loses their reuse (COR-017). A part can also fail without a word when what it builds on changes incompatibly (COR-030). Other parts must help each other without either depending on the other (COR-052, COR-053). Every project also needs fixed homes, with declared layouts, for its kinds of content (COR-011).
+
+A [capability](../glossary.md#term-capability--capability) packages one discipline, which each project chooses to [install](../glossary.md#term-install--install) beside the [backbone](../glossary.md#term-backbone--backbone) and its [adapters](../glossary.md#term-adapter--adapter). A [component](../glossary.md#term-component--component)'s ranges say which [versions](../glossary.md#term-version--version) of what it builds on it works with. [Areas](../glossary.md#term-area--area) are the homes every project holds, with no install. Capabilities work together through [roles](../glossary.md#term-role--role) and [connection points](../glossary.md#term-connection-point--connection-point) without naming each other, and a [data point](../glossary.md#term-data-point--data-point) is the kind that takes data in.
 
 ```mermaid
 classDiagram
@@ -82,31 +75,39 @@ classDiagram
 
 ## Capability
 
-A capability is a component that packages one discipline: its decision records, skills, agent definitions, scripts and schemas. Each project chooses whether to install it. `software-analysis` is one.
+Defined in [TERM-capability](../glossary.md#term-capability--capability).
+
+**Why:** A discipline that suits only some projects must be one each [project](../glossary.md#term-project--project) can choose (COR-017). Otherwise it is forced on every project, or scattered through each project's own files, where it cannot be reused (COR-017).
+
+A capability is a [component](../glossary.md#term-component--component) that packages one discipline: its [decision records](../glossary.md#term-decision-record--decision-record), [skills](../glossary.md#term-skill--skill), [agent definitions](../glossary.md#term-agent-definition--agent-definition), scripts and schemas. Each project chooses whether to [install](../glossary.md#term-install--install) it. `software-analysis` is one.
 
 **Attributes:**
 
 - its own subtree, `.pkit/capabilities/<name>/`, with its `package.yaml`, its decision records and its skills (COR-017)
 - its own namespace of decision records, DEC, cited with its name, as in `software-analysis:DEC-001` (COR-017)
-- the roles it provides (COR-053 point 1)
+- the [roles](../glossary.md#term-role--role) it provides (COR-053 [point](../glossary.md#term-point--point) 1)
 
 **Relations:**
 
-- It is a kind of component. The adapter is the other kind, which carries what one harness needs and no discipline (COR-027).
+- It is a kind of component. The [adapter](../glossary.md#term-adapter--adapter) is the other kind, which carries what one [harness](../glossary.md#term-harness--harness) needs and no discipline (COR-027).
 - A project installs it, or registers it where the project authors the capability itself (COR-031 point D3).
-- It may depend on other capabilities, each through a range (COR-030).
+- It may depend on other capabilities, each through a [range](../glossary.md#term-range--range) (COR-030).
 - It ships the agent definitions its discipline needs (COR-026).
 
 **States:** None.
 
 **Always true:**
 
-- It owns its subtree, and puts nothing into the backbone's own folders (COR-017).
+- It owns its subtree, and puts nothing into the [backbone](../glossary.md#term-backbone--backbone)'s own folders (COR-017).
 - Registering a capability the project authors copies nothing (COR-031 point D3).
 
 ## Range
 
-A range is the set of versions a component declares it works with: of the backbone, or of another capability. It runs from a floor to any upper bound, as in `>=1.149.0,<2.0.0`.
+Defined in [TERM-range](../glossary.md#term-range--range).
+
+**Why:** A part whose dependency changed in a way that breaks it fails without a word when it runs (COR-030). A range turns that into a refusal when a part is installed, upgraded or removed (COR-030).
+
+A range is the set of [versions](../glossary.md#term-version--version) a [component](../glossary.md#term-component--component) declares it works with: of the [backbone](../glossary.md#term-backbone--backbone), or of another [capability](../glossary.md#term-capability--capability). It runs from a floor to any upper bound, as in `>=1.149.0,<2.0.0`.
 
 **Attributes:**
 
@@ -117,7 +118,7 @@ A range is the set of versions a component declares it works with: of the backbo
 
 - Each component declares one on the backbone, its `requires_backbone` (COR-017).
 - A capability declares one for each capability it depends on (COR-030).
-- Install checks the ranges before it writes anything (COR-030).
+- [Install](../glossary.md#term-install--install) checks the ranges before it writes anything (COR-030).
 
 **States:** None.
 
@@ -128,7 +129,11 @@ A range is the set of versions a component declares it works with: of the backbo
 
 ## Area
 
-An area is a top-level slice of a project's `.pkit/` tree, such as `.pkit/decisions/`. Its README declares its layout. Every project holds each area the methodology ships, with no install, and may add areas of its own.
+Defined in [TERM-area](../glossary.md#term-area--area).
+
+**Why:** Each domain of content needs a fixed home, with a layout tools can rely on (COR-011). Without one, each new home invents its own shape, and tools have nothing to work from (COR-011).
+
+An area is a top-level slice of a [project](../glossary.md#term-project--project)'s `.pkit/` tree, such as `.pkit/decisions/`. Its README declares its layout. Every project holds each area the [methodology](../glossary.md#term-methodology--methodology) ships, with no [install](../glossary.md#term-install--install), and may add areas of its own.
 
 **Attributes:**
 
@@ -137,8 +142,8 @@ An area is a top-level slice of a project's `.pkit/` tree, such as `.pkit/decisi
 
 **Relations:**
 
-- It sits beside the capabilities in `.pkit/`, and is no capability (COR-011).
-- The methodology's areas ship with the backbone.
+- It sits beside the [capabilities](../glossary.md#term-capability--capability) in `.pkit/`, and is no capability (COR-011).
+- The methodology's areas ship with the [backbone](../glossary.md#term-backbone--backbone).
 - Where it holds both the methodology's content and the project's, a `core/` folder and a `project/` folder keep them apart (COR-003).
 
 **States:** None.
@@ -151,23 +156,27 @@ An area is a top-level slice of a project's `.pkit/` tree, such as `.pkit/decisi
 
 ## Connection point
 
-A connection point is a declared interface that one installed capability defines. Other components fill it, depend on it or subscribe to it, without naming that capability. Its address names its role, as in `pkit::analysis:revalidation-evidence`.
+Defined in [TERM-connection-point](../glossary.md#term-connection-point--connection-point).
+
+**Why:** [Capabilities](../glossary.md#term-capability--capability) need each other's knowledge, and need to react to each other, without depending on each other (COR-053). A connection point's address names a [role](../glossary.md#term-role--role), never a capability, so replacing one capability with another touches nothing connected to it (COR-053).
+
+A connection point is a declared interface that one installed capability defines. Other [components](../glossary.md#term-component--component) fill it, depend on it or subscribe to it, without naming that capability. Its address names its role, as in `pkit::analysis:revalidation-evidence`.
 
 **Attributes:**
 
-- an address, `<publisher>::<role>:<point>` (COR-053 point 2)
+- an address, `<publisher>::<role>:<point>` (COR-053 [point](../glossary.md#term-point--point) 2)
 - a kind (COR-053 point 2):
-  - a data point, which takes data in
+  - a [data point](../glossary.md#term-data-point--data-point), which takes data in
   - a process, offered for others to depend on
   - an event, which signals that a writing command finished
-- a version, an integer that rises only where it breaks what connects to it (COR-053 point 5)
+- a [version](../glossary.md#term-version--version), an integer that rises only where it breaks what connects to it (COR-053 point 5)
 - a description, in prose (COR-053 point 3)
 
 **Relations:**
 
 - The capability that provides its role defines it (COR-053 point 2).
 - Other components connect to it at a version equal to its own (COR-053 point 5).
-- The backbone resolves and checks every connection to it (COR-053 point 7).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it (COR-053 point 7).
 
 **States:** None.
 
@@ -179,12 +188,16 @@ A connection point is a declared interface that one installed capability defines
 
 ## Role
 
-A role is a name under which one installed capability provides connection points, so that others use them without naming that capability. The publisher that coined the name qualifies it, as in `pkit::documentation`.
+Defined in [TERM-role](../glossary.md#term-role--role).
+
+**Why:** A connection that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced (COR-053). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
+
+A role is a name under which one installed capability provides [connection points](../glossary.md#term-connection-point--connection-point), so that others use them without naming that capability. The publisher that coined the name qualifies it, as in `pkit::documentation`.
 
 **Attributes:**
 
-- its qualified name, `<publisher>::<role>` (COR-053 point 1)
-- no version: a role redefined in a way that breaks takes a new name (COR-053 point 5)
+- its qualified name, `<publisher>::<role>` (COR-053 [point](../glossary.md#term-point--point) 1)
+- no [version](../glossary.md#term-version--version): a role redefined in a way that breaks takes a new name (COR-053 point 5)
 
 **Relations:**
 
@@ -196,17 +209,21 @@ A role is a name under which one installed capability provides connection points
 
 **Always true:**
 
-- One installed capability at most provides each role: two are an error until the project selects one (COR-053 points 1 and 7).
+- One installed capability at most provides each role: two are an error until the [project](../glossary.md#term-project--project) selects one (COR-053 points 1 and 7).
 - An installed capability the project did not select connects nothing under that role, while its own commands still run (COR-053 point 1).
 
 ## Data point
 
-A data point is a declared interface through which the capability providing a role accepts input. A project file, installed capabilities and that capability's own default fill it, and the backbone resolves what it holds. It is the kind of connection point that takes data in.
+Defined in [TERM-data-point](../glossary.md#term-data-point--data-point).
+
+**Why:** A [component](../glossary.md#term-component--component) often needs knowledge that another component, or the [project](../glossary.md#term-project--project), is better able to give (COR-052). The consumer must still work without that other component, and one set of rules must settle precedence, collisions and failure (COR-052).
+
+A data point is a declared interface through which the [capability](../glossary.md#term-capability--capability) providing a [role](../glossary.md#term-role--role) accepts input. A project file, installed capabilities and that capability's own default fill it, and the [backbone](../glossary.md#term-backbone--backbone) resolves what it holds. It is the kind of [connection point](../glossary.md#term-connection-point--connection-point) that takes data in.
 
 **Attributes:**
 
-- its address, its version and the schema of its data (COR-052 points 1 and 5)
-- a combination policy, one of these (COR-052 point 3):
+- its address, its [version](../glossary.md#term-version--version) and the schema of its data (COR-052 points 1 and 5)
+- a combination policy, one of these (COR-052 [point](../glossary.md#term-point--point) 3):
   - one filler alone fills it
   - entries merge by id
   - entries merge and any collision fails
