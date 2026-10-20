@@ -66,7 +66,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement in an artefact's `friction` block that settles an edit to what the artefact rests on, or a revisit its links ask for: a revalidation, a deferral or a revisit entry"
+  definition: "statement in an artefact's `friction` block that settles an edit to what the artefact rests on, or a revisit its links ask for"
   pkit:
     friction:
       anchors:
@@ -560,7 +560,7 @@ TERM-migration:
 TERM-operational-rule:
   name: operational rule
   status: active
-  definition: "instruction every AI agent session loads through the harness's include, numbered in the file the system ships or in the repository's own, with no id, origin or status"
+  definition: "instruction every AI agent session loads through the harness's include, numbered in the system's file or the repository's own, with no id, origin or status"
   pkit:
     friction:
       anchors:
@@ -1067,6 +1067,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-acceptance-gate — acceptance gate
 
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#acceptance-gate).
+
 **Example:** a change would build on a project record that is still proposed, so the change's author has the record accepted first, or pauses the change.
 
 **Distinctions:**
@@ -1076,6 +1078,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A process's gate:** a condition on one move of a subject between states (COR-033 P4).
 
 ## TERM-adapter — adapter
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#adapter).
 
 **Example:** the `claude-code` adapter links each skill under `.claude/skills/`, and merges the methodology's permission entries into `.claude/settings.json`.
 
@@ -1087,6 +1091,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-agent-definition — agent definition
 
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#agent-definition).
+
 **Example:** `critic.md` is the critic's agent definition, which the main session dispatches before it shows a person a substantive draft.
 
 **Distinctions:**
@@ -1097,6 +1103,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-anchor — anchor
 
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#anchor).
+
 **Example:** `.pkit/release/README.md` anchors `src/project_kit/changesets.py`, so a change to that file asks the page whether it still holds.
 
 **Distinctions:**
@@ -1106,6 +1114,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Registered kind:** a kind of anchor a capability adds, with the command that resolves it. The backbone resolves paths, records and artefacts itself (COR-050 point 2).
 
 ## TERM-answer — answer
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#answer).
 
 **Example:** a change renames a flag that a page describes, so the developer updates the page in the same change and revalidates it `updated`.
 
@@ -1119,6 +1129,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-area — area
 
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#area).
+
 **Example:** `.pkit/decisions/` is an area, whose `core/` folder holds the core records and whose `project/` folder holds the project's own.
 
 **Distinctions:**
@@ -1129,6 +1141,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-artefact — artefact
 
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#artefact).
+
 **Example:** each use case of the analysis is an artefact, and so is each entry of this glossary, a collection file. So is each page project-kit lists in `friction.places`, such as `.pkit/cli/README.md`.
 
 **Distinctions:**
@@ -1137,6 +1151,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Held document:** a file a component keeps in a folder it declares, such as a log of its reviews. It is never an artefact, even inside a place (COR-050 point 1).
 
 ## TERM-artefact-type — artefact type
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#artefact-type).
 
 **Example:** the glossary's place gives each entry the type `software-analysis:term`, so `ANA`'s scope selects every term without naming a path.
 
@@ -1148,6 +1164,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Friction:** never reads a type, so giving a place a type flags nothing (COR-056 point 5).
 
 ## TERM-backbone — backbone
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#backbone).
 
 **Example:** backbone 1.149.0 is one version of the CLI, the core records and the friction and validation engines, released together.
 
@@ -1163,6 +1181,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-backbone-configuration — backbone configuration
 
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#backbone-configuration).
+
 **Example:** project-kit's `.pkit/project/config.yaml` declares its documentation roots and its friction mode and places, and leaves its default branch at `main`.
 
 **Distinctions:**
@@ -1173,6 +1193,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-base — base
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#base).
+
 **Example:** CI names the pull request's target in `PKIT_CHECK_BASE`, so that target is each check's base. Each compares the change from where its branch left the target.
 
 **Distinctions:**
@@ -1182,6 +1204,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A pull request's base:** the hosting service's name for the branch a pull request targets. The analysis calls that branch the pull request's target, and CI names it as the checks' base.
 
 ## TERM-capability — capability
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#capability).
 
 **Example:** an adopter installs the `software-analysis` capability, which brings the analysis's stamps and checks and the method rule set `SAN`.
 
@@ -1194,6 +1218,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-change — change
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#change).
+
 **Example:** the developer's change adds a command and revalidates the page that describes it. The change declares a changeset, then lands in one pull request.
 
 **Distinctions:**
@@ -1203,6 +1229,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Commit:** one step of a change on its branch. A change that lands through a pull request lands as one squash commit (COR-009 point 1).
 
 ## TERM-change-check — change check
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#change-check).
 
 **Example:** `pkit friction check` reports `.pkit/release/README.md` until a branch that edits `src/project_kit/release.py` revalidates the page.
 
@@ -1214,6 +1242,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-changeset — changeset
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#changeset).
+
 **Example:** a change adds a command to the `software-analysis` capability, so the developer adds a changeset naming `software-analysis` and `minor`.
 
 **Distinctions:**
@@ -1222,6 +1252,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Segment:** the changeset's `kind`, one of `patch`, `minor`, `major` and `none`. It is a person's judgement of the change's surface, never read from the commit type (PRJ-002 D2).
 
 ## TERM-component — component
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#component).
 
 **Example:** the `software-analysis` capability is a component, so a change to its scripts declares a changeset that names it.
 
@@ -1233,6 +1265,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-component-origin — component origin
 
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#component-origin).
+
 **Example:** project-kit's manifest marks `software-analysis` as `incubated-in-repo`, so sync never overwrites the capability's files from the methodology's content.
 
 **Distinctions:**
@@ -1242,6 +1276,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Source repository:** where a component is authored. The component is `incubated-in-repo` there, and `externally-sourced` in the projects that pull it (COR-041).
 
 ## TERM-connection-point — connection point
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#connection-point).
 
 **Example:** `pkit::analysis:revalidation-evidence` is a connection point of the analysis role, which a testing capability may fill with its results.
 
@@ -1257,6 +1293,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-consent — consent
 
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#consent).
+
 **Example:** choosing `pkit upgrade`'s target is the one consent for every migration the transition runs (COR-059 point 4).
 
 **Distinctions:**
@@ -1266,6 +1304,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A person's decision:** an answer on an artefact that the person was shown word for word and accepted before it was written (COR-050 point 3).
 
 ## TERM-data-point — data point
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#data-point).
 
 **Example:** living-docs accepts `pkit::documentation:readers`, and software-analysis fills it with its actors and their needs.
 
@@ -1281,6 +1321,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-debt — debt
 
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#debt).
+
 **Example:** `pkit friction debt` lists a page stale since the commit that renamed a command it describes, with that commit's author and date.
 
 **Distinctions:**
@@ -1290,6 +1332,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Ledger:** no file lists the debt. Each run derives it from git again (COR-050 point 9).
 
 ## TERM-decision-record — decision record
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#decision-record).
 
 **Example:** COR-050 is a core record the methodology ships, and PRJ-002 is one of project-kit's own.
 
@@ -1302,6 +1346,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-default-branch — default branch
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#default-branch).
+
 **Example:** project-kit declares none, so its default branch is `main`, which readers resolve as `origin/main` in a clone of its repository.
 
 **Distinctions:**
@@ -1311,6 +1357,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The local branch:** read only where the project has no remote, and the reader says so (COR-054 point 2).
 
 ## TERM-distribution — distribution
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#distribution).
 
 **Example:** project-kit is one distribution, installed from its repository's tags, and a fork that releases from its own repository is another.
 
@@ -1323,6 +1371,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-documentation-root — documentation root
 
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#documentation-root).
+
 **Example:** project-kit declares `tech-docs/` as its internal root, so its analysis lives under `tech-docs/analysis/`.
 
 **Distinctions:**
@@ -1332,6 +1382,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A recorded location:** a location derived from a root is recorded when first used, so changing the root later moves nothing (COR-049 point 5).
 
 ## TERM-finding — finding
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding).
 
 **Example:** validation fails on a revisit entry that names no target, and only warns of an anchor on a retired point.
 
@@ -1344,6 +1396,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-friction — friction
 
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#friction).
+
 **Example:** a change modifies `src/project_kit/release.py`, and the change check reports friction on `.pkit/release/README.md` until the page carries an answer.
 
 **Distinctions:**
@@ -1352,6 +1406,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The `friction` block:** the block in an artefact's front matter that holds its anchors and answers (COR-050 point 1). It is no finding.
 
 ## TERM-harness — harness
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#harness).
 
 **Example:** Claude Code is a harness, and the `claude-code` adapter serves it.
 
@@ -1363,6 +1419,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-head — head
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#head).
+
 **Example:** the change check compares a pull request's head with where its branch left `main`, and each push gives the pull request a new head.
 
 **Distinctions:**
@@ -1372,6 +1430,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A collection's file head:** the glossary's heading and opening (software-analysis DEC-001 point 1). It shares only the word.
 
 ## TERM-install — install
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#install).
 
 **Example:** `pkit capabilities install software-analysis` refuses before writing anything when the backbone lies outside the capability's range.
 
@@ -1385,6 +1445,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-manifest — manifest
 
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#manifest).
+
 **Example:** project-kit's `.pkit/manifest.yaml` records backbone 1.149.0, and lists each installed component with the path of that component's own manifest.
 
 **Distinctions:**
@@ -1397,6 +1459,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-merge-delivery — merge delivery
 
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#merge-delivery).
+
 **Example:** sync adds the methodology's missing entries to `.claude/settings.json`, and every entry project-kit added there stays.
 
 **Distinctions:**
@@ -1406,6 +1470,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Seeding:** creates a missing declared seed path from its template, never over a file that exists (COR-059 point 8). Merge delivery revisits its file on each run.
 
 ## TERM-methodology — methodology
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#methodology).
 
 **Example:** the developer records a decision beside the methodology's, and builds only on accepted records, as the methodology's acceptance gate asks.
 
@@ -1417,6 +1483,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-migration — migration
 
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#migration).
+
 **Example:** project-management renamed its reviewer's agent definition from `reviewer` to `pm-reviewer`. So the capability's migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each project's own settings, which sync never touches.
 
 **Distinctions:**
@@ -1425,6 +1493,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The migration check:** `pkit migrations check-diff`, which finds the renames and removals of a change that no migration covers. It runs no migration.
 
 ## TERM-operational-rule — operational rule
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#operational-rule).
 
 **Example:** core rule 8 asks an agent to pause before a destructive operation, and project rule 4 asks for signed commits in project-kit.
 
@@ -1436,6 +1506,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-package-metadata — package metadata
 
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#package-metadata).
+
 **Example:** `software-analysis`'s `package.yaml` declares the glossary as a place whose entries take the type `software-analysis:term`.
 
 **Distinctions:**
@@ -1444,6 +1516,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Plan:** a dry run that reads a capability's connection points from its package metadata, before the capability is installed (COR-053 point 8).
 
 ## TERM-place — place
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#place).
 
 **Example:** project-kit lists `.pkit/cli/README.md` in `friction.places`, so the backbone reads that page's anchors.
 
@@ -1454,6 +1528,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Held folder:** a folder a component declares for its held documents. No place reads a file in it as an artefact (COR-050 point 1).
 
 ## TERM-point — point
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#point).
 
 **Example:** COR-050 point 3 says who decides an answer, and an artefact anchors it as `COR-050#3`.
 
@@ -1466,6 +1542,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-project — project
 
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#project).
+
 **Example:** an adopter's repository becomes a project when `pkit init` installs the system there, and project-kit's own repository is a project too.
 
 **Distinctions:**
@@ -1476,6 +1554,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **The `project/` folder:** an area's half for a project's own content (COR-003). It is part of a project, and no project of its own.
 
 ## TERM-project-owned-content — project-owned content
+
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#project-owned-content).
 
 **Example:** project-kit's records in `.pkit/decisions/project/`, its backbone configuration and its root `CLAUDE.md` are project-owned content.
 
@@ -1493,6 +1573,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-propagation — propagation
 
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#propagation).
+
 **Example:** `pkit capabilities install` runs propagation for one capability, copying its subtree from the bundle at the backbone the project records (ADR-065 point 1).
 
 **Distinctions:**
@@ -1502,6 +1584,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Seeding:** creates a missing project-owned file once, and never writes over one that exists (COR-059 point 8).
 
 ## TERM-pull-request — pull request
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#pull-request).
 
 **Example:** the pull request that landed UC-008 targeted `main`, and its conventional title became the squash commit's subject.
 
@@ -1513,6 +1597,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-range — range
 
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#range).
+
 **Example:** the `software-analysis` capability declares `requires_backbone: ">=1.149.0,<2.0.0"`, a range on the backbone whose floor is 1.149.0.
 
 **Distinctions:**
@@ -1523,6 +1609,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Harness version bound:** the harness versions that an adapter's support declaration holds for. It is never widened automatically, only by an author who tested the claim (COR-047 point 2).
 
 ## TERM-recorded-version — recorded version
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#recorded-version).
 
 **Example:** an adopter's manifest records backbone 1.149.0, so `pkit sync` there writes the content of that release and moves no version.
 
@@ -1536,6 +1624,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Completion:** the state a transition of the backbone records last. While a transition is incomplete, the backbone's recorded version names its target (COR-059 points 1 and 6).
 
 ## TERM-release — release
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#release).
 
 **Example:** the release of 24 August 2026 holds backbone 1.149.0 and, among its components, project-management 0.54.0. Its release commit carries the tag `v1.149.0`.
 
@@ -1552,6 +1642,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-release-step — release step
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#release-step).
+
 **Example:** `pkit release plan` previews what the next release step writes, and `pkit release apply` writes it on a `release/` branch.
 
 **Distinctions:**
@@ -1561,6 +1653,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Release pull request:** the pull request that carries one release step's writes onto the default branch (PRJ-002 D3).
 
 ## TERM-report — report
+
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#report).
 
 **Example:** an adopter's `pkit report bug` files an issue titled `[Bug] …` on project-kit's repository, with the adopter's versions attached.
 
@@ -1573,6 +1667,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-reviewer — reviewer
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#reviewer).
+
 **Example:** the rule-set reviewer judges a change against the rules that bind on what the change alters, and withholds its approval for a settled break.
 
 **Distinctions:**
@@ -1583,6 +1679,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Merge authoriser:** the person who authorises a merge (`ACT-merge-authoriser`). A reviewer's approval is never that authorisation (project-management DEC-055 point 3).
 
 ## TERM-role — role
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#role).
 
 **Example:** living-docs provides the documentation role, so software-analysis contributes its readers to that role's readers point without naming living-docs.
 
@@ -1596,6 +1694,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-rule — rule
 
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#rule).
+
 **Example:** RS-WRITE-005 keeps every sentence of the analysis to at most 25 words, and binds on the analysis through `ANA`, which inherits `WRITE`.
 
 **Distinctions:**
@@ -1606,6 +1706,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Proposed rule:** one that binds nothing until it is accepted. An accepted rule binds only on the artefacts that a rule set of the project's own reaches (COR-051 points 4 and 7).
 
 ## TERM-rule-set — rule set
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#rule-set).
 
 **Example:** `ANA` is project-kit's rule set for its analysis. Its scope selects the analysis by type, and it inherits `WRITE@2` and `software-analysis:SAN@1`.
 
@@ -1618,6 +1720,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-seeding — seeding
 
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#seeding).
+
 **Example:** a project that deleted its agents overlay gets it back from the template at its next `pkit upgrade` (COR-059 point 8).
 
 **Distinctions:**
@@ -1629,6 +1733,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-skill — skill
 
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#skill).
+
 **Example:** the `analysis-author` skill walks an AI agent through a term's slug and anchors, then runs the stamp `pkit analysis new term`.
 
 **Distinctions:**
@@ -1638,6 +1744,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Composite skill:** one skill whose folder holds a procedure for each operation of a family, such as `analysis-author` (COR-020).
 
 ## TERM-source-repository — source repository
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#source-repository).
 
 **Example:** project-kit's repository is the source repository of its distribution, so its `.pkit/decisions/core/` holds the core records as they are authored, and may be a place.
 
@@ -1649,6 +1757,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-stamp — stamp
 
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#stamp).
+
 **Example:** `pkit analysis new term` is the stamp behind each entry of this glossary, and the `analysis-author` skill pairs with it.
 
 **Distinctions:**
@@ -1659,6 +1769,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-surface-change — surface change
 
+Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#surface-change).
+
 **Example:** a new subcommand of `pkit` is a surface change, so its pull request declares it in a changeset (PRJ-002 D1).
 
 **Distinctions:**
@@ -1667,6 +1779,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Declared surface:** the paths a project or a component says its descriptions ought to cover. Those no artefact anchors are reported as uncovered (COR-050 point 8).
 
 ## TERM-sync — sync
+
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#sync).
 
 **Example:** after a fresh clone, `pkit sync` deploys the skills and agent definitions again, and rewrites the core records at the recorded version.
 
@@ -1679,6 +1793,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-synced-copy — synced copy
 
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#synced-copy).
+
 **Example:** `.pkit/decisions/core/COR-050-anchors-and-friction.md` is a synced copy in an adopter's project, so the next sync overwrites any edit made there.
 
 **Distinctions:**
@@ -1689,6 +1805,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Deployed copy:** what an adapter regenerates for its harness from a skill or an agent definition, such as a link under `.claude/skills/`. Neither the project nor the methodology owns it (COR-003).
 
 ## TERM-system — system
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#system).
 
 **Example:** the system ends a pull request's landing `merged`, naming the head the pull request merged at (`pkit pull-request land`).
 
@@ -1701,6 +1819,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-validation — validation
 
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#validation).
+
 **Example:** `pkit validate` fails on a dangling deferral, and warns that project-kit's user root, `docs/`, does not exist yet.
 
 **Distinctions:**
@@ -1710,6 +1830,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Validator:** a command a component registers, whose findings validation reads. A validator that gives no answer yields a failing finding (COR-055 points 3 and 6).
 
 ## TERM-version — version
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#version).
 
 **Example:** backbone 1.149.0 and project-management 0.54.0 are versions, and a `minor` changeset has the next release step move the backbone to 1.150.0.
 
@@ -1721,6 +1843,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Recorded version:** the number or ref a project keeps for what it installed. An externally-sourced component's ref is no version in the sense of this term.
 
 ## TERM-version-pin — version pin
+
+Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#version-pin).
 
 **Example:** `pkit upgrade` writes `.pkit/version-pin` at the release it brought the project to, so each later command there runs at that release.
 
@@ -1734,6 +1858,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-version-transition — version transition
 
+Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#version-transition).
+
 **Example:** `pkit upgrade` runs a transition of the backbone, which moves project-management with it to the version the target release ships.
 
 **Distinctions:**
@@ -1744,6 +1870,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **A transition of one component:** moves that component to the version the project's release ships, without moving the backbone (COR-059 point 3).
 
 ## TERM-whole-repository-check — whole-repository check
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#whole-repository-check).
 
 **Example:** `pkit friction check --all` on the default branch lists a page stale since the commit that renamed a command the page describes.
 
