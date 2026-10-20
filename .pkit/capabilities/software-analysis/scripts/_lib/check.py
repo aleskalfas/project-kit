@@ -1515,8 +1515,8 @@ def _link_message(d: links.Departure) -> str:
                 f"`{d.wanted}` — {mend}"
             )
         return (
-            f"line {d.line} links the section to a term a second time, or to no term it "
-            f"explains, `{d.written}` — {mend}"
+            f"line {d.line} links the section to its term, `{d.written}`, a term not in "
+            f"force — {mend}"
         )
     if d.how == links.MISSING:
         return (

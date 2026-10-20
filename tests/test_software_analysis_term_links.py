@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -353,6 +354,29 @@ def test_a_section_s_link_to_its_term_is_no_content_of_its_explanation(
     assert any("in the section `## Order` is missing" in m for m in found), found
 
 
+def test_a_writer_s_line_that_opens_with_defined_in_is_left_as_written(
+    project: AdopterRepo,
+) -> None:
+    """Only a section's first line, in the form the command writes, leading from the
+    section's own term, is its link to its term. A sentence that opens with `Defined in [`
+    and such a line in fenced code are the writer's: the check reports neither, and the
+    command writes the section's link above the sentence and leaves both as written."""
+    link(project)
+    own = "Defined in [TERM-order](../glossary.md#term-order--order)."
+    prose = "Defined in [ISO 4217](https://www.iso.org/iso-4217), an order's currency is a code."
+    fenced = f"```markdown\n{own}\n```\n\n"
+    attributes = "**Attributes:** Its amount."
+    view = _read(project, VIEW).replace(own, prose, 1).replace(attributes, fenced + attributes, 1)
+    project.write({VIEW: view})
+    found = [m.split(" — ")[0] for _l, m in _validate(project)]
+    assert len(found) == 1 and "heads a section with no link to its term" in found[0], found
+    link(project)
+    expected = VIEW_LINKED.replace(own, f"{own}\n\n{prose}", 1)
+    assert _body(project, VIEW) == expected.replace(attributes, fenced + attributes, 1)
+    assert _validate(project) == []
+    assert link(project).stdout.strip() == "Every link is as it should be; nothing written."
+
+
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
     """A glossary with no view beside it is never linked nor held, a link written in it by
     hand included (DEC-004 point 7)."""
@@ -463,6 +487,59 @@ def test_a_name_two_terms_share_links_neither() -> None:
     assert links.matched((CHANGE, twin)) == {CHANGE.id: (), twin.id: ("change sets",)}
     vocabulary = links.Vocabulary((CHANGE, twin), links.matched((CHANGE, twin)))
     assert links.section("a change", None, vocabulary, "glossary.md", 1)[0] == "a change"
+
+
+def _definitions(lines: list[str], owners: list[str], wanted: Sequence[str | None]) -> Any:
+    return links.with_definitions(lines, links.view_sections(lines, 0)[1:], owners, wanted)
+
+
+def _defined(term: str, anchor: str | None = None) -> str:
+    return f"Defined in [{term}](../glossary.md#{anchor or term.lower() + '--' + term[5:]})."
+
+
+def test_the_command_writes_mends_and_takes_out_a_section_s_link_to_its_term() -> None:
+    """A section with no link to its term gets one right below its heading; a stale one is
+    rewritten in its place; one to a term no longer wanted is taken out. A second pass
+    finds nothing (DEC-004 point 7)."""
+    stale = _defined("TERM-payment", "term-payment--old")
+    lines = ["# V", "", "## Order", "", "An order.", "", "## Payment", "", stale, "", "Paid."]
+    lines += ["", "## Gone", "", _defined("TERM-gone"), "", "Gone."]
+    owners = ["TERM-order", "TERM-payment", "TERM-gone"]
+    wanted = [_defined("TERM-order"), _defined("TERM-payment"), None]
+    out, found = _definitions(lines, owners, wanted)
+    assert out == [
+        *("# V", "", "## Order", "", _defined("TERM-order"), "", "An order.", ""),
+        *("## Payment", "", _defined("TERM-payment"), "", "Paid.", ""),
+        *("## Gone", "", "", "Gone."),
+    ]
+    assert found == [
+        (links.MISSING, 3, None, _defined("TERM-order")),
+        (links.STALE, 9, stale, _defined("TERM-payment")),
+        (links.EXTRA, 15, _defined("TERM-gone"), None),
+    ]
+    assert _definitions(out, owners, wanted) == (out, [])
+
+
+def test_a_line_that_opens_with_defined_in_is_the_section_s_link_only_at_its_top() -> None:
+    """Only the section's first line that is not blank, in the command's form, leading
+    from its own term, is its link to its term. A sentence that opens with `Defined in [`,
+    the line in fenced code, and a line leading from another term are the writer's, left
+    as written, and a section that holds no link of its own gets one above them."""
+    prose = "Defined in [ISO 4217](https://www.iso.org/iso-4217), a currency is a code."
+    fence = ["```markdown", _defined("TERM-payment"), "```"]
+    lines = ["# V", "", "## Currency", "", prose, "", "## Order", "", _defined("TERM-order")]
+    lines += ["", prose, "", "```", _defined("TERM-order"), "```", ""]
+    lines += ["## Payment", "", *fence, "", "## Refund", "", _defined("TERM-payment"), ""]
+    owners = ["TERM-currency", "TERM-order", "TERM-payment", "TERM-refund"]
+    wanted = [_defined(term) for term in owners]
+    out, found = _definitions(lines, owners, wanted)
+    assert [how for how, *_rest in found] == [links.MISSING] * 3
+    assert out == [
+        *("# V", "", "## Currency", "", wanted[0], "", prose, ""),
+        *("## Order", "", _defined("TERM-order"), "", prose, "", "```", _defined("TERM-order")),
+        *("```", "", "## Payment", "", wanted[2], "", *fence, ""),
+        *("## Refund", "", wanted[3], "", _defined("TERM-payment"), ""),
+    ]
 
 
 def _front(repo: AdopterRepo, old: str, new_text: str) -> None:

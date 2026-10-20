@@ -849,7 +849,7 @@ def _defined(text: str, location: str, request: Request, analysis: Analysis) -> 
         artefact = analysis.of(term_id, TERM)
         term = links.term_of(artefact) if artefact is not None else None
         wanted.append(links.defined(term, location) if term is not None else None)
-    return "\n".join(links.with_definitions(lines, sections, wanted)[0])
+    return "\n".join(links.with_definitions(lines, sections, request.explains, wanted)[0])
 
 
 def _write_view(
