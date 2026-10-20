@@ -32,7 +32,7 @@ TERM-adapter:
 TERM-agent-definition:
   name: agent definition
   status: active
-  definition: "document setting one standing remit with boundaries, what it reads and the paths it owns, deployed by an adapter for a harness to delegate to"
+  definition: "document setting one standing remit with boundaries, what it reads and the paths it owns, deployed for a harness to delegate to"
   pkit:
     friction:
       anchors:
@@ -50,7 +50,7 @@ TERM-agent-definition:
 TERM-anchor:
   name: anchor
   status: active
-  definition: declared link from an artefact to what makes it true, such as a path, a record or another artefact
+  definition: declared link from a document or a collection entry to what makes it true, such as a path, a record or another document or entry
   pkit:
     friction:
       anchors:
@@ -66,7 +66,7 @@ TERM-anchor:
 TERM-answer:
   name: answer
   status: active
-  definition: "statement in an artefact's `friction` block that settles its friction, or a revisit its links ask for: a revalidation, a deferral or a revisit entry"
+  definition: "statement in an artefact's `friction` block that settles an edit to what the artefact rests on, or a revisit its links ask for: a revalidation, a deferral or a revisit entry"
   pkit:
     friction:
       anchors:
@@ -96,7 +96,7 @@ TERM-area:
 TERM-artefact:
   name: artefact
   status: active
-  definition: document with front matter, or keyed entry of a collection file, in a declared place, which carries its own anchors and answers
+  definition: document with front matter, or keyed entry of a collection file, in a declared place, which carries its own anchors
   pkit:
     friction:
       anchors:
@@ -129,7 +129,7 @@ TERM-artefact-type:
 TERM-backbone:
   name: backbone
   status: active
-  definition: "part of the system that ships whole at one version: the CLI, the core records and areas, and the engines every component builds on"
+  definition: "part of the system that ships whole at one version: the CLI, the core records and the engines"
   pkit:
     friction:
       anchors:
@@ -195,7 +195,7 @@ TERM-capability:
 TERM-change:
   name: change
   status: active
-  definition: "unit of work, compared from its base to its head, that lands on the branch it targets through a pull request or a direct commit"
+  definition: "unit of work that lands on the branch it targets"
   pkit:
     friction:
       anchors:
@@ -244,7 +244,7 @@ TERM-changeset:
 TERM-component:
   name: component
   status: active
-  definition: "part of the system, versioned apart from the backbone, that declares a range of backbone versions it works with: a capability or an adapter"
+  definition: "part of the system, versioned apart from the backbone, that declares which backbone versions it works with"
   pkit:
     friction:
       anchors:
@@ -278,7 +278,7 @@ TERM-component-origin:
 TERM-connection-point:
   name: connection point
   status: active
-  definition: "declared interface that a role's provider defines and other components fill, depend on or subscribe to, without naming that provider"
+  definition: "declared interface that one installed capability defines and other components fill, depend on or subscribe to, without naming that capability"
   pkit:
     friction:
       anchors:
@@ -481,7 +481,7 @@ TERM-head:
 TERM-install:
   name: install
   status: active
-  definition: "operation that adds the backbone or a component to a project, after checking ranges and name collisions, and registers it in the manifest"
+  definition: "operation that adds the backbone or a component to a repository, after checking name collisions"
   pkit:
     friction:
       anchors:
@@ -544,7 +544,7 @@ TERM-methodology:
 TERM-migration:
   name: migration
   status: active
-  definition: script that carries a project's state across a version of the backbone or of a component, run by the version transition that crosses that version
+  definition: script that carries a project's state across a version of the backbone or of a component
   pkit:
     friction:
       anchors:
@@ -560,7 +560,7 @@ TERM-migration:
 TERM-operational-rule:
   name: operational rule
   status: active
-  definition: "instruction every AI agent session loads through the harness's include, numbered in the methodology's file or the project's own, with no id, origin or status"
+  definition: "instruction every AI agent session loads through the harness's include, numbered in the file the system ships or in the repository's own, with no id, origin or status"
   pkit:
     friction:
       anchors:
@@ -710,7 +710,7 @@ TERM-range:
 TERM-recorded-version:
   name: recorded version
   status: active
-  definition: "number or ref a project keeps for the backbone or an installed component, naming the content it holds, which sync reads and never moves"
+  definition: "number or ref a project keeps for the backbone or an installed component, naming the content it holds"
   pkit:
     friction:
       anchors:
@@ -728,7 +728,7 @@ TERM-recorded-version:
 TERM-release:
   name: release
   status: active
-  definition: "set of versions shipped together, named by its backbone version: one of the backbone, and one of each component its distribution ships with it"
+  definition: "set of versions shipped together, named by its backbone version: one of the backbone, and one of each component shipped with it"
   pkit:
     friction:
       anchors:
@@ -777,7 +777,7 @@ TERM-report:
 TERM-reviewer:
   name: reviewer
   status: active
-  definition: "AI agent or person, not the author, who reports findings on a draft or a change within a remit, leaving each fix to the author"
+  definition: "AI agent or person, not the author, who reports on a draft or a change within a remit, leaving each fix to the author"
   pkit:
     friction:
       anchors:
@@ -810,7 +810,7 @@ TERM-role:
 TERM-rule:
   name: rule
   status: active
-  definition: "statement, under a permanent id and with a recorded origin, that every artefact it binds on must satisfy once accepted"
+  definition: "statement, under a permanent id and with a recorded origin, that every document or collection entry it binds on must satisfy once accepted"
   pkit:
     friction:
       anchors:
@@ -863,7 +863,7 @@ TERM-seeding:
 TERM-skill:
   name: skill
   status: active
-  definition: "document holding a procedure that an AI agent loads for a matching task, deployed by an adapter where its harness looks"
+  definition: "document holding a procedure that an AI agent loads for a matching task, deployed where the harness looks"
   pkit:
     friction:
       anchors:
@@ -880,7 +880,7 @@ TERM-skill:
 TERM-source-repository:
   name: source repository
   status: active
-  definition: "versioned tree where a distribution or a component is authored, whose files are the originals that synced copies elsewhere come from"
+  definition: "versioned tree where the backbone or a component is authored, whose files are the originals that synced copies elsewhere come from"
   pkit:
     friction:
       anchors:
@@ -995,7 +995,7 @@ TERM-validation:
 TERM-version:
   name: version
   status: active
-  definition: "number of the form major.minor.patch that names one state of the backbone or of a component, as semantic versioning reads it"
+  definition: "number of the form major.minor.patch that names one state of a top-level part of the system, as semantic versioning reads it"
   pkit:
     friction:
       anchors:
@@ -1046,7 +1046,7 @@ TERM-version-transition:
 TERM-whole-repository-check:
   name: whole-repository check
   status: active
-  definition: "comparison of every artefact at the latest commit with its revalidation point, which reports debt and never fails"
+  definition: "comparison of every artefact at the latest commit with its revalidation point, which never fails"
   pkit:
     friction:
       anchors:
