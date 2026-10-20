@@ -982,7 +982,7 @@ Each analysis keeps a generated overview, `overview/README.md` in its folder: th
   - **Concepts:** the glossary, then each domain-model view in the order of its number, with the first paragraph of its opening, the problem its concepts solve. Each link in it is kept as its text. A view whose opening holds no text yet shows its title alone.
   - **Actors.**
   - **Requirements,** then their map, where there are any.
-  - **Areas,** in the order of their numbers, each with its goal and its use cases. Then the chain of use cases and the use-case diagram. Use cases that lie in no area are listed under *Use cases* instead.
+  - **Areas,** in the order of their numbers, each with its goal and its use cases. Then the chain of use cases and the use-case diagram. Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead.
   - **Journeys,** each with its flow, where there are any.
 
   Each diagram is `pkit analysis diagram`'s own output, with its text alternative, in a section of its own.
