@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:23Z
+      at: 2026-10-20T09:24:28Z
       outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      unchanged-because: The required job gains a short form for a pull request head that changed only answers (ADR-067). The changeset guard runs on every pull request in both forms, so step 7 and variant 7a hold.
 ---
 
 # UC-003 — Declare what my change means for the next release

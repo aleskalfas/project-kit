@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T02:03:37Z
+      at: 2026-10-20T09:24:30Z
       outcome: unchanged
-      unchanged-because: Both agents now end a fixer run in the run contract's line forms, a none carrying one of its reasons, and the resolver takes a run's quoted pull-request text as intent. In a session each still proposes the answers with evidence and commands and runs none, so how a developer resolves debt is untouched.
+      unchanged-because: ADR-055 point 5 gains a sentence that the test suite is no gate on a pull request head that changed only answers (ADR-067). The whole-repository check and its tracking issue, which step 1 cites, are untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

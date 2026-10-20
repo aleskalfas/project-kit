@@ -25,9 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T19:45:26Z
+      at: 2026-10-20T09:24:24Z
       outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      unchanged-because: The required job may now skip the test suite on a pull request head that changed only answers since its passing full run (ADR-067). The migration check runs on every pull request in both forms, so step 7 holds.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

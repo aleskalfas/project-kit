@@ -19,9 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-19T08:29:57Z
+      at: 2026-10-20T09:24:31Z
       outcome: unchanged
-      unchanged-because: pyproject.toml gains one ruff per-file target, Python 3.9 for the adapter's run-agent.py, which runs under the system python3. The README's install and development instructions are untouched.
+      unchanged-because: pyproject.toml registers a pytest marker, answers, for the tests the short check runs. The README's install and development instructions are untouched.
 ---
 
 # project-kit

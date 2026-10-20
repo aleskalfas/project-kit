@@ -26,9 +26,9 @@ pkit:
         - ACT-developer
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-18T19:06:45Z
+      at: 2026-10-20T09:24:27Z
       outcome: unchanged
-      unchanged-because: This branch rewords the software-engineer agent's revisit paragraph to say a link takes some of an artefact's anchors as its targets. Reading the corpus, writing to it and handing the change on for review are untouched, and the use case cites no rule this branch changes.
+      unchanged-because: Project rule 2 adds that CI skips the suite on a pull request whose only changes since a passing full run are answers. The agent still runs the tests of what it changed and leaves the full suite to the pre-push hook and CI, as the use case says.
 ---
 
 # UC-001 — Build my change under my project's conventions

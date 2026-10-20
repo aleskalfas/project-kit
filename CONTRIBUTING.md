@@ -25,9 +25,8 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-19T19:46:11Z
-      outcome: unchanged
-      unchanged-because: The tracking-issue body names anchors on a shared id among its other findings, and COR-050 gains that warning. CONTRIBUTING's account of the friction report workflow and of authoring records holds as written.
+      at: 2026-10-20T09:24:32Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
