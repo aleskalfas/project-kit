@@ -194,7 +194,7 @@ And where the format rule binds, at its status:
   the `sentence` form that holds a list too. A journey's steps read each use
   case's title, and a domain-model view's sections each term's name: one
   section for each term its `explains` lists, in its order, headed by the
-  term's name, no two headings giving one slug, each holding its parts
+  term's name in sentence case, no two headings giving one slug, each holding its parts
   (DEC-004 point 2). A part or a
   label a writer adds is never reported, though what it holds is content of
   the part it falls in, and a list form judges only the part's list items. A

@@ -1,0 +1,16 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  A domain-model view heads each concept's section with its term's name in
+  sentence case, as DEC-004 point 2 decides: its first letter capitalized,
+  the rest as the name writes it, so `decision record` heads `## Decision
+  record`. A name whose first word holds a capital already, such as `iPhone
+  app`, stands as it is. `pkit analysis new view` writes the headings so, and
+  where the format rule binds, `pkit analysis validate` refuses a heading in
+  lower case and names the heading to write. A heading's slug is in lower
+  case, so each term's link to its section is unchanged. The template's hint
+  and the `analysis-author` skill ask for each concept's box in a diagram to
+  be labelled the same way. The term's name itself stays in lower case in the
+  glossary and in prose, unless it is a proper name.
