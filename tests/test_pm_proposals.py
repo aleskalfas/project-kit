@@ -655,5 +655,5 @@ def test_refuse_remembers_and_answer_records_through_the_commands(
     assert index["artefacts"]["docs/q.md"]["answer"] == "Yes, on purpose."
     assert refuse.main(["docs/a.md"]) == 1
     assert "has nothing waiting to refuse" in capsys.readouterr().err
-    assert answer.main(["docs/a.md", "Yes."]) == 1
+    assert answer.main(["docs/a.md", "Yes.", "--by", "Octo Cat"]) == 1
     assert "no question waits on `docs/a.md`" in capsys.readouterr().err
