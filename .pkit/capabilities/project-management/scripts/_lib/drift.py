@@ -529,7 +529,8 @@ def plan(
 
     `index` is the queue's index; `changed_by_open_prs(path)` says whether an
     open pull request changes the file, or None when the work tracker cannot
-    say; `explained(name)` reads an artefact's friction; `classes` maps each
+    say, and its `unreadable`, where it has one, says why;
+    `explained(name)` reads an artefact's friction; `classes` maps each
     `none` reason to what clears it (`artefact`, `setup` or `next-run`)."""
     result = Plan()
     reports = [r for r in reading.check.get("artefacts") or [] if isinstance(r, Mapping)]
@@ -597,8 +598,13 @@ def plan(
             continue
         changed = changed_by_open_prs(name.partition("#")[0])
         if changed is None:
+            why = getattr(changed_by_open_prs, "unreadable", None)
             result.listed.append(
-                Listed(name, "the work tracker cannot say whether an open pull request changes it")
+                Listed(
+                    name,
+                    "the work tracker cannot say whether an open pull request changes it"
+                    + (f": {why}" if why else ""),
+                )
             )
             continue
         if changed:
@@ -871,43 +877,125 @@ def gh_pulls_of(
     return pulls_of
 
 
+#: The open pull requests one listing reads. A listing that returns more is cut
+#: short, so it cannot say which files the open pull requests change.
+OPEN_PR_LIMIT = 200
+
+
+class OpenPullRequestFiles:
+    """`changed_by_open_prs` through the work tracker: whether an open pull
+    request changes a file, read once, on the first question.
+
+    The list is read whole or not at all (DEC-056 point 4): `gh pr list` names
+    the open pull requests, with each one's count of changed files, and a pull
+    request whose listed files fall short of its count is read again, page by
+    page, through `gh api`. More open pull requests than `OPEN_PR_LIMIT`, a
+    pull request whose files still fall short, or an answer that does not
+    read gives None for every file, since nothing is dispatched on a guess.
+    `unreadable` then says why."""
+
+    def __init__(
+        self, repo_root: Path, gh: Callable[..., subprocess.CompletedProcess[str]]
+    ) -> None:
+        self._repo_root = repo_root
+        self._gh = gh
+        self._read = False
+        self._paths: set[str] | None = None
+        self.unreadable: str | None = None
+
+    def __call__(self, path: str) -> bool | None:
+        if not self._read:
+            self._read = True
+            self._paths, self.unreadable = self._list()
+        return None if self._paths is None else path in self._paths
+
+    def _list(self) -> tuple[set[str] | None, str | None]:
+        proc = self._gh(
+            [
+                "gh",
+                "pr",
+                "list",
+                "--state",
+                "open",
+                "--limit",
+                str(OPEN_PR_LIMIT + 1),
+                "--json",
+                "number,files,changedFiles",
+            ],
+            cwd=str(self._repo_root),
+        )
+        if proc.returncode != 0:
+            return None, "the open pull requests could not be listed"
+        try:
+            document = json.loads(proc.stdout or "")
+        except ValueError:
+            document = None
+        if not isinstance(document, list):
+            return None, "the list of open pull requests does not read"
+        if len(document) > OPEN_PR_LIMIT:
+            return None, f"more than {OPEN_PR_LIMIT} pull requests are open"
+        found: set[str] = set()
+        for pr in document:
+            number = pr.get("number") if isinstance(pr, Mapping) else None
+            total = pr.get("changedFiles") if isinstance(pr, Mapping) else None
+            if (
+                not isinstance(number, int)
+                or isinstance(number, bool)
+                or not isinstance(total, int)
+                or isinstance(total, bool)
+            ):
+                return None, "an open pull request does not say which files it changes"
+            files = {
+                f["path"]
+                for f in pr.get("files") or []
+                if isinstance(f, Mapping) and isinstance(f.get("path"), str)
+            }
+            if len(files) < total:
+                paged = self._files_of(number)
+                if paged is None or len(paged) < total:
+                    return None, (
+                        f"the files of pull request #{number} cannot be read whole "
+                        f"({len(paged if paged is not None else files)} of {total})"
+                    )
+                files = paged
+            found |= files
+        return found, None
+
+    def _files_of(self, number: int) -> set[str] | None:
+        """Every file pull request `number` changes, page by page; None when
+        the answer does not read. The work tracker lists at most 3000."""
+        proc = self._gh(
+            [
+                "gh",
+                "api",
+                "--paginate",
+                f"repos/{{owner}}/{{repo}}/pulls/{number}/files?per_page=100",
+                "--jq",
+                ".[] | .filename | @json",
+            ],
+            cwd=str(self._repo_root),
+        )
+        if proc.returncode != 0:
+            return None
+        files: set[str] = set()
+        for line in (proc.stdout or "").splitlines():
+            if not line.strip():
+                continue
+            try:
+                name = json.loads(line)
+            except ValueError:
+                return None
+            if not isinstance(name, str):
+                return None
+            files.add(name)
+        return files
+
+
 def gh_open_pr_files(
     repo_root: Path, gh: Callable[..., subprocess.CompletedProcess[str]]
-) -> Callable[[str], bool | None]:
-    """`changed_by_open_prs` through `gh pr list`: whether an open pull request
-    changes a file, read once, on the first question; None for every file when
-    it cannot be read, since nothing is dispatched on a guess."""
-    read: list[set[str] | None] = []
-
-    def paths() -> set[str] | None:
-        if read:
-            return read[0]
-        proc = gh(
-            ["gh", "pr", "list", "--state", "open", "--limit", "200", "--json", "number,files"],
-            cwd=str(repo_root),
-        )
-        found: set[str] | None = None
-        if proc.returncode == 0:
-            try:
-                document = json.loads(proc.stdout or "")
-            except ValueError:
-                document = None
-            if isinstance(document, list):
-                found = {
-                    str(f.get("path"))
-                    for pr in document
-                    if isinstance(pr, Mapping)
-                    for f in pr.get("files") or []
-                    if isinstance(f, Mapping)
-                }
-        read.append(found)
-        return found
-
-    def changed(path: str) -> bool | None:
-        known = paths()
-        return None if known is None else path in known
-
-    return changed
+) -> OpenPullRequestFiles:
+    """`changed_by_open_prs` through the work tracker (`OpenPullRequestFiles`)."""
+    return OpenPullRequestFiles(repo_root, gh)
 
 
 # --- running -------------------------------------------------------------------------

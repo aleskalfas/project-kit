@@ -276,6 +276,107 @@ def test_an_artefact_an_open_pull_request_changes_is_listed(drift, fixers) -> No
     assert plan.empty and "cannot say" in _why(plan, "docs/a.md")
 
 
+def _tracker(prs: list[dict[str, Any]] | None, pages: dict[int, Any] | None = None):
+    """A stand-in for `gh` that lists `prs` as the open pull requests, and
+    answers a pull request's paged files from `pages` (a list of names, or
+    None for a failed call). Records each call."""
+    import json as _json
+    import subprocess
+
+    calls: list[list[str]] = []
+
+    def gh(argv, **kw):
+        calls.append(list(argv))
+        if argv[:3] == ["gh", "pr", "list"]:
+            if prs is None:
+                return subprocess.CompletedProcess(argv, 1, "", "boom")
+            return subprocess.CompletedProcess(argv, 0, _json.dumps(prs), "")
+        if argv[:3] == ["gh", "api", "--paginate"]:
+            number = int(argv[3].split("/pulls/")[1].split("/")[0])
+            names = (pages or {}).get(number)
+            if names is None:
+                return subprocess.CompletedProcess(argv, 1, "", "boom")
+            out = "".join(_json.dumps(n) + "\n" for n in names)
+            return subprocess.CompletedProcess(argv, 0, out, "")
+        return subprocess.CompletedProcess(argv, 1, "", "unknown")
+
+    return gh, calls
+
+
+def _pr(number: int, files: list[str], total: int | None = None) -> dict[str, Any]:
+    return {
+        "number": number,
+        "files": [{"path": f} for f in files],
+        "changedFiles": len(files) if total is None else total,
+    }
+
+
+def test_the_open_pull_requests_files_are_read_once(drift, tmp_path) -> None:
+    gh, calls = _tracker([_pr(1, ["docs/a.md"]), _pr(2, ["src/x.py"])])
+    changed = drift.gh_open_pr_files(tmp_path, gh)
+    assert changed("docs/a.md") is True and changed("docs/b.md") is False
+    assert len(calls) == 1 and str(drift.OPEN_PR_LIMIT + 1) in calls[0]
+    assert changed.unreadable is None
+
+
+def test_more_open_pull_requests_than_the_limit_say_nothing(drift, fixers, tmp_path) -> None:
+    prs = [_pr(n, []) for n in range(drift.OPEN_PR_LIMIT + 1)]
+    gh, _ = _tracker(prs)
+    changed = drift.gh_open_pr_files(tmp_path, gh)
+    assert changed("docs/a.md") is None
+    assert f"more than {drift.OPEN_PR_LIMIT}" in changed.unreadable
+    report, item = _page("docs/a.md")
+    reading = _reading(
+        drift, fixers, [report], [item], granted={"living-docs": ["living-docs:page"]}
+    )
+    plan = _plan(drift, reading, changed_by_open_prs=changed)
+    assert plan.empty
+    assert "cannot say whether an open pull request changes it: more than" in _why(
+        plan, "docs/a.md"
+    )
+
+
+def test_a_pull_request_listed_short_is_read_page_by_page(drift, tmp_path) -> None:
+    listed = [f"f{i}" for i in range(100)]
+    gh, calls = _tracker([_pr(7, listed, total=101)], {7: [*listed, "docs/a.md"]})
+    changed = drift.gh_open_pr_files(tmp_path, gh)
+    assert changed("docs/a.md") is True
+    assert changed.unreadable is None
+    assert calls[1][3] == "repos/{owner}/{repo}/pulls/7/files?per_page=100"
+
+
+@pytest.mark.parametrize(
+    "pages, why",
+    [
+        ({7: ["f0"]}, "the files of pull request #7 cannot be read whole (1 of 101)"),
+        ({}, "the files of pull request #7 cannot be read whole (100 of 101)"),
+    ],
+)
+def test_a_pull_request_whose_files_cannot_be_read_whole_says_nothing(
+    drift, tmp_path, pages, why
+) -> None:
+    listed = [f"f{i}" for i in range(100)]
+    gh, _ = _tracker([_pr(7, listed, total=101)], pages)
+    changed = drift.gh_open_pr_files(tmp_path, gh)
+    assert changed("docs/a.md") is None and changed("f0") is None
+    assert changed.unreadable == why
+
+
+@pytest.mark.parametrize(
+    "prs, why",
+    [
+        (None, "could not be listed"),
+        ([{"number": 1, "files": []}], "does not say which files it changes"),
+        ([{"number": True, "files": [], "changedFiles": 0}], "does not say"),
+        (["x"], "does not say"),
+    ],
+)
+def test_a_list_that_does_not_read_says_nothing(drift, tmp_path, prs, why) -> None:
+    gh, _ = _tracker(prs)
+    changed = drift.gh_open_pr_files(tmp_path, gh)
+    assert changed("docs/a.md") is None and why in changed.unreadable
+
+
 def test_an_artefact_whose_friction_cannot_be_read_is_listed(drift, fixers) -> None:
     report, item = _page("docs/a.md")
     reading = _reading(

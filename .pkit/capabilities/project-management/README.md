@@ -1177,7 +1177,7 @@ pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECO
 - no type, a tied type, a type no entry names, or a fixer that is not granted or fails its checks
 - a name that could forge a result line: a backtick, a control character, a line or paragraph separator, a `.` or `..` part, or a folder in the run's temp folder
 - a stale upstream, which the artefact waits for, even where the upstream has no granted fixer
-- a file an open pull request already changes, and every artefact when the work tracker cannot say
+- a file an open pull request already changes, and every artefact, with why, when the work tracker cannot list every open pull request's files whole: more than 200 are open, or a pull request's files still fall short of its count once read page by page
 - an answer that still stands: a proposal or a question waiting for you, a refusal you gave, or a `none` that stands, against the same friction or the same setup
 
 `--force` dispatches what stands. `--dry-run` says what it would start, and starts and writes nothing.
