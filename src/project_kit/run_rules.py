@@ -275,27 +275,20 @@ def _fill(value: Any, folders: Mapping[str, str]) -> Any:
 def model_denies(root: Path, agent: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     """The session catalog at `root`, and the session model's denies that bind
     on `agent`: those for every agent, the guardrails among them, and the
-    agent's own (ADR-066 point 3)."""
+    agent's own (ADR-066 point 3). With no agent named, those for every agent
+    alone."""
     from project_kit import permissions
 
     decide = permissions.decision_core(root)
     catalog: Any = decide.load_catalog(str(root))
     model: Any = decide.load_model(str(root), catalog)
-    subjects = {"all", f"agent:{agent}"}
+    subjects = {"all", f"agent:{agent}"} if agent else {"all"}
     denies = [
         grant
         for grant in (_mapping(item) for item in _items(_mapping(model).get("grants")))
         if grant.get("effect", "allow") == "deny" and grant.get("subject") in subjects
     ]
     return _mapping(_mapping(catalog).get("privileges")), denies
-
-
-def _catalog_only(root: Path) -> tuple[dict[str, Any], list[dict[str, Any]]]:
-    """The session catalog at `root`, and no denies of the model's."""
-    from project_kit import permissions
-
-    catalog: Any = permissions.decision_core(root).load_catalog(str(root))
-    return _mapping(_mapping(catalog).get("privileges")), []
 
 
 # --- the projection ----------------------------------------------------------
@@ -325,7 +318,7 @@ def _projected(
     from project_kit import permissions
 
     try:
-        catalog, denies = model_denies(root, agent) if agent else _catalog_only(root)
+        catalog, denies = model_denies(root, agent)
         projection = permissions.projection_core(root)
     except permissions.PermissionsError as exc:
         return f"the permission core cannot be read: {exc}"

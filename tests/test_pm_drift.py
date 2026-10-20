@@ -1063,6 +1063,47 @@ def test_nothing_starts_when_the_point_or_the_rules_fail(drift, tmp_path, change
         drift.read_at(copy, "a" * 40, _reader(_documents(changes), []))
 
 
+def test_a_model_deny_for_every_agent_that_refuses_a_run_stops_the_check(
+    drift, tmp_path, monkeypatch
+) -> None:
+    """The check names no agent, so the session model's denies for every agent
+    reach it through the backbone's own `pkit agents rules`."""
+    import subprocess
+    from types import SimpleNamespace
+
+    from click.testing import CliRunner
+
+    from project_kit import permissions
+    from project_kit.cli import main
+
+    real = permissions.decision_core
+    deny = {"subject": "all", "privilege": "[privilege-catalog:vcs]", "effect": "deny"}
+
+    def core(root: Path) -> Any:
+        module = real(root)
+
+        def load_model(target: str, catalog: dict[str, Any]) -> dict[str, Any]:
+            model = module.load_model(target, catalog)
+            return {**model, "grants": [*model["grants"], {**deny, "scope": ["x/**"]}]}
+
+        return SimpleNamespace(load_catalog=module.load_catalog, load_model=load_model)
+
+    monkeypatch.setattr(permissions, "decision_core", core)
+    monkeypatch.chdir(REPO_ROOT)
+    others = _reader(_documents(), [])
+
+    def run(argv, **kw):
+        if list(argv[:3]) != ["pkit", "agents", "rules"]:
+            return others(argv, **kw)
+        shown = CliRunner().invoke(main, list(argv[1:]))
+        return subprocess.CompletedProcess(argv, shown.exit_code, shown.output, "")
+
+    copy = tmp_path / "copy"
+    copy.mkdir()
+    with pytest.raises(drift.Stop, match=r"no fixer can be confined.*the model deny of vcs"):
+        drift.read_at(copy, "a" * 40, run)
+
+
 # --- the command -------------------------------------------------------------------------
 
 

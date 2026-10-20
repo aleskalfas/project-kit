@@ -122,6 +122,55 @@ def test_the_fix_drift_run_projects_with_no_refusal() -> None:
     assert "native deny" in held["issue-tracker"]
 
 
+def _model_with(monkeypatch: pytest.MonkeyPatch, grant: dict[str, Any]) -> None:
+    """The session model at every root, with `grant` added to its grants."""
+    from types import SimpleNamespace
+
+    from project_kit import permissions
+
+    real = permissions.decision_core
+
+    def core(root: Path) -> Any:
+        module = real(root)
+
+        def load_model(target: str, catalog: dict[str, Any]) -> dict[str, Any]:
+            model = module.load_model(target, catalog)
+            return {**model, "grants": [*model["grants"], grant]}
+
+        return SimpleNamespace(load_catalog=module.load_catalog, load_model=load_model)
+
+    monkeypatch.setattr(permissions, "decision_core", core)
+
+
+def test_with_no_agent_named_the_denies_for_every_agent_come_along() -> None:
+    _, denies = run_rules.model_denies(REPO, "")
+    assert denies and {grant["subject"] for grant in denies} == {"all"}
+    projected = run_rules.view(REPO, FIX_DRIFT)
+    assert not isinstance(projected, str), projected
+    held = {entry["privilege"] for entry in projected.held}
+    for grant in denies:
+        assert grant["privilege"].removeprefix("[privilege-catalog:").rstrip("]") in held
+    assert "destructive-fs" in held
+
+
+def test_a_deny_for_every_agent_that_takes_what_the_run_needs_refuses_with_no_agent_named(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from click.testing import CliRunner
+
+    from project_kit.cli import main
+
+    deny = {"subject": "all", "privilege": "[privilege-catalog:vcs]", "effect": "deny"}
+    _model_with(monkeypatch, {**deny, "scope": ["x/**"]})
+    projected = run_rules.view(REPO, FIX_DRIFT)
+    assert isinstance(projected, str)
+    assert "the model deny of vcs reaches what the run needs" in projected
+    monkeypatch.chdir(REPO)
+    shown = CliRunner().invoke(main, ["agents", "rules", FIX_DRIFT, "--json"])
+    assert shown.exit_code == 1, shown.output
+    assert "the model deny of vcs" in json.loads(shown.output)["refused"]
+
+
 #: Git commands with an option that runs another program, which no rule of a run
 #: may allow with any arguments: `grep --open-files-in-pager`, and the commands
 #: that run a hook, a pager or a transport.
