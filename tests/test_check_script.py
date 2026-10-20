@@ -28,6 +28,11 @@ The test step (#1182):
   ends, killed included;
 - when the slots cannot be opened, the step says so and runs the suite anyway.
 
+The short check (#1798, ADR-067): `--short` runs every line the full run runs, in
+the same order, but the suite, and in its place only the tests marked `answers`;
+nothing marked passes, a failing one fails the run. Any other argument is
+refused before a check runs.
+
 `check.sh` runs here for real, against a stub `uv` first on PATH, so no test
 runs the suite or pyright: the stub records every command it is handed; its
 `pytest` records its arguments and, on the parallel pass, holds until the test
@@ -85,6 +90,7 @@ case "$1" in
       *"not serial"*)
         while [ ! -e "$STUB_RELEASE" ]; do sleep 0.1; done
         exit 0 ;;
+      *"-m answers"*) exit "${{STUB_ANSWERS_STATUS:-0}}" ;;
     esac
     exit "${{STUB_SERIAL_STATUS:-0}}" ;;
   *) exit 0 ;;
@@ -123,11 +129,11 @@ class Checkout:
         self.outputs.mkdir()
         self.runs: list[subprocess.Popen[bytes]] = []
 
-    def check(self, **env: str) -> subprocess.CompletedProcess[str]:
+    def check(self, *args: str, **env: str) -> subprocess.CompletedProcess[str]:
         """Run `check.sh` to the end; the parallel pass is let go at once."""
         self.release.touch()
         return subprocess.run(
-            ["bash", "scripts/check.sh"],
+            ["bash", "scripts/check.sh", *args],
             cwd=self.root,
             env={**self.env, **env},
             capture_output=True,
@@ -321,3 +327,54 @@ def test_the_suite_runs_without_the_limit_when_the_slots_cannot_be_opened(
     assert done.returncode == 0, done.stdout + done.stderr
     assert "cannot open the test slots" in done.stdout
     assert checkout.parallel_passes() == 1
+
+
+# --- the short check (#1798, ADR-067) -------------------------------------------------
+
+
+def test_the_short_check_runs_every_line_but_the_suite_and_the_tests_marked_answers(
+    checkout: Checkout,
+) -> None:
+    full = checkout.check()
+    full_steps = checkout.steps.read_text().splitlines()
+    checkout.steps.unlink()
+    checkout.log.unlink()
+
+    done = checkout.check("--short")
+
+    assert full.returncode == 0, full.stdout + full.stderr
+    assert done.returncode == 0, done.stdout + done.stderr
+    steps = checkout.steps.read_text().splitlines()
+    suite = {"pytest -q -n auto -m not serial", "pytest -q -m serial"}
+    # The full run's test step also takes a slot, through `python -`.
+    assert steps == [
+        "pytest -q -m answers" if step == "pytest -q -n auto -m not serial" else step
+        for step in full_steps
+        if step != "pytest -q -m serial" and not step.startswith("python - ")
+    ]
+    assert not suite & set(steps)
+    assert checkout.log.read_text().splitlines() == ["-q -m answers"]
+    assert "the short check: the test suite was skipped" in done.stdout
+
+
+@pytest.mark.parametrize(
+    ("status", "ok"), [("5", True), ("1", False)], ids=["nothing-marked", "a-test-fails"]
+)
+def test_the_short_check_passes_with_nothing_marked_and_fails_on_a_failure(
+    checkout: Checkout, status: str, ok: bool
+) -> None:
+    done = checkout.check("--short", STUB_ANSWERS_STATUS=status)
+
+    assert (done.returncode == 0) == ok
+    assert ("FAILED" in done.stdout) != ok
+
+
+@pytest.mark.parametrize("args", [("--quick",), ("--short", "--short"), ("short",)])
+def test_any_other_argument_is_refused_before_a_check_runs(
+    checkout: Checkout, args: tuple[str, ...]
+) -> None:
+    done = checkout.check(*args)
+
+    assert done.returncode == 2
+    assert "usage: scripts/check.sh [--short]" in done.stderr
+    assert not checkout.steps.exists()

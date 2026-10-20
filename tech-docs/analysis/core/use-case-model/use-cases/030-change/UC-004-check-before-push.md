@@ -31,7 +31,7 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T01:38:23Z
+      at: 2026-10-20T10:10:46Z
       outcome: updated
 ---
 
@@ -71,6 +71,7 @@ pkit:
 - **3a.** A registered validator cannot run, ends abnormally or overruns its time. It yields an `error` finding, never a clean pass. Where `pkit sync` has not provisioned its environment in this clone, it says "environment not provisioned — run `pkit sync`".
 - **4a.** The base moved on after the branch left it. The change check reports an `outdated-base` and passes. The developer merges the base and runs the checks again.
 - **6a.** The developer pushes with `git push --no-verify`, so the hook does not run. The CI pipeline still runs the checks on the pull request.
+- **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2). Where the hook ran, it ran the whole aggregator before the push.
 
 **Postconditions:** Before the push, the developer has the answer the project's checks give on the change, against the base CI will name.
 

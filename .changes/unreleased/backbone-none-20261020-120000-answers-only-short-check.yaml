@@ -1,0 +1,6 @@
+component: backbone
+kind: none
+body: >
+  Project rule 2 says that project-kit's CI skips the test suite on a pull
+  request whose only changes since a passing full run are answers (ADR-067).
+  The rule is project-kit's own and ships to no adopter.

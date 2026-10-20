@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T09:39:00Z
+      at: 2026-10-20T10:10:45Z
       outcome: unchanged
-      unchanged-because: "It moved into the core's area 030-change with no word changed. Its precondition, that the project declares changesets, holds as written. No use case of the core's analysis produces it yet, so it names no producer: Develop the methodology in its source repository is not written yet (#1719)."
+      unchanged-because: The required job gains a short form for a pull request head that changed only answers (ADR-067). The changeset guard runs on every pull request in both forms, so step 7 and variant 7a hold.
 ---
 
 # UC-003 — Declare what my change means for the next release
