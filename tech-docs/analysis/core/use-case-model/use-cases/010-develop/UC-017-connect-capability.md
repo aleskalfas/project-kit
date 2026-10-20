@@ -64,7 +64,10 @@ pkit:
 7. Where the wait is to be checked, the author also runs `pkit process hand-off …` (COR-042).
 8. The author writes the script behind each state and condition. Where the project grants it the files, the `process-author` agent writes them (COR-044 points 1 and 2).
 9. The author offers the process to other components, under `extension-points.offers` with `kind: process` and `process: <id>` (COR-053 point 2).
-10. The author runs `pkit validate`. Its members `packages`, `connections` and `process` read what the capability declares. Each connection point lies under a role the capability provides, each companion schema is present, and each offered process has a definition.
+10. The author runs `pkit validate`. Its members `packages`, `connections` and `process` read what the capability declares. They check that:
+    - each connection point lies under a role the capability provides
+    - each companion schema is present
+    - each offered process has a definition
 11. The author runs `pkit connections graph`. The system draws each role, each connection point and what connects to each, such as `◇ accepts pkit::documentation:readers  [accepts · active]`.
 12. The author runs `pkit process status <capability>:<id>`, with `--subject <key>` where the process keeps one subject for each key. The backbone's engine runs the script behind each state. It says which state the subject, the thing the process follows, is in, and which moves it may make (COR-033).
 

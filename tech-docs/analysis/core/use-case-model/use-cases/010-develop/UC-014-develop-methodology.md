@@ -63,10 +63,18 @@ pkit:
 - **2b.** The maintainer runs `pkit init` in the checkout. The system refuses with `<root> is already a project-kit project.`, names `pkit sync` to refresh it, and writes nothing (`install.py`). The use case ends.
 - **2c.** The maintainer runs `pkit pin <version>`. The system refuses with ``refusing to pin <root>: it is the methodology's source repository``, since the checkout's own code runs before any pin is read, and writes nothing. To move the checkout to another release, the maintainer updates it with git (ADR-059 point 3). The use case ends.
 - **2d.** The maintainer runs `pkit capabilities install <name>` for a capability the tree authors. The system records the capability as `kit-shipped` in the manifest, copies nothing, and says that `nothing was copied (ADR-059)`. Uninstalling it later only takes it out of the manifest, after asking `Unregister '<name>' and keep .pkit/capabilities/<name>/?`, and the system refuses `--purge` there (ADR-059).
-- **3a.** The installed CLI started the command, and the dispatcher `.pkit/cli/pkit` is missing or not executable. The system warns on standard error that it runs the installed CLI's code instead, `which is not this checkout's code`. The warning names the repair: restore the dispatcher with `git checkout`, or make it executable (ADR-059). The command runs with the installed CLI's code, and a sync meets 6a. Once the maintainer repairs the dispatcher, the path rejoins at step 2.
+- **3a.** The installed CLI started the command, and the dispatcher `.pkit/cli/pkit` is missing or not executable. The system warns on standard error that it runs the installed CLI's code instead, `which is not this checkout's code`. The warning names the repair: restore the dispatcher with `git checkout`, or make it executable (ADR-059).
+
+  The command runs with the installed CLI's code, and a sync meets 6a. Once the maintainer repairs the dispatcher, the path rejoins at step 2.
 - **3b.** The installed CLI started the command with routing switched off, by `PKIT_NO_ROUTE=1` or by `PKIT_ROUTED=1` inherited from another run. The command runs with the installed CLI's code, with no warning, and a sync meets 6a. Once the maintainer clears the variable, the path rejoins at step 2.
 - **5a.** The maintainer runs `pkit upgrade` instead. The system prints `Self-host: source is the installed state; no backbone upgrade needed.` and `Re-running deploy primitives via sync.`, and the path goes on at step 6.
-- **6a.** The running code is not the checkout's own (3a, 3b). So the root does not hold the tree that code reads, while the package source beside `.pkit/` still marks the source repository. The system refuses with ``refusing to run `sync` in <root>: it is the methodology's source repository, and the running pkit is not its own code.`` It names how the run got there, and says `Nothing was written, and no flag overrides this refusal.` It names the remedy, running `.pkit/cli/pkit sync` from the root. `pkit upgrade` refuses the same way (ADR-059 point 3). The use case ends.
+- **6a.** The running code is not the checkout's own (3a, 3b). So the root does not hold the tree that code reads, while the package source beside `.pkit/` still marks the source repository. The system refuses, and its message gives these:
+  - the refusal, ``refusing to run `sync` in <root>: it is the methodology's source repository, and the running pkit is not its own code.``
+  - `Nothing was written, and no flag overrides this refusal.`
+  - how the run got there
+  - the remedy, running `.pkit/cli/pkit sync` from the root
+
+  `pkit upgrade` refuses the same way (ADR-059 point 3). The use case ends.
 
 **Postconditions:**
 

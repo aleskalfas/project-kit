@@ -65,7 +65,12 @@ pkit:
 
 **Variants:**
 
-- **2a.** The name is no kebab-case word or is `backbone`, a capability holds it, or an adapter of that name exists. The system refuses with the reason, such as `adapter '<name>' already exists at .pkit/adapters/<name>.`, and writes nothing. The path rejoins at step 1.
+- **2a.** The name breaks a rule of step 2, in one of these ways:
+  - the name is no kebab-case word, or is `backbone`
+  - a capability holds the name
+  - an adapter of that name exists
+
+  The system refuses with the reason, such as `adapter '<name>' already exists at .pkit/adapters/<name>.`, and writes nothing. The path rejoins at step 1.
 - **5a.** The adapter has no `undeploy-capability.sh`. Where a capability is unregistered and its subtree stays, the system warns that the adapter `ships no undeploy-capability.sh`, and that the capability stays deployed in its harness.
 - **9a.** A script exits with an error. The system stops with `adapter primitive <script> exited with status <n>. See the output above for details.` The author mends the script, and the path rejoins at step 8.
 
