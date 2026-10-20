@@ -23,9 +23,8 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-19T20:58:13Z
-      outcome: unchanged
-      unchanged-because: Anchoring a document is untouched; the change widens only the shape and bounds of a component's held folder, which the use case does not describe.
+      at: 2026-10-20T01:38:24Z
+      outcome: updated
 ---
 
 # UC-005 — Say what my document rests on
@@ -34,7 +33,7 @@ pkit:
 
 **Other actors:** None.
 
-**Preconditions:** None.
+**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

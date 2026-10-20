@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-19T19:00:00Z
+      at: 2026-10-20T01:36:51Z
       outcome: unchanged
-      unchanged-because: DEC-001 point 1 gains the domain-model view, a kind that explains the glossary's concepts, and says nothing new of an actor or its needs. The adopter's needs hold as written.
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-adopter — Adopter

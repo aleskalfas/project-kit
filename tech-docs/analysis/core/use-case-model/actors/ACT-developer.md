@@ -12,7 +12,6 @@ needs:
   - Have a substantive draft challenged before I adopt it, and have my diff checked against the methodology's conventions before I commit it.
   - Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
   - Turn recurring work into my project's own skill or agent, designing its dialogue as a storyboard first.
-  - Build my change with an agent that writes the change's code to my project's own conventions, read from wherever I keep them.
   - Declare what my change means for the next release, in changesets naming what it moves, the backbone or a component, and the segment I judge.
   - Resolve what the default branch left out of date, knowing for each debt the change it came from.
   - File a Task under its parent, with its title and the sections its body needs checked as it is filed.
@@ -33,8 +32,6 @@ pkit:
       record:
         - COR-009
         - ADR-061#3
-        - software-engineering:DEC-001#1
-        - software-engineering:DEC-001#2
         - PRJ-002#D1
         - PRJ-002#D2
         - COR-050#3
@@ -61,9 +58,8 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-19T19:00:00Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. How numbered ids are given and kept append-only reads as before, so the developer's needs still hold.
+      at: 2026-10-20T01:36:55Z
+      outcome: updated
 ---
 
 # ACT-developer — Developer

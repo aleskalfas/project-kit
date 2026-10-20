@@ -14,6 +14,10 @@ pkit:
         - project-management:DEC-054#5
         - project-management:DEC-016
         - project-management:DEC-018
+    revalidated:
+      at: 2026-10-20T01:36:59Z
+      outcome: unchanged
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-planner — Planner

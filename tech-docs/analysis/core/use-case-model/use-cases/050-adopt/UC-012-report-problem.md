@@ -27,9 +27,8 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-19T19:45:28Z
-      outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      at: 2026-10-20T01:38:31Z
+      outcome: updated
 ---
 
 # UC-012 — Report a problem with the system, and follow the report
@@ -41,10 +40,11 @@ pkit:
 - **AI agent** (`ACT-ai-agent`): composes the report with the adopter through the `report-author` skill. Where the agent runs a report verb with `--yes`, the system stages the report and posts nothing. So the adopter sees every word before the report leaves (ADR-047 point 2).
 - **Methodology maintainer** (`ACT-methodology-maintainer`): receives the report, and links each tracked fix to it (UC-013).
 
-**Preconditions:** None.
+**Preconditions:** The adopter has the system's tool, `pkit`, on the machine.
 
 **Assumptions:**
 
+- The adopter has a GitHub account, from which the report is filed on project-kit's repository, through `gh` or a browser (PRJ-008).
 - The text the adopter writes holds nothing private. The system builds the environment block without paths, and checks only an attached note for home paths (ADR-047 point 2 and `report.py`).
 
 **Trigger:** The adopter hits a problem with the system, or wants the system to change.

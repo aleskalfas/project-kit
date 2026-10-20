@@ -14,9 +14,9 @@ pkit:
         - COR-050#3
         - project-management:DEC-028
     revalidated:
-      at: 2026-10-18T16:38:19Z
+      at: 2026-10-20T01:36:56Z
       outcome: unchanged
-      unchanged-because: COR-050 point 3 was reached only through the Decision's text outside its points, which now says what a path anchor and a registered kind's anchor stand on in a file a place holds. The actor rests on point 3's rule that the person authorising a merge is told what a change updated and what it leaves out of date, which that text does not touch.
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-merge-authoriser — Merge authoriser

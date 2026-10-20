@@ -31,9 +31,8 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T07:10:18Z
-      outcome: unchanged
-      unchanged-because: This change gives the command runner an agent-run policy, with its own bound, standard input and a grace before the kill, which only pkit agents run uses. The query policy and the thirty-second bound that steps 3 and 3a rely on are unchanged.
+      at: 2026-10-20T01:38:23Z
+      outcome: updated
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks
@@ -44,7 +43,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the same checks on the pull request with no person to answer. It names the base once, for every check (COR-054 point 3).
 
-**Preconditions:** None.
+**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

@@ -27,9 +27,8 @@ pkit:
         - ACT-adopter
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:36Z
-      outcome: unchanged
-      unchanged-because: The change check gains a shared-id finding that enforcing mode never fails, so what the gate fails on is untouched. The CLI change is the friction check's help text alone.
+      at: 2026-10-20T01:38:25Z
+      outcome: updated
 ---
 
 # UC-006 — Make my merges wait on the system's checks
@@ -40,11 +39,11 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to answer, and gates the merge on the exit status. It names the base once, for every check (COR-054 point 3).
 
-**Preconditions:** The system is installed in the project, and the project's continuous integration can run `pkit` on a checkout of each pull request.
+**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 
-- The hosting service holds a merge until a required status passes. The backbone ships no workflow that runs these checks, so the adopter wires the required status (ADR-019 point 2).
+- The project's continuous integration can run `pkit` on a checkout of each pull request. The hosting service holds a merge until a required status passes. The backbone ships no workflow that runs these checks, so the adopter wires the job and its required status (ADR-019 point 2).
 - Branches are kept up to date with their base, or a merge queue runs the checks again on each merge (COR-050 point 6).
 
 **Trigger:** The adopter decides that the project's merges should wait on the system's checks.

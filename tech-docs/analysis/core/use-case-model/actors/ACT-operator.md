@@ -18,9 +18,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-18T12:33:10Z
+      at: 2026-10-20T01:36:58Z
       outcome: unchanged
-      unchanged-because: This change adds to Running checks that the friction gate also fails on a target not revisited (COR-050 point 16). The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-operator — Operator

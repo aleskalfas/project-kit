@@ -17,9 +17,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-18T08:24:11Z
+      at: 2026-10-20T01:36:57Z
       outcome: unchanged
-      unchanged-because: PRJ-002 lets a branch correct a range that excludes the version the tree carries, a rule for how a release's input is fixed. The maintainer still releases the backbone under that policy, and adopters still learn what each change means from the changelog, so the actor's needs and its Core hold.
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-methodology-maintainer — Methodology maintainer

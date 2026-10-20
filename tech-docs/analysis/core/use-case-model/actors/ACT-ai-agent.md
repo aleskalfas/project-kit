@@ -14,8 +14,9 @@ pkit:
       record:
         - COR-013
     revalidated:
-      at: 2026-10-14T09:21:10Z
-      outcome: updated
+      at: 2026-10-20T01:36:52Z
+      outcome: unchanged
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-ai-agent — AI agent

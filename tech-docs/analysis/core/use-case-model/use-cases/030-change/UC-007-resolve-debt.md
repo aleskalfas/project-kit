@@ -31,9 +31,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T00:35:45Z
-      outcome: unchanged
-      unchanged-because: The analysis-resolver now also covers domain-model views, and reads the view that explains a term when it revalidates the term. It still proposes each answer with its evidence and the commands, and runs none, so how a developer resolves debt is untouched.
+      at: 2026-10-20T01:38:26Z
+      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date
@@ -45,10 +44,11 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the whole-repository check after each push to the default branch and on a schedule. The check reports its findings and never fails on them (COR-050 point 12).
 - **AI agent** (`ACT-ai-agent`): the `analysis-resolver` and the `living-docs` agent propose each answer with its evidence and the commands that write it. Neither runs those commands itself (living-docs DEC-001 point 5 and `analysis-resolver.md`).
 
-**Preconditions:** None.
+**Preconditions:** The default branch holds debt: a change that landed there left an artefact stale, or deferred its answer.
 
 **Assumptions:**
 
+- The project's continuous integration runs the whole-repository check on the default branch, as project-kit's `friction-report.yml` does (ADR-055 point 5).
 - An answer that no change of the writer's own owes is a person's decision, shown to the person word for word before it is written. Nothing at run time stops an agent writing one (COR-050 point 3 and core rule 20).
 
 **Trigger:** The whole-repository check reports debt on the default branch.

@@ -25,9 +25,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T19:45:26Z
-      outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      at: 2026-10-20T01:38:29Z
+      outcome: updated
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across
@@ -39,7 +38,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the migration check on every pull request, with no person to answer. The check fails while a rename or a removal it finds has no migration.
 - **AI agent** (`ACT-ai-agent`): writes the migration for the maintainer through the `migration-author` skill, which pairs with the stamp of step 2.
 
-**Preconditions:** None.
+**Preconditions:** The maintainer develops the backbone in the methodology's source repository.
 
 **Assumptions:**
 

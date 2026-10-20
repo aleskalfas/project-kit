@@ -25,9 +25,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T19:45:22Z
-      outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      at: 2026-10-20T01:38:30Z
+      outcome: updated
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it
@@ -39,7 +38,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the migration check on every pull request, with no person to answer. It does so where the component's repository wires the check in, as project-kit's does (UC-006).
 - **AI agent** (`ACT-ai-agent`): writes the migration for the author through the `migration-author` skill, which pairs with the stamp of step 2.
 
-**Preconditions:** None.
+**Preconditions:** The author's component exists, a capability or an adapter, its version in its `package.yaml`.
 
 **Assumptions:**
 

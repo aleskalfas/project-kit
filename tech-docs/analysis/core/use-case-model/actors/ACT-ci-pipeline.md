@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-19T19:45:41Z
+      at: 2026-10-20T01:36:53Z
       outcome: unchanged
-      unchanged-because: COR-050 gains an anchor on a shared id, warned of by both checks and never failed. The pipeline runs the checks as it did, and nothing it does or answers for changes.
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-ci-pipeline — CI pipeline

@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:23Z
+      at: 2026-10-20T01:38:22Z
       outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      unchanged-because: "It moved into the core's area 030-change with no word changed. Its precondition, that the project declares changesets, holds as written. No use case of the core's analysis produces it yet, so it names no producer: Develop the methodology in its source repository is not written yet (#1719)."
 ---
 
 # UC-003 — Declare what my change means for the next release

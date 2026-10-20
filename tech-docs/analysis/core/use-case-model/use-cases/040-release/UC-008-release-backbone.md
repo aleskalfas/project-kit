@@ -5,6 +5,8 @@ status: active
 actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ci-pipeline
+after:
+  - [UC-008, environment]
 pkit:
   friction:
     anchors:
@@ -29,9 +31,8 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:25Z
-      outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      at: 2026-10-20T01:38:27Z
+      outcome: updated
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
@@ -42,7 +43,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): opens the release pull request. Once the release pull request lands, the pipeline tags the release commit, with no person there to confirm the push. No step of the CI pipeline's workflows merges a release pull request, so someone decides that each release lands (`release-pr.yml`).
 
-**Preconditions:** Changesets wait under `.changes/unreleased/`, each declaring what a merged change means for the next release (UC-003).
+**Preconditions:** **From UC-008, or Environment:** The default branch records the backbone's current version in `.pkit/VERSION`. The last release wrote it there, or, before the first release, the source repository held it (PRJ-002 D3).
 
 **Assumptions:**
 

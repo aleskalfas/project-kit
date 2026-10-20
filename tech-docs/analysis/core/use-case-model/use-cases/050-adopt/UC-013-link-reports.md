@@ -5,6 +5,8 @@ status: active
 actor: ACT-methodology-maintainer
 other-actors:
   - ACT-adopter
+after:
+  - [UC-012]
 pkit:
   friction:
     anchors:
@@ -19,9 +21,8 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-19T19:45:29Z
-      outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      at: 2026-10-20T01:38:32Z
+      outcome: updated
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix
@@ -32,9 +33,11 @@ pkit:
 
 - **Adopter** (`ACT-adopter`): filed the report, and sees each tracked fix with that fix's state, from their own project (UC-012).
 
-**Preconditions:** None.
+**Preconditions:** **From UC-012:** Adopters' reports arrive as issues on the report target, project-kit's own repository, each with its versions attached.
 
-**Assumptions:** None.
+**Assumptions:**
+
+- `gh` is signed in, as a maintainer who may comment on and close the report target's issues (PRJ-008).
 
 **Trigger:** Adopters' reports arrive on the report target, project-kit's own repository.
 

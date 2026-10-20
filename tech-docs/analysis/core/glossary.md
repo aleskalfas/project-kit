@@ -10,6 +10,10 @@ TERM-acceptance-gate:
           - .pkit/decisions/README.md
         record:
           - COR-051#4
+      revalidated:
+        at: 2026-10-20T01:37:00Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-adapter:
   name: adapter
   status: active
@@ -21,6 +25,10 @@ TERM-adapter:
           - COR-005
           - COR-028
           - COR-047
+      revalidated:
+        at: 2026-10-20T01:37:01Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-agent-definition:
   name: agent definition
   status: active
@@ -35,6 +43,10 @@ TERM-agent-definition:
           - COR-013#1
           - COR-013#2
           - COR-013#5
+      revalidated:
+        at: 2026-10-20T01:37:02Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-anchor:
   name: anchor
   status: active
@@ -48,9 +60,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-19T20:57:58Z
+        at: 2026-10-20T01:37:04Z
         outcome: unchanged
-        unchanged-because: A held folder may now be a glob of folders and wins over its own component's places; what an anchor is and what it names is untouched.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-answer:
   name: answer
   status: active
@@ -64,9 +76,9 @@ TERM-answer:
           - COR-050#3
           - COR-050#4
       revalidated:
-        at: 2026-10-18T21:14:51Z
+        at: 2026-10-20T01:37:05Z
         outcome: unchanged
-        unchanged-because: This change rewords only the revisit writer's refusal of a target no link takes, in friction_write.py. A revalidation, a deferral and the list of answers read as they did.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-area:
   name: area
   status: active
@@ -77,6 +89,10 @@ TERM-area:
         record:
           - COR-011
           - COR-003
+      revalidated:
+        at: 2026-10-20T01:37:06Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-artefact:
   name: artefact
   status: active
@@ -89,9 +105,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-19T20:58:04Z
+        at: 2026-10-20T01:37:07Z
         outcome: unchanged
-        unchanged-because: A held document is still never an artefact; the change only lets a held folder be a glob of folders and win over its own component's places.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-artefact-type:
   name: artefact type
   status: active
@@ -107,9 +123,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-19T20:58:07Z
+        at: 2026-10-20T01:37:08Z
         outcome: unchanged
-        unchanged-because: Types and how a place gives one are untouched; the change widens only the shape and bounds of a held folder.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-backbone:
   name: backbone
   status: active
@@ -120,6 +136,10 @@ TERM-backbone:
         record:
           - COR-010
           - COR-059#1
+      revalidated:
+        at: 2026-10-20T01:37:10Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-backbone-configuration:
   name: backbone configuration
   status: active
@@ -135,6 +155,10 @@ TERM-backbone-configuration:
           - COR-048#2
           - COR-048#4
           - COR-048#5
+      revalidated:
+        at: 2026-10-20T01:37:11Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-base:
   name: base
   status: active
@@ -147,6 +171,10 @@ TERM-base:
         record:
           - COR-054#2
           - COR-054#3
+      revalidated:
+        at: 2026-10-20T01:37:12Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-capability:
   name: capability
   status: active
@@ -160,6 +188,10 @@ TERM-capability:
           - COR-017
           - COR-026
           - COR-031
+      revalidated:
+        at: 2026-10-20T01:37:13Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-change:
   name: change
   status: active
@@ -172,6 +204,10 @@ TERM-change:
           - COR-009#5
           - COR-050#3
           - COR-050#6
+      revalidated:
+        at: 2026-10-20T01:37:14Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-change-check:
   name: change check
   status: active
@@ -186,9 +222,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-19T19:44:59Z
+        at: 2026-10-20T01:37:16Z
         outcome: unchanged
-        unchanged-because: The change check gains a reported-only finding, an anchor on a shared id, and COR-050 point 12 lists it as never failed. The term's distinctions, the whole-repository check, the two modes and the list of answers, hold as written.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-changeset:
   name: changeset
   status: active
@@ -201,6 +237,10 @@ TERM-changeset:
         record:
           - PRJ-002#D1
           - PRJ-002#D2
+      revalidated:
+        at: 2026-10-20T01:37:17Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-component:
   name: component
   status: active
@@ -213,6 +253,10 @@ TERM-component:
           - src/project_kit/changesets.py
         record:
           - COR-010
+      revalidated:
+        at: 2026-10-20T01:37:18Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-component-origin:
   name: component origin
   status: active
@@ -227,6 +271,10 @@ TERM-component-origin:
           - COR-031#D2
           - COR-041
           - COR-059#1
+      revalidated:
+        at: 2026-10-20T01:37:19Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-connection-point:
   name: connection point
   status: active
@@ -241,6 +289,10 @@ TERM-connection-point:
           - COR-053#3
           - COR-053#5
           - COR-053#6
+      revalidated:
+        at: 2026-10-20T01:37:20Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-consent:
   name: consent
   status: active
@@ -252,24 +304,10 @@ TERM-consent:
           - COR-048#5
           - COR-059#4
           - COR-002
-TERM-conventions-corpus:
-  name: conventions corpus
-  status: active
-  definition: set of a project's own coding standards, kept where the project names it, which the agents that write and review its code read
-  pkit:
-    friction:
-      anchors:
-        path:
-          - .pkit/capabilities/software-engineering/agents/software-engineer.md
-        record:
-          - software-engineering:DEC-001#2
-          - software-engineering:DEC-001#4
-          - software-engineering:DEC-002#4
-          - ADR-013
       revalidated:
-        at: 2026-10-18T18:53:58Z
+        at: 2026-10-20T01:37:22Z
         outcome: unchanged
-        unchanged-because: The software-engineer agent's revisit paragraph says a link takes some of an artefact's anchors as its targets. What the agent reads as the conventions corpus, and the distinctions, are untouched.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-data-point:
   name: data point
   status: active
@@ -288,6 +326,10 @@ TERM-data-point:
           - COR-052#6
           - COR-053#2
           - COR-061#1
+      revalidated:
+        at: 2026-10-20T01:37:24Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-debt:
   name: debt
   status: active
@@ -301,9 +343,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-19T19:45:07Z
+        at: 2026-10-20T01:37:25Z
         outcome: unchanged
-        unchanged-because: The whole-repository check gains a reported-only warning on an anchor on a shared id, and the explanation says what mends it. Neither is debt, which stays the stale and deferred findings dated from their origin.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-decision-record:
   name: decision record
   status: active
@@ -317,6 +359,10 @@ TERM-decision-record:
           - COR-006
           - COR-025
           - COR-058#1
+      revalidated:
+        at: 2026-10-20T01:37:26Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-default-branch:
   name: default branch
   status: active
@@ -331,6 +377,10 @@ TERM-default-branch:
           - COR-054#1
           - COR-054#2
           - COR-054#4
+      revalidated:
+        at: 2026-10-20T01:37:28Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-distribution:
   name: distribution
   status: active
@@ -342,6 +392,10 @@ TERM-distribution:
           - COR-041
           - PRJ-004
           - ADR-047#3
+      revalidated:
+        at: 2026-10-20T01:37:29Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-documentation-root:
   name: documentation root
   status: active
@@ -355,6 +409,10 @@ TERM-documentation-root:
           - COR-049#1
           - COR-049#3
           - COR-049#5
+      revalidated:
+        at: 2026-10-20T01:37:30Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-finding:
   name: finding
   status: active
@@ -370,9 +428,9 @@ TERM-finding:
           - COR-055#5
           - COR-057#3
       revalidated:
-        at: 2026-10-19T19:45:08Z
+        at: 2026-10-20T01:37:31Z
         outcome: unchanged
-        unchanged-because: COR-050 point 12 adds an anchor on a shared id among the change check's findings, reported and never failed. The term's example and its distinctions name no finding this alters.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-friction:
   name: friction
   status: active
@@ -389,9 +447,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-19T19:45:10Z
+        at: 2026-10-20T01:37:32Z
         outcome: unchanged
-        unchanged-because: Both checks gain a warning on an anchor on a shared id, which is no friction. What friction is, a changed anchor with no answer standing for it, is untouched.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-harness:
   name: harness
   status: active
@@ -402,6 +460,10 @@ TERM-harness:
         record:
           - COR-006
           - COR-047
+      revalidated:
+        at: 2026-10-20T01:37:34Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-head:
   name: head
   status: active
@@ -412,6 +474,10 @@ TERM-head:
         record:
           - COR-050#5
           - COR-050#6
+      revalidated:
+        at: 2026-10-20T01:37:35Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-install:
   name: install
   status: active
@@ -426,6 +492,10 @@ TERM-install:
           - COR-010
           - COR-017
           - COR-030
+      revalidated:
+        at: 2026-10-20T01:37:36Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-manifest:
   name: manifest
   status: active
@@ -440,6 +510,10 @@ TERM-manifest:
           - COR-031#D2
           - COR-059#1
           - ADR-065#2
+      revalidated:
+        at: 2026-10-20T01:37:37Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-merge-delivery:
   name: merge delivery
   status: active
@@ -452,6 +526,10 @@ TERM-merge-delivery:
         record:
           - COR-002
           - COR-059#2
+      revalidated:
+        at: 2026-10-20T01:37:39Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-methodology:
   name: methodology
   status: active
@@ -459,6 +537,10 @@ TERM-methodology:
   pkit:
     friction:
       unanchored-because: It names the whole body the system ships, so an anchor on its records and rules would match every change to them. COR-007 says what a methodology is in general, not what this word names here.
+      revalidated:
+        at: 2026-10-20T01:37:40Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-migration:
   name: migration
   status: active
@@ -472,9 +554,9 @@ TERM-migration:
         record:
           - COR-010
       revalidated:
-        at: 2026-10-19T06:40:58Z
+        at: 2026-10-20T01:37:41Z
         outcome: unchanged
-        unchanged-because: migrations.py now also fails a script a change lands with a number its folder holds, and the example's 001 script keeps its number. What a migration is, a script an upgrade crossing its version runs, is untouched.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-operational-rule:
   name: operational rule
   status: active
@@ -487,6 +569,10 @@ TERM-operational-rule:
         record:
           - COR-014
           - COR-051#1
+      revalidated:
+        at: 2026-10-20T01:37:42Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-package-metadata:
   name: package metadata
   status: active
@@ -502,9 +588,9 @@ TERM-package-metadata:
           - COR-053#3
           - COR-056#2
       revalidated:
-        at: 2026-10-19T20:58:09Z
+        at: 2026-10-20T01:37:44Z
         outcome: unchanged
-        unchanged-because: Package metadata still declares a component's places and held folders; the change widens only what a held folder's path may be, which the term does not detail.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-place:
   name: place
   status: active
@@ -518,9 +604,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-19T20:58:11Z
+        at: 2026-10-20T01:37:45Z
         outcome: unchanged
-        unchanged-because: A held folder still keeps its files from every place; that it may now be a glob of folders, and wins over its own component's places as well, leaves the distinction true as written.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-point:
   name: point
   status: active
@@ -534,6 +620,10 @@ TERM-point:
           - COR-058#1
           - COR-058#3
           - COR-058#4
+      revalidated:
+        at: 2026-10-20T01:37:46Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-project:
   name: project
   status: active
@@ -544,6 +634,10 @@ TERM-project:
         record:
           - COR-001
           - COR-010
+      revalidated:
+        at: 2026-10-20T01:37:47Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-project-owned-content:
   name: project-owned content
   status: active
@@ -557,6 +651,10 @@ TERM-project-owned-content:
           - COR-001
           - COR-003
           - COR-059#2
+      revalidated:
+        at: 2026-10-20T01:37:48Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-propagation:
   name: propagation
   status: active
@@ -570,6 +668,10 @@ TERM-propagation:
           - COR-001
           - COR-059#2
           - ADR-065#1
+      revalidated:
+        at: 2026-10-20T01:37:50Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-pull-request:
   name: pull request
   status: active
@@ -584,6 +686,10 @@ TERM-pull-request:
           - COR-009#2
           - COR-009#3
           - COR-009#5
+      revalidated:
+        at: 2026-10-20T01:37:51Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-range:
   name: range
   status: active
@@ -597,6 +703,10 @@ TERM-range:
           - PRJ-002#D4
           - COR-010
           - COR-030
+      revalidated:
+        at: 2026-10-20T01:37:52Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-recorded-version:
   name: recorded version
   status: active
@@ -611,6 +721,10 @@ TERM-recorded-version:
           - COR-059#2
           - COR-059#6
           - ADR-065#2
+      revalidated:
+        at: 2026-10-20T01:37:53Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-release:
   name: release
   status: active
@@ -623,8 +737,9 @@ TERM-release:
           - COR-059#7
           - PRJ-004
       revalidated:
-        at: 2026-10-19T07:33:19Z
-        outcome: updated
+        at: 2026-10-20T01:37:55Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-release-step:
   name: release step
   status: active
@@ -638,6 +753,10 @@ TERM-release-step:
           - PRJ-002#D3
           - PRJ-002#D4
           - PRJ-004
+      revalidated:
+        at: 2026-10-20T01:37:56Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-report:
   name: report
   status: active
@@ -651,6 +770,10 @@ TERM-report:
           - PRJ-008
           - ADR-047#3
           - COR-043#3
+      revalidated:
+        at: 2026-10-20T01:37:57Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-reviewer:
   name: reviewer
   status: active
@@ -664,6 +787,10 @@ TERM-reviewer:
           - COR-057#1
           - COR-057#3
           - COR-057#5
+      revalidated:
+        at: 2026-10-20T01:37:58Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-role:
   name: role
   status: active
@@ -676,6 +803,10 @@ TERM-role:
         record:
           - COR-053#1
           - COR-053#7
+      revalidated:
+        at: 2026-10-20T01:38:00Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-rule:
   name: rule
   status: active
@@ -690,6 +821,10 @@ TERM-rule:
           - COR-051#3
           - COR-051#4
           - COR-051#5
+      revalidated:
+        at: 2026-10-20T01:38:01Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-rule-set:
   name: rule set
   status: active
@@ -703,6 +838,10 @@ TERM-rule-set:
           - COR-051#2
           - COR-051#6
           - COR-051#7
+      revalidated:
+        at: 2026-10-20T01:38:02Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-seeding:
   name: seeding
   status: active
@@ -717,6 +856,10 @@ TERM-seeding:
           - COR-001
           - COR-003
           - COR-059#8
+      revalidated:
+        at: 2026-10-20T01:38:03Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-skill:
   name: skill
   status: active
@@ -730,6 +873,10 @@ TERM-skill:
           - COR-005
           - COR-006
           - COR-020
+      revalidated:
+        at: 2026-10-20T01:38:05Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-source-repository:
   name: source repository
   status: active
@@ -743,6 +890,10 @@ TERM-source-repository:
           - COR-050#14
           - COR-041
           - ADR-059#1
+      revalidated:
+        at: 2026-10-20T01:38:06Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-stamp:
   name: stamp
   status: active
@@ -754,6 +905,10 @@ TERM-stamp:
           - src/project_kit/scaffolds.py
         record:
           - COR-005
+      revalidated:
+        at: 2026-10-20T01:38:07Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-surface-change:
   name: surface change
   status: active
@@ -768,9 +923,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-19T06:39:10Z
+        at: 2026-10-20T01:38:08Z
         outcome: unchanged
-        unchanged-because: This change makes the release's migration-dir warning cover adapter and capability folders, and adds a number check to migrations check-diff. What an adopter could observe, depend on or break against, and the surface paths the changeset guard reads, are as the term says.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-sync:
   name: sync
   status: active
@@ -786,6 +941,10 @@ TERM-sync:
           - COR-001
           - COR-059#2
           - COR-059#9
+      revalidated:
+        at: 2026-10-20T01:38:10Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-synced-copy:
   name: synced copy
   status: active
@@ -800,6 +959,10 @@ TERM-synced-copy:
           - COR-050#14
           - COR-059#2
           - COR-041
+      revalidated:
+        at: 2026-10-20T01:38:11Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-system:
   name: system
   status: active
@@ -807,6 +970,10 @@ TERM-system:
   pkit:
     friction:
       unanchored-because: It names the whole of pkit, so an anchor on its code would match every change. No record defines it.
+      revalidated:
+        at: 2026-10-20T01:38:12Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-validation:
   name: validation
   status: active
@@ -821,6 +988,10 @@ TERM-validation:
           - COR-055#2
           - COR-055#3
           - COR-055#5
+      revalidated:
+        at: 2026-10-20T01:38:13Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-version:
   name: version
   status: active
@@ -831,6 +1002,10 @@ TERM-version:
         record:
           - COR-010
           - PRJ-002#D2
+      revalidated:
+        at: 2026-10-20T01:38:15Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-version-pin:
   name: version pin
   status: active
@@ -846,6 +1021,10 @@ TERM-version-pin:
           - ADR-049#3
           - ADR-064#1
           - ADR-064#3
+      revalidated:
+        at: 2026-10-20T01:38:16Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-version-transition:
   name: version transition
   status: active
@@ -860,6 +1039,10 @@ TERM-version-transition:
           - COR-059#4
           - COR-059#6
           - COR-059#7
+      revalidated:
+        at: 2026-10-20T01:38:17Z
+        outcome: unchanged
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-whole-repository-check:
   name: whole-repository check
   status: active
@@ -873,9 +1056,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-19T19:45:13Z
+        at: 2026-10-20T01:38:19Z
         outcome: unchanged
-        unchanged-because: The whole-repository check gains a reported-only warning on an anchor on a shared id. It measures every artefact from its revalidation point and never fails, as the term says.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 ---
 
 # Glossary
@@ -1081,15 +1264,6 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **With nobody to ask:** nothing is written, and the default applies (COR-048 point 5).
 - **A choice that keeps its own:** such as merge delivery's tier that asks, or a data point's question. A transition's one consent does not cover it (COR-059 point 4 and COR-061).
 - **A person's decision:** an answer on an artefact that the person was shown word for word and accepted before it was written (COR-050 point 3).
-
-## TERM-conventions-corpus — conventions corpus
-
-**Example:** the `software-engineer` agent reads the conventions corpus before it writes a change's code, and checks its own diff against it.
-
-**Distinctions:**
-
-- **The methodology's conventions:** conventional commits, branch names and the no-shared-files invariant, which bind every project. The `convention-compliance-reviewer` checks them, and never reads the corpus (software-engineering DEC-001 point 4).
-- **The reviewers' knowledge:** what each code-review agent knows of any project. The project's own rules come from the corpus alone (software-engineering DEC-002 point 4).
 
 ## TERM-data-point — data point
 

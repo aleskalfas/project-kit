@@ -34,9 +34,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-19T19:45:38Z
-      outcome: unchanged
-      unchanged-because: The change check gains a reported-only warning on an anchor on a shared id, which asks no answer of a document. A shared id that moves an anchor to another artefact raises friction, answered as this use case says.
+      at: 2026-10-20T01:38:21Z
+      outcome: updated
 ---
 
 # UC-002 — Answer what my change made stale
@@ -49,7 +48,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the change check against the pull request's target, named once for every check (COR-054 point 3). It is told when a shallow clone cut the history the check reads.
 - **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated artefact, the sentence the change's author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up (COR-050 point 3).
 
-**Preconditions:** The artefacts the change could make stale lie in a declared place, and carry their anchors (UC-005).
+**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

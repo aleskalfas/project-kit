@@ -2,9 +2,9 @@
 id: UC-001
 title: Build my change under my project's conventions
 status: active
-actor: ACT-developer
+actor: core:ACT-developer
 other-actors:
-  - ACT-ai-agent
+  - core:ACT-ai-agent
 pkit:
   friction:
     anchors:
@@ -22,13 +22,12 @@ pkit:
         - COR-050#3
         - ADR-052#3
         - ADR-052#6
-      artefact:
-        - ACT-developer
-        - ACT-ai-agent
+        - COR-013
+        - COR-017
+        - COR-031
     revalidated:
-      at: 2026-10-18T19:06:45Z
-      outcome: unchanged
-      unchanged-because: This branch rewords the software-engineer agent's revisit paragraph to say a link takes some of an artefact's anchors as its targets. Reading the corpus, writing to it and handing the change on for review are untouched, and the use case cites no rule this branch changes.
+      at: 2026-10-20T01:38:20Z
+      outcome: updated
 ---
 
 # UC-001 — Build my change under my project's conventions
@@ -37,12 +36,13 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
+- **AI agent** (`core:ACT-ai-agent`): the `software-engineer` agent, and the reviewer agents that judge its change. The engineer never invents a convention the corpus lacks (software-engineering DEC-001 point 5).
 
-**Preconditions:** The project has installed the software-engineering capability, and the adapter has deployed its `software-engineer` agent definition.
+**Preconditions:** None.
 
 **Assumptions:**
 
+- The project has the software-engineering capability installed, and the adapter has deployed its `software-engineer` agent definition. The core provides both: a capability is installed, or registered in place where it is developed (COR-017, COR-031), and an adapter deploys its agents (COR-013).
 - The running agent finds the corpus the project names. The adapter writes its path into the deployed definition's front matter only, and the agent definition's text keeps `<project-conventions>` (ADR-052 points 3 and 6).
 - Nothing at run time holds the agent to the corpus. Where the project runs the code-review panel, its agents read the corpus too (software-engineering DEC-002 point 4).
 - The change builds only on accepted decision records (core rule 2).
@@ -69,7 +69,7 @@ pkit:
 
 - **2a.** The project names no corpus, as project-kit names none today, or the corpus is empty or silent on a choice. The agent says so, as in "no project conventions found for X; proceeding as a careful generalist", and works by ordinary judgement. The path rejoins at step 3.
 - **3a.** A design fork arises that the corpus does not settle. The agent names it and its trade-off, rather than choosing silently. The developer decides, asked one decision at a time with the agent's recommendation (core rule 17), and the path rejoins at step 3.
-- **3b.** The change makes an anchored artefact owe an answer. The agent writes the answers its own change owes, as UC-002 describes, and says in its hand-off that the change wrote answers. It composes no list of them, and the path goes on at step 4.
+- **3b.** The change makes an anchored artefact owe an answer. The agent writes the answers its own change owes, as `core:UC-002` describes, and says in its hand-off that the change wrote answers. It composes no list of them, and the path goes on at step 4.
 
 **Postconditions:** The change's code conforms to the project's conventions corpus wherever the corpus speaks, and its reviewers have judged it, with each blocking finding fixed.
 

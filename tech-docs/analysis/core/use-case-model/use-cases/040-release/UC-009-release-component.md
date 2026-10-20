@@ -25,9 +25,8 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T19:45:20Z
-      outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      at: 2026-10-20T01:38:28Z
+      outcome: updated
 ---
 
 # UC-009 — Release my component on its own version
@@ -38,7 +37,11 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the release pull request that carries the component's new version. That pull request carries the new versions of the backbone and of other components too (UC-008).
 
-**Preconditions:** The component's repository declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1). Changesets naming the component wait there (UC-003), and the component's `package.yaml` gives its `version` and a `requires_backbone` range.
+**Preconditions:**
+
+- The component's repository declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
+- Changesets naming the component wait there on the default branch, each declared as UC-003 describes and landed with its change.
+- **From UC-009:** The component's `package.yaml` gives its `version` and a `requires_backbone` range. The component's last release wrote them, or its author did when packaging it.
 
 **Assumptions:**
 
