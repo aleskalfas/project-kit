@@ -33,7 +33,9 @@ privileges:
       another program: `git grep` is left out, since `--open-files-in-pager`
       runs one, and the Grep tool searches instead. An option that writes a
       file, such as `--output`, is held by the sandbox, which lets the run
-      write only its workspace.
+      write only its workspace. `--ext-diff` and `--textconv` run only a
+      driver the working copy's or the person's git configuration names,
+      which the run cannot write.
     recognize:
       bash:
         - {cmd: git, args: ["-C", "{working-copy}", "log"]}
