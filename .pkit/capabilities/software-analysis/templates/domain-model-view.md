@@ -5,8 +5,9 @@
 # <TERM-id> …` writes `<number>-<slug>.md` in `domain-model/` under the analysis
 # location. The number gives the view's place in the domain model's order, and
 # is no part of its id. The stamp writes its title, `explains`, an anchor to each
-# term it explains, one section for each, and each term's link to its section in
-# the glossary. `explains` is the source: `pkit analysis validate` requires the
+# term it explains, one section for each, which opens with its link to the term's
+# entry, and each term's link to its section in the glossary. `pkit analysis link`
+# links the first mention of each term in each section to its entry. `explains` is the source: `pkit analysis validate` requires the
 # term anchors to match it, and each section's heading to be its term's name
 # with its first letter capitalized, such as `## Order` for the term `order`.
 # A diagram labels each concept's box the same way.

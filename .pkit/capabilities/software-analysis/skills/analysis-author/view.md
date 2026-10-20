@@ -34,7 +34,7 @@ The stamp anchors each term it explains, from `explains`. Add as `--record` each
 pkit analysis new view <slug> --number <number> --explains <TERM-id> [--explains <TERM-id>]... [--title "<Title>"] [--record <id>]...
 ```
 
-The stamp writes the view, with one section for each term, headed by the term's name in sentence case. It also writes each term's link to its section, on a line under the term's heading in the glossary. The check holds that line equal to the view.
+The stamp writes the view, with one section for each term, headed by the term's name in sentence case. Each section opens with its link to its term's entry, `Defined in [<TERM-id>](../glossary.md#<anchor>).`. It also writes each term's link to its section, on a line under the term's heading in the glossary. The check holds both lines.
 
 - **Sentence case** capitalizes the first letter alone, so the term `decision record` heads its section `## Decision record`. The rest keeps the name's case, so `pull request on GitHub` reads `Pull request on GitHub`.
 - **A name whose first word holds a capital already,** such as a proper name like `iPhone app`, stands as it is.
@@ -51,11 +51,21 @@ Each part holds its hint, which says what goes there and gives an example. Fill 
 - **One home for each fact.** A diagram shows only what the sections state. What a section states fits exactly what the term's definition fits, never more and never less. An obligation the system must keep is a functional requirement, which names the concept by its term (`requirement.md`).
 - **Its terms.** Write each concept by its term, a diagram's labels included (the shared framing's "Use the glossary's terms").
 
-Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first. Where the format rule binds, the check holds each section's heading to the name of the term `explains` lists in its place, in sentence case.
+Leave each section's link to its term as the stamp wrote it.
+
+## 7. Link it
+
+Run `pkit analysis link`. The first view an analysis holds turns the links on for the whole analysis, so this run links the glossary too (DEC-004 point 7).
+
+- **What it links.** The first mention of each term in each section, in the views and the glossary entries, to the term's entry. A term is never linked in its own section.
+- **A wrong link** is a finding: the section uses a term's name in another sense, so reword it (`RS-SAN-008`). The escape `<!-- pkit:not-the-term -->` right before a mention serves last, such as for a word in a quotation.
+- **Each later edit** of a view or an entry may move a link, so run the command again before the checks.
+
+Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first. Where the format rule binds, the check holds each section's heading to the name of the term `explains` lists in its place, in sentence case. Whatever any rule's status, it holds the links.
 
 ## Later
 
-- **A section added by hand.** Add its term to `explains`, in the section's place, and anchor the term. Write the term's link the check names, under the term's heading in the glossary. Moving a section to another view moves its term between the two lists, the two views' anchors and its link.
+- **A section added by hand.** Add its term to `explains`, in the section's place, and anchor the term. Write the term's link the check names, under the term's heading in the glossary, then run `pkit analysis link` for the section's link to its term. Moving a section to another view moves its term between the two lists, the two views' anchors and its link.
 - **Renumbering or renaming its file** keeps its id where the slug stays. Each term it explains then links to the new file: write each link the check names.
 - **Withdrawing** — set `status: withdrawn`, and remove each term's link to it. A withdrawn view explains nothing, so its terms may be explained by another view.
 - **A term renamed** renames its section's heading, in sentence case, and its link's section. A page anchored on the section's old slug is then dead, and validation fails until the change mends it.

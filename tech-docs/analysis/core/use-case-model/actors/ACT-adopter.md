@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-20T01:36:51Z
+      at: 2026-10-20T13:00:27Z
       outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
+      unchanged-because: software-analysis DEC-001 point 1 gains one name for one concept among terms, and two optional term fields for the links between terms. What an adopter is and needs is unchanged, so this actor holds as written.
 ---
 
 # ACT-adopter — Adopter
