@@ -11,10 +11,13 @@ nothing and is a workflow of its own (`test_friction_tracking_issue.py`).
 The short check (#1798, ADR-067): a step decides, before the aggregator, whether
 the run is full or short, and cannot fail the job. On a pull request the base's
 decider decides, checked out beside the tree and run against it; a base with
-none leaves the run full; on any other event this tree's decider only says why
-the run is full. Its shell runs here for real, against a stub `uv`. The two
-forms exclude each other, the run is full unless the step named the short
-check, and only a pull request runs the short one, by the workflow's own gate.
+none leaves the run full, and answers `full`; on any other event this tree's
+decider only says why the run is full. Its shell runs here for real, against a
+stub `uv`. The two forms exclude each other, the run is full unless the step
+named the short check, and only a pull request runs the short one, by the
+workflow's own gate. Where the deciding step gave no answer, as when it failed
+before the decider started, the full run's step says in the job's summary that
+the run is full; its shell runs here too, against a stub aggregator.
 Their steps' names are the marks `scripts/short_check.py` reads on earlier runs.
 The job may only read. The checkout keeps the token out of the clone, and of the
 steps that run the project's code, only the deciding step holds it.
@@ -120,9 +123,10 @@ def test_the_two_forms_exclude_each_other_and_only_a_pull_request_runs_the_short
     assert short["if"] == (
         "github.event_name == 'pull_request' && steps.form.outputs.mode == 'short'"
     )
-    assert full["run"] == "./scripts/check.sh"
+    assert full["run"].splitlines()[-1] == "./scripts/check.sh"
     assert short["run"] == "./scripts/check.sh --short"
-    assert full["env"] == short["env"]
+    form = {"PKIT_FORM_MODE", "PKIT_FORM_OUTCOME"}
+    assert {k: v for k, v in full["env"].items() if k not in form} == short["env"]
 
 
 # The deciding step's shell, run for real against a stub `uv` that logs what it ran
@@ -155,6 +159,8 @@ class Decider:
         self.log = root / "uv.log"
         self.summary = root / "summary"
         self.summary.touch()
+        self.output = root / "output"
+        self.output.touch()
         self.temp = root / "runner-temp"
         self.temp.mkdir()
         self.env = {
@@ -163,6 +169,7 @@ class Decider:
             "STUB_LOG": str(self.log),
             "RUNNER_TEMP": str(self.temp),
             "GITHUB_STEP_SUMMARY": str(self.summary),
+            "GITHUB_OUTPUT": str(self.output),
             "PKIT_DECIDER_BASE": "main",
         }
 
@@ -204,6 +211,8 @@ def test_a_base_with_no_decider_leaves_the_run_full_and_says_so(workflow, tmp_pa
     assert decider.ran() == []
     assert "the full run" in decider.summary.read_text()
     assert "no decider" in decider.summary.read_text()
+    # An answer, so the full run's step adds no second section to the summary.
+    assert decider.output.read_text() == "mode=full\n"
 
 
 @pytest.mark.parametrize("event", ["push", "merge_group"])
@@ -229,6 +238,85 @@ def test_a_base_that_cannot_be_checked_out_fails_the_step_and_decides_nothing(
 
     assert done.returncode != 0
     assert decider.ran() == []
+
+
+# The full run's step's shell, run for real over a stub aggregator that logs that it
+# ran and exits with the status it is given.
+STUB_CHECK = '#!/bin/sh\necho ran >> "$STUB_LOG"\nexit "${STUB_STATUS:-0}"\n'
+
+
+def _full_run(
+    workflow: dict[str, Any], root: Path, mode: str, outcome: str, status: str = "0"
+) -> tuple[subprocess.CompletedProcess[str], str, list[str]]:
+    """Run the full run's step's shell as GitHub would, with the deciding step's answer
+    `mode` and its outcome; return the result, the job's summary and what ran."""
+    (root / "scripts").mkdir()
+    (root / "scripts" / "check.sh").write_text(STUB_CHECK)
+    (root / "scripts" / "check.sh").chmod(0o755)
+    summary, log = root / "summary", root / "check.log"
+    summary.touch()
+    done = subprocess.run(
+        [
+            "bash",
+            "-e",
+            "-o",
+            "pipefail",
+            "-c",
+            _step(workflow["jobs"]["checks"], short_check.FULL_STEP)["run"],
+        ],
+        cwd=root,
+        env={
+            "PATH": os.environ["PATH"],
+            "GITHUB_STEP_SUMMARY": str(summary),
+            "STUB_LOG": str(log),
+            "STUB_STATUS": status,
+            "PKIT_FORM_MODE": mode,
+            "PKIT_FORM_OUTCOME": outcome,
+        },
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    ran = log.read_text().splitlines() if log.exists() else []
+    return done, summary.read_text(), ran
+
+
+def test_the_full_run_says_which_form_ran_where_the_deciding_step_gave_no_answer(
+    workflow, tmp_path: Path
+) -> None:
+    """The deciding step failed before the decider started, as where the base cannot be
+    checked out or `uv` cannot build its environment: nothing else says which form ran."""
+    full = _step(workflow["jobs"]["checks"], short_check.FULL_STEP)
+    assert full["env"]["PKIT_FORM_MODE"] == "${{ steps.form.outputs.mode }}"
+    assert full["env"]["PKIT_FORM_OUTCOME"] == "${{ steps.form.outcome }}"
+
+    done, summary, ran = _full_run(workflow, tmp_path, mode="", outcome="failure")
+
+    assert done.returncode == 0, done.stderr
+    assert ran == ["ran"]
+    assert summary.startswith("### `checks`: the full run\n")
+    assert "gave no answer (it ended in `failure`)" in summary
+    assert "ADR-067" in summary
+
+
+def test_the_full_run_adds_nothing_to_the_summary_where_the_deciding_step_answered(
+    workflow, tmp_path: Path
+) -> None:
+    done, summary, ran = _full_run(workflow, tmp_path, mode="full", outcome="success")
+
+    assert done.returncode == 0, done.stderr
+    assert ran == ["ran"]
+    assert summary == ""
+
+
+def test_the_full_run_fails_as_its_aggregator_does_after_the_fallback_line(
+    workflow, tmp_path: Path
+) -> None:
+    done, summary, ran = _full_run(workflow, tmp_path, mode="", outcome="failure", status="1")
+
+    assert done.returncode == 1
+    assert ran == ["ran"]
+    assert "the full run" in summary
 
 
 def test_the_runs_read_are_this_workflow_s_and_its_required_job_s(workflow) -> None:

@@ -75,8 +75,8 @@ jobs:
       # with no decider leaves the run full. On any other event this tree's
       # decider only says why the run is full. The decider writes `mode=short`
       # last, and only then. A failure here fails nothing: with no answer, the
-      # run is full. Of the steps that run the project's code, only this one
-      # holds the token.
+      # run is full, and the full run's step says so in the job's summary. Of
+      # the steps that run the project's code, only this one holds the token.
       - name: Decide the full run or the short check
         id: form
         continue-on-error: true
@@ -91,6 +91,7 @@ jobs:
           git worktree add --detach --quiet "$decider" "refs/remotes/origin/$PKIT_DECIDER_BASE"
           if [ ! -f "$decider/scripts/short_check.py" ]; then
             printf '### `checks`: the full run\n\nThe base holds no decider of the short check (ADR-067).\n' >> "$GITHUB_STEP_SUMMARY"
+            echo mode=full >> "$GITHUB_OUTPUT"
             exit 0
           fi
           exec uv run --project "$decider" --frozen python "$decider/scripts/short_check.py"
@@ -104,7 +105,16 @@ jobs:
           # alone and the base is never outdated. Push to main: against main
           # (no-op diff).
           PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
-        run: ./scripts/check.sh
+          # The deciding step's answer, and how that step ended. With no answer,
+          # as when it failed before the decider started, nothing has said in
+          # the job's summary which form ran, so this step says it (ADR-067).
+          PKIT_FORM_MODE: ${{ steps.form.outputs.mode }}
+          PKIT_FORM_OUTCOME: ${{ steps.form.outcome }}
+        run: |
+          if [ -z "$PKIT_FORM_MODE" ]; then
+            printf '### `checks`: the full run\n\nThe step that decides the short check gave no answer (it ended in `%s`), so the run is full (ADR-067).\n' "$PKIT_FORM_OUTCOME" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          ./scripts/check.sh
 
       # Every line of the aggregator but the test suite, of which it runs only
       # the tests marked `answers` (ADR-067). Its name is the mark the deciding

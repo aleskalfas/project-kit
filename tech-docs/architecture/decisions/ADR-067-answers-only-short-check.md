@@ -111,7 +111,7 @@ Such a test is marked `answers`, and the short check runs the marked tests.
 
 ### 9. What the job says, and what its token can do
 
-The job's summary says which form ran and why: the basis, with its run, or the reason the run is full. What a file's author or a tool named is set in code spans there, so none of it renders as Markdown.
+The job's summary says which form ran and why: the basis, with its run, or the reason the run is full. Where the deciding step gave no answer, as when it failed before the decider started, the full run's step says that the run is full, and how the deciding step ended. What a file's author or a tool named is set in code spans there, so none of it renders as Markdown.
 
 The job's token may only read the repository's contents, its runs and its pull requests. The checkout keeps the token out of the clone's configuration. Of the steps that run the project's code, only the deciding step is handed it.
 
