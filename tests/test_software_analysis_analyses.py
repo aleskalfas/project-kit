@@ -39,6 +39,7 @@ from tests.analysis_repo import (
     GLOSSARY,
     MAIN,
     SA,
+    SETTINGS_TEXT,
     VALIDATE,
     accepting_san,
     fill,
@@ -59,9 +60,7 @@ DIAGRAM = SA / "scripts" / "diagram.py"
 
 def listing(*entries: str) -> str:
     """The settings file listing `entries`, each an item of `analyses`."""
-    return "pkit_schema: software-analysis:config\nschema_version: 1\nanalyses:\n" + "".join(
-        entries
-    )
+    return SETTINGS_TEXT + "analyses:\n" + "".join(entries)
 
 
 CORE = "  - {component: core, folder: core}\n"
@@ -148,7 +147,7 @@ def test_a_single_analysis_needs_no_list_and_no_change(seeded: AdopterRepo) -> N
     """A project that lists nothing keeps its one analysis at the location's top, as
     every project did before several analyses could be kept: its artefacts pass, and the
     stamp writes there. Naming an analysis then is refused."""
-    assert not (seeded.root / SETTINGS).exists()
+    assert "analyses" not in (seeded.root / SETTINGS).read_text(encoding="utf-8")
     document = check(seeded)
     assert findings(document) == []
     assert not any("listed" in line for line in document["summary"])

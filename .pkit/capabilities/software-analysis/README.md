@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T21:11:25Z
+      at: 2026-10-20T22:11:23Z
       outcome: updated
 ---
 
@@ -970,9 +970,67 @@ flowchart LR
 - **Where a copy may go.** Never into an analysis artefact, and never into a view of the solution, such as an architecture page or a record (DEC-003 point 9). A copy on any other page is that page's diagram, and the page anchors each artefact it draws.
 - **Complete, or no answer.** A file of a place a diagram reads that holds no artefact of its kind gives no answer. So does an artefact there with no id of its kind's shape, or one in force whose list a diagram reads that is no list of ids, or, for the chain, a use case in force whose `after` is no list of lists. The command exits 1 and names the file, and `pkit analysis validate` says what is wrong with it. A subject that names no diagram, and a journey or a requirement not in force, give no answer too.
 - **`--json`** prints `{schema_version, diagrams}`. Each diagram is `{id, title, description, mermaid}`, its `mermaid` text without the fence.
-- **What comes later:** a generated overview of the analysis's diagrams, kept fresh in a folder of its own (DEC-003 point 8).
+- **Where readers see them:** in each analysis's overview, which the stamp keeps fresh ("The overview", below).
 
 It is a query: read-only and offline. It reads the working tree through the core's reading command, `pkit friction artefacts`, as the check does.
+
+## The overview: `pkit analysis overview`
+
+Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). A reader who opens the folder on GitHub sees what the analysis holds, in the order it is built, and why its areas are cut as they are.
+
+- **What it shows,** each artefact in force, linked, in the order an analysis is built (DEC-001 point 12):
+  - **Concepts:** the glossary, then each domain-model view in the order of its number, with the first paragraph of its opening, the problem its concepts solve. Each link in it is kept as its text. A view whose opening holds no text yet shows its title alone.
+  - **Actors.**
+  - **Requirements,** then their map, where there are any.
+  - **Areas,** in the order of their numbers, each with its goal and its use cases. Then the chain of use cases and the use-case diagram. Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead.
+  - **Journeys,** each with its flow, where there are any.
+
+  Each diagram is `pkit analysis diagram`'s own output, with its text alternative, in a section of its own.
+- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a view's opening or a goal. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
+- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=1 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that reads more of the analysis raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
+- **A missing overview** is a warning that names the command, so an upgrade fails nothing.
+- **Two branches** that each change what it shows conflict on it, as on a lock file: always on the fingerprint's line, and on each section both change. Resolve the conflict by running the command.
+- **Never edit it by hand.** It is a held document, listed as this capability's, and carries no anchors. Edit the analysis, then rewrite it.
+
+**Each area's goal.** One line for each area of your use cases, beside the area's folder name in the settings file ("Configuration", below), says what the area makes possible. The overview shows it under the area's heading, so a reader sees why the use cases are split as they are:
+
+```yaml
+analyses:
+  - component: core
+    folder: core
+    areas:
+      010-run: A suite runs against a sandbox, and its result can be read.
+      020-report: A failure's cause can be found and shared.
+```
+
+- **One analysis.** A project that lists no analyses writes `areas` at the file's top.
+- **Each analysis its own.** Each analysis numbers its own areas, so it keeps the goals of its own.
+- **The check.** `pkit analysis validate` fails a goal that names no folder of the use cases, such as one left behind when an area was renamed. Where you keep the overview, it also warns of an area of use cases in force without a goal.
+- **No areas.** A project whose use cases lie in no area keeps no goal.
+
+**Keeping none.** Set `overview: false` in the settings file. The stamp then writes none, `pkit analysis overview` refuses, and `pkit analysis validate` asks for no overview and no goal. It warns of an overview you leave in place, since nothing keeps it fresh.
+
+Here is the start of the overview of the analysis the examples above come from:
+
+```markdown
+# Overview of the analysis
+
+<!-- pkit:overview reads=1 fingerprint=sha256:… -->
+
+What the analysis holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
+
+## Concepts
+
+The [glossary](../glossary.md) defines each term.
+
+Each view of the domain model explains a group of related concepts:
+
+- [VIEW-runs-and-sandboxes — Runs and sandboxes](../domain-model/010-runs-and-sandboxes.md): A suite's tests change files, yet the files a suite starts from must stay as they were. Two concepts answer it: a run, one pass of the suite, and the sandbox it takes place in.
+
+## Actors
+
+- [ACT-tester — Test author](../use-case-model/actors/ACT-tester.md)
+```
 
 ## The method rule set: `SAN`
 
@@ -1155,7 +1213,7 @@ It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 The capability's project tier, `.pkit/capabilities/software-analysis/project/`, holds three files of yours, which sync never touches: the settings file, `config.yaml`, the recorded location, `docs-locations.yaml`, and your own structures, `structures.yaml` ("A project's own structures", above).
 
-The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off. There are two settings:
+The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off, but for the overview, which is kept. There are two settings here, and two more the overview reads, `areas` and `overview` ("The overview", above):
 
 ```yaml
 pkit_schema: software-analysis:config

@@ -139,6 +139,14 @@ What is checked, each against the record's words:
   whose links name another version than the floor its component declares is a
   warning. The head's text against that data is its form, held where the format
   rule binds.
+- **The overview and the areas' goals** (DEC-003 point 8; `_lib/overview.py`): for
+  each analysis the project keeps, an overview whose fingerprint no longer matches
+  what it draws is stale, an error naming its command, and one that carries no
+  fingerprint is an error too. A missing overview of an analysis that holds an
+  artefact is a warning, and so is one left in place while the setting keeps none.
+  A goal that names no folder of the use cases is an error, and, where the overview
+  is kept, an area of the use cases in force without a goal a warning. An overview
+  written under another version of what it reads is a warning too.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -301,6 +309,7 @@ from _lib import (
     evidence,
     links,
     markdown,
+    overview,
     project_structure,
     render,
     schemas,
@@ -434,6 +443,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _term_links(root, analysis)
     outcome.findings += _names(analysis, listing)
     outcome.findings += _mention_links(root, analysis, listing)
+    outcome.findings += overview.findings(root, analysis, listing)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:

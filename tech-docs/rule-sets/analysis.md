@@ -13,9 +13,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-20T13:00:20Z
+          at: 2026-10-20T22:11:42Z
           outcome: unchanged
-          unchanged-because: software-analysis DEC-001 points 1 and 2 gain one name for one concept among terms. The voice of a need or a goal is unchanged, so this rule holds as written.
+          unchanged-because: The change to DEC-001 points 1 and 2 concerns the overview, its folder and its quote of a view's opening. Needs and goals, and the voice they speak in, are untouched.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}
@@ -32,9 +32,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
         revalidated:
-          at: 2026-10-20T13:00:21Z
+          at: 2026-10-20T22:11:43Z
           outcome: unchanged
-          unchanged-because: software-analysis DEC-001 point 2 widens a term's name across the analyses it builds on. An area's number and its form are unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 point 2 changes only how it names the overview's folder. An area's folder name and its number are untouched, and an area's goal sits beside that name in the configuration.
   RS-ANA-007:
     status: proposed
     origin: {why: "A file listing shows the order in which the views build on each other only where their names carry it. Steps of 10 leave room for a new view between two, so no file is renamed. software-analysis leaves the number's form to each project (software-analysis DEC-004 point 4). The maintainer chose this form for project-kit's views on 19 October, with the areas' (the design note on analysis concepts and order, PR #1808)."}
@@ -54,9 +54,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-20T13:00:22Z
+          at: 2026-10-20T22:11:45Z
           outcome: unchanged
-          unchanged-because: software-analysis DEC-001 point 2 widens a term's name across the analyses it builds on. Which analysis holds an artefact is unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 point 2 calls the overview the reader's entry point. Each analysis keeps its own overview in its own folder, so where an artefact lies is untouched.
   RS-ANA-005:
     status: proposed
     origin: {why: "On 19 October, a map of project-kit's chain of use cases on main found five stages, each building on the ones before it. The maintainer took them as the core's areas (the design note on analysis concepts and order, PR #1808)."}
@@ -65,9 +65,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#2", "software-analysis:DEC-001#12"]
         revalidated:
-          at: 2026-10-20T13:00:23Z
+          at: 2026-10-20T22:11:47Z
           outcome: unchanged
-          unchanged-because: software-analysis DEC-001 point 2 widens a term's name across the analyses it builds on. The core's five areas are unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 point 2's change names the overview's folder as the reader's entry point. The core's five areas, and where its use cases lie, are untouched.
   RS-ANA-006:
     status: proposed
     origin: {why: "A link at the version a capability requires of another component names the definitions the capability was written against. software-analysis leaves the links' version to each project (software-analysis DEC-001 point 2). A floor is project-kit's mechanism, raised only when a change declares it (PRJ-002 D4). The maintainer's delegate chose the floor on 19 October, under the maintainer's standing delegation (the design note on analysis concepts and order, PR #1808)."}
@@ -76,9 +76,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#2", "PRJ-002#D4"]
         revalidated:
-          at: 2026-10-20T13:00:25Z
+          at: 2026-10-20T22:11:48Z
           outcome: unchanged
-          unchanged-because: software-analysis DEC-001 point 2 widens a term's name across the analyses it builds on, and DEC-004 links a mention to the entry its repository holds. The head's own links and the floor they name are unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 point 2 changes only its line on the overview's folder. The version a glossary head's links to another analysis name is untouched.
 ---
 
 # ANA — project-kit's rules for its analysis

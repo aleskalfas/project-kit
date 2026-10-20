@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-20T13:00:27Z
+      at: 2026-10-20T22:11:50Z
       outcome: unchanged
-      unchanged-because: software-analysis DEC-001 point 1 gains one name for one concept among terms, and two optional term fields for the links between terms. What an adopter is and needs is unchanged, so this actor holds as written.
+      unchanged-because: DEC-001 point 1 lets the overview quote a view's opening to readers. The adopter's need to choose each kind's parts as it adopts the analysis, which rests on that point, holds as written.
 ---
 
 # ACT-adopter — Adopter

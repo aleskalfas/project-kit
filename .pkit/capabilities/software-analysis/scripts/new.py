@@ -44,6 +44,11 @@ never moves where it numbers from (COR-054 point 3). `pkit analysis
 check-numbers` reports a number another branch took first. `_lib/stamp.py`
 states the rules.
 
+After it writes an artefact, it rewrites the overview of the analysis it wrote in,
+`overview/README.md`, where its bytes change, unless the project keeps none
+(DEC-003 point 8; `_lib/overview.py`). An overview it cannot draw in full is a
+warning, never a refusal: the artefact is written all the same.
+
 It also writes a revalidation record, `revalidations/<date>-<slug>.md`, and only
 one with something to say — a planned revalidation, one that found a
 regression or a gap (point 6), or one where a person decided an artefact was
@@ -95,7 +100,7 @@ from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import backbone, revalidation, schemas, stamp
+from _lib import backbone, overview, revalidation, schemas, stamp
 from _lib.model import (
     ACTOR,
     CONSTRAINT,
@@ -502,9 +507,16 @@ def main() -> int:
     except stamp.Refused as exc:
         print(f"refused: {exc}", file=sys.stderr)
         return 1
-    for note in stamped.notes:
+    notes, warnings = list(stamped.notes), list(stamped.warnings)
+    if args.kind != REVALIDATION:
+        # The overview of the analysis it wrote in, rewritten after the artefact (DEC-003
+        # point 8): a failure to draw it never fails the stamp, and names the command.
+        wrote, failed = overview.refresh(backbone.project_root(), args.analysis)
+        notes += [wrote] if wrote else []
+        warnings += [failed] if failed else []
+    for note in notes:
         print(note)
-    for warning in stamped.warnings:
+    for warning in warnings:
         print(f"warning: {warning}", file=sys.stderr)
     print(f"stamped {stamped.id} at {stamped.location}")
     return 0

@@ -49,6 +49,7 @@ from tests.analysis_repo import (
     NEW,
     NUMBERS,
     SA,
+    SETTINGS_TEXT,
     USE_CASES,
     installed,
     new,
@@ -133,14 +134,15 @@ def pilot_freed(repo: AdopterRepo) -> tuple[Entry, Entry]:
 
 
 def free(repo: AdopterRepo, *entries: Entry) -> None:
-    """The setting of `entries`, written in the working tree; none, no setting."""
+    """The setting of `entries`, written in the working tree; none, no setting. The
+    file keeps no overview, as `prepare` writes it (`SETTINGS_TEXT`)."""
     if not entries:
-        repo.write({SETTING: None})
+        repo.write({SETTING: SETTINGS_TEXT})
         return
     written = "".join(
         f'    - commit: "{commit}"\n      ids: [{", ".join(ids)}]\n' for commit, ids in entries
     )
-    repo.write({SETTING: f"schema_version: 1\nnumbering:\n  freed-by:\n{written}"})
+    repo.write({SETTING: f"{SETTINGS_TEXT}numbering:\n  freed-by:\n{written}"})
 
 
 def where(index: int, *pointer: str | int) -> str:

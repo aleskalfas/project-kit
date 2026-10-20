@@ -37,6 +37,7 @@ from tests.analysis_repo import (
     DOMAIN_MODEL,
     GLOSSARY,
     SA,
+    SETTINGS_TEXT,
     VALIDATE,
     accepting_san,
     fill,
@@ -686,7 +687,7 @@ def _three(repo: AdopterRepo) -> None:
     repo.write(
         {
             SETTINGS: (
-                "pkit_schema: software-analysis:config\nschema_version: 1\nanalyses:\n"
+                SETTINGS_TEXT + "analyses:\n"
                 "  - {component: core, folder: core}\n"
                 "  - {component: shipping, folder: shipping}\n"
                 "  - component: billing\n    folder: billing\n    builds-on:\n"
