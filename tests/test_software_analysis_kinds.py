@@ -331,8 +331,8 @@ PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
         ("verified-by", "label", "Verified by", True, None),
         ("imposed-by", "label", "Imposed by", True, None),
     ],
-    # Its heading, what its group covers with the class diagram, then one section for each
-    # concept it explains, headed by its term's name (DEC-004 point 2, #1817).
+    # Its heading, the problem its group's concepts solve with the class diagram, then one
+    # section for each concept it explains, headed by its term's name (DEC-004 point 2).
     VIEW: [
         ("heading", "heading", None, False, None),
         ("opening", "opening", None, False, None),
@@ -340,11 +340,13 @@ PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
     ],
 }
 
-#: The parts each section of a repeated section holds, in order (DEC-004 point 2): the
-#: explanation of the concept for a newcomer, then its attributes, its relations, its
-#: life cycle and what is always true of it, each of which may read `None.`.
+#: The parts each section of a repeated section holds, in order (DEC-004 point 2): what
+#: the concept is for, the explanation of the concept for a newcomer, then its attributes,
+#: its relations, its life cycle and what is always true of it. Each but the explanation
+#: may read `None.`.
 SECTION_PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
     VIEW: [
+        ("why", "label", "Why", True, None),
         ("explanation", "opening", None, False, None),
         ("attributes", "label", "Attributes", True, None),
         ("relations", "label", "Relations", True, None),

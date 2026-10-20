@@ -19,7 +19,7 @@ The capability's maintainer decided the domain model's shape on 19 October, with
 
 ## Decision
 
-**An analysis may keep a domain model: a few views beside the glossary, written by hand, one for each group of related concepts. A view explains each concept of its group in words and draws how they relate. It anchors the terms it explains and the records it rests on. The glossary stays one collection of terms. Each term a view explains links to its section, each section links back, and the first mention of a term in a section links to its entry.**
+**An analysis may keep a domain model: a few views beside the glossary, written by hand, one for each group of related concepts. A view explains each concept of its group in words, purpose first, and draws how they relate. It anchors the terms it explains and the records it rests on. The glossary stays one collection of terms. Each term a view explains links to its section, each section links back, and the first mention of a term in a section links to its entry.**
 
 In this record, a *view* is a domain-model view. A view of the solution, such as an architecture view, is always named in full.
 
@@ -37,11 +37,12 @@ A domain model explains the concepts of the analysis's domain and how they relat
 
 ### 2. What a view holds
 
-A view opens with what its group covers and the group's class diagram. Then it gives one section to each concept it explains.
+A view opens with the problem its group's concepts solve, and the group's class diagram. Then it gives one section to each concept it explains, whose first part says what the concept is for.
 - **What it explains,** as data: its front matter's `explains` lists, by their ids, the terms whose concepts it explains, in the order of its sections. It lists one term at least. A tool takes the terms from that list, never from the sections (DEC-001 point 1).
 - **Its heading:** its id and its title, such as `# VIEW-orders-and-payments — Orders and payments`.
-- **Its opening:** what the group covers, then the group's class diagram. The diagram shows the concepts, what relates to what, and attributes where they matter.
+- **Its opening:** the problem the group's concepts solve together, then the concepts named as the parts of its answer, then the group's class diagram. The diagram shows the concepts, what relates to what, and attributes where they matter.
 - **A section for each concept,** headed at the second level by its term's name in sentence case, such as `## Order`. Every heading at that level is such a section. A section holds, in order:
+  - what the concept is for, shipped as *Why*: the problem it answers, in plain words (point 3)
   - an explanation of the concept for a newcomer, in plain words
   - its attributes, shipped as *Attributes*: what each instance of the concept holds
   - its relations, shipped as *Relations*: how it relates to other concepts, such as those of its group or of a lower view (point 6)
@@ -49,13 +50,17 @@ A view opens with what its group covers and the group's class diagram. Then it g
   - what is always true of it, shipped as *Always true*: what holds of every instance, as the records decide it (point 3)
 
   A label with nothing to say reads `None.`, as in every kind (DEC-001 point 1). The section opens with its link to its term's entry, which is no part (point 7).
+- **Purpose first.** *Why* is each section's first part, and the explanation follows it as its consequence.
+  - **Its paragraph.** *Why* holds one paragraph, which starts on its label's line. The explanation is the text below it, after a blank line, with no label of its own. The structure reads a label listed right before an opening as its paragraph alone, so it tells the two apart.
+  - **`None.` where no record gives it.** A *Why* reads `None.` while no record the view anchors gives its concept's reason (point 3). It shows the missing reason, where a reason the writer made up would hide it.
+  - **One problem, its parts.** The opening states the problem once for the group. Each *Why* states its own concept's part of the answer.
 - **Sentence case** capitalizes the name's first letter alone, so the term `decision record` heads its section `Decision record`.
   - **A proper name keeps its own case,** as in `Pull request on GitHub`. A name whose first word holds a capital already, such as `iPhone app`, stands as it is.
   - **The name itself** stays as running text writes it, in the glossary and in prose (DEC-001 point 1). Only a heading and a diagram's box capitalize it.
 - **One declared structure.** The kind declares its structure as data, as every kind does (DEC-001 point 1). It is the first document kind with a section that repeats, once for each concept. So the schema of the structures gains a repeating section.
 - **The headings match the list.** Each section's heading is the name of the term `explains` lists in its place, in sentence case. This is a form of the repeating section, so it binds where the format rule binds, and at its status (DEC-001 point 1).
 - **One slug for each section.** The structure refuses two sections of one view whose headings give one slug. A page anchor on either would be ambiguous (COR-050 point 7).
-- **What a project adds.** A project may add labels to the opening, or to each concept's section, never a heading (DEC-001 point 1).
+- **What a project adds.** A project may add labels to the opening, or to each concept's section after its explanation, never a heading (DEC-001 point 1). So each section still opens with its purpose.
 - **Its diagrams** are Mermaid fences written by hand, each with its `accTitle` and its `accDescr`, and with no styling (DEC-003 points 2 and 10).
   - **Where they sit:** the class diagram in the opening, and a concept's state diagram in its *States*, after the text (DEC-003 point 2).
   - **A concept's box** is labelled by its term's name in sentence case, as its section is headed. No check reads a diagram, so the writer keeps to it.
@@ -70,6 +75,10 @@ Each section states its concept's attributes, relations and states in words. A v
 - **What is always true** of a concept is what its records decide, such as that an issued invoice is never changed. The section states it, and the view anchors the record that decides it (point 5).
 - **An obligation stays a requirement.** What the system must keep, such as a business rule across use cases, is a functional requirement ([software-analysis:DEC-002-analysis-requirements] point 1). The requirement names the concept by its term.
 - **The definition defines.** A term's `definition` defines its concept, as ISO 1087 has it, and is the home of its broader kind. The term's section explains that concept, restating the broader kind where it helps. What the section states fits exactly what the definition fits, never more and never less.
+- **A reason has its home in a record.** The opening and each *Why* state reasons: the problem the concepts solve, and what each concept is for. Each says again, in plain words, a reason that a record the view anchors gives in its Context or its Rationale (point 5). The view states no reason that no record gives.
+  - **Where no record gives one,** the *Why* reads `None.` (point 2). The opening, which always has something to say, then says what the group covers instead of its problem. A project that wants the reason stated records it, and the view then says it again.
+  - **No actor and no need.** A view comes before the actors (point 8). So a reason names no actor, and cites no actor's need. A role the domain holds, such as a customer, is named by its term (point 5).
+  - **No check reads a reason.** Whether a record gives it is read from words, so the writer keeps to it, as the hint asks.
 
 ### 4. Its place, its type and its id
 
@@ -86,7 +95,7 @@ Each section states its concept's attributes, relations and states in words. A v
 A view anchors each term it explains and each record it rests on. Nothing in the analysis anchors a view.
 - **Its terms,** by artefact anchors: exactly the terms its `explains` lists. The stamp writes them from the list. The capability's check holds them equal to the list, whatever any rule's status, as it holds a journey's anchors to its steps (DEC-001 point 4).
 - **Why its terms.** Using a term asks for no anchor on it (DEC-001, Rationale). A view explains what a term defines, so a changed definition asks whether its section still holds.
-- **Its records,** by record anchors: each record its statements cite or apply. Each fact it states as always true rests on the record that decides it.
+- **Its records,** by record anchors: each record its statements cite or apply. Each fact it states as always true rests on the record that decides it. Each reason its opening or a *Why* gives rests on the record whose Context or Rationale gives it (point 3).
 - **No code.** A view describes the domain, never the software. The stamp writes no path anchor on a view, and the check refuses one.
 - **What it explains:**
   - **terms of its own analysis alone.** A term that the head of its glossary lists from another analysis is explained there (DEC-001 point 2).
@@ -188,6 +197,24 @@ A documentation page that is no architecture view may rest on a view's section (
 
 **Why views beside the glossary.** A definition says what one concept is. It cannot show how several fit together, nor how one moves through its states. A diagram with words beside it shows both. A newcomer reads it before the use cases that act on those concepts.
 
+**Why purpose first.** A person who explains something starts from the need behind it, and the description follows as its consequence. A view that opens each section with what its concept is reads as reference, an inventory of what is. The domain model was meant as explanation from the start. The maintainer chose purpose first on 20 October, on reading the core's first views ([project-kit#1838](https://github.com/aleskalfas/project-kit/pull/1838), [project-kit#1845](https://github.com/aleskalfas/project-kit/issues/1845)).
+- **Documentation** tells explanation apart from reference, as Diátaxis does. Explanation gives the reasons, and reference describes what is.
+- **Goal-oriented requirements engineering,** such as KAOS, derives the concepts from the goals they serve. A view comes before the actors' needs (point 8), so it takes its goals from the records instead.
+- **The opening** states the problem once for the group, so each *Why* states only its concept's part of the answer.
+
+**Why the reasons come from records.** A view comes before the actors and the requirements in the build order (DEC-001 point 12). So it cannot rest a reason on a need. A record's Context and its Rationale already hold why the project has each concept. The record stays the reason's home, and a changed record flags the view through its anchor. A reason no record gives would be the writer's alone, and no revalidation would reach it.
+- **Said again, unlike a requirement's.** A requirement's *Rationale* reads `None.` where a record it rests on gives the reason (DEC-002). A *Why* says the record's reason again. A newcomer reads a view first, before any record, and purpose first is the view's point. The record still decides, and the anchor keeps the two in step.
+- **Why `None.` where no record gives it.** A writer pressed to fill every *Why* would make a reason up, and no check could tell it from a recorded one. `None.` shows the gap instead.
+
+**What that costs.**
+- **A whole record.** A record's parts are its points, and its Context and its Rationale are none (COR-050 point 2). So a reason anchors its whole record, and any edit to the record flags the view, for a short answer.
+- **Reasons kept elsewhere.** A project whose reasons lie in documents and no record writes `None.`, since a view anchors no path (point 5). Recording them is the project's choice.
+
+**Why the explanation takes no label.** The explanation follows the *Why* as its consequence, in prose. A label on it would make each section read as a form. So the structure reads a label listed right before an opening as its paragraph alone, and the opening as the text below it.
+- **Its cost.** A writer who joins the two paragraphs is told the explanation is missing. One who writes the *Why* below its label, after a blank line, is told the *Why* is empty.
+- **Text above the *Why*,** below the section's link to its term, belongs to no part, as text above a use case's *Goal* does. No check reads it, so the writer keeps the *Why* first.
+- **By its place.** The rule reads a label by where the structure lists it, so it holds for any kind that lists a label before an opening. Read any other way, such a label would take the opening's lines.
+
 **Why hand-written views, not generated ones.** A term holds no relation to another as data, so nothing could draw one. Making relations and states data would add fields to every concept, more structure than the domain needs. Generated views per concept can come later, if hand-written ones prove a burden (COR-007).
 
 **Why one view for each group.** One file for the whole domain model would be long to read, and would conflict on every branch that touched it. A file for each concept would scatter the relations its group shares. A group is what a reader takes in at once.
@@ -247,6 +274,13 @@ A documentation page that is no architecture view may rest on a view's section (
 - **A prefix of the domain model's own, such as `DMV-`.** Not taken. `VIEW-` was settled with the ids across analyses ([project-kit#1808](https://github.com/aleskalfas/project-kit/pull/1808)), and a reader knows the word. Its cost: a project whose own artefacts take `VIEW-` ids must keep their slugs apart from its views'.
 - **A heading and a box in the name as running text writes it.** Rejected. In lower case, they read oddly.
 - **Title case, each word of the name capitalized.** Rejected. It changes more of the name than a heading needs, and makes a common noun read as a proper name.
+- **The *Why* after the explanation, or folded into it.** Rejected. A reader would meet what a concept is before what it is for, and the view would read as reference again.
+- **A label on the explanation, such as *What it is*.** Not taken. Each section would read as a form of labels. Without it, the structure reads the *Why* as one paragraph.
+- **A paragraph extent declared on the element, such as `extent: paragraph` on *Why*.** Not taken. A label listed before an opening can be read no other way, so a field would only restate its place.
+- **A *Why* that never reads `None.`, its reason recorded first where none is.** Rejected. A writer pressed to fill it would make a reason up, and a record written only to hold a reason would decide nothing.
+- **A *Why* that names the record it rests on, as *Always true* does.** Not taken. A *Why* is read first, in plain words, and the view's anchors name its records.
+- **A *Why* that names the actors and the needs its concept serves.** Rejected. The actors come after the views, so a view would use what the build order puts after it (DEC-001 point 12).
+- **A check that each reason lies in a record the view anchors.** Not taken. Whether a record gives a reason is read from words, a reader's judgement.
 - **The terms a view explains read from its headings.** Rejected. The stamp would take data from a body, which DEC-001 point 1 keeps from every tool but the check.
 - **A shipped part for the diagrams, after the opening.** Rejected. DEC-003 point 2 decides that no kind ships a part for diagrams. The opening and *States* hold them as free text instead.
 - **A check that asks each view for a class diagram.** Not taken. A view of one concept may have nothing to draw, and the hints ask for it.
@@ -281,10 +315,12 @@ A documentation page that is no architecture view may rest on a view's section (
   - **The links command,** `pkit analysis link`, writes the section's link and the mentions' links (point 7).
   - **Who runs the command.** The authoring skill runs it after a term or a view is written. Whoever applies a revalidation that rewords a section runs it too.
   - **The structure holds** a view's headings to the names of the terms its `explains` lists, in sentence case, where the format rule binds. The stamp writes them so. Each heading gives a slug of its own (point 2).
+  - **The structure holds each section's *Why*** where the format rule binds, as it holds the section's other parts: present, before the explanation and the section's labels, and filled or `None.`. The stamp writes it with its hint. The structure reads it as its paragraph alone, and the explanation below it (point 2).
+  - **A project's own structure** that places an addition to a concept's section before its explanation is refused, as one that places it before any opening is.
   - **The structures' schema** refuses an added heading in a view, and gains the repeating section with no new `schema_version`.
   - **A section added by hand** is added to `explains` too. How the anchor and the link are then written is the build's to settle, and the README says how.
 - **`SAN`'s judgement rules read views,** proposed with its other rules, so `SAN` keeps its version (COR-051 point 4):
-  - The rule on anchors lists what a view anchors (point 5). It leaves the term anchors to the check.
+  - The rule on anchors lists what a view anchors (point 5), the records its reasons come from among them. It leaves the term anchors to the check.
   - The rule on domain concepts reads a view's sections and its diagrams as statements. It judges a section against its term's definition (point 3).
   - A new rule holds the order of point 6, with this record as its origin.
 - **DEC-001** points 1, 2, 3, 4 and 12 name what this record adds to them.

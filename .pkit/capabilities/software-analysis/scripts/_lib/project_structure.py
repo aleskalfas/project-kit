@@ -46,7 +46,9 @@ project being the one to mend it (COR-055 point 1):
   that it retired
 - an id or a label two parts take, and a cycle of additions
 - a part placed between an element and the opening that follows it, which
-  would take the opening's lines
+  would take the opening's lines, or before a label listed right before an
+  opening: a domain-model view's *Why* and its explanation come first in each
+  section (DEC-004 point 2)
 - a heading of any level but the one just below the kind's own first heading:
   a shallower one would end the artefact's or the entry's section, and a deeper
   one would read as the content of the part before it. A domain-model view
@@ -63,7 +65,6 @@ changes nothing, and is reported (`Own.notes`).
 from __future__ import annotations
 
 import dataclasses
-import itertools
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -307,12 +308,7 @@ class _Reading:
             kind.sections,
             *(section_elements(e) for e in kind.sections if e.type == REPEATED),
         ]
-        opened = {
-            before.id: after.id
-            for run in runs
-            for before, after in itertools.pairwise(run)
-            if after.type == OPENING
-        }
+        opened = _opened(runs)
         top = min((e.level or 1 for e in kind.sections if e.type == HEADING), default=0)
         added: dict[str, tuple[Group, int]] = {}
         texts: dict[str, str] = {}
@@ -389,12 +385,21 @@ class _Reading:
                 )
             elif after not in shipped and after not in added:
                 self.problem(here, _unknown(kind, after, "names after"))
+            elif after in opened and opened[after][1] is not None:
+                opening, lead = opened[after]
+                self.problem(
+                    here,
+                    f"the {kind.name}'s `{lead}` and the opening text below its paragraph, "
+                    f"`{opening}`, come first in each of its sections: a part placed after "
+                    f"`{after}` would come before or between them. So name `{opening}`, and "
+                    f"the part comes after the opening (DEC-004 point 2)",
+                )
             elif after in opened:
                 self.problem(
                     here,
                     f"the {kind.name}'s opening text follows `{after}`, and a part placed "
-                    f"between them would take the opening's lines: name `{opened[after]}`, so "
-                    f"the part comes after the opening",
+                    f"between them would take the opening's lines: name `{opened[after][0]}`, "
+                    f"so the part comes after the opening",
                 )
             elif _in_cycle(element_id, {i: g.additions[n].after for i, (g, n) in added.items()}):
                 self.problem(
@@ -410,6 +415,25 @@ class _Reading:
             render.field_hint(Field(name, change.hint or "", change.example or ""))
         except ValueError as exc:
             self.problem(here, f"{exc}: a hint or an example holds no `-->` and no line break")
+
+
+def _opened(runs: Iterable[Sequence[Element]]) -> dict[str, tuple[str, str | None]]:
+    """Each element an addition may not follow, by its id: one listed before an opening
+    of its run, since the opening's previous element. Each gives the opening's id, and
+    the label listed right before the opening, `None` where there is none. Such a label
+    holds its paragraph alone, as a domain-model view's *Why* does, and the two come
+    first in each section (DEC-004 point 2)."""
+    opened: dict[str, tuple[str, str | None]] = {}
+    for run in runs:
+        since = 0
+        for j, element in enumerate(run):
+            if element.type != OPENING:
+                continue
+            lead = run[j - 1].id if j and run[j - 1].type == LABEL else None
+            for before in run[since:j]:
+                opened[before.id] = (element.id, lead)
+            since = j + 1
+    return opened
 
 
 def _level(kind: str, level: int, top: int) -> str:

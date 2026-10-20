@@ -62,9 +62,8 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-20T13:00:04Z
-          outcome: unchanged
-          unchanged-because: DEC-001 points 2 and 11 and DEC-004 gain the links between terms, which draw no anchor, and one name across analyses. What each kind anchors is unchanged, so this rule holds as written.
+          at: 2026-10-20T18:30:57Z
+          outcome: updated
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -107,8 +106,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-20T13:00:07Z
-          outcome: updated
+          at: 2026-10-20T18:30:54Z
+          outcome: unchanged
+          unchanged-because: DEC-004 point 3 gains where a view's reasons have their home, in the records it anchors. A section still explains its term's concept in the term's own sense, and its Why is a statement this rule reads like any other.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -145,9 +145,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
         revalidated:
-          at: 2026-10-20T13:00:10Z
+          at: 2026-10-20T18:30:52Z
           outcome: unchanged
-          unchanged-because: DEC-004 gains the links between terms and views in point 7, and its summary says so. A view's number and the views it may use are unchanged, so this rule holds as written.
+          unchanged-because: The change adds purpose first to DEC-004's points 2, 3 and 5. The order of the views in point 6, and their numbers in point 4, are as before, so a view still names only concepts of views numbered lower.
   RS-SAN-012:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -284,7 +284,7 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
   - **Views.** A *view* named alone in this rule is an architecture view. A domain-model view is always named in full.
   - **What its anchors name.** What its kind anchors to, where a change to it can make one of its statements false. This list is whole:
     - An actor or a term rests on the code and the decisions that embody it. A term whose `definition` names a term the glossary's head lists also rests on that term.
-    - A domain-model view rests on each term it explains, and the decisions its statements cite or apply. Each fact it states as always true rests on the record that decides it. It rests on no code, since it describes the domain, never the software.
+    - A domain-model view rests on each term it explains, and the decisions its statements cite or apply. Each fact it states as always true rests on the record that decides it. Each reason its opening or a section's *Why* gives rests on the record whose Context or Rationale gives it. It rests on no code, since it describes the domain, never the software.
     - A use case rests on its `actor` and its `other-actors`, each requirement in its `requirements`, the code it exercises and the decisions it cites or applies. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of the use case's statements names it, since a change to it can leave the use case untrue of the system.
     - A journey rests on its actor, the use cases of its `steps` and its `relies-on`, each requirement in its `requirements`, and the code and decisions at its seams.
     - A requirement rests on each actor in its `actors`, each requirement in its `refines`, and the decisions it cites or applies. It also rests on the narrow code that holds it and the files that verify it. Its anchors also name each decision that answers it and each architecture view that realises it. Each is asked for even where none of its statements names it.

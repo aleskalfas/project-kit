@@ -3258,19 +3258,29 @@ def _named(element: structure.Element, elements: Sequence[structure.Element]) ->
         return f"its `{marks} ` heading"
     index = list(elements).index(element)
     following = next((e for e in elements[index + 1 :] if e.type != structure.OPENING), None)
+    if index and elements[index - 1].type == structure.LABEL:
+        # Below a label's paragraph, such as a view's explanation below its *Why*.
+        return "its text" if following is None else f"the text before {_named(following, elements)}"
     if following is None:
         return "its opening text"
     return f"the opening text before {_named(following, elements)}"
 
 
 def _place(element: structure.Element, elements: Sequence[structure.Element]) -> str:
-    """Where the element goes: first, or after the element listed before it."""
+    """Where the element goes: first, or after the element listed before it. An opening
+    below a label goes after the label's paragraph, a blank line between them, as a
+    view's explanation goes below its *Why* (DEC-004 point 2)."""
     index = list(elements).index(element)
     if index == 0:
         return "and it comes first"
     previous = elements[index - 1]
     if previous.type == structure.OPENING:
         return "and it comes after its opening"
+    if element.type == structure.OPENING and previous.type == structure.LABEL:
+        return (
+            f"and it comes after the paragraph of {_named(previous, elements)}, a blank line "
+            f"between them"
+        )
     return f"and it comes after {_named(previous, elements)}"
 
 

@@ -54,7 +54,8 @@ VIEW = f"{DOMAIN_MODEL}/010-orders-and-payments.md"
 def _view(linked: bool) -> str:
     """The view's body below its front matter, as a writer fills it or, `linked`, as `pkit
     analysis link` writes it: an opening, and one section for each term it explains, each
-    opening with the link the stamp writes. Each safeguard meets a mention here."""
+    opening with the link the stamp writes, then its *Why*, which no record gives here.
+    Each safeguard meets a mention here."""
 
     def k(text: str, slug: str) -> str:
         return f"[{text}](../glossary.md#term-{slug}--{slug})" if linked else text
@@ -79,6 +80,8 @@ def _view(linked: bool) -> str:
             "",
             "Defined in [TERM-order](../glossary.md#term-order--order).",
             "",
+            "**Why:** None.",
+            "",
             f"An order is what a {k('customer', 'customer')} asks the shop to send. Orders "
             f"wait for a {k('payment method', 'payment-method')}, and a "
             f"{k('payment', 'payment')} settles them.",
@@ -94,6 +97,8 @@ def _view(linked: bool) -> str:
             "## Payment",
             "",
             "Defined in [TERM-payment](../glossary.md#term-payment--payment).",
+            "",
+            "**Why:** None.",
             "",
             f"A payment settles {k('orders', 'order')}. Customer service answers for a "
             f"{k('customer', 'customer')}, and a pre-order or an order-form holds no order. "
@@ -244,7 +249,7 @@ def test_the_stamp_opens_each_section_with_its_link_to_its_term(
     body = _body(repo, f"{DOMAIN_MODEL}/020-lines.md")
     assert (
         "## Line item\n\nDefined in [TERM-line-item](../glossary.md#term-line-item--line-item)."
-        "\n\n<!-- pkit:hint " in body
+        "\n\n**Why:** <!-- pkit:hint " in body
     )
 
 
@@ -285,7 +290,7 @@ def test_the_check_reports_each_link_missing_extra_or_stale_and_names_the_comman
     )
     assert (
         VIEW,
-        "line 31: `customer` is the first mention of TERM-customer in its section, and takes "
+        "line 33: `customer` is the first mention of TERM-customer in its section, and takes "
         "a link to its entry, `../glossary.md#term-customer--customer` — run `pkit analysis "
         "link`, which writes the links (DEC-004 point 7)",
     ) in found
@@ -303,12 +308,12 @@ def test_the_check_reports_each_link_missing_extra_or_stale_and_names_the_comman
     project.write({VIEW: defined})
     messages = sorted(m.split(" — ")[0] for _l, m in _validate(project))
     assert messages == [
-        "line 35: `payment` links to a glossary entry, `../glossary.md#term-payment--payment`, "
+        "line 37: `payment` links to a glossary entry, `../glossary.md#term-payment--payment`, "
         "where no link belongs: only the first mention of a term in force in each section "
         "takes one, never in its own section, nor after `<!-- pkit:not-the-term -->`",
-        "line 41 heads a section with no link to its term: each section opens with "
+        "line 43 heads a section with no link to its term: each section opens with "
         "`Defined in [TERM-payment](../glossary.md#term-payment--payment).`",
-        "line 43: `orders` links to `../glossary.md#term-old--old`, and its term's entry is "
+        "line 47: `orders` links to `../glossary.md#term-old--old`, and its term's entry is "
         "`../glossary.md#term-order--order`",
     ], messages
     link(project)

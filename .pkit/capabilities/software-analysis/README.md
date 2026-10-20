@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T13:00:28Z
+      at: 2026-10-20T18:31:00Z
       outcome: updated
 ---
 
@@ -204,7 +204,7 @@ Where an analysis keeps a domain model, `pkit analysis link` links its terms whe
 - **A phrase in another sense.** A phrase a term lists in `other-senses` never links that term. Another term inside the phrase may still link.
 - **An escape for one mention.** `<!-- pkit:not-the-term -->` right before a mention marks it as no mention. It takes no link, and the next mention counts as the first. Use it last, where no rewording helps, such as a word in a quotation.
 - **A wrong link is a finding.** In a view, a link on a word used in another sense shows a statement `RS-SAN-008` asks you to reword. In a glossary entry, list the phrase in `other-senses`, or escape the one mention.
-- **A name two terms share** links neither, and `pkit analysis validate` refuses the pair (The artefacts, below).
+- **A name two terms share** links neither. Two terms never share one: see one name, one concept, under the glossary in [The artefacts](#the-artefacts), below.
 - **Written, never by hand.** It writes a file only where a link changes, whole or not at all, with the file's own line endings, and names each file it wrote. A link to a glossary entry written by hand is rewritten as the command's.
 - **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. So run it after you add or rename a term, or reword a view or an entry.
 - **What a moved link costs.** A link is part of the content that holds it. So a moved link flags whatever anchors that entry's term, such as the view that explains it, or that section of a view. Answer each with a revalidation.
@@ -215,6 +215,8 @@ A section of the example view below, linked:
 ## Sandbox
 
 Defined in [TERM-sandbox](../glossary.md#term-sandbox--sandbox).
+
+**Why:** A suite's tests must never change the files the suite starts from.
 
 A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart from the tester's workspace.
 ```
@@ -390,7 +392,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 - **Two optional fields** serve the links between terms ([Linking terms](#linking-terms-pkit-analysis-link), above), so write them by hand where your analysis keeps a domain model (DEC-001 point 1):
   - **`noun-forms`** lists other forms of the name as a noun, such as `[sandboxes]`, each one that cannot read as a verb. A language that inflects its nouns lists more of them, such as their cases.
   - **`other-senses`** lists each phrase in which the name has another sense, one the distinctions tell apart, such as `[sandbox mode]`. Each phrase holds one of the term's names, and more.
-- **One name, one concept.** No two terms in force share a name, a noun form counted, ignoring case, and no term takes a name another term replaces. `pkit analysis validate` refuses each, whatever any rule's status, as it refuses a shared id. When two concepts need one word, give each a qualified name, such as `business process` and `system process` (DEC-001 points 1 and 2; `RS-SAN-012`).
+- **One name, one concept.** No two terms in force share a name, a noun form counted, ignoring case, and no term takes a name another term in force replaces. `pkit analysis validate` refuses each, whatever any rule's status, as it refuses a shared id. When two concepts need one word, give each a qualified name, such as `business process` and `system process` (DEC-001 points 1 and 2; `RS-SAN-012`).
 - **Its body** opens with the file's head, which the stamp writes once. Then it has one `## <id> — <name>` section per entry.
 
 **The glossary's head.** In an analysis that builds on others, the head lists what it takes from each (DEC-001 point 2). Its front matter holds the data, `builds-on`, a list, so no reader takes it for a term. The opening below the heading shows it:
@@ -445,7 +447,7 @@ pkit:
 
 # VIEW-runs-and-sandboxes — Runs and sandboxes
 
-The concepts of running a suite, and the [sandbox](../glossary.md#term-sandbox--sandbox) each [run](../glossary.md#term-run--run) takes place in.
+A suite's tests change files, yet the files a suite starts from must stay as they were. Two concepts answer it: a [run](../glossary.md#term-run--run), one pass of the suite, and the [sandbox](../glossary.md#term-sandbox--sandbox) it takes place in.
 
 ```mermaid
 classDiagram
@@ -459,6 +461,8 @@ classDiagram
 ## Run
 
 Defined in [TERM-run](../glossary.md#term-run--run).
+
+**Why:** A result must say which pass of a suite it comes from, and what that pass changed.
 
 A run is one pass of a suite, from its start to its result.
 
@@ -474,6 +478,8 @@ A run is one pass of a suite, from its start to its result.
 
 Defined in [TERM-sandbox](../glossary.md#term-sandbox--sandbox).
 
+**Why:** A suite's tests must never change the files the suite starts from.
+
 A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart from the tester's workspace.
 
 **Attributes:** None.
@@ -488,7 +494,11 @@ A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart fr
 - **Its file's name** opens with a number and a hyphen, which give the view's place in the domain model's order, in the form you choose. Its id is `VIEW-` and the rest of the name, so a view given another number keeps its id (DEC-004 point 4).
 - **`explains`** lists the terms whose concepts it explains, one at least, in the order of its sections. Each is a term of its own analysis, in force while the view is. No two views in force explain one term.
 - **Its sections.** Each is headed by the name of the term `explains` lists in its place, in sentence case: its first letter capitalized, the rest as the name writes it (DEC-004 point 2). So the term `sandbox` heads its section `## Sandbox`. A name whose first word holds a capital already, such as `iPhone app`, stands as it is. A diagram labels each concept's box the same way, which no check reads. In the glossary and in prose, the name stays as running text writes it (DEC-001 point 1). No two headings give one slug, so a page anchored on one, such as `VIEW-runs-and-sandboxes#sandbox`, names one section.
-- **Its anchors.** Each term `explains` lists is an artefact anchor, which the stamp writes, and the check requires them to match the list. A changed definition then flags the view that explains it. It also anchors the records its statements cite or apply, and no code. Nothing in the analysis anchors a view (DEC-004 point 5).
+- **Purpose first** (DEC-004 points 2 and 3):
+  - **The opening** states the problem the view's concepts solve together, and names them as the parts of its answer.
+  - **Each section's first part is *Why*:** what its concept is for, in one paragraph that starts on the label's line. The explanation follows it, after a blank line, with no label.
+  - **Its reasons** say again, in plain words, what the Context or the Rationale of a record the view anchors gives. They name no actor. Where no record gives one, *Why* reads `None.`.
+- **Its anchors.** Each term `explains` lists is an artefact anchor, which the stamp writes, and the check requires them to match the list. A changed definition then flags the view that explains it. It also anchors the records its statements cite or apply, those its reasons come from among them, and no code. Nothing in the analysis anchors a view (DEC-004 point 5).
 - **Its order.** A view names a concept that another view of its analysis explains only where that view's number is lower (`RS-SAN-011`).
 - **Each term's link.** A term a view in force explains carries an unlabelled line under its heading in the glossary, before its first part, that links to its section. The stamp writes it, and the check holds it equal to the view, whatever any rule's status (DEC-004 point 7). A term no view explains carries none. For the view above:
 
@@ -501,7 +511,7 @@ A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart fr
   ```
 
   The link is part of the term's content, so a change to it flags whatever anchors the term. A view renumbered or renamed, a section added, moved or taken out, and a view withdrawn each change a link.
-- **Each section's link to its term, and the mentions' links.** Each section opens with its link to its term's entry, which the stamp writes, and the first mention of each term in each section links to its entry. `pkit analysis link` writes both, and the check holds them ([Linking terms](#linking-terms-pkit-analysis-link), above).
+- **Its links to the glossary:** see [Linking terms](#linking-terms-pkit-analysis-link), above.
 - **A section added by hand.** Add its term to `explains`, in the section's place. Then write the term anchor and the term's link that the check names: its message gives the anchors to write, and the line, word for word. Moving a section to another view moves its term between the two lists, their anchors and its link, in the same change.
 
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
@@ -662,8 +672,8 @@ Each kind's structure is declared once, as data, in `schemas/artefact-kinds.yaml
 - **A kind shown beside its id.** A requirement's kind names itself in `shown-as`, such as `Quality`, and its heading reads `# <id> · <shown-as> · <title>` (DEC-002 point 2). An actor, a use case and a journey show none, and are headed `# <id> — <title>`, an actor by its name. Your own structures relabel no `shown-as`.
 - **Each element of a body** has an `id`, permanent once shipped, and a `type`. A part a kind retires is listed under its `retired` ids, never renamed, and its id is never given again. No kind has retired one yet. The types:
   - `heading`: a heading's `level` and, where the kind fixes it, its `text`
-  - `label`: a bold label, such as `**Goal:**`, that opens a paragraph or a top-level list item
-  - `opening`: the text before the first label, such as an actor's description
+  - `label`: a bold label, such as `**Goal:**`, that opens a paragraph or a top-level list item. A label listed right before an opening holds its paragraph alone, up to the first blank line, as a view's *Why* does.
+  - `opening`: the text before the first label, such as an actor's description, or below the paragraph of the label listed right before it, such as a view's explanation
   - `repeated`: a section that repeats, once for each entry of a front-matter list, each headed at its `level` and holding the parts its own `sections` give. A view's section for each concept is one (DEC-004 point 2). Every heading of its level is one of its sections.
 - **Every part is required.** A part with nothing to say reads `None.`, where its element sets `allows-none: true`. A front-matter field a writer fills may say the same: `allows-none: true` lets it read `None.`, as a requirement's `measure` may, and `false` refuses it, as a requirement's `applies-to` does. A field that says neither is judged by its form alone.
 - **A hint and an example** go with each part and each front-matter field a writer fills, one line each. A hint says what goes there. A heading the stamp writes has an example and no hint.
@@ -678,7 +688,7 @@ The parts each kind ships:
 | `use-case` | the heading, *Goal*, *Other actors*, *Preconditions*, *Assumptions*, *Trigger*, *Main path*, *Variants*, *Postconditions*, *Minimal guarantees* | *Other actors*, *Preconditions*, *Assumptions*, *Variants*, *Minimal guarantees* | none |
 | `journey` | the heading, *Goal*, *Steps*, *Variants*, *Postconditions*, *Minimal guarantees* | *Variants*, *Minimal guarantees* | none |
 | `term` | each entry's heading, *Example*, *Distinctions* | *Example*, *Distinctions* | `name`, `definition` of the form `definition`, and `replaces` |
-| `domain-model-view` | the heading, an opening, then a section for each concept: its heading, an explanation, *Attributes*, *Relations*, *States*, *Always true* | *Attributes*, *Relations*, *States*, *Always true* | none |
+| `domain-model-view` | the heading, an opening, then a section for each concept: its heading, *Why*, an explanation, *Attributes*, *Relations*, *States*, *Always true* | *Why*, *Attributes*, *Relations*, *States*, *Always true* | none |
 | `revalidation-record` | the heading, `## Outcomes`, `## Gaps` | *Gaps* | `reviewed-against` |
 | `quality-requirement` | the heading, *Verified by*, *Rationale* | *Verified by*, *Rationale*, and the field `measure` | `statement` of the form `sentence`, `measure`, `applies-to`, `actors` and `refines`. `statement` and `applies-to` never read `None.` |
 | `functional-requirement` | the heading, *Verified by*, *Rationale* | *Verified by*, *Rationale*, and the field `measure` | the same as a quality requirement's |
@@ -768,6 +778,7 @@ kinds:                    # keyed by kind, never by file
 - a part, a field or an `after` the kind does not hold, or one it retired (a kind's `retired` ids in `schemas/artefact-kinds.yaml`)
 - an id or a label two parts take, a label holding `*`, and a cycle of additions
 - a part placed between a title heading and the opening text below it, which would take the opening's lines: name `opening` instead
+- a part placed before a domain-model view section's explanation, after its heading or its *Why*: the two come first in each section (DEC-004 point 2). Name `explanation` instead
 - a heading of any level but the one just below the kind's own heading: a shallower one would end the artefact's section, and a deeper one would read as the content of the part before it
 - a heading in a domain-model view, of any level: its headings are its title and its concepts' sections (DEC-004 point 2). A label added after `opening` goes in its opening, and one after a part of a concept's section goes in each of its sections
 - a label for a part with no text, and a hint for a heading the stamp writes
@@ -821,8 +832,8 @@ While any of these stands, none of the file applies: the check holds no body to 
 - **a term two views in force explain** — the view whose path sorts first keeps it, and each other is named, at its `explains`;
 - **a view whose term anchors do not match its `explains`**, or that carries a path anchor (a view's anchors, in [The artefacts](#the-artefacts), above). The message names the anchors to write;
 - **a term's link that does not match the view that explains it** — missing, written otherwise, written twice, or left where no view in force explains the term. The message gives the line to write, word for word (DEC-004 point 7);
-- **a link between terms and views that `pkit analysis link` would write otherwise** — in an analysis that keeps a domain model, a section's link to its term, or a mention's link, missing, extra or stale. The message gives the line and names the command, which mends it ([Linking terms](#linking-terms-pkit-analysis-link), above);
-- **two terms in force of one name** — a `name` or a noun form two terms hold, ignoring case, or a name another term replaces (DEC-001 point 1). The later term in the glossary is named. Give each concept a qualified name, such as `business process` and `system process`;
+- **a link between terms and views that `pkit analysis link` would write otherwise** — the message gives the line and names the command, which mends it ([Linking terms](#linking-terms-pkit-analysis-link), above);
+- **a name two terms share** — see one name, one concept, under the glossary in [The artefacts](#the-artefacts), above. The later term in the glossary is named;
 - **a phrase in `other-senses` that holds none of its term's names, or is one of them alone**;
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
 - **a revalidation record copying evidence for an artefact it gives no outcome**: evidence supports an outcome and never replaces it, so the record is incomplete whatever the evidence says;

@@ -1,0 +1,19 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  A domain-model view explains purpose first, as DEC-004 points 2 and 3 now
+  decide (#1845). Its opening states the problem its concepts solve together,
+  and names them as the parts of the answer. Each concept's section opens,
+  below its link to its term, with a new part, `**Why:**`: what the concept is
+  for, in one paragraph of plain words, saying again a reason the Context or
+  the Rationale of a record the view anchors gives. It names no actor, and
+  reads `None.` where no record gives a reason. The explanation follows below
+  it, after a blank line, with no label. `pkit analysis new view` writes the
+  part with its hint, and where the format rule binds, `pkit analysis
+  validate` holds it like the section's other parts. A label listed right
+  before an opening now holds its paragraph alone, so the check tells the two
+  apart. A project's own structure may not place an addition before a
+  section's explanation. The proposed rule `RS-SAN-005` names the records a
+  view's reasons come from among those it anchors, so `SAN` stays at 1.0.0.
