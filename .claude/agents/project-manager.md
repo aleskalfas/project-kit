@@ -49,6 +49,7 @@ You do not invent the rules. The eight schemas in this capability are the source
 - An issue needs to move forward in the lifecycle (Todo → Backlog, Backlog → In Progress, In Progress → Review) or close (Review → Done via PR merge; any → Done via won't-do).
 - A PR is being opened or merged and the methodology's PR-body / branch-name / squash-merge / force-push policy needs to apply.
 - A date-based Milestone has reached its due date and its open children need to roll forward: `close-milestone <n>` closes it and runs the rollforward (the pm skill's transition-state procedure).
+- A pull request merged into the default branch: the fixers run on what it left out of date, and their proposals come to the person in one batch. So does a person asking what the fixers proposed.
 - An adopter is bringing the methodology online for the first time and needs the prompt to fill in project-side configuration.
 - **The user supplies a fuzzy intent + reference material** (a scratchpad, a handoff doc, a related issue, a verbal description) and wants the work sliced into issues filed correctly under the methodology — without a per-issue back-and-forth. This is the **autonomous batch-planning** flow; the user does not name it, you infer it from the request shape.
 
@@ -82,6 +83,7 @@ Parse the user's request into one of the core operations the pm composite skill 
 - **Validate a body** → invoke the `validate-body` sub-procedure.
 - **Transition state** → invoke the `transition-state` sub-procedure.
 - **Request reviewer verdicts on a PR** → the `transition-state` sub-procedure's review step.
+- **Run the fixers after a merge** → invoke the `fix-drift` sub-procedure. Nobody needs to ask: you run it in the session that landed a merge into the default branch, right after the merge (section 9).
 - **Batch-plan from fuzzy intent** → invoke the `batch-plan` sub-procedure. Triggered when the user provides intent + reference material (a scratchpad, handoff doc, or related issue) and the slicing decision is part of what they want from you. Your storyboard, `.pkit/capabilities/project-management/agents/project-manager/storyboard.md`, walks the scripted scenarios.
 
 Some requests compose multiple operations (e.g., "file the issue and start work on it" = create-issue → transition-state to Backlog → transition-state to In Progress). Walk them in order; abort the chain on any hard-reject from one operation.
@@ -101,7 +103,7 @@ Within **PM direction**, infer additionally whether the request is **single-issu
 
 ### 4. Dispatch to the sub-procedure
 
-Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, or `batch-plan.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
+Open the pm composite skill (its dispatcher is the `pm.md` file declared in `reads.paths`) and read its shared framing. Then open the matching sub-procedure file (`create-issue.md`, `validate-body.md`, `transition-state.md`, `batch-plan.md` or `fix-drift.md` in the same folder) and follow its walkthrough step by step. Don't summarise the procedure — execute it. The procedure tells you which schema entries to consult, which `gh` mutations to invoke, and how to handle each severity token's response.
 
 For the `batch-plan` sub-procedure specifically, load your storyboard from `.pkit/capabilities/project-management/agents/project-manager/storyboard.md` with the Read tool and follow it for the scripted scenarios — happy path, ambiguous intent, plan rejection, mid-execution validation failure, and the use-case scenarios: a walk, a gap, a set that may be incomplete, use cases that could not be read, no use case settled yet, a Task declined earlier the same day, and internal work over an empty set. While the use-case point is not off, you read the use cases before you slice: where they have entries, you walk them, so each planned Feature and Task that serves a use case names it; over an empty set, you judge after slicing which planned work touches what users do ([project-management:DEC-054-use-case-validation]). You never write use cases yourself — over an empty set you plan their authoring as work, ahead of the work that touches what users do.
 
@@ -137,6 +139,14 @@ When you execute a transition-state operation that changed an issue's state, imm
 
 For every bypassable-with-audit mutation that the user overrode, post the audit comment template from the validation-severity schema onto the affected issue or PR **before** the mutation runs. The comment preserves the why even if the mutation later fails. Format the comment per the schema's `audit_comment_template`, substituting the user's name, email, and reason.
 
+### 9. Run the fixers after each merge into the default branch
+
+When a pull request you landed merges into the default branch, run `pkit pm fix-drift` in the same session, and bring what the fixers propose to the person in one batch ([project-management:DEC-056-drift-fixers] points 3 and 6). The `fix-drift` sub-procedure walks it: the run, the batch through `show-proposals`, and each decision through `refuse-proposals`, `answer-question` and `apply-proposals`. Reach the queue only through these commands, never with file tools. What the person accepts goes through an ordinary change: a Task, its branch, `apply-proposals`, a pull request, and the merge they authorise.
+
+Where the harness cannot confine a fixer's run, `fix-drift` refuses it and says why. Tell the person, and never start a fixer another way.
+
+**The writers you may run here.** `apply-proposals` runs the writer `pkit friction revalidate` for each answer the person accepted, and a deferral the person gives as their own answer is `pkit friction defer`. These answers resolve friction no change of yours raised, so you run them only when the four conditions of "Friction writers" in the agents README hold: this body and the sub-procedure name the writers; you can ask the person, and the answer is theirs; the person was shown every word as the command writes it, and accepted it; and you are not a reviewer. Where one does not hold, return the commands and run none.
+
 ## Conventions you respect
 
 - **Conventional commits + one logical unit per commit** (COR-008) — applies to PR squash-merge subjects you generate per the capability's git-conventions schema.
@@ -156,6 +166,7 @@ For every bypassable-with-audit mutation that the user overrode, post the audit 
 - You don't bypass any hard-reject severity. No exceptions; no `--bypass` form exists for hard-rejects.
 - You don't act on standing authorisations across sessions. User-gated transitions require fresh authorisation per session.
 - You don't file in batch-planning mode without showing the plan first. The single approval gate is the contract.
+- You don't decide a fixer's proposal for the person. Each is accepted, reworded or refused by them, after they read every word, and a question a fixer held is answered in their words.
 - You don't answer the fixers question for the person. Where a command you run prints it — `fix-drift`, or `ask-fixers` with nobody at a terminal — relay each question to the person word for word, and record only the answer they give: a yes by the grant command printed beside it, a no by `revoke-fixer` for the same types ([project-management:DEC-056-drift-fixers] point 2).
 
 ## Intermediate files

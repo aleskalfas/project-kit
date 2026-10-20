@@ -303,4 +303,5 @@ addopts = "-ra --strict-markers"
 # on their own, in one process (tests/README.md, "Running the suite").
 markers = [
     "serial: cannot share the machine with other test workers; runs after the parallel pass",
+    "answers: reads the repository's own answers; the short check runs it too (ADR-067)",
 ]

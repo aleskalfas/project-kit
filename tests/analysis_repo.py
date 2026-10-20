@@ -41,6 +41,8 @@ CAPABILITY = REPO / ".pkit" / "capabilities" / "software-analysis"
 SA = Path(".pkit") / "capabilities" / "software-analysis"
 NEW = SA / "scripts" / "new.py"
 VALIDATE = SA / "scripts" / "validate.py"
+#: The command that writes the links between terms and views (DEC-004 point 7).
+LINK = SA / "scripts" / "link.py"
 NUMBERS = SA / "scripts" / "check-numbers.py"
 CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
@@ -201,6 +203,14 @@ def stamped(repo: AdopterRepo, *args: str) -> str:
     completed = new(repo, *args)
     assert completed.returncode == 0, completed.stderr
     return completed.stdout.strip().splitlines()[-1].split()[1]
+
+
+def link(repo: AdopterRepo) -> subprocess.CompletedProcess[str]:
+    """`pkit analysis link`, run as the dispatcher runs it: the links between the terms
+    and the views written (DEC-004 point 7)."""
+    completed = run_script(repo, LINK)
+    assert completed.returncode == 0, completed.stderr
+    return completed
 
 
 def front(repo: AdopterRepo, rel: str) -> dict[str, Any]:

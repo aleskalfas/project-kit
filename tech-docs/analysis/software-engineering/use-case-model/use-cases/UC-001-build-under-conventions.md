@@ -26,8 +26,9 @@ pkit:
         - COR-017
         - COR-031
     revalidated:
-      at: 2026-10-20T01:38:20Z
-      outcome: updated
+      at: 2026-10-20T10:10:43Z
+      outcome: unchanged
+      unchanged-because: Project rule 2 adds that CI skips the suite on a pull request whose only changes since a passing full run are answers. The agent still runs the tests of what it changed and leaves the full suite to the pre-push hook and CI, as the use case says.
 ---
 
 # UC-001 — Build my change under my project's conventions

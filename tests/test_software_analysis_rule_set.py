@@ -158,6 +158,11 @@ JUDGEMENT_RULES = {
         "where that view's number is lower.",
         ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"],
     ),
+    "RS-SAN-012": (
+        "No two terms in force share a name, within an analysis and across the analyses it "
+        "builds on. No term takes a name another term in force replaces.",
+        ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"],
+    ),
 }
 #: Each judgement rule's origin, where a decision record holds it. The source rule's is
 #: the maintainer's decision of 17 October (#1648, choice 6), which no record holds.
@@ -170,6 +175,7 @@ ORIGINS = {
     "RS-SAN-009": "software-analysis:DEC-001",
     "RS-SAN-010": "software-analysis:DEC-001",
     "RS-SAN-011": "software-analysis:DEC-004",
+    "RS-SAN-012": "software-analysis:DEC-001",
 }
 SOURCE_RULE = "RS-SAN-007"
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
@@ -389,6 +395,8 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     assert "validate" in package["commands"]
 
 
+# Asserts what the shipped rules' answers hold, so the short check runs it (ADR-067).
+@pytest.mark.answers
 def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     """The maintainer's three judgement rules (8 October, on #1360), proposed until he
     accepts them (#1577), each with DEC-001 as its origin. Beside them the record rule,

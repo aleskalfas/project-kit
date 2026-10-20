@@ -40,6 +40,7 @@ from tests.analysis_repo import (
     fill,
     front,
     installed,
+    link,
     load_lib,
     new,
     prepare,
@@ -65,14 +66,15 @@ PAYMENT_LINK = (
 
 
 def _domain(repo: AdopterRepo) -> None:
-    """`prepare`, then three terms, and a view explaining two of them, stamped and filled.
-    Built once per session (`installed`)."""
+    """`prepare`, then three terms, and a view explaining two of them, stamped, filled and
+    linked. Built once per session (`installed`)."""
     prepare(repo)
     for slug in ("order", "payment", "customer"):
         stamped(repo, "term", slug, "--name", slug, "--path", "src/run.py")
     explains = ("--explains", "TERM-order", "--explains", "TERM-payment")
     stamped(repo, "view", "orders-and-payments", "--number", "010", *explains)
     fill(repo)
+    link(repo)
 
 
 @pytest.fixture
@@ -157,6 +159,7 @@ def test_the_stamp_heads_each_section_in_sentence_case(project: AdopterRepo) -> 
     assert "Explained in [VIEW-lines](domain-model/020-lines.md#github-issue)." in glossary
     assert "## TERM-line-item — line item\n" in glossary  # the name itself keeps its case
     fill(project)
+    link(project)
     project.write(accepting_san(project))
     assert _found(_validate(project)) == []
 

@@ -217,6 +217,12 @@ kinds:
       replaces:
         hint: The names this term was written as before, in the analysis or in an accepted record, newest first.
         example: report template
+      noun-forms:
+        hint: Other forms of the term's name as a noun, such as its plural, each one that cannot read as a verb. The links between terms take each as a mention of the term.
+        example: templates
+      other-senses:
+        hint: Each phrase in which the term's name has another sense, one its distinctions tell apart. No link names the term inside such a phrase.
+        example: template literal
 
   domain-model-view:
     sections:

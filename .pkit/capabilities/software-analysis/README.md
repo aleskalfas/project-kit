@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
-      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T11:39:13Z
+      at: 2026-10-20T13:00:28Z
       outcome: updated
 ---
 
@@ -164,7 +164,7 @@ Create artefacts with the stamp, never by copying a template by hand: it gives e
 |---|---|
 | `pkit analysis new actor <slug> [--name <text>] [--unanchored-because <text>]` | `use-case-model/actors/ACT-<slug>.md`, headed `# ACT-<slug> — <name>`, its needs in its front matter |
 | `pkit analysis new term <slug> [--name <text>] [--unanchored-because <text>]` | the entry `TERM-<slug>` of `glossary.md`, with its section |
-| `pkit analysis new view <slug> --number <digits> --explains <TERM-id> … [--title <text>]` | `domain-model/<number>-<slug>.md`, headed `# VIEW-<slug> — <title>`, each term it explains anchored with a section of its own, and each term's link to its section written in `glossary.md` |
+| `pkit analysis new view <slug> --number <digits> --explains <TERM-id> … [--title <text>]` | `domain-model/<number>-<slug>.md`, headed `# VIEW-<slug> — <title>`, each term it explains anchored with a section of its own, which opens with its link to the term's entry, and each term's link to its section written in `glossary.md` |
 | `pkit analysis new use-case <slug> --actor <ACT-id> [--other-actor <ACT-id>]… [--requirement <REQ-id>]… [--area <area>] [--title <text>]` | `use-case-model/use-cases/[<area>/]UC-NNN-<slug>.md`, its actor, each other actor and each requirement it must meet anchored |
 | `pkit analysis new journey <slug> --actor <ACT-id> --step <UC-id> --step <UC-id> … [--relies-on <UC-id>]… [--requirement <REQ-id>]… [--title <text>]` | `use-case-model/journeys/JRN-NNN-<slug>.md`, its actor, its steps, the use cases it relies on and each requirement that binds its whole path anchored |
 | `pkit analysis new quality-requirement <slug> [--actor <ACT-id>]… [--refines <REQ-id>]… [--area <area>] [--title <text>] [--unanchored-because <text>]` | `requirements/quality/[<area>/]REQ-NNN-<slug>.md`, headed `# REQ-NNN · Quality · <title>`, its actors and the requirements it refines anchored |
@@ -190,6 +190,34 @@ Every artefact form also takes `--path <glob>` and `--record <id>`, each repeata
 - **Of what the stamp writes, only an actor, a term or a requirement is ever unanchored.** A use case always anchors to its actor, and a journey to its actor and its steps' use cases (DEC-001 point 4), so neither is ever without anchors, and the reason an unanchored artefact carries (point 9) never applies to them: `--unanchored-because` is an actor's, a term's and a requirement's alone. A requirement given the reason has no anchor at all: no actor, no requirement it refines and nothing in the solution, such as a requirement a stakeholder states (DEC-002 point 6).
 
 The stamp reads the analysis through the core's reading command, `pkit friction artefacts` — the working tree's, and with `--at` the default branch's, at the commit `pkit repository base` resolves it to (COR-054 point 5) — and records the location through `pkit docs record-location` once the artefact is written; it never walks the folders itself. The value recorded is the one already in use, so running the stamp is the consent and nothing is asked (COR-049 point 5) — the `--yes` it passes is accepted and not needed — and it prints what the command says: what was recorded, the root it was derived from, and where to change it. For the default branch's history it asks git one question — every path ever added under the place the core's reading names, or a requirement's three, and the commit that added it — and the core's reading at that commit whether the path was a file of the place, only for a number past the tree's highest.
+
+## Linking terms: `pkit analysis link`
+
+Where an analysis keeps a domain model, `pkit analysis link` links its terms where they are mentioned, so each concept is a click from its definition (DEC-004 point 7). An analysis keeps a domain model once its `domain-model/` folder holds a view, in force or withdrawn. An analysis without one sees no link.
+
+- **What it writes.** Each section of a view in force opens with `Defined in [<TERM-id>](<glossary>#<anchor>).`, right below its heading. In a view's opening and each of its sections, and in each glossary entry below its heading, the first mention of each term links to the term's entry. A term is never linked in its own section, nor in its own entry. A term's definition, in front matter, and the glossary's head take no link.
+- **The entry's anchor** is the slug of its heading, `<id> — <name>`, such as `term-sandbox--sandbox`, so it changes only when the term is renamed. A link's target is a path from the file's folder, such as `../glossary.md#term-sandbox--sandbox` from a view, or the anchor alone in the glossary.
+- **A term of another analysis.** A term the glossary's head lists from an analysis your settings list links to its entry there, at the same commit, such as `../core/glossary.md#term-change--change`. It is mentioned by the name the head lists. A term of an analysis in another repository takes no link: the head's own link leads there.
+- **What a mention is.** A term's name, or one of its `noun-forms`, whole, its first letter in either case. No letter, digit, hyphen, slash or underscore may join it, so `sandbox's` holds a mention, and `pre-sandbox` holds none.
+- **The longest first.** Of two mentions that overlap, the one that starts first wins, and of two that start together, the longer. So `payment method` wins over `payment`.
+- **What it skips:** fenced code and code spans, headings, bold labels, comments, links, autolinks, HTML tags and bare URLs.
+- **A phrase in another sense.** A phrase a term lists in `other-senses` never links that term. Another term inside the phrase may still link.
+- **An escape for one mention.** `<!-- pkit:not-the-term -->` right before a mention marks it as no mention. It takes no link, and the next mention counts as the first. Use it last, where no rewording helps, such as a word in a quotation.
+- **A wrong link is a finding.** In a view, a link on a word used in another sense shows a statement `RS-SAN-008` asks you to reword. In a glossary entry, list the phrase in `other-senses`, or escape the one mention.
+- **A name two terms share** links neither, and `pkit analysis validate` refuses the pair (The artefacts, below).
+- **Written, never by hand.** It writes a file only where a link changes, whole or not at all, with the file's own line endings, and names each file it wrote. A link to a glossary entry written by hand is rewritten as the command's.
+- **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. So run it after you add or rename a term, or reword a view or an entry.
+- **What a moved link costs.** A link is part of the content that holds it. So a moved link flags whatever anchors that entry's term, such as the view that explains it, or that section of a view. Answer each with a revalidation.
+
+A section of the example view below, linked:
+
+```markdown
+## Sandbox
+
+Defined in [TERM-sandbox](../glossary.md#term-sandbox--sandbox).
+
+A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart from the tester's workspace.
+```
 
 ## The artefacts
 
@@ -359,6 +387,10 @@ The words of the domain and what each means. A term's id is stable, and its name
 ```
 
 - **Its front matter** maps each term's id to its entry. Each entry has a `name`, a `status` and a `definition`. The definition takes the form `definition` ("Each kind's structure", below). On a rename, the entry keeps the former names in `replaces`, newest first. The id never changes.
+- **Two optional fields** serve the links between terms ([Linking terms](#linking-terms-pkit-analysis-link), above), so write them by hand where your analysis keeps a domain model (DEC-001 point 1):
+  - **`noun-forms`** lists other forms of the name as a noun, such as `[sandboxes]`, each one that cannot read as a verb. A language that inflects its nouns lists more of them, such as their cases.
+  - **`other-senses`** lists each phrase in which the name has another sense, one the distinctions tell apart, such as `[sandbox mode]`. Each phrase holds one of the term's names, and more.
+- **One name, one concept.** No two terms in force share a name, a noun form counted, ignoring case, and no term takes a name another term replaces. `pkit analysis validate` refuses each, whatever any rule's status, as it refuses a shared id. When two concepts need one word, give each a qualified name, such as `business process` and `system process` (DEC-001 points 1 and 2; `RS-SAN-012`).
 - **Its body** opens with the file's head, which the stamp writes once. Then it has one `## <id> — <name>` section per entry.
 
 **The glossary's head.** In an analysis that builds on others, the head lists what it takes from each (DEC-001 point 2). Its front matter holds the data, `builds-on`, a list, so no reader takes it for a term. The opening below the heading shows it:
@@ -390,7 +422,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 - **The data.** Each entry names the analysis by its component, the version its links name, each term and actor by its id there and its name, and the needs each actor brings to this analysis. No definition is copied. Its shape is checked always, as a kind's schema checks front matter.
 - **The text.** One top-level item per entry, in order, opens `**From <analysis> at <version>:**`, then the area it builds on in words. Nested in it, one `**Term:**` item per term, then one `**Actor:**` item per actor, each its name as a link to its home in that analysis. Each actor's needs are nested under it, exactly. The check holds the text to the data where the format rule binds, as a part's form (`builds-on-matches-front-matter`). An item that does not open `**From ` is the writer's own.
-- **What the check holds.** Only a listed analysis builds on another, and its head names only analyses its entry builds on. A term of its own never takes the name of a term its head lists. Where its component declares the lowest version it needs of the other, a link naming another version is warned of, and never failed. Which version a link names is your choice.
+- **What the check holds.** Only a listed analysis builds on another, and its head names only analyses its entry builds on. A term of its own never takes a name of an analysis it builds on (one name, one concept, above). Where its component declares the lowest version it needs of the other, a link naming another version is warned of, and never failed. Which version a link names is your choice.
 - **What reads it.** An actor named with another analysis, such as `core:ACT-developer`, resolves against the head's actors. The readers point gives each actor the needs every head states for it ("Connections", below).
 
 **Domain-model view** (`schemas/domain-model-view.schema.json`, `templates/domain-model-view.md`) — a group of related concepts, each explained in a section of its own, and drawn as they relate (DEC-004). It is a file of its own, `domain-model/<number>-<slug>.md`:
@@ -413,7 +445,7 @@ pkit:
 
 # VIEW-runs-and-sandboxes — Runs and sandboxes
 
-The concepts of running a suite, and the sandbox each run takes place in.
+The concepts of running a suite, and the [sandbox](../glossary.md#term-sandbox--sandbox) each [run](../glossary.md#term-run--run) takes place in.
 
 ```mermaid
 classDiagram
@@ -426,11 +458,13 @@ classDiagram
 
 ## Run
 
+Defined in [TERM-run](../glossary.md#term-run--run).
+
 A run is one pass of a suite, from its start to its result.
 
 **Attributes:** The suite it runs, and its result.
 
-**Relations:** Each run takes place in one sandbox, built for it alone.
+**Relations:** Each run takes place in one [sandbox](../glossary.md#term-sandbox--sandbox), built for it alone.
 
 **States:** A run is running until its last test ends, then done.
 
@@ -438,7 +472,9 @@ A run is one pass of a suite, from its start to its result.
 
 ## Sandbox
 
-A sandbox is where one run takes place, apart from the tester's workspace.
+Defined in [TERM-sandbox](../glossary.md#term-sandbox--sandbox).
+
+A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart from the tester's workspace.
 
 **Attributes:** None.
 
@@ -465,6 +501,7 @@ A sandbox is where one run takes place, apart from the tester's workspace.
   ```
 
   The link is part of the term's content, so a change to it flags whatever anchors the term. A view renumbered or renamed, a section added, moved or taken out, and a view withdrawn each change a link.
+- **Each section's link to its term, and the mentions' links.** Each section opens with its link to its term's entry, which the stamp writes, and the first mention of each term in each section links to its entry. `pkit analysis link` writes both, and the check holds them ([Linking terms](#linking-terms-pkit-analysis-link), above).
 - **A section added by hand.** Add its term to `explains`, in the section's place. Then write the term anchor and the term's link that the check names: its message gives the anchors to write, and the line, word for word. Moving a section to another view moves its term between the two lists, their anchors and its link, in the same change.
 
 An actor or a term nothing embodies carries `unanchored-because:` in its friction block instead of anchors — the reason onboarding accepts it unanchored (DEC-001 point 9). The key is the core's, not one of the artefact's own fields (COR-050 point 1): `pkit friction check --all` lists the artefact apart with its reason and never counts it as unanchored, and `pkit validate` refuses the reason beside anchors.
@@ -784,6 +821,9 @@ While any of these stands, none of the file applies: the check holds no body to 
 - **a term two views in force explain** — the view whose path sorts first keeps it, and each other is named, at its `explains`;
 - **a view whose term anchors do not match its `explains`**, or that carries a path anchor (a view's anchors, in [The artefacts](#the-artefacts), above). The message names the anchors to write;
 - **a term's link that does not match the view that explains it** — missing, written otherwise, written twice, or left where no view in force explains the term. The message gives the line to write, word for word (DEC-004 point 7);
+- **a link between terms and views that `pkit analysis link` would write otherwise** — in an analysis that keeps a domain model, a section's link to its term, or a mention's link, missing, extra or stale. The message gives the line and names the command, which mends it ([Linking terms](#linking-terms-pkit-analysis-link), above);
+- **two terms in force of one name** — a `name` or a noun form two terms hold, ignoring case, or a name another term replaces (DEC-001 point 1). The later term in the glossary is named. Give each concept a qualified name, such as `business process` and `system process`;
+- **a phrase in `other-senses` that holds none of its term's names, or is one of them alone**;
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
 - **a revalidation record copying evidence for an artefact it gives no outcome**: evidence supports an outcome and never replaces it, so the record is incomplete whatever the evidence says;
 - **an evidence entry whose `id` is not its own `<artefact>@<commit>#<check>`** — the entry's `artefact`, `commit` and `check`: the id is the three parts the result is for, and whether the id or those fields are meant cannot be told, so nothing else is read from that entry;
@@ -798,7 +838,8 @@ Where you keep several analyses, it also fails on (DEC-001 points 2 and 3):
 - **a field naming another analysis's artefact** — every field names its own analysis's artefacts, but for an actor named with an analysis it builds on, such as `core:ACT-developer`;
 - **an actor named with another analysis that it may not name** — its analysis is not listed, does not build on that one, or its glossary's head does not list the actor from it;
 - **a glossary's head data that breaks its shape, or names an analysis it may not** (the glossary's head, in [The artefacts](#the-artefacts), above);
-- **a term whose name is that of a term its head lists** (the glossary's head, in [The artefacts](#the-artefacts), above).
+- **a term that takes a name of an analysis it builds on** — the name or a noun form of a term in force there, listed by the head or not, or a name such a term replaces. For an analysis your settings do not list, such as one in another repository, the names its head lists stand for its terms. The rest of that analysis's names are a reviewer's, under `RS-SAN-012` (DEC-001 point 2);
+- **two analyses it builds on that share a name** — its text reads both, so one of the two is renamed in its own analysis. The finding stands at its glossary's head.
 
 Where `RS-SAN-009` binds, it holds each use case in force that writes `after` (DEC-001 points 1 and 12). Accepted, each departure is an error. Proposed, as the rule ships, `--preview` reports it where the rule would bind, and the normal check says it checked nothing. It fails on:
 

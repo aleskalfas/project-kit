@@ -32,8 +32,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T09:39:01Z
-      outcome: updated
+      at: 2026-10-20T13:09:34Z
+      outcome: unchanged
+      unchanged-because: The resolver's commands for the person gain pkit analysis link before an analysis-stale update, where an analysis keeps a domain model. Who proposes and who writes the answers on the debt are unchanged, so this use case holds as written.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

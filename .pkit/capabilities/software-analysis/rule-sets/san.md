@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-19T19:00:00Z
+          at: 2026-10-20T12:59:53Z
           outcome: unchanged
-          unchanged-because: DEC-001 gains the domain-model view kind, whose structure a later build declares. No kind this rule checks gains a part or a form, so this format rule holds as written.
+          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept, and two optional term fields, noun-forms and other-senses, which the term kind's structure declares with hints. No shipped part or form changes, so this format rule holds as written.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-19T19:00:00Z
+          at: 2026-10-20T12:59:54Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 to 4 gain the domain-model view, its folder, its id and its anchors. Whose goal a use case is stays as decided, so this rule holds as written.
+          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept among terms, within an analysis and across those it builds on. Whose goal a use case is, and its actors, stay as decided, so this rule holds as written.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-19T19:00:00Z
+          at: 2026-10-20T12:59:55Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain the domain-model view and its folder. A goal and its actor's needs stay as decided, so this rule holds as written.
+          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept among terms. A goal and its actor's needs stay as decided, so this rule holds as written.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -62,8 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-19T18:36:20Z
-          outcome: updated
+          at: 2026-10-20T13:00:04Z
+          outcome: unchanged
+          unchanged-because: DEC-001 points 2 and 11 and DEC-004 gain the links between terms, which draw no anchor, and one name across analyses. What each kind anchors is unchanged, so this rule holds as written.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -89,9 +90,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-19T19:00:00Z
+          at: 2026-10-20T13:00:05Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 4 gain the domain-model view and what it anchors. What names the source of a goal, a guarantee or a requirement is unchanged.
+          unchanged-because: DEC-001 points 1 and 11 gain one name for one concept, and name the term's link to its section as the one stored reverse. What names the source of a goal, a guarantee or a requirement is unchanged, so this rule holds as written.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -106,7 +107,7 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-19T18:36:20Z
+          at: 2026-10-20T13:00:07Z
           outcome: updated
   RS-SAN-009:
     status: proposed
@@ -119,9 +120,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-19T19:00:00Z
+          at: 2026-10-20T13:00:08Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1, 2 and 12 gain the domain-model view, its folder and its place in the build order's first step. Preconditions, their producers and after stay as decided.
+          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept among terms. Preconditions, their producers and after stay as decided, so this rule holds as written.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -133,9 +134,9 @@ rules:
             - "software-analysis:DEC-001#4"
             - "COR-030"
         revalidated:
-          at: 2026-10-19T19:00:00Z
+          at: 2026-10-20T13:00:09Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 2 and 4 gain the domain model's folder and what a view anchors, terms of its own analysis alone. Which analyses one may name is unchanged.
+          unchanged-because: DEC-001 point 2 widens a term's name across the analyses it builds on. Which analyses an analysis may name, and an optional one as an option, are unchanged, so this rule holds as written.
   RS-SAN-011:
     status: proposed
     origin: {decision: "software-analysis:DEC-004"}
@@ -143,6 +144,17 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
+        revalidated:
+          at: 2026-10-20T13:00:10Z
+          outcome: unchanged
+          unchanged-because: DEC-004 gains the links between terms and views in point 7, and its summary says so. A view's number and the views it may use are unchanged, so this rule holds as written.
+  RS-SAN-012:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-001"}
+    pkit:
+      friction:
+        anchors:
+          record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -154,7 +166,7 @@ rules:
 # only where its rule binds. Whoever judges the rest of a rule leaves that part
 # to the check. Where a project's rule tightens a structure, the project's set
 # declares what the check enforces of that rule. RS-SAN-003 to RS-SAN-008,
-# RS-SAN-010 and RS-SAN-011 declare no check: a reviewer judges each.
+# RS-SAN-010 to RS-SAN-012 declare no check: a reviewer judges each.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
@@ -353,7 +365,7 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - a form made from the name in the term's sense, such as a plural, a possessive or a verb
     - a phrase whose other words keep their dictionary meaning, such as "the last release". A phrase that names a thing of its own, such as "release tag", is a concept of its own. It names a thing of its own where the system keeps, shows or acts on what it names as one thing.
     - a pronoun or a shortened name that points back to the term, where the same part already named it
-  - **A term's name in another sense.** Once a term holds a name, the name means the term's concept wherever a statement uses it, a sense a dictionary gives it included. The exception is a sense the term tells apart from its own.
+  - **A term's name in another sense.** Once a term holds a name, the name means the term's concept wherever a statement uses it, a sense a dictionary gives it included. The exception is a sense the term tells apart from its own. Each phrase a term lists in its `other-senses` is such a sense, which its distinctions tell apart.
   - **A definition and its own name.** The `definition` form refuses a word of the term's own name, and whether a definition holds one is that form's to check. Where such a word is the name of a term the definition relates to, such as its broader kind, the definition names that concept in other words. That is no break.
   - **What uses no concept.**
     - an actor, named by its name, a shortened name or the word its id is made of, and an artefact's id
@@ -372,7 +384,6 @@ An analysis artefact uses a domain concept only where a term of the glossary def
     - names a defined concept by another word than its term's name, such as a name the term replaces, or a word of its own
     - uses a term's name in a meaning other than the term's own, unless the term tells that meaning apart from its own
   - **Two terms.** A term breaks this rule where another term in force defines the concept it defines. Two terms define one concept where whatever one definition fits, the other fits too, and neither term tells the other apart. Withdrawing one of them, or telling the two apart, mends it.
-  - **A listed term's name.** A term breaks this rule where it takes the name of a term its glossary's head lists from another analysis.
   - **A renamed term.** A term breaks this rule while an artefact in force names its concept by a name the term replaces. So the change that renames a term owns the term's break, which lasts while any use of a name it replaces is left. To judge it, a reviewer reads the analysis's artefacts in force for the names the term replaces.
   - So a writer defines a term before an artefact uses its concept, and adds no second term for a concept the glossary defines.
   - **No anchor.** Using a term asks for no anchor on it.
@@ -440,3 +451,21 @@ A domain-model view names a concept that another view of its analysis explains o
   - **A new section.** A view also breaks this rule while a view of its analysis with an equal or a lower number names a concept it explains. So the change that adds a section to a view, or moves one into it, owns that break. To judge it, a reviewer reads those views for the term's name.
   - **No anchor.** A view's uses of other views lie in its prose and its diagrams, which draw no anchor. So no check sees them, and a reviewer judges each.
   - **History.** This rule judges a domain-model view in force. A withdrawn view is history.
+
+## RS-SAN-012 — One name means one concept
+
+No two terms in force share a name, within an analysis and across the analyses it builds on. No term takes a name another term in force replaces.
+
+- **How:**
+  - **What the check holds.** Validation refuses a name two terms share, and a term that takes a name another replaces, wherever it reads both glossaries. That is within an analysis, and across the analyses it builds on that its repository holds. It also refuses a term that takes a name the glossary's head lists. It does so whatever any rule's status, and this rule does not cover it.
+  - **What this rule judges.** A name of an analysis in another repository that the glossary's head does not give: a term it does not list, and a listed term's noun forms and the names it replaces. A reviewer reads that analysis's glossary at the version the head's links name. The reviewer judges each term a change adds or renames, and each term of the glossary where the change takes up a version: one the head names first, or in place of another.
+  - **A term's names.** Its `name` and each of its `noun-forms`, compared ignoring case. A name it replaces is no longer its own, and no other term takes it.
+  - **Across analyses.** An analysis builds on the analyses of the components its component depends on, required or optional. A term never takes the name of a term in force of such an analysis, whether its glossary's head lists that term or not. Two analyses that build on none of each other may share a name.
+  - **Which term breaks it.** Across analyses, the term of the analysis that builds on the other breaks this rule, never the term it builds on. The change that brings the two names together owns that break.
+  - **Two it builds on.** No two terms of the analyses one analysis builds on share a name either. Where two do, that analysis breaks this rule at its glossary's head, until one of the two is renamed in its own analysis.
+  - **Two concepts, one word.** Each takes a qualified name, such as "business process" and "system process". So the bare word stays an ordinary word, which no term defines.
+  - **Actors.** An actor's name is no term's name, so this rule asks nothing of it.
+  - **The glossary's head.** Wherever this rule binds on a term, it judges the head of the glossary that holds the term too.
+  - **A break.** A term breaks this rule while it holds a name another term holds or replaces. Renaming one of the two terms mends it.
+  - **History.** This rule judges a term in force. A withdrawn term is history.
+  - **Note:** the rule on domain concepts forbids two names for one concept. This rule forbids two concepts for one name.
