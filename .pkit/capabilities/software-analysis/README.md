@@ -120,6 +120,7 @@ A project whose system has several components may keep one analysis for each, an
 - **Its own artefacts.** Each analysis has artefacts of every kind of its own, its own areas and its own revalidation records. Validation refuses a file that no analysis holds: one in a folder below the top while nothing is listed, and one at the top or in an unlisted folder while the analyses are listed.
 - **Ids unique across them,** of every kind, with one numbering of each numbered kind, its history included (DEC-001 point 3). So an id read anywhere in the repository names one artefact. The stamp refuses an id another analysis holds, and the check refuses an id two analyses share.
 - **Where it lives.** An analysis lives where its component is developed, and never ships with it. A component that moves to a repository of its own takes its analysis's folder with it, and leaves a withdrawn stub for each of its artefacts.
+- **No dependency.** Keeping an analysis is the work of the repository that holds it, which installs this capability to do it, as it installs its test runner. The component itself takes no dependency on this capability, and a project that installs the component receives no analysis. Where a component moves, its new repository installs this capability to keep the analysis it takes along.
 
 **What an analysis builds on.** An analysis builds only on the analyses of the components its component depends on (DEC-001 point 2).
 
