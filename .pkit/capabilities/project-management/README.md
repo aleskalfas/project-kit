@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-20T03:23:23Z
+      at: 2026-10-20T10:34:32Z
       outcome: updated
 ---
 
@@ -44,7 +44,7 @@ The authority signal for distillation is pm-workflow's `main` branch. Capability
 
 - `decisions/DEC-NNN-*.md` — principles distilled from pm-workflow's METs (1:1). Some are schema-backed; others ship as policy prose adopters read.
 - `schemas/<name>.yaml` + `<name>.schema.json` — the operationally-material rules in data form: issue hierarchy, workflow state machine, body shape, title regexes, label classification, git conventions, validation severity, time containers.
-- `skills/pm/` — the composite engine skill (`pm.md` dispatcher + `create-issue.md` + `validate-body.md` + `transition-state.md` sub-procedures, per COR-020). Methodology-agnostic; reads schemas at runtime.
+- `skills/pm/` — the composite engine skill (`pm.md` dispatcher + `create-issue.md` + `validate-body.md` + `transition-state.md` + `batch-plan.md` + `fix-drift.md` sub-procedures, per COR-020). Methodology-agnostic; reads schemas at runtime.
 - `agents/project-manager/project-manager.md` (with its storyboard) — orchestrates the three skills, enforces methodology gates.
 - `templates/{EPIC,Feature,Umbrella,Task,PR}.md` — body shapes adopters fill in.
 - `scripts/pre-check.py` — read-only diagnostic verifying every methodology prerequisite is in place (DEC-017). Hard-gate on every pm operation.
@@ -1157,7 +1157,7 @@ A tool that writes new files is allowed, for its workspace.
 
 #### Starting the fixers — `fix-drift`
 
-`pkit pm fix-drift` starts each fixer you granted on what the default branch left out of date, and gathers what it proposes for you ([project-management:DEC-056-drift-fixers] points 3 to 6). You run it, or the project manager runs it in the session that landed a merge. Nothing it gathers is applied until you accept it. Unlike the five commands above, it passes the bootstrap gate, since it reads the work tracker.
+`pkit pm fix-drift` starts each fixer you granted on what the default branch left out of date, and gathers what it proposes for you ([project-management:DEC-056-drift-fixers] points 3 to 6). You run it, or the project manager runs it after each merge into the default branch, in the session that landed the merge (the pm skill's `fix-drift` sub-procedure). Nothing it gathers is applied until you accept it. Unlike the five commands above, it passes the bootstrap gate, since it reads the work tracker.
 
 ```
 pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECONDS] [--effort LEVEL]
@@ -1217,7 +1217,45 @@ The command refuses to start inside an agent run, since a fixer starts no other 
   drift.lock            the lock of the run that works on the queue
 ```
 
-The index records the version of the run's contract each run followed, each artefact's friction and setup, and how many runs in a row it failed. `land-work` prints how many proposals wait. The project manager brings them to you in one batch.
+The index records the version of the run's contract each run followed, each artefact's friction and setup, and how many runs in a row it failed. `land-work` prints how many proposals wait. The project manager brings them to you in one batch ("Deciding the proposals", below).
+
+#### Deciding the proposals — `show-proposals`, `apply-proposals`, `refuse-proposals`, `answer-question`
+
+You decide each proposal: accept it, reword it or refuse it ([project-management:DEC-056-drift-fixers] point 6). Four commands reach the queue, and the project manager reaches it through them alone, never with file tools. Each refuses inside an agent run, since a fixer only proposes, and one at a time works on the queue, under the drift command's lock.
+
+```
+pkit pm show-proposals
+pkit pm apply-proposals <artefact>... [--because <artefact> <words>]... [--sentence <artefact> <sentence>]... [--dry-run]
+pkit pm refuse-proposals <artefact>... [--dry-run]
+pkit pm answer-question <artefact> <answer> [--by NAME] [--dry-run]
+```
+
+**Checked again first.** Before a proposal is shown, and again before it is applied, it is checked at the default branch's commit. It is set aside where its artefact is no longer stale, or its friction differs from what it was judged against. It is set aside too where it was judged under another version of the run's contract, or its files no longer read. A proposal set aside is never shown or applied, and the next `fix-drift` dispatches it again.
+
+**The batch.** `show-proposals` prints each proposal whole, for you to read every word before you decide. A proposal's words can carry a contributor's steering.
+
+- the artefact, its type, its fixer and the commit it was judged at
+- the outcome, with its justification or its sentence
+- the deferrals it keeps, and what you do before it is recorded, such as reporting a defect
+- the evidence, the diff, and the writer's command word for word
+
+It prints each question a fixer held, with the command that answers it, and lists each question you answered, which waits for the next run.
+
+**Accepting.** What you accept reaches the default branch through an ordinary pull request. The project manager files a Task, cuts its branch from the default branch and runs `apply-proposals` there. It then opens the pull request, and you authorise its merge.
+
+- **It refuses, writing nothing,** on the default branch or on no branch, and where an artefact's file differs from the default branch's. It refuses too where an `unchanged` justification still holds a placeholder for you to fill, such as `<the defect reference>`, and no `--because` gives your words.
+- **Upstream first,** it applies each diff, then runs its writer, `pkit friction revalidate`. The writer is built from the answer's fields, never from a command a fixer wrote, and runs with `--yes`, since you accepted it word for word.
+- **A diff that no longer applies** is set aside. A writer that fails leaves the file as it was, and its proposal keeps waiting.
+- **Your words.** `--because` gives them for an `unchanged` justification, and `--sentence` for an `updated` sentence. Each is held to the line an answer's own words are held to.
+- **For the description,** it prints the `## What changed in each updated document` section, one sentence for each `updated` answer.
+
+It exits 0 when each was applied, 1 when it refused and wrote nothing, and 3 when some were applied and some were not, each line saying which and why.
+
+**Refusing.** `refuse-proposals` remembers your refusal in the queue against the artefact's friction, so `fix-drift` dispatches it again only once its friction changes. It goes with the queue, which is the clone's. Its lasting form is a deferral, which you may give instead as your own answer, with `pkit friction defer`.
+
+**Answering a question.** `answer-question` records your answer and who gave it, `--by`, else `git config user.name`. While the artefact's friction stays the one the question was asked on, the next `fix-drift` quotes both in the fixer's brief, as data. An answered question no longer counts in `land-work`'s line.
+
+A run's folder is removed once each of its proposals was accepted or refused. These four commands pass the bootstrap gate, as `fix-drift` does.
 
 ## Connections
 

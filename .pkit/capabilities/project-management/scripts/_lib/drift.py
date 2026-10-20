@@ -374,6 +374,19 @@ def explain(copy: Path, name: str, run: Runner = subprocess.run) -> Mapping[str,
     return _json(["pkit", "friction", "explain", name, "--json"], copy, run)
 
 
+def upstreams_at(copy: Path, run: Runner = subprocess.run) -> dict[str, list[str]]:
+    """Each artefact at the working copy, by location, with the locations of the
+    artefacts it anchors on, read from `pkit friction artefacts --json`. Applying
+    accepted proposals follows it, upstream first (DEC-056 point 6)."""
+    artefacts = _json(["pkit", "friction", "artefacts", "--json"], copy, run)
+    by_key = _artefact_index(artefacts)
+    return {
+        str(item["location"]): _upstreams(item, by_key)
+        for item in artefacts.get("artefacts") or []
+        if isinstance(item, Mapping) and isinstance(item.get("location"), str)
+    }
+
+
 # --- fingerprints --------------------------------------------------------------------
 
 

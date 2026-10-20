@@ -15,8 +15,9 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T03:23:27Z
-      outcome: updated
+      at: 2026-10-20T10:34:33Z
+      outcome: unchanged
+      unchanged-because: It says that project-management brings the proposals together and applies only what the person accepts, which the new batch commands and the project manager's fix-drift procedure do.
 ---
 
 # software-analysis capability
