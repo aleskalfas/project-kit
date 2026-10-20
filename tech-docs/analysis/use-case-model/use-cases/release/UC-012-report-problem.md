@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-19T06:40:56Z
+      at: 2026-10-19T19:45:28Z
       outcome: unchanged
-      unchanged-because: cli.py changed only in migrations check-diff, which also fails a script whose number its folder holds. The report command this use case describes is untouched.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

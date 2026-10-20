@@ -1,0 +1,6 @@
+component: claude-code
+kind: none
+body: >
+  Internal. The adapter's README is revalidated unchanged against ADR-066's
+  refinements (#1792). Only its friction block changes, and nothing you run or
+  read changes.

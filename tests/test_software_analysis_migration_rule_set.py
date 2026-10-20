@@ -66,11 +66,12 @@ def test_the_migration_creates_the_set_install_would_create(
     )
     text = (project / CREATED).read_text(encoding="utf-8")
     assert text == planned.text
-    # The set the capability declares, as DEC-001's and DEC-002's Implications give it:
-    # it selects the three kinds of requirement beside the four.
+    # The set the capability declares, as DEC-001's, DEC-002's and DEC-004's Implications
+    # give it: it selects the three kinds of requirement and the view beside the four.
     assert text.startswith(
         "---\nrule-set: ANALYSIS\nversion: 1.0.0\ninherits: [software-analysis:SAN@1]\n"
         "scope:\n  types: [software-analysis:actor, software-analysis:term, "
+        "software-analysis:domain-model-view, "
         "software-analysis:use-case, software-analysis:journey, "
         "software-analysis:quality-requirement, software-analysis:functional-requirement, "
         "software-analysis:constraint]\nrules: {}\n---\n\n"

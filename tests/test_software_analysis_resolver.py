@@ -732,7 +732,7 @@ ASKING_TOOL = "AskUserQuestion"
 
 SA_README = CAPABILITY / "README.md"
 
-SCENARIOS = ("Happy path", "The stop", "A regression, recorded")
+SCENARIOS = ("Happy path", "The stop", "A regression, recorded", "Started by a command")
 SCENARIO_PARTS = ("**Trigger.**", "**Preconditions.**", "### Walkthrough", "### Behind the scenes")
 
 _FENCE = re.compile(r"^[ ]*(?:>[ ]?)?[ ]*```")
@@ -840,7 +840,7 @@ def test_the_readme_points_at_the_recorded_rule() -> None:
     ) in text
 
 
-def test_the_storyboard_scripts_the_three_scenarios_and_hands_over_commands() -> None:
+def test_the_storyboard_scripts_the_four_scenarios_and_hands_over_commands() -> None:
     front, body = _split(STORYBOARD)
     assert front["consumers"] == [
         {"kind": "agent", "name": "analysis-resolver", "namespace": "software-analysis"}
@@ -850,7 +850,7 @@ def test_the_storyboard_scripts_the_three_scenarios_and_hands_over_commands() ->
     pattern = body.split("## Invocation pattern", 1)[1].split("\n## ", 1)[0]
     assert "it returns the proposal" in pattern and "and nothing else" in pattern
     assert (
-        "Either way it runs no writer: it has no tool for putting a question to the person, "
+        "In every mode it runs no writer: it has no tool for putting a question to the person, "
         "so the second of the four conditions its body points at never holds"
     ) in pattern
     assert "no record sanctions" not in body

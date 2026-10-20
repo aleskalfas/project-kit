@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-18T20:04:47Z
+      at: 2026-10-19T19:46:10Z
       outcome: unchanged
-      unchanged-because: COR-059 changed only in the guide to its points 4 and 5 and in those points, which now place a data point's question. The lifecycle README's steps of a transition and what sync writes now say the questions run after the transition and that sync asks none. This page's account of what sync writes in a project-owned path, through merge delivery only, still holds.
+      unchanged-because: COR-050 point 7 gains an anchor on a shared id, among artefact anchors. The README's account of how an anchor names a record's point, and of a record whose points are a list, is untouched.
 ---
 
 # Decision records

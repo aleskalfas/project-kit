@@ -11,10 +11,10 @@ pkit:
         - .pkit/capabilities/living-docs/templates/**
         - .pkit/capabilities/living-docs/skills/**
         - .pkit/capabilities/living-docs/review-contributions.yaml
-      record: ["living-docs:DEC-001", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
-      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
+      record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
+      artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T06:33:01Z
+      at: 2026-10-20T02:03:35Z
       outcome: updated
 ---
 
@@ -109,9 +109,25 @@ Write nothing else. The file is bound to its shape (`schemas/source.schema.json`
 
 `pkit living-docs resolve-source <name>` prints the file a name resolves to. It is the resolver the friction checks run (`--json` prints `{"paths": [...]}`).
 
+## Visual elements
+
+A page may show diagrams, images, console output and callouts. Each is neutral content: the page holds no styling, and your presentation decides how it looks. On your repository host, such as GitHub, that is the host's own look, and on a site it is the site's theme ([living-docs:DEC-002-visual-elements]).
+
+- **No styling.** Nothing in a page sets a colour, a font, a theme, a class or a style. That rules out Mermaid's `%%{init}%%` directive, a `config` block in a diagram's front matter, `classDef`, `class`, `:::`, `style` and `linkStyle` lines, and HTML attributes that size, align or theme an image.
+- **Diagrams.** Write a diagram as a `mermaid` fence in the page, with an `accTitle` and an `accDescr`. A repository host such as GitHub draws it with no setup, and it reads as text where nothing draws it. Use another diagram language only where you render it to an image yourself, and show that as an image.
+- **What a diagram shows.** A diagram is never a fact's home. Each fact it shows has its home elsewhere: a decision record the page anchors, or prose on a page. Once `RS-LDOC-007` binds, it may also be anything else the page anchors that decides or states the fact. The page anchors the home of each fact the diagram draws. A diagram of its own page's prose is a view of that prose, and one of another page's fact is a summary, with the link and the anchor a summary takes. For a wide diagram, anchor the records that decide its parts and how they relate, never most of the repository.
+- **Images.** Show an image with `![alt](path)`, beside the page that shows it. An image that pages of both spaces show lies beside a user page, never under the internal root. For an image you made, a screenshot taken by hand included, anchor what it shows, and the image file too if replacing it should ask whether the text still agrees.
+- **Screenshots from a script.** Take them with a capture script you keep, with its window size, scale and theme in settings of their own. Anchor the script and what the screenshot shows, never the screenshot: each new capture would flag the page for nothing. When the script's anchor flags the page, run the capture again before you answer. The same holds for a recording, an animated image included.
+- **Console output.** Show a command and what it prints in a shell-session fence, such as `console` for a POSIX shell: each command after its prompt, `$ `, its output below. Run the fences with a runner of your own, as a test: living-docs never runs your product, and how output that varies is matched is your runner's. A command that cannot run as a test goes in a fence of its shell's language, with no output. Anchor the code whose output the fence shows.
+- **Callouts.** Write a callout as a block quote whose first line is `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` or `[!CAUTION]`. Where nothing draws it, it reads as a block quote.
+- **Text alternatives.** A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image an empty one, `![](path)`. The validator checks the `mermaid` fences ([Validation](#validation)).
+- **A documentation site** is optional, and your repository host's own view is the default. A site you publish reads your content as written, takes its theme for diagrams and callouts from one place, and serves one space: its pages and the images they show, wherever they lie. A technical page's link to a user page reaches the user space's site.
+
+`RS-LDOC-007` widens a fact's home, for every statement a page makes, to what the page anchors that decides or states the fact, and says a diagram or a page is never such a home. `RS-LDOC-008` is the rule on text alternatives. Both are proposed, and bind from the major of `LDOC` that accepts them ([The shared method](#the-shared-method-ldoc)). Until then, a fact's home is a decision record the page anchors, or a page (`RS-LDOC-002`).
+
 ## The shared method: `LDOC`
 
-`rule-sets/ldoc.md` is a method rule set (COR-051), cited `living-docs:LDOC`. Its rules are those point 3 of the decision states, each accepted, with the decision as its origin and its anchor:
+`rule-sets/ldoc.md` is a method rule set (COR-051), cited `living-docs:LDOC`. Its accepted rules are those point 3 of [living-docs:DEC-001-living-docs-discipline] states, with that decision as their origin and their anchor. Its two proposed rules come from [living-docs:DEC-002-visual-elements]:
 
 | Rule | Statement |
 |---|---|
@@ -121,6 +137,10 @@ Write nothing else. The file is bound to its shape (`schemas/source.schema.json`
 | `RS-LDOC-004` | Pages of a kind follow one format, with a template per kind. |
 | `RS-LDOC-005` | An index-like file is a signpost to what a folder holds, never a summary of its contents. |
 | `RS-LDOC-006` | Nothing is created ahead of the need for it. |
+| `RS-LDOC-007`, proposed | Each fact has one home, and a diagram is never it. Besides a page, a fact's home may be what the page anchors that decides or states it, the first of: an accepted record or rule, another artefact in force such as an analysis artefact or a section of one, a captured source, code. A page of the user space anchors such a home under the internal root, and links nothing there. |
+| `RS-LDOC-008`, proposed | A diagram, an image or a recording that carries meaning has a text alternative, and a decorative image has an empty one. |
+
+`RS-LDOC-007` and `RS-LDOC-008` bind nothing yet. A major of `LDOC` accepts both, and `RS-LDOC-007` then supersedes `RS-LDOC-002` (DEC-002 point 10). Your definitions' pins then fall behind until you review the new major (core rule sets, COR-051 point 7).
 
 You never edit `LDOC`; a space's definition inherits it, pinned to its major (`inherits: [living-docs:LDOC@1]`), and `pkit validate` tells you when a new major arrives. Rules about how rules are named and inherited are the core's (COR-051), so they are not repeated here.
 
@@ -130,8 +150,9 @@ You never edit `LDOC`; a space's definition inherits it, pinned to its major (`i
 
 - `RS-LDOC-003`: the page names its reader in its `reader` field, one the readers point holds.
 - `RS-LDOC-004`: the page's body carries the sections its kind's structure declares, in order where order matters.
+- `RS-LDOC-008`: each `mermaid` fence in the page's body carries an `accTitle` and an `accDescr`, each followed by text that is not blank.
 
-The agent's reader-review leaves those parts to the validator and judges the rest of each rule. A declaration is no part of a rule's content, so it flags nothing anchored to the rule. `pkit rule-sets reach` lists each part on the rule wherever `LDOC` binds. The validator checks each part only on the pages where its rule binds, as that answer gives it: a page's sections where `RS-LDOC-004` binds, and its reader where `RS-LDOC-003` binds. On any other page it reads neither.
+The agent's reader-review leaves those parts to the validator and judges the rest of each rule. A declaration is no part of a rule's content, so it flags nothing anchored to the rule. `pkit rule-sets reach` lists each part on the rule wherever `LDOC` binds. The validator checks each part only on the pages where its rule binds, as that answer gives it: a page's sections where `RS-LDOC-004` binds, its reader where `RS-LDOC-003` binds, and its diagrams where `RS-LDOC-008` binds. On any other page it reads none of them.
 
 ## Templates
 
@@ -233,18 +254,19 @@ The user space's definition carries its one rule, `RS-<SET>-001`, reader paths s
 - a project place equal to or enclosing a root; a file two project places claim at equal rank, ahead of every other place of your spaces, in the backbone's order;
 - where a space's definition carries a scope: a page an assigned place gives that space outside that scope, or inside another space definition's scope; where it selects by type, an assigned place outside every root that does not give the page type ([Declaring your spaces](#declaring-your-spaces));
 - a decision record that would otherwise be a page — of the page type, or declaring its page kind in an untyped place of yours outside every root — since a decision record is never a page. Another owner's document is never read for `reader` or `kind` ([Types](#types)), so carrying them fails nothing;
-- where the rules bind, unreadable — `pkit rule-sets reach --json` gives no answer: one error, and no page's structure or reader is checked;
+- where the rules bind, unreadable — `pkit rule-sets reach --json` gives no answer: one error, and no page's structure, reader or diagram is checked;
 - a page whose `kind` does not fit `schemas/page.schema.json`; where `RS-LDOC-003` binds on a page, a `reader` it lacks or that does not fit the schema;
 - where `RS-LDOC-003` binds on a page, a `reader` the readers point does not hold — the message names the readers it does (Connections, below);
 - a page whose body lacks a section its kind's structure declares, or carries one out of order (Pages, above) — the message names the page, its kind, the section and the declared structure. It is an error where `RS-LDOC-004` binds on the page. A page no rule set of yours reaches is not checked, nor one reached only through a pin behind `LDOC`'s major, nor any page while the rule is not accepted (COR-051 points 4 and 7);
 - the declaration of the kinds' structures, `schemas/page-kinds.yaml`, absent, unparsable or not fitting its schema — one error, "structures unreadable", and no page's body is checked. The file is read only where `RS-LDOC-004` binds on some page, or while you have no page and the rule is accepted;
 - where `RS-LDOC-004` binds on a page whose kind declares a structure, a body that cannot be read;
+- where `RS-LDOC-008` binds on a page, a `mermaid` fence in its body without an `accTitle` or without an `accDescr`, each followed by text that is not blank — the message names the page and the fence's line. A fence is read as a section's heading is: below the front matter, outside an HTML comment, in a callout or under a list item too. A Mermaid comment, a line that opens with `%%`, holds neither. While the rule is proposed it binds on no page, and the summary says so;
 - an entry point that is not a document of its space — under its root or in a place assigned to it. An entry point without front matter whose places cannot be told apart (above) fails only when none of them gives its space;
 - a definition outside `<definitions>/rule-sets/`, or one that does not inherit `living-docs:LDOC`.
 
 It reports, without failing: a `source` anchor, or a rule origin citing a `source`, that no captured file answers (the whole-repository check reports it dead); a captured source nothing anchors or cites; a captured source carrying `schema_version` or `binds_to`, which its shape permits only for its own carrier; a file in the sources folder whose name does not end in `.yaml` — notes, an editor's backup — which captures nothing; a space with no definition yet, a definition with no scope, or with the template's placeholder in its scope, naming the scope to give it, the pages of a space its definition's scope leaves out, a file without front matter whose places cannot be told apart, unless every one of them is an unassigned place outside every root, which fails (above), roots that are the same folder or nested (onboarding separates them), a document that declares its page kind and lies only in an untyped place of rule sets outside every root that no assignment gives a space, naming the assignment that would make it a page, each kind that declares no structure, with the pages that name it where `RS-LDOC-004` binds and the kinds that do declare one, and — in its summary — the unclassified documents and the documents of a type of your own, whether each entry point is a page yet, the spaces whose definitions carry a scope, the readers each page's reader was checked against, how many pages were checked against their kind's structure and how many were not because their kind declares none, how many pages each check left out because its rule does not bind on them, and the pages left unanchored: those without an accepted reason, onboarding's work still to do, and apart from them those whose friction block gives one as `unanchored-because` (DEC-001 point 8; COR-050 point 1). The human view lists both, each accepted page with its reason; an excluded page is in neither. A synced tree declared as a place is the core's `synced-place` finding, under `friction` (above).
 
-**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — and for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs.
+**Pages are checked** for their front matter — `kind`, and `reader` against the readers point where `RS-LDOC-003` binds, and the friction block, which `pkit validate` checks under `friction` — for their body's structure, against the structure their kind declares, where `RS-LDOC-004` binds, and for their diagrams' text alternatives where `RS-LDOC-008` binds. Everything else a page owes `LDOC` is judgment, left to the agent's reader-review (below): whether each section says what its kind's template asks, whether the anchors ground every statement, whether each fact has one home, and whether the page says only what its reader needs.
 
 ## Connections
 
@@ -315,6 +337,7 @@ What it will not do:
 
 - **For each page it proposes,** it writes the evidence, the answer as fields, and, for an `updated` answer, a diff of the page's text and anchors. The command builds the answer's command from those fields, and never runs a command the agent wrote.
 - **A page whose fix needs what only you know,** such as what changed in a source, it holds with one question. Your answer goes with the page's next run.
+- **It ends with one line for each page,** in the forms of project-management's run contract: proposed, held with its question, or none with one of the contract's reasons, such as `not-mine` for a location that is no page.
 
 Nothing is applied until you accept it.
 
@@ -338,11 +361,11 @@ From then on, the friction check flags pages as their anchors change, and the ag
 
 ## What's shipped now, what's next
 
-Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. So is the agent's declaration as the fixer of your pages, with what it takes from the command that starts it and what it returns. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate.
+Shipped: the decision, the project configuration's schema, the declaration of the roots as places and of the definitions location, the page and template types they give, the validator, the `LDOC` rule set with the parts the validator enforces where they bind, the space-definition template with its scope and the signpost and reference page templates with the page's schema and each page kind's declared structure, the connections (the readers and reading-evidence points, and the contribution to the documentation check), the `source` anchor kind with its resolver and the shape of a captured source, and the `living-docs` agent that proposes fixes, performs reader-review and onboards existing documentation. So is the agent's declaration as the fixer of your pages, with what it takes from the command that starts it and what it returns. Shipped too: the authoring command for a page and a space, `pkit living-docs new`, with its `docs-author` skill. So is the contribution of the core rule-set reviewer to project-management's merge gate. So are the decision on visual elements, its two proposed rules, and the validator's check of a diagram's text alternative, which runs once a major of `LDOC` accepts its rule.
 
 ## Citing this capability's decisions
 
-`[living-docs:DEC-001-living-docs-discipline]`; a rule of the shared method, `[living-docs:RS-LDOC-003]`.
+`[living-docs:DEC-001-living-docs-discipline]`, `[living-docs:DEC-002-visual-elements]`; a rule of the shared method, `[living-docs:RS-LDOC-003]`.
 
 ## Dependencies
 

@@ -25,9 +25,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-19T06:13:50Z
+      at: 2026-10-19T19:46:11Z
       outcome: unchanged
-      unchanged-because: "COR-004 gained two sentences: the rule lists the core layer's operations, and a data point's question is the definer's command and none of them. This page cites COR-004 as an example of design rules for the command surface that list no commands, which still holds."
+      unchanged-because: The tracking-issue body names anchors on a shared id among its other findings, and COR-050 gains that warning. CONTRIBUTING's account of the friction report workflow and of authoring records holds as written.
 ---
 
 # Contributing to project-kit

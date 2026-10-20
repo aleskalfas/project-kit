@@ -61,9 +61,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-19T06:33:07Z
+      at: 2026-10-19T19:00:00Z
       outcome: unchanged
-      unchanged-because: living-docs DEC-001 point 5 gains that the capability declares its agent the fixer of the page type, so a work-tracking command may start it on stale pages in a run nobody watches. The agent still only proposes there, and nothing is applied until the person accepts it, so the developer's need to have a stale page's fix proposed with its evidence, and to review it before it is applied, still holds.
+      unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. How numbered ids are given and kept append-only reads as before, so the developer's needs still hold.
 ---
 
 # ACT-developer — Developer

@@ -28,6 +28,11 @@ read an artefact anchor through it, so they agree on what it names:
   - a section or the lead of an artefact whose file a record anchor names,
     whose parts are its points (`record_points`): the point whose id follows
     the `#`, or whose heading has the slug, else the whole record.
+- **An id two artefacts share** (COR-050 point 7). Where two artefacts or more
+  share the id the anchor names an artefact by, whole or before a part, it is
+  read on the first in walk order (`Discovery.find`), and is ambiguous too,
+  warned of and never failed: `AnchoredPart.namesakes` names them all, the one
+  it is read on first, and `AnchoredPart.shared_id` gives the warning.
 - **What a part stands on** (`part_standing`, COR-050 point 5): its text — a
   section's heading and its text, or the lead's text — and the artefact's own
   fields, outside the container. It is read in the shape a point's is
@@ -94,6 +99,9 @@ class AnchoredPart:
     - `sharing`: how many headings have the slug.
     - `refusal` and `use`: for a refused anchor, what it names a part of and
       the anchor to use instead, where there is one.
+    - `namesakes`: where two artefacts or more share the id it names an artefact
+      by, the location of each, in walk order, the first being `target`'s, the
+      one it is read on (COR-050 point 7); else empty.
     """
 
     value: str
@@ -105,6 +113,7 @@ class AnchoredPart:
     sharing: int = 0
     refusal: Refusal | None = None
     use: Anchor | None = None
+    namesakes: tuple[str, ...] = ()
 
     @property
     def resolves(self) -> bool:
@@ -149,6 +158,20 @@ class AnchoredPart:
             return "names no artefact in the declared places"
         return f"{self.name} has no heading whose slug is {self.part}"
 
+    @property
+    def shared_id(self) -> str | None:
+        """The warning on an anchor whose id two artefacts share (COR-050 point 7), as both
+        checks give it: which artefacts share it, the one it is read on, and how to mend
+        it; `None` where no other artefact has the id. It is given whatever else the
+        anchor finds, since the artefact it was meant for may be another."""
+        if not self.namesakes:
+            return None
+        return (
+            f"is ambiguous: {len(self.namesakes)} artefacts have the id {self.name} "
+            f"({', '.join(self.namesakes)}); read as naming {self.namesakes[0]} — give them "
+            f"ids no two share, or name a document by its path"
+        )
+
     def _refused(self) -> str:
         use = "" if self.use is None else f" — use the {self.use.kind} anchor {self.use.value}"
         if self.refusal is Refusal.COLLECTION_FILE:
@@ -178,13 +201,15 @@ def anchored_part(
     whole anchor's is (`Discovery.find`). `record_of` says which record anchor
     names a file, if one does (`friction_check.record_naming`).
     """
-    whole = discovery.find(value)
-    if whole is not None:
-        return AnchoredPart(value, PartState.WHOLE, whole, value)
+    wholes = discovery.named(value)
+    if wholes:
+        return AnchoredPart(value, PartState.WHOLE, wholes[0], value, namesakes=_namesakes(wholes))
     name, part = split_anchor(value)
     if part is None:
         return AnchoredPart(value, PartState.MISSING, name=value)
-    target = discovery.find(name)
+    named = discovery.named(name)
+    target = named[0] if named else None
+    namesakes = _namesakes(named)
     if target is None:
         entries = [
             a for a in discovery.artefacts if a.path == name and a.kind is ArtefactKind.ENTRY
@@ -199,22 +224,46 @@ def anchored_part(
     if target.kind is ArtefactKind.ENTRY:
         use = Anchor("artefact", name)
         return AnchoredPart(
-            value, PartState.REFUSED, target, name, part, refusal=Refusal.ENTRY, use=use
+            value,
+            PartState.REFUSED,
+            target,
+            name,
+            part,
+            refusal=Refusal.ENTRY,
+            use=use,
+            namesakes=namesakes,
         )
     record = record_of(target.path)
     if record is not None:
         use = Anchor("record", _point_to_use(record, target, part))
         return AnchoredPart(
-            value, PartState.REFUSED, target, name, part, refusal=Refusal.RECORD, use=use
+            value,
+            PartState.REFUSED,
+            target,
+            name,
+            part,
+            refusal=Refusal.RECORD,
+            use=use,
+            namesakes=namesakes,
         )
     body = Body.read(target.body)
     if part == LEAD:
-        return AnchoredPart(value, PartState.LIVE, target, name, part, body.lead())
+        return AnchoredPart(
+            value, PartState.LIVE, target, name, part, body.lead(), namesakes=namesakes
+        )
     found = body.sections_by_slug(part)
     if not found:
-        return AnchoredPart(value, PartState.MISSING, target, name, part)
+        return AnchoredPart(value, PartState.MISSING, target, name, part, namesakes=namesakes)
     state = PartState.LIVE if len(found) == 1 else PartState.AMBIGUOUS
-    return AnchoredPart(value, state, target, name, part, found[0], sharing=len(found))
+    return AnchoredPart(
+        value, state, target, name, part, found[0], sharing=len(found), namesakes=namesakes
+    )
+
+
+def _namesakes(named: Sequence[Artefact]) -> tuple[str, ...]:
+    """The locations of the artefacts a name names, where two or more share it (COR-050
+    point 7); empty where one does, or none."""
+    return tuple(artefact.location for artefact in named) if len(named) > 1 else ()
 
 
 def part_standing(artefact: Artefact | None, part: str) -> Standing | None:

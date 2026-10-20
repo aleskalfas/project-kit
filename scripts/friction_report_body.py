@@ -107,9 +107,9 @@ DORMANT = (
     "demanded (COR-050 point 15)."
 )
 OTHER = (
-    "Dead anchors, anchors of a kind nothing resolves, over-broad anchors, what does not "
-    "read — a file's front matter, or `friction.exclude` at a revalidation point — and "
-    "artefacts a shallow clone could not judge."
+    "Dead anchors, anchors of a kind nothing resolves, over-broad anchors, anchors on an id "
+    "two artefacts share, what does not read — a file's front matter, or `friction.exclude` "
+    "at a revalidation point — and artefacts a shallow clone could not judge."
 )
 #: What the body says of an over-broad anchor, in place of the check's message.
 OVER_BROAD_SAID = (

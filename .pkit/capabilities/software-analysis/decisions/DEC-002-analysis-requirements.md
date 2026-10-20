@@ -36,10 +36,11 @@ Behaviour that serves one actor's goal is a use case, not a functional requireme
 
 ### 2. One numbering, and the kind beside the id
 
-Requirements are numbered within the project as `REQ-NNN`, one numbering across the three kinds.
+Requirements are numbered within the repository as `REQ-NNN`, one numbering across the three kinds.
 - **Reclassifying keeps the id.** A requirement moved to another kind is rewritten to that kind's structure, and keeps its number.
 - **The kind shows beside the id** in the path, in the heading, in tool output and on pages. The heading shows the id, the kind and the title, such as `# REQ-007 · Quality · <title>`.
 - **DEC-001 point 3's rules for numbered ids** apply to `REQ-NNN`. Its next free number and its check of parallel work read the three kinds' folders as one.
+- **Across a repository's analyses,** as for use cases, the numbering is one (DEC-001 point 3). So the three kinds' folders of every analysis are read as one, and no two requirements of a repository share a number.
 
 ### 3. Places and types
 
@@ -88,12 +89,13 @@ A requirement points at the solution, and nothing in the solution points back at
   - each architecture view that realises it
   - the files that verify it (point 5), and the narrow code that holds it. An anchor on every command of the class it binds would be over-broad (COR-050 point 7).
 - **Within the analysis,** it anchors only each actor in its `actors` and each requirement in its `refines`, as artefact anchors. The stamp writes them from the fields, and the check requires its anchors within the analysis to match the two fields exactly.
+- **Across analyses.** Its `refines` names requirements of its own analysis alone. An actor in its `actors` may be another analysis's, and it then anchors the records behind that actor instead (DEC-001 points 2 and 4).
 - **Refined in a circle.** A requirement that comes back round to itself through `refines` closes a cycle, which validation refuses (COR-050 point 5).
 - **With no anchor.** A requirement with no anchor at all may give the reason it has none, as an actor or a term may (DEC-001 point 9). It then has no actor, no requirement it refines and nothing in the solution, such as a requirement a stakeholder states.
 
 ### 7. Use cases and journeys list the requirements they must meet
 
-- **A use case** lists in `requirements` each requirement it must meet. The field is optional, so no use case needs changing.
+- **A use case** lists in `requirements` each requirement of its own analysis it must meet (DEC-001 point 2). The field is optional, so no use case needs changing.
 - **A journey** lists only the requirements that bind its whole path. A requirement that binds one of its steps is that step's use case's to list.
 - **As anchors.** Each requirement listed is an artefact anchor of the use case or the journey. The stamp writes it. The check requires the requirement anchors to match the list exactly, as a journey's use-case anchors match its steps. So a changed requirement flags each use case and journey that lists it.
 - **In force.** The stamp and the check refuse a listed requirement the analysis does not hold. They refuse a withdrawn one listed by a use case or a journey in force, or refined by a requirement in force. So the change that withdraws a requirement also takes it off those lists, and the friction its withdrawal raises points at each of them.

@@ -23,9 +23,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-18T19:56:59Z
+      at: 2026-10-19T20:58:13Z
       outcome: unchanged
-      unchanged-because: This change adds a second way for a link to choose its targets, and splits one validation bullet of COR-050 point 12. Writing anchors, and the block faults this use case says validation fails on, are untouched.
+      unchanged-because: Anchoring a document is untouched; the change widens only the shape and bounds of a component's held folder, which the use case does not describe.
 ---
 
 # UC-005 — Say what my document rests on
@@ -62,6 +62,7 @@ pkit:
   - a cycle between artefacts
   - a dead, ambiguous or refused anchor on a part
 - **3a.** An anchor names a kind that no installed component resolves. The check reports an `unresolved-kind`. The developer installs the capability that resolves it, or removes the anchor.
+- **3b.** An artefact anchor names an id that two artefacts share. The check warns of it as `shared-id`, and never fails on it (COR-050 point 7). The warning names the artefacts that share the id, and the one the anchor stands on. The developer gives them ids no two share, or names a document by its path, and the path rejoins at step 2.
 - **5a.** An anchor matches more than half the tracked files. `pkit friction check --all` warns of it as `over-broad`, since it would make every change a revalidation, and never fails on it (COR-050 point 7).
 
 **Postconditions:** The document carries anchors naming what makes it true. The change check asks it for an answer in each change that modifies what one of them names.

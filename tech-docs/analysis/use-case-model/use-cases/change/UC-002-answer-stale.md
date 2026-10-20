@@ -34,9 +34,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-18T21:14:54Z
+      at: 2026-10-19T19:45:38Z
       outcome: unchanged
-      unchanged-because: This branch words the revisit finding and the revisit writer's refusal, rewords the software-engineer agent's revisit paragraph, and splits one validation bullet of COR-050 point 12. Revalidating and deferring, and what this use case takes from core rule 20, are untouched.
+      unchanged-because: The change check gains a reported-only warning on an anchor on a shared id, which asks no answer of a document. A shared id that moves an anchor to another artefact raises friction, answered as this use case says.
 ---
 
 # UC-002 — Answer what my change made stale

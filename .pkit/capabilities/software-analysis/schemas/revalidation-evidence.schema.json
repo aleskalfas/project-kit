@@ -37,7 +37,7 @@
           "$ref": "#/$defs/text"
         },
         "steps": {
-          "description": "A set: for a use case, the steps and variants the run went through, by number and letter; for a journey, the use cases it passed through, by id, each once; an actor, a term or a requirement has none.",
+          "description": "A set: for a use case, the steps and variants the run went through, by number and letter; for a journey, the use cases it passed through, by id, each once; an actor, a term, a requirement or a domain-model view has none.",
           "type": "array",
           "minItems": 1,
           "uniqueItems": true,
@@ -62,7 +62,7 @@
           "then": { "properties": { "steps": { "items": { "$ref": "#/$defs/use-case-id" } } } }
         },
         {
-          "if": { "properties": { "artefact": { "pattern": "^(?:ACT|TERM|REQ)-" } }, "required": ["artefact"] },
+          "if": { "properties": { "artefact": { "pattern": "^(?:ACT|TERM|REQ|VIEW)-" } }, "required": ["artefact"] },
           "then": { "properties": { "steps": false } }
         }
       ]
@@ -97,6 +97,11 @@
       "type": "string",
       "pattern": "^REQ-(?:[0-9]{3}|[1-9][0-9]{3,})$"
     },
+    "view-id": {
+      "description": "A domain-model view's id: `VIEW-` and the slug its file's name gives after its number and the hyphen, so a view given another number keeps its id (software-analysis DEC-004 point 4).",
+      "type": "string",
+      "pattern": "^VIEW-[a-z][a-z0-9-]*$"
+    },
     "artefact-id": {
       "description": "The id of any analysis artefact.",
       "anyOf": [
@@ -104,7 +109,8 @@
         { "$ref": "#/$defs/term-id" },
         { "$ref": "#/$defs/use-case-id" },
         { "$ref": "#/$defs/journey-id" },
-        { "$ref": "#/$defs/requirement-id" }
+        { "$ref": "#/$defs/requirement-id" },
+        { "$ref": "#/$defs/view-id" }
       ]
     },
     "commit": {
@@ -118,9 +124,9 @@
       "pattern": "^[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
     },
     "evidence-id": {
-      "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7): the artefact, the commit and the check the result is for, `<artefact>@<commit>#<check>` — an artefact id as above, then a commit's full name, then a check's name. A pattern cannot refer to another, so this one spells the five id shapes, the commit and the check name again, here beside them; a test holds them in step.",
+      "description": "The id of an entry of the evidence point, `pkit::analysis:revalidation-evidence` (DEC-001 point 7): the artefact, the commit and the check the result is for, `<artefact>@<commit>#<check>` — an artefact id as above, then a commit's full name, then a check's name. A pattern cannot refer to another, so this one spells the six id shapes, the commit and the check name again, here beside them; a test holds them in step.",
       "type": "string",
-      "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,})|REQ-(?:[0-9]{3}|[1-9][0-9]{3,}))@(?:[0-9a-f]{40}|[0-9a-f]{64})#[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
+      "pattern": "^(?:ACT-[a-z][a-z0-9-]*|TERM-[a-z][a-z0-9-]*|UC-(?:[0-9]{3}|[1-9][0-9]{3,})|JRN-(?:[0-9]{3}|[1-9][0-9]{3,})|REQ-(?:[0-9]{3}|[1-9][0-9]{3,})|VIEW-[a-z][a-z0-9-]*)@(?:[0-9a-f]{40}|[0-9a-f]{64})#[a-z][a-z0-9-]*(?:\\.[a-z0-9][a-z0-9-]*)*$"
     }
   }
 }

@@ -50,9 +50,17 @@ What is checked, each against the record's words:
   its title, `# REQ-NNN · Quality · <title>`, as its kind's structure names it
   (DEC-002 point 2). The heading wanted is the one the stamp and the templates
   write (`render.title_heading`).
+- **Several analyses** (point 2). Where the capability's settings list the
+  analyses, one per component, each lies in its folder: a file no listed
+  analysis holds is an error, and so is one below the top while none is listed
+  (`_lib/analyses.py`). An entry listed twice, or building on itself, is an
+  error. Where a component declares its dependencies, as a capability does in
+  its package metadata, each analysis its entry builds on is a dependency's,
+  optional where that one is; the analysis of `core` is the backbone's.
 - **Duplicate ids** (point 3). No two artefacts in the analysis share an id,
   a number spelt with other zeros included — as the stamp counts it held. A
-  requirement's number is one across its three kinds (DEC-002 point 2).
+  requirement's number is one across its three kinds (DEC-002 point 2). No two
+  artefacts of a repository's analyses share one either.
 - **A name the id disagrees with** (point 3). A use case, journey or
   requirement whose file's name carries a number (`UC-007-<slug>.md`) its
   front matter does not give — no id, or another: the stamp counts the number
@@ -62,8 +70,11 @@ What is checked, each against the record's words:
   names its file.
 - **What a use case or journey names** (points 1, 3 and 4): its actor, a use
   case's other actors, and a journey's steps and the use cases outside it that
-  a step relies on, are actors and use cases of the analysis; and one in force
-  names none withdrawn. The stamp refuses the same (`Analysis.unfit`), so the
+  a step relies on, are actors and use cases of its own analysis; and one in force
+  names none withdrawn. An actor of an analysis its own builds on is the one
+  exception, named with that analysis, `core:ACT-developer`, where its glossary's
+  head lists it (point 2); it is anchored by the records behind it, never itself.
+  The stamp refuses the same (`Analysis.unfit`), so the
   check never accepts what the stamp would not write; a withdrawn artefact may
   name withdrawn ones. A use case's other actors leave out its own actor, and
   what a journey relies on leaves out its steps.
@@ -98,6 +109,25 @@ What is checked, each against the record's words:
   requirement, are exactly the list, so a changed requirement flags every use
   case and journey that lists it. A part anchor names the artefact before its
   last `#` (COR-050 point 2), so one on a requirement counts among them.
+- **The domain model's views** (DEC-004 points 4, 5 and 7), whatever any
+  rule's status, as the record's Implications hold them: a view's file's name
+  opens with a number and a hyphen, and gives its id after them; each term its
+  `explains` lists is a term of its own analysis, in force while the view is;
+  no two views in force explain one term; its term anchors are exactly
+  `explains`, a part anchor counting as an anchor on its term, and it carries
+  no path anchor. A withdrawn view keeps its `explains` and its anchors, and
+  explains nothing (`_lib/views.py`).
+- **Each term's link to its section** (DEC-004 point 7), whatever any rule's
+  status: a term a view in force explains holds one line under its heading,
+  before its first part, that links to that view's section on it, exactly as
+  the stamp writes it; a term no view in force explains holds none. A project
+  with no domain model meets none of this.
+- **What an analysis builds on** (point 2): each glossary's head data,
+  `builds-on`, against its shape, always; only a listed analysis's head lists
+  what it takes from another, and only from one its entry builds on; a term of
+  its own never takes the name of a term its head lists; and a head whose links
+  name another version than the floor its component declares is a warning. The
+  head's text against that data is its form, held where the format rule binds.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -162,7 +192,10 @@ And where the format rule binds, at its status:
   or a front-matter field that does not hold the form its element names
   (`_lib/forms.py`), a part of
   the `sentence` form that holds a list too. A journey's steps read each use
-  case's title. A part or a
+  case's title, and a domain-model view's sections each term's name: one
+  section for each term its `explains` lists, in its order, headed by the
+  term's name, no two headings giving one slug, each holding its parts
+  (DEC-004 point 2). A part or a
   label a writer adds is never reported, though what it holds is content of
   the part it falls in, and a list form judges only the part's list items. A
   withdrawn artefact is never failed for a part it lacks or for a form, since
@@ -201,6 +234,19 @@ And where the format rule binds, at its status:
   kind takes no group: its schema refuses one, since no rule binds on a
   record.
 
+And where the rule of logical consequence, RS-SAN-009, binds, at its status:
+
+- **A use case's `after`** (point 1; `_lib/chain.py`): of a use case in force
+  that writes it, each producer is a use case in force of its own analysis, the
+  use case itself among them, or `environment`. The field holds one entry for
+  each precondition its *Preconditions* writes, in their order, each naming the
+  producers its line opens with, such as `**From UC-003:**`. In an area whose
+  name opens with a number, each entry names a producer in no later area, the
+  environment before every area (point 12). Where the rule binds is the one
+  reading the format rule reads. Accepted, each departure is an error, and
+  proposed, a preview reports it. A use case that writes no `after` is not read,
+  and its schema holds the field's shape always.
+
 And whatever any rule's status, the project's own structures themselves: a file
 its schema or the shipped structure refuses, a tightening of the record's kind
 among them, and a group naming no rule of the project's own rule sets, are
@@ -237,18 +283,33 @@ from typing import Any
 
 from ruamel.yaml.error import YAMLError
 
-from _lib import backbone, evidence, markdown, project_structure, render, schemas, structure
+from _lib import (
+    analyses,
+    backbone,
+    chain,
+    evidence,
+    markdown,
+    project_structure,
+    render,
+    schemas,
+    structure,
+    views,
+)
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
     ACTOR,
+    AFTER,
     CAPABILITY,
     COLLECTIONS,
     CONTAINER,
+    ENVIRONMENT,
+    EXPLAINS,
     FORMAT_RULE,
     ID_SHAPE,
     JOURNEY,
     KIND_OF_PLACE,
     KINDS,
+    LOGIC_RULE,
     METHOD_SET,
     MUST_MEET,
     NOUN,
@@ -258,16 +319,21 @@ from _lib.model import (
     REQUIREMENTS,
     REQUIREMENTS_FOLDER,
     REVALIDATED_AT,
+    REVALIDATIONS,
     TERM,
     UNANCHORED_BECAUSE,
     UNPLACED,
     USE_CASE,
+    VIEW,
     Analysis,
     Artefact,
     Unreadable,
+    area_number,
     id_in_name,
     identity,
     one_actor,
+    qualified,
+    view_name,
     with_article,
 )
 from _lib.placeholder import IN_TEMPLATES, left_in
@@ -288,6 +354,7 @@ TITLED = {
     USE_CASE: "title",
     JOURNEY: "title",
     **dict.fromkeys(REQUIREMENTS, "title"),
+    VIEW: "title",
 }
 
 #: A requirement's front-matter fields naming artefacts of the analysis: the actors whose
@@ -326,24 +393,33 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
         return outcome
 
     records = list(analysis.records)
+    listing = analyses.read(root)
     outcome.summary.append(_counts(analysis, len(records)))
+    outcome.summary += _listed_summary(listing)
     outcome.findings += [Finding(ERROR, s.path, s.why) for s in analysis.strays]
-    outcome.findings += _outside_kinds(analysis)
+    outcome.findings += list(listing.problems)
+    outcome.findings += _in_no_analysis(analysis, listing)
+    outcome.findings += _outside_kinds(analysis, listing)
     outcome.findings += _unreadable(analysis)
     outcome.findings += _own_fields(analysis)
     outcome.findings += _placeholders(root, analysis)
     outcome.findings += _headings(root, analysis)
     outcome.findings += _duplicates(analysis)
     outcome.findings += _named_otherwise(analysis)
-    outcome.findings += _references(analysis)
-    outcome.findings += _requirement_references(analysis)
+    outcome.findings += _references(analysis, listing)
+    outcome.findings += _requirement_references(analysis, listing)
     outcome.findings += _listed_requirements(analysis)
+    outcome.findings += _built_on(root, analysis, listing)
     outcome.findings += _lists_apart(analysis)
     outcome.findings += _journeys_of_one_actor(analysis)
     outcome.findings += _actor_anchors(analysis)
     outcome.findings += _journey_anchors(analysis)
     outcome.findings += _requirement_anchors(analysis)
     outcome.findings += _listed_requirement_anchors(analysis)
+    outcome.findings += _view_terms(analysis)
+    outcome.findings += _one_view_per_term(analysis)
+    outcome.findings += _view_anchors(analysis)
+    outcome.findings += _term_links(root, analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -353,11 +429,15 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _open_regressions(root, read, analysis)
     own = _own(root)
     outcome.findings += _own_findings(analysis, own)
-    summary, departing = _structure(root, analysis, preview=preview, own=own)
+    reached = _Reach(root, backbone.reach)
+    summary, departing = _structure(root, analysis, preview=preview, own=own, reach=reached)
     outcome.summary.append(summary)
     outcome.findings += departing
     said, departing = _record_structure(root, read, own)
     outcome.summary += [said] if said else []
+    outcome.findings += departing
+    lines, departing = _after(root, analysis, reached, preview=preview, own=own)
+    outcome.summary += lines
     outcome.findings += departing
     return outcome
 
@@ -373,13 +453,68 @@ def _counts(analysis: Analysis, records: int) -> str:
     return line
 
 
+def _listed_summary(listing: analyses.Listing) -> list[str]:
+    """Where the project lists its analyses, which, each in its folder (DEC-001 point 2):
+    the counts above are theirs together."""
+    if not listing.several:
+        return []
+    each = ", ".join(f"{a.component} in {a.folder}/" for a in listing.analyses)
+    return [f"{len(listing.analyses)} analysis(es) listed: {each}; counted together above."]
+
+
+# --- which analysis holds an artefact (DEC-001 point 2) -------------------------------------
+
+
+def _in_no_analysis(analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
+    """A file of a place, or a revalidation record, that lies where no analysis holds it:
+    in a folder below the location's top where the project lists no analyses, at the top
+    where it lists them, or in a folder no listed analysis takes (DEC-001 point 2)."""
+    found: list[Finding] = []
+    lying = dict(analysis.folders)
+    lying |= {path: _record_folder(analysis, path) for path in analysis.records}
+    for path, folder in sorted(lying.items()):
+        if listing.holds(folder):
+            continue
+        if not listing.several:
+            why = (
+                f"it lies in the folder {folder}/ of the analysis location, and the project "
+                f"lists no analyses in {analyses.CONFIG}: its one analysis lies at the "
+                f"location's top. List each analysis, with its component and its folder, or "
+                f"move the file to the top"
+            )
+        elif folder is None:
+            why = (
+                f"it lies at the top of the analysis location, and the project lists its "
+                f"analyses in {analyses.CONFIG}, each in its component's folder: move it into "
+                f"the folder of the analysis that holds it"
+            )
+        else:
+            why = (
+                f"it lies in the folder {folder}/, which no analysis {analyses.CONFIG} lists "
+                f"takes: list the analysis of its component there, or move the file"
+            )
+        found.append(Finding(ERROR, path, f"{why} (DEC-001 point 2)"))
+    return found
+
+
+def _record_folder(analysis: Analysis, path: str) -> str | None:
+    """The folder of the location a revalidation record lies in, one down from the top
+    where the glob of the records' folders holds it, `None` at the top's."""
+    top = f"{analysis.location}/" if analysis.location not in (None, ".") else ""
+    first, _, rest = path.removeprefix(top).partition("/")
+    if first != REVALIDATIONS and rest.startswith(f"{REVALIDATIONS}/"):
+        return first
+    return None
+
+
 # --- shape and required parts --------------------------------------------------------------
 
 
-def _outside_kinds(analysis: Analysis) -> list[Finding]:
+def _outside_kinds(analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
     """A file under `requirements/` outside the three kinds' folders, which no place holds
-    (DEC-002 point 3); or, when the backbone's reading gives no list of such files, that
-    the check could not look."""
+    (DEC-002 point 3) — at the location's top, and in each listed analysis's folder; or,
+    when the backbone's reading gives no list of such files, that the check could not
+    look."""
     folder = f"`{REQUIREMENTS_FOLDER}/`"
     *some, last = [
         f"`{written}/`" for written, kind in KIND_OF_PLACE.items() if kind in REQUIREMENTS
@@ -405,7 +540,19 @@ def _outside_kinds(analysis: Analysis) -> list[Finding]:
             f"counts no number it holds. A requirement lies in the folder of its kind, {kinds} "
             f"(DEC-002 point 3) — move it there, or leave it out with `friction.exclude`",
         )
-        for path in analysis.outside_kinds
+        for path in sorted({*analysis.outside_kinds, *_nested_outside_kinds(analysis, listing)})
+    ]
+
+
+def _nested_outside_kinds(analysis: Analysis, listing: analyses.Listing) -> list[str]:
+    """The files under `requirements/` of each listed analysis's folder that no place or
+    held folder of this capability holds: outside the three kinds' folders there."""
+    top = f"{analysis.location}/" if analysis.location not in (None, ".") else ""
+    folders = [f"{top}{listed.folder}/{REQUIREMENTS_FOLDER}/" for listed in listing.analyses]
+    return [
+        path
+        for path in analysis.unplaced or ()
+        if any(path.startswith(folder) for folder in folders)
     ]
 
 
@@ -644,12 +791,18 @@ def _duplicates(analysis: Analysis) -> list[Finding]:
             written = (
                 other.id if other.id == first.id else f"{other.id}, {first.id} spelt otherwise,"
             )
+            rule = (
+                "no two artefacts in the analysis share an id"
+                if other.folder == first.folder
+                else "no two artefacts of a repository's analyses share an id, of any kind, so "
+                "an id read anywhere in the repository names one artefact"
+            )
             found.append(
                 Finding(
                     ERROR,
                     other.location,
-                    f"the id {written} is also held by {first.location}: no two artefacts in "
-                    f"the analysis share an id, and an id is never used again (DEC-001 point 3)",
+                    f"the id {written} is also held by {first.location}: {rule}, and an id is "
+                    f"never used again (DEC-001 point 3)",
                 )
             )
     return found
@@ -697,7 +850,7 @@ def _named_otherwise(analysis: Analysis) -> list[Finding]:
         else:
             continue
         found.append(Finding(ERROR, artefact.location, message))
-    return found + _actors_named_otherwise(analysis)
+    return found + _actors_named_otherwise(analysis) + _views_named_otherwise(analysis)
 
 
 def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
@@ -723,6 +876,42 @@ def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
     return found
 
 
+def _views_named_otherwise(analysis: Analysis) -> list[Finding]:
+    """A domain-model view whose file's name opens with no number and a hyphen, or gives
+    another id than its front matter's: its name opens with its number, which gives its
+    place in the domain model's order, and its id is `VIEW-` and the name after the
+    number, so a view given another number keeps its id (DEC-004 point 4). A view with no
+    id, or one that is no view's id, is the schema's to report."""
+    found: list[Finding] = []
+    pattern = schemas.id_pattern(VIEW)
+    for view in analysis.of_kind(VIEW):
+        name = view.path.rsplit("/", 1)[-1]
+        named = view_name(view.path)
+        if named is None:
+            found.append(
+                Finding(
+                    ERROR,
+                    view.location,
+                    f"its name is {name}, which opens with no number: a view's file's name "
+                    f"opens with a number and a hyphen, which give its place in the domain "
+                    f"model's order, then the slug its id is made of — name the file "
+                    f"`<number>-<slug>.md` (DEC-004 point 4)",
+                )
+            )
+        elif view.id is not None and pattern.match(view.id) and view.id != f"VIEW-{named[1]}":
+            slug = view.id.removeprefix("VIEW-")
+            found.append(
+                Finding(
+                    ERROR,
+                    view.location,
+                    f"its name is {name}, its front matter's id {view.id}: a view's id is "
+                    f"`VIEW-` and its file's name after the number and the hyphen — name the "
+                    f"file `<number>-{slug}.md`, or correct `id` (DEC-004 point 4)",
+                )
+            )
+    return found
+
+
 # --- what an artefact names ----------------------------------------------------------------
 
 
@@ -734,10 +923,12 @@ LISTED = {
 }
 
 
-def _references(analysis: Analysis) -> list[Finding]:
+def _references(analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
     """A use case's and a journey's actor, a use case's other actors, and a journey's
-    steps and the use cases it relies on: artefacts of the analysis, and in force for
-    one in force — what the stamp refuses otherwise."""
+    steps and the use cases it relies on: artefacts of its own analysis, and in force
+    for one in force — what the stamp refuses otherwise. An actor of an analysis its own
+    builds on is named with that analysis, and its glossary's head lists it from there
+    (DEC-001 point 2): every other field names its own analysis's artefacts alone."""
     found: list[Finding] = []
     for artefact in analysis.artefacts:
         if artefact.kind not in (USE_CASE, JOURNEY):
@@ -749,27 +940,52 @@ def _references(analysis: Analysis) -> list[Finding]:
                 named += [(f"/{field}/{i}", value, kind) for i, value in enumerate(listed)]
         in_force = not artefact.withdrawn
         for pointer, value, kind in named:
+            if kind == ACTOR and isinstance(value, str) and qualified(value)[0] is not None:
+                found += _foreign_actor(analysis, listing, artefact, pointer, value)
+                continue
             if not isinstance(value, str) or not schemas.id_pattern(kind).match(value):
                 continue  # the schema reports it
-            problem = analysis.unfit(value, kind, in_force=in_force)
+            problem = analysis.unfit(value, kind, in_force=in_force, within=artefact.folder)
             if problem is None:
                 continue
+            cite = "DEC-001 point 3"
             if analysis.of(value, kind) is None:
                 rule = f"what {with_article(artefact.kind)} names is in the analysis"
+            elif analysis.elsewhere(value, artefact.folder):
+                rule, cite = _OWN_ANALYSIS, "DEC-001 point 2"
             else:
                 rule = (
                     f"{with_article(artefact.kind)} in force rests only on artefacts in force, "
                     f"as the stamp requires — withdraw it too, or name another"
                 )
             found.append(
-                Finding(
-                    ERROR, at(artefact.location, pointer), f"{problem}: {rule} (DEC-001 point 3)"
-                )
+                Finding(ERROR, at(artefact.location, pointer), f"{problem}: {rule} ({cite})")
             )
     return found
 
 
-def _requirement_references(analysis: Analysis) -> list[Finding]:
+#: Why a field may not name an artefact of another analysis (DEC-001 point 2).
+_OWN_ANALYSIS = (
+    "an artefact names its own analysis's artefacts alone, but for an actor of an analysis "
+    "its own builds on, named with that analysis, such as `core:ACT-developer`"
+)
+
+
+def _foreign_actor(
+    analysis: Analysis,
+    listing: analyses.Listing,
+    artefact: Artefact,
+    pointer: str,
+    value: str,
+) -> list[Finding]:
+    """An actor of another analysis, named with that analysis, that the artefact's own
+    analysis does not build on, or that the head of its glossary does not list from it
+    (DEC-001 points 2 and 4)."""
+    problem = analyses.actor_problem(listing, analysis, value, artefact.folder)
+    return [] if problem is None else [Finding(ERROR, at(artefact.location, pointer), problem)]
+
+
+def _requirement_references(analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
     """What a requirement names (DEC-002 points 6 and 7): each of its `actors` an actor
     of the analysis, and each of its `refines` a requirement of the analysis, of any of
     the three kinds, and never itself. A requirement in force names none withdrawn, so
@@ -784,16 +1000,23 @@ def _requirement_references(analysis: Analysis) -> list[Finding]:
             continue
         in_force = not artefact.withdrawn
         for index, value in _listed(artefact, ACTORS):
+            pointer = f"/{ACTORS}/{index}"
+            if qualified(value)[0] is not None:
+                found += _foreign_actor(analysis, listing, artefact, pointer, value)
+                continue
             if not actor_id.match(value):
                 continue  # the schema reports it
-            problem = analysis.unfit(value, ACTOR, in_force=in_force)
+            problem = analysis.unfit(value, ACTOR, in_force=in_force, within=artefact.folder)
             if problem is not None:
                 found.append(
                     Finding(
                         ERROR,
-                        at(artefact.location, f"/{ACTORS}/{index}"),
+                        at(artefact.location, pointer),
                         _unfit_message(
-                            problem, analysis.of(value, ACTOR) is None, "DEC-001 point 3"
+                            problem,
+                            analysis.of(value, ACTOR) is None,
+                            "DEC-001 point 3",
+                            analysis.elsewhere(value, artefact.folder),
                         ),
                     )
                 )
@@ -812,12 +1035,15 @@ def _requirement_references(analysis: Analysis) -> list[Finding]:
                     )
                 )
                 continue
-            problem = analysis.unfit_requirement(value, in_force=in_force)
+            problem = analysis.unfit_requirement(value, in_force=in_force, within=artefact.folder)
             if problem is not None:
                 held = analysis.find(value)
                 missing = held is None or held.kind not in REQUIREMENTS
+                elsewhere = analysis.elsewhere(value, artefact.folder)
                 found.append(
-                    Finding(ERROR, where, _unfit_message(problem, missing, "DEC-002 point 7"))
+                    Finding(
+                        ERROR, where, _unfit_message(problem, missing, "DEC-002 point 7", elsewhere)
+                    )
                 )
     return found
 
@@ -830,11 +1056,16 @@ def _listed(artefact: Artefact, field: str) -> list[tuple[int, str]]:
     return [(index, value) for index, value in enumerate(listed) if isinstance(value, str)]
 
 
-def _unfit_message(problem: str, missing: bool, withdrawn_because: str) -> str:
-    """Why a requirement may not name what `problem` says: it is not in the analysis, or
-    it is withdrawn while the requirement is in force, citing `withdrawn_because` then."""
+def _unfit_message(
+    problem: str, missing: bool, withdrawn_because: str, elsewhere: bool = False
+) -> str:
+    """Why a requirement may not name what `problem` says: it is not in the analysis, it
+    lies in another analysis, or it is withdrawn while the requirement is in force,
+    citing `withdrawn_because` then."""
     if missing:
         return f"{problem}: what a requirement names is in the analysis (DEC-002 point 6)"
+    if elsewhere:
+        return f"{problem}: {_OWN_ANALYSIS} (DEC-001 point 2)"
     return (
         f"{problem}: a requirement in force rests only on artefacts in force — withdraw it "
         f"too, or name another ({withdrawn_because})"
@@ -856,12 +1087,17 @@ def _listed_requirements(analysis: Analysis) -> list[Finding]:
         for index, value in _listed(artefact, MUST_MEET):
             if not requirement_id.match(value):
                 continue  # the schema reports it
-            problem = analysis.unfit_requirement(value, in_force=not artefact.withdrawn)
+            problem = analysis.unfit_requirement(
+                value, in_force=not artefact.withdrawn, within=artefact.folder
+            )
             if problem is None:
                 continue
             held = analysis.find(value)
+            cite = "DEC-002 point 7"
             if held is None or held.kind not in REQUIREMENTS:
                 rule = f"what {with_article(artefact.kind)} lists is in the analysis"
+            elif analysis.elsewhere(value, artefact.folder):
+                rule, cite = _OWN_ANALYSIS, "DEC-001 point 2"
             else:
                 rule = (
                     f"{with_article(artefact.kind)} in force lists only requirements in force — "
@@ -871,7 +1107,7 @@ def _listed_requirements(analysis: Analysis) -> list[Finding]:
                 Finding(
                     ERROR,
                     at(artefact.location, f"/{MUST_MEET}/{index}"),
-                    f"{problem}: {rule} (DEC-002 point 7)",
+                    f"{problem}: {rule} ({cite})",
                 )
             )
     return found
@@ -889,7 +1125,7 @@ def _journeys_of_one_actor(analysis: Analysis) -> list[Finding]:
         if (
             journey.withdrawn
             or not isinstance(actor, str)
-            or analysis.of(actor, ACTOR) is None
+            or (analysis.of(actor, ACTOR) is None and qualified(actor)[0] is None)
             or not isinstance(steps, list)
         ):
             continue
@@ -936,6 +1172,150 @@ def _lists_apart(analysis: Analysis) -> list[Finding]:
                         f"— remove it from `{field}` (DEC-001 point 4)",
                     )
                 )
+    return found
+
+
+# --- what an analysis builds on (DEC-001 point 2) ------------------------------------------
+
+
+def _built_on(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
+    """What each analysis builds on (DEC-001 point 2; RS-SAN-010's checkable part):
+
+    - **the configuration's list against the component's own.** Where a component
+      declares its dependencies, as a capability does in its package metadata, each
+      analysis its entry builds on is one of a component it depends on, optional where
+      that dependency is; elsewhere, the list is the project's statement of them;
+    - **each glossary's head data**, its `builds-on`, against its shape, always, as a
+      kind's schema checks its front matter. Only a listed analysis builds on another,
+      and its head names only the analyses its entry builds on;
+    - **no clash:** a term of its own never takes the name of a term its head lists;
+    - **the links' version:** where the component declares the lowest version it needs
+      of an analysis's component, a head whose links name another is warned of. The
+      analysis whose component is `core` is the backbone's, whose floor a capability
+      declares as `requires_backbone`.
+
+    The head's text against its data is the head's form, held where the format rule
+    binds (`forms.BUILDS_ON_MATCH`)."""
+    found = _declared_dependencies(root, listing)
+    for path in sorted(analysis.glossaries):
+        folder = analysis.folders.get(path)
+        head = analyses.head(analysis, folder)
+        if head is None or not listing.holds(folder):
+            continue
+        where = f"/{analyses.HEAD}"
+        found += [
+            Finding(ERROR, at(path, f"{where}{pointer}"), f"{message} (DEC-001 point 2)")
+            for pointer, message in schemas.head_errors(head.raw)
+        ]
+        listed = listing.of_folder(folder)
+        if listed is None:
+            if head.taken:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(path, where),
+                        f"the head lists what its analysis takes from {head.taken[0].analysis}, "
+                        f"and only an analysis {analyses.CONFIG} lists builds on another: list "
+                        f"the project's analyses, each with its component, its folder and what "
+                        f"it builds on (DEC-001 point 2)",
+                    )
+                )
+            continue
+        declared = analyses.declared(root, listed.component)
+        for taken in head.taken:
+            entry = f"{where}/{taken.index}"
+            if listed.built_on(taken.analysis) is None:
+                found.append(
+                    Finding(
+                        ERROR,
+                        at(path, f"{entry}/analysis"),
+                        f"the head lists what the analysis of {listed.component} takes from "
+                        f"{taken.analysis}, which its entry in {analyses.CONFIG} does not build "
+                        f"on: an analysis names only the analyses it builds on (DEC-001 point "
+                        f"2) — add it to `builds-on` there, or remove it here",
+                    )
+                )
+            dependency = declared.depends.get(taken.analysis) if declared is not None else None
+            floor = dependency[1] if dependency is not None else None
+            if floor is not None and declared is not None:
+                if not analyses.same_version(taken.version, floor):
+                    found.append(
+                        Finding(
+                            WARNING,
+                            at(path, f"{entry}/version"),
+                            f"its links to the analysis of {taken.analysis} name "
+                            f"{taken.version}, and {declared.file} declares {floor} as the "
+                            f"lowest version of {taken.analysis} {listed.component} needs: "
+                            f"which version a link names is the project's choice, and the "
+                            f"floor is what a reader of this one can count on (DEC-001 point 2)",
+                        )
+                    )
+        found += _clashes(analysis, folder, head)
+    return found
+
+
+def _declared_dependencies(root: Path, listing: analyses.Listing) -> list[Finding]:
+    """Each analysis a listed one builds on, against what its component declares it
+    depends on, where it declares it (DEC-001 point 2)."""
+    found: list[Finding] = []
+    for listed in listing.analyses:
+        declared = analyses.declared(root, listed.component)
+        if declared is None:
+            continue
+        depends = ", ".join(sorted(declared.depends)) or "nothing"
+        for entry in listed.builds_on:
+            dependency = declared.depends.get(entry.analysis)
+            if dependency is None:
+                found.append(
+                    Finding(
+                        ERROR,
+                        listed.builds_on_at(entry),
+                        f"the analysis of {listed.component} builds on {entry.analysis}'s, and "
+                        f"{declared.file} declares no dependency of {listed.component} on "
+                        f"{entry.analysis} (it depends on {depends}): an analysis builds only on "
+                        f"the analyses of the components its component depends on (DEC-001 "
+                        f"point 2)",
+                    )
+                )
+            elif dependency[0] != entry.optional:
+                said = "optional" if dependency[0] else "required"
+                written = "optional" if entry.optional else "required"
+                found.append(
+                    Finding(
+                        ERROR,
+                        listed.builds_on_at(entry),
+                        f"{entry.analysis} is {written} here, and {declared.file} declares it "
+                        f"{said}: an optional one is used only where its component is present "
+                        f"(DEC-001 point 2) — write `optional: {str(dependency[0]).lower()}`",
+                    )
+                )
+    return found
+
+
+def _clashes(analysis: Analysis, folder: str | None, head: analyses.Head) -> list[Finding]:
+    """A term of the analysis's own whose name is that of a term its head lists from an
+    analysis it builds on: never so (DEC-001 point 2)."""
+    listed = {
+        name.casefold(): (term_id, taken.analysis)
+        for taken in head.taken
+        for term_id, name in taken.terms
+    }
+    found: list[Finding] = []
+    for term in analysis.in_folder(folder):
+        name = term.fields.get("name")
+        if term.kind != TERM or term.withdrawn or not isinstance(name, str):
+            continue
+        clash = listed.get(name.casefold())
+        if clash is not None:
+            found.append(
+                Finding(
+                    ERROR,
+                    at(term.location, "/name"),
+                    f"its name, {name}, is the name of {clash[1]}:{clash[0]}, which the head "
+                    f"lists: a term of its own never takes the name of a term its head lists "
+                    f"(DEC-001 point 2) — rename it, or use the listed term",
+                )
+            )
     return found
 
 
@@ -1096,6 +1476,197 @@ def _listed_requirement_anchors(analysis: Analysis) -> list[Finding]:
                 f"journey that lists it — {write} (DEC-002 point 7)",
             )
         )
+    return found
+
+
+# --- the domain model's views (DEC-004) ----------------------------------------------------
+
+
+def _view_terms(analysis: Analysis) -> list[Finding]:
+    """Each term a domain-model view's `explains` lists is a term of its own analysis,
+    and one in force lists only terms in force: the change that withdraws a term takes
+    its section out of the view in force that explains it (DEC-004 point 5). A withdrawn
+    view is history, and may list withdrawn ones. An entry that is no term's id, a term
+    of another analysis written with it included, is the schema's to report."""
+    term_id = schemas.id_pattern(TERM)
+    found: list[Finding] = []
+    for view in analysis.of_kind(VIEW):
+        for index, value in _listed(view, EXPLAINS):
+            if not term_id.match(value):
+                continue  # the schema reports it
+            problem = analysis.unfit(value, TERM, in_force=not view.withdrawn, within=view.folder)
+            if problem is None:
+                continue
+            if analysis.of(value, TERM) is None:
+                rule = (
+                    "a view explains terms of the analysis — stamp the term first, `pkit "
+                    "analysis new term <slug>`, or take it off `explains`"
+                )
+            elif analysis.elsewhere(value, view.folder):
+                rule = "a view explains terms of its own analysis alone"
+            else:
+                rule = (
+                    "a view in force explains only terms in force — take it off `explains`, "
+                    "its anchors and its section, or withdraw the view too"
+                )
+            found.append(
+                Finding(
+                    ERROR,
+                    at(view.location, f"/{EXPLAINS}/{index}"),
+                    f"{problem}: {rule} (DEC-004 point 5)",
+                )
+            )
+    return found
+
+
+def _one_view_per_term(analysis: Analysis) -> list[Finding]:
+    """No two domain-model views in force of one analysis explain one term, so each
+    explanation has one home (DEC-004 point 5). The view that comes first by its path
+    keeps it, and each other is reported. A withdrawn view explains nothing."""
+    found: list[Finding] = []
+    for (_folder, term), held in sorted(views.explaining(analysis).items(), key=_by_term):
+        first, *later = held
+        for view in later:
+            index = views.explained(view).index(term)
+            found.append(
+                Finding(
+                    ERROR,
+                    at(view.location, f"/{EXPLAINS}/{index}"),
+                    f"{term} is explained by {first.id} too ({first.location}): no two views "
+                    f"in force explain one term, so each explanation has one home — explain "
+                    f"it in one of them, and take it off the other's `explains`, anchors and "
+                    f"sections (DEC-004 point 5)",
+                )
+            )
+    return found
+
+
+def _by_term(item: tuple[tuple[str | None, str], list[Artefact]]) -> tuple[str, str]:
+    (folder, term), _held = item
+    return folder or "", term
+
+
+def _view_anchors(analysis: Analysis) -> list[Finding]:
+    """A domain-model view's term anchors are exactly the terms its `explains` lists, and
+    it carries no path anchor (DEC-004 point 5): the list is the source, and the stamp
+    writes the anchors from it, so a changed definition flags the view that explains it.
+    A view describes the domain, never the software, so it anchors no code. A term anchor
+    is an artefact anchor naming a term, as the part before its last `#` names one
+    (`_artefact_named`). A withdrawn view keeps its `explains` and its anchors, so both
+    are held to each other as long as it stands. An `explains` that is no list is the
+    schema's to report, and nothing is compared until it is one."""
+    term_id = schemas.id_pattern(TERM)
+    found: list[Finding] = []
+    for view in analysis.of_kind(VIEW):
+        paths = view.anchored_to("path")
+        if paths:
+            found.append(
+                Finding(
+                    ERROR,
+                    at(view.location, f"/{CONTAINER}/friction/anchors/path"),
+                    f"it anchors code ({', '.join(paths)}): a view describes the domain, never "
+                    f"the software, and the term anchors the code that embodies it — remove "
+                    f"its path anchors (DEC-004 point 5)",
+                )
+            )
+        if not isinstance(view.fields.get(EXPLAINS), list):
+            continue  # the schema reports it
+        expected = _unique(v for _i, v in _listed(view, EXPLAINS) if term_id.match(v))
+        anchored = _unique(
+            a for a in view.anchored_to("artefact") if term_id.match(_artefact_named(a))
+        )
+        if set(expected) == set(anchored):
+            continue
+        found.append(
+            Finding(
+                ERROR,
+                at(view.location, ARTEFACT_ANCHORS),
+                f"its term anchors ({', '.join(anchored) or 'none'}) do not match its "
+                f"`{EXPLAINS}` ({', '.join(expected) or 'none'}): the anchors are written from "
+                f"`{EXPLAINS}`, so a changed definition flags the view that explains it — "
+                f"anchor exactly [{', '.join(expected)}] (DEC-004 point 5)",
+            )
+        )
+    return found
+
+
+def _term_links(root: Path, analysis: Analysis) -> list[Finding]:
+    """Each term's link to its section, under its heading in the glossary (DEC-004 point
+    7): a term a view in force explains holds one line that links to that view's section
+    on it, as the stamp writes it (`views.link`), and a term no view in force explains
+    holds none. The line is read from the term's section as the backbone spans it, below
+    its heading and above its first part (`views.link_lines`). A term two views explain
+    is `_one_view_per_term`'s to report, and its link is not held until one does. A
+    backbone that gives no span is the structure check's to report."""
+    explaining = views.explaining(analysis)
+    texts: dict[str, str | None] = {}
+    found: list[Finding] = []
+    for term in analysis.of_kind(TERM):
+        held = explaining.get((term.folder, term.id or ""), [])
+        if term.id is None or not term.span_read or len(held) > 1:
+            continue
+        text = _cached(root, term.path, texts)
+        if text is None:
+            continue  # the core reports a file it cannot read
+        lines = structure.span_lines(text, term.span) if term.span is not None else []
+        written = views.link_lines(lines)
+        if not held:
+            found += [
+                Finding(
+                    ERROR,
+                    term.location,
+                    f"line {number} links it to the domain model, `{line.strip()}`, and no "
+                    f"view in force explains it: a term links to the section of the view in "
+                    f"force that explains it, and holds no link where none does — remove the "
+                    f"line (DEC-004 point 7)",
+                )
+                for number, line in written
+            ]
+            continue
+        (view,) = held
+        name = term.fields.get("name")
+        if view.id is None or not isinstance(name, str) or not name:
+            continue  # the schema reports it
+        wanted = views.link(term.path, view.id, view.path, name)
+        if not written:
+            where = (
+                "write it on a line of its own right below its heading"
+                if lines
+                else "its entry has no section to hold it, so write the section first"
+            )
+            found.append(
+                Finding(
+                    ERROR,
+                    term.location,
+                    f"{view.id} explains it ({view.location}), and its section holds no link "
+                    f"to it: a term links to the section of the view that explains it, "
+                    f"`{wanted}` — {where}. The stamp of a view writes it, and the check holds "
+                    f"it equal to the view (DEC-004 point 7)",
+                )
+            )
+            continue
+        (number, line), *more = written
+        if line.strip() != wanted:
+            found.append(
+                Finding(
+                    ERROR,
+                    term.location,
+                    f"line {number} links it to the domain model as `{line.strip()}`, and "
+                    f"{view.id} explains it: a term's link names the view's file and its "
+                    f"section on the term, as the stamp writes it — write `{wanted}` in its "
+                    f"place (DEC-004 point 7)",
+                )
+            )
+        found += [
+            Finding(
+                ERROR,
+                term.location,
+                f"line {other} links it to the domain model a second time, `{text_.strip()}`: "
+                f"a term holds one link, to the view that explains it — remove the line "
+                f"(DEC-004 point 7)",
+            )
+            for other, text_ in more
+        ]
     return found
 
 
@@ -1580,6 +2151,245 @@ def _structure(
     )
 
 
+# --- what makes each precondition true (DEC-001 point 1; RS-SAN-009) ------------------------
+
+#: The rule of logical consequence as the backbone's reading of where rules bind cites it.
+CITED_LOGIC_RULE = f"{CAPABILITY}:{LOGIC_RULE}"
+
+#: What the summary line about the check of `after` opens with.
+AFTER_SUBJECT = "after"
+
+#: What a producer is, as a finding of one says it.
+_PRODUCER = (
+    "each producer is a use case in force of its own analysis, the use case itself among "
+    "them, or `environment`"
+)
+
+
+def _after(
+    root: Path,
+    analysis: Analysis,
+    reached: Callable[..., Mapping[str, Mapping[str, bool]]],
+    *,
+    preview: bool,
+    own: project_structure.Own | None,
+) -> tuple[list[str], list[Finding]]:
+    """Each use case in force that writes `after` against its analysis, the words of its
+    *Preconditions* and its area's number, where the rule of logical consequence,
+    RS-SAN-009, binds and at its status (DEC-001 point 1; `_lib/chain.py`): an error where
+    the rule is accepted, a report opening `preview:` where it is proposed and a preview
+    is asked for, and nothing otherwise. Where it binds is the backbone's one answer,
+    `reached`, which the format rule reads too. A use case that writes no `after` is not
+    read, and where none does, the summary says nothing of it. Returns the summary's
+    lines and the findings."""
+    writing = [u for u in analysis.of_kind(USE_CASE) if not u.withdrawn and chain.writes_after(u)]
+    if not writing:
+        return [], []
+    rules = analysis.method_rules
+    status = None if rules is None else rules.get(LOGIC_RULE)
+    if status == ACCEPTED:
+        severity, label = ERROR, ""
+    elif status == PROPOSED and preview:
+        severity, label = REPORT, PREVIEW
+    else:
+        said = unchecked(status, rules is None, preview, subject=AFTER_SUBJECT, rule=LOGIC_RULE)
+        return [said], []
+    head = f"{AFTER_SUBJECT} ({LOGIC_RULE}, {status}{', previewed as accepted' if label else ''})"
+    binds, binds_not = ("would bind", "would not bind") if label else ("binds", "does not bind")
+    try:
+        bound_at = reached(root, preview=status != ACCEPTED)
+    except Unreadable as exc:
+        return [f"{head}: not checked — where the rule {binds} cannot be read."], [
+            Finding(
+                severity,
+                analysis.location or ".",
+                f"{label}where {LOGIC_RULE} {binds} cannot be read: {exc}. No use case's "
+                f"`{AFTER}` is checked until it can (COR-051 point 7)",
+            )
+        ]
+    bound = [u for u in writing if CITED_LOGIC_RULE in (bound_at.get(u.location) or {})]
+    unbound = len(writing) - len(bound)
+    unbound_said = (
+        f" The rule {binds_not} on {unbound} of the {len(writing)} use case(s) that write "
+        f"`{AFTER}`, so they are not checked."
+        if unbound
+        else ""
+    )
+    if not bound:
+        return [f"{head}: nothing checked.{unbound_said}"], []
+    kind = _use_case_kind(own)
+    found: list[Finding] = []
+    departing = 0
+    for use_case in sorted(bound, key=lambda u: u.path):
+        entries = chain.producers(use_case)
+        if entries is None:
+            continue  # the schema reports an `after` of another shape
+        messages = [
+            *_unfit_producers(analysis, use_case, entries),
+            *_words_apart(root, use_case, entries, kind),
+            *_all_later(analysis, use_case, entries),
+        ]
+        departing += bool(messages)
+        found += [Finding(severity, where, label + message) for where, message in messages]
+    where = "would bind, as `pkit rule-sets reach --preview` reads it" if label else "binds"
+    never = ", reported and never failing" if label else ""
+    unread = (
+        " Their words are not compared: the use case's structure cannot be read, and "
+        "`pkit analysis validate` says why."
+        if kind is None
+        else ""
+    )
+    line = (
+        f"{head}: {len(bound)} use case(s) that write `{AFTER}` checked, where the rule "
+        f"{where}; {departing} of them departing from it{never}.{unbound_said}{unread}"
+    )
+    return [line], found
+
+
+def _use_case_kind(own: project_structure.Own | None) -> structure.Kind | None:
+    """The use-case kind its *Preconditions* is read with, as the append-only check reads
+    its steps: as shipped, relabelled by the project's own structures, each label any of
+    their groups adds ending the part before it, and a part found by its shipped label
+    too. `None` where the declaration or the project's file cannot be read."""
+    if own is None or own.problems:
+        return None
+    try:
+        kinds = structure.read_kinds()
+    except structure.Unreadable:
+        return None
+    groups = own.of(USE_CASE)
+    kind = project_structure.tightened(
+        project_structure.relabelled(kinds[USE_CASE], own), groups, (), groups
+    )
+    return dataclasses.replace(kind, as_written=True)
+
+
+def _unfit_producers(
+    analysis: Analysis, use_case: Artefact, entries: Sequence[Sequence[str]]
+) -> list[tuple[str, str]]:
+    """Each producer that is no use case in force of the use case's own analysis. Its own
+    id is one, and `environment` passes; an entry that is no use case's id is the
+    schema's."""
+    use_case_id = schemas.id_pattern(USE_CASE)
+    found: list[tuple[str, str]] = []
+    for index, entry in enumerate(entries):
+        for place, named in enumerate(entry):
+            if named == ENVIRONMENT or not use_case_id.match(named):
+                continue
+            problem = analysis.unfit(named, USE_CASE, in_force=True, within=use_case.folder)
+            if problem is not None:
+                where = at(use_case.location, f"/{AFTER}/{index}/{place}")
+                found.append((where, f"{problem}: {_PRODUCER} ({LOGIC_RULE})"))
+    return found
+
+
+def _words_apart(
+    root: Path,
+    use_case: Artefact,
+    entries: Sequence[Sequence[str]],
+    kind: structure.Kind | None,
+) -> list[tuple[str, str]]:
+    """Where `after` and the words of the use case's *Preconditions* disagree: one entry
+    for each precondition the words write, in their order, each naming the producers its
+    precondition's opening names. A body with no such part is the format rule's."""
+    text = _read(root / use_case.path) if kind is not None else None
+    read = chain.words(text, kind) if text is not None and kind is not None else None
+    if read is None:
+        return []
+    element, written = read
+    part = f"`**{element.text}:**`"
+    if len(written) != len(entries):
+        holds = (
+            f"holds {_counted(len(written), 'precondition')}"
+            if written
+            else "holds no precondition, and a use case with none writes no `after`"
+        )
+        return [
+            (
+                use_case.location,
+                f"`{AFTER}` lists {_counted(len(entries), 'precondition')}, and {part} "
+                f"{holds}: `{AFTER}` holds one entry for each precondition the words write, "
+                f"in their order ({LOGIC_RULE})",
+            )
+        ]
+    found: list[tuple[str, str]] = []
+    for index, (entry, precondition) in enumerate(zip(entries, written, strict=True)):
+        where = at(use_case.location, f"/{AFTER}/{index}")
+        named = f"precondition {index + 1} of {part}, at line {precondition.line},"
+        if precondition.named is None:
+            found.append(
+                (
+                    where,
+                    f"{named} opens with no producers, such as `**From UC-003:**`, though "
+                    f"`{AFTER}` lists them: each line of the part opens with its producers "
+                    f"({LOGIC_RULE})",
+                )
+            )
+        elif _producer_set(precondition.named) != _producer_set(entry):
+            found.append(
+                (
+                    where,
+                    f"{named} names {_producers_shown(precondition.named)}, and entry {index} "
+                    f"of `{AFTER}` names {_producers_shown(entry)}: `{AFTER}` names the "
+                    f"producers the words name ({LOGIC_RULE})",
+                )
+            )
+    return found
+
+
+def _all_later(
+    analysis: Analysis, use_case: Artefact, entries: Sequence[Sequence[str]]
+) -> list[tuple[str, str]]:
+    """Each precondition of a use case in a numbered area whose producers all lie in later
+    areas (DEC-001 point 12). The environment counts as one before every area. A producer
+    of an area without a number, of no area, or that is no use case in force of the
+    analysis, counts as one in no later area: a reviewer, or the producers' check, judges
+    those."""
+    area = analysis.area(use_case)
+    if area_number(area) is None:
+        return []
+
+    def later(named: str) -> str | None:
+        if named == ENVIRONMENT:
+            return None
+        if analysis.unfit(named, USE_CASE, in_force=True, within=use_case.folder) is not None:
+            return None
+        producer = analysis.of(named, USE_CASE)
+        producer_area = analysis.area(producer) if producer is not None else None
+        return producer_area if chain.later(producer_area, area) else None
+
+    found: list[tuple[str, str]] = []
+    for index, entry in enumerate(entries):
+        areas = [later(named) for named in entry]
+        if not entry or any(a is None for a in areas):
+            continue
+        each = ", ".join(f"{named} in {a}" for named, a in zip(entry, areas, strict=True))
+        found.append(
+            (
+                at(use_case.location, f"/{AFTER}/{index}"),
+                f"each producer of precondition {index + 1} lies in a later area than "
+                f"{area}: {each}. At least one producer of each precondition lies in its own "
+                f"area or a lower-numbered one, the environment before every area: name one "
+                f"there, or move a use case to another area ({LOGIC_RULE}; DEC-001 point 12)",
+            )
+        )
+    return found
+
+
+def _producer_set(named: Iterable[str]) -> frozenset[str]:
+    """Producers as compared: each use case's number as `identity` spells it."""
+    return frozenset(identity(n) for n in named)
+
+
+def _producers_shown(named: Sequence[str]) -> str:
+    """Producers as a message names them: each id, and `environment`, in the order given."""
+    return ", ".join(named) if named else "none"
+
+
+def _counted(number: int, noun: str) -> str:
+    return f"{number} {noun}" + ("" if number == 1 else "s")
+
+
 def _unbound(analysis: Analysis, reached: _Reach) -> tuple[str, list[Finding]]:
     """What the summary says of the artefacts no rule of `SAN` binds on, and, where it
     binds on none of the analysis, the finding that says so, and why (DEC-001 point 1):
@@ -1772,8 +2582,8 @@ class _Binding:
 
 def _key(departure: structure.Departure) -> tuple[object, ...]:
     """What tells one departure from another in a body, whatever structure found it: the
-    element, how it departs, and the line."""
-    return (departure.element.id, departure.how, departure.line)
+    element, how it departs, the line, and the repeated section it lies in."""
+    return (departure.element.id, departure.how, departure.line, departure.within)
 
 
 def _bound(
@@ -1971,12 +2781,17 @@ def unchecked(
 
 
 def _titles(analysis: Analysis) -> dict[str, str]:
-    """Each use case's title by its id, as a journey's steps quote it."""
+    """Each use case's title by its id, as a journey's steps quote it, and each term's
+    name by its id, as a domain-model view's sections are headed (DEC-004 point 2)."""
     titles: dict[str, str] = {}
     for use_case in analysis.of_kind(USE_CASE):
         title = use_case.fields.get("title")
         if use_case.id and isinstance(title, str):
             titles.setdefault(use_case.id, title)
+    for term in analysis.of_kind(TERM):
+        name = term.fields.get("name")
+        if term.id and isinstance(name, str):
+            titles.setdefault(term.id, name)
     return titles
 
 
@@ -2017,7 +2832,11 @@ def _artefact_structure(
         departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
     found: list[tuple[Finding, tuple[object, ...]]] = [
         (
-            Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject)),
+            Finding(
+                ERROR,
+                artefact.location,
+                _departure_message(d, structure.siblings(kind, d.element), subject),
+            ),
             _key(d),
         )
         for d in departing
@@ -2082,7 +2901,9 @@ def _heads(
         subject = f"a file of {NOUN[kind_name]}s"
         found += [
             Finding(ERROR, path, _departure_message(d, kind.head, subject))
-            for d in structure.departures(lines, kind, head=True)
+            for d in structure.departures(
+                lines, kind, head=True, fields=analysis.glossaries.get(path)
+            )
         ]
     return found, checked
 
@@ -2141,6 +2962,8 @@ def _departure_message(
     that asks for it beside the format rule."""
     element = departure.element
     line = f", at line {departure.line}," if departure.line is not None else ""
+    if element.type == structure.REPEATED:
+        return _repeated_message(departure, subject, because)
     if departure.how == structure.UNDECLARED:
         return (
             f"`**{element.text}:**`{line} is no label the kind declares: {departure.detail} "
@@ -2148,6 +2971,8 @@ def _departure_message(
             f"into a part with a form ({departure.detail}, {because})"
         )
     named = _named(element, elements)
+    if departure.within is not None:
+        named = f"{named} in the section `## {departure.within}`"
     cited = f"{element.rule}, {because}" if element.rule else because
     if departure.how == structure.MISSING and element.rule:
         problem = (
@@ -2181,6 +3006,25 @@ def _departure_message(
     else:
         problem = f"{named}{line} does not hold its form, `{element.form}`: {departure.detail}"
     return f"{problem} ({cited}). {_advice(element.hint, element.example)}".rstrip()
+
+
+def _repeated_message(departure: structure.Departure, subject: str, because: str) -> str:
+    """What a repeated section's departure breaks: a domain-model view's sections for its
+    concepts, missing, or headed apart from its `explains` (DEC-004 point 2)."""
+    element = departure.element
+    marks = "#" * (element.level or 2)
+    if departure.how == structure.MISSING:
+        problem = (
+            f"it has no `{marks} ` section after its opening: {subject} gives one to each term "
+            f"its `{EXPLAINS}` lists"
+        )
+    else:
+        at_line = f", at line {departure.line}," if departure.line is not None else ""
+        problem = (
+            f"its `{marks} ` sections{at_line} do not hold their form, `{element.form}`: "
+            f"{departure.detail}"
+        )
+    return f"{problem} ({because}). {_advice(element.hint, element.example)}".rstrip()
 
 
 def _named(element: structure.Element, elements: Sequence[structure.Element]) -> str:

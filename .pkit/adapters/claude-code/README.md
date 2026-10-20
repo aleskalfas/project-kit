@@ -11,11 +11,11 @@ pkit:
         - .pkit/adapters/claude-code/settings/project/settings.json
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
-      record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, "project-management:DEC-030"]
+      record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-19T06:39:13Z
+      at: 2026-10-19T09:38:23Z
       outcome: unchanged
-      unchanged-because: ADR-009 changed only the file name it gives the 1.150.0 migration that untracks runtime-ignored files, now numbered 002 so its folder numbers each script once. No decision changed, and this page names no migration file.
+      unchanged-because: "ADR-066 now says a run's output is the agent's final message, refuses a definition that fails its check, reads an agent's methodology fields without passing them, and ends every process of the run it can reach, naming what it cannot in point 11. This page already says the runner ends the harness and every process still descended from it and names what it cannot reach. Its closed set of flags and the unconfined form read as before, and the definition check belongs to the confined form, which #1744 builds."
 ---
 
 # Claude Code adapter
@@ -36,6 +36,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── deploy-agents.sh                   # writes resolved agent copies into .claude/agents/
 ├── undeploy-capability.sh             # removes one capability's deployed skills and agents from .claude/
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths
+├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 └── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
 ```
@@ -85,7 +86,7 @@ Writes each kit-shipped agent as a **resolved copy** at `.claude/agents/<name>.m
 
 **Model and effort** (#1047). Claude Code reads a `model:` and an `effort:` key from an agent definition's front matter (verified against Claude Code 2.1.283: `effort` takes `low`, `medium`, `high`, `xhigh`, `max`, or an integer; `model` takes `inherit`, an alias or a full model name). The resolver writes both under those names, taking each from the overlay's `overrides.<agent>.model` / `.effort` when set, else from the agent's front matter. It writes **nothing** for an absent or `inherit` value — so a shipped agent that sets neither deploys exactly as before, and the harness default applies: a dispatched agent inherits its caller's model and effort. A value outside the accepted set (the named effort levels only; the integer form is not part of the methodology's vocabulary) is not written: the agent still deploys, inherits, and the run prints a `warning` line naming the value. The accepted values, the precedence and the `pkit agents` report are specified in the agents README, "Model and effort".
 
-**Precedence with `review-pr --effort`.** A run-time effort resolved by `review-pr` (the project-management capability's `--effort` flag, `PKIT_REVIEW_AGENT_EFFORT`, or `review.agents.effort`) wins over the agent's deployed `effort:` — a run-time knob over a declaration. `review-pr` realises it by passing the value as the reviewer session's `--effort`, the harness's session-level setting (the same shape by which a `--model` flag wins over an `--agent`'s `model:`). When `review-pr` resolves none it passes nothing, and the deployed value applies.
+**Precedence with `review-pr --effort`.** A run-time effort resolved by `review-pr` (the project-management capability's `--effort` flag, `PKIT_REVIEW_AGENT_EFFORT`, or `review.agents.effort`) wins over the agent's deployed `effort:` — a run-time knob over a declaration. `review-pr` passes the value to the reviewer's run, and the agent runner (`run-agent.py`, below) passes it as the reviewer session's `--effort`, the harness's session-level setting (the same shape by which a `--model` flag wins over an `--agent`'s `model:`). When `review-pr` resolves none it passes nothing, and the deployed value applies.
 
 **Storyboard references** (#1101). An agent that drives scripted scenarios declares its storyboards (COR-016) in `storyboards:` and cites them in its body. The source names a storyboard by its bare sibling filename (`storyboard.md`), which stays right wherever the agent's folder lives — core, project or a capability. The deployed copy lives in `.claude/agents/`, where that name resolves to nothing, so the resolver rewrites each entry naming a file beside the source to the storyboard's project-root-relative source path, in the list and wherever the body cites the entry as a whole path; the runtime reads the storyboard from there with its `Read` tool. An entry already written as a source path deploys unchanged. The convention is stated in the agents README, "Frontmatter declaration" under "Storyboards".
 
@@ -99,6 +100,35 @@ It removes only what the deploy scripts created for the capability, recognised b
 - **an agent** — a `.claude/agents/<agent>.md` carrying `deploy-agents.sh`'s marker, for an agent the capability ships in its `agents/` folder (flat or folder form). A copy is kept when a project agent of the same name exists: project agents outrank every other source (the agents README, "Name-collision precedence"), so the copy is the project's.
 
 Adopter content — a file that is not such a symlink, a symlink pointing anywhere else, an agent without the marker — and the capability's own subtree are never touched. The script removes what exists for the capability whatever its registration, so it runs the same before or after the unregister; it is idempotent (`Done. Nothing deployed for capability <name>.` on a second run) and exits 2 on anything but one capability name. Status lines: `removed`, `kept`.
+
+### The agent runner (`run-agent.py`)
+
+The one place `claude` is started for an agent nobody watches ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md) points 1 and 10). The adapter registers it in its `package.yaml` under `commands:` as `run-agent`, and the backbone's `pkit agents run` starts it. No command calls `claude` itself: project-management's `review-pr` starts its reviewers through it. The contract every adapter's runner answers is [the adapters README's, "The agent runner"](../README.md#the-agent-runner). This section is how this one answers it.
+
+It runs under the system `python3` with the standard library only, as the permission hook does, so it needs no `uv` and nothing to provision.
+
+**What it does with a request:**
+
+- It refuses the run when `claude` is not on `PATH`, or when the agent is not deployed. Deployed means `.claude/agents/<agent>.md` exists in the run's folder or a folder above it, or in the person's own agents folder (`$CLAUDE_CONFIG_DIR/agents`, else `~/.claude/agents`).
+- It refuses a request that carries any key of the confined form, or any other key it does not run. The confined form is not built yet.
+- It starts `claude` in the run's folder, in a session of its own, and writes the brief to its standard input. So no word of the brief is read as a flag.
+- At the limit it ends the harness and every process still descended from it. Claude Code starts each shell command in a session of its own, which a kill of the harness's process group would not reach. So the runner first stops the harness's group, so it starts nothing more. It then reads the process table with `ps`, and stops the group of each process descended from the harness, until a reading finds no new one. Then it kills every group it stopped.
+- **What it cannot reach.** A process that left the harness's tree before the limit is not found: one that daemonises, or whose parent ended and left it to the system. Where the system's own `ps` (`/bin/ps` or `/usr/bin/ps`) cannot be read, the runner ends the harness's own group alone.
+- Asked to stop (`SIGTERM`, `SIGHUP`, `SIGINT`), it ends the harness the same way, and exits with no answer.
+- The harness gets the runner's environment, less the backbone's own variables for its run of the runner (`PKIT_COMMAND_DEADLINE`, `PKIT_COMMAND_STRAYS`, `PKIT_RUN_CACHE`).
+- It starts the `claude` it found on `PATH`, made absolute. So a relative `PATH` entry never runs a `claude` that the run's folder holds.
+
+**The closed set of flags** (ADR-066 point 4). The runner passes only these, and refuses to build a command line with any other:
+
+| Flag | Passed |
+|---|---|
+| `-p` | always |
+| `--agent <agent>` | always |
+| `--effort <level>` | where the run sets an effort |
+
+None of them approves a call by itself. `--agent` makes the agent's definition the session's agent, so a field that definition carries, such as a permission mode, hooks or MCP servers, applies as in any session started with it. Checking a definition's fields comes with the confined form (ADR-066 point 3). Among the flags it never passes are `--dangerously-skip-permissions`, `--allow-dangerously-skip-permissions`, `--permission-mode`, `--permission-prompt-tool`, `--allowedTools`, `--add-dir`, `--settings`, `--agents` and `--mcp-config`.
+
+**The unconfined form.** Today every run takes the form the review command's runs take (ADR-066 point 10). The run takes the person's and the project's settings in its folder, as a session started there would. It starts in the mode those settings or the harness choose, and the runner passes no settings of its own. That form is not confined: a run may write in the folder, and may start in a mode that approves calls no rule allows (ADR-066 point 11). The hook judges a run's calls as it judges a person's session. `--agent` does not change the `agent` key the hook reads, so which subject it judges there is not yet known ([the permissions README, "Default-agent subject resolution"](../../permissions/README.md#default-agent-subject-resolution)). The confined form's settings are not built yet.
 
 ### Live permission enforcement (`permission-hook.py`)
 

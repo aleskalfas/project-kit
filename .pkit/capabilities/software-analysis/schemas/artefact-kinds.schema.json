@@ -105,13 +105,39 @@
           "$ref": "#/$defs/word"
         },
         "type": {
-          "description": "`heading`: a heading written with one to six `#` at the start of a line. `label`: a bold label, its text then a colon, as `**Goal:**`, that opens a paragraph or a top-level list item. `opening`: the text before the body's first label. Only a declared label marks a part, so a bold run the kind does not declare is content.",
+          "description": "`heading`: a heading written with one to six `#` at the start of a line. `label`: a bold label, its text then a colon, as `**Goal:**`, that opens a paragraph or a top-level list item. `opening`: the text before the body's first label. `repeated`: a section that repeats, once for each entry of a front-matter list, each headed at its `level` and holding the parts its `sections` give, such as a domain-model view's section for each concept it explains (software-analysis DEC-004 point 2). Every heading of that level is one of its sections, and the stamp writes each heading. Only a declared label marks a part, so a bold run the kind does not declare is content.",
           "enum": [
             "heading",
             "label",
-            "opening"
+            "opening",
+            "repeated"
           ],
           "default": "heading"
+        },
+        "sections": {
+          "description": "A repeated section's parts, in order, each held in every one of its sections as a body's element is: an opening, then labels. A part's id is unique within its kind, the elements outside the repeated section included. A repeated section holds no repeated section.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "allOf": [
+              {
+                "$ref": "#/$defs/section"
+              },
+              {
+                "required": [
+                  "type"
+                ],
+                "properties": {
+                  "type": {
+                    "enum": [
+                      "label",
+                      "opening"
+                    ]
+                  }
+                }
+              }
+            ]
+          }
         },
         "level": {
           "description": "A heading's level: the number of `#`.",
@@ -209,6 +235,35 @@
               "text": false
             }
           }
+        },
+        {
+          "if": {
+            "properties": {
+              "type": {
+                "const": "repeated"
+              }
+            },
+            "required": [
+              "type"
+            ]
+          },
+          "then": {
+            "required": [
+              "level",
+              "hint",
+              "example",
+              "sections"
+            ],
+            "properties": {
+              "text": false,
+              "allows-none": false
+            }
+          },
+          "else": {
+            "properties": {
+              "sections": false
+            }
+          }
         }
       ]
     },
@@ -242,6 +297,10 @@
         "stamp": {
           "description": "The words the stamp writes for the element when it creates the file: a heading's text without its `#`, or the opening.",
           "$ref": "#/$defs/line"
+        },
+        "form": {
+          "description": "A check on what the element holds, as a body's element takes one. A glossary's opening takes `builds-on-matches-front-matter` (DEC-001 point 2).",
+          "$ref": "#/$defs/form"
         }
       },
       "if": {
@@ -314,6 +373,14 @@
         {
           "const": "gaps-match-outcomes",
           "description": "A record's gaps: the part reads `None.`, or holds one top-level item for each gap. Each item opens with a bold label of one or more ids from `outcomes`, separated by commas and ended by a colon, and holds `**Resolution:**` with text after it. Each artefact whose outcome is `code-regressed` or `gap-found` is named by a gap (DEC-001 point 6)."
+        },
+        {
+          "const": "builds-on-matches-front-matter",
+          "description": "A glossary's opening, where its front matter's `builds-on` lists what its analysis takes from the analyses it builds on (DEC-001 point 2): one top-level item for each entry, in the same order, opening `**From <analysis> at <version>:**`. Nested in it, one item for each of its terms, `**Term:** [<name>](<link>)`, then for each of its actors, `**Actor:** [<name>](<link>)`, each name exactly its entry's, and nested in an actor's item, one item for each need its entry gives, exactly. Only an item opening `**From ` stands for an entry. Where `builds-on` lists nothing, the form asks nothing."
+        },
+        {
+          "const": "headings-match-front-matter",
+          "description": "A repeated section's headings: one section for each entry of the front matter's `explains`, in the same order, each headed by the name of the term the entry names, exactly, white space aside. Where the analysis holds no such term, any heading will do. No two of its headings give one slug, the heading's text in lower case with every character but letters, digits, spaces and hyphens dropped, and each space made a hyphen (COR-050 point 2), so a page anchor on one names one section (software-analysis DEC-004 point 2)."
         },
         {
           "const": "definition",

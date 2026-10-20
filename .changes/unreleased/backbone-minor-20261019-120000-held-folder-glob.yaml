@@ -1,0 +1,20 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A component's folder of held documents (`friction.held`, COR-050 point 1)
+  may now be a glob of folders at one depth, such as `*/revalidations`, and
+  holds every file beneath each folder it names (#1821). A glob stands only
+  before the folder's own name: one in the last segment, or a `**`, is refused
+  as malformed. A held folder now also wins over its own component's places:
+  a place of the component that shares only some files with the folder, such
+  as a glob reaching into it, leaves those files to it, where the folder used
+  to be refused and hold nothing. Two of one component's held folders that
+  share only some files hold each for the component, by the folder declared
+  first, where both used to be refused. A held folder that equals or encloses
+  a documentation root or any place, its own component's included, or shares
+  a file with another component's held folder or a rule-set folder, is still
+  refused, and so are two of one component's folders when one lies within the
+  other. Every package valid before reads the same, so nothing migrates; a
+  component that relies on the new shapes needs this release of the backbone.

@@ -48,9 +48,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-18T19:56:45Z
+        at: 2026-10-19T20:57:58Z
         outcome: unchanged
-        unchanged-because: "This change lets a link take every anchor but those some own fields list, in friction_discovery.py. It changes no anchor: what an anchor is, a dead anchor and a registered kind read as they did."
+        unchanged-because: A held folder may now be a glob of folders and wins over its own component's places; what an anchor is and what it names is untouched.
 TERM-answer:
   name: answer
   status: active
@@ -89,9 +89,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-18T19:56:50Z
+        at: 2026-10-19T20:58:04Z
         outcome: unchanged
-        unchanged-because: This change adds a second way for a link to choose its targets, in friction_discovery.py. What an artefact is, and how a decision record and a held document differ from one, is untouched.
+        unchanged-because: A held document is still never an artefact; the change only lets a held folder be a glob of folders and win over its own component's places.
 TERM-artefact-type:
   name: artefact type
   status: active
@@ -106,6 +106,10 @@ TERM-artefact-type:
           - COR-056#2
           - COR-056#3
           - COR-056#5
+      revalidated:
+        at: 2026-10-19T20:58:07Z
+        outcome: unchanged
+        unchanged-because: Types and how a place gives one are untouched; the change widens only the shape and bounds of a held folder.
 TERM-backbone:
   name: backbone
   status: active
@@ -181,6 +185,10 @@ TERM-change-check:
           - COR-050#6
           - COR-050#12
           - COR-054#3
+      revalidated:
+        at: 2026-10-19T19:44:59Z
+        outcome: unchanged
+        unchanged-because: The change check gains a reported-only finding, an anchor on a shared id, and COR-050 point 12 lists it as never failed. The term's distinctions, the whole-repository check, the two modes and the list of answers, hold as written.
 TERM-changeset:
   name: changeset
   status: active
@@ -292,6 +300,10 @@ TERM-debt:
           - src/project_kit/friction_report.py
         record:
           - COR-050#9
+      revalidated:
+        at: 2026-10-19T19:45:07Z
+        outcome: unchanged
+        unchanged-because: The whole-repository check gains a reported-only warning on an anchor on a shared id, and the explanation says what mends it. Neither is debt, which stays the stale and deferred findings dated from their origin.
 TERM-decision-record:
   name: decision record
   status: active
@@ -357,6 +369,10 @@ TERM-finding:
           - COR-055#4
           - COR-055#5
           - COR-057#3
+      revalidated:
+        at: 2026-10-19T19:45:08Z
+        outcome: unchanged
+        unchanged-because: COR-050 point 12 adds an anchor on a shared id among the change check's findings, reported and never failed. The term's example and its distinctions name no finding this alters.
 TERM-friction:
   name: friction
   status: active
@@ -373,9 +389,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-18T18:53:52Z
+        at: 2026-10-19T19:45:10Z
         outcome: unchanged
-        unchanged-because: This change words the change check's finding on a target that a link takes by what stays out, in friction_check.py. Friction, debt and the friction block mean what they did.
+        unchanged-because: Both checks gain a warning on an anchor on a shared id, which is no friction. What friction is, a changed anchor with no answer standing for it, is untouched.
 TERM-harness:
   name: harness
   status: active
@@ -485,6 +501,10 @@ TERM-package-metadata:
           - COR-021
           - COR-053#3
           - COR-056#2
+      revalidated:
+        at: 2026-10-19T20:58:09Z
+        outcome: unchanged
+        unchanged-because: Package metadata still declares a component's places and held folders; the change widens only what a held folder's path may be, which the term does not detail.
 TERM-place:
   name: place
   status: active
@@ -498,9 +518,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-18T21:26:52Z
+        at: 2026-10-19T20:58:11Z
         outcome: unchanged
-        unchanged-because: A capability's place may declare a link of a second shape, read in friction_discovery.py. What a place is, and how it differs from a root, a synced tree and a held folder, is untouched.
+        unchanged-because: A held folder still keeps its files from every place; that it may now be a glob of folders, and wins over its own component's places as well, leaves the distinction true as written.
 TERM-point:
   name: point
   status: active
@@ -852,6 +872,10 @@ TERM-whole-repository-check:
         record:
           - COR-050#6
           - COR-050#9
+      revalidated:
+        at: 2026-10-19T19:45:13Z
+        outcome: unchanged
+        unchanged-because: The whole-repository check gains a reported-only warning on an anchor on a shared id. It measures every artefact from its revalidation point and never fails, as the term says.
 ---
 
 # Glossary

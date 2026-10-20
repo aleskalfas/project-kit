@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-18T20:10:02Z
+      at: 2026-10-19T19:00:00Z
       outcome: unchanged
-      unchanged-because: What COR-059 point 3 stands on changed only in the Decision's guide sentence, which now names a data point's question beside a transition and an update of the CLI. Points 4 and 5 gained the question too. Point 3, what a version transition is, says what it said, so the adopter's needs this actor states still hold.
+      unchanged-because: DEC-001 point 1 gains the domain-model view, a kind that explains the glossary's concepts, and says nothing new of an actor or its needs. The adopter's needs hold as written.
 ---
 
 # ACT-adopter — Adopter

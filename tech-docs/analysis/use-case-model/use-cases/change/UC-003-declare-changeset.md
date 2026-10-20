@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-19T06:39:15Z
+      at: 2026-10-19T19:45:23Z
       outcome: unchanged
-      unchanged-because: This change makes the release's migration-dir warning cover adapter and capability folders, and adds a number check to pkit migrations check-diff in cli.py. The changesets, the changeset guard and the release commands this use case describes behave as before, and the warning writes no version.
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

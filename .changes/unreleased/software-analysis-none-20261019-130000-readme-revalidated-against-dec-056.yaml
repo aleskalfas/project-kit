@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against project-management's
+  DEC-056, which gains the fixer run's contract (#1792). Only its friction
+  block changes, and nothing you run or read changes.

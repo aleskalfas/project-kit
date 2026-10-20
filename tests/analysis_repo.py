@@ -50,6 +50,8 @@ STRUCTURES = f"{SA.as_posix()}/project/structures.yaml"
 ANALYSIS = "tech-docs/analysis"
 ACTORS = f"{ANALYSIS}/use-case-model/actors"
 GLOSSARY = f"{ANALYSIS}/glossary.md"
+#: The domain model's folder, one file per view (software-analysis DEC-004 point 4).
+DOMAIN_MODEL = f"{ANALYSIS}/domain-model"
 USE_CASES = f"{ANALYSIS}/use-case-model/use-cases"
 JOURNEYS = f"{ANALYSIS}/use-case-model/journeys"
 RECORDS = f"{ANALYSIS}/revalidations"
@@ -72,7 +74,7 @@ ANALYSIS_SET_TEXT = (
     "scope:\n  types: [software-analysis:actor, software-analysis:term, "
     "software-analysis:use-case, software-analysis:journey, "
     "software-analysis:quality-requirement, software-analysis:functional-requirement, "
-    "software-analysis:constraint]\nrules: {}\n---\n\n"
+    "software-analysis:constraint, software-analysis:domain-model-view]\nrules: {}\n---\n\n"
     "# ANALYSIS — the project's rules for its analysis\n"
 )
 

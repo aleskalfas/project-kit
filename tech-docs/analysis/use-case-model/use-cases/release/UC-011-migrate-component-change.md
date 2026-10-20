@@ -25,8 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T06:40:53Z
-      outcome: updated
+      at: 2026-10-19T19:45:22Z
+      outcome: unchanged
+      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

@@ -9,13 +9,19 @@ backbone and never walks the places itself, so it reads that answer through
 the backbone's reading command, `pkit friction artefacts --json`, at the
 working tree or, with `--at`, at one commit (`backbone.read_document`).
 
-What this module decides over the answer is DEC-001's and DEC-002's: each place
-of this capability holds one kind of artefact (DEC-001 point 2, DEC-002 point
-3) — the glossary is a collection file, one keyed entry per term; an actor, a
-use case, a journey and a requirement of each of the three kinds are a
-document each — and a file in a place that holds no artefact of its kind's
-shape is a stray the check reports. The folder that holds the three kinds of
-requirement's places is no place (DEC-002 point 3), so a file in it outside them
+One analysis per component (DEC-001 point 2): each place is declared at the
+location's top and one folder down, so a file's place tells its kind and the
+folder of the location it lies in, which names the analysis that holds it
+(`_lib/analyses.py`); the records' folder is held at both too.
+
+What this module decides over the answer is DEC-001's, DEC-002's and DEC-004's:
+each place of this capability holds one kind of artefact (DEC-001 point 2,
+DEC-002 point 3, DEC-004 point 4) — the glossary is a collection file, one
+keyed entry per term; a domain-model view, an actor, a use case, a journey and
+a requirement of each of the three kinds are a document each — and a file in a
+place that holds no artefact of its kind's shape is a stray the check reports.
+The folder that holds the three kinds of requirement's places is no place
+(DEC-002 point 3), so a file in it outside them
 is in no place: the answer lists the files of the analysis location that no
 place or held folder of this capability holds, and the check reports those
 under that folder. The revalidation records are not
@@ -37,7 +43,7 @@ import dataclasses
 import posixpath
 import re
 from collections import defaultdict
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -45,9 +51,9 @@ from typing import Any
 CAPABILITY = "software-analysis"
 LOCATION = "analysis"
 
-#: The kinds of anchored artefact: the four DEC-001 point 1 gives, and the three kinds
-#: of requirement DEC-002 point 1 adds.
-ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT = (
+#: The kinds of anchored artefact: the four DEC-001 point 1 gives, the three kinds of
+#: requirement DEC-002 point 1 adds, and the domain-model view DEC-004 adds.
+ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT, VIEW = (
     "actor",
     "term",
     "use-case",
@@ -55,9 +61,10 @@ ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT = (
     "quality-requirement",
     "functional-requirement",
     "constraint",
+    "domain-model-view",
 )
 REQUIREMENTS = (QUALITY, FUNCTIONAL, CONSTRAINT)
-KINDS = (ACTOR, TERM, USE_CASE, JOURNEY, *REQUIREMENTS)
+KINDS = (ACTOR, TERM, VIEW, USE_CASE, JOURNEY, *REQUIREMENTS)
 
 #: The kinds kept as one collection file, an entry per artefact (DEC-001 point 2):
 #: the glossary. An actor is a document of its own, so its needs, in its front
@@ -72,6 +79,7 @@ PREFIX = {
     USE_CASE: "UC",
     JOURNEY: "JRN",
     **dict.fromkeys(REQUIREMENTS, "REQ"),
+    VIEW: "VIEW",
 }
 #: The kinds whose id is a number, `<PREFIX>-NNN`, which the stamp gives: a use case, a
 #: journey, and a requirement of each of the three kinds, which read their three places
@@ -88,6 +96,7 @@ NOUN = {
     QUALITY: "quality requirement",
     FUNCTIONAL: "functional requirement",
     CONSTRAINT: "constraint",
+    VIEW: "domain-model view",
 }
 
 #: How a requirement of any of the three kinds is named where its kind does not matter,
@@ -100,7 +109,31 @@ ID_SHAPE = {
     USE_CASE: "UC-NNN",
     JOURNEY: "JRN-NNN",
     **dict.fromkeys(REQUIREMENTS, "REQ-NNN"),
+    VIEW: "VIEW-<slug>",
 }
+
+#: The front-matter field DEC-004 point 2 gives a domain-model view: the terms whose
+#: concepts it explains, in the order of its sections. The stamp writes the view's term
+#: anchors from it, and each term's link to its section (point 7).
+EXPLAINS = "explains"
+
+#: The folder of the domain model's views inside an analysis (DEC-004 point 4), as the
+#: package declares its place. A term's link names a view's file under it.
+DOMAIN_MODEL = "domain-model"
+
+#: A domain-model view's file's name: a number, a hyphen and the slug its id is made of,
+#: such as `010-orders-and-payments.md`. The number gives the view's place in the domain
+#: model's order, compared as a number, and is no part of its id (DEC-004 point 4).
+_VIEW_NAME = re.compile(r"^(?P<number>[0-9]+)-(?P<slug>.+)\.md$")
+
+
+def view_name(path: str) -> tuple[int, str] | None:
+    """The number a domain-model view's file's name opens with, compared as a number, and
+    the slug after it: `(10, "orders-and-payments")` for `…/010-orders-and-payments.md`;
+    `None` for a name that opens with no number and a hyphen (DEC-004 point 4)."""
+    found = _VIEW_NAME.match(path.rsplit("/", 1)[-1])
+    return None if found is None else (int(found["number"]), found["slug"])
+
 
 #: The front-matter fields DEC-001 point 4 adds to what a use case and a journey name:
 #: a use case's other actors, and the use cases outside a journey that a step relies on.
@@ -111,6 +144,24 @@ RELIES_ON = "relies-on"
 #: requirement it must meet, of any of the three kinds. A journey lists only those that
 #: bind its whole path.
 MUST_MEET = "requirements"
+
+#: The front-matter field DEC-001 point 1 adds to a use case: for each precondition, in
+#: its order, its producers — use cases of its analysis, its own id among them, and
+#: `ENVIRONMENT` beside them. Optional, and it draws no anchor (`_lib/chain.py`).
+AFTER = "after"
+ENVIRONMENT = "environment"
+
+#: A number that opens an area's folder name, such as `010-` in `010-develop`: one valid
+#: order in which the areas build on each other, and no part of any id (DEC-001 point 2).
+_AREA_NUMBER = re.compile(r"^(?P<number>[0-9]+)-")
+
+
+def area_number(area: str | None) -> int | None:
+    """The number that opens an area's folder name, compared as a number — 10 for
+    `010-develop` — or `None` for an area that carries none, or for no area."""
+    found = _AREA_NUMBER.match(area or "")
+    return None if found is None else int(found["number"])
+
 
 #: A numbered artefact's id — a use case's, a journey's or a requirement's — with its
 #: number in any number of digits, the spellings the id schema refuses included.
@@ -169,17 +220,70 @@ def _spelt(found: re.Match[str]) -> str:
     return f"{found['prefix']}-{int(found['number']):03d}"
 
 
+def qualified(reference: str) -> tuple[str | None, str]:
+    """The analysis a reference names, and the id it names there: `core:ACT-developer`
+    names `ACT-developer` of the analysis of `core`, and a bare id names its own
+    analysis's artefact, `None` (DEC-001 point 2)."""
+    analysis, colon, artefact_id = reference.partition(QUALIFIER)
+    return (analysis, artefact_id) if colon else (None, reference)
+
+
+def under_place(path: str, place: str) -> bool:
+    """Whether `path` lies in `place`, as the backbone's reading of these places matches
+    a file: a folder holds every file beneath it, a folder glob ending `/**` too, and a
+    file is itself. A `*` segment stands for one folder of any name."""
+    if place.endswith("/**"):
+        return _beneath(path, place[: -len("/**")])
+    if place.endswith(".md"):
+        return _segments_match(path.split("/"), place.split("/"))
+    return _beneath(path, place)
+
+
+def _beneath(path: str, folder: str) -> bool:
+    parts, segments = path.split("/"), folder.split("/")
+    return len(parts) > len(segments) and _segments_match(parts[: len(segments)], segments)
+
+
+def _segments_match(parts: Sequence[str], segments: Sequence[str]) -> bool:
+    return len(parts) == len(segments) and all(
+        segment == part or (segment == "*" and bool(part))
+        for part, segment in zip(parts, segments, strict=True)
+    )
+
+
+def _folder(place: str) -> str:
+    """A nested folder place, `<location>/*/<place>/**`, as the folder glob it names."""
+    return place[: -len("/**")] if place.endswith("/**") else place
+
+
 #: The places this capability's package metadata declares (`friction.places`),
 #: by the path each is written with inside the analysis location, and the kind
 #: each holds. A test holds this table to the package.
 KIND_OF_PLACE = {
     "glossary.md": TERM,
+    "domain-model": VIEW,
     "use-case-model/actors": ACTOR,
     "use-case-model/use-cases": USE_CASE,
     "use-case-model/journeys": JOURNEY,
     "requirements/quality": QUALITY,
     "requirements/functional": FUNCTIONAL,
     "requirements/constraints": CONSTRAINT,
+}
+
+#: The same eight places one folder down, in a folder named after a component, where a
+#: project keeps one analysis per component (DEC-001 point 2): a folder place is a glob of
+#: the folders below one folder of the location, every Markdown file beneath each. The
+#: places match both layouts, so a single analysis at the location's top stays in them. A
+#: test holds this table to the package too.
+NESTED_PLACES = {
+    "*/glossary.md": TERM,
+    "*/domain-model/**": VIEW,
+    "*/use-case-model/actors/**": ACTOR,
+    "*/use-case-model/use-cases/**": USE_CASE,
+    "*/use-case-model/journeys/**": JOURNEY,
+    "*/requirements/quality/**": QUALITY,
+    "*/requirements/functional/**": FUNCTIONAL,
+    "*/requirements/constraints/**": CONSTRAINT,
 }
 
 #: The folder inside the analysis location that holds the three kinds of requirement's
@@ -192,6 +296,19 @@ REQUIREMENTS_FOLDER = "requirements"
 #: package declares it as its folder of held documents (`friction.held`), by
 #: this path. A test holds this to the package.
 REVALIDATIONS = "revalidations"
+
+#: The records' folder of each analysis kept in a component's folder, held as the folder
+#: at the top is: a glob of the folders one folder down (DEC-001 point 2; COR-050 point 1).
+NESTED_REVALIDATIONS = f"*/{REVALIDATIONS}"
+
+#: How a reference names an artefact of another analysis: the analysis's component, a
+#: colon, and the artefact's id, as a capability's decision is cited, such as
+#: `core:ACT-developer` (DEC-001 point 2).
+QUALIFIER = ":"
+
+#: The folder `Analysis.unfit` reads as every analysis's: a reference resolved anywhere
+#: in the repository. No folder an analysis takes is named so, since each is a word.
+ANYWHERE = "*"
 
 #: The trigger of a revalidation planned before code (DEC-001 point 5), whose record
 #: names the sources of the design it reviewed (point 6).
@@ -237,6 +354,11 @@ FORMAT_RULE = "RS-SAN-001"
 #: removed binds where it binds and at its status (`_lib/append_only.py`).
 STEPS_RULE = "RS-SAN-002"
 
+#: The rule of logical consequence: a use case starts only from what is already true,
+#: each precondition naming its producers (DEC-001 points 1 and 12). The check of a use
+#: case's `after` binds where it binds and at its status (`_lib/check.py`).
+LOGIC_RULE = "RS-SAN-009"
+
 #: The key of the folders of held documents in that document, each declared as a
 #: place is, with the files it holds (COR-050 point 1), and of the files they
 #: hold, each saying whether `friction.exclude` leaves it out.
@@ -278,7 +400,10 @@ class Artefact:
     the backbone reads it; `None` when it gives none). An entry's `span` is the
     first and last line of its section in its file (`SPAN`), `None` for a
     document or an entry with no section; `span_read` says whether the backbone
-    gave the key at all, which one that predates it does not."""
+    gave the key at all, which one that predates it does not. `folder` is the
+    folder of the location it lies in, named after a component, where a nested
+    place holds it (`NESTED_PLACES`), and `None` where a place at the location's
+    top does: the folder tells which analysis holds it (DEC-001 point 2)."""
 
     kind: str
     id: str | None
@@ -290,6 +415,7 @@ class Artefact:
     unanchored_because: str | None = None
     span: tuple[int, int] | None = None
     span_read: bool = False
+    folder: str | None = None
 
     def anchored_to(self, anchor_kind: str) -> tuple[str, ...]:
         return self.anchors.get(anchor_kind, ())
@@ -337,6 +463,16 @@ class Analysis:
     the project's own rule sets, by id, and `rule_statuses` the status of every rule
     of every rule set the reading holds, by its id as cited: bare for a project
     rule, `<component>:<id>` for a method rule.
+
+    One analysis per component (DEC-001 point 2): `places` are the places at the
+    location's top, and `nested` the same places one folder down (`NESTED_PLACES`),
+    each by kind, as the reading resolves them. `folders` gives each file of a
+    place the folder of the location it lies in where a nested place holds it, and
+    `None` where a place at the top does. `glossaries` is each glossary file's front
+    matter, by path, whose head data is no entry (`_lib/analyses.py`). `unplaced` is
+    every file of the location no place or held folder of this capability holds, by
+    path, less those `friction.exclude` leaves out; `None` when the reading gives
+    no such list.
     """
 
     location: str | None
@@ -352,6 +488,45 @@ class Analysis:
     method_rules: Mapping[str, str] | None = None
     project_rules: Mapping[str, ProjectRule] = dataclasses.field(default_factory=dict)
     rule_statuses: Mapping[str, str] = dataclasses.field(default_factory=dict)
+    nested: Mapping[str, str] = dataclasses.field(default_factory=dict)
+    folders: Mapping[str, str | None] = dataclasses.field(default_factory=dict)
+    glossaries: Mapping[str, Mapping[str, Any]] = dataclasses.field(default_factory=dict)
+    unplaced: tuple[str, ...] | None = ()
+
+    def where(self, path: str) -> tuple[str, str | None] | None:
+        """The kind of the place this state of the analysis declares that `path` lies
+        under, and the folder of the location it lies in where a nested place holds it
+        (`None` at the location's top); `None` where no place this state declares
+        holds it. Read from the paths alone, so a file gone since is placed too."""
+        for kind, place in self.places.items():
+            if under_place(path, place):
+                return kind, None
+        for kind, place in self.nested.items():
+            if under_place(path, place):
+                return kind, path.split("/")[place.split("/").index("*")]
+        return None
+
+    def place_folders(self, kinds: Iterable[str]) -> set[str]:
+        """The folders of the places of `kinds` this state declares, a nested one as a
+        folder glob, `<location>/*/<place>`: what a history is read under."""
+        found = {self.places[kind] for kind in kinds if kind in self.places}
+        found |= {_folder(self.nested[kind]) for kind in kinds if kind in self.nested}
+        return found
+
+    def area(self, artefact: Artefact) -> str | None:
+        """The area a use case lies in: the folder of its place that holds it, one folder
+        below the use cases' folder, such as `010-develop`; `None` for one right in that
+        folder, or one no place of this state holds (DEC-001 point 2)."""
+        for place in (self.places.get(USE_CASE), self.nested.get(USE_CASE)):
+            if not place or not under_place(artefact.path, place):
+                continue
+            below = artefact.path.split("/")[len(_folder(place).split("/")) :]
+            return below[0] if len(below) > 1 else None
+        return None
+
+    def in_folder(self, folder: str | None) -> list[Artefact]:
+        """The artefacts that lie in `folder` of the location, `None` its top."""
+        return [a for a in self.artefacts if a.folder == folder]
 
     def held(self) -> set[str]:
         """Every id this state of the analysis holds, as `identity` spells it: each
@@ -385,32 +560,49 @@ class Analysis:
         found = self.find(artefact_id)
         return found if found is not None and found.kind == kind else None
 
-    def unfit(self, artefact_id: str, kind: str, *, in_force: bool) -> str | None:
+    def unfit(
+        self, artefact_id: str, kind: str, *, in_force: bool, within: str | None = ANYWHERE
+    ) -> str | None:
         """Why an artefact cannot rest on `artefact_id` as its `kind` — a use case on its
         actor, a journey on its actor and its steps — or `None` when it can.
 
         What it names is an artefact of the analysis; and an artefact in force rests
         only on artefacts in force, so a withdrawn actor or step is refused to it. A
         withdrawn artefact may name a withdrawn one: it is history, as a revalidation
-        record citing a withdrawn artefact is (DEC-001 points 3 and 6). One rule for
-        the stamp, which writes artefacts in force, and the check, so the check never
-        accepts what the stamp refuses to write."""
+        record citing a withdrawn artefact is (DEC-001 points 3 and 6). Named by its id
+        alone, it is an artefact of the analysis in `within`, the folder its own lies
+        in (`None` the location's top): an actor of another analysis is named with that
+        analysis (DEC-001 point 2), and every other field names its own analysis's
+        artefacts alone. One rule for the stamp, which writes artefacts in force, and
+        the check, so the check never accepts what the stamp refuses to write."""
         found = self.of(artefact_id, kind)
         if found is None:
             return f"no {NOUN[kind]} {artefact_id} in the analysis"
+        if within != ANYWHERE and found.folder != within:
+            return f"{NOUN[kind]} {artefact_id} lies in another analysis ({found.location})"
         if in_force and found.withdrawn:
             return f"{NOUN[kind]} {artefact_id} is withdrawn ({found.location})"
         return None
 
-    def unfit_requirement(self, artefact_id: str, *, in_force: bool) -> str | None:
+    def elsewhere(self, artefact_id: str, within: str | None) -> bool:
+        """Whether `artefact_id` names an artefact of another analysis than the one in
+        `within`, which a field may name only as an actor written with its analysis."""
+        found = self.find(artefact_id)
+        return within != ANYWHERE and found is not None and found.folder != within
+
+    def unfit_requirement(
+        self, artefact_id: str, *, in_force: bool, within: str | None = ANYWHERE
+    ) -> str | None:
         """Why a requirement cannot refine `artefact_id`, or a use case or a journey list
         it in its `requirements`, or `None` when it can: what it names is a requirement
-        of the analysis, of any of the three kinds, and an artefact in force names none
-        withdrawn (DEC-002 points 6 and 7). As `unfit` is, one rule for the check and the
-        stamp."""
+        of the analysis, of any of the three kinds — of its own analysis, the one in
+        `within` — and an artefact in force names none withdrawn (DEC-002 points 6 and
+        7; DEC-001 point 2). As `unfit` is, one rule for the check and the stamp."""
         found = self.find(artefact_id)
         if found is None or found.kind not in REQUIREMENTS:
             return f"no {REQUIREMENT} {artefact_id} in the analysis"
+        if within != ANYWHERE and found.folder != within:
+            return f"{REQUIREMENT} {artefact_id} lies in another analysis ({found.location})"
         if in_force and found.withdrawn:
             return f"{REQUIREMENT} {artefact_id} is withdrawn ({found.location})"
         return None
@@ -450,7 +642,9 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
             f"{document.get('schema_version')!r}; this capability reads {SCHEMA_VERSION}"
         )
     kind_of_place: dict[int, str] = {}
+    is_nested: set[int] = set()
     places: dict[str, str] = {}
+    nested: dict[str, str] = {}
     location: str | None = None
     for index, place in enumerate(_mappings(document.get("places"))):
         where = place.get("location")
@@ -461,33 +655,43 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
             or where.get("name") != LOCATION
         ):
             continue
-        kind = KIND_OF_PLACE.get(str(place.get("written")))
+        written = str(place.get("written"))
+        kind = KIND_OF_PLACE.get(written) or NESTED_PLACES.get(written)
         path = place.get("path")
         if kind is None or not isinstance(path, str):
             continue
         kind_of_place[index] = kind
-        places[kind] = path
+        if written in NESTED_PLACES:
+            is_nested.add(index)
+            nested[kind] = path
+        else:
+            places[kind] = path
         location = location or _text(where.get("path"))
 
     records, unheld = _records(document.get(HELD), document.get(HELD_FILES))
     kind_of_file: dict[str, str] = {}
+    folder_of: dict[str, str | None] = {}
+    glossaries: dict[str, Mapping[str, Any]] = {}
     unreadable: dict[str, str] = {}
     no_front_matter: list[str] = []
     excluded: set[str] = set()
     for entry in _mappings(document.get("files")):
-        kinds = [kind_of_place[i] for i in entry.get("places") or [] if i in kind_of_place]
-        if not kinds:
+        indices = [i for i in entry.get("places") or [] if i in kind_of_place]
+        if not indices:
             continue
         path = str(entry.get("path"))
         if entry.get("excluded") is True:
             excluded.add(path)
             continue
-        kind_of_file[path] = kinds[0]
+        kind_of_file[path] = kind_of_place[indices[0]]
+        folder_of[path] = _folder_of(path, location) if indices[0] in is_nested else None
         reason = entry.get("unreadable")
         if reason is not None:
             unreadable[path] = reason if isinstance(reason, str) else ""
         elif entry.get("fields") is None:
             no_front_matter.append(path)
+        elif kind_of_file[path] in COLLECTIONS and isinstance(entry.get("fields"), Mapping):
+            glossaries[path] = entry["fields"]
 
     artefacts: list[Artefact] = []
     strays: dict[str, Stray] = {
@@ -530,6 +734,7 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
                 unanchored_because=_text(entry.get(REASON)),
                 span=_span(entry.get(SPAN)),
                 span_read=SPAN in entry,
+                folder=folder_of.get(path),
             )
         )
     return Analysis(
@@ -546,7 +751,21 @@ def analysis_of(document: Mapping[str, Any]) -> Analysis:
         method_rules=_method_rules(document),
         project_rules=_project_rules(document),
         rule_statuses=_rule_statuses(document),
+        nested=nested,
+        folders=folder_of,
+        glossaries=glossaries,
+        unplaced=_unplaced(document.get(UNPLACED)),
     )
+
+
+def _folder_of(path: str, location: str | None) -> str | None:
+    """The folder of the location `path` lies in, one down from its top: the component's
+    folder a nested place reads it in."""
+    if location is None:
+        return None
+    top = posixpath.normpath(location)
+    rel = path if top == "." else path.removeprefix(f"{top}/")
+    return rel.split("/", 1)[0] if "/" in rel else None
 
 
 def _outside_kinds(unplaced: Any) -> tuple[str, ...] | None:
@@ -576,6 +795,24 @@ def _outside_kinds(unplaced: Any) -> tuple[str, ...] | None:
             if isinstance(path := entry.get("path"), str)
             and path.startswith(f"{folder}/")
             and entry.get("excluded") is not True
+        )
+    )
+
+
+def _unplaced(unplaced: Any) -> tuple[str, ...] | None:
+    """Every file of the analysis location the reading says no place or held folder of
+    this capability holds, by path, less those `friction.exclude` leaves out; `None`
+    where the reading cannot say, as `_outside_kinds` reads it."""
+    own = unplaced.get(CAPABILITY) if isinstance(unplaced, Mapping) else None
+    location = own.get(LOCATION) if isinstance(own, Mapping) else None
+    files = location.get("files") if isinstance(location, Mapping) else None
+    if not isinstance(files, list):
+        return None
+    return tuple(
+        sorted(
+            path
+            for entry in _mappings(files)
+            if isinstance(path := entry.get("path"), str) and entry.get("excluded") is not True
         )
     )
 
@@ -681,27 +918,40 @@ def _status(rule: Any) -> str:
 
 
 def _records(held: Any, held_files: Any) -> tuple[tuple[str, ...], str | None]:
-    """The revalidation records — the files the document's declaration of this
-    capability's folder of them holds, less those it lists as excluded — and why it
-    holds none, when it holds nothing: the backbone skipped it, or the document
+    """The revalidation records — the files the document's declarations of this
+    capability's folders of them hold, the one at the location's top and the glob of
+    those one folder down (DEC-001 point 2), less those it lists as excluded — and why
+    they hold none, when they hold nothing: the backbone skipped one, or the document
     declares no such folder."""
     excluded = {str(f.get("path")) for f in _mappings(held_files) if f.get("excluded") is True}
+    records: set[str] = set()
+    declared = False
+    skipped_because: str | None = None
     for entry in _mappings(held):
         where = entry.get("location")
         if (
-            entry.get("source") == f"capability:{CAPABILITY}"
-            and entry.get("written") == REVALIDATIONS
-            and isinstance(where, Mapping)
-            and where.get("name") == LOCATION
+            entry.get("source") != f"capability:{CAPABILITY}"
+            or entry.get("written") not in (REVALIDATIONS, NESTED_REVALIDATIONS)
+            or not isinstance(where, Mapping)
+            or where.get("name") != LOCATION
         ):
-            skipped = entry.get("skipped")
-            if isinstance(skipped, Mapping):
-                return (), f"the backbone skipped it ({skipped.get('reason')})"
-            files = entry.get("files")
-            if not isinstance(files, list):
-                return (), None
-            return tuple(sorted(str(f) for f in files if str(f) not in excluded)), None
-    return (), "the backbone's reading declares no such folder of this capability's"
+            continue
+        declared = True
+        skipped = entry.get("skipped")
+        if isinstance(skipped, Mapping):
+            skipped_because = (
+                skipped_because or f"the backbone skipped it ({skipped.get('reason')})"
+            )
+            continue
+        files = entry.get("files")
+        records |= (
+            {str(f) for f in files if str(f) not in excluded} if isinstance(files, list) else set()
+        )
+    if not declared:
+        return (), "the backbone's reading declares no such folder of this capability's"
+    if skipped_because is not None and not records:
+        return (), skipped_because
+    return tuple(sorted(records)), None
 
 
 def _misshapen(kind: str) -> str:

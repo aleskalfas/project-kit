@@ -25,6 +25,13 @@
       "type": "string",
       "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:config`."
     },
+    "analyses": {
+      "description": "The analyses the project keeps, one for each component that keeps one (DEC-001 point 2). Absent, or empty, where it keeps one, at the top of the analysis location. Listed, each lies in a folder of the location named after its component, and an artefact no listed analysis holds is refused. One numbering of each numbered kind runs across them, and no two of their artefacts share an id (DEC-001 point 3).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/analysis"
+      }
+    },
     "numbering": {
       "description": "How use cases, journeys and requirements are numbered (DEC-001 point 3, DEC-002 point 2).",
       "type": "object",
@@ -42,6 +49,47 @@
     }
   },
   "$defs": {
+    "analysis": {
+      "description": "One analysis: its component, the folder of the analysis location it lies in, and the analyses it builds on.",
+      "type": "object",
+      "required": [
+        "component",
+        "folder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "description": "The component it describes, a part of the system developed and versioned on its own, by its name. `core` names a methodology's core, the backbone; a capability goes by its own name.",
+          "$ref": "analysis.schema.json#/$defs/slug"
+        },
+        "folder": {
+          "description": "The folder of the analysis location it lies in, one word, named after its component.",
+          "$ref": "analysis.schema.json#/$defs/slug"
+        },
+        "builds-on": {
+          "description": "The analyses it builds on: those of the components its component depends on, required or optional, and no other (DEC-001 point 2; RS-SAN-010). Where the component declares its dependencies, as a capability does in its package metadata, validation holds this list to them.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "analysis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "description": "The analysis it builds on, by its component's name.",
+                "$ref": "analysis.schema.json#/$defs/slug"
+              },
+              "optional": {
+                "description": "Whether its component is an optional dependency: used only where present, and the analysis works without it. False unless set.",
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        }
+      }
+    },
     "entry": {
       "description": "One commit and the ids it frees.",
       "type": "object",

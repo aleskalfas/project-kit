@@ -826,7 +826,8 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
 ) -> None:
     """A held folder names the location it lies within, and is a folder there: one
     discovery cannot read — plain text, no location, a location not declared, a
-    glob, a path leaving its location — is an error at its entry, and holds
+    glob in its last segment or a `**`, a path leaving its location — is an
+    error at its entry, and holds
     nothing, so a place matching its documents walks them as artefacts."""
     adopter = make_adopter_repo(capabilities=("evidence",))
     _evidence_declares(
@@ -840,7 +841,8 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
         "    - {path: '.'}\n"
         "    - {location: logs, path: records}\n"
         "    - {location: runs, path: 'records/*'}\n"
-        "    - {location: runs, path: '../records'}\n",
+        "    - {location: runs, path: '../records'}\n"
+        "    - {location: runs, path: '*/records/**'}\n",
     )
     adopter.write({CONFIG: _config(["docs"]), RECORD: "---\ndate: '2026-10-01'\n---\n"})
     result = fv.validate_friction(adopter.root)
@@ -861,7 +863,14 @@ def test_a_held_folder_in_another_shape_is_a_finding_and_holds_nothing(
             "the held folder names location 'logs', which `docs.locations` does not declare "
             "(declared: ['runs'])"
         ),
-        "/friction/held/3": "the held folder's `path` 'records/*' is a glob, not a folder",
+        "/friction/held/3": (
+            "the held folder's `path` 'records/*' ends in a glob: only the segments before the "
+            "folder's own name may be globs"
+        ),
+        "/friction/held/5": (
+            "the held folder's `path` '*/records/**' spans folders with `**`, not a folder or a "
+            "glob of folders at one depth"
+        ),
         "/friction/held/4": (
             "the held folder's `path` '../records' leaves its location (absolute, or with a "
             "`..` segment)"

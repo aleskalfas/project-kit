@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T06:33:10Z
+      at: 2026-10-20T02:03:37Z
       outcome: unchanged
-      unchanged-because: The living-docs agent and DEC-001 point 5 gain a fixer run, which a work-tracking command starts on stale pages with nobody watching, and in which the agent writes each answer as fields, never as a command. This use case is the developer's own resolution, where the developer dispatches the agent (variant 3a). There the agent still proposes the outcome with its evidence and the commands to run, and runs none, so what this use case says of it holds. A run a command starts is none of its paths.
+      unchanged-because: Both agents now end a fixer run in the run contract's line forms, a none carrying one of its reasons, and the resolver takes a run's quoted pull-request text as intent. In a session each still proposes the answers with evidence and commands and runs none, so how a developer resolves debt is untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date
