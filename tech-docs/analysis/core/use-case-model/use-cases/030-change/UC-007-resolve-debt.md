@@ -32,9 +32,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T10:10:47Z
+      at: 2026-10-20T13:09:34Z
       outcome: unchanged
-      unchanged-because: ADR-055 point 5 gains a sentence that the test suite is no gate on a pull request head that changed only answers (ADR-067). The whole-repository check and its tracking issue, which step 1 cites, are untouched.
+      unchanged-because: The resolver's commands for the person gain pkit analysis link before an analysis-stale update, where an analysis keeps a domain model. Who proposes and who writes the answers on the debt are unchanged, so this use case holds as written.
 ---
 
 # UC-007 — Resolve what the default branch left out of date
