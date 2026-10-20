@@ -43,3 +43,17 @@ requirements:
       The harness delivers a helper's full result to the delegating agent
       regardless of how the helper was spawned, or removes the delivery mode
       that truncates it — verified by repeating the measurement.
+  unattended-confined-run:
+    title: A process can start an agent unattended, confined for that one run
+    behaviour: >-
+      A process can start an agent with nobody attending. For that one run,
+      the agent is confined to rules and a folder the process sets. A call
+      those rules do not allow is refused, not asked. After the run, the
+      process can read the run's files and its outcome.
+    observation_point: out-of-session
+    evidence: >-
+      A design dependency (COR-047 point 9): project-management DEC-056 point
+      5 starts each granted fixer with nobody watching, held to what
+      proposing needs, and ADR-066 point 13 words what it requires of the
+      harness. The drift command, `pkit pm fix-drift`, is the first command
+      that depends on it.

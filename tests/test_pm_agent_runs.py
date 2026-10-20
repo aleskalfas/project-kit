@@ -117,6 +117,89 @@ def test_pm_asks_the_backbones_run_command(ar: ModuleType, fake_pkit: Path) -> N
     assert seen["brief"] == "Review PR 7."
 
 
+def test_a_confined_run_names_its_commit_rules_and_folder(ar: ModuleType, fake_pkit: Path) -> None:
+    files = fake_pkit / "files"
+    files.mkdir()
+    _answer(
+        fake_pkit,
+        stdout=_document(
+            confined=True,
+            commit="a" * 40,
+            check={"verdict": "clean", "changes": []},
+            files=str(files),
+            refused_calls=[{"tool": "Bash", "input": "gh pr list"}],
+            excluded=[["pkit", "analysis", "propose"]],
+        ),
+    )
+    run = ar.run_confined(
+        "living-docs",
+        "Fix the pages.",
+        commit="a" * 40,
+        rules_of="project-management:fix-drift",
+        files_to=files,
+        limit_seconds=900,
+    )
+    seen = json.loads((fake_pkit / "log.json").read_text(encoding="utf-8"))
+    assert seen["argv"] == [
+        "agents",
+        "run",
+        "--commit",
+        "a" * 40,
+        "--rules-of",
+        "project-management:fix-drift",
+        "--files-to",
+        str(files),
+        "--limit",
+        "900",
+        "--json",
+        "--",
+        "living-docs",
+    ]
+    assert run.check == "clean" and not run.breached
+    assert run.files == str(files)
+    assert run.refused_calls == ("Bash: gh pr list",)
+    assert run.excluded == ("pkit analysis propose",)
+
+
+def test_a_confined_run_whose_check_cannot_be_read_is_a_breach(
+    ar: ModuleType, fake_pkit: Path
+) -> None:
+    _answer(fake_pkit, stdout=_document(confined=True, check="clean"))
+    run = ar.run_confined(
+        "living-docs",
+        "Go.",
+        commit="a" * 40,
+        rules_of="project-management:fix-drift",
+        files_to=fake_pkit,
+        limit_seconds=5,
+    )
+    assert run.breached and "cannot be read" in run.changes[0]
+
+
+def test_a_confined_run_refused_before_its_clone_was_checked_nothing(
+    ar: ModuleType, fake_pkit: Path
+) -> None:
+    _answer(
+        fake_pkit,
+        stdout=_document(confined=True, check=None, ending="refused", exit_code=None),
+    )
+    run = ar.run_confined(
+        "living-docs",
+        "Go.",
+        commit="a" * 40,
+        rules_of="project-management:fix-drift",
+        files_to=fake_pkit,
+        limit_seconds=5,
+    )
+    assert run.check == ar.NOT_RUN and not run.breached
+
+
+def test_an_unconfined_run_has_no_check(ar: ModuleType, fake_pkit: Path) -> None:
+    _answer(fake_pkit, stdout=_document())
+    run = ar.run_agent("code-reviewer", "Go.", folder=fake_pkit, limit_seconds=5)
+    assert run.check == ar.NOT_RUN and run.files is None and not run.breached
+
+
 def test_no_effort_passes_none(ar: ModuleType, fake_pkit: Path) -> None:
     _answer(fake_pkit, stdout=_document())
     ar.run_agent("code-reviewer", "Go.", folder=fake_pkit, limit_seconds=5)

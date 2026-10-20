@@ -2873,3 +2873,216 @@ def test_at_a_terminal_the_prompt_follows_the_findings(world, capsys, monkeypatc
     shown = printed.splitlines()
     at = shown.index(_person_lines("code-reviewer")[0])
     assert shown[at : at + 3] == [*_person_lines("code-reviewer"), f"{_FINDINGS}: 1, above"]
+
+
+# ---- the fixers' proposals that wait (DEC-056 point 6, #1744) ----------------------------
+
+
+def _queue(run: _Run) -> Path:
+    """The queue's folder in the clone's main working tree, as git names it."""
+    return run.work.resolve() / ".agent-workspace" / "project-management" / "drift"
+
+
+def _waiting(run: _Run, *states: str) -> None:
+    """A queue whose index holds one artefact in each of `states`."""
+    queue = _queue(run)
+    queue.mkdir(parents=True)
+    artefacts = {
+        f"docs/{n}.md": {"type": "living-docs:page", "fixer": "living-docs", "state": state}
+        for n, state in enumerate(states)
+    }
+    index = {"schema_version": 1, "contract_version": 1, "artefacts": artefacts}
+    (queue / "index.json").write_text(json.dumps(index), encoding="utf-8")
+
+
+def _count(run: _Run, count: int) -> str:
+    noun = "proposal waits" if count == 1 else "proposals wait"
+    return f"fixers: {count} {noun} for you — pkit pm fix-drift gathered them in {_queue(run)}"
+
+
+def test_the_count_of_proposals_that_wait_comes_just_before_the_ready_line(world, capsys) -> None:
+    run = world()
+    _waiting(run, "proposed", "held", "none", "failed", "set-aside")
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert out.splitlines()[-2:] == [_count(run, 2), _ready_line(run, told="")]
+
+
+def test_the_count_comes_before_the_last_line_of_a_merge(world, capsys) -> None:
+    run = world()
+    _waiting(run, "proposed")
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert out.splitlines()[-2:] == [_count(run, 1), f"merge: merged as {'c' * 7}"]
+
+
+def test_the_count_comes_before_the_last_line_of_a_run_that_stops(world, capsys) -> None:
+    stopped = world(checks=[_RED])
+    _waiting(stopped, "held", "held", "proposed")
+    rc, out, _err = stopped.run(capsys=capsys)
+    assert rc == stopped.land.EXIT_NEEDS_CHANGE
+    lines = out.splitlines()
+    assert lines[-2] == _count(stopped, 3)
+    assert lines[-1].startswith("ci: failed on")
+
+
+@pytest.mark.parametrize("states", [(), ("none", "failed", "set-aside")])
+def test_with_nothing_waiting_no_count_is_printed(world, capsys, states) -> None:
+    run = world()
+    if states:
+        _waiting(run, *states)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert not any(line.startswith("fixers:") for line in out.splitlines())
+
+
+def test_a_queue_that_cannot_be_read_warns_and_changes_nothing(world, capsys) -> None:
+    run = world()
+    _queue(run).mkdir(parents=True)
+    (_queue(run) / "index.json").write_text('{"schema_version": 9}', encoding="utf-8")
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    warning, last = out.splitlines()[-2:]
+    assert warning.startswith("warn: the fixers' queue cannot be read, so whether proposals wait")
+    assert "schema_version 9" in warning
+    assert last == f"merge: merged as {'c' * 7}"
+    assert [merge[-1] for merge in run.github.merges] == [run.github.head]
+
+
+# ---- a change to the fixers' grant list (DEC-056 point 2, #1744) -------------------------
+
+_CONFIG = ".pkit/capabilities/project-management/project/config.yaml"
+_GRANT = "fixers:\n  living-docs:\n    granted:\n      - living-docs:page\n"
+_GRANT_AND_REFUSE = _GRANT + "    refused:\n      - living-docs:guide\n"
+_GRANTED = "Fixer grant added: living-docs may start on its own on living-docs:page"
+_REFUSED = "Fixer refusal added: living-docs is refused living-docs:guide"
+_GRANTS = "a change to which fixers may start"
+
+
+def _push_grants(run: _Run, block: str) -> str:
+    """A push to the PR's branch whose project configuration carries `block`, the
+    staged configuration kept above it. The clone ignores `.pkit/`, so the base
+    holds no configuration: every grant and refusal is the change's."""
+    config = run.work / _CONFIG
+    text = config.read_text(encoding="utf-8").split("fixers:", 1)[0]
+    config.write_text(text + block, encoding="utf-8")
+    _git(run.work, "add", "-f", _CONFIG)
+    _git(run.work, "commit", "-q", "-m", "grant a fixer")
+    _git(run.work, "push", "-q", "origin", BRANCH)
+    head = _git(run.work, "rev-parse", "HEAD")
+    run.github.head = head
+    run.github.checks[head] = [_GREEN]
+    return head
+
+
+def test_a_change_to_the_grant_list_is_listed_before_the_run_stops_ready(world, capsys) -> None:
+    run = world()
+    _push_grants(run, _GRANT_AND_REFUSE)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    at = lines.index(f"{_STEP}: none, but {_GRANTS}")
+    # A line each, by agent and type: living-docs:guide before living-docs:page.
+    assert lines[at - 2 : at] == [f"  {_REFUSED}", f"  {_GRANTED}"]
+    # Told again just above the `ready:` line, which names it.
+    told = f", {_GRANTS} above, for information"
+    assert lines[-3:] == [f"  {_REFUSED}", f"  {_GRANTED}", _ready_line(run, told=told)]
+    # Printed only: the description is left as it was.
+    assert run.github.bodies == []
+
+
+def test_a_change_to_the_grant_list_beside_answers_is_listed_with_them(world, capsys) -> None:
+    run = _answers_world(world)
+    _push_grants(run, _GRANT)
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    at = lines.index(f"{_STEP}: 2, plus {_GRANTS}, {_IN_THE_DESCRIPTION} (written now)")
+    assert lines[at - 1] == f"  {_GRANTED}"
+    told = f", 1 document left out of date and {_GRANTS} above, for information"
+    assert lines[-3:] == [*TOLD, f"  {_GRANTED}", _ready_line(run, told=told)]
+
+
+def test_an_authorisation_for_the_head_merges_its_grant_list_change(world, capsys) -> None:
+    """The run reads the change at the head it pinned when it started: the head the
+    person was shown, so the authorisation covers it."""
+    run = world()
+    _push_grants(run, _GRANT)
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert f"  {_GRANTED}" in out.splitlines()
+    assert [merge[-1] for merge in run.github.merges] == [run.github.head]
+
+
+def test_a_grant_list_that_cannot_be_read_at_the_head_stops_and_merges_nothing(
+    world, capsys
+) -> None:
+    run = world()
+    head = _push_grants(run, "fixers: [living-docs]\n")
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    last = out.splitlines()[-1]
+    assert last.startswith(
+        f"{_STEP}: refused — the fixers' grant list at {_short(head)} cannot be read ("
+    )
+    assert last.endswith(f"push, and run `land-work {ISSUE}` again. Nothing was written")
+    assert run.github.merges == []
+    assert run.github.bodies == []
+
+
+def test_a_covered_later_head_with_the_same_grant_list_change_merges(world, capsys) -> None:
+    run = world()
+    authorised = _push_grants(run, _GRANT)
+    head = run.push_new_head("answers.txt")
+    run.github.checks[head] = [_GREEN]
+    run.cover = True
+    rc, out, err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_covered_later_head_with_another_grant_list_change_stops_ready(world, capsys) -> None:
+    """The authorisation covers only the change the person was shown, the one at the
+    head authorised: a later head that brings another stops at `ready:`, as an answer
+    the change check did not ask for does."""
+    run = world()
+    authorised = _push_grants(run, _GRANT)
+    head = _push_grants(run, _GRANT_AND_REFUSE)
+    run.cover = True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert out.splitlines()[-1] == (
+        f"ready: {_short(head)} — CI passed, all required verdicts approved, {_GRANTS} above, "
+        f"for information; the authorisation for {_short(authorised)} covers {_short(head)} "
+        f"only where nothing there needs a person, and it holds {_GRANTS} other than the one "
+        f"at {_short(authorised)}; {_merge_line(run)}"
+    )
+    assert run.github.merges == []
+    # The person's authorisation for the later head, shown the change, merges it.
+    rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
+    assert rc == 0, out + err
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_covered_later_head_that_left_its_base_elsewhere_holds_its_grant_list_change(
+    world, capsys
+) -> None:
+    """The change at the head authorised is read from where the later head left its base,
+    which the change check names, and pm computes no fork point of its own (COR-054 point
+    5): where the head authorised left the base elsewhere, its change could not be read,
+    and a person decides."""
+    run = world()
+    authorised = _push_grants(run, _GRANT)
+    tip = _main_moves_on(run, "src/elsewhere.py")
+    _git(run.work, "merge", "-q", "--no-edit", "main")
+    _git(run.work, "push", "-q", "origin", BRANCH)
+    head = run.github.head = _git(run.work, "rev-parse", "HEAD")
+    run.github.checks[head] = [_GREEN]
+    run.merge_base, run.outdated, run.cover = tip, False, True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert (
+        f"it holds a change to the fixers' grant list that could not be read at "
+        f"{_short(authorised)};"
+    ) in out.splitlines()[-1]
+    assert run.github.merges == []

@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Internal. The README's part on the fixer of your pages names
+  project-management's drift command, `pkit pm fix-drift`, as the command
+  that starts the agent, in place of saying such a command is needed.
+  Nothing you run changes.

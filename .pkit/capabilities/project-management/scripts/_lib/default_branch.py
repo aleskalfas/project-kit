@@ -15,7 +15,9 @@ reference itself, nor computes where a branch left its base:
   DEC-013 integration branch — resolved as the backbone resolves every one:
   the commit start-work cuts from and create-draft counts commits beyond;
 - `check_base(explicit)` is a diff-scoped check's base and where HEAD left it:
-  `explicit`, else `$PKIT_CHECK_BASE`, else the default branch.
+  `explicit`, else `$PKIT_CHECK_BASE`, else the default branch;
+- `read(cwd=...)` is the whole answer, for a reader that needs the default
+  branch's commit: the commit fix-drift pins.
 
 **pm never guesses** (COR-054 point 4). When the backbone cannot answer — no
 `pkit`, a timeout, a failed run, a backbone that predates the command —
@@ -33,6 +35,7 @@ with a warning. A value equal to the backbone's says nothing.
 
 from __future__ import annotations
 
+import functools
 import json
 import subprocess
 import sys
@@ -100,13 +103,16 @@ _read: dict[tuple[Path, str | None], Reading | Unanswered] = {}
 _warned: set[str] = set()
 
 
-def read(explicit: str | None = None, *, run: Runner = subprocess.run) -> Reading:
-    """The backbone's answer for the working directory — with `explicit` the base it
-    reads — asked once per run. Raises Unanswered."""
-    key = (Path.cwd(), explicit)
+def read(
+    explicit: str | None = None, *, cwd: Path | None = None, run: Runner = subprocess.run
+) -> Reading:
+    """The backbone's answer for the working directory — `cwd`, else the process's,
+    with `explicit` the base it reads — asked once per run. Raises Unanswered."""
+    key = (cwd if cwd is not None else Path.cwd(), explicit)
     if key not in _read:
+        asked = run if cwd is None else functools.partial(run, cwd=str(cwd))
         try:
-            _read[key] = _ask(explicit, run)
+            _read[key] = _ask(explicit, asked)
         except Unanswered as exc:
             _read[key] = exc
     answer = _read[key]

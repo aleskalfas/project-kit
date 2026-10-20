@@ -67,3 +67,91 @@ dimensions:
   network-egress:
     layer: out-of-harness
     enforcement: none
+
+# A confined agent run (ADR-066): a run the drift command starts through the
+# adapter's runner, `run-agent.py` (its README, "The agent runner"). The runner
+# writes the run's own settings and passes them inline, never into a settings
+# file of the project's. So a session's report above does not read this block,
+# and nothing here changes a session. The same vocabulary, per run: what holds a
+# confined run, and what stays open (COR-028 point 3, ADR-066 point 11).
+confined-run:
+  dimensions:
+    # The run's allow list: the run's rules, held the other way round (ADR-066
+    # point 5). `dontAsk` refuses every call no rule allows, and
+    # `--permission-prompts none` lets nobody answer.
+    command-allow:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+    # The run's floor of denies, with the deny rules of each settings file the
+    # run leaves out, copied into the run's settings.
+    command-deny:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+      fail_closed: true
+    # The file tools' reads and writes: path rules in the run's settings on the
+    # clone and the workspace (ADR-060 point 6, refined by ADR-066), not the hook.
+    directory-scope:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+    path-scoped-allow:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+    # The five tools, from the checked definition and `--tools`. No MCP server
+    # and no skill. The harness's start report is read back, and a mismatch
+    # ends the run at once.
+    tool-gating:
+      layer: frontmatter
+      enforcement: native
+      granularity: per-run
+    # Only the run's settings and a checked definition load: no hook, no MCP
+    # server, no plugin of the person's or the project's.
+    run-configuration:
+      layer: settings
+      enforcement: native
+      granularity: per-run
+    # The shell writes only the workspace, with no retry outside the sandbox,
+    # and the sandbox failing closed.
+    filesystem-confinement:
+      layer: sandbox
+      enforcement: native
+      granularity: per-run
+    # No host is allowed. Like the session's list, not a control on data
+    # leaving: see network-egress.
+    domain-allowlist:
+      layer: sandbox
+      enforcement: native
+      granularity: per-run
+    # What stays open. The sandbox checks the host a client names, and the
+    # harness's own connection to its model carries what the run reads.
+    network-egress:
+      layer: out-of-harness
+      enforcement: none
+    # On macOS, an allowed command that starts `uv` runs outside the sandbox,
+    # held by the run's rules alone. Its writes outside the clone go unseen.
+    excluded-commands:
+      layer: out-of-harness
+      enforcement: none
+    # The harness's own read-only commands run under `dontAsk` with no rule.
+    read-only-commands:
+      layer: out-of-harness
+      enforcement: none
+    # The file tools read only the workspace and what a rule opens
+    # (`blockReadsOutsideWorkingDirectories`). The shell's reads are not
+    # narrowed yet: it reads what the sandbox's defaults let it read, since the
+    # request names no folders of the installed tool to reopen under a denyRead.
+    shell-reads:
+      layer: out-of-harness
+      enforcement: none
+    # An organisation's managed settings reach every run, and nothing drops
+    # them. The person's own CLAUDE.md, and any above the workspace, load too.
+    managed-configuration:
+      layer: out-of-harness
+      enforcement: none
+    # A process that left the harness's tree before the limit is not ended.
+    stray-processes:
+      layer: out-of-harness
+      enforcement: none

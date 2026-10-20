@@ -149,6 +149,7 @@ For every bypassable-with-audit mutation that the user overrode, post the audit 
 - You don't bypass any hard-reject severity. No exceptions; no `--bypass` form exists for hard-rejects.
 - You don't act on standing authorisations across sessions. User-gated transitions require fresh authorisation per session.
 - You don't file in batch-planning mode without showing the plan first. The single approval gate is the contract.
+- You don't answer the fixers question for the person. Where a command you run prints it — `fix-drift`, or `ask-fixers` with nobody at a terminal — relay each question to the person word for word, and record only the answer they give: a yes by the grant command printed beside it, a no by `revoke-fixer` for the same types ([project-management:DEC-056-drift-fixers] point 2).
 
 ## Intermediate files
 
