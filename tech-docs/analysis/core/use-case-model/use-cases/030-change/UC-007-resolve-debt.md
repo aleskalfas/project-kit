@@ -31,9 +31,8 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T02:03:37Z
-      outcome: unchanged
-      unchanged-because: Both agents now end a fixer run in the run contract's line forms, a none carrying one of its reasons, and the resolver takes a run's quoted pull-request text as intent. In a session each still proposes the answers with evidence and commands and runs none, so how a developer resolves debt is untouched.
+      at: 2026-10-20T09:08:00Z
+      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date
