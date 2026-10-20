@@ -129,7 +129,7 @@ def test_a_view_is_stamped_with_its_terms_their_sections_and_their_links(
     }
     body = _read(project, VIEW).split("\n---\n", 1)[1]
     headings = [line for line in body.splitlines() if line.startswith("#")]
-    assert headings == [f"# {VIEW_ID} — Orders and payments", "## order", "## payment"]
+    assert headings == [f"# {VIEW_ID} — Orders and payments", "## Order", "## Payment"]
     glossary = _read(project, GLOSSARY)
     assert f"## TERM-order — order\n\n{ORDER_LINK}\n\n**Example:** " in glossary
     assert f"## TERM-payment — payment\n\n{PAYMENT_LINK}\n\n**Example:** " in glossary
@@ -139,6 +139,26 @@ def test_a_view_is_stamped_with_its_terms_their_sections_and_their_links(
     project.write(accepting_san(project))
     assert _found(_validate(project)) == []
     assert validate_friction(project.root).errors == ()
+
+
+def test_the_stamp_heads_each_section_in_sentence_case(project: AdopterRepo) -> None:
+    """A section's heading is its term's name with its first letter capitalized, the rest
+    as the name writes it. The heading's slug is the name's, so the term's link names it,
+    and the view passes the check where the format rule binds (DEC-004 points 2 and 7)."""
+    stamped(project, "term", "line-item", "--name", "line item", "--path", "src/run.py")
+    stamped(project, "term", "github-issue", "--name", "GitHub issue", "--path", "src/run.py")
+    explains = ("--explains", "TERM-line-item", "--explains", "TERM-github-issue")
+    stamped(project, "view", "lines", "--number", "020", *explains)
+    view = f"{DOMAIN_MODEL}/020-lines.md"
+    headings = [line for line in _read(project, view).splitlines() if line.startswith("## ")]
+    assert headings == ["## Line item", "## GitHub issue"]
+    glossary = _read(project, GLOSSARY)
+    assert "Explained in [VIEW-lines](domain-model/020-lines.md#line-item)." in glossary
+    assert "Explained in [VIEW-lines](domain-model/020-lines.md#github-issue)." in glossary
+    assert "## TERM-line-item — line item\n" in glossary  # the name itself keeps its case
+    fill(project)
+    project.write(accepting_san(project))
+    assert _found(_validate(project)) == []
 
 
 def test_the_stamp_says_what_it_linked(project: AdopterRepo) -> None:
@@ -327,7 +347,7 @@ def test_a_view_s_sections_match_explains_where_the_format_rule_binds(
     """Each section is headed by the name of the term `explains` lists in its place. The
     format rule is accepted as `SAN` ships it, so this binds where a set of the project's
     own selects the view, as the set install creates does."""
-    _edit(project, VIEW, "## payment\n", "## settlement\n")
+    _edit(project, VIEW, "## Payment\n", "## settlement\n")
     assert _found(_validate(project)) == []  # no set of the project's own selects it yet
     project.write(accepting_san(project))
     (found,) = _found(_validate(project))
@@ -336,7 +356,14 @@ def test_a_view_s_sections_match_explains_where_the_format_rule_binds(
         "the 2nd section is headed `settlement`, and `explains` lists TERM-payment in its "
         "place, whose name is `payment`" in found[1]
     )
+    assert "head it `Payment`" in found[1]
     assert "(RS-SAN-001)" in found[1]
+    # The term's name as running text writes it, in lower case, is no heading either.
+    _edit(project, VIEW, "## settlement\n", "## payment\n")
+    (found,) = _found(_validate(project))
+    assert "the 2nd section is headed `payment`" in found[1]
+    assert "in sentence case, its first letter capitalized" in found[1]
+    assert "head it `Payment`" in found[1]
 
 
 def test_a_view_s_parts_are_held_in_each_section(project: AdopterRepo) -> None:
@@ -344,7 +371,7 @@ def test_a_view_s_parts_are_held_in_each_section(project: AdopterRepo) -> None:
     _edit(project, VIEW, "**Relations:**", "**Links:**")
     messages = [m for location, m in _found(_validate(project)) if location == VIEW]
     assert any(
-        m.startswith("`**Relations:**` in the section `## order` is missing") for m in messages
+        m.startswith("`**Relations:**` in the section `## Order` is missing") for m in messages
     ), messages
     assert len(messages) == 1, messages
 
@@ -373,8 +400,8 @@ def test_a_project_s_own_label_goes_in_the_opening_or_each_section_never_a_headi
     project.write({STRUCTURES: added})
     messages = [m for location, m in _found(_validate(project)) if location == VIEW]
     assert [m.split(" is missing")[0] for m in messages] == [
-        "`**Examples:**` in the section `## order`",
-        "`**Examples:**` in the section `## payment`",
+        "`**Examples:**` in the section `## Order`",
+        "`**Examples:**` in the section `## Payment`",
     ], messages
     headed = added.replace("{id: examples,", "{id: examples, type: heading, level: 2,")
     project.write({STRUCTURES: headed})
@@ -410,12 +437,13 @@ def test_a_heading_s_slug_is_the_backbone_s(title: str) -> None:
 
 KINDS: dict[str, Any] = structure.read_kinds()
 
-#: A view's body, filled: two sections, `order` and `payment`.
+#: A view's body, filled: two sections, `Order` and `Payment`, each its term's name in
+#: sentence case.
 BODY = """# VIEW-orders-and-payments — Orders and payments
 
 What ordering and paying cover.
 
-## order
+## Order
 
 An order is what a customer asks for.
 
@@ -427,7 +455,7 @@ An order is what a customer asks for.
 
 **Always true:** None.
 
-## payment
+## Payment
 
 A payment settles an order.
 
@@ -472,18 +500,63 @@ def test_the_headings_follow_explains_and_give_one_slug_each() -> None:
     assert _departures(BODY, one) == [("concept", "breaks-its-form", 17, None)]
     three = {"explains": ["TERM-order", "TERM-payment", "TERM-customer"]}
     assert _departures(BODY, three) == [("concept", "breaks-its-form", 17, None)]
-    twice = BODY.replace("## payment", "## Order")
+    twice = BODY.replace("## Payment", "## order")
     assert ("concept", "breaks-its-form", 17, None) in _departures(
         twice, {"explains": ["TERM-order", "TERM-x"]}
     )
 
 
+def test_each_heading_is_its_term_s_name_in_sentence_case() -> None:
+    """The name as running text writes it, in lower case, breaks the form, as does a name
+    in title case. A name whose first word holds a capital already stands as it is
+    (DEC-004 point 2)."""
+    assert _departures(BODY.replace("## Payment", "## payment")) == [
+        ("concept", "breaks-its-form", 17, None)
+    ]
+    assert _departures(BODY.replace("## Order", "## ORDER")) == [
+        ("concept", "breaks-its-form", 5, None)
+    ]
+    assert _departures(BODY.replace("## Payment", "##   Payment  ")) == []  # white space aside
+    titles = {"TERM-order": "iPhone order", "TERM-payment": "payment"}
+    proper = BODY.replace("## Order", "## iPhone order")
+    lines = list(enumerate(proper.splitlines(), 1))
+    kind = KINDS["domain-model-view"]
+    assert structure.departures(lines, kind, fields=FIELDS, titles=titles) == []
+    capitalized = list(enumerate(BODY.replace("## Order", "## IPhone order").splitlines(), 1))
+    assert [
+        (d.element.id, d.line)
+        for d in structure.departures(capitalized, kind, fields=FIELDS, titles=titles)
+    ] == [("concept", 5)]
+
+
+@pytest.mark.parametrize(
+    ("name", "heading"),
+    [
+        ("order", "Order"),
+        ("decision record", "Decision record"),
+        ("pull request on GitHub", "Pull request on GitHub"),
+        ("GitHub issue", "GitHub issue"),
+        ("iPhone app", "iPhone app"),
+        ("état payé", "État payé"),
+        ("3d model", "3d model"),
+        ("ßx", "ßx"),
+        ("", ""),
+    ],
+)
+def test_sentence_case_capitalizes_the_first_letter_alone(name: str, heading: str) -> None:
+    """The first letter capitalized, the rest as the name writes it, a name whose first
+    word holds a capital standing as it is. The slug is always the name's, so a term's
+    link names its section whatever the capital (DEC-004 points 2 and 7)."""
+    assert forms.sentence_case(name) == heading
+    assert forms.heading_slug(heading) == forms.heading_slug(name)
+
+
 def test_a_section_is_held_to_its_parts_and_names_its_heading() -> None:
     empty = BODY.replace("**Attributes:** Its amount.", "**Attributes:**")
-    assert _departures(empty) == [("attributes", "empty", 21, "payment")]
+    assert _departures(empty) == [("attributes", "empty", 21, "Payment")]
     unexplained = BODY.replace("An order is what a customer asks for.\n", "")
-    assert _departures(unexplained) == [("explanation", "missing", None, "order")]
-    assert _departures(BODY.split("## order", 1)[0]) == [("concept", "missing", None, None)]
+    assert _departures(unexplained) == [("explanation", "missing", None, "Order")]
+    assert _departures(BODY.split("## Order", 1)[0]) == [("concept", "missing", None, None)]
     no_opening = BODY.replace("What ordering and paying cover.\n", "")
     assert _departures(no_opening) == [("opening", "missing", None, None)]
 

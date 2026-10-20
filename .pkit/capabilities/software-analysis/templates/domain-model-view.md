@@ -7,7 +7,9 @@
 # is no part of its id. The stamp writes its title, `explains`, an anchor to each
 # term it explains, one section for each, and each term's link to its section in
 # the glossary. `explains` is the source: `pkit analysis validate` requires the
-# term anchors to match it, and each section's heading to be its term's name.
+# term anchors to match it, and each section's heading to be its term's name
+# with its first letter capitalized, such as `## Order` for the term `order`.
+# A diagram labels each concept's box the same way.
 # A view anchors the records its statements cite or apply (`--record`), and no
 # code. Its body is rendered from the view's declared structure
 # (`schemas/artefact-kinds.yaml`). Each part holds its hint until you write in
@@ -26,7 +28,7 @@ pkit:
 
 # VIEW-view — <Title>
 
-<!-- pkit:hint What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Example: The concepts of ordering goods and paying for them, and how a payment settles an order. -->
+<!-- pkit:hint What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized. Example: The concepts of ordering goods and paying for them, and how a payment settles an order. -->
 
 ## <Term>
 

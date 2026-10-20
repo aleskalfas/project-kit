@@ -20,8 +20,9 @@
 #     top-level list item
 #   - `opening`: the text before the body's first label
 #   - `repeated`: a section that repeats, once for each term a domain-model
-#     view's `explains` lists, each headed at its `level` by the term's name.
-#     Its own `sections` give the parts each holds (DEC-004 point 2).
+#     view's `explains` lists, each headed at its `level` by the term's name
+#     with its first letter capitalized. Its own `sections` give the parts
+#     each holds (DEC-004 point 2).
 # - `required`: true unless set to false. Every element a kind ships is
 #   required, so none sets it here.
 # - `allows-none`: the part may read `None.` when it has nothing to say.
@@ -225,14 +226,14 @@ kinds:
         example: "# VIEW-orders-and-payments — Orders and payments"
       - id: opening
         type: opening
-        hint: What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling.
+        hint: What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized.
         example: The concepts of ordering goods and paying for them, and how a payment settles an order.
       - id: concept
         type: repeated
         level: 2
         form: headings-match-front-matter
-        hint: One section for each term `explains` lists, in its order, headed by the term's name.
-        example: "## order"
+        hint: One section for each term `explains` lists, in its order, headed by the term's name with its first letter capitalized.
+        example: "## Order"
         sections:
           - id: explanation
             type: opening
