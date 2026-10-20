@@ -109,6 +109,19 @@ What is checked, each against the record's words:
   requirement, are exactly the list, so a changed requirement flags every use
   case and journey that lists it. A part anchor names the artefact before its
   last `#` (COR-050 point 2), so one on a requirement counts among them.
+- **The domain model's views** (DEC-004 points 4, 5 and 7), whatever any
+  rule's status, as the record's Implications hold them: a view's file's name
+  opens with a number and a hyphen, and gives its id after them; each term its
+  `explains` lists is a term of its own analysis, in force while the view is;
+  no two views in force explain one term; its term anchors are exactly
+  `explains`, a part anchor counting as an anchor on its term, and it carries
+  no path anchor. A withdrawn view keeps its `explains` and its anchors, and
+  explains nothing (`_lib/views.py`).
+- **Each term's link to its section** (DEC-004 point 7), whatever any rule's
+  status: a term a view in force explains holds one line under its heading,
+  before its first part, that links to that view's section on it, exactly as
+  the stamp writes it; a term no view in force explains holds none. A project
+  with no domain model meets none of this.
 - **What an analysis builds on** (point 2): each glossary's head data,
   `builds-on`, against its shape, always; only a listed analysis's head lists
   what it takes from another, and only from one its entry builds on; a term of
@@ -179,7 +192,10 @@ And where the format rule binds, at its status:
   or a front-matter field that does not hold the form its element names
   (`_lib/forms.py`), a part of
   the `sentence` form that holds a list too. A journey's steps read each use
-  case's title. A part or a
+  case's title, and a domain-model view's sections each term's name: one
+  section for each term its `explains` lists, in its order, headed by the
+  term's name, no two headings giving one slug, each holding its parts
+  (DEC-004 point 2). A part or a
   label a writer adds is never reported, though what it holds is content of
   the part it falls in, and a list form judges only the part's list items. A
   withdrawn artefact is never failed for a part it lacks or for a form, since
@@ -277,6 +293,7 @@ from _lib import (
     render,
     schemas,
     structure,
+    views,
 )
 from _lib.findings import ERROR, REPORT, WARNING, Finding, Outcome, at
 from _lib.model import (
@@ -286,6 +303,7 @@ from _lib.model import (
     COLLECTIONS,
     CONTAINER,
     ENVIRONMENT,
+    EXPLAINS,
     FORMAT_RULE,
     ID_SHAPE,
     JOURNEY,
@@ -306,6 +324,7 @@ from _lib.model import (
     UNANCHORED_BECAUSE,
     UNPLACED,
     USE_CASE,
+    VIEW,
     Analysis,
     Artefact,
     Unreadable,
@@ -314,6 +333,7 @@ from _lib.model import (
     identity,
     one_actor,
     qualified,
+    view_name,
     with_article,
 )
 from _lib.placeholder import IN_TEMPLATES, left_in
@@ -334,6 +354,7 @@ TITLED = {
     USE_CASE: "title",
     JOURNEY: "title",
     **dict.fromkeys(REQUIREMENTS, "title"),
+    VIEW: "title",
 }
 
 #: A requirement's front-matter fields naming artefacts of the analysis: the actors whose
@@ -395,6 +416,10 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _journey_anchors(analysis)
     outcome.findings += _requirement_anchors(analysis)
     outcome.findings += _listed_requirement_anchors(analysis)
+    outcome.findings += _view_terms(analysis)
+    outcome.findings += _one_view_per_term(analysis)
+    outcome.findings += _view_anchors(analysis)
+    outcome.findings += _term_links(root, analysis)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -825,7 +850,7 @@ def _named_otherwise(analysis: Analysis) -> list[Finding]:
         else:
             continue
         found.append(Finding(ERROR, artefact.location, message))
-    return found + _actors_named_otherwise(analysis)
+    return found + _actors_named_otherwise(analysis) + _views_named_otherwise(analysis)
 
 
 def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
@@ -848,6 +873,42 @@ def _actors_named_otherwise(analysis: Analysis) -> list[Finding]:
                 f"its file — name the file {artefact.id}.md, or correct `id` (DEC-001 point 3)",
             )
         )
+    return found
+
+
+def _views_named_otherwise(analysis: Analysis) -> list[Finding]:
+    """A domain-model view whose file's name opens with no number and a hyphen, or gives
+    another id than its front matter's: its name opens with its number, which gives its
+    place in the domain model's order, and its id is `VIEW-` and the name after the
+    number, so a view given another number keeps its id (DEC-004 point 4). A view with no
+    id, or one that is no view's id, is the schema's to report."""
+    found: list[Finding] = []
+    pattern = schemas.id_pattern(VIEW)
+    for view in analysis.of_kind(VIEW):
+        name = view.path.rsplit("/", 1)[-1]
+        named = view_name(view.path)
+        if named is None:
+            found.append(
+                Finding(
+                    ERROR,
+                    view.location,
+                    f"its name is {name}, which opens with no number: a view's file's name "
+                    f"opens with a number and a hyphen, which give its place in the domain "
+                    f"model's order, then the slug its id is made of — name the file "
+                    f"`<number>-<slug>.md` (DEC-004 point 4)",
+                )
+            )
+        elif view.id is not None and pattern.match(view.id) and view.id != f"VIEW-{named[1]}":
+            slug = view.id.removeprefix("VIEW-")
+            found.append(
+                Finding(
+                    ERROR,
+                    view.location,
+                    f"its name is {name}, its front matter's id {view.id}: a view's id is "
+                    f"`VIEW-` and its file's name after the number and the hyphen — name the "
+                    f"file `<number>-{slug}.md`, or correct `id` (DEC-004 point 4)",
+                )
+            )
     return found
 
 
@@ -1415,6 +1476,197 @@ def _listed_requirement_anchors(analysis: Analysis) -> list[Finding]:
                 f"journey that lists it — {write} (DEC-002 point 7)",
             )
         )
+    return found
+
+
+# --- the domain model's views (DEC-004) ----------------------------------------------------
+
+
+def _view_terms(analysis: Analysis) -> list[Finding]:
+    """Each term a domain-model view's `explains` lists is a term of its own analysis,
+    and one in force lists only terms in force: the change that withdraws a term takes
+    its section out of the view in force that explains it (DEC-004 point 5). A withdrawn
+    view is history, and may list withdrawn ones. An entry that is no term's id, a term
+    of another analysis written with it included, is the schema's to report."""
+    term_id = schemas.id_pattern(TERM)
+    found: list[Finding] = []
+    for view in analysis.of_kind(VIEW):
+        for index, value in _listed(view, EXPLAINS):
+            if not term_id.match(value):
+                continue  # the schema reports it
+            problem = analysis.unfit(value, TERM, in_force=not view.withdrawn, within=view.folder)
+            if problem is None:
+                continue
+            if analysis.of(value, TERM) is None:
+                rule = (
+                    "a view explains terms of the analysis — stamp the term first, `pkit "
+                    "analysis new term <slug>`, or take it off `explains`"
+                )
+            elif analysis.elsewhere(value, view.folder):
+                rule = "a view explains terms of its own analysis alone"
+            else:
+                rule = (
+                    "a view in force explains only terms in force — take it off `explains`, "
+                    "its anchors and its section, or withdraw the view too"
+                )
+            found.append(
+                Finding(
+                    ERROR,
+                    at(view.location, f"/{EXPLAINS}/{index}"),
+                    f"{problem}: {rule} (DEC-004 point 5)",
+                )
+            )
+    return found
+
+
+def _one_view_per_term(analysis: Analysis) -> list[Finding]:
+    """No two domain-model views in force of one analysis explain one term, so each
+    explanation has one home (DEC-004 point 5). The view that comes first by its path
+    keeps it, and each other is reported. A withdrawn view explains nothing."""
+    found: list[Finding] = []
+    for (_folder, term), held in sorted(views.explaining(analysis).items(), key=_by_term):
+        first, *later = held
+        for view in later:
+            index = views.explained(view).index(term)
+            found.append(
+                Finding(
+                    ERROR,
+                    at(view.location, f"/{EXPLAINS}/{index}"),
+                    f"{term} is explained by {first.id} too ({first.location}): no two views "
+                    f"in force explain one term, so each explanation has one home — explain "
+                    f"it in one of them, and take it off the other's `explains`, anchors and "
+                    f"sections (DEC-004 point 5)",
+                )
+            )
+    return found
+
+
+def _by_term(item: tuple[tuple[str | None, str], list[Artefact]]) -> tuple[str, str]:
+    (folder, term), _held = item
+    return folder or "", term
+
+
+def _view_anchors(analysis: Analysis) -> list[Finding]:
+    """A domain-model view's term anchors are exactly the terms its `explains` lists, and
+    it carries no path anchor (DEC-004 point 5): the list is the source, and the stamp
+    writes the anchors from it, so a changed definition flags the view that explains it.
+    A view describes the domain, never the software, so it anchors no code. A term anchor
+    is an artefact anchor naming a term, as the part before its last `#` names one
+    (`_artefact_named`). A withdrawn view keeps its `explains` and its anchors, so both
+    are held to each other as long as it stands. An `explains` that is no list is the
+    schema's to report, and nothing is compared until it is one."""
+    term_id = schemas.id_pattern(TERM)
+    found: list[Finding] = []
+    for view in analysis.of_kind(VIEW):
+        paths = view.anchored_to("path")
+        if paths:
+            found.append(
+                Finding(
+                    ERROR,
+                    at(view.location, f"/{CONTAINER}/friction/anchors/path"),
+                    f"it anchors code ({', '.join(paths)}): a view describes the domain, never "
+                    f"the software, and the term anchors the code that embodies it — remove "
+                    f"its path anchors (DEC-004 point 5)",
+                )
+            )
+        if not isinstance(view.fields.get(EXPLAINS), list):
+            continue  # the schema reports it
+        expected = _unique(v for _i, v in _listed(view, EXPLAINS) if term_id.match(v))
+        anchored = _unique(
+            a for a in view.anchored_to("artefact") if term_id.match(_artefact_named(a))
+        )
+        if set(expected) == set(anchored):
+            continue
+        found.append(
+            Finding(
+                ERROR,
+                at(view.location, ARTEFACT_ANCHORS),
+                f"its term anchors ({', '.join(anchored) or 'none'}) do not match its "
+                f"`{EXPLAINS}` ({', '.join(expected) or 'none'}): the anchors are written from "
+                f"`{EXPLAINS}`, so a changed definition flags the view that explains it — "
+                f"anchor exactly [{', '.join(expected)}] (DEC-004 point 5)",
+            )
+        )
+    return found
+
+
+def _term_links(root: Path, analysis: Analysis) -> list[Finding]:
+    """Each term's link to its section, under its heading in the glossary (DEC-004 point
+    7): a term a view in force explains holds one line that links to that view's section
+    on it, as the stamp writes it (`views.link`), and a term no view in force explains
+    holds none. The line is read from the term's section as the backbone spans it, below
+    its heading and above its first part (`views.link_lines`). A term two views explain
+    is `_one_view_per_term`'s to report, and its link is not held until one does. A
+    backbone that gives no span is the structure check's to report."""
+    explaining = views.explaining(analysis)
+    texts: dict[str, str | None] = {}
+    found: list[Finding] = []
+    for term in analysis.of_kind(TERM):
+        held = explaining.get((term.folder, term.id or ""), [])
+        if term.id is None or not term.span_read or len(held) > 1:
+            continue
+        text = _cached(root, term.path, texts)
+        if text is None:
+            continue  # the core reports a file it cannot read
+        lines = structure.span_lines(text, term.span) if term.span is not None else []
+        written = views.link_lines(lines)
+        if not held:
+            found += [
+                Finding(
+                    ERROR,
+                    term.location,
+                    f"line {number} links it to the domain model, `{line.strip()}`, and no "
+                    f"view in force explains it: a term links to the section of the view in "
+                    f"force that explains it, and holds no link where none does — remove the "
+                    f"line (DEC-004 point 7)",
+                )
+                for number, line in written
+            ]
+            continue
+        (view,) = held
+        name = term.fields.get("name")
+        if view.id is None or not isinstance(name, str) or not name:
+            continue  # the schema reports it
+        wanted = views.link(term.path, view.id, view.path, name)
+        if not written:
+            where = (
+                "write it on a line of its own right below its heading"
+                if lines
+                else "its entry has no section to hold it, so write the section first"
+            )
+            found.append(
+                Finding(
+                    ERROR,
+                    term.location,
+                    f"{view.id} explains it ({view.location}), and its section holds no link "
+                    f"to it: a term links to the section of the view that explains it, "
+                    f"`{wanted}` — {where}. The stamp of a view writes it, and the check holds "
+                    f"it equal to the view (DEC-004 point 7)",
+                )
+            )
+            continue
+        (number, line), *more = written
+        if line.strip() != wanted:
+            found.append(
+                Finding(
+                    ERROR,
+                    term.location,
+                    f"line {number} links it to the domain model as `{line.strip()}`, and "
+                    f"{view.id} explains it: a term's link names the view's file and its "
+                    f"section on the term, as the stamp writes it — write `{wanted}` in its "
+                    f"place (DEC-004 point 7)",
+                )
+            )
+        found += [
+            Finding(
+                ERROR,
+                term.location,
+                f"line {other} links it to the domain model a second time, `{text_.strip()}`: "
+                f"a term holds one link, to the view that explains it — remove the line "
+                f"(DEC-004 point 7)",
+            )
+            for other, text_ in more
+        ]
     return found
 
 
@@ -2330,8 +2582,8 @@ class _Binding:
 
 def _key(departure: structure.Departure) -> tuple[object, ...]:
     """What tells one departure from another in a body, whatever structure found it: the
-    element, how it departs, and the line."""
-    return (departure.element.id, departure.how, departure.line)
+    element, how it departs, the line, and the repeated section it lies in."""
+    return (departure.element.id, departure.how, departure.line, departure.within)
 
 
 def _bound(
@@ -2529,12 +2781,17 @@ def unchecked(
 
 
 def _titles(analysis: Analysis) -> dict[str, str]:
-    """Each use case's title by its id, as a journey's steps quote it."""
+    """Each use case's title by its id, as a journey's steps quote it, and each term's
+    name by its id, as a domain-model view's sections are headed (DEC-004 point 2)."""
     titles: dict[str, str] = {}
     for use_case in analysis.of_kind(USE_CASE):
         title = use_case.fields.get("title")
         if use_case.id and isinstance(title, str):
             titles.setdefault(use_case.id, title)
+    for term in analysis.of_kind(TERM):
+        name = term.fields.get("name")
+        if term.id and isinstance(name, str):
+            titles.setdefault(term.id, name)
     return titles
 
 
@@ -2575,7 +2832,11 @@ def _artefact_structure(
         departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
     found: list[tuple[Finding, tuple[object, ...]]] = [
         (
-            Finding(ERROR, artefact.location, _departure_message(d, kind.sections, subject)),
+            Finding(
+                ERROR,
+                artefact.location,
+                _departure_message(d, structure.siblings(kind, d.element), subject),
+            ),
             _key(d),
         )
         for d in departing
@@ -2701,6 +2962,8 @@ def _departure_message(
     that asks for it beside the format rule."""
     element = departure.element
     line = f", at line {departure.line}," if departure.line is not None else ""
+    if element.type == structure.REPEATED:
+        return _repeated_message(departure, subject, because)
     if departure.how == structure.UNDECLARED:
         return (
             f"`**{element.text}:**`{line} is no label the kind declares: {departure.detail} "
@@ -2708,6 +2971,8 @@ def _departure_message(
             f"into a part with a form ({departure.detail}, {because})"
         )
     named = _named(element, elements)
+    if departure.within is not None:
+        named = f"{named} in the section `## {departure.within}`"
     cited = f"{element.rule}, {because}" if element.rule else because
     if departure.how == structure.MISSING and element.rule:
         problem = (
@@ -2741,6 +3006,25 @@ def _departure_message(
     else:
         problem = f"{named}{line} does not hold its form, `{element.form}`: {departure.detail}"
     return f"{problem} ({cited}). {_advice(element.hint, element.example)}".rstrip()
+
+
+def _repeated_message(departure: structure.Departure, subject: str, because: str) -> str:
+    """What a repeated section's departure breaks: a domain-model view's sections for its
+    concepts, missing, or headed apart from its `explains` (DEC-004 point 2)."""
+    element = departure.element
+    marks = "#" * (element.level or 2)
+    if departure.how == structure.MISSING:
+        problem = (
+            f"it has no `{marks} ` section after its opening: {subject} gives one to each term "
+            f"its `{EXPLAINS}` lists"
+        )
+    else:
+        at_line = f", at line {departure.line}," if departure.line is not None else ""
+        problem = (
+            f"its `{marks} ` sections{at_line} do not hold their form, `{element.form}`: "
+            f"{departure.detail}"
+        )
+    return f"{problem} ({because}). {_advice(element.hint, element.example)}".rstrip()
 
 
 def _named(element: structure.Element, elements: Sequence[structure.Element]) -> str:

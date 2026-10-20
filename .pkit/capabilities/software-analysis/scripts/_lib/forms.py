@@ -118,6 +118,14 @@ each with what it reads:
   opening `**From ` stand for an entry, so a list of the writer's own in the
   opening stays content. Where `builds-on` lists nothing, the form asks
   nothing.
+- **`headings-match-front-matter`**, a domain-model view's repeated section
+  (DEC-004 point 2), read from the section's headings rather than from a part
+  (`headings_match`): one section for each entry of the front matter's
+  `explains`, in the same order, each headed by the name of the term its
+  entry names, exactly, white space aside. Where the analysis holds no such
+  term, any heading will do. Every heading of the section's level is one of
+  its sections. No two headings give one slug (`heading_slug`), so a page
+  anchor on a section names one (COR-050 point 7).
 
 What no form checks is whether the words are true: friction flags the artefact
 when what it rests on changes, and a person rereads it (DEC-001 point 4).
@@ -147,6 +155,11 @@ OUTCOMES_MATCH = "outcomes-match-front-matter"
 GAPS_MATCH = "gaps-match-outcomes"
 DEFINITION = "definition"
 BUILDS_ON_MATCH = "builds-on-matches-front-matter"
+HEADINGS_MATCH = "headings-match-front-matter"
+
+#: A domain-model view's front-matter list of the terms it explains, which its sections'
+#: headings match (DEC-004 point 2).
+EXPLAINS = "explains"
 
 #: The glossary's front-matter key its head data lies under (DEC-001 point 2).
 BUILDS_ON = "builds-on"
@@ -1346,6 +1359,83 @@ def _item_text(item: Item) -> str:
             break
         lines.append(text)
     return " ".join(" ".join(lines).split())
+
+
+# --- a repeated section's headings (DEC-004 point 2) -------------------------------------------
+
+
+def heading_slug(title: str) -> str:
+    """A heading's slug, as COR-050 point 2 makes it and a page anchor names a section by
+    it: its title in lower case, with every character but letters, digits, spaces and
+    hyphens dropped, and each space made a hyphen. The rule is the backbone's own
+    (`project_kit.document_parts.heading_slug`), which a capability's script never
+    imports, so a test holds this copy equal to it. A title made only of other
+    characters has an empty slug, which names no section."""
+    kept = (ch for ch in title.lower() if ch.isalpha() or ch.isdigit() or ch in " -")
+    return "".join(kept).replace(" ", "-")
+
+
+def headings_match(headings: Sequence[tuple[int, str]], context: Context) -> list[Breach]:
+    """How a repeated section's `headings`, each its line and its text, break the form
+    `headings-match-front-matter`: each is the name of the term the front matter's
+    `explains` lists in its place, by `context.titles`, white space aside, any text where
+    the analysis holds no such term; one for each entry, in order; and no two give one
+    slug. An `explains` that is no list of ids is the schema's to report, and only the
+    slugs are compared then."""
+    found: list[Breach] = []
+    listed = _ids(context.fields.get(EXPLAINS))
+    if listed is not None:
+        for n, (line, text) in enumerate(headings):
+            if n >= len(listed):
+                found.append(
+                    Breach(
+                        BREAKS_FORM,
+                        line,
+                        f"`{_shown(text)}` is the section of no term: `explains` lists "
+                        f"{len(listed)} term(s), and each heading at this level is the section "
+                        f"of the term `explains` lists in its place — add its term to "
+                        f"`explains`, or remove the section",
+                    )
+                )
+                continue
+            name = context.titles.get(listed[n])
+            if name is not None and " ".join(text.split()) != " ".join(name.split()):
+                found.append(
+                    Breach(
+                        BREAKS_FORM,
+                        line,
+                        f"the {_ordinal(n + 1)} section is headed `{_shown(text)}`, and "
+                        f"`explains` lists {listed[n]} in its place, whose name is "
+                        f"`{name}`: each section is headed by its term's name, in the order "
+                        f"of `explains`",
+                    )
+                )
+        missing = listed[len(headings) :]
+        if missing and headings:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    headings[-1][0],
+                    f"`explains` lists {', '.join(missing)} after the last section, and no "
+                    f"section is headed by {'its' if len(missing) == 1 else 'their'} name: "
+                    f"each term `explains` lists has a section, in its order",
+                )
+            )
+    seen: dict[str, str] = {}
+    for line, text in headings:
+        slug = heading_slug(text)
+        if slug and slug in seen:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    line,
+                    f"`{_shown(text)}` gives the slug `{slug}`, as `{_shown(seen[slug])}` "
+                    f"does: a page anchor on either would be ambiguous, so no two sections' "
+                    f"headings give one slug",
+                )
+            )
+        seen.setdefault(slug, text)
+    return found
 
 
 # --- shown in a message ------------------------------------------------------------------------

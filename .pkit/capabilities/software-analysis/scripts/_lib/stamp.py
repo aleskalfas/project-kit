@@ -31,7 +31,16 @@ analysis location. Its front matter comes from its kind's template in
   `REQ-NNN-<slug>.md`, in its kind's folder or an area's folder in it, headed
   by its id, its kind and its title (DEC-002 points 2 and 3). The three kinds
   share one numbering: its number is counted as a use case's is, over the
-  three kinds' places read as one.
+  three kinds' places read as one;
+- a **domain-model view** is a new file, `<number>-<slug>.md`, in the domain
+  model's folder, its id `VIEW-<slug>`, a slug a person chooses, and its number
+  the one a person gives, in the project's own form (DEC-004 point 4). It
+  explains the terms `--explains` names, in that order: each a term in force of
+  its own analysis that no view in force explains yet (point 5). It anchors
+  each, and the records `--record` names, never code. Its body holds one
+  section for each, headed by the term's name. The stamp also writes each
+  term's link to its section, under the term's heading in the glossary, and
+  writes the two files whole, or neither (point 7; `_lib/views.py`).
 
 Where the project lists several analyses, one per component (DEC-001 point 2),
 the stamp writes in the one `--analysis` names — needed where more than one is
@@ -126,12 +135,14 @@ from _lib import (
     render,
     schemas,
     structure,
+    views,
 )
 from _lib.model import (
     ACTOR,
     CAPABILITY,
     COLLECTIONS,
     CONTAINER,
+    EXPLAINS,
     JOURNEY,
     KIND_OF_PLACE,
     MUST_MEET,
@@ -144,6 +155,7 @@ from _lib.model import (
     TERM,
     UNANCHORED_BECAUSE,
     USE_CASE,
+    VIEW,
     Analysis,
     Unreadable,
     identity,
@@ -162,6 +174,7 @@ TEMPLATE_OF = {
     ACTOR: "actor.md",
     TERM: "glossary.md",
     **{kind: f"{kind}.md" for kind in REQUIREMENTS},
+    VIEW: f"{VIEW}.md",
 }
 
 #: A requirement's front-matter fields the stamp writes from its command line: the
@@ -199,6 +212,8 @@ class Request:
     refines: tuple[str, ...] = ()  # the requirements a requirement refines
     requirements: tuple[str, ...] = ()  # those a use case or a journey must meet
     analysis: str | None = None  # the listed analysis to write in, by its component
+    number: str | None = None  # a domain-model view's number, which opens its file's name
+    explains: tuple[str, ...] = ()  # the terms a domain-model view explains, in order
 
 
 @dataclass(frozen=True)
@@ -258,6 +273,17 @@ def stamp(
             f"point 3)"
         )
 
+    if kind == VIEW:
+        location = f"{place}/{request.number}-{request.slug}.md"
+        target = root / location
+        refuse_links(root, target, location)
+        if target.exists():
+            raise Refused(f"{location} exists already")
+        text = _document(root, kind, new_id, request, analysis)
+        recorded, linked = _write_view(root, target, location, text, request, analysis, record)
+        notes += [line for line in (recorded,) if line]
+        notes.append(linked)
+        return Stamped(id=new_id, location=location, notes=tuple(notes))
     if kind in COLLECTIONS:
         target = root / place
         refuse_links(root, target, place)
@@ -416,6 +442,12 @@ def _check_words(request: Request) -> None:
             f"the slug {request.slug!r} is not a word: a lowercase letter, then lowercase "
             f"letters, digits and hyphens"
         )
+    if request.kind == VIEW and not _NUMBER.match(request.number or ""):
+        raise Refused(
+            f"--number {request.number!r} is not a number: a domain-model view's file's name "
+            f"opens with digits and a hyphen, such as `010-orders-and-payments.md`, in your "
+            f"project's own form (DEC-004 point 4)"
+        )
     if request.area is not None and not slug.match(_AREA_NUMBER.sub("", request.area, count=1)):
         raise Refused(
             f"the area {request.area!r} is not a word, as a slug is, after an optional number "
@@ -427,13 +459,17 @@ def _check_words(request: Request) -> None:
 #: `010-develop`: no part of any id (DEC-001 point 2).
 _AREA_NUMBER = re.compile(r"^[0-9]+-")
 
+#: A domain-model view's number, which opens its file's name: digits, in the project's own
+#: form, such as `010` (DEC-004 point 4).
+_NUMBER = re.compile(r"^[0-9]+$")
+
 
 def _check_placeholders(request: Request) -> None:
     """The words given are the person's: one still holding a placeholder the templates
     or the skill's commands shipped is refused — matched exactly, as the check matches
     an artefact's fields (`_lib/placeholder.py`), so words of the person's own in angle
     brackets are theirs to write."""
-    flag = "--title" if request.kind in NUMBERED else "--name"
+    flag = "--name" if request.kind in (ACTOR, TERM) else "--title"
     for option, text in (
         (flag, request.title),
         ("--unanchored-because", request.unanchored_because),
@@ -453,8 +489,19 @@ def _check_unanchored(request: Request) -> None:
     cases (point 4), so neither is ever unanchored, and point 9's reason never applies to
     them. A requirement with the reason has no anchor at all: no actor, no requirement
     it refines, and nothing in the solution (DEC-002 point 6)."""
+    if request.kind == VIEW and request.paths:
+        raise Refused(
+            "a domain-model view anchors no code: it describes the domain, never the "
+            "software, and the term anchors the code that embodies it (DEC-004 point 5) — "
+            "drop --path"
+        )
     if request.unanchored_because is None:
         return
+    if request.kind == VIEW:
+        raise Refused(
+            "a domain-model view anchors each term it explains, so it is never unanchored "
+            "(DEC-004 point 5)"
+        )
     if request.kind in ALWAYS_ANCHORED:
         rests_on = "its actor" if request.kind == USE_CASE else "its actor and its steps"
         raise Refused(
@@ -501,6 +548,8 @@ def _check_references(analysis: Analysis, request: Request, within: Within) -> N
     if request.kind in REQUIREMENTS:
         for actor in request.actors:
             _in_force(analysis, actor, ACTOR, within)
+    if request.kind == VIEW:
+        _check_explains(analysis, request, within)
     if request.kind == USE_CASE:
         for other in request.other_actors:
             if other == request.actor:
@@ -531,6 +580,35 @@ def _check_references(analysis: Analysis, request: Request, within: Within) -> N
                     f"{one_actor(number, step, other, str(request.actor))} — name one of "
                     f"{request.actor}'s in its place"
                 )
+
+
+def _check_explains(analysis: Analysis, request: Request, within: Within) -> None:
+    """A domain-model view explains one term at least, each once, each a term in force
+    of the analysis it writes in, and none a view in force explains already: each term
+    is explained by one view, so each explanation has one home (DEC-004 point 5). The
+    check holds every view in force to the same."""
+    if not request.explains:
+        raise Refused(
+            "a domain-model view explains one term at least: name each with --explains "
+            "<TERM-id>, in the order of its sections (DEC-004 point 2)"
+        )
+    explaining = views.explaining(analysis)
+    for term in request.explains:
+        if request.explains.count(term) > 1:
+            raise Refused(f"--explains {term} is named twice: a view explains each term once")
+        if qualified(term)[0] is not None:
+            raise Refused(
+                f"--explains {term} names a term of another analysis: a view explains terms of "
+                f"its own analysis alone, and that analysis explains its own (DEC-004 point 5)"
+            )
+        _in_force(analysis, term, TERM, within)
+        held = explaining.get((within.folder, term))
+        if held:
+            raise Refused(
+                f"--explains {term}: {held[0].id} explains it already ({held[0].location}), "
+                f"and no two views in force explain one term, so each explanation has one "
+                f"home (DEC-004 point 5) — explain it there, or move its section here"
+            )
 
 
 def _in_force(analysis: Analysis, artefact_id: str, kind: str, within: Within) -> None:
@@ -732,6 +810,10 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         data[ACTORS] = list(dict.fromkeys(request.actors))
         data[REFINES] = list(dict.fromkeys(request.refines))
         anchored = _own([*request.actors, *request.refines])
+    elif kind == VIEW:
+        data["title"] = _title(request)
+        data[EXPLAINS] = list(request.explains)
+        anchored = list(request.explains)
     else:
         data["title"] = _title(request)
         data["actor"] = request.actor
@@ -747,8 +829,65 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         anchored = _own([str(request.actor), *named, *request.requirements])
     data[CONTAINER] = _container(request, anchored)
     heading = render.title_heading(structured, new_id, _title(request))
-    body = render.body(structured, heading, written)
+    named = [views.term_name(analysis, term) or term for term in request.explains]
+    body = render.body(structured, heading, written, repeats=named)
     return f"---\n{dump(data)}---\n\n{body}"
+
+
+def _write_view(
+    root: Path,
+    target: Path,
+    location: str,
+    text: str,
+    request: Request,
+    analysis: Analysis,
+    record: Recorder,
+) -> tuple[str | None, str]:
+    """Write a domain-model view and, in the glossary, each term's link to its section,
+    whole or not at all (DEC-004 point 7): the glossary first, then the view, the
+    glossary put back as it was where the view cannot be written. Returns the line the
+    location's recording printed, and the note on the links written."""
+    view_id = f"VIEW-{request.slug}"
+    by_glossary: dict[str, dict[tuple[int, int], str]] = {}
+    for term_id in request.explains:
+        term = analysis.of(term_id, TERM)
+        if term is None or term.span is None:
+            raise Refused(
+                f"{term_id} has no section in its glossary for its link to stand in: the "
+                f"backbone gives its entry no span — `pkit analysis validate` says why"
+            )
+        name = views.term_name(analysis, term_id) or term_id
+        line = views.link(term.path, view_id, location, name)
+        by_glossary.setdefault(term.path, {})[term.span] = line
+    written: list[tuple[Path, bytes]] = []
+    try:
+        for glossary, spans in sorted(by_glossary.items()):
+            path = root / glossary
+            refuse_links(root, path, glossary)
+            try:
+                before = path.read_bytes()
+                current = before.decode("utf-8")
+            except (OSError, UnicodeDecodeError) as exc:
+                raise Refused(f"{glossary} could not be read: {exc}") from exc
+            crlf = _crlf(current, glossary)
+            lf = current.replace("\r\n", "\n") if crlf else current
+            updated = views.linked(lf, spans)
+            updated = updated.replace("\n", "\r\n") if crlf else updated
+            try:
+                write_whole(path, updated.encode("utf-8"))
+            except OSError as exc:
+                raise Refused(f"{glossary} could not be written: {exc}") from exc
+            written.append((path, before))
+        recorded = write_and_record(root, target, location, text, record)
+    except Refused:
+        for path, before in reversed(written):
+            with contextlib.suppress(OSError):
+                write_whole(path, before)
+        raise
+    terms = ", ".join(request.explains)
+    places = " and ".join(sorted(by_glossary))
+    sections = "its section" if len(request.explains) == 1 else "their sections"
+    return recorded, f"linked {terms} in {places} to {sections} (DEC-004 point 7)"
 
 
 def _own(named: Sequence[str]) -> list[str]:
@@ -791,7 +930,7 @@ def declared(kind: str, root: Path, analysis: Analysis | None = None) -> structu
     try:
         kinds = structure.read_kinds()
         declared_kind = kinds[kind]
-        for element in declared_kind.sections:
+        for element in structure.elements(declared_kind):
             if element.filled:
                 render.hint(element)
         for field in declared_kind.fields:

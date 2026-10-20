@@ -4,11 +4,11 @@
 # the front-matter fields a writer fills. Its shape is
 # `artefact-kinds.schema.json`, beside this file.
 #
-# - The kinds: `actor`, `use-case`, `journey` and `term` (DEC-001), and the
-#   three kinds of requirement, `quality-requirement`, `functional-requirement`
-#   and `constraint` (DEC-002), keyed by the types the capability's places
-#   give. The revalidation record has no type, and is keyed
-#   `revalidation-record`.
+# - The kinds: `actor`, `use-case`, `journey` and `term` (DEC-001), the three
+#   kinds of requirement, `quality-requirement`, `functional-requirement` and
+#   `constraint` (DEC-002), and `domain-model-view` (DEC-004), keyed by the
+#   types the capability's places give. The revalidation record has no type,
+#   and is keyed `revalidation-record`.
 # - `shown-as`: the kind's name as its artefacts show it beside their id. A
 #   requirement is headed `# REQ-007 · Quality · <title>` (DEC-002 point 2).
 #   An actor, a use case and a journey show none, and are headed
@@ -19,6 +19,9 @@
 #   - `label`: a bold label, `**<text>:**`, that opens a paragraph or a
 #     top-level list item
 #   - `opening`: the text before the body's first label
+#   - `repeated`: a section that repeats, once for each term a domain-model
+#     view's `explains` lists, each headed at its `level` by the term's name.
+#     Its own `sections` give the parts each holds (DEC-004 point 2).
 # - `required`: true unless set to false. Every element a kind ships is
 #   required, so none sets it here.
 # - `allows-none`: the part may read `None.` when it has nothing to say.
@@ -213,6 +216,52 @@ kinds:
       replaces:
         hint: The names this term was written as before, in the analysis or in an accepted record, newest first.
         example: report template
+
+  domain-model-view:
+    sections:
+      - id: heading
+        type: heading
+        level: 1
+        example: "# VIEW-orders-and-payments — Orders and payments"
+      - id: opening
+        type: opening
+        hint: What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling.
+        example: The concepts of ordering goods and paying for them, and how a payment settles an order.
+      - id: concept
+        type: repeated
+        level: 2
+        form: headings-match-front-matter
+        hint: One section for each term `explains` lists, in its order, headed by the term's name.
+        example: "## order"
+        sections:
+          - id: explanation
+            type: opening
+            hint: What the concept is, in plain words for a newcomer. What it says fits exactly what the term's definition fits.
+            example: An order is what a customer asks the shop to send, before anything is paid or sent.
+          - id: attributes
+            type: label
+            text: Attributes
+            allows-none: true
+            hint: What each instance of the concept holds, in words. Write `None.` when there is none.
+            example: Each order holds its lines, the customer who placed it and the day it was placed.
+          - id: relations
+            type: label
+            text: Relations
+            allows-none: true
+            hint: How the concept relates to other concepts, such as those of this group or of a view numbered before it. Write `None.` when there is none.
+            example: An order belongs to one customer, and one payment or more settle it.
+          - id: states
+            type: label
+            text: States
+            allows-none: true
+            hint: The concept's states, and the events that move it from one to the next. Add a state diagram after the text where it has a life cycle. Write `None.` when it has none.
+            example: An order is open until a payment settles it, and settled until it is sent.
+          - id: always-true
+            type: label
+            text: Always true
+            allows-none: true
+            hint: What holds of every instance, as a record decides it, naming the record. Write `None.` when no record decides one.
+            example: An order once settled is never changed (DEC-007).
 
   quality-requirement:
     shown-as: Quality

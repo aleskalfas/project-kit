@@ -3,7 +3,8 @@
 Each kind's own fields have a companion schema in `schemas/` (DEC-001 point 2):
 `actor`, `term`, `use-case`, `journey`, the three kinds of requirement
 (`quality-requirement`, `functional-requirement` and `constraint`, DEC-002
-point 1), and `revalidation-record` for the records. They share
+point 1), `domain-model-view` (DEC-004), and `revalidation-record` for the
+records. They share
 `analysis.schema.json` — each kind's id, the status, a line of text — which
 is also where the commands read the id patterns from, so the
 stamp that gives an id and the check that judges one never disagree. A record
@@ -28,7 +29,7 @@ from typing import Any
 from jsonschema import Draft202012Validator
 from referencing import Registry, Resource
 
-from _lib.model import ACTOR, JOURNEY, REQUIREMENTS, TERM, USE_CASE
+from _lib.model import ACTOR, JOURNEY, REQUIREMENTS, TERM, USE_CASE, VIEW
 
 #: Where the schemas are, in the capability's own tree.
 SCHEMAS = Path(__file__).resolve().parents[2] / "schemas"
@@ -50,6 +51,7 @@ SCHEMA_OF = {
     USE_CASE: "use-case",
     JOURNEY: "journey",
     **{kind: kind for kind in REQUIREMENTS},
+    VIEW: VIEW,
     RECORD: RECORD,
 }
 
@@ -61,6 +63,7 @@ ID_DEF = {
     USE_CASE: "use-case-id",
     JOURNEY: "journey-id",
     **dict.fromkeys(REQUIREMENTS, "requirement-id"),
+    VIEW: "view-id",
 }
 
 

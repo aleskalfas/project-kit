@@ -1,0 +1,27 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  An analysis may keep a domain model, as DEC-004 decides: a few views beside
+  the glossary, in a folder `domain-model/`, one for each group of related
+  concepts. `pkit analysis new view <slug> --number <digits> --explains
+  <TERM-id>…` writes `<number>-<slug>.md`, its id `VIEW-<slug>`, its number
+  in the project's own form and no part of the id. The view lists the terms
+  it explains in `explains`, anchors each and no code, and holds one section
+  for each, headed by the term's name. The stamp also writes each term's link
+  to its section, on a line under the term's heading in the glossary. Whatever
+  any rule's status, `pkit analysis validate` holds a view's file's name to
+  its id, its terms to its own analysis and to one view in force each, its
+  term anchors to `explains`, no path anchor, and each term's link to the
+  view that explains it. Where the format rule binds, it holds each section's
+  heading to its term's name and each section's parts, a new repeating
+  section of the kinds' declared structure. A project's own structures add
+  labels to a view, never a heading. The kind is optional: a project with no
+  `domain-model/` folder fails nothing. A set of your own created before this
+  release selects no `software-analysis:domain-model-view`, so add it to its
+  scope for `SAN` to bind on your views. While the capability is installed, a
+  bare type of your own named `domain-model-view` clashes with the
+  capability's, and `pkit validate` refuses it. The `analysis-author` skill
+  walks a view, and its build order writes the views after the glossary. The
+  `analysis-resolver` is the fixer of the new type too.

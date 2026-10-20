@@ -1,0 +1,532 @@
+"""software-analysis: the domain model's views, and each term's link to its section (#1817).
+
+Held to software-analysis DEC-004:
+
+- **the stamp** — `pkit analysis new view <slug> --number <digits> --explains <TERM-id>…`
+  writes `domain-model/<number>-<slug>.md`, its id `VIEW-<slug>`, with `explains`, an
+  anchor to each term it lists and one section for each, headed by the term's name. It
+  writes each term's link to its section under the term's heading in the glossary, and
+  refuses what a view may not explain (points 2, 4, 5 and 7);
+- **the check, whatever any rule's status** — a view's file's name against its id, the
+  terms it explains against its analysis, one view in force for each term, its term
+  anchors equal to `explains`, no path anchor, and each term's link held equal to the
+  view that explains it (points 4, 5 and 7);
+- **the structure, where the format rule binds** — one section for each term `explains`
+  lists, in its order, headed by its name, no two headings giving one slug, and each
+  section's parts (point 2), with a project's own labels in the opening or each section
+  and never a heading;
+- **optional** — a project with no domain model fails nothing.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from project_kit import document_parts
+from project_kit.friction_validate import validate_friction
+from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.analysis_repo import (
+    ANALYSIS_SET,
+    DOMAIN_MODEL,
+    GLOSSARY,
+    STRUCTURES,
+    VALIDATE,
+    accepting_san,
+    fill,
+    front,
+    installed,
+    load_lib,
+    new,
+    prepare,
+    run_script,
+    stamped,
+)
+
+forms: Any
+structure: Any
+forms, structure = load_lib("forms", "structure")
+
+#: The fixture's view, as the stamp names it.
+VIEW = f"{DOMAIN_MODEL}/010-orders-and-payments.md"
+VIEW_ID = "VIEW-orders-and-payments"
+
+#: The link each term the fixture's view explains carries under its heading.
+ORDER_LINK = (
+    "Explained in [VIEW-orders-and-payments](domain-model/010-orders-and-payments.md#order)."
+)
+PAYMENT_LINK = (
+    "Explained in [VIEW-orders-and-payments](domain-model/010-orders-and-payments.md#payment)."
+)
+
+
+def _domain(repo: AdopterRepo) -> None:
+    """`prepare`, then three terms, and a view explaining two of them, stamped and filled.
+    Built once per session (`installed`)."""
+    prepare(repo)
+    for slug in ("order", "payment", "customer"):
+        stamped(repo, "term", slug, "--name", slug, "--path", "src/run.py")
+    explains = ("--explains", "TERM-order", "--explains", "TERM-payment")
+    stamped(repo, "view", "orders-and-payments", "--number", "010", *explains)
+    fill(repo)
+
+
+@pytest.fixture
+def project(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    return installed(make_adopter_repo, monkeypatch, then=_domain)
+
+
+@pytest.fixture
+def bare(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    return installed(make_adopter_repo, monkeypatch)
+
+
+def _validate(repo: AdopterRepo, *args: str) -> dict[str, Any]:
+    completed = run_script(repo, VALIDATE, "--json", *args)
+    assert completed.returncode == 0, completed.stderr
+    return json.loads(completed.stdout)
+
+
+def _found(document: dict[str, Any], severity: str = "error") -> list[tuple[str, str]]:
+    return [
+        (f["location"], f["message"]) for f in document["findings"] if f["severity"] == severity
+    ]
+
+
+def _read(repo: AdopterRepo, rel: str) -> str:
+    return (repo.root / rel).read_text(encoding="utf-8")
+
+
+def _edit(repo: AdopterRepo, rel: str, old: str, new_text: str) -> None:
+    text = _read(repo, rel)
+    assert old in text, (old, text)
+    repo.write({rel: text.replace(old, new_text, 1)})
+
+
+# --- the stamp (DEC-004 points 2, 4, 5 and 7) ------------------------------------------------
+
+
+def test_a_view_is_stamped_with_its_terms_their_sections_and_their_links(
+    project: AdopterRepo,
+) -> None:
+    """The view's file is named by its number and its slug, its id the slug alone. It lists
+    the terms it explains, anchors each and no code, and holds one section for each,
+    headed by the term's name. Each term links to its section, right below its heading."""
+    assert front(project, VIEW) == {
+        "id": VIEW_ID,
+        "title": "Orders and payments",
+        "status": "active",
+        "explains": ["TERM-order", "TERM-payment"],
+        "pkit": {"friction": {"anchors": {"artefact": ["TERM-order", "TERM-payment"]}}},
+    }
+    body = _read(project, VIEW).split("\n---\n", 1)[1]
+    headings = [line for line in body.splitlines() if line.startswith("#")]
+    assert headings == [f"# {VIEW_ID} — Orders and payments", "## order", "## payment"]
+    glossary = _read(project, GLOSSARY)
+    assert f"## TERM-order — order\n\n{ORDER_LINK}\n\n**Example:** " in glossary
+    assert f"## TERM-payment — payment\n\n{PAYMENT_LINK}\n\n**Example:** " in glossary
+    section = glossary.split("## TERM-customer — customer\n", 1)[1].split("\n## ", 1)[0]
+    assert "Explained in" not in section  # a term no view explains carries no link
+    # Filled, it passes the check with the format rule binding, and the core's friction pass.
+    project.write(accepting_san(project))
+    assert _found(_validate(project)) == []
+    assert validate_friction(project.root).errors == ()
+
+
+def test_the_stamp_says_what_it_linked(project: AdopterRepo) -> None:
+    completed = new(project, "view", "customers", "--number", "020", "--explains", "TERM-customer")
+    assert completed.returncode == 0, completed.stderr
+    assert completed.stdout.splitlines()[-2:] == [
+        f"linked TERM-customer in {GLOSSARY} to its section (DEC-004 point 7)",
+        f"stamped VIEW-customers at {DOMAIN_MODEL}/020-customers.md",
+    ]
+    link = "Explained in [VIEW-customers](domain-model/020-customers.md#customer)."
+    assert f"## TERM-customer — customer\n\n{link}\n\n" in _read(project, GLOSSARY)
+
+
+@pytest.mark.parametrize(
+    ("args", "said"),
+    [
+        (("--number", "030"), "explains one term at least"),
+        (("--number", "03a", "--explains", "TERM-customer"), "is not a number"),
+        (("--number", "030", "--explains", "TERM-nothing"), "no term TERM-nothing"),
+        (("--number", "030", "--explains", "TERM-order"), "VIEW-orders-and-payments explains it"),
+        (
+            ("--number", "030", "--explains", "TERM-customer", "--explains", "TERM-customer"),
+            "is named twice",
+        ),
+        (("--number", "030", "--explains", "core:TERM-change"), "of its own analysis alone"),
+        (("--number", "030", "--explains", "TERM-customer", "--title", "<Title>"), "<Title>"),
+    ],
+)
+def test_the_stamp_refuses_what_a_view_may_not_explain(
+    project: AdopterRepo, args: tuple[str, ...], said: str
+) -> None:
+    """One term at least, each once, each a term in force of its own analysis that no view
+    in force explains yet (DEC-004 point 5); a number of digits (point 4). Refused, it
+    writes nothing."""
+    before = _read(project, GLOSSARY)
+    completed = new(project, "view", "customers", *args)
+    assert completed.returncode == 1, completed.stdout
+    assert said in completed.stderr
+    assert not (project.root / DOMAIN_MODEL / "030-customers.md").exists()
+    assert _read(project, GLOSSARY) == before
+
+
+def test_the_stamp_refuses_a_held_id_a_withdrawn_term_and_code(project: AdopterRepo) -> None:
+    """A view's id is never used again, whatever its number. A view in force explains
+    terms in force, and anchors no code: `new view` takes no `--path` (DEC-004 points 4
+    and 5)."""
+    completed = new(
+        project, "view", "orders-and-payments", "--number", "090", "--explains", "TERM-customer"
+    )
+    assert (
+        completed.returncode == 1 and "VIEW-orders-and-payments is held already" in completed.stderr
+    )
+    _edit(project, GLOSSARY, "  status: active\n  definition", "  status: withdrawn\n  definition")
+    withdrawn = front(project, GLOSSARY)
+    first = next(term for term, entry in withdrawn.items() if entry["status"] == "withdrawn")
+    completed = new(project, "view", "lone", "--number", "030", "--explains", first)
+    assert completed.returncode == 1 and "is withdrawn" in completed.stderr
+    completed = new(project, "view", "lone", "--number", "030", "--path", "src/run.py")
+    assert completed.returncode == 2 and "--path" in completed.stderr
+
+
+# --- the check, whatever any rule's status (DEC-004 points 4, 5 and 7) ----------------------
+
+
+def test_a_view_s_file_name_opens_with_its_number_and_gives_its_id(project: AdopterRepo) -> None:
+    text = _read(project, VIEW)
+    project.write({VIEW: None, f"{DOMAIN_MODEL}/orders-and-payments.md": text})
+    (found,) = [f for f in _found(_validate(project)) if "opens with no number" in f[1]]
+    assert found[0] == f"{DOMAIN_MODEL}/orders-and-payments.md"
+    project.write(
+        {f"{DOMAIN_MODEL}/orders-and-payments.md": None, f"{DOMAIN_MODEL}/020-orders.md": text}
+    )
+    messages = [m for _l, m in _found(_validate(project))]
+    assert any(
+        "its name is 020-orders.md, its front matter's id VIEW-orders-and-payments" in m
+        for m in messages
+    ), messages
+
+
+def test_a_view_s_term_anchors_match_explains_and_it_anchors_no_code(project: AdopterRepo) -> None:
+    _edit(
+        project,
+        VIEW,
+        "      artefact:\n        - TERM-order\n        - TERM-payment\n",
+        "      path:\n        - src/run.py\n      artefact:\n        - TERM-order\n",
+    )
+    messages = [m for location, m in _found(_validate(project)) if location.startswith(VIEW)]
+    assert any("it anchors code (src/run.py)" in m for m in messages), messages
+    assert any(
+        "its term anchors (TERM-order) do not match its `explains` (TERM-order, TERM-payment)" in m
+        and "anchor exactly [TERM-order, TERM-payment]" in m
+        for m in messages
+    ), messages
+
+
+def test_each_term_is_explained_by_one_view_in_force(project: AdopterRepo) -> None:
+    """A second view in force explaining a term is refused at its `explains`; withdrawn,
+    it explains nothing, and the term links to the view in force (DEC-004 point 5)."""
+    second = _read(project, VIEW).replace(VIEW_ID, "VIEW-payments")
+    project.write({f"{DOMAIN_MODEL}/020-payments.md": second})
+    found = [(location, m) for location, m in _found(_validate(project)) if "is explained by" in m]
+    assert found == [
+        (
+            f"{DOMAIN_MODEL}/020-payments.md:/explains/0",
+            f"TERM-order is explained by {VIEW_ID} too ({VIEW}): no two views in force explain "
+            f"one term, so each explanation has one home — explain it in one of them, and take "
+            f"it off the other's `explains`, anchors and sections (DEC-004 point 5)",
+        ),
+        (
+            f"{DOMAIN_MODEL}/020-payments.md:/explains/1",
+            f"TERM-payment is explained by {VIEW_ID} too ({VIEW}): no two views in force "
+            f"explain one term, so each explanation has one home — explain it in one of them, "
+            f"and take it off the other's `explains`, anchors and sections (DEC-004 point 5)",
+        ),
+    ]
+    project.write(
+        {f"{DOMAIN_MODEL}/020-payments.md": second.replace("status: active", "status: withdrawn")}
+    )
+    assert _found(_validate(project)) == []
+
+
+def test_a_view_in_force_explains_terms_in_force_of_its_own_analysis(
+    project: AdopterRepo,
+) -> None:
+    """The change that withdraws a term takes its section out of the view in force that
+    explains it (DEC-004 point 5). A withdrawn view may still list it: it is history."""
+    text = _read(project, GLOSSARY)
+    withdrawn = re.sub(r"(TERM-payment:\n  name: payment\n  status: )active", r"\1withdrawn", text)
+    assert withdrawn != text
+    project.write({GLOSSARY: withdrawn})
+    found = [(location, m) for location, m in _found(_validate(project))]
+    assert (
+        f"{VIEW}:/explains/1",
+        f"term TERM-payment is withdrawn ({GLOSSARY}#TERM-payment): a view in force explains "
+        f"only terms in force — take it off `explains`, its anchors and its section, or "
+        f"withdraw the view too (DEC-004 point 5)",
+    ) in found
+    _edit(project, VIEW, "status: active", "status: withdrawn")
+    # A withdrawn view explains nothing, so no term links to it.
+    found = _found(_validate(project))
+    assert [location for location, _m in found] == [
+        f"{GLOSSARY}#TERM-order",
+        f"{GLOSSARY}#TERM-payment",
+    ], found
+    assert all("and no view in force explains it" in m for _l, m in found), found
+
+
+def test_a_term_s_link_is_held_to_the_view_that_explains_it(project: AdopterRepo) -> None:
+    """The link names the view's file and the term's section, exactly as the stamp writes
+    it: missing, written otherwise, twice, or left by a view renumbered, it is reported
+    with the line to write (DEC-004 point 7)."""
+    _edit(project, GLOSSARY, f"{ORDER_LINK}\n\n", "")
+    (found,) = _found(_validate(project))
+    assert found[0] == f"{GLOSSARY}#TERM-order"
+    assert (
+        "its section holds no link to it: a term links to the section of the view that "
+        f"explains it, `{ORDER_LINK}`" in found[1]
+    )
+    _edit(
+        project,
+        "tech-docs/analysis/glossary.md",
+        "## TERM-order — order\n",
+        "## TERM-order — order\n\nSee [the view](domain-model/010-orders-and-payments.md).\n",
+    )
+    (found,) = _found(_validate(project))
+    assert "as `See [the view](domain-model/010-orders-and-payments.md).`" in found[1]
+    assert f"write `{ORDER_LINK}` in its place" in found[1]
+    # A view renumbered is a moved file: each term's link names its new file.
+    text = _read(project, VIEW)
+    _edit(project, GLOSSARY, "See [the view](domain-model/010-orders-and-payments.md).", ORDER_LINK)
+    project.write({VIEW: None, f"{DOMAIN_MODEL}/015-orders-and-payments.md": text})
+    found = _found(_validate(project))
+    assert [location for location, _m in found] == [
+        f"{GLOSSARY}#TERM-order",
+        f"{GLOSSARY}#TERM-payment",
+    ], found
+    assert "domain-model/015-orders-and-payments.md#order" in found[0][1]
+
+
+# --- the structure, where the format rule binds (DEC-004 point 2) ----------------------------
+
+
+def test_a_view_s_sections_match_explains_where_the_format_rule_binds(
+    project: AdopterRepo,
+) -> None:
+    """Each section is headed by the name of the term `explains` lists in its place. The
+    format rule is accepted as `SAN` ships it, so this binds where a set of the project's
+    own selects the view, as the set install creates does."""
+    _edit(project, VIEW, "## payment\n", "## settlement\n")
+    assert _found(_validate(project)) == []  # no set of the project's own selects it yet
+    project.write(accepting_san(project))
+    (found,) = _found(_validate(project))
+    assert found[0] == VIEW
+    assert (
+        "the 2nd section is headed `settlement`, and `explains` lists TERM-payment in its "
+        "place, whose name is `payment`" in found[1]
+    )
+    assert "(RS-SAN-001)" in found[1]
+
+
+def test_a_view_s_parts_are_held_in_each_section(project: AdopterRepo) -> None:
+    project.write(accepting_san(project))
+    _edit(project, VIEW, "**Relations:**", "**Links:**")
+    messages = [m for location, m in _found(_validate(project)) if location == VIEW]
+    assert any(
+        m.startswith("`**Relations:**` in the section `## order` is missing") for m in messages
+    ), messages
+    assert len(messages) == 1, messages
+
+
+def test_a_project_s_own_label_goes_in_the_opening_or_each_section_never_a_heading(
+    project: AdopterRepo,
+) -> None:
+    """A project adds labels to a view's opening, or to each concept's section, and never a
+    heading (DEC-004 point 2)."""
+    rule = "RS-ANALYSIS-001"
+    sets = accepting_san(project)
+    set_text = (
+        sets[ANALYSIS_SET].replace(
+            "rules: {}\n",
+            f'rules:\n  {rule}:\n    status: accepted\n    origin: {{why: "A reader asks."}}\n',
+        )
+        + f"\n## {rule} — A view says more\n\nA view says more.\n"
+    )
+    project.write({**sets, ANALYSIS_SET: set_text})
+    added = (
+        "pkit_schema: software-analysis:structures\nschema_version: 1\nkinds:\n"
+        "  domain-model-view:\n    tighten:\n      - rule: RS-ANALYSIS-001\n        add:\n"
+        "          - {id: examples, label: Examples, after: attributes, hint: An instance., "
+        "example: Order 7., required: true}\n"
+    )
+    project.write({STRUCTURES: added})
+    messages = [m for location, m in _found(_validate(project)) if location == VIEW]
+    assert [m.split(" is missing")[0] for m in messages] == [
+        "`**Examples:**` in the section `## order`",
+        "`**Examples:**` in the section `## payment`",
+    ], messages
+    headed = added.replace("{id: examples,", "{id: examples, type: heading, level: 2,")
+    project.write({STRUCTURES: headed})
+    found = _found(_validate(project))
+    assert any(
+        location.startswith(STRUCTURES) and "'label' was expected" in m for location, m in found
+    ), found
+
+
+def test_a_project_with_no_domain_model_fails_nothing(bare: AdopterRepo) -> None:
+    """The view kind is optional: terms with no view carry no link, and nothing asks for
+    one (DEC-004 point 1)."""
+    stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
+    fill(bare)
+    bare.write(accepting_san(bare))
+    document = _validate(bare)
+    assert _found(document) == []
+    assert "0 domain-model view(s)" in document["summary"][0]
+
+
+# --- the pure parts --------------------------------------------------------------------------
+
+
+@pytest.mark.parametrize(
+    "title",
+    ["order", "Order line", "order-line", "Ordnung & Zahlung", "état payé", "1st step", "#!?", ""],
+)
+def test_a_heading_s_slug_is_the_backbone_s(title: str) -> None:
+    """A term's link names its section by the slug the backbone makes of its heading
+    (COR-050 point 2): the capability's copy of the rule says the same."""
+    assert forms.heading_slug(title) == document_parts.heading_slug(title)
+
+
+KINDS: dict[str, Any] = structure.read_kinds()
+
+#: A view's body, filled: two sections, `order` and `payment`.
+BODY = """# VIEW-orders-and-payments — Orders and payments
+
+What ordering and paying cover.
+
+## order
+
+An order is what a customer asks for.
+
+**Attributes:** Its lines.
+
+**Relations:** One payment settles it.
+
+**States:** None.
+
+**Always true:** None.
+
+## payment
+
+A payment settles an order.
+
+**Attributes:** Its amount.
+
+**Relations:** None.
+
+**States:** None.
+
+**Always true:** None.
+"""
+
+FIELDS = {"explains": ["TERM-order", "TERM-payment"]}
+TITLES = {"TERM-order": "order", "TERM-payment": "payment"}
+
+
+def _departures(
+    body: str, fields: dict[str, Any] = FIELDS
+) -> list[tuple[str, str, int | None, str | None]]:
+    lines = list(enumerate(body.splitlines(), 1))
+    return [
+        (d.element.id, d.how, d.line, d.within)
+        for d in structure.departures(
+            lines, KINDS["domain-model-view"], fields=fields, titles=TITLES
+        )
+    ]
+
+
+def test_a_filled_view_departs_from_nothing() -> None:
+    assert _departures(BODY) == []
+
+
+def test_the_headings_follow_explains_and_give_one_slug_each() -> None:
+    """One section per term, in order, each headed by its name; and no two headings with
+    one slug (DEC-004 point 2)."""
+    swapped = {"explains": ["TERM-payment", "TERM-order"]}
+    assert _departures(BODY, swapped) == [
+        ("concept", "breaks-its-form", 5, None),
+        ("concept", "breaks-its-form", 17, None),
+    ]
+    one = {"explains": ["TERM-order"]}
+    assert _departures(BODY, one) == [("concept", "breaks-its-form", 17, None)]
+    three = {"explains": ["TERM-order", "TERM-payment", "TERM-customer"]}
+    assert _departures(BODY, three) == [("concept", "breaks-its-form", 17, None)]
+    twice = BODY.replace("## payment", "## Order")
+    assert ("concept", "breaks-its-form", 17, None) in _departures(
+        twice, {"explains": ["TERM-order", "TERM-x"]}
+    )
+
+
+def test_a_section_is_held_to_its_parts_and_names_its_heading() -> None:
+    empty = BODY.replace("**Attributes:** Its amount.", "**Attributes:**")
+    assert _departures(empty) == [("attributes", "empty", 21, "payment")]
+    unexplained = BODY.replace("An order is what a customer asks for.\n", "")
+    assert _departures(unexplained) == [("explanation", "missing", None, "order")]
+    assert _departures(BODY.split("## order", 1)[0]) == [("concept", "missing", None, None)]
+    no_opening = BODY.replace("What ordering and paying cover.\n", "")
+    assert _departures(no_opening) == [("opening", "missing", None, None)]
+
+
+project_structure: Any
+(project_structure,) = load_lib("project_structure")
+
+#: A project's own structures for the view kind, as `project/structures.yaml` holds them.
+OWN = (
+    "pkit_schema: software-analysis:structures\nschema_version: 1\nkinds:\n"
+    "  domain-model-view:\n    relabel:\n      attributes: {label: Holds}\n"
+    "    tighten:\n      - rule: RS-X-001\n        add:\n"
+    "          - {id: examples, label: Examples, after: AFTER, hint: An instance., "
+    "example: Order 7.}\n"
+)
+
+
+def _own(tmp_path: Path, after: str) -> Any:
+    path = tmp_path / STRUCTURES
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(OWN.replace("AFTER", after), encoding="utf-8")
+    return project_structure.read(tmp_path, KINDS)
+
+
+def test_a_project_relabels_and_adds_to_each_section_of_a_view(tmp_path: Path) -> None:
+    """A relabel and an addition after a part of a concept's section apply in each section
+    (DEC-004 point 2). One placed between a section's heading and its explanation would
+    take the explanation's lines, and is refused, naming the part to place it after."""
+    own = _own(tmp_path, "attributes")
+    assert own.problems == ()
+    groups = own.of("domain-model-view")
+    view = project_structure.tightened(
+        project_structure.relabelled(KINDS["domain-model-view"], own), groups, groups
+    )
+    (concept,) = [e for e in view.sections if e.type == "repeated"]
+    assert [(p.id, p.text) for p in concept.parts] == [
+        ("explanation", None),
+        ("attributes", "Holds"),
+        ("examples", "Examples"),
+        ("relations", "Relations"),
+        ("states", "States"),
+        ("always-true", "Always true"),
+    ]
+    assert {"holds", "examples"} <= view.labels
+    (problem,) = _own(tmp_path, "concept").problems
+    assert "name `explanation`" in problem.message

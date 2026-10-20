@@ -3,7 +3,8 @@
 Held to software-analysis DEC-001 points 1 to 6:
 
 - one **companion schema** per kind — actor, term, use case, journey, the
-  three kinds of requirement (#1691), revalidation record — and the evidence
+  three kinds of requirement (#1691), the domain-model view (#1817),
+  revalidation record — and the evidence
   point's (#1001), each valid Draft 2020-12, sharing one home for the id shapes
   (`analysis.schema.json`), a requirement's `REQ-NNN` among them;
 - each anchored kind's **template** carrying the friction block inside the
@@ -95,6 +96,7 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
         "artefact-kinds",
         "config",
         "constraint",
+        "domain-model-view",
         "functional-requirement",
         "journey",
         "quality-requirement",
@@ -118,6 +120,8 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
         "JRN-001",
         "REQ-004",
         "REQ-1000",
+        "VIEW-orders-and-payments",
+        "VIEW-Orders",
         "ACT-Tester",
         "UC-0007",
         "JRN-1",
@@ -129,18 +133,17 @@ def test_the_schemas_are_one_per_kind_and_valid() -> None:
     ],
 )
 def test_an_evidence_id_is_an_artefact_id_a_commit_and_a_check(artefact: str) -> None:
-    """A pattern cannot refer to another, so the evidence id spells the five id
-    shapes again beside them, a requirement's among them (#1691): held in step, it
+    """A pattern cannot refer to another, so the evidence id spells the six id
+    shapes again beside them, a requirement's and a view's among them (#1691,
+    #1817): held in step, it
     admits `<artefact>@<commit>#<check>` exactly when the artefact id does — and never
     without its check."""
     definitions = _schema("analysis")["$defs"]
     evidence_id = re.compile(definitions["evidence-id"]["pattern"])
-    is_artefact = any(
-        re.match(definitions[f"{kind}-id"]["pattern"], artefact)
-        for kind in ("actor", "term", "use-case", "journey", "requirement")
-    )
+    kinds = ("actor", "term", "use-case", "journey", "requirement", "view")
+    is_artefact = any(re.match(definitions[f"{kind}-id"]["pattern"], artefact) for kind in kinds)
     assert {ref["$ref"] for ref in definitions["artefact-id"]["anyOf"]} == {
-        f"#/$defs/{kind}-id" for kind in ("actor", "term", "use-case", "journey", "requirement")
+        f"#/$defs/{kind}-id" for kind in kinds
     }
     assert bool(evidence_id.match(f"{artefact}@{SHA1}#{CHECK}")) is is_artefact
     assert not evidence_id.match(f"{artefact}@{SHA1}")
@@ -209,6 +212,7 @@ COPIED = (
     "use-case-id",
     "journey-id",
     "requirement-id",
+    "view-id",
     "artefact-id",
     "commit",
     "check-name",
@@ -271,7 +275,7 @@ def test_every_id_shape_has_one_home() -> None:
     """The kinds' schemas refer to the shared id shapes; none writes its own. The
     evidence point's companion carries a copy, held equal to its home
     (`test_the_evidence_point_s_schema_reads_alone`)."""
-    for prefix in ("ACT", "TERM", "UC", "JRN", "REQ"):
+    for prefix in ("ACT", "TERM", "UC", "JRN", "REQ", "VIEW"):
         holders = [s for s in _stems() if f'"^{prefix}-' in json.dumps(_schema(s))]
         assert holders == ["analysis", "revalidation-evidence"], prefix
 
@@ -301,6 +305,7 @@ REQUIREMENT: dict[str, Any] = {
         ("use-case", "use-case"),
         ("journey", "journey"),
         *((kind, kind) for kind in REQUIREMENTS),
+        ("domain-model-view", "domain-model-view"),
     ],
 )
 def test_a_document_template_carries_the_friction_block_in_the_container(
@@ -327,10 +332,17 @@ def test_a_collection_template_carries_the_friction_block_in_each_entry(
 
 
 @pytest.mark.parametrize(
-    ("template", "field"), [("actor", "name"), ("use-case", "title"), ("journey", "title")]
+    ("template", "field"),
+    [
+        ("actor", "name"),
+        ("use-case", "title"),
+        ("journey", "title"),
+        ("domain-model-view", "title"),
+    ],
 )
 def test_a_document_template_s_heading_is_its_id_and_title(template: str, field: str) -> None:
-    """A use case's or journey's heading is its id and title, an actor's its id and name."""
+    """A use case's, journey's or domain-model view's heading is its id and title, an
+    actor's its id and name."""
     text = (CAPABILITY / "templates" / f"{template}.md").read_text(encoding="utf-8")
     data = _template(template)
     assert f"\n# {data['id']} — {data[field]}\n" in text
@@ -405,6 +417,61 @@ def test_the_use_case_template_anchors_each_actor() -> None:
     data = _template("use-case")
     anchored = [data["actor"], *data["other-actors"], *data["requirements"]]
     assert data["pkit"]["friction"]["anchors"]["artefact"] == anchored
+
+
+def test_the_view_template_anchors_the_terms_it_explains_and_no_code() -> None:
+    """A domain-model view anchors exactly the terms its `explains` lists, and the records
+    it rests on, never code (DEC-004 point 5, #1817)."""
+    data = _template("domain-model-view")
+    anchors = data["pkit"]["friction"]["anchors"]
+    assert anchors["artefact"] == data["explains"]
+    assert "path" not in anchors
+    assert anchors["record"] == ["<record it rests on>"]
+
+
+#: A domain-model view's own fields, filled (DEC-004 points 2 and 4).
+VIEW: dict[str, Any] = {
+    "id": "VIEW-orders-and-payments",
+    "title": "Orders and payments",
+    "status": "active",
+    "explains": ["TERM-order", "TERM-payment"],
+}
+
+
+def test_a_view_s_schema_takes_its_id_its_title_and_the_terms_it_explains() -> None:
+    """Its id is `VIEW-` and a slug, and `explains` lists one term at least, each once,
+    by its id, never another analysis's (DEC-004 points 2, 4 and 5, #1817)."""
+    assert _schema_errors("domain-model-view", VIEW) == []
+    assert _schema_errors("domain-model-view", {**VIEW, "status": "withdrawn"}) == []
+    for bad, message in (
+        ({**VIEW, "id": "VIEW-Orders"}, "does not match"),
+        ({**VIEW, "id": "010-orders"}, "does not match"),
+        ({**VIEW, "explains": []}, "should be non-empty"),
+        ({**VIEW, "explains": ["TERM-order", "TERM-order"]}, "non-unique"),
+        ({**VIEW, "explains": ["core:TERM-change"]}, "does not match"),
+        ({**VIEW, "explains": ["ACT-tester"]}, "does not match"),
+        ({k: v for k, v in VIEW.items() if k != "explains"}, "'explains' is a required"),
+        ({**VIEW, "number": "010"}, "'number' was unexpected"),
+    ):
+        (found,) = _schema_errors("domain-model-view", bad)
+        assert message in found, (bad, found)
+
+
+def test_a_record_and_the_evidence_point_take_a_view_s_id() -> None:
+    """A revalidation record's outcomes may name a view, and the evidence point's entries
+    too, with no steps, as an actor has none. Taking it is an addition, so the point's
+    version stays (DEC-004, Implications; #1817)."""
+    record = {
+        "change": "#42",
+        "trigger": "drift",
+        "date": "2026-10-20",
+        "by": "Sam",
+        "outcomes": {"VIEW-orders-and-payments": "holds"},
+    }
+    assert _schema_errors("revalidation-record", record) == []
+    assert _schema_errors("revalidation-evidence", [_evidence("VIEW-orders")]) == []
+    (stepped,) = _schema_errors("revalidation-evidence", [_evidence("VIEW-orders", steps=["1"])])
+    assert "False schema does not allow" in stepped
 
 
 #: A use case's and a journey's own fields, filled, beside which `requirements` is tested.
@@ -564,7 +631,7 @@ def test_every_placeholder_shipped_is_in_the_append_only_lists() -> None:
     in_templates, in_commands = _shipped("IN_TEMPLATES"), _shipped("IN_COMMANDS")
     assert len(set(in_templates)) == len(in_templates)
     shipped: set[str] = set()
-    for name in ("actor", "glossary", "use-case", "journey", *REQUIREMENTS):
+    for name in ("actor", "glossary", "use-case", "journey", *REQUIREMENTS, "domain-model-view"):
         text = (CAPABILITY / "templates" / f"{name}.md").read_text(encoding="utf-8")
         _front, body = document_parts.split_front_matter(text)
         for value in [*_texts(_template(name)), body]:
@@ -602,6 +669,9 @@ DOCUMENT_OPENINGS = {
     # A requirement's obligation is in its front matter, so its body opens with what
     # verifies it (DEC-002 point 4).
     **dict.fromkeys(REQUIREMENTS, "**Verified by:** <!-- pkit:hint "),
+    # A domain-model view opens with what its group covers, then its class diagram
+    # (DEC-004 point 2).
+    "domain-model-view": "<!-- pkit:hint What the group of concepts covers",
 }
 
 
@@ -833,6 +903,7 @@ KIND_OF = {
     "revalidation-record": "revalidation-record",
     "use-case": "use-case",
     **{kind: kind for kind in REQUIREMENTS},
+    "domain-model-view": "domain-model-view",
 }
 
 #: The mark that opens a hint, and what closes it (#1366).
@@ -862,7 +933,7 @@ def test_each_part_a_writer_fills_holds_its_hint_and_a_record_none(name: str) ->
         assert found == []
         assert "pkit:hint" not in _body(name)
         return
-    filled = [e for e in _kind(name).sections if e.filled]
+    filled = [e for e in STRUCTURE.elements(_kind(name)) if e.filled]
     hints = [RENDER.hint(e) for e in filled]
     assert [f"{MARK}{said}{CLOSE}" for said in found] == hints
     assert all(f"Example: {e.example}" in h for e, h in zip(filled, hints, strict=True))
@@ -912,6 +983,7 @@ FIELDS_LEFT = {
     "use-case": set(),
     "journey": set(),
     **{kind: {"statement", "measure", "applies-to"} for kind in REQUIREMENTS},
+    "domain-model-view": set(),
 }
 
 

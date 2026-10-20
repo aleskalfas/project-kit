@@ -47,6 +47,7 @@ from tests.analysis_repo import (
     CAPABILITY,
     CONFIG,
     CONSTRAINTS,
+    DOMAIN_MODEL,
     FUNCTIONAL,
     GLOSSARY,
     JOURNEYS,
@@ -102,7 +103,7 @@ def test_the_package_declares_the_analysis_location_and_one_place_per_kind(
     assert location == dr.Location(Path(ANALYSIS), dr.Source.DERIVED)
     settings = fd.read_friction_settings(project.root)
     ours = [p.resolved for p in settings.places if p.source == "capability:software-analysis"]
-    top = [GLOSSARY, ACTORS, USE_CASES, JOURNEYS, QUALITY, FUNCTIONAL, CONSTRAINTS]
+    top = [GLOSSARY, DOMAIN_MODEL, ACTORS, USE_CASES, JOURNEYS, QUALITY, FUNCTIONAL, CONSTRAINTS]
     # The same places one folder down, one analysis per component (DEC-001 point 2).
     nested = [
         f"{ANALYSIS}/*/{place.removeprefix(f'{ANALYSIS}/')}"
@@ -277,6 +278,7 @@ def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
             "use-case",
             "journey",
             "term",
+            "domain-model-view",
             "quality-requirement",
             "functional-requirement",
             "constraint",

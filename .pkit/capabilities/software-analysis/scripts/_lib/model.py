@@ -14,13 +14,14 @@ location's top and one folder down, so a file's place tells its kind and the
 folder of the location it lies in, which names the analysis that holds it
 (`_lib/analyses.py`); the records' folder is held at both too.
 
-What this module decides over the answer is DEC-001's and DEC-002's: each place
-of this capability holds one kind of artefact (DEC-001 point 2, DEC-002 point
-3) — the glossary is a collection file, one keyed entry per term; an actor, a
-use case, a journey and a requirement of each of the three kinds are a
-document each — and a file in a place that holds no artefact of its kind's
-shape is a stray the check reports. The folder that holds the three kinds of
-requirement's places is no place (DEC-002 point 3), so a file in it outside them
+What this module decides over the answer is DEC-001's, DEC-002's and DEC-004's:
+each place of this capability holds one kind of artefact (DEC-001 point 2,
+DEC-002 point 3, DEC-004 point 4) — the glossary is a collection file, one
+keyed entry per term; a domain-model view, an actor, a use case, a journey and
+a requirement of each of the three kinds are a document each — and a file in a
+place that holds no artefact of its kind's shape is a stray the check reports.
+The folder that holds the three kinds of requirement's places is no place
+(DEC-002 point 3), so a file in it outside them
 is in no place: the answer lists the files of the analysis location that no
 place or held folder of this capability holds, and the check reports those
 under that folder. The revalidation records are not
@@ -50,9 +51,9 @@ from typing import Any
 CAPABILITY = "software-analysis"
 LOCATION = "analysis"
 
-#: The kinds of anchored artefact: the four DEC-001 point 1 gives, and the three kinds
-#: of requirement DEC-002 point 1 adds.
-ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT = (
+#: The kinds of anchored artefact: the four DEC-001 point 1 gives, the three kinds of
+#: requirement DEC-002 point 1 adds, and the domain-model view DEC-004 adds.
+ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT, VIEW = (
     "actor",
     "term",
     "use-case",
@@ -60,9 +61,10 @@ ACTOR, TERM, USE_CASE, JOURNEY, QUALITY, FUNCTIONAL, CONSTRAINT = (
     "quality-requirement",
     "functional-requirement",
     "constraint",
+    "domain-model-view",
 )
 REQUIREMENTS = (QUALITY, FUNCTIONAL, CONSTRAINT)
-KINDS = (ACTOR, TERM, USE_CASE, JOURNEY, *REQUIREMENTS)
+KINDS = (ACTOR, TERM, VIEW, USE_CASE, JOURNEY, *REQUIREMENTS)
 
 #: The kinds kept as one collection file, an entry per artefact (DEC-001 point 2):
 #: the glossary. An actor is a document of its own, so its needs, in its front
@@ -77,6 +79,7 @@ PREFIX = {
     USE_CASE: "UC",
     JOURNEY: "JRN",
     **dict.fromkeys(REQUIREMENTS, "REQ"),
+    VIEW: "VIEW",
 }
 #: The kinds whose id is a number, `<PREFIX>-NNN`, which the stamp gives: a use case, a
 #: journey, and a requirement of each of the three kinds, which read their three places
@@ -93,6 +96,7 @@ NOUN = {
     QUALITY: "quality requirement",
     FUNCTIONAL: "functional requirement",
     CONSTRAINT: "constraint",
+    VIEW: "domain-model view",
 }
 
 #: How a requirement of any of the three kinds is named where its kind does not matter,
@@ -105,7 +109,31 @@ ID_SHAPE = {
     USE_CASE: "UC-NNN",
     JOURNEY: "JRN-NNN",
     **dict.fromkeys(REQUIREMENTS, "REQ-NNN"),
+    VIEW: "VIEW-<slug>",
 }
+
+#: The front-matter field DEC-004 point 2 gives a domain-model view: the terms whose
+#: concepts it explains, in the order of its sections. The stamp writes the view's term
+#: anchors from it, and each term's link to its section (point 7).
+EXPLAINS = "explains"
+
+#: The folder of the domain model's views inside an analysis (DEC-004 point 4), as the
+#: package declares its place. A term's link names a view's file under it.
+DOMAIN_MODEL = "domain-model"
+
+#: A domain-model view's file's name: a number, a hyphen and the slug its id is made of,
+#: such as `010-orders-and-payments.md`. The number gives the view's place in the domain
+#: model's order, compared as a number, and is no part of its id (DEC-004 point 4).
+_VIEW_NAME = re.compile(r"^(?P<number>[0-9]+)-(?P<slug>.+)\.md$")
+
+
+def view_name(path: str) -> tuple[int, str] | None:
+    """The number a domain-model view's file's name opens with, compared as a number, and
+    the slug after it: `(10, "orders-and-payments")` for `…/010-orders-and-payments.md`;
+    `None` for a name that opens with no number and a hyphen (DEC-004 point 4)."""
+    found = _VIEW_NAME.match(path.rsplit("/", 1)[-1])
+    return None if found is None else (int(found["number"]), found["slug"])
+
 
 #: The front-matter fields DEC-001 point 4 adds to what a use case and a journey name:
 #: a use case's other actors, and the use cases outside a journey that a step relies on.
@@ -233,6 +261,7 @@ def _folder(place: str) -> str:
 #: each holds. A test holds this table to the package.
 KIND_OF_PLACE = {
     "glossary.md": TERM,
+    "domain-model": VIEW,
     "use-case-model/actors": ACTOR,
     "use-case-model/use-cases": USE_CASE,
     "use-case-model/journeys": JOURNEY,
@@ -241,13 +270,14 @@ KIND_OF_PLACE = {
     "requirements/constraints": CONSTRAINT,
 }
 
-#: The same seven places one folder down, in a folder named after a component, where a
+#: The same eight places one folder down, in a folder named after a component, where a
 #: project keeps one analysis per component (DEC-001 point 2): a folder place is a glob of
 #: the folders below one folder of the location, every Markdown file beneath each. The
 #: places match both layouts, so a single analysis at the location's top stays in them. A
 #: test holds this table to the package too.
 NESTED_PLACES = {
     "*/glossary.md": TERM,
+    "*/domain-model/**": VIEW,
     "*/use-case-model/actors/**": ACTOR,
     "*/use-case-model/use-cases/**": USE_CASE,
     "*/use-case-model/journeys/**": JOURNEY,
