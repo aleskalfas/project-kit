@@ -1,0 +1,13 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  A domain-model view shows how its concepts move together, as DEC-004 points
+  2 and 3 now decide (#1847). After the class diagram, its opening holds a
+  flow: a Mermaid flowchart of the events and the state changes across the
+  group's concepts, with an `accTitle`, an `accDescr` and no styling. It names
+  no actor and no use case, and shows only what the view's sections state.
+  The opening's hint, which `pkit analysis new view` writes, asks for it, and
+  `analysis-author`'s view walkthrough shows one beside its class diagram. No
+  check reads a diagram, so nothing requires the flow.

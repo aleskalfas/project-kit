@@ -62,8 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-20T18:30:57Z
-          outcome: updated
+          at: 2026-10-20T21:11:20Z
+          outcome: unchanged
+          unchanged-because: The change adds a flow that restates only what a view's sections state. A view rests on the same terms and records as before, and anchors no code.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -106,9 +107,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-20T18:30:54Z
+          at: 2026-10-20T21:11:21Z
           outcome: unchanged
-          unchanged-because: DEC-004 point 3 gains where a view's reasons have their home, in the records it anchors. A section still explains its term's concept in the term's own sense, and its Why is a statement this rule reads like any other.
+          unchanged-because: The flow's labels are a Mermaid fence's labels, which this rule already judges as statements. The flow adds no fact a section does not state.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -145,9 +146,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
         revalidated:
-          at: 2026-10-20T18:30:52Z
+          at: 2026-10-20T21:11:17Z
           outcome: unchanged
-          unchanged-because: The change adds purpose first to DEC-004's points 2, 3 and 5. The order of the views in point 6, and their numbers in point 4, are as before, so a view still names only concepts of views numbered lower.
+          unchanged-because: The change adds a flow to a view's opening, and changes nothing of the views' order or their numbers. The flow's labels are diagram labels, which this rule already reads.
   RS-SAN-012:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
