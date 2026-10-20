@@ -642,6 +642,20 @@ TERM-point:
         at: 2026-10-20T01:37:46Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-process:
+  name: process
+  noun-forms: [processes]
+  status: active
+  definition: "declared course of one kind of subject through states, with a condition on each move, which a capability defines and the backbone's engine checks"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/process.py
+        record:
+          - COR-033
+          - COR-044
+          - COR-053#2
 TERM-project:
   name: project
   status: active
@@ -936,6 +950,19 @@ TERM-stamp:
         at: 2026-10-20T01:38:07Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-storyboard:
+  name: storyboard
+  noun-forms: [storyboards]
+  other-senses: [executable storyboard]
+  status: active
+  definition: "document that scripts a dialogue with a person, scenario by scenario, for the file that carries it out to follow, written before that file"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/storyboards.py
+        record:
+          - COR-016
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
@@ -1318,7 +1345,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 - **Data point, process and event:** the three kinds of connection point (COR-053 [point](#term-point--point) 2):
   - a [data point](#term-data-point--data-point) takes data in
-  - a process is offered for others to depend on
+  - a [process](#term-process--process) is offered for others to depend on
   - an event signals that a writing command finished
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision (COR-058 point 1). It shares only the word.
 - **Extension point:** COR-053's key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into (COR-053 point 3). A [rule](#term-rule--rule)'s extension point is a part of the rule that an inheriting [rule set](#term-rule-set--rule-set) may fill, and shares only the word (COR-051 point 3).
@@ -1573,6 +1600,19 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Revalidation point and deferral point:** commits that the [friction](#term-friction--friction) checks measure from (COR-050 points 3 and 4). They share only the word.
 - **Connection point:** a [component](#term-component--component)'s declared interface under a [role](#term-role--role) (COR-053 point 2). It shares only the word.
 
+## TERM-process — process
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#process).
+
+**Example:** project-management's `issue-lifecycle` process moves an issue through its states, and `pkit process status` says which state an issue is in, from a live check.
+
+**Distinctions:**
+
+- **Process definition:** the file that declares a process, `schemas/<id>.yaml` in its [capability](#term-capability--capability), addressed as `<capability>:<id>` (COR-033 P2).
+- **State machine:** the [backbone](#term-backbone--backbone)'s shape that each process binds to, which holds no discipline of its own (COR-033 P1).
+- **Process connection point:** the kind of [connection point](#term-connection-point--connection-point) through which a capability offers its process for other [components](#term-component--component) to depend on (COR-053 [point](#term-point--point) 2).
+- **Operating-system process:** a running program, such as the one a command starts. It shares only the word.
+
 ## TERM-project — project
 
 Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#project).
@@ -1799,6 +1839,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Skill:** the procedure a stamp pairs with. The skill chooses the slug and fills the body, and the stamp writes what it can compute (COR-005).
 - **Provenance stamp:** project-management's record of the [versions](#term-version--version) an issue or a [pull request](#term-pull-request--pull-request) was filed under (project-management DEC-041). It is no command.
 - **Seeding:** creates a missing declared seed path from its template (COR-059 [point](#term-point--point) 8). A stamp writes a new file when a person or an AI agent asks for one.
+
+## TERM-storyboard — storyboard
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#storyboard).
+
+**Example:** `pkit new agent project <name> --with-storyboard` writes `storyboard.md` beside the new [agent definition](#term-agent-definition--agent-definition), which lists it in `storyboards:` and follows its scenarios at run time.
+
+**Distinctions:**
+
+- **Executable storyboard:** the demo-recording [capability](#term-capability--capability)'s document, which runs to record a demo of a command line and still reads as a document (demo-recording DEC-003). It shares only the word.
+- **Skill:** a procedure an AI agent loads for a matching task. A storyboard scripts one dialogue, and no [adapter](#term-adapter--adapter) deploys it (COR-016).
+- **Judgement-driven dialogue:** a dialogue an AI agent improvises from its context, which needs no storyboard (COR-016).
 
 ## TERM-surface-change — surface change
 

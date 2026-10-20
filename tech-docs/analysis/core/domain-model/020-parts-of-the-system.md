@@ -8,6 +8,7 @@ explains:
   - TERM-component
   - TERM-skill
   - TERM-agent-definition
+  - TERM-storyboard
   - TERM-stamp
   - TERM-adapter
   - TERM-install
@@ -23,6 +24,7 @@ pkit:
         - COR-010
         - COR-013
         - COR-014
+        - COR-016
         - COR-017
         - COR-025
         - COR-028#2
@@ -35,10 +37,14 @@ pkit:
         - TERM-component
         - TERM-skill
         - TERM-agent-definition
+        - TERM-storyboard
         - TERM-stamp
         - TERM-adapter
         - TERM-install
         - TERM-project
+    revalidated:
+      at: 2026-10-20T22:56:37Z
+      outcome: updated
 ---
 
 # VIEW-parts-of-the-system — Parts of the system, and projects
@@ -50,7 +56,7 @@ The [backbone](../glossary.md#term-backbone--backbone) ships whole, at one versi
 ```mermaid
 classDiagram
   accTitle: Parts of the system, and projects
-  accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
+  accDescr: The system is made of the backbone and components, each with a version of its own. A component declares which backbone versions it works with. An adapter is a component that serves one harness and deploys skills and agent definitions there. A storyboard scripts the dialogue an agent definition follows. A stamp pairs with a skill. Install adds the backbone or a component to a repository. A project is a repository the system is installed into, holding the methodology's files.
   class System["System"]
   class Harness["Harness"]
   class Methodology["Methodology"]
@@ -63,6 +69,8 @@ classDiagram
   class AgentDefinition["Agent definition"]
   AgentDefinition : reads
   AgentDefinition : owns
+  class Storyboard["Storyboard"]
+  Storyboard : scenarios
   class Stamp["Stamp"]
   class Adapter["Adapter"]
   class Install["Install"]
@@ -76,6 +84,7 @@ classDiagram
   Adapter --> Harness : serves one
   Adapter ..> Skill : deploys
   Adapter ..> AgentDefinition : deploys
+  Storyboard ..> AgentDefinition : scripts the dialogue of
   Stamp -- Skill : pairs with
   Install ..> Backbone : adds
   Install ..> Component : adds
@@ -219,6 +228,33 @@ An agent definition is a document that sets one standing remit, with its boundar
 - Each path it manages has exactly one owning agent definition (COR-013 point 2).
 - What its front matter declares, its body cites, and the other way round (COR-013 point 3).
 - It cites the rules and documents it relies on, rather than copying them (COR-006).
+
+## Storyboard
+
+Defined in [TERM-storyboard](../glossary.md#term-storyboard--storyboard).
+
+**Why:** A dialogue that a tool holds with a person, turn by turn, is hard to get right inside the tool's own body (COR-016). Written first as a script, its ambiguities surface before anything is built, and its edge cases become scenarios of their own (COR-016).
+
+A storyboard is a document that scripts a dialogue with a person, scenario by scenario, before the file that carries it out is written. That file then reads it and follows it. Today that file is an [agent definition](../glossary.md#term-agent-definition--agent-definition), and its storyboard lies beside it, as `storyboard.md`.
+
+**Attributes:**
+
+- its framing: the scenarios it covers, the state they work on and where each one starts (COR-016)
+- its tone: the norms each turn of its scenarios keeps, such as one thought a turn (COR-016)
+- its scenarios, each with its trigger, its preconditions, a walkthrough of the dialogue and what happens behind the scenes (COR-016)
+- `consumers:`, the agent definitions that follow it (COR-016)
+
+**Relations:**
+
+- It lies beside the agent definition that follows it, which lists it in `storyboards:`, so each names the other (COR-016).
+- No [adapter](../glossary.md#term-adapter--adapter) deploys it. The agent definition reads it where it lies (COR-016).
+- The `storyboard-author` [skill](../glossary.md#term-skill--skill) walks its writing, and a [stamp](../glossary.md#term-stamp--stamp), `pkit new storyboard`, writes it.
+
+**States:** None.
+
+**Always true:**
+
+- Nothing requires one. A storyboard is recommended for a dialogue that follows a script, and never for one an AI agent improvises (COR-016).
 
 ## Stamp
 
