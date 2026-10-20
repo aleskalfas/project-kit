@@ -7,6 +7,8 @@ other-actors:
   - ACT-ai-agent
   - ACT-ci-pipeline
   - ACT-merge-authoriser
+after:
+  - [UC-014]
 pkit:
   friction:
     anchors:
@@ -48,7 +50,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the change check against the pull request's target, named once for every check (COR-054 point 3). It is told when a shallow clone cut the history the check reads.
 - **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated artefact, the sentence the change's author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up (COR-050 point 3).
 
-**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

@@ -6,6 +6,8 @@ actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+after:
+  - [UC-014]
 pkit:
   friction:
     anchors:
@@ -39,7 +41,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the migration check on every pull request, with no person to answer. The check fails while a rename or a removal it finds has no migration.
 - **AI agent** (`ACT-ai-agent`): writes the migration for the maintainer through the `migration-author` skill, which pairs with the stamp of step 2.
 
-**Preconditions:** The maintainer develops the backbone in the methodology's source repository.
+**Preconditions:** **From UC-014:** The maintainer develops the backbone in the methodology's source repository.
 
 **Assumptions:**
 

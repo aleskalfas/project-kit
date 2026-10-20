@@ -5,6 +5,8 @@ status: active
 actor: ACT-adopter
 other-actors:
   - ACT-ci-pipeline
+after:
+  - [UC-014]
 pkit:
   friction:
     anchors:
@@ -40,7 +42,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to answer, and gates the merge on the exit status. It names the base once, for every check (COR-054 point 3).
 
-**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

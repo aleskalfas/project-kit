@@ -5,6 +5,8 @@ status: active
 actor: ACT-developer
 other-actors:
   - ACT-ci-pipeline
+after:
+  - [UC-014]
 pkit:
   friction:
     anchors:
@@ -35,10 +37,11 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the changeset guard on the pull request with no person to answer. It reads the `skip-changeset` label as the guard's escape hatch.
 
-**Preconditions:** The project declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
+**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 
+- The project declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
 - Surface is a person's judgement (PRJ-002 D2). The guard reads only paths, so it can flag a change that moves no surface, or miss one that does (`release.py`).
 - The change edits no version number, such as `.pkit/VERSION` or a component's `version`, since only the release step writes them (PRJ-002 D1).
 

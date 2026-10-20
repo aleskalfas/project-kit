@@ -6,6 +6,7 @@ actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ci-pipeline
 after:
+  - [UC-014]
   - [UC-008, environment]
 pkit:
   friction:
@@ -43,7 +44,10 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): opens the release pull request. Once the release pull request lands, the pipeline tags the release commit, with no person there to confirm the push. No step of the CI pipeline's workflows merges a release pull request, so someone decides that each release lands (`release-pr.yml`).
 
-**Preconditions:** **From UC-008, or Environment:** The default branch records the backbone's current version in `.pkit/VERSION`. The last release wrote it there, or, before the first release, the source repository held it (PRJ-002 D3).
+**Preconditions:**
+
+- **From UC-014:** The methodology's source repository runs the system as written, so its release step runs the code it releases.
+- **From UC-008, or Environment:** The default branch records the backbone's current version in `.pkit/VERSION`. The last release wrote it there, or, before the first release, the source repository held it (PRJ-002 D3).
 
 **Assumptions:**
 

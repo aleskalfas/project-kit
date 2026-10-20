@@ -39,12 +39,12 @@ pkit:
 
 **Preconditions:**
 
-- The component's repository declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
-- Changesets naming the component wait there on the default branch, each declared as UC-003 describes and landed with its change.
-- **From UC-009:** The component's `package.yaml` gives its `version` and a `requires_backbone` range. The component's last release wrote them, or its author did when packaging it.
+- Changesets naming the component wait under `.changes/unreleased/` on the default branch, each declared as UC-003 describes and landed with its change.
+- **From UC-009, UC-015 or UC-019:** The component's `package.yaml` gives its `version` and a `requires_backbone` range. The component's last release wrote them, or its author did when packaging it as a capability or writing it as an adapter.
 
 **Assumptions:**
 
+- The component's repository declares, in changesets under `.changes/unreleased/`, what each change means for its release step, as project-kit does (PRJ-002 D1).
 - The author has run the component on the backbone the repository carries. The new version claims that the component works with that backbone, and the author owns that claim (COR-041).
 
 **Trigger:** The component author decides to release what the component's changesets declare.
