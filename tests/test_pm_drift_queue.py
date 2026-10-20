@@ -248,6 +248,14 @@ def test_what_waits_is_each_proposed_or_held_artefact() -> None:
     assert dq.waiting(dq.empty_index()) == 0
 
 
+def test_an_answered_question_waits_for_the_next_run_not_for_the_person() -> None:
+    """The person answered it (`answer-question`), so the count leaves it out
+    until the next run gives the fixer the answer (#1747)."""
+    index = _index("held", "held", "proposed")
+    index["artefacts"]["docs/0.md"]["answer"] = "Yes, it was renamed on purpose."
+    assert dq.waiting(index) == 2
+
+
 @pytest.mark.parametrize(
     ("count", "line"),
     [
