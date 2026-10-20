@@ -32,7 +32,7 @@ only the tests marked `answers`.
   the landing.
 
 **The full suite runs in parallel.** `scripts/check.sh` — the one command the
-pre-push hook and CI run, with no arguments in both — runs it in
+pre-push hook and CI's full run call, with no arguments in both — runs it in
 [pytest-xdist](https://pytest-xdist.readthedocs.io/) workers, `-n auto` (one per
 CPU), and then the tests marked `serial` on their own, in one process, in the
 same step. `PKIT_TEST_WORKERS` sets the number of workers; `0` runs the whole
