@@ -70,13 +70,28 @@ classDiagram
   Harness ..> OperationalRule : loads
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How a choice comes to bind work
+  accDescr: A choice among alternatives is written as a proposed decision record. Once accepted in review, it passes the acceptance gate, so work may build on it, and a rule's origin may cite it. A rule passes the gate once it is accepted too. Decision records keep the reasons for operational rules, which the harness's include loads into each session, where work is held to them.
+  C([A choice among alternatives]) --> P[Decision record: proposed]
+  P -->|accepted in review| A[Decision record: accepted]
+  A --> G{Acceptance gate}
+  G -->|may build on| W[Work]
+  A -->|cited by the origin of| R[Rule]
+  R -->|once accepted| G
+  A -->|keeps the reasons for| O[Operational rule]
+  O -->|loaded into| S[Harness session]
+  S -->|work held to it| W
+```
+
 ## System
 
 Defined in [TERM-system](../glossary.md#term-system--system).
 
 **Why:** A way of working passes between people and repositories, and grows, only once tooling carries it (COR-007). Without such tooling, it stays the folklore of those who began it (COR-007).
 
-The system is the software this analysis describes: the one you set up on a machine, run and extend. The analysis calls it *the system*, and keeps the product's name, pkit, for prose about the product and for commands.
+The system is the software this analysis describes: the one you set up on a machine, run and extend.
 
 **Attributes:** None.
 
@@ -88,6 +103,8 @@ The system is the software this analysis describes: the one you set up on a mach
 **States:** None.
 
 **Always true:** None.
+
+**Note:** The analysis calls this software *the system*, and keeps the product's name, pkit, for prose about the product and for commands.
 
 ## Harness
 

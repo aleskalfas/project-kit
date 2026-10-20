@@ -43,9 +43,9 @@ pkit:
 
 # VIEW-artefacts-and-friction — Artefacts and friction
 
-A document is true only against something, such as the code it explains or a decision it applies (COR-050). When that changes and the document does not, it goes stale, and a review of the edit seldom sees it (COR-050). Rules need the same tracking, and must reach only the documents meant for them (COR-051, COR-056).
+A document is true only against something, such as the code it explains or a decision it applies (COR-050). When that changes and the document does not, it goes stale, and a review of the edit seldom sees it (COR-050). Rules need the same tracking, and must reach only the [artefacts](../glossary.md#term-artefact--artefact) meant for them (COR-051, COR-056).
 
-An [artefact](../glossary.md#term-artefact--artefact) in a [place](../glossary.md#term-place--place) declares its anchors, the things that make it true. When one of them changes, the artefact has [friction](../glossary.md#term-friction--friction) until an [answer](../glossary.md#term-answer--answer) stands for the edit. The [change check](../glossary.md#term-change-check--change-check) finds the friction a [change](../glossary.md#term-change--change) brings, and the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) reports the [debt](../glossary.md#term-debt--debt) left on the [default branch](../glossary.md#term-default-branch--default-branch).
+An artefact in a [place](../glossary.md#term-place--place) declares its anchors, the things that make it true. When one of them changes, the artefact has [friction](../glossary.md#term-friction--friction) until an [answer](../glossary.md#term-answer--answer) stands for the edit. The [change check](../glossary.md#term-change-check--change-check) finds the friction a [change](../glossary.md#term-change--change) brings, and the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) reports the [debt](../glossary.md#term-debt--debt) left on the [default branch](../glossary.md#term-default-branch--default-branch).
 
 [Rule sets](../glossary.md#term-rule-set--rule-set) hold the rules artefacts must satisfy, and select the artefacts their rules bind on, by path or by [artefact type](../glossary.md#term-artefact-type--artefact-type). A [component](../glossary.md#term-component--component)'s [package metadata](../glossary.md#term-package-metadata--package-metadata) declares its places and its artefact types.
 
@@ -90,6 +90,19 @@ classDiagram
   PackageMetadata --> ArtefactType : declares
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How an edit leaves an artefact behind, and how it is answered
+  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. The whole-repository check reports both kinds of debt, and never fails.
+  E([A change edits what an anchor names, or the list of anchors]) --> F[Friction on the artefact]
+  F -->|the change check finds it| A{Answer in the change?}
+  A -->|revalidation, updated or unchanged| CL[Friction cleared]
+  A -->|deferral| DF["Friction cleared, deferred debt on the default branch"]
+  A -->|none, and the change lands| SD[Stale debt on the default branch]
+  DF -->|reported by| W["Whole-repository check, which never fails"]
+  SD -->|reported by| W
+```
+
 ## Anchor
 
 Defined in [TERM-anchor](../glossary.md#term-anchor--anchor).
@@ -125,7 +138,7 @@ Defined in [TERM-place](../glossary.md#term-place--place).
 
 **Why:** Many files carry front matter that has nothing to do with anchors (COR-050 [point](../glossary.md#term-point--point) 1). The [backbone](../glossary.md#term-backbone--backbone) looks only in declared places, so it never misreads such a file (COR-050 point 1). The owner of a place also knows what its files are, and can declare that there (COR-056).
 
-A place is a path or glob that the [project](../glossary.md#term-project--project) or a [component](../glossary.md#term-component--component) declares, within which the backbone looks for documents that carry anchors. project-kit lists `.pkit/cli/README.md` among its places, so the backbone reads that page's anchors.
+A place is a path or glob that the [project](../glossary.md#term-project--project) or a [component](../glossary.md#term-component--component) declares, within which the backbone looks for [artefacts](../glossary.md#term-artefact--artefact) that carry anchors. project-kit lists `.pkit/cli/README.md` among its places, so the backbone reads that page's anchors.
 
 **Attributes:**
 
@@ -141,20 +154,20 @@ A place is a path or glob that the [project](../glossary.md#term-project--projec
 
 **Always true:**
 
-- The backbone looks for [artefacts](../glossary.md#term-artefact--artefact) only in places (COR-050 point 1).
+- The backbone looks for artefacts only in places (COR-050 point 1).
 - A folder of [synced copies](../glossary.md#term-synced-copy--synced-copy) is never a place, or each [sync](../glossary.md#term-sync--sync) would read as [friction](../glossary.md#term-friction--friction) (COR-050 point 14).
 
 ## Artefact
 
 Defined in [TERM-artefact](../glossary.md#term-artefact--artefact).
 
-**Why:** Descriptions of what the [system](../glossary.md#term-system--system) must do and documentation both go stale when what they rest on changes (COR-050). Parts that must not depend on each other keep them, so the mechanism that finds staleness is shared (COR-050). An artefact is the unit it works on, and carries its own anchors and answers (COR-050 [point](../glossary.md#term-point--point) 1).
+**Why:** Descriptions of what the [system](../glossary.md#term-system--system) must do and documentation both go stale when what they rest on changes (COR-050). [Components](../glossary.md#term-component--component) that must not depend on each other keep them, so the mechanism that finds staleness is shared (COR-050). An artefact is the unit it works on, and carries its own anchors and answers (COR-050 [point](../glossary.md#term-point--point) 1).
 
 An artefact is a document with front matter, or a keyed entry of a collection file, in a declared [place](../glossary.md#term-place--place). It carries its own anchors. Each entry of this analysis's glossary is one.
 
 **Attributes:**
 
-- its own fields, such as its id and its status, which belong to the [component](../glossary.md#term-component--component) that defines it (COR-050 point 1)
+- its own fields, such as its id and its status, which belong to the component that defines it (COR-050 point 1)
 - its `friction` block, which holds its anchors and its answers (COR-050 point 1)
 - one [artefact type](../glossary.md#term-artefact-type--artefact-type), or none (COR-056 point 1)
 
@@ -330,7 +343,7 @@ Defined in [TERM-artefact-type](../glossary.md#term-artefact-type--artefact-type
 
 **Why:** Selecting [artefacts](../glossary.md#term-artefact--artefact) by path alone cannot tell apart the different sorts one folder holds (COR-056). Inferring a sort from fields fails without a word, so the owner of a [place](../glossary.md#term-place--place) declares it there (COR-056).
 
-An artefact type is the declared name of what a document or a collection entry is. The place holding its file gives it, save for a [rule](../glossary.md#term-rule--rule), which always takes `backbone:rule`, and a type that a kind field gates. A [rule set](../glossary.md#term-rule-set--rule-set)'s scope may select by it. The glossary's place gives each entry the type `software-analysis:term`.
+An artefact type is the declared name of what a document or a collection entry is. The place holding the document's or the entry's file gives the type. The exceptions are a [rule](../glossary.md#term-rule--rule), which always takes `backbone:rule`, and a type that a kind field gates. A [rule set](../glossary.md#term-rule-set--rule-set)'s scope may select by artefact type. The glossary's place gives each entry the type `software-analysis:term`.
 
 **Attributes:**
 

@@ -36,9 +36,9 @@ pkit:
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
 
-Some disciplines suit only some projects, yet forcing them on every [project](../glossary.md#term-project--project) is wrong, and copying them into each loses their reuse (COR-017). A part can also fail without a word when what it builds on changes incompatibly (COR-030). Other parts must help each other without either depending on the other (COR-052, COR-053). Every project also needs fixed homes, with declared layouts, for its kinds of content (COR-011).
+Some disciplines suit only some projects, yet forcing them on every [project](../glossary.md#term-project--project) is wrong, and copying them into each loses their reuse (COR-017). A [component](../glossary.md#term-component--component) can also fail without a word when what it builds on changes incompatibly (COR-030). Other components must help each other without either depending on the other (COR-052, COR-053). Every project also needs fixed homes, with declared layouts, for its kinds of content (COR-011).
 
-A [capability](../glossary.md#term-capability--capability) packages one discipline, which each project chooses to [install](../glossary.md#term-install--install) beside the [backbone](../glossary.md#term-backbone--backbone) and its [adapters](../glossary.md#term-adapter--adapter). A [component](../glossary.md#term-component--component)'s ranges say which [versions](../glossary.md#term-version--version) of what it builds on it works with. [Areas](../glossary.md#term-area--area) are the homes every project holds, with no install. Capabilities work together through [roles](../glossary.md#term-role--role) and [connection points](../glossary.md#term-connection-point--connection-point) without naming each other, and a [data point](../glossary.md#term-data-point--data-point) is the kind that takes data in.
+A [capability](../glossary.md#term-capability--capability) packages one discipline, which each project chooses to [install](../glossary.md#term-install--install) beside the [backbone](../glossary.md#term-backbone--backbone) and its [adapters](../glossary.md#term-adapter--adapter). A component's ranges say which [versions](../glossary.md#term-version--version) of what it builds on it works with. [Areas](../glossary.md#term-area--area) are the homes every project holds, with no install. Capabilities work together through [roles](../glossary.md#term-role--role) and [connection points](../glossary.md#term-connection-point--connection-point) without naming each other, and a [data point](../glossary.md#term-data-point--data-point) is the kind that takes data in.
 
 ```mermaid
 classDiagram
@@ -73,6 +73,23 @@ classDiagram
   DataPoint --|> ConnectionPoint
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How a capability comes to connect
+  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components connect to each at a version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
+  I([A capability is to be installed]) --> K{Its ranges admit what it depends on?}
+  K -->|no| N[Install refuses]
+  K -->|yes| C[Capability installed]
+  C -->|provides| R[Role]
+  R -->|two capabilities provide it| E[Error until the project selects one]
+  E -->|the project selects one| R
+  R -->|its provider defines| P[Connection point]
+  O[Other component] -->|connects at an equal version, which the backbone checks| P
+  P -->|the kind that takes data in| D[Data point]
+  F["Project file, installed capabilities, the default"] -->|fill| D
+  D -->|the backbone resolves it, a project file over a capability over the default| H[What the data point holds]
+```
+
 ## Capability
 
 Defined in [TERM-capability](../glossary.md#term-capability--capability).
@@ -105,9 +122,9 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 
 Defined in [TERM-range](../glossary.md#term-range--range).
 
-**Why:** A part whose dependency changed in a way that breaks it fails without a word when it runs (COR-030). A range turns that into a refusal when a part is installed, upgraded or removed (COR-030).
+**Why:** A [component](../glossary.md#term-component--component) whose dependency changed in a way that breaks it fails without a word when it runs (COR-030). A range turns that into a refusal when the [backbone](../glossary.md#term-backbone--backbone) or a component is installed, upgraded or removed (COR-030).
 
-A range is the set of [versions](../glossary.md#term-version--version) a [component](../glossary.md#term-component--component) declares it works with: of the [backbone](../glossary.md#term-backbone--backbone), or of another [capability](../glossary.md#term-capability--capability). It runs from a floor to any upper bound, as in `>=1.149.0,<2.0.0`.
+A range is the set of [versions](../glossary.md#term-version--version) a component declares it works with: of the backbone, or of another [capability](../glossary.md#term-capability--capability). It runs from a floor to any upper bound, as in `>=1.149.0,<2.0.0`.
 
 **Attributes:**
 

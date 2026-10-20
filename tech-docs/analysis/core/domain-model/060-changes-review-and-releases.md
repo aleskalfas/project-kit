@@ -87,6 +87,21 @@ classDiagram
   Report ..> Distribution : filed on the repository of
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How a change lands, and a release follows
+  accDescr: A change declares each surface change it makes in a changeset, which is pending from then on. Each push gives the change a new head, and a check compares that head with its base, the default branch unless a run names another. Reviewers report findings on the change, and leave each fix to its author. Merged through a pull request, the change lands on the default branch as one squash commit. The release step consumes every pending changeset there, and its writes land on the default branch through a pull request from a release branch. When it moves the backbone, it makes a release.
+  C([Change, on its branch]) -->|declares each surface change in| CS[Changeset: pending]
+  C -->|each push gives it| H[New head]
+  H -->|a check compares it with| B["Base, the default branch unless a run names another"]
+  C -->|reviewers report on it| F[Findings]
+  F -->|each fix left to the author| C
+  C -->|merged through a pull request, as one squash commit| D[Default branch]
+  CS -->|once on the default branch, consumed by| RS[Release step]
+  RS -->|writes the new versions, through a pull request from a release branch| D
+  RS -->|when it moves the backbone| RL([Release])
+```
+
 ## Change
 
 Defined in [TERM-change](../glossary.md#term-change--change).

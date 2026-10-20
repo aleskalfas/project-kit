@@ -40,7 +40,7 @@ pkit:
 
 A [project](../glossary.md#term-project--project) adds content of its own, which the [methodology](../glossary.md#term-methodology--methodology) must never take away (COR-001). Yet some of its files need entries the methodology ships (COR-002). Overwriting such a file destroys the project's entries, and writing it only once misses later ones (COR-002). Facts that no part owns, such as the project's name, must not be guessed either (COR-048).
 
-[Project-owned content](../glossary.md#term-project-owned-content--project-owned-content) is the part of a project the methodology does not own. [Seeding](../glossary.md#term-seeding--seeding) creates a missing file once, and [merge delivery](../glossary.md#term-merge-delivery--merge-delivery) adds the methodology's entries to one, each with the [consent](../glossary.md#term-consent--consent) its record sets. The [version pin](../glossary.md#term-version-pin--version-pin) and the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration) are such files, and the backbone configuration declares the [documentation roots](../glossary.md#term-documentation-root--documentation-root). [Validation](../glossary.md#term-validation--validation) checks a project's own files against the invariants its records own.
+[Project-owned content](../glossary.md#term-project-owned-content--project-owned-content) is the part of a project the methodology does not own. [Seeding](../glossary.md#term-seeding--seeding) creates a missing file once, and [merge delivery](../glossary.md#term-merge-delivery--merge-delivery) adds the methodology's entries to one, each with the [consent](../glossary.md#term-consent--consent) its record sets. The [version pin](../glossary.md#term-version-pin--version-pin) and the [backbone configuration](../glossary.md#term-backbone-configuration--backbone-configuration) are such files, and the backbone configuration declares the [documentation roots](../glossary.md#term-documentation-root--documentation-root). [Validation](../glossary.md#term-validation--validation) checks a project's own files against the invariants the project's records own.
 
 ```mermaid
 classDiagram
@@ -73,6 +73,24 @@ classDiagram
   Validation ..> ProjectOwnedContent : checks
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How a project's own files come to be written
+  accDescr: The first install, and each transition of the backbone, seed each missing seed path, which is project-owned content from then on. A transition's chosen target is the one consent for every migration it runs, and each migration writes within what the records owning the content allow. The transition writes the version pin last, after the content and the migrations. Sync runs only merge delivery's tier that asks nothing, which adds the methodology's entries. Merge delivery's tier that asks, and the configuration commands, write only with consent. Where nobody can reply, nothing is written and the default applies. Validation checks the project's own files as they stand.
+  I([First install]) -->|seeding creates each missing seed path| C[Project-owned content]
+  T(["Transition of the backbone, by pkit upgrade"]) -->|seeding creates each missing seed path| C
+  T -->|its chosen target is the one consent for| M[Migrations]
+  M -->|write within what the records owning the content allow| C
+  T -->|writes it last, after the content and the migrations| P["Version pin, a project-owned file"]
+  S([Sync]) -->|runs only| D1["Merge delivery, tier that asks nothing"]
+  D1 -->|adds the methodology's entries| C
+  D2["Merge delivery, tier that asks"] --> Q{Consent}
+  CC[Configuration commands] --> Q
+  Q -->|given| C
+  Q -->|nobody can reply| N["Nothing written, the default applies"]
+  C -->|checked as it stands| V[Validation]
+```
+
 ## Project-owned content
 
 Defined in [TERM-project-owned-content](../glossary.md#term-project-owned-content--project-owned-content).
@@ -88,7 +106,11 @@ Project-owned content is the files of a project that the methodology does not ow
 **Relations:**
 
 - It sits beside the [synced copies](../glossary.md#term-synced-copy--synced-copy), and a project adds to it rather than edit a synced copy (COR-003).
-- Its writers include [seeding](../glossary.md#term-seeding--seeding), [merge delivery](../glossary.md#term-merge-delivery--merge-delivery), a [migration](../glossary.md#term-migration--migration) within what its records allow, and the configuration commands (COR-001, COR-048 [point](../glossary.md#term-point--point) 5).
+- Its writers include these (COR-001, COR-048 [point](../glossary.md#term-point--point) 5):
+  - [seeding](../glossary.md#term-seeding--seeding)
+  - [merge delivery](../glossary.md#term-merge-delivery--merge-delivery)
+  - a [migration](../glossary.md#term-migration--migration), within what the records owning the content allow
+  - the configuration commands
 
 **States:** None.
 
@@ -153,7 +175,13 @@ Defined in [TERM-consent](../glossary.md#term-consent--consent).
 
 **Why:** Some writes do what the person behind them might not want, and could not easily see or undo (COR-049). Such a write needs that person's agreement, given explicitly and never taken silently (COR-048, COR-059).
 
-Consent is a person's agreement to a write. The person gives it by a reply when asked, by an explicit confirmation flag, or by running a command that a record says carries it. Choosing the target of `pkit upgrade` is one consent for every [migration](../glossary.md#term-migration--migration) the transition runs.
+Consent is a person's agreement to a write. The person gives it in one of these ways:
+
+- by a reply when asked
+- by an explicit confirmation flag
+- by running a command that a record says carries it
+
+Choosing the target of `pkit upgrade` is one consent for every [migration](../glossary.md#term-migration--migration) the transition runs.
 
 **Attributes:**
 
@@ -178,7 +206,7 @@ Defined in [TERM-version-pin](../glossary.md#term-version-pin--version-pin).
 
 **Why:** One machine may serve several projects held at different [versions](../glossary.md#term-version--version), under one installed [system](../glossary.md#term-system--system) (ADR-049). Without a pin, a newer system can run over older content that was never migrated to it (ADR-064).
 
-A version pin is a project-owned file, `.pkit/version-pin`, that names a [release](../glossary.md#term-release--release). While that release can be fetched, its system runs the [project](../glossary.md#term-project--project)'s commands instead of the installed one.
+A version pin is a project-owned file, `.pkit/version-pin`, that names a [release](../glossary.md#term-release--release). While that release can be fetched, the system at that release runs the [project](../glossary.md#term-project--project)'s commands instead of the installed one.
 
 **Attributes:**
 
@@ -214,7 +242,7 @@ Defined in [TERM-validation](../glossary.md#term-validation--validation).
 
 **Why:** Many records say that a defect "fails validation", and that must mean one thing in each (COR-055). One check that installed [components](../glossary.md#term-component--component) join forgets nothing they register (COR-055).
 
-Validation checks a [project](../glossary.md#term-project--project)'s own files against the invariants its records own. Each installed component may join it with a validator. It fails on one severity alone, so `pkit validate` fails on a dangling deferral, and only warns that a [documentation root](../glossary.md#term-documentation-root--documentation-root) does not exist yet.
+Validation checks a [project](../glossary.md#term-project--project)'s own files against the invariants the project's records own. Each installed component may join it with a validator. It fails on one severity alone, so `pkit validate` fails on a dangling deferral, and only warns that a [documentation root](../glossary.md#term-documentation-root--documentation-root) does not exist yet.
 
 **Attributes:**
 

@@ -83,6 +83,19 @@ classDiagram
   Project o-- Methodology : holds the files of
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How the system enters a repository
+  accDescr: The first install, pkit init, adds the backbone to a repository, which is a project from then on. Install then adds components to the project. Before it writes, it checks that the component exists in its source, works with the backbone and collides by name with nothing. On a collision, a person chooses for each file whether to override it, skip it or look at it first. An installed adapter deploys skills and agent definitions where its harness looks for them, and uninstall removes a component again.
+  R([Repository]) -->|the first install adds the backbone| P[Project]
+  P -->|install adds a component| K{Install checks before it writes}
+  K -->|it exists, works with the backbone, no name collides| C[Component installed]
+  K -->|a name collides| X["Per file: override, skip or look first"]
+  X --> C
+  C -->|uninstall removes it| P
+  C -->|an adapter deploys| D["Skills and agent definitions, where its harness looks"]
+```
+
 ## Version
 
 Defined in [TERM-version](../glossary.md#term-version--version).

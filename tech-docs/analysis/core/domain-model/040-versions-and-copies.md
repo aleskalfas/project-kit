@@ -82,6 +82,21 @@ classDiagram
   Distribution --> SourceRepository : ships from one
 ```
 
+```mermaid
+flowchart LR
+  accTitle: How a release reaches a project, and sync repairs it
+  accDescr: A distribution ships each release from its source repository. A transition of the backbone to a release records that target first, and the backbone's recorded version is incomplete. The transition runs each pending migration, and writes the release's content by propagation as synced copies. Once every migration has run, it records its completion, and the recorded version is complete. A migration that fails leaves it incomplete, and the next transition of the backbone finishes it. Over an incomplete transition, sync stops and writes nothing. At complete recorded versions, it runs propagation again and writes the synced copies anew, moving no version.
+  SR[Source repository] -->|a distribution ships from it| RL([Release])
+  RL -->|target of| T[Transition of the backbone]
+  T -->|records its target first| RI["Backbone's recorded version: incomplete"]
+  RI -->|the transition runs each pending migration| M[Migrations]
+  RI -->|the transition writes its target by propagation| SC[Synced copies]
+  M -->|every one has run and the completion is recorded| RC["Backbone's recorded version: complete"]
+  M -->|one fails and the next transition finishes it| RI
+  RI -->|sync stops and writes nothing| RI
+  RC -->|sync runs propagation at the recorded versions| SC
+```
+
 ## Manifest
 
 Defined in [TERM-manifest](../glossary.md#term-manifest--manifest).
