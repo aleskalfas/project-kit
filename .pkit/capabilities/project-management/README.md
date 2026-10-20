@@ -1251,7 +1251,7 @@ It prints each question a fixer held, with the command that answers it, and list
 
 It exits 0 when each was applied, 1 when it refused and wrote nothing, and 3 when some were applied and some were not, each line saying which and why.
 
-**Refusing.** `refuse-proposals` remembers your refusal in the queue against the artefact's friction, so `fix-drift` dispatches it again only once its friction changes. It goes with the queue, which is the clone's. Its lasting form is a deferral, which you may give instead as your own answer, with `pkit friction defer`.
+**Refusing.** `refuse-proposals` remembers your refusal in the queue against the artefact's friction, so `fix-drift` dispatches it again only once its friction changes, or when you pass `--force`. It goes with the queue, which is the clone's. Its lasting form is a deferral, which you may give instead as your own answer, with `pkit friction defer`.
 
 **Answering a question.** `answer-question` records your answer and who gave it, `--by`, else `git config user.name`. While the artefact's friction stays the one the question was asked on, the next `fix-drift` quotes both in the fixer's brief, as data. An answered question no longer counts in `land-work`'s line.
 
