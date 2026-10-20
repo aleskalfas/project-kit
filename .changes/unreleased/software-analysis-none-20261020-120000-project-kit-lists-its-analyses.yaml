@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. project-kit's own settings for the capability list its two
+  analyses, the core's and software-engineering's (#1826). Only the
+  project-owned settings file changes, and nothing the capability ships
+  changes.
