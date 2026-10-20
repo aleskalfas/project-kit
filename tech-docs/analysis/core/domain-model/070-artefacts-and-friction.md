@@ -343,7 +343,9 @@ Defined in [TERM-artefact-type](../glossary.md#term-artefact-type--artefact-type
 
 **Why:** Selecting [artefacts](../glossary.md#term-artefact--artefact) by path alone cannot tell apart the different sorts one folder holds (COR-056). Inferring a sort from fields fails without a word, so the owner of a [place](../glossary.md#term-place--place) declares it there (COR-056).
 
-An artefact type is the declared name of what a document or a collection entry is. The place holding the document's or the entry's file gives the type. The exceptions are a [rule](../glossary.md#term-rule--rule), which always takes `backbone:rule`, and a type that a kind field gates. A [rule set](../glossary.md#term-rule-set--rule-set)'s scope may select by artefact type. The glossary's place gives each entry the type `software-analysis:term`.
+An artefact type is the declared name of what a document or a collection entry is. The place holding the document's or the entry's file gives the type. The exceptions are a [rule](../glossary.md#term-rule--rule), which always takes `backbone:rule`, and a type that a kind field gates.
+
+A [rule set](../glossary.md#term-rule-set--rule-set)'s scope may select by artefact type. The glossary's place gives each entry the type `software-analysis:term`.
 
 **Attributes:**
 
