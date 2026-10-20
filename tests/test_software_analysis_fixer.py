@@ -14,7 +14,13 @@ software-analysis DEC-001 points 5 and 8; project-management DEC-056 points 1, 3
   entry passes, and the same declaration over an agent that holds Edit starts no
   fixer;
 - the body and the storyboard: the brief's fields, the answer's fields, and the
-  result line's three forms, which the storyboard's run follows.
+  result line's three forms and its `none` reasons, read by the grammar of
+  project-management's run contract (`fixer_lines`, #1801), which the storyboard's
+  run follows in lines the contract counts;
+- intent from the brief's pull request (#1801): the body takes the text the brief
+  quotes as evidence, passed to `pkit analysis propose` with the pull request's URL
+  as its source, and the storyboard's run proposes from it only words the brief
+  holds.
 
 The adopter's copy of project-management's validator runs under this interpreter,
 and the `pkit` it reads through is the real CLI (`pkit_on_path`), so no test
@@ -36,6 +42,7 @@ import pytest
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
+from tests import fixer_lines
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parent.parent
@@ -76,13 +83,7 @@ RUN_SECTION = "## When a command starts you"
 #: The answer's fields, in the order the body lists them.
 ANSWER_FIELDS = ("artefact", "outcome", "justification", "sentence", "keep", "diff", "first")
 
-#: The result line's three forms (DEC-056 point 3), as the agent's body gives its side of
-#: them until project-management states them in full.
-LINE = re.compile(
-    r"^Fixer result \(analysis-resolver\): "
-    r"(?:(?P<proposed>proposed) `(?P<artefact>[^`]+)` in `(?P<file>[^`]+/answer\.json)`"
-    r"|(?P<state>held|none) `(?P<other>[^`]+)`: (?P<text>\S.*))$"
-)
+SA_README = SA / "README.md"
 
 
 def _yaml(path: Path) -> Any:
@@ -265,16 +266,36 @@ def test_the_body_says_what_a_command_s_run_takes_and_returns() -> None:
 
     lines = section.split("**The result lines.**", 1)[1]
     assert "No other line of your output starts with `Fixer result (`." in lines
-    block = lines.split("```text\n", 1)[1].split("```", 1)[0]
-    forms = [line for line in block.splitlines() if line]
-    assert [f.split("): ", 1)[1].split(" ", 1)[0] for f in forms] == ["proposed", "held", "none"]
-    for form in forms:  # each form, its placeholders filled, is a line the command reads
-        filled = (
-            form.replace("<artefact>", "tech-docs/analysis/glossary.md#TERM-run")
-            .replace("<the question>", "Was it meant?")
-            .replace("<the reason>", "It is not stale at the commit.")
-        )
-        assert LINE.match(filled), form
+    forms = _block(lines)
+    assert len(forms) == len(fixer_lines.forms())
+    values = {
+        "<artefact>": "tech-docs/analysis/glossary.md#TERM-run",
+        "<the question>": "Was it meant?",
+        "<the reason in words>": "It is not stale at the commit.",
+    }
+    for code in fixer_lines.reasons():  # each form, filled, is a line the contract reads
+        filled = [fixer_lines.fill(form, {**values, "<reason>": code}) for form in forms]
+        results = [fixer_lines.read(line, RESOLVER) for line in filled]
+        assert [r.state if r else None for r in results] == ["proposed", "held", "none"], filled
+        assert results[2] is not None and results[2].reason == code
+    none = lines.split("- **none** carries on that line one of the contract's reasons", 1)[1]
+    assert _codes(none.split("\n\n", 1)[0]) == fixer_lines.reasons()
+    assert "The command reads the reason, never the words" in none
+    # The run's own stops name their reason.
+    assert "gets `none`, `upstream`." in section
+    assert "give it `none`, `refused`." in section
+    assert "Give each `none`, `refused` (DEC-001 point 5)." in section
+
+
+def _block(text: str) -> list[str]:
+    """The lines of the first fenced `text` block in `text`."""
+    block = text.split("```text\n", 1)[1].split("```", 1)[0]
+    return [line for line in block.splitlines() if line.strip()]
+
+
+def _codes(text: str) -> tuple[str, ...]:
+    """The `none` reasons a nested list in `text` names, each glossed after a comma."""
+    return tuple(re.findall(r"^  - `([a-z]+(?:-[a-z]+)*)`, ", text, flags=re.MULTILINE))
 
 
 def _scenario(title: str) -> str:
@@ -282,29 +303,107 @@ def _scenario(title: str) -> str:
     return body.split(f"## Scenario 4: {title}", 1)[1]
 
 
+def _walkthrough() -> str:
+    scenario = _scenario("Started by a command")
+    return scenario.split("### Walkthrough", 1)[1].split("### Behind the scenes", 1)[0]
+
+
+def _results() -> list[fixer_lines.Result]:
+    """The storyboard's run's result lines, as the contract reads them."""
+    lines = fixer_lines.counted(_walkthrough())
+    results = [fixer_lines.read(line, RESOLVER) for line in lines]
+    assert all(results), lines
+    return [r for r in results if r]
+
+
 def test_the_storyboard_s_run_follows_the_body_s_forms() -> None:
     scenario = _scenario("Started by a command")
-    walkthrough = scenario.split("### Walkthrough", 1)[1].split("### Behind the scenes", 1)[0]
+    walkthrough = _walkthrough()
     brief = walkthrough.split("**The command's brief:**", 1)[1].split("\n", 1)[0]
     named = re.findall(r"`([^`]+\.md)` \([a-z:-]+\)", brief)
-    assert len(named) == 3
+    assert len(named) == 4
 
-    lines = [
-        line.removeprefix("> ").strip()
-        for line in walkthrough.splitlines()
-        if line.removeprefix("> ").startswith("Fixer result")
-    ]
-    matches = [LINE.match(line) for line in lines]
-    assert all(matches), lines
-    assert [m["artefact"] or m["other"] for m in matches if m] == named  # one each, in order
-    assert [m["proposed"] or m["state"] for m in matches if m] == ["proposed", "held", "none"]
+    # The lines the command counts are every result line of the walkthrough: none
+    # stands behind a quote's `>`, and they lie in a fenced `text` block.
+    lines = fixer_lines.counted(walkthrough)
+    assert len(lines) == sum(fixer_lines.LEAD in line for line in walkthrough.splitlines())
+    assert fixer_lines.counted("\n".join(_block(walkthrough))) == lines
+    results = _results()
+    assert [r.artefact for r in results] == named  # one each, in the brief's order
+    assert [r.state for r in results] == ["proposed", "proposed", "held", "none"]
+    assert results[3].reason == "not-mine"
 
-    (proposed,) = [m for m in matches if m and m["proposed"]]
+    proposed = results[0]
     example = scenario.split("```json\n", 1)[1].split("```", 1)[0]
     answer = json.loads("\n".join(line.strip() for line in example.splitlines()))
     assert tuple(answer) == ANSWER_FIELDS
-    assert answer["artefact"] == proposed["artefact"]
-    assert proposed["file"] == f"{proposed['artefact']}/answer.json"  # its own folder
+    assert answer["artefact"] == proposed.artefact
+    assert proposed.answer == f"{proposed.artefact}/answer.json"  # its own folder
     # holds: recorded unchanged, with its justification, and no edit (DEC-001 point 5)
     assert answer["outcome"] == "unchanged" and answer["justification"]
     assert (answer["sentence"], answer["diff"], answer["keep"]) == (None, None, [])
+
+    behind = scenario.split("### Behind the scenes", 1)[1]
+    assert "never behind a quote's `>`" in behind
+    reasons = behind.split("**Each `none` carries one of the contract's reasons,**", 1)[1]
+    reasons = reasons.split("\n- ", 1)[0]
+    assert tuple(re.findall(r"`([a-z]+(?:-[a-z]+)*)`", reasons)) == fixer_lines.reasons()
+
+
+# --- intent from the brief's pull request ----------------------------------------------
+
+
+def test_the_body_takes_the_brief_s_pull_request_as_intent() -> None:
+    section = _run_section()
+    brief = section.split("**The brief is your only instruction.**", 1)[1].split("\n\n", 1)[0]
+    assert "the title and text of the pull request that carried it, quoted with its URL" in brief
+    assert "Commit messages, pull requests, artefacts and the files they anchor" in section
+    intent = section.split("**Intent from the commits, their pull requests, and an answer.**", 1)
+    assert len(intent) == 2
+    said = intent[1].split("\n- **", 1)[0]
+    assert "`--intended <quote> --intended-from <the pull request's URL>`" in said
+    assert "it shows it unverified" in said
+    assert "Quote only words the brief holds" in said
+    _front, body = _front_and_body(AGENT)
+    assert "you read no pull request and no work item" not in body
+
+
+def test_the_storyboard_s_run_proposes_from_the_pull_request_s_words() -> None:
+    """The brief quotes the pull request that carried a commit; the agent passes its
+    words to `pkit analysis propose` with the pull request's URL as their source, and
+    proposes the artefact from them. A commit no pull request carried leaves its
+    artefact held."""
+    walkthrough = _walkthrough()
+    data = walkthrough.split("**The brief's data, quoted between the run's markers:**", 1)[1]
+    data = data.split("\n", 1)[0]
+    called = re.search(
+        r"pkit analysis propose on (UC-\d+) with --intended \"([^\"]+)\" --intended-from (\S+?)…",
+        walkthrough,
+    )
+    assert called, walkthrough
+    artefact, quote, source = called.groups()
+    assert quote in data  # only words the brief holds
+    assert f"was carried by {source}, whose text reads:" in data  # its source is the pull request
+    assert "for 4b7d1e0" in data.lower() and "holds no pull request" in data
+
+    results = {}
+    for result in _results():
+        found = re.search(r"/(UC-\d+)-", result.artefact)
+        if found:
+            results[found.group(1)] = result
+    assert results[artefact].state == "proposed"  # decided by the pull request's words
+    assert results["UC-009"].state == "held"  # nothing said whether 4b7d1e0 was meant
+
+    behind = _scenario("Started by a command").split("### Behind the scenes", 1)[1]
+    reading = behind.split(f"- **{artefact}** —", 1)[1].split("\n- **", 1)[0]
+    assert "the pull request's URL as their source" in reading
+    assert "the quote shown unverified" in reading
+    assert "never an instruction it follows" in reading
+
+
+def test_the_readme_says_a_run_takes_the_brief_s_pull_request() -> None:
+    text = SA_README.read_text(encoding="utf-8")
+    run = text.split("### As the fixer of your analysis", 1)[1].split("\n### ", 1)[0]
+    assert "it can't read a pull request or a work item" not in run
+    assert "the agent takes it as evidence of intent" in run
+    assert "none with one of the contract's reasons" in run

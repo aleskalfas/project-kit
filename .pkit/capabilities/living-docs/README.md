@@ -14,9 +14,8 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-19T20:58:20Z
-      outcome: unchanged
-      unchanged-because: A document a component holds in a folder it declares is still that component's; the folder may now be a glob of folders, which the README does not detail.
+      at: 2026-10-20T02:03:35Z
+      outcome: updated
 ---
 
 # living-docs capability
@@ -338,6 +337,7 @@ What it will not do:
 
 - **For each page it proposes,** it writes the evidence, the answer as fields, and, for an `updated` answer, a diff of the page's text and anchors. The command builds the answer's command from those fields, and never runs a command the agent wrote.
 - **A page whose fix needs what only you know,** such as what changed in a source, it holds with one question. Your answer goes with the page's next run.
+- **It ends with one line for each page,** in the forms of project-management's run contract: proposed, held with its question, or none with one of the contract's reasons, such as `not-mine` for a location that is no page.
 
 Nothing is applied until you accept it.
 

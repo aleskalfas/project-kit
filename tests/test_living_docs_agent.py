@@ -20,9 +20,11 @@ person reviews. These tests hold the contract its files carry:
 - the **storyboard**: it names the agent back by its capability and scripts its
   five scenarios, each with its four parts;
 - **the fixer run** (#1746): the body says what the agent takes from the command
-  that starts it as the fixer of pages and what it writes, and fixes the result
-  line it ends with, one per page; the storyboard's fixer run ends in lines of
-  that form;
+  that starts it as a fixer and what it writes, and fixes the result line it ends
+  with, one per page. The lines are read by the grammar of project-management's
+  run contract, its three forms and its `none` reasons (`fixer_lines`, #1801): the
+  body gives each form and each reason, and the storyboard's fixer run ends in
+  lines the contract counts, never behind a quote's `>`;
 - the **deployed copy**: `.claude/agents/living-docs.md` is what the Claude Code
   deploy writes from the source today, so a source edit without a redeploy
   fails here rather than shipping a stale agent; it carries the storyboard's
@@ -44,7 +46,7 @@ import pytest
 from ruamel.yaml import YAML
 
 from project_kit import refs
-from tests import handed_over
+from tests import fixer_lines, handed_over
 from tests.adopter_repo import MakeAdopterRepo
 
 REPO = Path(__file__).resolve().parent.parent
@@ -201,12 +203,8 @@ def test_body_carries_the_three_intents(agent):
 
 # --- the fixer run -------------------------------------------------------------
 
-#: The result lines a fixer run ends with, one per page (project-management DEC-056
-#: point 3): the page as the brief names it between backticks, then for `proposed`
-#: its answer file in the page's own folder, and for `held` or `none` the question
-#: for the person or the reason.
-PROPOSED_LINE = re.compile(r"^Fixer result \(living-docs\): proposed `([^`]+)` in `([^`]+)`$")
-HELD_OR_NONE_LINE = re.compile(r"^Fixer result \(living-docs\): (held|none) `([^`]+)`: (\S.*)$")
+#: The agent's name on its result lines (project-management DEC-056 point 3).
+NAME = "living-docs"
 
 #: The keys of a page's friction block a fixer run's diff never touches: an answer
 #: goes into the answer's fields (project-management DEC-056 point 6).
@@ -214,30 +212,25 @@ ANSWER_KEYS = ("`revalidated`", "`revisited`", "`unanchored-because`", "`last-ch
 
 
 def _outcome(line: str) -> str | None:
-    """The outcome a result line gives, or None for a line off the grammar. A
-    proposed page's answer file lies in the folder its location names."""
-    proposed = PROPOSED_LINE.match(line)
-    if proposed:
-        page, answer = proposed.groups()
-        return "proposed" if answer == f"{page}/answer.json" else None
-    matched = HELD_OR_NONE_LINE.match(line)
-    return matched.group(1) if matched else None
+    """The outcome a result line gives, or None for a line off the contract's
+    grammar. A proposed page's answer file lies in the folder its location names."""
+    result = fixer_lines.read(line, NAME)
+    return result.state if result else None
 
 
 def _fixer_run(body: str) -> str:
     return body.split("## A fixer run", 1)[1].split("\n## ", 1)[0]
 
 
-def _fenced(text: str) -> list[str]:
-    """The lines of the fenced blocks in `text`, a blockquote's marker stripped."""
-    lines, inside = [], False
-    for raw in text.splitlines():
-        line = raw.removeprefix("> ").removeprefix(">")
-        if line.startswith("```"):
-            inside = not inside
-        elif inside:
-            lines.append(line)
-    return lines
+def _block(text: str) -> list[str]:
+    """The lines of the first fenced `text` block in `text`."""
+    block = text.split("```text\n", 1)[1].split("```", 1)[0]
+    return [line for line in block.splitlines() if line.strip()]
+
+
+def _codes(text: str) -> tuple[str, ...]:
+    """The `none` reasons a nested list in `text` names, each glossed after a comma."""
+    return tuple(re.findall(r"^  - `([a-z]+(?:-[a-z]+)*)`, ", text, flags=re.MULTILINE))
 
 
 def test_body_declares_the_agent_the_fixer_of_pages(agent):
@@ -247,7 +240,9 @@ def test_body_declares_the_agent_the_fixer_of_pages(agent):
     assert "the type `living-docs:page`" in section
     assert "(project-management's DEC-056, point 3)" in section
     assert "Such a run is a friction fix" in section
-    assert "A brief that says a command started you as the fixer of pages is a fixer run" in body
+    # A brief that names the type in other words still starts a fixer run.
+    assert "A brief that says a command started you as a fixer is a fixer run" in body
+    assert "started you as the fixer of pages is a fixer run" not in body
 
 
 def test_agent_and_storyboard_cite_no_record_of_an_optional_dependency_by_its_bracket(
@@ -300,7 +295,7 @@ def test_body_says_what_a_fixer_run_writes_and_holds(agent):
     for key in ANSWER_KEYS:
         assert key in diff, key
     assert "**No command, anywhere.**" in section
-    assert "**A page that waits for its upstream** gets none." in section
+    assert "**A page that waits for its upstream** gets none, `upstream`." in section
     writes = section.split("**What you write for a page,**", 1)[1]
     writes = writes.split("\n\n**", 1)[0]
     assert "in the folder `<page>/` of your workspace" in writes
@@ -314,13 +309,33 @@ def test_body_says_what_a_fixer_run_writes_and_holds(agent):
     assert "A held page's folder holds its evidence and no answer." in writes
 
 
-def test_body_fixes_the_result_line_for_each_outcome(agent):
+def test_body_gives_the_contract_s_three_forms_and_its_none_reasons(agent):
     _, body = agent
     section = _fixer_run(body)
-    lines = _fenced(section)
-    assert [_outcome(line) for line in lines] == ["proposed", "held", "none"], lines
+    forms = _block(section.split("**The result lines.**", 1)[1])
+    assert len(forms) == len(fixer_lines.forms())
+    values = {
+        "<page>": "docs/guide/a.md",
+        "<one question for the person>": "Which flag does the guide mean?",
+        "<the reason in words>": "It lies in no space.",
+    }
+    for code in fixer_lines.reasons():  # each form, filled, is a line the contract reads
+        lines = [fixer_lines.fill(form, {**values, "<reason>": code}) for form in forms]
+        results = [fixer_lines.read(line, NAME) for line in lines]
+        assert [r.state if r else None for r in results] == ["proposed", "held", "none"], lines
+        assert results[2] is not None and results[2].reason == code
+    none = section.split("- `none` carries on that line one of the contract's reasons", 1)[1]
+    assert _codes(none.split("\n- Each page", 1)[0]) == fixer_lines.reasons()
+    assert "The command reads the reason, never the words" in none
     assert "Each page the brief names has exactly one line." in section
     assert "No other line of your output starts with `Fixer result (`." in section
+    for bullet, code in (
+        ("**A page that waits for its upstream** gets none, ", "upstream"),
+        ("**A call the run refuses** comes back refused", "refused"),
+        ("**A friction document of a version you do not read**", "out-of-step"),
+    ):
+        said = section.split(bullet, 1)[1].split("\n- **", 1)[0]
+        assert f"`{code}`" in said, bullet
 
 
 @pytest.mark.parametrize(
@@ -333,6 +348,10 @@ def test_body_fixes_the_result_line_for_each_outcome(agent):
         "Fixer result (analysis-resolver): held `docs/a.md`: Which one?",
         "Fixer result (living-docs): none `docs/a.md`",
         "Fixer result (living-docs): held `docs/a.md` Which one?",
+        "Fixer result (living-docs): none `docs/a.md`: it is no page",
+        "Fixer result (living-docs): none `docs/a.md`: not-a-page: it is no page",
+        "Fixer result (living-docs): none `docs/a.md`: not-mine:",
+        "> Fixer result (living-docs): held `docs/a.md`: Which one?",
     ],
     ids=[
         "no-backticks",
@@ -342,6 +361,10 @@ def test_body_fixes_the_result_line_for_each_outcome(agent):
         "another-agent",
         "no-reason",
         "no-colon",
+        "a-reason-in-words-alone",
+        "a-reason-off-the-list",
+        "a-reason-without-words",
+        "behind-a-quote",
     ],
 )
 def test_the_result_line_form_refuses_a_line_off_its_grammar(line: str) -> None:
@@ -352,12 +375,29 @@ def test_storyboard_s_fixer_run_ends_in_result_lines(storyboard):
     _, body = storyboard
     scenario = body.split("## Scenario 5: ", 1)[1]
     walkthrough = scenario.split("### Walkthrough", 1)[1].split("### Behind the scenes", 1)[0]
-    lines = _fenced(walkthrough)
-    assert [_outcome(line) for line in lines] == ["proposed", "held"], lines
+    brief = walkthrough.split("**Command:**", 1)[1].split("\n", 1)[0]
+    assert "started you as the fixer of the types" in brief  # a fixer, in its own words
+    named = re.findall(r"`([^`]+)` \(`[a-z:-]+`\)", brief)
+    assert len(named) == 3
+
+    # The lines the command counts are every result line of the walkthrough: none
+    # stands behind a quote's `>`, and they lie in a fenced `text` block.
+    lines = fixer_lines.counted(walkthrough)
+    assert len(lines) == sum(fixer_lines.LEAD in line for line in walkthrough.splitlines())
+    assert fixer_lines.counted("\n".join(_block(walkthrough))) == lines
+    results = [fixer_lines.read(line, NAME) for line in lines]
+    assert all(results), lines
+    assert [r.artefact for r in results if r] == named  # one each, in the brief's order
+    assert [r.state for r in results if r] == ["proposed", "held", "none"]
+    assert results[2] is not None and results[2].reason == "not-mine"
+
     behind = scenario.split("### Behind the scenes", 1)[1]
     assert "End with one result line per page, in the brief's order" in behind
+    assert "never behind a quote's `>`" in behind
     for key in ANSWER_KEYS:
         assert key in behind, key
+    none = behind.split("**None, with one of the contract's reasons and its words,**", 1)[1]
+    assert _codes(none.split("\n- End", 1)[0]) == fixer_lines.reasons()
 
 
 # --- references ----------------------------------------------------------------
