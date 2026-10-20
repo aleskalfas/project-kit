@@ -53,7 +53,7 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any
 
-from _lib import agent_runs, fixers
+from _lib import agent_runs, default_branch, fixers
 
 #: The command, and the run whose rules confine each fixer (ADR-066 point 5).
 VERB = "fix-drift"
@@ -237,15 +237,17 @@ class Reading:
 
 def pin_commit(repo_root: Path, run: Runner = subprocess.run) -> str:
     """The default branch's commit, as the backbone resolves it (COR-054
-    point 2). Raises Stop when the backbone cannot say."""
-    document = _json(["pkit", "repository", "base", "--json"], repo_root, run)
-    branch = document.get("default_branch")
-    commit = branch.get("commit") if isinstance(branch, Mapping) else None
-    if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
-        problem = branch.get("problem") if isinstance(branch, Mapping) else None
+    point 2), read where pm reads it (`_lib/default_branch.py`). Raises Stop
+    when the backbone cannot say."""
+    try:
+        branch = default_branch.read(cwd=repo_root, run=run).default_branch
+    except default_branch.Unanswered as exc:
+        raise Stop(str(exc)) from exc
+    commit = branch.commit
+    if commit is None or not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise Stop(
             "the default branch's commit cannot be resolved"
-            + (f": {problem}" if problem else "")
+            + (f": {branch.problem}" if branch.problem else "")
             + " (`pkit repository base` says why)"
         )
     return commit

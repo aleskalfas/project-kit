@@ -3062,3 +3062,27 @@ def test_a_covered_later_head_with_another_grant_list_change_stops_ready(world, 
     rc, out, err = run.run("--yes", "--expect-head", head, capsys=capsys)
     assert rc == 0, out + err
     assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_covered_later_head_that_left_its_base_elsewhere_holds_its_grant_list_change(
+    world, capsys
+) -> None:
+    """The change at the head authorised is read from where the later head left its base,
+    which the change check names, and pm computes no fork point of its own (COR-054 point
+    5): where the head authorised left the base elsewhere, its change could not be read,
+    and a person decides."""
+    run = world()
+    authorised = _push_grants(run, _GRANT)
+    tip = _main_moves_on(run, "src/elsewhere.py")
+    _git(run.work, "merge", "-q", "--no-edit", "main")
+    _git(run.work, "push", "-q", "origin", BRANCH)
+    head = run.github.head = _git(run.work, "rev-parse", "HEAD")
+    run.github.checks[head] = [_GREEN]
+    run.merge_base, run.outdated, run.cover = tip, False, True
+    rc, out, _err = run.run("--yes", "--expect-head", authorised, capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    assert (
+        f"it holds a change to the fixers' grant list that could not be read at "
+        f"{_short(authorised)};"
+    ) in out.splitlines()[-1]
+    assert run.github.merges == []

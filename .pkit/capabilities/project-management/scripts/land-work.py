@@ -1347,21 +1347,37 @@ def _grants_moved(
     authorisation does not cover its change to the fixers' grant list, or "": the
     change differs from the one at the head authorised, or that one could not be
     read. The run found the change at that head when the person was shown it, so
-    another change at the later head is one nobody was shown (DEC-056 point 2)."""
+    another change at the later head is one nobody was shown (DEC-056 point 2).
+
+    The change at the head authorised is read from where the pinned head left its
+    base, which the change check names, and only where the head authorised left
+    the base there too: otherwise it could not be read, and a person decides."""
     if not head.authorised:
         return ""
     earlier = short_sha(head.authorised)
-    base = derived.tip or derived.merge_base
-    proc = _git("merge-base", head.authorised, base) if base else None
-    left = proc.stdout.strip() if proc is not None and proc.returncode == 0 else ""
-    if not left:
-        return f"a change to the fixers' grant list that could not be read at {earlier}"
+    unread = f"a change to the fixers' grant list that could not be read at {earlier}"
+    left = derived.merge_base
+    if not _left_base_at(left, head.authorised, derived.tip):
+        return unread
     found = _grants_between(left, head.authorised, capability_root)
     if isinstance(found, _GrantsUnread):
-        return f"a change to the fixers' grant list that could not be read at {earlier}"
+        return unread
     if found != grants:
         return f"a change to which fixers may start other than the one at {earlier}"
     return ""
+
+
+def _left_base_at(fork: str, oid: str, tip: str) -> bool:
+    """Whether commit `oid` left the base, whose commit is `tip`, at `fork`: `fork` is
+    in its history, and no later commit of the base is. Read by ancestry alone, since
+    pm computes no fork point of its own (COR-054 point 5); False where git cannot
+    say."""
+    if not fork or not tip:
+        return False
+    if _git("merge-base", "--is-ancestor", fork, oid).returncode != 0:
+        return False
+    beyond = _count_commits(f"{fork}..{tip}")
+    return beyond is not None and _count_commits(f"{oid}..{tip}") == beyond
 
 
 @dataclass(frozen=True)

@@ -892,6 +892,28 @@ def _documents(changes: dict[tuple[str, ...], Any] | None = None) -> dict[tuple[
     return documents
 
 
+def _settled(commit: str | None, problem: str | None = None) -> dict[str, Any]:
+    branch = {"name": "main", "source": "default", "ref": "origin/main", "commit": commit}
+    return {
+        "schema_version": 1,
+        "default_branch": {**branch, "problem": problem},
+        "base": {"ref": "origin/main", "tip": commit, "fork": None, "problem": None},
+    }
+
+
+def test_the_pin_is_the_default_branch_commit_pm_reads(drift, tmp_path) -> None:
+    """Read through pm's one reading of the backbone's answer, in the person's checkout."""
+    seen: list[tuple[list[str], Any]] = []
+    answer = {("pkit", "repository", "base"): _settled("b" * 40)}
+    assert drift.pin_commit(tmp_path, _reader(answer, seen)) == "b" * 40
+    assert seen == [(["pkit", "repository", "base", "--json"], str(tmp_path))]
+    unresolved = {("pkit", "repository", "base"): _settled(None, "origin/main does not exist")}
+    with pytest.raises(drift.Stop, match="cannot be resolved: origin/main does not exist"):
+        drift.pin_commit(tmp_path / "other", _reader(unresolved, []))
+    with pytest.raises(drift.Stop, match="pm does not guess it"):
+        drift.pin_commit(tmp_path / "none", _reader({}, []))
+
+
 def test_everything_is_read_in_the_copy_of_the_commit(drift, tmp_path) -> None:
     seen: list[tuple[list[str], Any]] = []
     copy = tmp_path / "copy"
