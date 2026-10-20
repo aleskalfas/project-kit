@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README's part on the fixer of your analysis names
+  project-management's drift command, `pkit pm fix-drift`, which now ships,
+  in place of saying the command is still to come. Nothing you run changes.
