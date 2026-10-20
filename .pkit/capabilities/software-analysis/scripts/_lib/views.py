@@ -1,7 +1,8 @@
 """The domain model's views, and each term's link to its section (DEC-004).
 
 A domain-model view explains a group of related concepts, one section for each,
-headed by its term's name, and lists those terms in its front matter's
+headed by its term's name in sentence case, its first letter capitalized
+(`heading`), and lists those terms in its front matter's
 `explains`, in the order of its sections (point 2). Its id is `VIEW-` and the
 slug its file's name gives after its number (point 4). It anchors exactly the
 terms `explains` lists, which the stamp writes from the list (point 5).
@@ -19,7 +20,8 @@ status. A term no view explains carries none.
 - **The line** reads `Explained in [<view id>](<file>#<slug>).` (`link`): the
   view's file as a path from the glossary's folder, such as
   `domain-model/010-orders-and-payments.md`, and the slug of its section's
-  heading, the term's name, as COR-050 point 2 makes it. It depends on the
+  heading, as COR-050 point 2 makes it. A slug is in lower case, so it is the
+  slug of the term's name, the heading's capital aside. It depends on the
   view's file's name and the term's name alone, so a retitled view changes no
   link.
 - **Where it is read** (`link_lines`): the lines of the term's section, as the
@@ -115,3 +117,11 @@ def term_name(analysis: Analysis, term_id: str) -> str | None:
     term = analysis.of(term_id, TERM)
     name = term.fields.get("name") if term is not None else None
     return name if isinstance(name, str) and name else None
+
+
+def heading(analysis: Analysis, term_id: str) -> str:
+    """The heading of a term's section in a view: its name in sentence case, its first
+    letter capitalized (`forms.sentence_case`, DEC-004 point 2), or its id where it has no
+    name. The heading gives the name's slug, so its link is unchanged."""
+    name = term_name(analysis, term_id)
+    return forms.sentence_case(name) if name is not None else term_id

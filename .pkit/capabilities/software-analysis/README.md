@@ -15,9 +15,8 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T10:34:33Z
-      outcome: unchanged
-      unchanged-because: It says that project-management brings the proposals together and applies only what the person accepts, which the new batch commands and the project manager's fix-drift procedure do.
+      at: 2026-10-20T11:39:13Z
+      outcome: updated
 ---
 
 # software-analysis capability
@@ -420,12 +419,12 @@ The concepts of running a suite, and the sandbox each run takes place in.
 classDiagram
   accTitle: Runs and sandboxes
   accDescr: A run takes place in one sandbox, which is built for it alone.
-  class run
-  class sandbox
-  run "1" --> "1" sandbox : takes place in
+  class Run
+  class Sandbox
+  Run "1" --> "1" Sandbox : takes place in
 ```
 
-## run
+## Run
 
 A run is one pass of a suite, from its start to its result.
 
@@ -437,7 +436,7 @@ A run is one pass of a suite, from its start to its result.
 
 **Always true:** A run that fails leaves no sandbox behind (ADR-006).
 
-## sandbox
+## Sandbox
 
 A sandbox is where one run takes place, apart from the tester's workspace.
 
@@ -452,7 +451,7 @@ A sandbox is where one run takes place, apart from the tester's workspace.
 
 - **Its file's name** opens with a number and a hyphen, which give the view's place in the domain model's order, in the form you choose. Its id is `VIEW-` and the rest of the name, so a view given another number keeps its id (DEC-004 point 4).
 - **`explains`** lists the terms whose concepts it explains, one at least, in the order of its sections. Each is a term of its own analysis, in force while the view is. No two views in force explain one term.
-- **Its sections.** Each is headed by the name of the term `explains` lists in its place (DEC-004 point 2). No two headings give one slug, so a page anchored on one, such as `VIEW-runs-and-sandboxes#sandbox`, names one section.
+- **Its sections.** Each is headed by the name of the term `explains` lists in its place, in sentence case: its first letter capitalized, the rest as the name writes it (DEC-004 point 2). So the term `sandbox` heads its section `## Sandbox`. A name whose first word holds a capital already, such as `iPhone app`, stands as it is. A diagram labels each concept's box the same way, which no check reads. In the glossary and in prose, the name stays as running text writes it (DEC-001 point 1). No two headings give one slug, so a page anchored on one, such as `VIEW-runs-and-sandboxes#sandbox`, names one section.
 - **Its anchors.** Each term `explains` lists is an artefact anchor, which the stamp writes, and the check requires them to match the list. A changed definition then flags the view that explains it. It also anchors the records its statements cite or apply, and no code. Nothing in the analysis anchors a view (DEC-004 point 5).
 - **Its order.** A view names a concept that another view of its analysis explains only where that view's number is lower (`RS-SAN-011`).
 - **Each term's link.** A term a view in force explains carries an unlabelled line under its heading in the glossary, before its first part, that links to its section. The stamp writes it, and the check holds it equal to the view, whatever any rule's status (DEC-004 point 7). A term no view explains carries none. For the view above:
@@ -659,7 +658,7 @@ The forms, each described in the schema:
 | `outcomes-match-front-matter` | a record's *Outcomes* | one item for each of its `outcomes`, in order, opening `**<id> — <outcome>.**` |
 | `gaps-match-outcomes` | a record's *Gaps* | one item for each gap, labelled with the ids it affects and holding its `**Resolution:**` |
 | `definition` | a term's `definition` | a phrase with no article first, no full stop last, and no word of the term's name |
-| `headings-match-front-matter` | a view's sections for its concepts | one section for each of its `explains`, in order, headed by that term's name, no two headings giving one slug |
+| `headings-match-front-matter` | a view's sections for its concepts | one section for each of its `explains`, in order, headed by that term's name in sentence case, no two headings giving one slug |
 
 **What binds it.** An artefact kind's structure is the checkable part of the format rule, `RS-SAN-001`. It binds where that rule binds, through a rule set of your own, and at the rule's status, which is accepted ("The method rule set: `SAN`", below). The revalidation record's structure binds always. A record is a held document, which no rule binds on, so the capability checks it itself (DEC-001 point 1). A kind's companion schema still checks its front matter whatever the rule's status.
 
@@ -849,7 +848,7 @@ It fails on:
   - `outcomes-match-front-matter`, a record's *Outcomes*: not one item for each of its `outcomes`, in order, each opening `**<id> — <outcome>.**` exactly with its reason after it.
   - `gaps-match-outcomes`, a record's *Gaps*: neither `None.` nor one item for each gap, each opening with a bold label of the ids it affects, such as `**UC-001, JRN-001:**`, every id one of `outcomes`, and holding `**Resolution:**` with text after it. Each `code-regressed` or `gap-found` artefact is named by a gap, so *Gaps* reads `None.` only where none is.
   - `definition`, a term's `definition`: a phrase that opens with an article, `a`, `an` or `the`, ends with a full stop, or holds a whole word of the term's `name`, in any case.
-  - `headings-match-front-matter`, a view's sections for its concepts: no `##` section, a heading that is not the name of the term its `explains` lists in its place, a section of no term, a term with no section, or two headings that give one slug. A message on a part of one of its sections names that section by its heading.
+  - `headings-match-front-matter`, a view's sections for its concepts: no `##` section, a heading that is not the name of the term its `explains` lists in its place, in sentence case, a section of no term, a term with no section, or two headings that give one slug. A message on a part of one of its sections names that section by its heading.
 - **a label no part declares**, where a rule of yours closes the kind's list of labels and binds on the body.
 
 Each message gives the part's hint and example. How the check reads a body:
