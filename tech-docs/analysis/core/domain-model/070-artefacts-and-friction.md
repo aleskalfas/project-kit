@@ -60,7 +60,9 @@ pkit:
 
 # VIEW-artefacts-and-friction — Artefacts and friction
 
-How the system finds where a document has drifted from what it rests on. An artefact in a place declares its anchors, the things that make it true. When one of them changes, the artefact has friction until an answer stands for the edit. The change check finds the friction a change brings, and the whole-repository check reports the debt left on the default branch. Rule sets hold the rules artefacts must satisfy, and select the artefacts their rules bind on, by path or by artefact type.
+How the system finds where a document has drifted from what it rests on. An artefact in a place declares its anchors, the things that make it true. When one of them changes, the artefact has friction until an answer stands for the edit. The change check finds the friction a change brings, and the whole-repository check reports the debt left on the default branch.
+
+Rule sets hold the rules artefacts must satisfy, and select the artefacts their rules bind on, by path or by artefact type.
 
 ```mermaid
 classDiagram
@@ -139,7 +141,7 @@ A place is a path or glob that the project or a component declares, within which
 
 **Relations:**
 
-- A component declares its places in its package metadata, and the project in its backbone configuration (COR-050 point 1).
+- A component declares its places in its package metadata, and the project declares its places in its backbone configuration (COR-050 point 1).
 - It may lie inside a documentation root, and a root may hold files no place reads.
 
 **States:** None.
@@ -336,7 +338,7 @@ Package metadata is the file a component ships that declares its version, its ra
 
 **Relations:**
 
-- A component ships it (COR-017). COR-017 calls it the capability's manifest, a word the analysis keeps for the project's record.
+- A component ships it (COR-017).
 - It is no manifest: a manifest is what the project recorded when it installed the component.
 
 **States:** None.
@@ -345,3 +347,5 @@ Package metadata is the file a component ships that declares its version, its ra
 
 - A capability's connections can be read from it before the capability is installed (COR-053 point 8).
 - It is the only source of a capability's commands (COR-021).
+
+**Note:** COR-017 calls it the capability's manifest, a word the analysis keeps for the project's record.

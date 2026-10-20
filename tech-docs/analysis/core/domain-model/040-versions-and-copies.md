@@ -52,7 +52,9 @@ pkit:
 
 # VIEW-versions-and-copies — Versions and copies
 
-How a project's content moves from one version to the next. A project records which version of the backbone and of each component it holds. Propagation writes the methodology's files into it as synced copies. Sync writes them again at the recorded versions, and a version transition moves those versions, running the migrations between. A distribution ships its releases from one source repository.
+How a project's content moves from one version to the next. A project records which version of the backbone and of each component it holds. Propagation writes the methodology's files into it as synced copies. Sync writes them again at the recorded versions, and a version transition moves those versions, running the migrations between.
+
+A distribution ships its releases from one source repository.
 
 ```mermaid
 classDiagram
@@ -222,7 +224,7 @@ Propagation writes the methodology's files into a project verbatim, at the recor
 **Relations:**
 
 - It writes synced copies.
-- Sync runs it at the recorded versions, and a version transition at its target (COR-059 points 2 and 3).
+- Sync runs it at the recorded versions, and a version transition runs it at its target (COR-059 points 2 and 3).
 
 **States:** None.
 
@@ -268,7 +270,7 @@ A synced copy is a file that propagation writes into a project, from the methodo
 
 **Always true:**
 
-- Each sync writes it again at the recorded version, and each transition at its target (COR-001).
+- Each sync writes it again at the recorded version, and each transition writes it at its target (COR-001).
 - It holds only its original's content (COR-001).
 
 ## Source repository

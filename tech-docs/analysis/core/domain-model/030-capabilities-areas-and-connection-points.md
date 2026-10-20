@@ -206,13 +206,16 @@ A data point is a declared interface through which the capability providing a ro
 **Attributes:**
 
 - its address, its version and the schema of its data (COR-052 points 1 and 5)
-- a combination policy: one filler alone fills it, entries merge by id, or entries merge and any collision fails (COR-052 point 3)
+- a combination policy, one of these (COR-052 point 3):
+  - one filler alone fills it
+  - entries merge by id
+  - entries merge and any collision fails
 - optionally a question, which asks a person about the point and records the reply (COR-061 point 1)
 
 **Relations:**
 
 - It is the kind of connection point that takes data in (COR-053 point 2).
-- Where fillers overlap, a project file wins over a capability, and a capability over the default (COR-052 point 4).
+- Where fillers overlap, a project file wins over a capability, and a capability wins over the default (COR-052 point 4).
 
 **States:** None.
 

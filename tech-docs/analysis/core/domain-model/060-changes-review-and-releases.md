@@ -56,7 +56,9 @@ pkit:
 
 # VIEW-changes-review-and-releases — Changes, review and releases
 
-How work lands, is reviewed and is released. A change lands on the branch it targets, most often through a pull request. A check compares its head with its base, which is the default branch unless a run names another. Reviewers report findings on it. A change that alters the system's surface declares that in a changeset, and the release step consumes the changesets on the default branch.
+How work lands, is reviewed and is released. A change lands on the branch it targets, most often through a pull request. A check compares its head with its base, which is the default branch unless a run names another. Reviewers report findings on it.
+
+A change that alters the system's surface declares that in a changeset, and the release step consumes the changesets on the default branch.
 
 ```mermaid
 classDiagram

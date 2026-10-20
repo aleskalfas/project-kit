@@ -223,7 +223,7 @@ Validation checks a project's own files against the invariants its records own. 
 
 ## Backbone configuration
 
-The backbone configuration is the project-owned file, `.pkit/project/config.yaml`, that holds the declarations the system reads. A decision record owns each of its keys, sync never writes it, and validation checks it all.
+The backbone configuration is the project-owned file, `.pkit/project/config.yaml`, that holds the declarations the system reads. A decision record owns each of its keys. Sync never writes the file, and validation checks all of it.
 
 **Attributes:**
 
@@ -232,7 +232,7 @@ The backbone configuration is the project-owned file, `.pkit/project/config.yaml
 **Relations:**
 
 - It declares the documentation roots (COR-049 point 1).
-- It is no manifest: a manifest records what the project installed, and the configuration what the project declares.
+- It is no manifest: a manifest records what the project installed, and the configuration records what the project declares.
 
 **States:** None.
 
