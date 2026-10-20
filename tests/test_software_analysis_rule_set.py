@@ -395,6 +395,8 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     assert "validate" in package["commands"]
 
 
+# Asserts what the shipped rules' answers hold, so the short check runs it (ADR-067).
+@pytest.mark.answers
 def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     """The maintainer's three judgement rules (8 October, on #1360), proposed until he
     accepts them (#1577), each with DEC-001 as its origin. Beside them the record rule,

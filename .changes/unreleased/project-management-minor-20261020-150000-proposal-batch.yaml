@@ -1,0 +1,20 @@
+component: project-management
+kind: minor
+custom:
+  category: Added
+body: >
+  Four new commands bring the fixers' proposals to you and carry out what you
+  decide (DEC-056 point 6). `pkit pm show-proposals` shows them in one batch,
+  each with its evidence, its diff and its writer's command word for word, and
+  each question a fixer held. `pkit pm apply-proposals` applies what you
+  accept to the change's branch, upstream first: each diff, then its writer,
+  built from the answer's fields. `pkit pm refuse-proposals` remembers a
+  refusal against the artefact's friction, and `pkit pm answer-question`
+  records your answer to a held question for the next run. Each proposal is
+  checked again at the default branch before it is shown or applied, and one
+  that no longer holds is set aside and dispatched again. The pm skill gains
+  the `fix-drift` sub-procedure, and the project manager runs `fix-drift`
+  after each merge into the default branch, in the session that landed it.
+  It then brings you the batch and applies what you accept through an
+  ordinary pull request. `land-work`'s count leaves out a question you
+  answered.

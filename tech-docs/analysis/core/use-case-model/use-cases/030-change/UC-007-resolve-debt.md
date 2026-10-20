@@ -32,8 +32,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T09:39:01Z
-      outcome: updated
+      at: 2026-10-20T10:10:47Z
+      outcome: unchanged
+      unchanged-because: ADR-055 point 5 gains a sentence that the test suite is no gate on a pull request head that changed only answers (ADR-067). The whole-repository check and its tracking issue, which step 1 cites, are untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

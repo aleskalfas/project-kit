@@ -15,7 +15,9 @@ module is where the queue lies and how it is read and written:
 - `lock` holds `drift.lock`, so one run at a time works on the queue. It never
   waits: a lock another run holds raises Held.
 - `waiting` counts the artefacts that wait on the person, those `proposed` or
-  `held`, and `count_line` is the landing command's line for them.
+  `held` with a question not yet answered, and `count_line` is the landing
+  command's line for them. The commands that show and decide them are
+  `_lib/proposals.py`'s.
 
 The index's shape (`schema_version` 1): `contract_version`, the version of the
 run's contract its last write followed; `artefacts`, each artefact's entry with
@@ -238,9 +240,16 @@ def _holder(path: Path) -> str:
 
 
 def waiting(index: Mapping[str, Any]) -> int:
-    """How many artefacts wait on the person: those `proposed` or `held`."""
+    """How many artefacts wait on the person: those `proposed`, and those `held`
+    with a question the person has not answered. An answered question waits for
+    the next run, not for the person."""
     entries = index.get("artefacts") or {}
-    return sum(1 for entry in entries.values() if entry.get("state") in WAITING)
+    return sum(
+        1
+        for entry in entries.values()
+        if entry.get("state") in WAITING
+        and not (entry.get("state") == "held" and entry.get("answer"))
+    )
 
 
 def count_line(count: int, queue: Path) -> str | None:

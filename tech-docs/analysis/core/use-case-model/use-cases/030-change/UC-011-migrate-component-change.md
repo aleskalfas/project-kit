@@ -25,8 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T09:38:57Z
-      outcome: updated
+      at: 2026-10-20T10:10:42Z
+      outcome: unchanged
+      unchanged-because: The required job gains a short form, the aggregator without its test suite, on a pull request head that changed only answers since its passing full run (ADR-067). The migration check runs in both forms, so step 7 and the CI pipeline's part hold.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

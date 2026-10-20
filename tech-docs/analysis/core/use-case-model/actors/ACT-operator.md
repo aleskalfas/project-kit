@@ -18,9 +18,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-20T01:36:58Z
+      at: 2026-10-20T10:10:49Z
       outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
+      unchanged-because: Running checks gains when CI runs the short check and what it runs. The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
 ---
 
 # ACT-operator — Operator
