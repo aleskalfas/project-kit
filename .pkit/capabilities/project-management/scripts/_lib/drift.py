@@ -45,6 +45,7 @@ import shutil
 import subprocess
 import tempfile
 import threading
+import unicodedata
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
@@ -200,6 +201,21 @@ def name_problem(name: str) -> str | None:
     if "/" in entry:
         return "its name is no plain path inside the repository: its entry holds a `/`"
     return None
+
+
+def plain(text: str) -> str:
+    """`text` as it may reach a person's terminal: each control or formatting
+    character, a line break included, shown as its escape. A fixer's words, a
+    harness's reason and a refused call all pass through it, so none of them
+    moves the cursor, rewrites a line above or sends the terminal a command."""
+    out: list[str] = []
+    for char in text:
+        if unicodedata.category(char) in ("Cc", "Cf", "Zl", "Zp"):
+            code = ord(char)
+            out.append(f"\\x{code:02x}" if code < 0x100 else f"\\u{code:04x}")
+        else:
+            out.append(char)
+    return "".join(out)
 
 
 # --- reading at one commit ----------------------------------------------------------

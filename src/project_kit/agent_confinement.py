@@ -52,6 +52,7 @@ exit.
 from __future__ import annotations
 
 import contextlib
+import errno
 import hashlib
 import importlib
 import os
@@ -65,7 +66,7 @@ import tempfile
 from collections.abc import Generator, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, BinaryIO, Protocol
 
 #: Where the run root lies, under the user's state folder.
 RUN_ROOT_PARTS = ("pkit", "agent-runs")
@@ -83,8 +84,12 @@ BIN = "bin"
 WORKSPACE = ".agent-workspace"
 TEMP = ".tmp"
 
-#: The most the run's files may weigh together. The copy refuses a file past it.
+#: The bounds on the run's files: the most they may weigh together, the most
+#: entries the workspace may hold, and the most folders deep they may lie. Past a
+#: bound, the copy refuses the rest.
 COPY_LIMIT_BYTES = 64 * 1024 * 1024
+COPY_LIMIT_ENTRIES = 10_000
+COPY_LIMIT_DEPTH = 32
 
 #: How long one git call that makes the clone may take before the run is refused.
 GIT_TIMEOUT_SECONDS = 600
@@ -105,6 +110,11 @@ SHARED_TEMP_FOLDERS = ("/tmp", "/private/tmp", "/var/folders", "/private/var/fol
 CLEAN = "clean"
 BREACH = "breach"
 NOT_RUN = "not-run"
+
+# How the copy and the removal open a folder and a file: never through a link, and a
+# file never waiting on a pipe.
+_FOLDER_FLAGS = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+_FILE_FLAGS = os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK
 
 # The brief's markers, each replaced with the run's value before the runner reads it.
 _MARKER = re.compile(r"\{\{pkit:(working-copy|workspace|temp|commit)\}\}")
@@ -349,18 +359,62 @@ def remove_tree(folder: Path) -> None:
 
 
 def _make_folders_writable(folder: Path) -> None:
-    """Give the owner full use of `folder` and of each folder inside it. A link is
-    never followed."""
-    stack = [str(folder)]
+    """Give the owner full use of `folder` and of each folder inside it.
+
+    Each folder is opened from its parent, following no link, and its mode is set
+    through what was opened. So a link swapped in for a folder never has its
+    target's mode changed. One folder open per level is held at a time."""
+    top = _owned_folder(None, str(folder))
+    if top is None:
+        return
+    stack: list[tuple[int, list[str]]] = [(top, _subfolders(top))]
     while stack:
-        path = stack.pop()
-        try:
-            if not stat.S_ISDIR(os.lstat(path).st_mode):
-                continue
-            os.chmod(path, 0o700)
-            stack.extend(entry.path for entry in os.scandir(path))
-        except OSError:
+        handle, names = stack[-1]
+        if not names:
+            os.close(handle)
+            stack.pop()
             continue
+        inner = _owned_folder(handle, names.pop())
+        if inner is not None:
+            stack.append((inner, _subfolders(inner)))
+
+
+def _owned_folder(parent: int | None, name: str) -> int | None:
+    """The folder `name`, opened from the open folder `parent` (or by its path),
+    following no link, and given to its owner in full. None when it cannot be.
+
+    A folder its owner cannot read cannot be opened. Its mode is first set by its
+    name, with no link followed, where the platform can do that."""
+    for attempt in range(2):
+        try:
+            handle = os.open(name, _FOLDER_FLAGS, dir_fd=parent)
+        except PermissionError:
+            if attempt:
+                return None
+            try:
+                os.chmod(name, 0o700, dir_fd=parent, follow_symlinks=False)
+            except (OSError, NotImplementedError):
+                return None
+            continue
+        except OSError:
+            return None
+        try:
+            os.fchmod(handle, 0o700)
+        except OSError:
+            os.close(handle)
+            return None
+        return handle
+    return None
+
+
+def _subfolders(handle: int) -> list[str]:
+    """The names of the entries of the open folder `handle` that are folders, not
+    links. None of them when it cannot be listed."""
+    try:
+        with os.scandir(handle) as listing:
+            return [entry.name for entry in listing if entry.is_dir(follow_symlinks=False)]
+    except OSError:
+        return []
 
 
 # --- the clone ------------------------------------------------------------------------
@@ -746,89 +800,158 @@ def copy_files(workspace: Path, files_to: Path) -> list[str]:
     """Copy the run's files from `workspace` into `files_to`, and return what was
     refused, one line each.
 
-    Only regular files are copied, and folders made for them. No link is followed. A
-    file with more than one link is refused, as is one past `COPY_LIMIT_BYTES` of the
-    run's files together, any entry whose name a file system may read as `.git`, and
-    any entry that already exists in `files_to`. The temp folder is never copied."""
-    refused: list[str] = []
-    budget = COPY_LIMIT_BYTES
-    stack: list[tuple[str, Path, str]] = [(str(workspace), files_to, "")]
-    while stack:
-        path, target, rel = stack.pop()
+    The workspace is walked through open folders: each folder and each file is
+    opened from its parent folder, following no link. So a process the run left
+    behind cannot swap a link in for a folder and have it followed. Each file is
+    judged by what was opened. Only regular files are copied, and folders made for
+    them. A link is refused, as is anything else that is not a regular file, a file
+    with more than one link, and any entry whose name a file system may read as
+    `.git`. So is any entry that already exists in `files_to`. The run's files are
+    bounded in bytes, entries and depth (`COPY_LIMIT_BYTES`, `COPY_LIMIT_ENTRIES`,
+    `COPY_LIMIT_DEPTH`). Past a bound, the rest is refused. The temp folder is never
+    copied."""
+    copy = _Copy(bytes_left=COPY_LIMIT_BYTES)
+    try:
+        handle = os.open(workspace, _FOLDER_FLAGS)
+    except OSError as exc:
+        return [f"refused: .: {_why_not_opened(exc)}"]
+    try:
+        copy.folder(handle, files_to, "", 0)
+    finally:
+        os.close(handle)
+    return copy.refused
+
+
+def _lstat_at(folder: int, name: str) -> os.stat_result:
+    """The entry `name` of the open folder `folder`, as it is, following no link."""
+    return os.stat(name, dir_fd=folder, follow_symlinks=False)
+
+
+def _why_not_opened(exc: OSError) -> str:
+    """Why an entry could not be opened, as a line of the copy names it."""
+    if exc.errno == errno.ELOOP:  # what opening a link without following it gives
+        return "a symbolic link"
+    if exc.errno == errno.ENOTDIR:  # a folder swapped for something else, a link too
+        return "no longer a folder when it was opened"
+    return f"cannot be read: {exc.strerror or exc}"
+
+
+@dataclass
+class _Copy:
+    """One copy of the run's files: what is left of its byte bound, the entries it
+    has met, and what it refused."""
+
+    bytes_left: int
+    entries: int = 0
+    stopped: bool = False
+    refused: list[str] = field(default_factory=list[str])
+
+    def refuse(self, name: str, why: str) -> None:
+        self.refused.append(f"refused: {_shown(name)}: {why}")
+
+    def folder(self, handle: int, target: Path, rel: str, depth: int) -> None:
+        """Copy what the open folder `handle` holds into `target`. `rel` names the
+        folder from the workspace, which lies at depth 0."""
         try:
-            listing = sorted(os.scandir(path), key=lambda entry: entry.name)
+            with os.scandir(handle) as listing:
+                names = sorted(entry.name for entry in listing)
         except OSError as exc:
-            refused.append(f"refused: {_shown(rel or '.')}: cannot be read: {exc.strerror or exc}")
-            continue
-        for entry in listing:
-            name = f"{rel}/{entry.name}" if rel else entry.name
-            if not rel and entry.name == TEMP:
+            self.refuse(rel or ".", f"cannot be read: {exc.strerror or exc}")
+            return
+        for name in names:
+            if self.stopped:
+                return
+            if not rel and name == TEMP:
                 continue
-            if names_git(entry.name):
-                refused.append(f"refused: {_shown(name)}: a name a file system may read as .git")
+            path = f"{rel}/{name}" if rel else name
+            self.entries += 1
+            if self.entries > COPY_LIMIT_ENTRIES:
+                self.refuse(
+                    path,
+                    f"it and every entry after it: past the bound of {COPY_LIMIT_ENTRIES} "
+                    "entries on the run's files",
+                )
+                self.stopped = True
+                return
+            if names_git(name):
+                self.refuse(path, "a name a file system may read as .git")
                 continue
             try:
-                held = entry.stat(follow_symlinks=False)
+                held = _lstat_at(handle, name)
             except OSError as exc:
-                refused.append(f"refused: {_shown(name)}: cannot be read: {exc.strerror or exc}")
+                self.refuse(path, f"cannot be read: {exc.strerror or exc}")
                 continue
-            destination = target / entry.name
             if stat.S_ISLNK(held.st_mode):
-                refused.append(f"refused: {_shown(name)}: a symbolic link")
+                self.refuse(path, "a symbolic link")
             elif stat.S_ISDIR(held.st_mode):
-                try:
-                    os.mkdir(destination, 0o700)
-                except OSError as exc:
-                    refused.append(f"refused: {_shown(name)}: {exc.strerror or exc}")
-                    continue
-                stack.append((entry.path, destination, name))
-            elif not stat.S_ISREG(held.st_mode):
-                refused.append(f"refused: {_shown(name)}: not a regular file")
-            elif held.st_nlink > 1:
-                refused.append(f"refused: {_shown(name)}: a file with more than one link")
-            elif held.st_size > budget:
-                refused.append(
-                    f"refused: {_shown(name)}: past the bound of {COPY_LIMIT_BYTES} bytes on "
-                    "the run's files"
-                )
+                self.subfolder(handle, name, target / name, path, depth + 1)
+            elif stat.S_ISREG(held.st_mode):
+                self.file(handle, name, target / name, path)
             else:
-                copied = _copy_file(entry.path, destination, held, budget)
-                if isinstance(copied, str):
-                    refused.append(f"refused: {_shown(name)}: {copied}")
-                else:
-                    budget -= copied
-    return refused
+                self.refuse(path, "not a regular file")
 
-
-def _copy_file(source: str, destination: Path, held: os.stat_result, budget: int) -> int | str:
-    """Copy one regular file, through no link, into a file of its own that did not
-    exist. The bytes copied, or why it was refused, the destination then removed."""
-    try:
-        handle = os.open(source, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
-    except OSError as exc:
-        return f"cannot be read: {exc.strerror or exc}"
-    with os.fdopen(handle, "rb") as reader:
-        opened = os.fstat(reader.fileno())
-        if (
-            (opened.st_dev, opened.st_ino) != (held.st_dev, held.st_ino)
-            or not stat.S_ISREG(opened.st_mode)
-            or opened.st_nlink > 1
-        ):
-            return "changed while it was copied"
+    def subfolder(self, parent: int, name: str, target: Path, path: str, depth: int) -> None:
+        """Copy the folder `name` of the open folder `parent`, opened from it."""
+        if depth > COPY_LIMIT_DEPTH:
+            self.refuse(path, f"past the bound of {COPY_LIMIT_DEPTH} folders deep")
+            return
         try:
-            written = os.open(
-                destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600
-            )
+            handle = os.open(name, _FOLDER_FLAGS, dir_fd=parent)
+        except OSError as exc:
+            self.refuse(path, _why_not_opened(exc))
+            return
+        try:
+            try:
+                os.mkdir(target, 0o700)
+            except OSError as exc:
+                self.refuse(path, str(exc.strerror or exc))
+                return
+            self.folder(handle, target, path, depth)
+        finally:
+            os.close(handle)
+
+    def file(self, parent: int, name: str, target: Path, path: str) -> None:
+        """Copy the file `name` of the open folder `parent`, judged by what was
+        opened, into a file of its own that did not exist."""
+        try:
+            handle = os.open(name, _FILE_FLAGS, dir_fd=parent)
+        except OSError as exc:
+            self.refuse(path, _why_not_opened(exc))
+            return
+        with os.fdopen(handle, "rb") as reader:
+            held = os.fstat(reader.fileno())
+            if not stat.S_ISREG(held.st_mode):
+                self.refuse(path, "not a regular file")
+            elif held.st_nlink > 1:
+                self.refuse(path, "a file with more than one link")
+            elif held.st_size > self.bytes_left:
+                self.refuse(path, self._past_the_bytes())
+            else:
+                copied = self._write(reader, target)
+                if isinstance(copied, str):
+                    self.refuse(path, copied)
+                else:
+                    self.bytes_left -= copied
+
+    def _write(self, reader: BinaryIO, target: Path) -> int | str:
+        """Write what `reader` holds into `target`, a new file. The bytes written, or
+        why not, the file then removed."""
+        try:
+            written = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
         except OSError as exc:
             return f"cannot be written: {exc.strerror or exc}"
         size = 0
         with os.fdopen(written, "wb") as writer:
             while chunk := reader.read(1024 * 1024):
                 size += len(chunk)
-                if size > budget:
+                if size > self.bytes_left:
                     break
                 writer.write(chunk)
-    if size > budget:
-        destination.unlink(missing_ok=True)
+        if size > self.bytes_left:
+            target.unlink(missing_ok=True)
+            return self._past_the_bytes()
+        return size
+
+    @staticmethod
+    def _past_the_bytes() -> str:
         return f"past the bound of {COPY_LIMIT_BYTES} bytes on the run's files"
-    return size

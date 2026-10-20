@@ -122,6 +122,53 @@ def test_the_fix_drift_run_projects_with_no_refusal() -> None:
     assert "native deny" in held["issue-tracker"]
 
 
+#: Git commands with an option that runs another program, which no rule of a run
+#: may allow with any arguments: `grep --open-files-in-pager`, and the commands
+#: that run a hook, a pager or a transport.
+_RUNNING_GIT = {
+    "grep",
+    "difftool",
+    "mergetool",
+    "bisect",
+    "submodule",
+    "filter-branch",
+    "fetch",
+    "pull",
+    "push",
+    "clone",
+    "remote",
+    "archive",
+    "send-email",
+    "help",
+    "commit",
+    "am",
+    "rebase",
+    "cherry-pick",
+    "revert",
+    "merge",
+    "checkout",
+    "switch",
+    "config",
+    "credential",
+    "instaweb",
+    "web--browse",
+    "gc",
+    "repack",
+}
+
+
+def test_no_allowed_git_form_can_run_another_program() -> None:
+    projected = run_rules.view(REPO, FIX_DRIFT, "living-docs")
+    assert not isinstance(projected, str)
+    for rule in projected.allow:
+        command = rule.get("command") or []
+        if command[:1] != ["git"]:
+            continue
+        verbs = [token for token in command[1:] if not token.startswith("-")]
+        verbs = [v for v in verbs if v != "{{pkit:working-copy}}"]
+        assert not set(verbs[:1]) & _RUNNING_GIT, command
+
+
 def test_project_managements_own_commands_are_never_allowed() -> None:
     projected = run_rules.view(REPO, FIX_DRIFT, "living-docs")
     assert not isinstance(projected, str)

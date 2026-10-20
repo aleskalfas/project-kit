@@ -287,41 +287,47 @@ def _ask(
     )
 
 
+def _say(line: str) -> None:
+    """Print one line whose words may be a fixer's, its control and formatting
+    characters shown as escapes, so no such word rewrites the terminal."""
+    print(drift.plain(line))
+
+
 def _print_plan(plan: drift.Plan) -> None:
     for agent, candidates in plan.dispatch.items():
         names = ", ".join(f"`{c.name}`" for c in candidates)
-        print(f"dispatch: {agent} on {len(candidates)} artefact(s): {names}")
+        _say(f"dispatch: {agent} on {len(candidates)} artefact(s): {names}")
     for listed in plan.listed:
         label = "standing" if listed.standing else "listed"
-        print(f"{label}: `{listed.name}` — {listed.why}")
+        _say(f"{label}: `{listed.name}` — {listed.why}")
 
 
 def _print_runs(fixers_run: list[drift.FixerRun], gathered: list[drift.Gathered]) -> None:
     for fixer, each in zip(fixers_run, gathered, strict=True):
         run = fixer.run
         if run is None:
-            print(f"ran: {fixer.agent} did not start — {fixer.skipped}")
+            _say(f"ran: {fixer.agent} did not start — {fixer.skipped}")
         else:
             said = f"finished, exit {run.exit_code}" if run.ending == "finished" else run.ending
             retried = ", started twice" if fixer.retried else ""
-            print(f"ran: {fixer.agent} — {said}{retried}; check {run.check}")
+            _say(f"ran: {fixer.agent} — {said}{retried}; check {run.check}")
             if run.reason and run.ending != "finished":
-                print(f"  why: {run.reason}")
+                _say(f"  why: {run.reason}")
             for command in run.excluded:
-                print(f"  outside the sandbox: `{command}` (ADR-066 point 6)")
+                _say(f"  outside the sandbox: `{command}` (ADR-066 point 6)")
             if run.refused_calls:
-                print(f"  the harness refused {len(run.refused_calls)} call(s):")
+                _say(f"  the harness refused {len(run.refused_calls)} call(s):")
                 for call in run.refused_calls:
-                    print(f"    {call}")
+                    _say(f"    {call}")
         if each.set_aside:
-            print(f"  set aside: {each.set_aside}")
+            _say(f"  set aside: {each.set_aside}")
         for outcome in each.outcomes:
             detail = f": {outcome.reason}" if outcome.reason else ""
             words = f" — {outcome.words}" if outcome.words else ""
             where = f" ({outcome.proposal})" if outcome.proposal else ""
-            print(f"result: {fixer.agent} {outcome.state} `{outcome.name}`{detail}{words}{where}")
+            _say(f"result: {fixer.agent} {outcome.state} `{outcome.name}`{detail}{words}{where}")
         for line, why in each.ignored:
-            print(f"  read for nothing: {line!r} — {why}")
+            _say(f"  read for nothing: {line!r} — {why}")
 
 
 def _print_waiting(index: dict[str, Any], queue: Path) -> None:

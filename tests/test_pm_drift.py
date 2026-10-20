@@ -1054,6 +1054,13 @@ def test_a_whole_run_gathers_each_proposal_into_the_queue(
     assert "fixers: 1 proposal waits for you" in out
 
 
+def test_a_fixers_words_never_reach_the_terminal_raw(drift) -> None:
+    said = drift.plain("held: \x1b[2Jclear\r\x07\x1b]52;c;aGk=\x07 and ‮evil")
+    assert "\x1b" not in said and "\r" not in said and "‮" not in said
+    assert "\\x1b[2Jclear\\x0d\\x07" in said and "\\u202e" in said
+    assert drift.plain("a plain line — with `ticks`") == "a plain line — with `ticks`"
+
+
 def test_a_dry_run_starts_and_writes_nothing(
     command, drift, fixers, contract_mod, monkeypatch, tmp_path, capsys
 ) -> None:

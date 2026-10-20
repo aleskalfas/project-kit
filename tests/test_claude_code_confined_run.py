@@ -1070,6 +1070,7 @@ def test_the_environment_holds_only_what_the_run_needs(runner: ModuleType, scene
         "ANTHROPIC_BASE_URL": "https://gateway",
         "TMPDIR": str(scene.temp),
         "CLAUDE_CODE_TMPDIR": str(scene.temp),
+        "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB": "1",
         "PKIT_AGENT_RUN": "1",
     }
 

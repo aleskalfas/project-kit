@@ -186,6 +186,10 @@ LINUX_SANDBOX = ("bwrap", "socat")
 
 #: The harness's sign-in variables, as its documentation names them: its own,
 #: then those of Amazon Bedrock, Google Vertex AI and Microsoft Foundry.
+#: The harness's switch that strips the sign-in variables from every process it
+#: starts, the run's shell included (ADR-066 point 4). A probe fact (point 12).
+CREDENTIAL_SCRUB = "CLAUDE_CODE_SUBPROCESS_ENV_SCRUB"
+
 SIGN_IN_VARIABLES = (
     "ANTHROPIC_API_KEY",
     "ANTHROPIC_AUTH_TOKEN",
@@ -906,7 +910,9 @@ def confined_environment(
     """The harness's environment in a confined run (ADR-066 point 4): only what
     the harness and the run's commands need. PATH puts the run's `pkit` first,
     then the folders of the harness and git, then the system's. The temp
-    variables name the run's temp folder, and the marker is set."""
+    variables name the run's temp folder, and the marker is set. The harness's
+    own scrub of the sign-in variables from every process it starts is turned
+    on by name (`CREDENTIAL_SCRUB`), rather than left to its default."""
     folders = [confined["pkit_folder"], os.path.dirname(harness)]
     git = shutil.which("git", path=env.get("PATH"))
     if git is not None:
@@ -921,6 +927,7 @@ def confined_environment(
         **kept,
         "PATH": os.pathsep.join(dict.fromkeys(folders)),
         **dict.fromkeys(TEMP_VARIABLES, confined["temp"]),
+        CREDENTIAL_SCRUB: "1",
         MARKER: "1",
     }
 

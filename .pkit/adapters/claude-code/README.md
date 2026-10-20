@@ -224,6 +224,7 @@ Never passed to a confined run: `--add-dir`, `--allowedTools`, `--mcp-config`, `
 - `TMPDIR` and `CLAUDE_CODE_TMPDIR`, both set to the run's temp folder, so the shell's temp folder lies in the workspace
 - the proxy and gateway variables the harness reaches its model through: `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, each in either case, and `ANTHROPIC_BASE_URL`
 - the harness's sign-in variables: `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `CLAUDE_CODE_OAUTH_TOKEN`; for Amazon Bedrock `CLAUDE_CODE_USE_BEDROCK`, `AWS_REGION`, `AWS_PROFILE`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_SESSION_TOKEN` and `AWS_BEARER_TOKEN_BEDROCK`; for Google Vertex AI `CLAUDE_CODE_USE_VERTEX`, `CLOUD_ML_REGION`, `ANTHROPIC_VERTEX_PROJECT_ID` and `GOOGLE_APPLICATION_CREDENTIALS`; for Microsoft Foundry `CLAUDE_CODE_USE_FOUNDRY`, `ANTHROPIC_FOUNDRY_API_KEY` and `ANTHROPIC_FOUNDRY_RESOURCE`
+- `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, so the harness keeps the sign-in variables from every command it starts
 - `PKIT_AGENT_RUN=1`
 
 Nothing else reaches the harness: no `CLAUDE_CONFIG_DIR`, no `UV_*`, and no variable that changes the harness's permissions or the folder it reads its configuration from. The one variable that touches its sandbox, `CLAUDE_CODE_TMPDIR`, only moves the shell's temp folder into the workspace. The run's `pkit` sets the `uv` settings it needs itself.
@@ -283,6 +284,8 @@ Only when every line passes does the adapter's author widen `TESTED_RANGE` to th
 - the start report's fields (`permissionMode`, `tools`, `mcp_servers`, `plugins`), the hook events' subtypes, and the result's `result` and `permission_denials`
 - the sign-in variables, and what the sandbox needs on each platform
 - that the start report does not say whether the sandbox started. `failIfUnavailable` stops the harness at start instead.
+- that an allow rule such as `Bash(git -C <clone> log:*)` matches no command that sets a variable before it, such as `GIT_EXTERNAL_DIFF=… git -C <clone> log`. A variable a command sets could make git run another program, so a rule that matched it would let the run do what the rules refuse
+- that `CLAUDE_CODE_SUBPROCESS_ENV_SCRUB=1`, which the runner sets, keeps the sign-in variables from every command the run's shell starts
 
 #### What stays open
 
@@ -295,7 +298,8 @@ The confined form holds what the harness can hold. This is what it cannot, state
 - **What the hook sees.** A confined run loads no project settings, so the hook does not run in it. The start report and the backbone's check after the run stand in for it.
 - **The person's instructions.** The harness reads the person's own `CLAUDE.md`, and any above the folder it starts in.
 - **An organisation's managed settings** reach every run, and nothing drops them. They may allow more, or run hooks of their own.
-- **What the limit reaches**, as "The limit, for both forms" says.
+- **What the limit reaches**, as "The limit, for both forms" says. A run that finishes on its own is not ended either: a process it left running in a session of its own runs on while the backbone checks the clone and copies the run's files. The copy reads the workspace by file descriptors, so such a process cannot swap a link in under it, but what it writes before the copy goes into the run's files, which are untrusted data in any case.
+- **What an allowed command's options do.** A rule allows a command with any arguments after its words. No allowed form has an option that runs another program, as `git grep --open-files-in-pager` does, which is why the rules leave it out. An option that writes a file, such as `--output`, is held by the sandbox, which writes only the workspace.
 - **The review command's runs** take the unconfined form, and nothing checks them.
 
 ### Live permission enforcement (`permission-hook.py`)

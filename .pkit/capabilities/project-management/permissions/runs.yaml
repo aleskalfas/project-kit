@@ -26,7 +26,14 @@ privileges:
         folders: ["{workspace}"]
         tools: [Write]
   read-version-control:
-    description: Git's reading commands, each pointed at the working copy as `git -C <working copy>`.
+    description: >-
+      Git's reading commands, each pointed at the working copy as
+      `git -C <working copy>`. A rule allows a command with any arguments
+      after its words, so no command is listed that an option can make run
+      another program: `git grep` is left out, since `--open-files-in-pager`
+      runs one, and the Grep tool searches instead. An option that writes a
+      file, such as `--output`, is held by the sandbox, which lets the run
+      write only its workspace.
     recognize:
       bash:
         - {cmd: git, args: ["-C", "{working-copy}", "log"]}
@@ -39,13 +46,17 @@ privileges:
         - {cmd: git, args: ["-C", "{working-copy}", "rev-parse"]}
         - {cmd: git, args: ["-C", "{working-copy}", "rev-list"]}
         - {cmd: git, args: ["-C", "{working-copy}", "blame"]}
-        - {cmd: git, args: ["-C", "{working-copy}", "grep"]}
         - {cmd: git, args: ["-C", "{working-copy}", "merge-base"]}
         - {cmd: git, args: ["-C", "{working-copy}", "describe"]}
         - {cmd: git, args: ["-C", "{working-copy}", "name-rev"]}
         - {cmd: git, args: ["-C", "{working-copy}", "shortlog"]}
   make-diff:
-    description: Make a diff between a file of the working copy and one in the workspace, and check that a diff applies to the working copy, which writes nothing.
+    description: >-
+      Make a diff between a file of the working copy and one in the
+      workspace, and check that a diff applies to the working copy. An option
+      that would write, such as `--output`, or `--apply` beside `--check`, is
+      held by the sandbox, which lets the run write only its workspace, and by
+      the check of the clone after the run.
     recognize:
       bash:
         - {cmd: git, args: ["diff", "--no-index"]}

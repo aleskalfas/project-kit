@@ -632,6 +632,98 @@ def test_the_copy_never_writes_over_what_the_folder_holds(workspace: Path, tmp_p
     assert (files_to / "answer.json").read_text(encoding="utf-8") == "the caller's"
 
 
+def test_a_link_swapped_in_after_the_entry_was_judged_is_not_followed(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A process the run left behind swaps a link in for a folder, and for a file,
+    after the copy judged each entry: the copy opens each from its folder, following
+    no link, so it reads neither target."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "secret.txt").write_text("the person's", encoding="utf-8")
+    (workspace / "docs").symlink_to(outside)
+    (workspace / "leak.txt").symlink_to(outside / "secret.txt")
+    judged = agent_confinement._lstat_at
+
+    def before_the_swap(folder: int, name: str) -> os.stat_result:
+        """Each link as the entry it replaced: a folder, a file."""
+        if name == "docs":
+            return os.stat(outside)
+        if name == "leak.txt":
+            return os.stat(outside / "secret.txt")
+        return judged(folder, name)
+
+    monkeypatch.setattr(agent_confinement, "_lstat_at", before_the_swap)
+    files_to = tmp_path / "files"
+    files_to.mkdir()
+    refused = agent_confinement.copy_files(workspace, files_to)
+    # Opened without following, a link reads as a link, or, opened as a folder on
+    # some systems, as no folder: never as its target.
+    docs, leak = refused
+    assert docs in (
+        "refused: docs: a symbolic link",
+        "refused: docs: no longer a folder when it was opened",
+    )
+    assert leak == "refused: leak.txt: a symbolic link"
+    assert _copied(files_to) == ["answer.json"]
+
+
+def test_the_copy_refuses_the_entries_past_its_bound(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(agent_confinement, "COPY_LIMIT_ENTRIES", 3)
+    for name in ("b", "c", "d", "e"):
+        (workspace / name).write_text(name, encoding="utf-8")
+    files_to = tmp_path / "files"
+    files_to.mkdir()
+    refused = agent_confinement.copy_files(workspace, files_to)
+    assert refused == [
+        "refused: d: it and every entry after it: past the bound of 3 entries on the run's files"
+    ]
+    assert _copied(files_to) == ["answer.json", "b", "c"]
+
+
+def test_the_copy_refuses_folders_past_its_depth(
+    workspace: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(agent_confinement, "COPY_LIMIT_DEPTH", 2)
+    (workspace / "a" / "b" / "c").mkdir(parents=True)
+    (workspace / "a" / "b" / "ok.txt").write_text("ok", encoding="utf-8")
+    (workspace / "a" / "b" / "c" / "deep.txt").write_text("deep", encoding="utf-8")
+    files_to = tmp_path / "files"
+    files_to.mkdir()
+    refused = agent_confinement.copy_files(workspace, files_to)
+    assert refused == ["refused: a/b/c: past the bound of 2 folders deep"]
+    assert _copied(files_to) == ["a", "a/b", "a/b/ok.txt", "answer.json"]
+
+
+def test_the_removal_never_changes_a_links_target(tmp_path: Path) -> None:
+    """A run folder the run sealed is opened up and removed, and a link in it, or in
+    place of it, never has its target's mode changed."""
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "keep").write_text("the person's", encoding="utf-8")
+    folder = tmp_path / "run"
+    (folder / "sealed").mkdir(parents=True)
+    (folder / "sealed" / "x").write_text("x", encoding="utf-8")
+    (folder / "locked").mkdir()
+    (folder / "locked" / "y").write_text("y", encoding="utf-8")
+    (folder / "elsewhere").symlink_to(outside)
+    linked = tmp_path / "linked-run"
+    linked.symlink_to(outside)
+    (folder / "sealed").chmod(0o500)
+    (folder / "locked").chmod(0)
+    outside.chmod(0o500)
+    try:
+        agent_confinement.remove_tree(folder)
+        agent_confinement._make_folders_writable(linked)
+        assert not folder.exists()
+        assert stat.S_IMODE(outside.stat().st_mode) == 0o500
+        assert (outside / "keep").read_text(encoding="utf-8") == "the person's"
+    finally:
+        outside.chmod(0o700)
+
+
 @pytest.mark.parametrize(
     ("name", "is_git"),
     [
