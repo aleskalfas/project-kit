@@ -22,7 +22,9 @@ only the tests marked `answers`.
 - **Mark a test `@pytest.mark.answers`** when what it asserts can change with
   the repository's own answers, the `revalidated` blocks and `revisited` lists
   of its files, beyond what `pkit validate` checks. An example is a test that
-  every declared place carries a revalidation.
+  every declared place carries a revalidation. So can a test that reads an
+  artefact file's bytes: one that compares the file whole with a copy, hashes
+  it, or reads its line numbers.
 - **No mark is needed** for a test that only runs a validator over the tree.
   The short check runs `pkit validate` itself.
 - **Unmarked,** such a test is skipped where only answers changed. An answer it

@@ -12,14 +12,14 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **A passing full run.** GitHub's record of this workflow's runs shows that the most recent full run on this pull request passed.
 - **Only answers since.** `pkit friction since` says every change from that run's head to this one lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
 
-Anything else, and any doubt, takes the full run. The decision is made by the base's copy of the decider, not the pull request's.
+Anything else, and any doubt, takes the full run. The decision is made by the base's code, the decider and the `pkit` it asks, not the pull request's.
 
 **What the status then means.** A green `checks` no longer always means the test suite passed on this head. On a short check it means three things:
 - every other check passed on this head, merged with the base as it stands
 - the suite passed on an earlier head of the pull request, merged with the base as it stood then
 - since then, only answers changed, and merges of the base
 
-Point 7 says it in full. The maintainer allowed this on 19 October, as option E of the design note on #1779.
+Point 7 says it in full. One predicate, `pkit friction since`, now decides two things: whether a person's authorisation covers a later head (project-management DEC-055 point 3), and whether the suite runs on that head. So a later head landed under an earlier authorisation has usually passed only the short check. The maintainer allowed this on 19 October, as option E of the design note on #1779, and #1798 carries it out.
 
 ## Context
 
@@ -29,7 +29,9 @@ Point 7 says it in full. The maintainer allowed this on 19 October, as option E 
 
 **What the status asks today.** `main`'s ruleset requires the `checks` status from GitHub Actions. It does not require a branch to be up to date with `main` ([ADR-055](ADR-055-first-adopter-analysis-and-living-docs.md) point 5 rejected that), and `main` merges through no queue. So the status never promised that the suite ran on the merge that lands. A push to `main` runs the full aggregator after each landing.
 
-**One home for the predicate.** Which changes lie inside the answers is computed in the backbone, in one place that every reader calls ([ADR-057](ADR-057-backbone-engines-and-command-limits.md) point 2). Answers are about to move into files of their own (#1779, #1797).
+**One home for the predicate.** Which changes lie inside the answers is computed in the backbone, in one place that every reader calls ([ADR-057](ADR-057-backbone-engines-and-command-limits.md) point 2). That place is `pkit friction since`, as DEC-055 point 3 ("Who answers it") and the CLI reference's "Friction checks" name it. Answers are about to move into files of their own (#1779, #1797).
+
+**Why an ADR.** Wiring CI alone is workflow mechanics, which COR-025 would place in a project record. This record also refines ADR-055 point 5, and it decides a trust boundary: whose code decides, and which of GitHub's records the status trusts. So it is an ADR, beside ADR-057.
 
 ## Decision
 
@@ -49,7 +51,8 @@ The short check runs only on a `pull_request` event. The workflow says so in the
 ### 3. The basis: the most recent full run on the pull request, which passed
 
 The decider finds the basis in GitHub's own record of runs, through the Actions API, with the token the workflow already holds.
-- **Which runs.** Runs of this workflow file, for `pull_request` events, on a branch of this repository, that GitHub lists for this pull request's number. Each must have started before this run.
+- **Which runs.** Runs of this workflow file, for `pull_request` events, on this pull request's branch of this repository, that started before this run. GitHub must list each of them for this pull request's number. A run it lists for no pull request, or for another, cannot be told, and makes this run full: passed over, it might be the most recent full run, which failed.
+- **All of them.** The decider reads up to three pages of runs. A branch with more runs than that makes this run full, so the decision never rests on the order GitHub lists runs in.
 - **Newest first.** A short run is passed over, whether it passed or failed. The next short check runs again all that a short run ran.
 - **The first full run decides.** It must have finished with success, and its head is the basis. A full run that failed, or was cancelled, makes this run full, even where an older full run passed. This is stricter than the issue's "the last head that passed the full run", on purpose: keyed on the last head that passed, a failed full run could hide behind a later push of answers.
 - **Telling the forms apart.** A run is full when its `checks` job ran the step that runs the full aggregator. It is short when that step was skipped and the short check's step ran. The two steps' names are the mark, as GitHub records them for each job.
@@ -69,19 +72,22 @@ The decider asks `pkit friction since <basis> --head <head> --base <base> --json
 
 ### 5. The base's copy decides
 
-On a pull request, the workflow checks the base's tree out beside the pull request's. It runs the base's decider, in an environment built from the base's tree, so the `pkit` it asks is the base's too. Both read the pull request's history.
-- **Why.** The code that decides has passed `main`'s full run. A pull request that changes the decider, or the code behind `friction since`, cannot judge its own run with that change.
+On a pull request, the workflow checks the base's tree out beside the pull request's, as a worktree of the same clone. It runs the base's decider, in an environment built from the base's tree, so the `pkit` it asks is the base's too. That `pkit` runs in the base's tree, so the code it loads from the tree it runs in, such as the ownership predicate, is the base's as well. Both read the pull request's history, as data.
+- **Why.** The code that decides is the base's, which passed the full run of the pull request that landed it. A pull request that changes the decider, or the code behind `friction since`, cannot judge its own run with that change.
+- **What is still the pull request's.** The steps before the decision, such as `uv sync` and `pkit sync`, run the pull request's code. What they set for later steps, such as where the deciding step finds `uv`, `git` and `gh`, is trusted as the pull request's workflow is ("What the status trusts").
 - **A base with no decider** leaves the run full.
 - **On any other event,** the tree's own decider runs, and only says why the run is full.
 
 ### 6. Every doubt runs the full suite
 
-The decider chooses the short check only by naming it, as its last act. Anything else leaves the full run:
+The decider chooses the short check only by naming it, as its last act. Anything else leaves the full run, among others:
 - a re-run. Its own first attempt is left out of the runs read, so a full run that failed could otherwise pass on its re-run with no suite.
 - a branch another pull request has had as its head, or a pull request whose base was changed
 - no full run on the pull request, or none among the runs read
 - a full run that failed, was cancelled or has not finished
-- an answer from GitHub that cannot be read, or a run that cannot be told
+- an answer from GitHub that cannot be read, or a run that cannot be told, such as one listed for no pull request or for another
+- more runs, events or pull requests of the branch than the decider reads
+- a checkout that is not the merge of the head judged, point 7
 - a pull request from a fork, whose runs lie on no branch of this repository
 - `pkit friction since` unable to answer, as in a shallow clone, or answering in a version the decider does not know
 - a base that cannot be checked out, or that holds no decider
@@ -92,7 +98,7 @@ The decider chooses the short check only by naming it, as its last act. Anything
 On a full run, as before. On the merge of this head with the base as the run saw it, every line of the aggregator passed, the suite included, and so did the changeset guard.
 
 On a short check, these hold together:
-- **This head.** On its merge with the base as the run saw it, every line of the aggregator but the suite passed, and so did the tests marked `answers` and the changeset guard.
+- **This head.** On its merge with the base as the run saw it, every line of the aggregator but the suite passed, and so did the tests marked `answers` and the changeset guard. The decider checks that the commit the run checked out is that merge: its second parent is the head it judged.
 - **An earlier head.** The suite passed on the basis, merged with the base as that run saw it.
 - **Between them.** Only answers changed, and merges of the base, clean or resolved inside the answers. The base may also have moved on with no merge on the branch.
 - **Who said so.** The base's decider, reading GitHub's record of runs and the base's `pkit friction since`.
@@ -107,7 +113,8 @@ The suite is skipped on the premise that an answer changes nothing a test finds.
 
 Such a test is marked `answers`, and the short check runs the marked tests.
 - **No mark is needed** for a test that only runs a validator over the tree. The short check runs `pkit validate` itself.
-- **The residual gap.** An unmarked test that reads the answers is skipped. So is a test that meets the shipped answers through a fixture copied from this tree. An answer that only such a test rejects passes the short check, and the full run on `main` finds it after the landing.
+- **The mark is held.** The short check passes where no test is marked. So a test of the full suite holds the two tests named above to the mark, and a change that drops it runs in full.
+- **The residual gap.** It is wider than the tests that assert what the answers hold. Any test that reads an artefact file's bytes can break on an answer: one that compares the file whole with a copy, hashes it, reads its line numbers, or meets it through a fixture or a template copied from this tree. Unmarked, such a test is skipped. An answer that only such a test rejects passes the short check, and the full run on `main` finds it after the landing.
 
 ### 9. What the job says, and what its token can do
 
@@ -131,7 +138,7 @@ The pre-push hook runs the full aggregator, as before, and decides nothing. So a
 
 **Why the steps' names mark the form.** The Actions API returns each job's steps with their conclusions. It gives no other field a step can set, and an Actions job's check run carries no output. A line in a job's summary or log could be printed by any test. A marker file uploaded beside the run would need another permission and a download per run. The full run's step keeps the name it had, so runs from before this record read as full.
 
-**Why the base decides.** On a `pull_request` event everything runs from the pull request's own commits. A decider from those commits would judge a change to itself. A slip that read code as an answer would give that very push the short check, and skip the tests that would find the slip. The base's decider has passed `main`'s full run. A slip in a pull request's decider is caught by that pull request's own full run, before it decides anything.
+**Why the base decides.** On a `pull_request` event everything runs from the pull request's own commits. A decider from those commits would judge a change to itself. A slip that read code as an answer would give that very push the short check, and skip the tests that would find the slip. The base's decider passed the full run of the pull request that landed it. A slip in a pull request's decider is caught by that pull request's own full run, before it decides anything. `main`'s tip may itself be broken, as the Implications say, so what the base's code has for it is that run, not a run of the tip.
 
 **Why `pkit friction since`.** DEC-055 point 3 already decides, with it, whether a person's authorisation covers a later head. CI asks the same question of the same heads. A second reading of the answers would drift from the first, and would not follow when answers move into files of their own.
 
@@ -139,10 +146,11 @@ The pre-push hook runs the full aggregator, as before, and decides nothing. So a
 
 **Why the aggregator with a flag.** The aggregator is the one source of what must pass, for the hook and CI alike. Leaving out only the suite keeps every check that reads the change. A check added to the aggregator joins the short check with no second edit.
 
-**What the status trusts.** The status trusts no more than it did, and the record says plainly what that is.
-- **The pull request's own commits.** The workflow, the aggregator and the short check's step run from them, as every check of a pull request does. A contributor who edits them can make the job say anything, with or without this record. Such an edit shows in the pull request's diff, as an edit to the aggregator that skips the suite would.
-- **The record of runs.** The basis trusts the runs of this workflow that GitHub lists for the branch. Someone who can push a branch to this repository can make such a run pass with no suite, through a pull request against a base of their own. Point 3 refuses the two routes that would carry such a run to this pull request: another pull request on the branch, and a change of base. Someone who can delete runs can still take away the most recent full run, which failed. Both could already put a green `checks` on any head, since `main`'s rule names only the app that writes the status.
-- **The decider.** It is the base's, so a slip in a pull request's own copy cannot choose the short check for it.
+**What the status trusts.** Before this record, nothing could skip the suite on a pull request. Now the status trusts three things it did not, and the rest as before.
+- **New: the base's decider and `friction since` being right.** A bug in either, not only an attacker, can now skip the suite on a change that is not answers only. The guard is that both are the base's, so a change to either is tested by its own pull request's full run before it decides anything. Project-management DEC-055 point 3 trusts the same predicate, so one misjudgement now meets neither safeguard (Implications).
+- **New: GitHub's record of runs being whole.** The basis trusts that GitHub lists every run of this workflow on the branch, and records each job's steps and their conclusions as they ran. Point 3 refuses a run it cannot tell, a run listed for no pull request or another, and a listing longer than the decider reads. Someone who can delete runs can still take away the most recent full run, which failed. Someone who can push a branch to this repository can make a run pass with no suite, through a pull request against a base of their own; point 3 refuses the two routes that would carry such a run to this pull request, another pull request on the branch and a change of base. Both could already put a green `checks` on any head, since `main`'s rule names only the app that writes the status.
+- **New: the commit tested is the merge of the head judged.** The decider checks it, point 7, so this rests on the checkout's history as git reads it.
+- **As before: the pull request's own commits.** The workflow, the aggregator, the short check's step and the steps before the decision run from them, as every check of a pull request does. A contributor who edits them can make the job say anything, with or without this record, such as through what an earlier step sets for the deciding step. Such an edit shows in the pull request's diff, as an edit to the aggregator that skips the suite would.
 
 ### Alternatives considered
 
@@ -154,7 +162,7 @@ The pre-push hook runs the full aggregator, as before, and decides nothing. So a
 - **Move the two assertions on the answers out of the suite,** into a line of the aggregator, so that no mark is needed. Not taken: both tests assert much besides the answers, and the mark keeps them whole.
 - **Cache the suite's result by a tree with the answers taken out.** Rejected. It needs a second reading of the answers, and a pull request's run can write a cache that a later run trusts.
 - **Run only the tests a change affects.** Rejected: no reliable map from a change to the tests it can break exists here.
-- **Pair the short check with a merge queue.** Not decided here. A queue runs `checks` in full on the merge it is about to make, so every landing would be tested on the true pair first. The short check would then leave no gap before the landing, and point 8's residual gap would close too. Turning the queue on is a change to `main`'s rules, which is the maintainer's.
+- **Pair the short check with a merge queue.** Already the end state that ADR-055 point 5 decided, and its tooling has landed (#1011). Turning it on is a setting of `main`'s ruleset, which the operator applies. A queue's run is always full (point 2), on the merge it is about to make, so every landing would be tested on the true pair first. The short check would then leave no gap before the landing, and point 8's residual gap would close too. Until then, point 7's gap is interim.
 - **Keep the full run on every push.** The status quo. Rejected by the maintainer for the cost above.
 
 ## Implications
@@ -164,10 +172,12 @@ The pre-push hook runs the full aggregator, as before, and decides nothing. So a
 - **The suite.** A test that asserts what the repository's own answers hold carries the `answers` mark. `tests/README.md` says so.
 - **The documentation.** `CONTRIBUTING.md`, under "Running checks", and `tests/README.md` say when the short check runs. Project rule 2 says CI may skip the suite on a head that changed only answers.
 - **ADR-055 point 5.** Its statement that every check the aggregator runs is a gate holds, but for the suite on a head the short check passes. It points here.
+- **DEC-055 point 3's "its checks pass".** The landing command lets a person's authorisation cover a later head when only answers changed and its checks pass. On such a head the checks are now the short check. So one predicate, `pkit friction since`, decides both whether the person's authorisation covers the head and whether the suite runs on it. A misjudgement in it, which the suite used to catch on its own, can now land a change that no person reviewed and no suite tested before the landing. The full run on `main` after the landing still finds what the suite would.
+- **The deciding step's cost.** Every pull request run now builds the base's environment and asks `friction since` before either form starts. `friction since` is bounded at fifteen minutes, and one that overruns is no answer, so the run is full.
 - **Two effects to watch.**
   - Nothing ties a failure on `main` to a landing that a short check passed. The job's summary names the basis, which is where to look.
   - A broken `main` turns every full run of a pull request red, since each tests its merge with `main`. A short check skips the suite, so a pull request it passes stays green on a broken `main`.
-- **No changeset and no migration.** Nothing here ships to adopters. It is project-kit's own CI.
+- **A `none` changeset and no migration.** Nothing here ships to adopters. It is project-kit's own CI. Project rule 2 lies in the backbone's tree, so a backbone `none` changeset covers its edit.
 - **When answers move into files of their own (#1779).** The predicate follows through `pkit friction since`. Whether the short check is still worth keeping is decided then.
-- **Revisit** if a test that reads the repository's own answers is found without the mark, or if the full run on `main` starts to find what a short check passed.
+- **Revisit** if a test that reads the repository's own answers, or an artefact file's bytes, is found without the mark, if the full run on `main` starts to find what a short check passed, if the deciding step grows to a share of a full run, or once the merge queue is turned on.
 - **Stands on** COR-050, ADR-019, ADR-055, ADR-057 and project-management DEC-055, all accepted.
