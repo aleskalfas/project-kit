@@ -1,7 +1,7 @@
 ---
 id: ADR-067
 title: The required check skips the test suite on a pull request head that changed only answers since the most recent full run, which passed
-status: proposed
+status: accepted
 date: 2026-10-19
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
