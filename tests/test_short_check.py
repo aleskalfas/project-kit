@@ -9,14 +9,17 @@
   request from another repository, a re-run, a branch another pull request has had
   as its head, a base that was changed, no full run, a most recent full run that
   failed or was cancelled though an older one passed, a run that has not finished
-  or ran neither step, a change outside the answers, a rewritten branch, an answer
-  from GitHub or from `pkit` that cannot be read or does not hold together, and the
-  script's own fault;
-- **what it reads**: only runs of this workflow, on this repository's branch, listed
-  for this pull request, started before this run; the branch's name only as a
-  query value; `pkit friction since` with no token in its environment;
+  or ran neither step, a run listed for no pull request or another, more runs than
+  are read, a checkout that is not the merge of the head, a change outside the
+  answers, a rewritten branch, an answer from GitHub or from `pkit` that cannot be
+  read or does not hold together, and the script's own fault;
+- **what it reads**: only runs of this workflow, on this repository's branch,
+  started before this run; the branch's name only as a query value; `pkit friction
+  since` in the tree the script lies in, with no token in its environment;
 - **what it writes**: `mode=` once, last, and the reason in the job's summary, with
-  what the author named in code spans.
+  what the author named in code spans;
+- **the tests the short check runs**: the two the record names keep the `answers`
+  mark.
 
 GitHub is a fake that answers the listing of runs, each run's jobs, the branch's pull
 requests and the pull request's events. One test runs the real `pkit friction since`
@@ -25,6 +28,7 @@ over a real history.
 
 from __future__ import annotations
 
+import ast
 import json
 import os
 import stat
@@ -222,8 +226,13 @@ def _env(tmp_path: Path, event_name: str = "pull_request", **event: Any) -> dict
     }
 
 
+def _merge_of(head: str = HEAD) -> Callable[[], str]:
+    """The checkout's second parent: by default, the pull request's head."""
+    return lambda: head
+
+
 def _decide(tmp_path: Path, github: Callable[[str], Any], since: Since, **env: Any) -> sc.Decision:
-    return sc.decide(_env(tmp_path, **env), github, since)
+    return sc.decide(_env(tmp_path, **env), github, since, _merge_of())
 
 
 # --- the short check ----------------------------------------------------------------
@@ -342,20 +351,19 @@ def test_no_full_run_on_the_pull_request_makes_the_run_full(tmp_path: Path) -> N
     decision = _decide(tmp_path, _github((_run(95), SHORT_PASSED)), Since())
 
     assert decision.mode == sc.FULL
-    assert "no full run on this pull request was found among the 1 runs read" in decision.why
+    assert "no full run on this pull request was found among its 1 earlier runs" in decision.why
 
 
 @pytest.mark.parametrize(
     "run",
     [
-        _run(90, pr=8),
         _run(90, repository="someone/fork"),
         _run(90, event="push"),
         _run(90, path=".github/workflows/other.yml"),
         _run(THIS_RUN),
         _run(THIS_RUN + 1),
     ],
-    ids=["another-pr", "another-repository", "another-event", "another-workflow", "this", "later"],
+    ids=["another-repository", "another-event", "another-workflow", "this", "later"],
 )
 def test_only_earlier_runs_of_this_workflow_on_this_pull_request_count(
     tmp_path: Path, run: dict[str, Any]
@@ -364,6 +372,34 @@ def test_only_earlier_runs_of_this_workflow_on_this_pull_request_count(
 
     assert decision.mode == sc.FULL
     assert "no full run on this pull request" in decision.why
+
+
+@pytest.mark.parametrize("pulls", [[{"number": 8}], [], None], ids=["another", "none", "missing"])
+def test_a_run_on_the_branch_not_listed_for_this_pull_request_makes_the_run_full(
+    tmp_path: Path, pulls: Any
+) -> None:
+    """Passed over, a failed full run GitHub listed for no pull request would let an
+    older one that passed be the basis."""
+    failed = {**_run(95), "pull_requests": pulls}
+    github = _github((failed, FULL_FAILED), (_run(90), FULL_PASSED))
+
+    decision = _decide(tmp_path, github, Since())
+
+    assert decision.mode == sc.FULL
+    assert "run #95 on the branch is not listed for this pull request" in decision.why
+
+
+@pytest.mark.parametrize("parent", [OLDER, None], ids=["another-head", "no-merge"])
+def test_a_checkout_that_is_not_the_merge_of_the_head_makes_the_run_full(
+    tmp_path: Path, parent: str | None
+) -> None:
+    """The aggregator runs on the checkout: the head judged must be the head it merges."""
+    github = _github((_run(90), FULL_PASSED))
+
+    decision = sc.decide(_env(tmp_path), github, Since(), lambda: parent)
+
+    assert decision.mode == sc.FULL
+    assert "not a merge of the pull request's head" in decision.why
 
 
 def test_a_change_outside_the_answers_makes_the_run_full_and_is_named(tmp_path: Path) -> None:
@@ -483,7 +519,7 @@ def test_a_re_run_runs_in_full(tmp_path: Path, attempt: str | None) -> None:
     else:
         env["GITHUB_RUN_ATTEMPT"] = attempt
 
-    decision = sc.decide(env, github, Since())
+    decision = sc.decide(env, github, Since(), _merge_of())
 
     assert decision.mode == sc.FULL
     assert "a re-run runs in full" in decision.why
@@ -545,24 +581,28 @@ def test_the_listing_is_read_a_page_at_a_time_up_to_its_bound(tmp_path: Path) ->
     github = _github(*shorts, (_run(10), FULL_PASSED))
     env = {**_env(tmp_path), "GITHUB_RUN_NUMBER": "2001"}
 
-    decision = sc.decide(env, github, Since())
+    decision = sc.decide(env, github, Since(), _merge_of())
 
     assert decision.mode == sc.SHORT
     listings = [path for path in github.asked if "/workflows/" in path]
     assert len(listings) == 2
 
 
-def test_no_basis_within_the_pages_read_makes_the_run_full(tmp_path: Path) -> None:
-    """A full run that passed, on a page past the bound, is never read."""
+def test_more_runs_than_the_pages_read_make_the_run_full(tmp_path: Path) -> None:
+    """Runs past the bound are never read, so the decision would rest on the order GitHub
+    lists them in: a full listing on the last page read is no basis, even with a full run
+    that passed on it."""
     count = sc.PAGE_SIZE * sc.PAGES
-    shorts = [(_run(2000 - i, OLDER), {**SHORT_PASSED, "head_sha": OLDER}) for i in range(count)]
-    github = _github(*shorts, (_run(10), FULL_PASSED))
+    shorts = [
+        (_run(2000 - i, OLDER), {**SHORT_PASSED, "head_sha": OLDER}) for i in range(count - 1)
+    ]
+    github = _github(*shorts, (_run(10), FULL_PASSED), (_run(5), FULL_PASSED))
     env = {**_env(tmp_path), "GITHUB_RUN_NUMBER": "2001"}
 
-    decision = sc.decide(env, github, Since())
+    decision = sc.decide(env, github, Since(), _merge_of())
 
     assert decision.mode == sc.FULL
-    assert f"no full run on this pull request was found among the {count} runs read" in decision.why
+    assert "more runs on the branch than the decider reads" in decision.why
     assert len([path for path in github.asked if "/workflows/" in path]) == sc.PAGES
 
 
@@ -582,30 +622,53 @@ def test_the_branch_name_is_only_a_query_value(tmp_path: Path) -> None:
     assert all("{owner}" not in path for path in github.asked)
 
 
-def test_friction_since_runs_unrouted_and_with_no_token(
+def test_friction_since_runs_unrouted_with_no_token_in_the_decider_s_tree(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """It runs in the tree the script lies in, the base's on a pull request, never in
+    the pull request's checkout, so the code `pkit` loads from its tree is the base's."""
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     pkit = bin_dir / "pkit"
     pkit.write_text(
-        '#!/bin/sh\nprintf \'{"args": "%s", "gh": "%s", "github": "%s", "route": "%s"}\' '
-        '"$*" "${GH_TOKEN:-}" "${GITHUB_TOKEN:-}" "${PKIT_NO_ROUTE:-}"\n',
+        '#!/bin/sh\nprintf \'{"args": "%s", "gh": "%s", "github": "%s", "route": "%s", '
+        '"cwd": "%s"}\' "$*" "${GH_TOKEN:-}" "${GITHUB_TOKEN:-}" "${PKIT_NO_ROUTE:-}" "$PWD"\n',
         encoding="utf-8",
     )
     pkit.chmod(pkit.stat().st_mode | stat.S_IEXEC)
     monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
     monkeypatch.setenv("GH_TOKEN", "secret")
     monkeypatch.setenv("GITHUB_TOKEN", "secret")
+    checkout = tmp_path / "the-pull-request-s-checkout"
+    checkout.mkdir()
+    monkeypatch.chdir(checkout)
 
     answered = sc.friction_since(BASIS, HEAD, "origin/main")
 
+    assert Path(__file__).resolve().parents[1] == sc.ROOT
     assert answered == {
         "args": f"friction since {BASIS} --head {HEAD} --base origin/main --json",
         "gh": "",
         "github": "",
         "route": "1",
+        "cwd": str(sc.ROOT),
     }
+
+
+def test_the_commit_tested_is_read_as_the_checkout_s_second_parent(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, make_adopter_repo: MakeAdopterRepo
+) -> None:
+    repo = make_adopter_repo()
+    repo.write({"a.txt": "a\n"})
+    repo.commit("start", files=None)
+    assert sc.checkout_head() is None
+    repo.checkout("topic", create=True)
+    head = repo.commit("the head", {"b.txt": "b\n"})
+    repo.checkout("main")
+    repo.commit("the base moves", {"c.txt": "c\n"})
+    repo.git("merge", "--no-ff", "-q", "-m", "merge", "topic")
+
+    assert sc.checkout_head() == head
 
 
 @pytest.mark.parametrize(
@@ -641,7 +704,7 @@ def test_main_writes_the_form_once_and_last_and_says_why(tmp_path: Path) -> None
     files = _outputs(tmp_path)
     env = {**_env(tmp_path), **files}
 
-    assert sc.main(env, _github((_run(90), FULL_PASSED)), Since()) == 0
+    assert sc.main(env, _github((_run(90), FULL_PASSED)), Since(), _merge_of()) == 0
 
     assert Path(files["GITHUB_OUTPUT"]).read_text().splitlines() == ["earlier=1", "mode=short"]
     said = Path(files["GITHUB_STEP_SUMMARY"]).read_text()
@@ -657,7 +720,7 @@ def test_a_fault_of_its_own_is_a_full_run(tmp_path: Path) -> None:
     def broken(path: str) -> Any:
         raise RuntimeError("a bug")
 
-    assert sc.main(env, broken, Since()) == 0
+    assert sc.main(env, broken, Since(), _merge_of()) == 0
 
     assert Path(files["GITHUB_OUTPUT"]).read_text().splitlines()[-1] == "mode=full"
     assert (
@@ -669,7 +732,7 @@ def test_a_fault_of_its_own_is_a_full_run(tmp_path: Path) -> None:
 def test_a_run_outside_a_workflow_is_full(tmp_path: Path) -> None:
     files = _outputs(tmp_path)
 
-    sc.main(files, _github((_run(90), FULL_PASSED)), Since())
+    sc.main(files, _github((_run(90), FULL_PASSED)), Since(), _merge_of())
 
     assert Path(files["GITHUB_OUTPUT"]).read_text().splitlines()[-1] == "mode=full"
 
@@ -698,7 +761,12 @@ def history(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRe
 def _decide_over(repo: AdopterRepo, tmp_path: Path, basis: str, head: str) -> sc.Decision:
     github = _github((_run(90, basis), {**FULL_PASSED, "head_sha": basis}))
     env = _env(tmp_path, head=head)
-    return sc.decide(env, github, lambda s, h, b: sc.friction_since(s, h, "main"))
+    return sc.decide(
+        env,
+        github,
+        lambda s, h, b: sc.friction_since(s, h, "main", root=repo.root),
+        _merge_of(head),
+    )
 
 
 def test_over_a_real_history_answers_are_short_and_code_is_full(
@@ -727,3 +795,42 @@ def test_over_a_real_history_a_rewritten_branch_is_full(
 
     assert decision.mode == sc.FULL
     assert "does not descend" in decision.why
+
+
+# --- the tests the short check runs -------------------------------------------------
+
+
+def _marked_answers(tree: ast.Module) -> set[str]:
+    """The test functions of a module that carry `@pytest.mark.answers`."""
+    return {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.FunctionDef)
+        and any(
+            ast.unparse(d.func if isinstance(d, ast.Call) else d) == "pytest.mark.answers"
+            for d in node.decorator_list
+        )
+    }
+
+
+def test_the_tests_that_read_the_repository_s_answers_carry_the_mark() -> None:
+    """The short check runs the tests marked `answers`, and passes where none is: a mark
+    removed or renamed would empty it with no failure (ADR-067 point 8). So the full run
+    holds the two tests the record names to the mark."""
+    tests = Path(__file__).resolve().parent
+    marked = {
+        (path.name, name)
+        for path in tests.glob("test_*.py")
+        for name in _marked_answers(ast.parse(path.read_text(encoding="utf-8")))
+    }
+
+    assert {
+        (
+            "test_self_host_documentation.py",
+            "test_every_declared_place_is_a_page_anchored_and_revalidated",
+        ),
+        (
+            "test_software_analysis_rule_set.py",
+            "test_the_judgement_rules_ship_proposed_declaring_no_check",
+        ),
+    } <= marked

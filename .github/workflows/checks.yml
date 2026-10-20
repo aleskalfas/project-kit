@@ -32,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     # Read only: the checkout, and what the step that decides the short check
     # reads (ADR-067) — the record of this workflow's runs, and the pull
-    # request's branch and timeline.
+    # request's branch and events.
     permissions:
       contents: read
       actions: read
@@ -70,9 +70,11 @@ jobs:
       # `short` where GitHub's record shows the most recent full run on the pull
       # request passed, and `pkit friction since` says only answers changed
       # since that run's head. On a pull request the decider, and the `pkit` it
-      # asks, are the base's, checked out beside this tree and run against it,
-      # so a pull request never decides its own run with its own code. A base
-      # with no decider leaves the run full. On any other event this tree's
+      # asks, are the base's, checked out beside this tree, run in the base's
+      # tree and reading this tree's history, so neither is the pull request's
+      # own code. The steps above ran the pull request's code, and what they
+      # set for later steps is trusted as its workflow is. A base with no
+      # decider leaves the run full. On any other event this tree's
       # decider only says why the run is full. The decider writes `mode=short`
       # last, and only then. A failure here fails nothing: with no answer, the
       # run is full, and the full run's step says so in the job's summary. Of

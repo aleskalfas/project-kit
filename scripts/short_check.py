@@ -7,12 +7,14 @@ without its test suite. A run takes it only on a pull request, and only where:
 
 - **a passing full run is the basis.** GitHub's own record of this workflow's
   runs is read through the Actions API, with the token the workflow holds. The
-  runs kept are those of this workflow file, for `pull_request` events, on a
-  branch of this repository, that GitHub lists for this pull request's number
-  and that started before this run. Newest first, a short run is passed over,
-  and the first full run decides: it must have finished with success, and its
-  head is the basis. A run is told by its `checks` job's steps, as GitHub
-  records them: `FULL_STEP` ran, or it was skipped and `SHORT_STEP` ran.
+  runs read are those of this workflow file, for `pull_request` events, on a
+  branch of this repository, that started before this run. Each must be listed
+  for this pull request's number, or the run is full. Newest first, a short run
+  is passed over, and the first full run decides: it must have finished with
+  success, and its head is the basis. A run is told by its `checks` job's
+  steps, as GitHub records them: `FULL_STEP` ran, or it was skipped and
+  `SHORT_STEP` ran. A listing longer than the pages read is no basis, so the
+  decision does not rest on the order GitHub lists runs in.
 - **only answers changed since.** `pkit friction since <basis> --head <head>
   --base origin/<base> --json` says every change from the basis to the pull
   request's head lies inside `revalidated` blocks and `revisited` lists, a merge
@@ -21,12 +23,17 @@ without its test suite. A run takes it only on a pull request, and only where:
   reads no answer itself. GitHub lists a run for every pull request of its
   branch, so the basis is this pull request's only because `friction since`
   finds it on the head's own line of commits.
+- **the commit this run tests is the merge of that head.** The checkout's
+  second parent is the pull request's head, so the head judged is the head
+  whose merge the aggregator runs on.
 
 Everything else is a full run, and so is every doubt: another event, a pull
 request from another repository, a re-run, a branch another pull request has
 had as its head, a pull request whose base was changed, no full run among the
-runs read, a full run that failed, was cancelled or has not finished, a run that
-cannot be told, an answer from GitHub or from `pkit` that cannot be read. No
+runs read, more runs than are read, a run listed for no pull request or another,
+a full run that failed, was cancelled or has not finished, a run that cannot be
+told, a checkout that is not the merge of the head, an answer from GitHub or
+from `pkit` that cannot be read. No
 label, title, description, commit message or file of the pull request names the
 basis: the branch's name only narrows the listing.
 
@@ -40,9 +47,11 @@ basis: the branch's name only narrows the listing.
 
 **Whose copy decides.** On a pull request the workflow runs the base's copy of
 this script, in an environment built from the base's tree, so the `pkit` it asks
-is the base's too. Both read this checkout's history. A pull request that
-changes the decider, or the code behind `friction since`, is decided by the
-code that passed `main`'s full run. On any other event the workflow runs this
+is the base's too. That `pkit` runs in the base's tree, the one this script
+lies in, so the code it loads from the tree it runs in, such as the ownership
+predicate, is the base's as well. Both read this checkout's history as data. A
+pull request that changes the decider, or the code behind `friction since`, is
+decided by the code its base holds. On any other event the workflow runs this
 tree's copy, which only says why the run is full. The workflow also lets no
 other event run the short check, whatever this script says.
 
@@ -104,8 +113,13 @@ _CONTROL = re.compile(r"[\x00-\x1f\x7f-\x9f]")
 #: The tokens the deciding step holds, kept from every command it starts but `gh`.
 _TOKENS = ("GH_TOKEN", "GITHUB_TOKEN")
 
+#: The tree this script lies in: on a pull request, the base's. `pkit friction
+#: since` runs there, so the code it loads from its tree is the base's.
+ROOT = Path(__file__).resolve().parents[1]
+
 Api = Callable[[str], Any]
 Since = Callable[[str, str, str], Any]
+Tested = Callable[[], Any]
 
 
 class Full(Exception):
@@ -237,22 +251,35 @@ def earlier_runs(
             raise Full("GitHub's listing of this workflow's runs holds no list of runs")
         for item in cast("list[Any]", page_runs):
             run = _mapping(item)
-            if _ours(run, repository, pr) and _number(run) < before:
+            if _ours(run, repository) and _number(run) < before:
+                _for_this_pull_request(run, pr)
                 runs.append(run)
         if len(cast("list[Any]", page_runs)) < PAGE_SIZE:
-            break
-    return sorted(runs, key=_number, reverse=True)
+            return sorted(runs, key=_number, reverse=True)
+    raise Full("this workflow has more runs on the branch than the decider reads")
 
 
-def _ours(run: Mapping[str, Any], repository: str, pr: PullRequest) -> bool:
-    pulls = run.get("pull_requests")
+def _ours(run: Mapping[str, Any], repository: str) -> bool:
+    """A run of this workflow, for a pull request whose head is a branch of this
+    repository."""
     return (
         run.get("event") == "pull_request"
         and run.get("path") == WORKFLOW_PATH
         and _mapping(run.get("head_repository")).get("full_name") == repository
-        and isinstance(pulls, list)
-        and any(_mapping(p).get("number") == pr.number for p in cast("list[Any]", pulls))
     )
+
+
+def _for_this_pull_request(run: Mapping[str, Any], pr: PullRequest) -> None:
+    """Return where GitHub lists `run` for this pull request. The branch was the head
+    of this pull request alone, so a run listed for none, or for another, is one that
+    cannot be told, and is never passed over: it may be the most recent full run."""
+    pulls = run.get("pull_requests")
+    listed = cast("list[Any]", pulls) if isinstance(pulls, list) else []
+    if not any(_mapping(p).get("number") == pr.number for p in listed):
+        raise Full(
+            f"run #{_number(run)} on the branch is not listed for this pull request, "
+            f"so it cannot be told"
+        )
 
 
 def _number(run: Mapping[str, Any]) -> int:
@@ -336,7 +363,7 @@ def basis(api: Api, repository: str, pr: PullRequest, before: int) -> Run:
                 f"the most recent full run on this pull request, {run.named()}, did not pass"
             )
         return run
-    raise Full(f"no full run on this pull request was found among the {len(runs)} runs read")
+    raise Full(f"no full run on this pull request was found among its {len(runs)} earlier runs")
 
 
 # --- only answers since -------------------------------------------------------------
@@ -377,10 +404,46 @@ def answers_only(since: Since, found: Run, pr: PullRequest) -> None:
     raise Full(f"changes since {found.named()} lie outside the answers: {', '.join(shown)}{more}")
 
 
+# --- the commit tested ---------------------------------------------------------------
+
+
+def tests_the_head(tested: Tested, pr: PullRequest) -> None:
+    """Return where the commit this run checked out, which the aggregator runs on, is
+    a merge whose second parent is the pull request's head: the head judged is the head
+    tested."""
+    if tested() != pr.head:
+        raise Full(
+            f"the commit this run tests is not a merge of the pull request's head "
+            f"{pr.head[:7]}, so the head judged would not be the head tested"
+        )
+
+
+def checkout_head() -> str | None:
+    """The second parent of the commit checked out in the working directory, the
+    pull request's checkout: on a `pull_request` event, the head GitHub merged with the
+    base. None where it has none, or git cannot say."""
+    env = {k: v for k, v in os.environ.items() if k not in _TOKENS}
+    try:
+        proc = subprocess.run(
+            ["git", "rev-parse", "--verify", "--quiet", "HEAD^2^{commit}"],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=API_TIMEOUT,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    said = proc.stdout.strip()
+    return said if proc.returncode == 0 and _SHA.fullmatch(said) else None
+
+
 # --- the decision -------------------------------------------------------------------
 
 
-def decide(env: Mapping[str, str], api: Api, since: Since) -> Decision:
+def decide(
+    env: Mapping[str, str], api: Api, since: Since, tested: Tested = checkout_head
+) -> Decision:
     """Whether this run is the short check, and why."""
     try:
         repository = env["GITHUB_REPOSITORY"]
@@ -389,6 +452,7 @@ def decide(env: Mapping[str, str], api: Api, since: Since) -> Decision:
         event = json.loads(Path(env["GITHUB_EVENT_PATH"]).read_text(encoding="utf-8"))
         pr = pull_request(event_name, _mapping(event), repository)
         first_attempt(env)
+        tests_the_head(tested, pr)
         one_pull_request(api, repository, pr)
         base_unchanged(api, repository, pr)
         found = basis(api, repository, pr, before)
@@ -428,15 +492,23 @@ def gh_api(path: str) -> Any:
         raise Full("GitHub could not be read: its answer is not JSON") from exc
 
 
-def friction_since(since: str, head: str, base: str) -> Any:
+def friction_since(since: str, head: str, base: str, *, root: Path = ROOT) -> Any:
     """`pkit friction since <since> --head <head> --base <base> --json`, read as JSON,
-    with no token in its environment. Raises Full when it cannot answer."""
+    run in `root`, the tree this script lies in, with no token in its environment. On a
+    pull request that tree is the base's, a worktree of the pull request's checkout, so
+    it reads the same history. Raises Full when it cannot answer."""
     env = {k: v for k, v in os.environ.items() if k not in _TOKENS}
     env["PKIT_NO_ROUTE"] = "1"
     command = ["pkit", "friction", "since", since, "--head", head, "--base", base, "--json"]
     try:
         proc = subprocess.run(
-            command, env=env, capture_output=True, text=True, check=False, timeout=SINCE_TIMEOUT
+            command,
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=SINCE_TIMEOUT,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise Full(f"`pkit friction since` could not be run: {_code(str(exc))}") from exc
@@ -480,11 +552,14 @@ def _shown(text: str) -> str:
 
 
 def main(
-    env: Mapping[str, str] | None = None, api: Api = gh_api, since: Since = friction_since
+    env: Mapping[str, str] | None = None,
+    api: Api = gh_api,
+    since: Since = friction_since,
+    tested: Tested = checkout_head,
 ) -> int:
     env = os.environ if env is None else env
     try:
-        decision = decide(env, api, since)
+        decision = decide(env, api, since, tested)
     except Exception as exc:  # any fault of its own is a doubt too, so the run is full
         fault = _code(f"{type(exc).__name__}: {exc}")
         decision = Decision(FULL, f"the decision could not be made ({fault})")
