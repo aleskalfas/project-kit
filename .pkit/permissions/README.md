@@ -15,6 +15,7 @@ pkit:
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+      artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
       at: 2026-10-20T03:31:55Z
       outcome: updated
@@ -265,4 +266,4 @@ A command that starts agents with nobody watching may confine each run to rules 
 
 **How the projection holds each deny.** The first deny becomes an allow list: each privilege it leaves open, in a native rule's form. Every other deny, the run's floor and the session model's denies for every agent or for the run's agent, is held in one of two ways. A deny that reaches nothing the allow list allows is held by the list, and each part of it a native rule can name is also written as a native deny. A deny that reaches something the allow list allows must be written as native denies there, which take it from the list; where no native rule can name it, the run is refused. Where the projection cannot tell that two recognizers never match the same call, it takes them to.
 
-`pkit agents rules <capability>:<command>` shows the allow list, the denies and how each is held, each folder named as a brief names it. `pkit permissions overview` and `explain` list each run's rules under "RULES OF AGENT RUNS", with the capability that contributed them (ADR-016 point 7).
+`pkit agents rules <capability>:<command>` shows the allow list, the denies and how each is held ([the CLI README, "agents rules"](../cli/README.md#agents-rules-capabilitycommand---agent-agent---json)). `pkit permissions overview` and `explain` list each run's rules under "RULES OF AGENT RUNS", with the capability that contributed them (ADR-016 point 7).

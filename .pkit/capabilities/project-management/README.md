@@ -13,7 +13,8 @@ pkit:
         - .pkit/capabilities/project-management/permissions/**
         - .pkit/capabilities/project-management/adapters/**
         - .pkit/capabilities/project-management/decisions/**
-      record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
+        - .pkit/capabilities/project-management/package.yaml
+      record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
       at: 2026-10-20T03:23:23Z
       outcome: updated
@@ -1344,7 +1345,7 @@ To deliberately override the deny (not recommended — it removes the methodolog
 - **One deny of everything proposing does not need.** What it leaves open: reading the working copy with the file tools, writing new files in the run's workspace, git's reading commands pointed at the working copy (`git -C <working copy> log`, `show`, `diff` and the rest), making a diff with `git diff --no-index` and checking one with `git -C <working copy> apply --check`, the backbone's reading commands, and each command another component declares a query. The adapter holds it as an allow list, and refuses every other call without asking. A writer added later is refused without anyone listing it. A form is allowed with any arguments, so none is listed whose options can run another program: `git grep` is left out, since `--open-files-in-pager` runs one, and the Grep tool searches instead. An option that writes a file is held by the sandbox.
 - **A floor of denies:** writing with the file tools anywhere but the workspace, version control beyond reading, the work tracker, the toolchain that installs or runs packages, every writer of the methodology, and every command of this capability. Each is written as a native deny where a native rule can name it, and the allow list holds the rest.
 
-The session model's denies that bind on the run's agent come along, the guardrails among them. A deny that reaches what the run needs and that no native rule can hold refuses the run. `pkit agents rules project-management:fix-drift` shows what a run is allowed, what it is denied and how each deny is held. `pkit permissions overview` and `explain` list the rules under "RULES OF AGENT RUNS", with this capability as their source.
+The session model's denies that bind on the run's agent come along, the guardrails among them. A deny that reaches what the run needs and that no native rule can hold refuses the run. What `pkit agents rules project-management:fix-drift` shows is in [the CLI README, "agents rules"](../../cli/README.md#agents-rules-capabilitycommand---agent-agent---json). `pkit permissions overview` and `explain` list the rules under "RULES OF AGENT RUNS", with this capability as their source.
 
 ## Upgrading
 

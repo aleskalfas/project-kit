@@ -948,9 +948,6 @@ Runs `<agent>` once, on the brief read from standard input, and ends it at `<sec
 - **The marker.** Inside an agent run, where `PKIT_AGENT_RUN` is set at all, even empty, the command refuses before it reads anything, in both forms (ADR-066 point 8). The runner sets the marker for every process of a run.
 - **The runner.** The backbone finds the command a registered adapter registers in its `commands:` tree under `run-agent`, through its one lookup of that tree. For a confined run it reads that registration, and runs the runner, from the clone. A capability's command of that name is no runner. With none, the run is refused and the reason names the registered adapters. With more than one, it is refused too, until a record says how a project names its harness.
 - **What it passes.** The runner reads the request on its standard input: the agent, the brief, the limit, the effort, and the folder or the confined form's block. No flag that bypasses permissions reaches any run (ADR-066 point 4). The runner passes only the flags its adapter's README lists.
-
-- **The runner.** The backbone finds the command a registered adapter registers in its `commands:` tree under `run-agent`, through its one lookup of that tree. A capability's command of that name is no runner. With none, the run is refused and the reason names the registered adapters. With more than one, it is refused too, until a record says how a project names its harness.
-- **What it passes.** The runner reads the request on its standard input: the agent, the brief, the folder, the limit and the effort. No flag that bypasses permissions reaches any run (ADR-066 point 4). The runner passes only the flags its adapter's README lists.
 - **The bounds.** At the limit the runner ends the harness and the processes still descended from it, as the adapters README says. The backbone gives the runner thirty seconds more to answer, then asks it to stop and kills it two seconds later. `SIGTERM` or `SIGHUP` to the command stops the runner the same way, so a caller that ends the command at its own bound ends the harness too. In a project pinned to another backbone version, the router runs the command through `uvx`, and such a signal to the router does not reach it. The runner still ends the harness at the limit.
 - **Inside a command the backbone runs**, such as a validator or a predicate, the run is refused before anything else. That run's kill asks nothing first, so the harness would outlive it.
 - **Usage errors, exit 2.** An agent name that is not a letter or digit followed by letters, digits, `.`, `_` or `-`; an empty brief, or one holding a NUL character; a folder that does not exist; `--folder` with any confined option, or the confined options not all three; a commit that is not a full id the repository holds; a `--rules-of` that is not `<capability>:<command>`; a limit outside 1 second to a week; an effort outside `low`, `medium`, `high`, `xhigh`, `max`.
@@ -974,8 +971,6 @@ Shows what a confined run of `<command>` is allowed and denied, as the run comma
 - **Without `--json`**, the forms allowed and nothing else, the native denies, how each deny is held, and the allowed commands whose work starts `uv`, which macOS runs outside the sandbox.
 - **With `--json`**, keys sorted: `schema_version` (`1`), `rules_of`, `refused` (why no run starts under the rules, or `null`), `allow` and `deny` (each in the runner's rule forms), `held`, `forms` (the forms a brief names) and `excluded_candidates`.
 - **Exit** `0` when the rules project, `1` when a run under them would be refused.
-
-project-management's `fix-drift` reads `forms` at the pinned commit, so its brief names no form the rules refuse (DEC-056 point 5).
 
 ## Authoring commands
 
