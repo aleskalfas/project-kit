@@ -1,0 +1,20 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  Each analysis keeps a generated overview, `overview/README.md` in its
+  folder, as DEC-003 point 8 decides: the reader's entry point. It shows the
+  glossary and each domain-model view with the first paragraph of its
+  opening, the actors, the requirements and their map, the areas in the order
+  of their numbers with each one's goal and use cases, the chain of use cases,
+  the use-case diagram, and each journey with its flow, every artefact in
+  force linked. `pkit analysis overview` writes it, and the stamp rewrites the
+  overview of the analysis it writes in. It carries a fingerprint of the data
+  it reads, and `pkit analysis validate` fails a stale one, naming the
+  command. A missing overview is a warning, so an upgrade fails nothing. Each
+  area's goal is one line in the settings file's new `areas`, in an entry of
+  `analyses` or at the file's top. The check warns of an area of use cases in
+  force without a goal, and fails a goal that names no area. The new setting
+  `overview: false` keeps no overview. The capability declares the overview's
+  folder as held, at the location's top and one folder down.

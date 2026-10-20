@@ -31,7 +31,7 @@ A design note weighed the options against established practice. That practice in
 
 ## Decision
 
-**The capability draws four diagrams from an analysis's front matter: a use-case diagram, a journey's flow, a requirement map and the chain of use cases. A query prints them on demand, and a generated overview shows them to readers. No diagram is a fact's home. A diagram written in an artefact shows only what that artefact, or an analysis artefact it anchors, states.**
+**The capability draws four diagrams from an analysis's front matter: a use-case diagram, a journey's flow, a requirement map and the chain of use cases. A query prints them on demand. Each analysis's generated overview shows them to readers, beside what the analysis holds. No diagram is a fact's home. A diagram written in an artefact shows only what that artefact, or an analysis artefact it anchors, states.**
 
 ### 1. A diagram is never a fact's home
 
@@ -107,13 +107,34 @@ A query prints each diagram as Mermaid text, computed from the analysis in the w
 
 ### 8. A generated overview shows them by default
 
-Each analysis keeps a generated overview of its diagrams, so a reader on a repository host, such as GitHub, sees them with no setup.
-- **What it is:** a held document, in a folder of held documents of its own in the analysis (COR-050 point 1). A held folder never equals or encloses a documentation root or another declaration's place.
-- **How it starts:** install writes it. A migration writes it for a project that installed the capability before (COR-010). How install does so is a question for the overview's build (Implications).
-- **How it stays fresh:** the stamp rewrites it whenever it writes an artefact. After a hand edit of a field a diagram draws, a command rewrites it, apart from the query, which writes nothing. Validation fails a stale overview, and its finding names the command.
-- **Opting out:** a project that deletes it is reported, never failed. How a deletion lasts past the stamp's next rewrite is a question for the overview's build (Implications).
+Each analysis keeps a generated overview, the reader's entry point. A reader on a repository host, such as GitHub, sees there with no setup what the analysis holds, in the order it is built. The reader also sees why its areas are cut as they are.
+- **What it is:** a held document, `overview/README.md`, in a folder of held documents of its own in the analysis (COR-050 point 1). A held folder never equals or encloses a documentation root or another declaration's place.
+- **What it shows,** in the order an analysis is built (DEC-001 point 12), each artefact in force and linked:
+  - the concepts: the glossary, then each domain-model view in its numbered order, with its title and the first paragraph of its opening
+  - the actors
+  - the requirements and their map, where requirements exist
+  - the areas in their numbered order, each with its goal and its use cases, then the chain of use cases and the use-case diagram
+  - the journeys, each with its flow, where journeys exist
+
+  Each diagram is the query's own output, with its text alternative (point 7), in a section of its own.
+- **A view's opening.** Its first paragraph states the problem the view's concepts solve, or what the group covers where no record gives the problem ([software-analysis:DEC-004-domain-model-views] point 3). The overview quotes that paragraph, with each link kept as its text. A view whose opening holds no text yet shows its title alone.
+  - **Read by the part's permanent id,** as the check reads it. It is the only body part the overview reads, so it refines DEC-001 point 1.
+  - **A reader's text, shown to readers.** The overview acts on none of it, and draws nothing from it.
+- **An area's goal:** one line for each area of an analysis's use cases, kept as data in the capability's configuration beside the area's folder name. It says what the area makes possible, such as "010-ordering: a customer can place an order and pay for it".
+  - **Each analysis its own.** Each analysis numbers its own areas (DEC-001 point 2), so it keeps the goals of its own areas.
+  - **Its home** is the configuration. It is the one text the overview shows that no artefact holds. No anchor covers it, and no rule of `SAN` judges its words.
+  - **The check** fails a goal that names no folder of the use cases. Where the project keeps its overview, it also warns of an area of use cases in force without a goal.
+  - **No areas.** A project whose use cases have no areas keeps no goal.
+- **Who writes it:** its own command, which writes the overview of each analysis that holds an artefact, and the stamp, after it writes an artefact. Each writes a file only where its bytes change. The query writes nothing. Install writes none, since install runs no command of a capability (COR-017). So a project gets its overview from its first stamp, or from the command.
+- **How it stays fresh:** the overview carries a fingerprint of what it draws, the data it reads, never its text. Validation compares it with the analysis, and fails a stale overview. Its finding names the command.
+  - **A release that only prints it differently** changes no fingerprint, so it fails no project. The next rewrite prints it anew.
+  - **A release that reads more of the analysis** raises the version the fingerprint carries. An overview written under another version is a warning until the command rewrites it, so such a release fails no project either.
+  - **A missing overview** is a warning that names the command. So a project that installed the capability before fails nothing, and needs no migration.
+- **Keeping none:** a setting in the capability's configuration turns the overview off. The stamp then writes none, the command refuses, and validation asks for no overview and no goal. It warns of an overview left in place, which nothing keeps fresh.
 - **What it anchors:** nothing, since a held document carries no friction block (COR-050 point 12). Generation and the check that it is fresh keep it true to what it draws. The capability's maintainer took this as meeting "it anchors what it shows".
-- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis, a title or a status included. Two branches that each make such a change conflict on the overview, as on a lock file. The command's rewrite resolves it.
+- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a view's opening and a goal are included. Two branches that each make such a change conflict on the overview, as on a lock file.
+  - **Where they conflict:** always on its fingerprint's line, and on each section both change. One section per diagram keeps the rest apart.
+  - **Resolving it** is running the command.
 
 ### 9. Where a generated diagram never shows
 
@@ -142,7 +163,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why a diagram is never a fact's home.** A home is where a change to a fact is made. A picture cannot say which relation each line shows, so the change is always made in the field or the part that the picture restates.
 
-**Why front matter only, for now.** Reading front matter needs no change to an accepted point. It draws what the capability's maintainer took: who takes part, a journey's path and what meets a requirement. Reading body parts by their permanent id would draw paths and seams too, so it changes what DEC-001 point 1 allows a tool. It comes as a refinement of its own.
+**Why front matter only, for now.** Reading front matter needs no change to an accepted point. It draws what the capability's maintainer took: who takes part, a journey's path and what meets a requirement. Reading body parts by their permanent id would draw paths and seams too, so it changes what DEC-001 point 1 allows a tool. It comes as a refinement of its own. The overview's quote of a view's opening draws nothing (point 8).
 
 **Why a use-case diagram, not a context diagram.**
 - **What was asked** was a context diagram from actors and use cases. Drawn from them, it is UML's use-case diagram, which shows the system's boundary with the actors around it.
@@ -165,6 +186,14 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why the overview carries no anchors.** A held document carries no friction block, and validation fails one that does (COR-050 point 12). The overview is generated from what it draws, and checked fresh, so it cannot drift from it. An anchor would add a flag on every drawn change, which the freshness check already fails until the overview is rewritten.
 
+**Why the overview shows each area's goal.** The chain shows which use case follows from which, never why the use cases are split into those areas. The capability's maintainer asked, on 20 October, that a reader of the analysis can see the concept of the split. One line for each area says it, with no new kind of artefact.
+
+**Why the overview quotes a view's opening.** A title names a group of concepts, never the problem they solve. The quote is a reader's text shown to readers, never data a tool acts on. That is the line DEC-004 draws where it keeps the stamp from reading the terms a view explains from its headings. So the overview reads that one part, and nothing else of a body.
+
+**Why the goals sit in the configuration.** DEC-001 rejects a project's additions to a structure in the configuration, since settings and data would then share a file. The goals sit beside the list of analyses, which is data of the same kind: each analysis's folder and what it builds on.
+
+**Why a fingerprint of what it draws.** A check of the overview's text would fail every adopter's overview at each release that prints it differently, until a migration rewrote it. A fingerprint of the data it reads tells a stale overview from one printed differently.
+
 **Why its own Mermaid writer.** A shared writer would be a backbone command that takes a graph from a capability and returns its text. The part the two writers share is small. A command for it would carry more than it saves, until a third writer shows what such a command must take.
 
 **Why the rules wait for a major.** A new accepted rule needs a new major of `SAN`, and every project's pin then falls behind until it reviews the set (COR-051 point 7). Landing them proposed lets a reviewer preview them, and lets them share one major with `SAN`'s other proposed rules.
@@ -179,6 +208,12 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **A rule against styling, with a check of Mermaid's directives.** Not taken yet. The authoring skill is to carry point 2 (Implications), and a rule comes when a project finds styling the skill did not prevent (COR-007).
 - **A generated diagram stored inside an artefact.** Rejected. See point 9.
 - **Diagrams on demand only, with no overview.** Rejected. It meets "it anchors what it shows" word for word, but shows nothing on a repository host.
+- **A check of the overview's text, not a fingerprint.** Rejected. See Rationale.
+- **A view's title alone, or its title and the terms it explains.** Not taken. Both read front matter alone, and neither says the problem the concepts solve.
+- **The problem in a field of the view's front matter.** Rejected. It would be a third home for a reason whose home is a record (DEC-004 point 3).
+- **Install or a migration writing the overview.** Not taken. Install runs no command of a capability (COR-017). A missing overview is a warning, so a project that installed the capability before needs no migration.
+- **Deleting the overview to keep none.** Rejected. The stamp's next rewrite would restore it, while a setting lasts.
+- **An area's goal in a file in the area's folder.** Rejected. The folder lies in the use cases' place, so a file there would read as a use case.
 - **Regions on another component's pages, filled through a data point now.** Not taken yet. A page that must show an analysis diagram is the trigger. The capability would then contribute to that point, as it contributes to the readers point, refining DEC-001 point 8.
 - **Every producer drawn solid, implied arrows included.** Rejected. An early use case would draw an arrow to each use case after it, and the picture would show little else.
 - **The chain at two levels:** the areas' order between areas, and every arrow within an area. Not taken. Between areas, it would lose which use case leads to which.
@@ -190,14 +225,12 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 - **A query** prints the use-case diagram, each journey's flow and the requirement map of the analysis, or the one its subject names (points 4 and 7). It is read-only and offline.
 - **The chain's query** comes with the build that adds `after` and its check (point 5).
-- **The overview** is built after the query (point 8). That build adds:
+- **The overview** (point 8) adds:
   - its folder of held documents
-  - its writing by install, a migration and the stamp
-  - the command that rewrites it, and the check that it is fresh
-- **Three questions for the overview's build.** Each answer refines point 8, so the build brings it to the capability's maintainer before it lands:
-  - **How install writes it.** Install creates what a capability declares, such as its project rule set, and has no step that runs a capability's command (COR-017).
-  - **How a release prints it.** A check of its text alone fails every adopter's overview at each release that prints it differently, until a migration rewrites it. A fingerprint of what it draws, beside the text, would tell the two apart.
-  - **How a project keeps none.** The stamp's next rewrite would restore a deleted overview, so the opt-out needs a form that lasts, such as a setting.
+  - its command, and the stamp's rewrite of it
+  - each area's goal in the configuration, and its check
+  - the fingerprint and its version, and the check that the overview is fresh
+  - the setting that keeps none
 - **`SAN`** gains the two proposed rules of point 10, and the validator their checkable part. Its judgement rules read a Mermaid fence's labels as statements. The forms check reads a fence as part of the text or the item it follows (point 2).
 - **DEC-001** points 1, 2 and 11 name what this record adds to them. Point 8 is not refined, since the capability contributes no diagram to another component's point.
 - **The authoring skill** tells a writer where a fence may sit, what it may show, and that it holds no styling (point 2).

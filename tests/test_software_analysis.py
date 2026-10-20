@@ -63,6 +63,7 @@ from tests.analysis_repo import (
     front,
     installed,
     load,
+    load_lib,
     new,
     prepare,
     prepare_seeded,
@@ -114,10 +115,13 @@ def test_the_package_declares_the_analysis_location_and_one_place_per_kind(
     assert not any(RECORDS in place for place in ours)  # an act, not an anchored artefact
     # The folder that holds the three kinds of requirement is no place (DEC-002 point 3).
     assert f"{ANALYSIS}/requirements" not in ours
-    # ... so the records' folders are held (COR-050 point 1): no place reads a record.
+    # ... so the records' folders are held (COR-050 point 1): no place reads a record. The
+    # overview's folders are held too (DEC-003 point 8): no place reads it as an artefact.
     assert [(h.source, h.resolved) for h in settings.held] == [
         ("capability:software-analysis", RECORDS),
         ("capability:software-analysis", f"{ANALYSIS}/*/revalidations"),
+        ("capability:software-analysis", f"{ANALYSIS}/overview"),
+        ("capability:software-analysis", f"{ANALYSIS}/*/overview"),
     ]
     assert [p.resolved for p in settings.surface if p.source.startswith("capability:")] == []
 
@@ -298,13 +302,17 @@ def test_the_artefacts_document_gives_each_analysis_artefact_its_place_s_type(
 
 def test_the_scripts_know_the_records_folder_by_the_package_s_own_words() -> None:
     """The records are read from the backbone's declaration of the held folder the
-    package declares (`_lib/model.py`'s REVALIDATIONS), the one the stamp writes into."""
+    package declares (`_lib/model.py`'s REVALIDATIONS), the one the stamp writes into. The
+    overview's folder is held beside it, by the name `_lib/overview.py` writes into."""
     package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     held: list[dict[str, str]] = package["friction"]["held"]
     records = _model_constant("REVALIDATIONS")
+    (overview,) = load_lib("overview")
     assert [(h["location"], h["path"]) for h in held] == [
         ("analysis", records),
         ("analysis", f"*/{records}"),  # NESTED_REVALIDATIONS: each component's analysis
+        ("analysis", overview.FOLDER),
+        ("analysis", f"*/{overview.FOLDER}"),
     ]
 
 

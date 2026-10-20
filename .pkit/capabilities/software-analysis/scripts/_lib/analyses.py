@@ -20,6 +20,15 @@ collection, and the check holds the head's text to it (`forms.BUILDS_ON_MATCH`).
 actor of another analysis is named with that analysis, `core:ACT-developer`, and
 resolves against the actors the head lists from it.
 
+**Areas' goals.** Each analysis may give each area of its use cases a goal: one line,
+kept as data beside the area's folder name, that says what the area makes possible
+(DEC-003 point 8). A listed analysis keeps them in its entry's `areas`, and the one
+analysis at the location's top in the file's own `areas`. The overview shows each beside
+its area (`_lib/overview.py`).
+
+**The overview.** The file's `overview` keeps the overview of each analysis, or, set to
+`false`, keeps none (DEC-003 point 8). Left out, it keeps one.
+
 **Dependencies.** Where a component declares what it depends on, as a capability does
 in its package metadata (COR-030), the configuration's list is held to it: the
 backbone is the analysis whose component is `core`, required, and each capability it
@@ -45,6 +54,18 @@ from _lib.numbering import CONFIG
 
 #: The key of the capability's settings file that lists the analyses.
 KEY = "analyses"
+
+#: The key that gives each area of an analysis's use cases its goal: in a listed
+#: analysis's entry, and at the file's top for the one analysis at the location's top.
+AREAS = "areas"
+
+#: The key that keeps the overview of each analysis, or, `false`, keeps none (DEC-003
+#: point 8).
+OVERVIEW = "overview"
+
+#: An area's folder name: a word, as a slug is, after an optional number and a hyphen,
+#: such as `010-develop` (DEC-001 point 2).
+_AREA = re.compile(r"^(?:[0-9]+-)?[a-z][a-z0-9-]*$")
 
 #: The key of a glossary's front matter that holds what its analysis takes from the
 #: analyses it builds on: a list, so the backbone never reads it as an entry.
@@ -79,6 +100,7 @@ class Listed:
     component: str
     folder: str
     builds_on: tuple[BuildsOn, ...]
+    areas: tuple[tuple[str, str], ...] = ()
 
     @property
     def where(self) -> str:
@@ -101,6 +123,8 @@ class Listing:
 
     analyses: tuple[Listed, ...] = ()
     problems: tuple[Finding, ...] = ()
+    areas: tuple[tuple[str, str], ...] = ()
+    keeps_overview: bool = True
 
     @property
     def several(self) -> bool:
@@ -123,6 +147,24 @@ class Listing:
         """How the analysis in `folder` is named in a message."""
         listed = self.of_folder(folder)
         return f"the analysis of {listed.component}" if listed is not None else "the analysis"
+
+    def kept(self) -> list[str | None]:
+        """The folder of each analysis the project keeps: each listed one's, or `None`, the
+        location's top, where it lists none."""
+        return [a.folder for a in self.analyses] if self.several else [None]
+
+    def goals(self, folder: str | None) -> dict[str, str]:
+        """Each area's goal of the analysis in `folder`, `None` the top, by the area's
+        folder name (DEC-003 point 8)."""
+        if not self.several:
+            return dict(self.areas) if folder is None else {}
+        listed = self.of_folder(folder)
+        return dict(listed.areas) if listed is not None else {}
+
+    def goals_at(self, folder: str | None) -> str:
+        """Where the goals of the analysis in `folder` are written in the settings file."""
+        listed = self.of_folder(folder)
+        return at(CONFIG, f"/{KEY}/{listed.index}/{AREAS}" if listed else f"/{AREAS}")
 
 
 class Unnamed(Exception):
@@ -178,7 +220,32 @@ def read(root: Path) -> Listing:
         entry = _listed(index, item)
         if entry is not None:
             analyses.append(entry)
-    return Listing(tuple(analyses), tuple(_problems(analyses)))
+    top = _goals(config.get(AREAS)) if isinstance(config, Mapping) else ()
+    problems = _problems(analyses)
+    if analyses and isinstance(config, Mapping) and AREAS in config:
+        problems.append(
+            Finding(
+                ERROR,
+                at(CONFIG, f"/{AREAS}"),
+                f"the project lists its analyses in `{KEY}`, so the file's own `{AREAS}` belongs "
+                f"to no analysis: each analysis keeps its areas' goals in its entry's `{AREAS}` "
+                f"(DEC-003 point 8) — move them there",
+            )
+        )
+    keeps = not (isinstance(config, Mapping) and config.get(OVERVIEW) is False)
+    return Listing(tuple(analyses), tuple(problems), top, keeps)
+
+
+def _goals(value: object) -> tuple[tuple[str, str], ...]:
+    """Each area's goal as written, by its folder name; entries of another shape are left
+    out, for the schema to report."""
+    if not isinstance(value, Mapping):
+        return ()
+    return tuple(
+        (area, " ".join(goal.split()))
+        for area, goal in value.items()
+        if isinstance(area, str) and _AREA.match(area) and isinstance(goal, str) and goal.strip()
+    )
 
 
 def _listed(index: int, item: object) -> Listed | None:
@@ -197,7 +264,7 @@ def _listed(index: int, item: object) -> Listed | None:
         optional = entry.get("optional", False) if isinstance(entry, Mapping) else None
         if isinstance(name, str) and word.match(name) and isinstance(optional, bool):
             builds_on.append(BuildsOn(name, optional, position))
-    return Listed(index, component, folder, tuple(builds_on))
+    return Listed(index, component, folder, tuple(builds_on), _goals(item.get(AREAS)))
 
 
 def _problems(analyses: Sequence[Listed]) -> list[Finding]:

@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-20T12:59:53Z
+          at: 2026-10-20T22:11:25Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept, and two optional term fields, noun-forms and other-senses, which the term kind's structure declares with hints. No shipped part or form changes, so this format rule holds as written.
+          unchanged-because: DEC-001 point 1 names the overview's read of a view's opening, and point 2 calls the overview the reader's entry point. A kind's structure, and where the format rule binds, are untouched, and the overview is a held document no structure governs.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-20T12:59:54Z
+          at: 2026-10-20T22:11:27Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept among terms, within an analysis and across those it builds on. Whose goal a use case is, and its actors, stay as decided, so this rule holds as written.
+          unchanged-because: DEC-001's change names the overview's quote of a view's opening and calls the overview the reader's entry point. Who a use case's actor is, and what the rule asks of it, are untouched.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-20T12:59:55Z
+          at: 2026-10-20T22:11:29Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept among terms. A goal and its actor's needs stay as decided, so this rule holds as written.
+          unchanged-because: The change to DEC-001 point 1 lets the overview quote a view's opening to readers. A use case's goal and its actor's needs are untouched, so the rule holds as written.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -62,9 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-20T21:11:20Z
+          at: 2026-10-20T22:11:31Z
           outcome: unchanged
-          unchanged-because: The change adds a flow that restates only what a view's sections state. A view rests on the same terms and records as before, and anchors no code.
+          unchanged-because: DEC-001 point 2 calls the overview's folder the reader's entry point, held as the records' folder is. What an artefact anchors, and what answers a use case or a requirement, are untouched.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -90,9 +90,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-20T13:00:05Z
+          at: 2026-10-20T22:11:32Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 11 gain one name for one concept, and name the term's link to its section as the one stored reverse. What names the source of a goal, a guarantee or a requirement is unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 point 1 gains the overview's read of a view's opening, by its part's permanent id. Where a goal, a minimal guarantee or a requirement names its source is untouched.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -107,9 +107,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-20T21:11:21Z
+          at: 2026-10-20T22:11:34Z
           outcome: unchanged
-          unchanged-because: The flow's labels are a Mermaid fence's labels, which this rule already judges as statements. The flow adds no fact a section does not state.
+          unchanged-because: The overview quotes a view's opening and shows each area's goal, and it is a held document, no analysis artefact, so the statements the rule judges are untouched. DEC-003 point 10's rules are unchanged.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -121,9 +121,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-20T13:00:08Z
+          at: 2026-10-20T22:11:35Z
           outcome: unchanged
-          unchanged-because: DEC-001 points 1 and 2 gain one name for one concept among terms. Preconditions, their producers and after stay as decided, so this rule holds as written.
+          unchanged-because: DEC-001's change adds the overview's quote of a view's opening and the role of its folder. The producers a precondition names, and the order of the areas, are untouched. The overview shows the chain and judges nothing.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -135,9 +135,9 @@ rules:
             - "software-analysis:DEC-001#4"
             - "COR-030"
         revalidated:
-          at: 2026-10-20T13:00:09Z
+          at: 2026-10-20T22:11:37Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 2 widens a term's name across the analyses it builds on. Which analyses an analysis may name, and an optional one as an option, are unchanged, so this rule holds as written.
+          unchanged-because: DEC-001 point 2 calls the overview the reader's entry point, kept in each analysis's folder. Which analyses an analysis builds on, and what it names of them, are untouched.
   RS-SAN-011:
     status: proposed
     origin: {decision: "software-analysis:DEC-004"}
@@ -156,6 +156,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
+        revalidated:
+          at: 2026-10-20T22:11:39Z
+          outcome: unchanged
+          unchanged-because: "DEC-001's change touches the overview alone: its quote of a view's opening and its folder's role. Terms' names, noun forms and other senses are untouched, so one name still means one concept."
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
