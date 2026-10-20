@@ -3,7 +3,7 @@ rule-set: ANA
 version: 4.0.0
 inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
-  types: [software-analysis:actor, software-analysis:term, software-analysis:use-case, software-analysis:journey]
+  types: [software-analysis:actor, software-analysis:term, software-analysis:domain-model-view, software-analysis:use-case, software-analysis:journey]
 rules:
   RS-ANA-001:
     status: proposed
@@ -35,6 +35,13 @@ rules:
           at: 2026-10-19T19:00:00Z
           outcome: unchanged
           unchanged-because: DEC-001 point 2 gains the domain model's folder, and point 12 writes the views after the glossary. What an area's number means is unchanged, so this rule holds as written.
+  RS-ANA-007:
+    status: proposed
+    origin: {why: "A file listing shows the order in which the views build on each other only where their names carry it. Steps of 10 leave room for a new view between two, so no file is renamed. software-analysis leaves the number's form to each project (software-analysis DEC-004 point 4). The maintainer chose this form for project-kit's views on 19 October, with the areas' (the design note on analysis concepts and order, PR #1808)."}
+    pkit:
+      friction:
+        anchors:
+          record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
   RS-ANA-004:
     status: proposed
     origin: {why: "Each component owns its analysis, as it owns its decision records. A capability may move to a repository of its own (software-analysis DEC-001 point 2). On 19 October the maintainer decided that project-kit keeps one analysis for its core and one for each capability. The maintainer's delegate decided that an adapter keeps one once it needs one. The design note on analysis concepts and order records both (PR #1808)."}
@@ -72,16 +79,16 @@ rules:
 
 # ANA — project-kit's rules for its analysis
 
-These are the rules project-kit's analysis follows: six rules of its own, and the rules of the two sets it inherits.
+These are the rules project-kit's analysis follows: seven rules of its own, and the rules of the two sets it inherits.
 
-- **What it selects:** every actor, glossary term, use case and journey, by the four types software-analysis declares (software-analysis DEC-001 point 2). The scope names no paths, so it selects the analysis wherever software-analysis places it.
+- **What it selects:** every actor, glossary term, domain-model view, use case and journey, by the five types software-analysis declares (software-analysis DEC-001 point 2, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.
   - `software-analysis:SAN`, the software-analysis method, pinned at `SAN@1`. `SAN` takes no scope, so its rules bind on project-kit's analysis only through this set (software-analysis DEC-001 point 1).
   - **The pins:** a rule accepted in an inherited set gives that set a new major. The same change re-pins this set, which gives it a new major too (COR-051 point 7).
-- **The set's own rules:** the actor's voice in needs and goals (RS-ANA-001), and each kind's list of labels (RS-ANA-002), which fills `RS-WRITE-002#labels`. Then the analyses project-kit keeps and their areas (RS-ANA-003 to RS-ANA-005), and the version a capability's links to the analyses it builds on name (RS-ANA-006).
-  - RS-ANA-003 to RS-ANA-006 are project-kit's choices where software-analysis leaves them to each project (software-analysis DEC-001 points 2 and 12). They are whether areas take numbers, which analyses it keeps, the core's five areas, and which version its links name.
+- **The set's own rules:** the actor's voice in needs and goals (RS-ANA-001), and each kind's list of labels (RS-ANA-002), which fills `RS-WRITE-002#labels`. Then the analyses project-kit keeps, their areas and the numbers of its domain-model views (RS-ANA-003, RS-ANA-007, RS-ANA-004 and RS-ANA-005), and the version a capability's links to the analyses it builds on name (RS-ANA-006).
+  - RS-ANA-003 to RS-ANA-007 are project-kit's choices where software-analysis leaves them to each project (software-analysis DEC-001 points 2 and 12, DEC-004 point 4). They are the form of an area's number and of a view's, which analyses it keeps, the core's five areas, and which version its links name.
   - The maintainer decided the design on 19 October. The maintainer's delegate answered its open questions the same day, under the maintainer's standing delegation. Among them are the adapters and the links' version (the design note on analysis concepts and order, PR #1808).
   - That a need or a goal is one sentence is the method's, through the `sentence` form of RS-SAN-001. So RS-ANA-001 leaves it out.
   - software-analysis asks for the actor's voice only in its hints, and a hint binds nothing (software-analysis DEC-001 point 1). A project that wants the voice to bind adds a rule of its own, as the maintainer decided on 9 October (PR #1391). RS-ANA-001 is that rule.
@@ -89,7 +96,7 @@ These are the rules project-kit's analysis follows: six rules of its own, and th
 - **The labels as data:** the labels project-kit adds to a kind, and a closed list of a kind's labels, are data in project-kit's own structures (`.pkit/capabilities/software-analysis/project/structures.yaml`). RS-ANA-002 authorises both. When they bind is software-analysis's (DEC-001 point 1).
 - **How a rule reads:** as in `WRITE`, a statement, then *How*, then examples. A rule's reason is the `why` of its origin (COR-051 point 5).
   - Each example names its source in brackets after the quote.
-  - RS-ANA-002 has no examples of its own, since RS-WRITE-002's quote the list it fills. RS-ANA-006 has none, since no analysis of project-kit's holds what it governs.
+  - RS-ANA-002 has no examples of its own, since RS-WRITE-002's quote the list it fills. RS-ANA-006 and RS-ANA-007 have none, since no analysis of project-kit's holds what they govern.
 - **What binds:** a rule's statement and its *How*, as in `WRITE`.
 - **Note:** how rules are named, accepted and inherited is the rule-set record's (COR-051). A rule binds only once it is accepted.
 
@@ -123,7 +130,7 @@ A kind's list of labels is that of its declared structure, with project-kit's ad
 
 ## Analyses and areas
 
-These rules say which analyses project-kit keeps, how their areas are numbered, and which version a capability's links to the core's analysis name.
+These rules say which analyses project-kit keeps, how their areas and their domain-model views are numbered, and which version a capability's links to the core's analysis name.
 
 ### RS-ANA-003 — An area's folder opens with a number of three digits, in steps of 10
 
@@ -137,6 +144,16 @@ Open the name of each use-case area's folder with a number of three digits and a
   - **No other folder** of the analysis takes such a number.
 - **Breaks the rule:** "`change/` and `release/`", the core's areas without numbers (`tech-docs/analysis/use-case-model/use-cases/` on main, 19 October)
 - **Keeps the rule:** "`030-change/` and `040-release/`" (the design note on analysis concepts and order)
+
+### RS-ANA-007 — A domain-model view's file opens with a number of three digits, in steps of 10
+
+Open the name of each domain-model view's file with a number of three digits and a hyphen, in steps of 10, such as `010-orders-and-payments.md`.
+
+- **How:**
+  - **Where it binds.** On each domain-model view, through its file's name.
+  - **The width.** Every view's number takes three digits, in every analysis.
+  - **A new view** between two takes a free number between theirs, so no file is renamed.
+  - **What the number means** is software-analysis's: one valid order of the views, in which each uses only the views before it (software-analysis DEC-004 points 4 and 6). It is no part of the id, so a view keeps its `VIEW-` id, whatever its number.
 
 ### RS-ANA-004 — An artefact lies in its component's analysis
 
