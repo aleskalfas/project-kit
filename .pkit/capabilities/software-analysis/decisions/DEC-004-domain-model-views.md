@@ -8,7 +8,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Context
 
-The glossary defines each concept of an analysis's domain, one term at a time. Each definition gives its broader kind and what sets it apart ([software-analysis:DEC-001-software-analysis-discipline] point 1). A reader cannot see there how the concepts fit together. Which belongs to which, what each holds, and how one moves through its states stay hidden.
+The glossary defines each concept of an analysis's domain, one term at a time. Each definition gives its broader kind and what sets it apart ([software-analysis:DEC-001-software-analysis-discipline] point 1). A reader cannot see there how the concepts fit together. Which belongs to which, what each holds, how one moves through its states and how several move together stay hidden.
 
 - **The build order** puts the concepts first, before the actors, the requirements and the use cases (DEC-001 point 12). Its first step has no artefact that shows how they relate.
 - **A new kind of artefact** needs a decision of its own (DEC-001 point 11).
@@ -19,7 +19,7 @@ The capability's maintainer decided the domain model's shape on 19 October, with
 
 ## Decision
 
-**An analysis may keep a domain model: a few views beside the glossary, written by hand, one for each group of related concepts. A view explains each concept of its group in words, purpose first, and draws how they relate. It anchors the terms it explains and the records it rests on. The glossary stays one collection of terms. Each term a view explains links to its section, each section links back, and the first mention of a term in a section links to its entry.**
+**An analysis may keep a domain model: a few views beside the glossary, written by hand, one for each group of related concepts. A view explains each concept of its group in words, purpose first, and draws how they relate and how they move together. It anchors the terms it explains and the records it rests on. The glossary stays one collection of terms. Each term a view explains links to its section, each section links back, and the first mention of a term in a section links to its entry.**
 
 In this record, a *view* is a domain-model view. A view of the solution, such as an architecture view, is always named in full.
 
@@ -31,16 +31,17 @@ A domain model explains the concepts of the analysis's domain and how they relat
   - **ICONIX's order:** the domain model comes first, with the glossary, before the use cases.
   - **ISO 704 and ISO 1087:** a concept is distinct from the term that names it. Concepts relate in three ways: generic, partitive and associative.
   - **State models,** as in Shlaer–Mellor and UML's state machines: a concept's life cycle, as states and the events that move it.
+  - **Event storming and UML's activity diagrams with object flow:** what happens to things over time, as events and the states they bring about. A view takes their events and states, and leaves out who acts.
 - **A few views.** The domain model is a folder of views, one for each group of related concepts. Which concepts form a group is the writer's choice, such as those of ordering, or of payment.
 - **Optional.** An analysis keeps a domain model only where its project chooses. A term no view explains links to no section (point 7).
 - **Not Domain-Driven Design's domain model,** which designs the solution. The analysis keeps the solution out (DEC-001 point 11).
 
 ### 2. What a view holds
 
-A view opens with the problem its group's concepts solve, and the group's class diagram. Then it gives one section to each concept it explains, whose first part says what the concept is for.
+A view opens with the problem its group's concepts solve, the group's class diagram and its flow. Then it gives one section to each concept it explains, whose first part says what the concept is for.
 - **What it explains,** as data: its front matter's `explains` lists, by their ids, the terms whose concepts it explains, in the order of its sections. It lists one term at least. A tool takes the terms from that list, never from the sections (DEC-001 point 1).
 - **Its heading:** its id and its title, such as `# VIEW-orders-and-payments — Orders and payments`.
-- **Its opening:** the problem the group's concepts solve together, then the concepts named as the parts of its answer, then the group's class diagram. The diagram shows the concepts, what relates to what, and attributes where they matter.
+- **Its opening:** the problem the group's concepts solve together, then the concepts named as the parts of its answer, then the group's class diagram and its flow. The class diagram shows the concepts, what relates to what, and attributes where they matter. The flow shows how the concepts move together.
 - **A section for each concept,** headed at the second level by its term's name in sentence case, such as `## Order`. Every heading at that level is such a section. A section holds, in order:
   - what the concept is for, shipped as *Why*: the problem it answers, in plain words (point 3)
   - an explanation of the concept for a newcomer, in plain words
@@ -62,16 +63,20 @@ A view opens with the problem its group's concepts solve, and the group's class 
 - **One slug for each section.** The structure refuses two sections of one view whose headings give one slug. A page anchor on either would be ambiguous (COR-050 point 7).
 - **What a project adds.** A project may add labels to the opening, or to each concept's section after its explanation, never a heading (DEC-001 point 1). So each section still opens with its purpose.
 - **Its diagrams** are Mermaid fences written by hand, each with its `accTitle` and its `accDescr`, and with no styling (DEC-003 points 2 and 10).
-  - **Where they sit:** the class diagram in the opening, and a concept's state diagram in its *States*, after the text (DEC-003 point 2).
+  - **Where they sit:** the class diagram in the opening, then the flow after it, and a concept's state diagram in its *States*, after the text (DEC-003 point 2).
+  - **The flow** is a flowchart of the events and the state changes across the group's concepts. It tells what happens to things, in the concepts' own terms.
+    - **No actor and no use case.** Who does what is behaviour, which use cases and journeys hold. The actors come after the views, too (point 8).
+    - **Its facts:** only the states, the events and the relations the view's sections state (point 3).
   - **A concept's box** is labelled by its term's name in sentence case, as its section is headed. No check reads a diagram, so the writer keeps to it.
   - **Another view's concept** is drawn by its name alone, as is a term no view explains. The view neither states nor anchors their facts, so its diagram shows none of them (DEC-003 point 2).
-  - **Asked by the hints.** The opening's hint asks for the class diagram, and the hint of *States* for a state diagram where the concept has a life cycle. A hint binds nothing (DEC-001 point 1), so no check asks for a diagram.
+  - **Asked by the hints.** The opening's hint asks for the class diagram and the flow. The hint of *States* asks for a state diagram where the concept has a life cycle. A hint binds nothing (DEC-001 point 1), so no check asks for a diagram.
   - **No part of their own.** The kind ships no part for diagrams, since DEC-003 point 2 decides that no kind does. So the diagrams sit in the opening and in *States*, not after the opening as a part of their own.
 
 ### 3. What a view states, and where each fact has its home
 
 Each section states its concept's attributes, relations and states in words. A view's diagrams show only what its sections state.
 - **A diagram is never a fact's home** (DEC-003 point 1). The class diagram restates the relations and the attributes the sections state. A state diagram restates its concept's *States*.
+- **The flow adds no fact.** It restates the states and the events the sections state, in the order they give, and the relations that join them. An event, or a sequence of events, that only the flow shows has no home. So the writer states it in a section first, or leaves it out.
 - **What is always true** of a concept is what its records decide, such as that an issued invoice is never changed. The section states it, and the view anchors the record that decides it (point 5).
 - **An obligation stays a requirement.** What the system must keep, such as a business rule across use cases, is a functional requirement ([software-analysis:DEC-002-analysis-requirements] point 1). The requirement names the concept by its term.
 - **The definition defines.** A term's `definition` defines its concept, as ISO 1087 has it, and is the home of its broader kind. The term's section explains that concept, restating the broader kind where it helps. What the section states fits exactly what the definition fits, never more and never less.
@@ -197,6 +202,11 @@ A documentation page that is no architecture view may rest on a view's section (
 
 **Why views beside the glossary.** A definition says what one concept is. It cannot show how several fit together, nor how one moves through its states. A diagram with words beside it shows both. A newcomer reads it before the use cases that act on those concepts.
 
+**Why a flow.** The class diagram shows what exists, and a state diagram how one concept changes. Neither shows how the concepts move together over time, which is the story a view's purpose tells. The maintainer chose the flow on 20 October, on reading the core's views ([project-kit#1838](https://github.com/aleskalfas/project-kit/pull/1838), [project-kit#1847](https://github.com/aleskalfas/project-kit/issues/1847)).
+- **Established practice.** Event storming tells a domain as the events that happen in it, in their order. UML's activity diagram with object flow shows objects passing through their states. The flow takes their events and states.
+- **Why no actor and no use case.** Who does what is behaviour, whose home is a use case or a journey. Without it, the flow tells what happens to things, which is what a view explains. The actors also come after the views in the build order (point 8).
+- **Its cost.** The flow restates facts the sections state, so a changed state or event changes the flow too. No check reads a diagram, so the writer keeps the two in step, as for the class diagram.
+
 **Why purpose first.** A person who explains something starts from the need behind it, and the description follows as its consequence. A view that opens each section with what its concept is reads as reference, an inventory of what is. The domain model was meant as explanation from the start. The maintainer chose purpose first on 20 October, on reading the core's first views ([project-kit#1838](https://github.com/aleskalfas/project-kit/pull/1838), [project-kit#1845](https://github.com/aleskalfas/project-kit/issues/1845)).
 - **Documentation** tells explanation apart from reference, as Diátaxis does. Explanation gives the reasons, and reference describes what is.
 - **Goal-oriented requirements engineering,** such as KAOS, derives the concepts from the goals they serve. A view comes before the actors' needs (point 8), so it takes its goals from the records instead.
@@ -284,6 +294,10 @@ A documentation page that is no architecture view may rest on a view's section (
 - **The terms a view explains read from its headings.** Rejected. The stamp would take data from a body, which DEC-001 point 1 keeps from every tool but the check.
 - **A shipped part for the diagrams, after the opening.** Rejected. DEC-003 point 2 decides that no kind ships a part for diagrams. The opening and *States* hold them as free text instead.
 - **A check that asks each view for a class diagram.** Not taken. A view of one concept may have nothing to draw, and the hints ask for it.
+- **A check that asks each view for a flow.** Not taken. A group whose concepts never change has no flow to draw, and the hint asks for it.
+- **A flow with the actors in lanes, as an activity diagram draws them.** Rejected. Who does what is behaviour, which use cases and journeys hold, and the actors come after the views (point 8).
+- **A sequence diagram of the concepts.** Rejected. Concepts send no messages to each other. Messages between parts belong to the solution's design, which the analysis keeps out (DEC-001 point 11).
+- **One state diagram for the whole group.** Not taken. A state diagram draws one concept's life cycle. Joined into one, it would draw states that belong to no single concept.
 - **The term's link computed where the glossary is shown, such as in the overview, and stored nowhere.** Rejected. A reader reads the glossary on a repository host, where no computed link shows.
 - **A shipped part for the link in each term.** Rejected. Every live term would need a migration, and a term no view explains would read `None.`.
 - **A link on every mention of a term.** Rejected. The text grows hard to read, and the first link already leads to the definition.
@@ -329,4 +343,5 @@ A documentation page that is no architecture view may rest on a view's section (
 - **Revalidation** applies to views as to every kind: its four outcomes, its records and its agent (DEC-001 points 5 and 6). The agent becomes the fixer of the new type too (DEC-001 point 8).
 - **Revalidating a term** reads the section that explains it, in the authoring skill and in the agent (point 5).
 - **The authoring skill** walks the views in the build order's first step, after the glossary.
+- **The opening's hint, the template and the authoring skill** ask for the flow after the class diagram, with an example. No check reads it (point 2).
 - **Projects** that keep a domain model write its views after the glossary, one for each group of related concepts. They number the views in the order they build on each other.

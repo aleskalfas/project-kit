@@ -1,7 +1,7 @@
 ---
 # A domain-model view (software-analysis DEC-004): a group of related concepts,
-# each explained in a section of its own, and drawn as they relate. It explains
-# purpose first: its opening states the problem the concepts solve, and each
+# each explained in a section of its own, and drawn as they relate and as they
+# move together. It explains purpose first: its opening states the problem the concepts solve, and each
 # section opens with its `**Why:**`, one paragraph, then what the concept is,
 # its reasons taken from the records it anchors. Stamp it,
 # never copy it: `pkit analysis new view <slug> --number <number> --explains
@@ -32,7 +32,7 @@ pkit:
 
 # VIEW-view — <Title>
 
-<!-- pkit:hint The problem the group's concepts solve together, then each concept named as a part of the answer. Then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized. Example: A shop must know what each customer asked for, and whether it is paid, before it sends anything. An order holds what was asked for, and a payment settles it. -->
+<!-- pkit:hint The problem the group's concepts solve together, then each concept named as a part of the answer. Then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized. Then its flow, a flowchart in a fence of the same form, of the events and the state changes across the concepts. Draw only what the sections state, such as a payment that settles an open order, and name no actor and no use case. Example: A shop must know what each customer asked for, and whether it is paid, before it sends anything. An order holds what was asked for, and a payment settles it. -->
 
 ## <Term>
 

@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T18:31:00Z
+      at: 2026-10-20T21:11:25Z
       outcome: updated
 ---
 
@@ -498,6 +498,10 @@ A sandbox is where one [run](../glossary.md#term-run--run) takes place, apart fr
   - **The opening** states the problem the view's concepts solve together, and names them as the parts of its answer.
   - **Each section's first part is *Why*:** what its concept is for, in one paragraph that starts on the label's line. The explanation follows it, after a blank line, with no label.
   - **Its reasons** say again, in plain words, what the Context or the Rationale of a record the view anchors gives. They name no actor. Where no record gives one, *Why* reads `None.`.
+- **Its diagrams** show only what its sections state (DEC-004 points 2 and 3). Each is a Mermaid fence with an `accTitle`, an `accDescr` and no styling.
+  - **The opening** draws the class diagram, as above, then the flow. The flow is a flowchart of the events and the state changes across the concepts. It names no actor and no use case, since who does what is a use case's or a journey's.
+  - **A concept with a life cycle** draws its state diagram under *States*.
+  - **Asked, never required.** The hints ask for each diagram, and no check reads one.
 - **Its anchors.** Each term `explains` lists is an artefact anchor, which the stamp writes, and the check requires them to match the list. A changed definition then flags the view that explains it. It also anchors the records its statements cite or apply, those its reasons come from among them, and no code. Nothing in the analysis anchors a view (DEC-004 point 5).
 - **Its order.** A view names a concept that another view of its analysis explains only where that view's number is lower (`RS-SAN-011`).
 - **Each term's link.** A term a view in force explains carries an unlabelled line under its heading in the glossary, before its first part, that links to its section. The stamp writes it, and the check holds it equal to the view, whatever any rule's status (DEC-004 point 7). A term no view explains carries none. For the view above:

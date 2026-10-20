@@ -234,7 +234,7 @@ kinds:
         example: "# VIEW-orders-and-payments — Orders and payments"
       - id: opening
         type: opening
-        hint: The problem the group's concepts solve together, then each concept named as a part of the answer. Then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized.
+        hint: The problem the group's concepts solve together, then each concept named as a part of the answer. Then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized. Then its flow, a flowchart in a fence of the same form, of the events and the state changes across the concepts. Draw only what the sections state, such as a payment that settles an open order, and name no actor and no use case.
         example: A shop must know what each customer asked for, and whether it is paid, before it sends anything. An order holds what was asked for, and a payment settles it.
       - id: concept
         type: repeated

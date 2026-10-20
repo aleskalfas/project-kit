@@ -1,6 +1,6 @@
 # Adding a domain-model view
 
-A domain-model view explains a group of related concepts, one section for each, and draws how they relate ([software-analysis:DEC-004-domain-model-views]). It explains purpose first: the problem its concepts solve, then what each is for, then what each is. It is a file of its own, `domain-model/<number>-<slug>.md`, beside the glossary. The glossary defines each concept, and the view explains it. A project keeps views only where it chooses: a term no view explains stays as it is.
+A domain-model view explains a group of related concepts, one section for each, and draws how they relate and how they move together ([software-analysis:DEC-004-domain-model-views]). It explains purpose first: the problem its concepts solve, then what each is for, then what each is. It is a file of its own, `domain-model/<number>-<slug>.md`, beside the glossary. The glossary defines each concept, and the view explains it. A project keeps views only where it chooses: a term no view explains stays as it is.
 
 ## 1. Is it a view?
 
@@ -50,12 +50,45 @@ Each part holds its hint, which says what goes there and gives an example. Fill 
 
 - **The opening** states the problem the group's concepts solve together, as a record the view anchors gives it, then names the concepts as the parts of its answer. Where no record gives the problem, say what the group covers instead. Then it draws its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Draw a concept of another view, or a term no view explains, by its name alone.
 - **Each concept's box** is labelled as its section is headed, by its term's name in sentence case, such as `class Order` or ``class DecisionRecord["Decision record"]``. No check reads a diagram, so you keep to it.
+- **Then its flow:** how the concepts move together, after the class diagram. Draw a Mermaid flowchart of the events and the state changes across the concepts, in a fence of the same form.
+  - **What happens to things.** Name no actor and no use case. Who does what is behaviour, whose home is a use case or a journey.
+  - **Only what the sections state.** Draw the states, the events and the relations the sections state, in the sequence they give. An event, or a sequence of events, the sections do not state goes into a section first, or stays out.
+  - **Nothing to draw?** A group whose concepts never change has no flow. The hint asks for one, and no check does.
 - **Each section's first part is its *Why*:** what the concept is for, the problem it answers, in one paragraph of plain words. Start it on the label's line. State its own part of the problem the opening states.
   - **Its ground.** Say again, in plain words, a reason the Context or the Rationale of a record the view anchors gives. Give none they do not give.
   - **No record gives one?** Write `None.`, never a reason of your own. Where your project wants the reason stated, record it first, then say it again here.
   - **No actor and no need.** The actors come after the views, so name no actor, and cite no actor's need. Name a role the domain holds by its term, such as a customer.
 - **Then what it is.** Below the *Why*, after a blank line, explain the concept for a newcomer, with no label. A *Why* that runs into it, with no blank line, leaves the explanation missing. Text above the *Why* belongs to no part, so write none there.
 - **Then its facts:** its *Attributes*, its *Relations*, its *States* and what is *Always true* of it. Where the concept has a life cycle, draw its states after the text of *States*.
+
+An opening, filled, its flow beside its class diagram:
+
+````markdown
+A shop must know what each [customer](../glossary.md#term-customer--customer) asked for, and whether it is paid, before it sends anything. An [order](../glossary.md#term-order--order) holds what was asked for, and a [payment](../glossary.md#term-payment--payment) settles it.
+
+```mermaid
+classDiagram
+  accTitle: Orders and payments
+  accDescr: An order belongs to one customer and holds its lines. One payment or more settle it.
+  class Order {
+    lines
+    day placed
+  }
+  class Payment
+  class Customer
+  Order "*" --> "1" Customer : belongs to
+  Payment "1..*" --> "1" Order : settles
+```
+
+```mermaid
+flowchart LR
+  accTitle: How orders and payments move together
+  accDescr: An order is open until a payment settles it, and settled until it is sent.
+  isOpen[Order open] --> settles([Payment settles the order])
+  settles --> isSettled[Order settled]
+  isSettled --> sent([Order sent])
+```
+````
 
 A section, filled:
 
