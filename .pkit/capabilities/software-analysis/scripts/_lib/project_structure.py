@@ -29,7 +29,9 @@ against, and the stamp writes:
   naming one element keep the order of the file, each followed by those that
   name it, so an addition comes before any shipped element that follows the
   element it names. Where a group does not apply, its additions are left out,
-  and those naming them keep the place they would have had.
+  and those naming them keep the place they would have had. An addition after a
+  part of a repeated section, a domain-model view's section for each concept,
+  goes in each of its sections (DEC-004 point 2).
 
 What the file is refused for, each an error at its place in the file, the
 project being the one to mend it (COR-055 point 1):
@@ -47,7 +49,9 @@ project being the one to mend it (COR-055 point 1):
   would take the opening's lines
 - a heading of any level but the one just below the kind's own first heading:
   a shallower one would end the artefact's or the entry's section, and a deeper
-  one would read as the content of the part before it
+  one would read as the content of the part before it. A domain-model view
+  takes no heading at all, which its companion refuses: its headings are its
+  title and its concepts' sections (DEC-004 point 2)
 - a label given to a part with no text, or a hint to a part no writer fills
 - a hint or an example that would not stay one comment on one line
 
@@ -59,6 +63,7 @@ changes nothing, and is reported (`Own.notes`).
 from __future__ import annotations
 
 import dataclasses
+import itertools
 from collections import defaultdict
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
@@ -69,7 +74,19 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import markdown, render, schemas
 from _lib.findings import ERROR, REPORT, Finding, at
-from _lib.structure import HEADING, LABEL, OPENING, RECORD, Element, Field, Kind, comparable
+from _lib.structure import (
+    HEADING,
+    LABEL,
+    OPENING,
+    RECORD,
+    REPEATED,
+    Element,
+    Field,
+    Kind,
+    comparable,
+    elements,
+    section_elements,
+)
 
 #: The project's own structures, relative to the project root.
 FILE = ".pkit/capabilities/software-analysis/project/structures.yaml"
@@ -252,7 +269,7 @@ class _Reading:
 
     def relabel(self, kind: Kind, element_id: str, change: Change) -> None:
         here = f"/kinds/{kind.name}/relabel/{element_id}"
-        element = next((e for e in kind.sections if e.id == element_id), None)
+        element = next((e for e in elements(kind) if e.id == element_id), None)
         if element is None:
             self.problem(here, _unknown(kind, element_id, "relabels"))
             return
@@ -285,16 +302,21 @@ class _Reading:
     def tightenings(
         self, kind: Kind, groups: Sequence[Group], relabels: Mapping[str, Change]
     ) -> None:
-        shipped = {e.id: e for e in kind.sections}
+        shipped = {e.id: e for e in elements(kind)}
+        runs = [
+            kind.sections,
+            *(section_elements(e) for e in kind.sections if e.type == REPEATED),
+        ]
         opened = {
             before.id: after.id
-            for before, after in zip(kind.sections, kind.sections[1:], strict=False)
+            for run in runs
+            for before, after in itertools.pairwise(run)
             if after.type == OPENING
         }
         top = min((e.level or 1 for e in kind.sections if e.type == HEADING), default=0)
         added: dict[str, tuple[Group, int]] = {}
         texts: dict[str, str] = {}
-        for element in kind.sections:
+        for element in elements(kind):
             if element.text is None:
                 continue
             relabel = relabels.get(element.id)
@@ -427,7 +449,7 @@ def _unknown(kind: Kind, element_id: str, does: str) -> str:
             f"`{element_id}` is an element the {kind.name} kind retired: a retired element "
             f"is never given back (DEC-001 point 1)"
         )
-    ids = ", ".join(f"`{e.id}`" for e in kind.sections)
+    ids = ", ".join(f"`{e.id}`" for e in elements(kind))
     return (
         f"`{element_id}` is no element of the {kind.name} kind, which the entry {does}: its "
         f"elements are {ids}, and the project's additions"
@@ -457,20 +479,24 @@ def relabelled(kind: Kind, own: Own) -> Kind:
     fields = own.fields.get(kind.name) or {}
     if not relabels and not fields:
         return kind
-    sections = tuple(
-        dataclasses.replace(
+
+    def changed(element: Element) -> Element:
+        parts = tuple(changed(part) for part in element.parts)
+        if element.id not in relabels:
+            return dataclasses.replace(element, parts=parts) if parts else element
+        relabel = relabels[element.id]
+        return dataclasses.replace(
             element,
-            text=_or(relabels[element.id].label, element.text),
-            hint=_or(relabels[element.id].hint, element.hint),
-            example=_or(relabels[element.id].example, element.example),
+            text=_or(relabel.label, element.text),
+            hint=_or(relabel.hint, element.hint),
+            example=_or(relabel.example, element.example),
             aliases=(element.text,)
-            if relabels[element.id].label is not None and element.text is not None
+            if relabel.label is not None and element.text is not None
             else (),
+            parts=parts,
         )
-        if element.id in relabels
-        else element
-        for element in kind.sections
-    )
+
+    sections = tuple(changed(element) for element in kind.sections)
     hinted = tuple(
         dataclasses.replace(
             field,
@@ -518,25 +544,31 @@ def tightened(
         for addition in group.additions:
             following[addition.after].append((addition.element, group in applying))
     required = _required(kind, applied)
-    sections: list[Element] = []
 
-    def place(after: str) -> None:
+    def place(after: str, into: list[Element]) -> None:
         for element, applies in following.get(after, ()):
             if applies:
-                sections.append(element)
-            place(element.id)
+                into.append(element)
+            place(element.id, into)
 
-    for element in kind.sections:
-        sections.append(required.get(element.id, element))
-        place(element.id)
+    def laid(run: Sequence[Element]) -> tuple[Element, ...]:
+        into: list[Element] = []
+        for element in run:
+            element = required.get(element.id, element)
+            if element.parts:
+                element = dataclasses.replace(element, parts=laid(element.parts))
+            into.append(element)
+            place(element.id, into)
+        return tuple(into)
+
     closed = tuple(dict.fromkeys(group.rule for group in applied if group.closed))
-    return dataclasses.replace(kind, sections=tuple(sections), closed=closed)
+    return dataclasses.replace(kind, sections=laid(kind.sections), closed=closed)
 
 
 def _required(kind: Kind, groups: Iterable[Group]) -> dict[str, Element]:
     """Each shipped optional part a group requires, required by the group's rule."""
     found: dict[str, Element] = {}
-    by_id = {element.id: element for element in kind.sections}
+    by_id = {element.id: element for element in elements(kind)}
     for group in groups:
         for element_id in group.require:
             element = by_id.get(element_id)

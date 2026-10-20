@@ -162,17 +162,17 @@ checks:
         Every part its kind ships is present, in the order the structure gives,
         save a part a withdrawn artefact lacks. A missing title heading of an
         actor, a use case, a journey, a quality requirement, a functional
-        requirement or a constraint is left to the heading check, which holds
-        it whatever the rule's status. No shipped part a writer fills is empty,
+        requirement, a constraint or a domain-model view is left to the heading
+        check, which holds it whatever the rule's status. No shipped part a writer fills is empty,
         and a part reads `None.` only where the structure allows it. A
         front-matter field the structure says may not read `None.` never does.
 
         The glossary carries its head wherever the rule binds on one of its
         terms. A shipped part or front-matter field that the structure gives a
         form holds that form, save on a withdrawn artefact. The forms are
-        `sentence`, `numbered-steps`, `variants`, `steps-match-front-matter` and
-        `definition`, each as the schema of the kinds' declared structure
-        describes it.
+        `sentence`, `numbered-steps`, `variants`, `steps-match-front-matter`,
+        `headings-match-front-matter` and `definition`, each as the schema of
+        the kinds' declared structure describes it.
   RS-SAN-002:
     - check: "software-analysis:check-numbers"
       part: >-

@@ -221,7 +221,7 @@ def test_every_entry_passes_the_point_s_checks(project: AdopterRepo) -> None:
     document = _checked(project)
     assert document["findings"] == []
     assert document["summary"] == [
-        f"{POINT}: 7 type(s) for 1 agent(s); 7 pass the checks, 0 granted"
+        f"{POINT}: 8 type(s) for 1 agent(s); 8 pass the checks, 0 granted"
     ]
 
 
@@ -234,10 +234,10 @@ def test_an_agent_that_holds_edit_starts_no_fixer(project: AdopterRepo) -> None:
     )
     document = _checked(project)
     assert document["summary"] == [
-        f"{POINT}: 7 type(s) for 1 agent(s); 0 pass the checks, 0 granted"
+        f"{POINT}: 8 type(s) for 1 agent(s); 0 pass the checks, 0 granted"
     ]
     messages = {(f["severity"], f["message"]) for f in document["findings"]}
-    assert len(document["findings"]) == 7
+    assert len(document["findings"]) == 8
     assert all(severity == "report" for severity, _ in messages)
     assert all("holds Edit, a tool that changes existing files" in m for _, m in messages)
 

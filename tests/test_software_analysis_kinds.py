@@ -262,7 +262,7 @@ def test_each_kind_is_keyed_by_its_type_and_the_record_by_a_key_of_its_own() -> 
     revalidation record, which has no type, keeps `revalidation-record`."""
     package = load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
     types = sorted(package["friction"]["types"])
-    assert types == sorted([*FOUR, *REQUIREMENTS])
+    assert types == sorted([*FOUR, *REQUIREMENTS, VIEW])
     assert sorted(_kinds()["kinds"]) == sorted([*types, "revalidation-record"])
 
 
@@ -270,6 +270,9 @@ def test_each_kind_is_keyed_by_its_type_and_the_record_by_a_key_of_its_own() -> 
 #: adds, each by the type its place gives.
 FOUR = ("actor", "use-case", "journey", "term")
 REQUIREMENTS = ("quality-requirement", "functional-requirement", "constraint")
+
+#: The domain-model view DEC-004 adds, by the type its place gives (#1817).
+VIEW = "domain-model-view"
 
 
 #: Each kind's body as the round chose it (#1362, each kind's "Decided" section): each
@@ -328,6 +331,26 @@ PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
         ("verified-by", "label", "Verified by", True, None),
         ("imposed-by", "label", "Imposed by", True, None),
     ],
+    # Its heading, what its group covers with the class diagram, then one section for each
+    # concept it explains, headed by its term's name (DEC-004 point 2, #1817).
+    VIEW: [
+        ("heading", "heading", None, False, None),
+        ("opening", "opening", None, False, None),
+        ("concept", "repeated", None, False, "headings-match-front-matter"),
+    ],
+}
+
+#: The parts each section of a repeated section holds, in order (DEC-004 point 2): the
+#: explanation of the concept for a newcomer, then its attributes, its relations, its
+#: life cycle and what is always true of it, each of which may read `None.`.
+SECTION_PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
+    VIEW: [
+        ("explanation", "opening", None, False, None),
+        ("attributes", "label", "Attributes", True, None),
+        ("relations", "label", "Relations", True, None),
+        ("states", "label", "States", True, None),
+        ("always-true", "label", "Always true", True, None),
+    ],
 }
 
 #: A requirement's front-matter fields, the same on each kind (DEC-002 point 4): its
@@ -348,6 +371,7 @@ FIELDS: dict[str, dict[str, str | None]] = {
     "term": {"name": None, "definition": "definition", "replaces": None},
     "revalidation-record": {"reviewed-against": None},
     **dict.fromkeys(REQUIREMENTS, REQUIREMENT_FIELDS),
+    VIEW: {},
 }
 
 #: The fields that say whether they may read `None.`: a requirement's measure may, which
@@ -366,7 +390,10 @@ SHOWN_AS = {
 
 
 def _elements(kind: dict[str, Any]) -> list[dict[str, Any]]:
-    return [*kind.get("head", []), *kind["sections"]]
+    return [
+        *kind.get("head", []),
+        *(found for e in kind["sections"] for found in (e, *e.get("sections", []))),
+    ]
 
 
 @pytest.mark.parametrize("name", sorted(PARTS))
@@ -387,6 +414,21 @@ def test_each_kind_holds_the_parts_the_round_chose(name: str) -> None:
         for element in kind["sections"]
     ]
     assert declared == PARTS[name]
+    nested = {
+        element["id"]: [
+            (
+                part["id"],
+                part["type"],
+                part.get("text"),
+                part.get("allows-none", False),
+                part.get("form"),
+            )
+            for part in element["sections"]
+        ]
+        for element in kind["sections"]
+        if "sections" in element
+    }
+    assert list(nested.values()) == ([SECTION_PARTS[name]] if name in SECTION_PARTS else [])
     assert all(element.get("required", True) is True for element in _elements(kind))
     ids = [element["id"] for element in _elements(kind)]
     assert len(set(ids)) == len(ids)
@@ -472,6 +514,7 @@ FORMS = (
     "outcomes-match-front-matter",
     "gaps-match-outcomes",
     "builds-on-matches-front-matter",
+    "headings-match-front-matter",
     "definition",
 )
 

@@ -16,15 +16,17 @@ Each step below says what to write, and when it is done. "Names each concept by 
 1. **List the concepts** the system works with, as its decisions, its code and its people use them. A word used as a dictionary has it needs no term (`term.md`, step 1).
 2. **Give each concept one name.** Where two words name one thing, choose one, and use only it from here on. Where one word names two things, give each its own term.
 3. **Stamp and define each term** (`term.md`). A definition gives the term's broader kind and what sets it apart. So define a broader concept before the concepts that name it as their kind. Name each concept a definition relates to by its term. A definition holds no word of its own term's name, so where a related term's name is such a word, name that concept in other words.
-4. **Then stamp the actors** (`actor.md`): each role that uses the system, with its needs.
+4. **Then the domain-model views,** where the project keeps a domain model (`view.md`). Group related concepts, and stamp one view for each group, in the order of their numbers. Each view explains its concepts and draws how they relate, and uses only the views numbered before it. Drawing the concepts finds those the definitions missed: go back and define each first.
+5. **Then stamp the actors** (`actor.md`): each role that uses the system, with its needs.
 
 **Done when:**
 
 - each concept you listed is a term in force, defined, and anchored to what embodies it, or stamped with its reason for having no anchor
 - each definition names each concept it relates to by its term
 - no two terms define one concept, and no term names two
+- where the project keeps a domain model, each group of related concepts is a view, each term in it is explained by one view, and each view names only the concepts of the views numbered before it
 - each role that uses the system is an actor, its needs naming each concept by its term
-- `pkit analysis validate --preview` reports nothing on the glossary or the actors. Where a set of yours inherits `SAN`, its summary counts none of them among the artefacts no rule of `SAN` binds on.
+- `pkit analysis validate --preview` reports nothing on the glossary, the views or the actors. Where a set of yours inherits `SAN`, its summary counts none of them among the artefacts no rule of `SAN` binds on.
 
 You may not know every concept yet. A concept a later step finds is added then, by going back.
 
@@ -73,4 +75,4 @@ You may not know every concept yet. A concept a later step finds is added then, 
 
 ## What a reviewer checks
 
-A reviewer judges what the order leaves in the analysis under `SAN`'s `RS-SAN-008`, as the shared framing's "Use the glossary's terms" gives it. Under `RS-SAN-009`, a reviewer also judges which area builds on which: the producers each precondition names, and the areas' numbers. While these rules are proposed, they bind nothing, and this procedure asks the same of you. The order you write the steps in is yours to keep, and no rule holds it.
+A reviewer judges what the order leaves in the analysis under `SAN`'s `RS-SAN-008`, as the shared framing's "Use the glossary's terms" gives it. Under `RS-SAN-011`, a reviewer judges that each domain-model view names only the concepts of the views numbered before it. Under `RS-SAN-009`, a reviewer also judges which area builds on which: the producers each precondition names, and the areas' numbers. While these rules are proposed, they bind nothing, and this procedure asks the same of you. The order you write the steps in is yours to keep, and no rule holds it.

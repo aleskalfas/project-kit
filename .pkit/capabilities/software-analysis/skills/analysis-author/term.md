@@ -32,5 +32,7 @@ Then run the checks in the shared framing's "After stamping", `pkit analysis val
 ## Later
 
 - **Renaming** — write the new `name`, and put the old one first in `replaces:`, newest first. The id never changes.
-- **Withdrawing** — set `status: withdrawn` when the word is no longer used; the entry and its id stay.
+- **Withdrawing** — set `status: withdrawn` when the word is no longer used; the entry and its id stay. A view in force explains no withdrawn term, so take its section out of the view that explains it, in the same change (`view.md`).
+- **Its link to the domain model.** A term a domain-model view explains carries a line under its heading that links to its section. The stamp of the view writes it, and the check holds it equal to the view. Leave the line as the stamp wrote it, and write the line the check names when a view changes. A rename changes the section's heading in the view, and the link's section.
+- **Revalidating it** — read the section of the view that explains it too, since a changed definition can make the section untrue.
 - **Its uses.** On a rename, a withdrawal or a changed definition, find each use of the term's name, and of the names it replaces, in the analysis's artefacts in force. Mend each in the same change: the new name, another term, or words that fit the new definition. Using a term asks for no anchor, so nothing flags those uses for you (the shared framing's "Use the glossary's terms").

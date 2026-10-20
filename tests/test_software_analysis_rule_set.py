@@ -372,7 +372,8 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     # stays (COR-051 point 2).
     assert (
         "A missing title heading of an actor, a use case, a journey, a quality requirement, "
-        "a functional requirement or a constraint is left to the heading check"
+        "a functional requirement, a constraint or a domain-model view is left to the heading "
+        "check"
     ) in part
     assert data["version"] == "1.0.0"
     assert "record" not in part

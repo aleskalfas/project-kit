@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T19:45:39Z
+      at: 2026-10-20T00:35:45Z
       outcome: unchanged
-      unchanged-because: The whole-repository check and the explanation gain a warning on an anchor on a shared id, with what mends it. It is no debt, so how a developer resolves debt is untouched.
+      unchanged-because: The analysis-resolver now also covers domain-model views, and reads the view that explains a term when it revalidates the term. It still proposes each answer with its evidence and the commands, and runs none, so how a developer resolves debt is untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

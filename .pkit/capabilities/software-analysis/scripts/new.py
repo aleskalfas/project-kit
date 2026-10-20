@@ -28,7 +28,12 @@ hint until a person writes it (DEC-001 point 1):
 - a requirement of each of the three kinds (DEC-002),
   `requirements/<quality|functional|constraints>/[<area>/]REQ-NNN-<slug>.md`,
   headed by its id, its kind and its title, with its actors and the
-  requirements it refines, and an anchor to each.
+  requirements it refines, and an anchor to each;
+- a domain-model view (DEC-004), `domain-model/<number>-<slug>.md`, its id
+  `VIEW-<slug>`, with the terms it explains, an anchor to each and a section
+  for each, and each term's link to its section written in the glossary. Its
+  number gives its place in the domain model's order, in the project's own
+  form, and is no part of its id.
 
 A use case, a journey or a requirement takes the next free number on the
 default branch — a requirement's across its three kinds' places — every
@@ -59,6 +64,8 @@ Usage:
       [--title <text>] [--unanchored-because <text>]
   each also: [--path <glob>]... [--record <id>]... [--base <ref>]
       [--analysis <component>]
+  pkit analysis new view <slug> --number <digits> --explains <TERM-id>...
+      [--title <text>] [--record <id>]... [--base <ref>] [--analysis <component>]
 
   pkit analysis new revalidation <slug> --change <ref> --trigger <trigger>
       --outcome <id>=<outcome>... --because <id>=<text>...
@@ -84,15 +91,29 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
+from typing import Any
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import backbone, revalidation, schemas, stamp
-from _lib.model import ACTOR, CONSTRAINT, FUNCTIONAL, JOURNEY, KINDS, QUALITY, TERM, USE_CASE
+from _lib.model import (
+    ACTOR,
+    CONSTRAINT,
+    FUNCTIONAL,
+    JOURNEY,
+    KINDS,
+    QUALITY,
+    TERM,
+    USE_CASE,
+    VIEW,
+)
 from _lib.placeholder import unfilled
 
 #: The kind a revalidation record is stamped as.
 REVALIDATION = "revalidation"
+
+#: The word a domain-model view is stamped as (DEC-004).
+VIEW_WORD = "view"
 
 #: What parts a gap from what resolved it, in `--gap "<ids>: <gap> => <resolution>"`,
 #: and the ids of the artefacts it affects from the gap.
@@ -262,6 +283,7 @@ def _parser() -> argparse.ArgumentParser:
                 "--actor and --refines): written as `unanchored-because` in its friction block."
             ),
         )
+    _view_arguments(kinds)
     help_text = (
         "A revalidation record, kept only when there is something to say: a planned "
         "revalidation, one that found a regression or a gap, or one where a person decided "
@@ -270,6 +292,53 @@ def _parser() -> argparse.ArgumentParser:
     )
     _revalidation_arguments(kinds.add_parser(REVALIDATION, help=help_text, description=help_text))
     return parser
+
+
+def _view_arguments(kinds: Any) -> None:
+    """`new view`: a domain-model view, its number, the terms it explains and the records
+    it rests on, and no code (DEC-004 points 4 and 5)."""
+    help_text = (
+        "A domain-model view: a group of related concepts, each explained in a section of its "
+        "own and drawn as they relate (DEC-004)."
+    )
+    view = kinds.add_parser(VIEW_WORD, help=help_text, description=help_text)
+    view.add_argument(
+        "slug", help="A word naming it, its id `VIEW-<slug>`: lowercase letters, digits, hyphens."
+    )
+    view.add_argument(
+        "--number",
+        required=True,
+        metavar="DIGITS",
+        help="The number its file's name opens with, such as `010`: its place in the domain "
+        "model's order, in your project's own form. It is no part of its id.",
+    )
+    view.add_argument(
+        "--explains",
+        action="append",
+        default=[],
+        metavar="TERM-ID",
+        help="A term of its analysis whose concept it explains, written in `explains` and "
+        "anchored, with a section of its own and a link to it under the term's heading in "
+        "the glossary (repeatable, in the order of its sections, at least one).",
+    )
+    view.add_argument("--title", metavar="TEXT", help="Its title (default: the slug).")
+    view.add_argument(
+        "--record",
+        dest="records",
+        action="append",
+        default=[],
+        metavar="ID",
+        help="A record anchor: a decision its statements cite or apply (repeatable). It anchors "
+        "no code.",
+    )
+    view.add_argument(
+        "--base",
+        metavar="REF",
+        default=None,
+        help="A branch whose ids count as taken beside the default branch's, which always "
+        "do; $PKIT_CHECK_BASE never does.",
+    )
+    _analysis_argument(view)
 
 
 def _analysis_argument(parser: argparse.ArgumentParser) -> None:
@@ -405,7 +474,7 @@ def _stamp_record(args: argparse.Namespace) -> stamp.Stamped:
 
 def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
     request = stamp.Request(
-        kind=args.kind,
+        kind=VIEW if args.kind == VIEW_WORD else args.kind,
         slug=args.slug,
         title=args.title,
         actor=getattr(args, "actor", None),
@@ -413,13 +482,15 @@ def _stamp_artefact(args: argparse.Namespace) -> stamp.Stamped:
         steps=tuple(getattr(args, "steps", ())),
         relies_on=tuple(getattr(args, "relies_on", ())),
         area=getattr(args, "area", None),
-        paths=tuple(args.paths),
+        paths=tuple(getattr(args, "paths", ())),
         records=tuple(args.records),
         unanchored_because=getattr(args, "unanchored_because", None),
         actors=tuple(getattr(args, "actors", ())),
         refines=tuple(getattr(args, "refines", ())),
         requirements=tuple(getattr(args, "requirements", ())),
         analysis=args.analysis,
+        number=getattr(args, "number", None),
+        explains=tuple(getattr(args, "explains", ())),
     )
     return stamp.stamp(backbone.project_root(), request, args.base)
 
