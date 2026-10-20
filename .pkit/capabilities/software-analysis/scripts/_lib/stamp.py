@@ -38,7 +38,8 @@ analysis location. Its front matter comes from its kind's template in
   explains the terms `--explains` names, in that order: each a term in force of
   its own analysis that no view in force explains yet (point 5). It anchors
   each, and the records `--record` names, never code. Its body holds one
-  section for each, headed by the term's name. The stamp also writes each
+  section for each, headed by the term's name in sentence case, its first
+  letter capitalized (point 2). The stamp also writes each
   term's link to its section, under the term's heading in the glossary, and
   writes the two files whole, or neither (point 7; `_lib/views.py`).
 
@@ -829,7 +830,7 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
         anchored = _own([str(request.actor), *named, *request.requirements])
     data[CONTAINER] = _container(request, anchored)
     heading = render.title_heading(structured, new_id, _title(request))
-    named = [views.term_name(analysis, term) or term for term in request.explains]
+    named = [views.heading(analysis, term) for term in request.explains]
     body = render.body(structured, heading, written, repeats=named)
     return f"---\n{dump(data)}---\n\n{body}"
 

@@ -41,7 +41,7 @@ A view opens with what its group covers and the group's class diagram. Then it g
 - **What it explains,** as data: its front matter's `explains` lists, by their ids, the terms whose concepts it explains, in the order of its sections. It lists one term at least. A tool reads that list, never the sections (DEC-001 point 1).
 - **Its heading:** its id and its title, such as `# VIEW-orders-and-payments — Orders and payments`.
 - **Its opening:** what the group covers, then the group's class diagram. The diagram shows the concepts, what relates to what, and attributes where they matter.
-- **A section for each concept,** headed by its term's name at the second level, such as `## order`. Every heading at that level is such a section. A section holds, in order:
+- **A section for each concept,** headed at the second level by its term's name in sentence case, such as `## Order`. Every heading at that level is such a section. A section holds, in order:
   - an explanation of the concept for a newcomer, in plain words
   - its attributes, shipped as *Attributes*: what each instance of the concept holds
   - its relations, shipped as *Relations*: how it relates to other concepts, such as those of its group or of a lower view (point 6)
@@ -49,12 +49,16 @@ A view opens with what its group covers and the group's class diagram. Then it g
   - what is always true of it, shipped as *Always true*: what holds of every instance, as the records decide it (point 3)
 
   A label with nothing to say reads `None.`, as in every kind (DEC-001 point 1).
+- **Sentence case** capitalizes the name's first letter alone, so the term `decision record` heads its section `Decision record`.
+  - **A proper name keeps its own case,** as in `Pull request on GitHub`. A name whose first word holds a capital already, such as `iPhone app`, stands as it is.
+  - **The name itself** stays as running text writes it, in the glossary and in prose (DEC-001 point 1). Only a heading and a diagram's box capitalize it.
 - **One declared structure.** The kind declares its structure as data, as every kind does (DEC-001 point 1). It is the first document kind with a section that repeats, once for each concept. So the schema of the structures gains a repeating section.
-- **The headings match the list.** Each section's heading is the name of the term `explains` lists in its place. This is a form of the repeating section, so it binds where the format rule binds, and at its status (DEC-001 point 1).
+- **The headings match the list.** Each section's heading is the name of the term `explains` lists in its place, in sentence case. This is a form of the repeating section, so it binds where the format rule binds, and at its status (DEC-001 point 1).
 - **One slug for each section.** The structure refuses two sections of one view whose headings give one slug. A page anchor on either would be ambiguous (COR-050 point 7).
 - **What a project adds.** A project may add labels to the opening, or to each concept's section, never a heading (DEC-001 point 1).
 - **Its diagrams** are Mermaid fences written by hand, each with its `accTitle` and its `accDescr`, and with no styling (DEC-003 points 2 and 10).
   - **Where they sit:** the class diagram in the opening, and a concept's state diagram in its *States*, after the text (DEC-003 point 2).
+  - **A concept's box** is labelled by its term's name in sentence case, as its section is headed. No check reads a diagram, so the writer keeps to it.
   - **Another view's concept** is drawn by its name alone, as is a term no view explains. The view neither states nor anchors their facts, so its diagram shows none of them (DEC-003 point 2).
   - **Asked by the hints.** The opening's hint asks for the class diagram, and the hint of *States* for a state diagram where the concept has a life cycle. A hint binds nothing (DEC-001 point 1), so no check asks for a diagram.
   - **No part of their own.** The kind ships no part for diagrams, since DEC-003 point 2 decides that no kind does. So the diagrams sit in the opening and in *States*, not after the opening as a part of their own.
@@ -107,7 +111,7 @@ The views of an analysis are written in the order of their numbers, and each use
 ### 7. The glossary, and each term's link to its section
 
 The glossary stays as it is: one collection of terms, each defined in ISO 1087's form (DEC-001 point 1). A term a view explains links to that view's section on it.
-- **Where:** an unlabelled line under the term's heading in the glossary, before its first part, where a reader reads the term. The link names the view's file and the section, such as `domain-model/010-orders-and-payments.md#order`. The section's name is its heading's slug, as COR-050 point 2 makes it.
+- **Where:** an unlabelled line under the term's heading in the glossary, before its first part, where a reader reads the term. The link names the view's file and the section, such as `domain-model/010-orders-and-payments.md#order`. The section's name is its heading's slug, as COR-050 point 2 makes it. A slug is in lower case, so it is the slug of the term's name, the heading's capital aside.
 - **Written and held.** The stamp writes the link from the view's `explains`, its file's name and the term's name. The capability's check holds it equal to the view in force that explains the term, whatever any rule's status. A term no view explains carries no link.
 - **No part.** The term kind ships no part for the link, so no live term needs a migration (DEC-001 point 1). The structure check reads the line as no part, and a project's closed list of labels does not refuse it. A project without a domain model sees no change to its glossary.
 - **A named exception.** The link is the reverse of the view's anchor on the term. No accepted point stores the reverse of an anchor (DEC-001 point 11, DEC-002 point 7). This link stores one, as a named exception: a copy for navigation, which the check holds equal, so it never drifts.
@@ -150,6 +154,8 @@ A documentation page that is no architecture view may rest on a view's section (
 
 **Why a list of the terms it explains.** A tool reads front matter only (DEC-001 point 1). The stamp writes a view's anchors and each term's link, so it reads them from `explains`, as it writes a journey's anchors from its `steps`. The sections' headings are held to the list by a form of the structure, as a journey's step lines are held to its `steps`.
 
+**Why sentence case.** A heading or a diagram's box in lower case reads oddly, as the maintainer found on reading the core's first views ([project-kit#1838](https://github.com/aleskalfas/project-kit/pull/1838)). Sentence case capitalizes the first letter alone, so the heading still reads as the term's name. Its slug is the name's, so a term's link names the section by the slug of the name. Wherever a sentence carries the name, it stays as running text writes it (DEC-001 point 1).
+
 **Why the headings bind with the format rule.** The headings are part of the view kind's declared structure, which is the format rule's checkable part (DEC-001 point 1). Checking them always would enforce part of one rule two ways, which DEC-001 rejects for the glossary's head (COR-051). The anchors, the link and the one view for each term lie outside any structure, so the check holds them always.
 
 **Why the always-true facts come from records.** A view explains the domain as the project decided it. What is always true of a concept is a decision, so its home is the record that decides it. An obligation the system must keep is a requirement's, which is checkable and may carry a measure (DEC-002 point 1).
@@ -185,6 +191,8 @@ A documentation page that is no architecture view may rest on a view's section (
 - **A form of the number fixed by the capability, such as three digits in steps of 10.** Rejected. The order needs only a number, and its form is a project's style, as for its areas.
 - **A view's id without a prefix.** Rejected. Every kind's id takes one (DEC-001 point 3), so no two kinds share an id.
 - **A prefix of the domain model's own, such as `DMV-`.** Not taken. `VIEW-` was settled with the ids across analyses ([project-kit#1808](https://github.com/aleskalfas/project-kit/pull/1808)), and a reader knows the word. Its cost: a project whose own artefacts take `VIEW-` ids must keep their slugs apart from its views'.
+- **A heading and a box in the name as running text writes it.** Rejected. In lower case, they read oddly.
+- **Title case, each word of the name capitalized.** Rejected. It changes more of the name than a heading needs, and makes a common noun read as a proper name.
 - **The terms a view explains read from its headings.** Rejected. The stamp would read a body, which DEC-001 point 1 keeps from every tool but the check.
 - **A shipped part for the diagrams, after the opening.** Rejected. DEC-003 point 2 decides that no kind ships a part for diagrams. The opening and *States* hold them as free text instead.
 - **A check that asks each view for a class diagram.** Not taken. A view of one concept may have nothing to draw, and the hints ask for it.
@@ -204,7 +212,7 @@ A documentation page that is no architecture view may rest on a view's section (
     - no path anchor on a view
     - each term explained by one view in force at most
     - each term's link to its section
-  - **The structure holds** a view's headings to the names of the terms its `explains` lists, where the format rule binds. Each heading gives a slug of its own (point 2).
+  - **The structure holds** a view's headings to the names of the terms its `explains` lists, in sentence case, where the format rule binds. The stamp writes them so. Each heading gives a slug of its own (point 2).
   - **The structures' schema** refuses an added heading in a view, and gains the repeating section with no new `schema_version`.
   - **A section added by hand** is added to `explains` too. How the anchor and the link are then written is the build's to settle, and the README says how.
 - **`SAN`'s judgement rules read views,** proposed with its other rules, so `SAN` keeps its version (COR-051 point 4):

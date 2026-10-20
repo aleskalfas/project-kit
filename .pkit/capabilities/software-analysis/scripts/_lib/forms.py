@@ -122,10 +122,10 @@ each with what it reads:
   (DEC-004 point 2), read from the section's headings rather than from a part
   (`headings_match`): one section for each entry of the front matter's
   `explains`, in the same order, each headed by the name of the term its
-  entry names, exactly, white space aside. Where the analysis holds no such
-  term, any heading will do. Every heading of the section's level is one of
-  its sections. No two headings give one slug (`heading_slug`), so a page
-  anchor on a section names one (COR-050 point 7).
+  entry names in sentence case (`sentence_case`), exactly, white space aside.
+  Where the analysis holds no such term, any heading will do. Every heading of
+  the section's level is one of its sections. No two headings give one slug
+  (`heading_slug`), so a page anchor on a section names one (COR-050 point 7).
 
 What no form checks is whether the words are true: friction flags the artefact
 when what it rests on changes, and a person rereads it (DEC-001 point 4).
@@ -1375,13 +1375,31 @@ def heading_slug(title: str) -> str:
     return "".join(kept).replace(" ", "-")
 
 
+def sentence_case(name: str) -> str:
+    """A term's name as a domain-model view heads its section and labels its box (DEC-004
+    point 2): its first letter capitalized, and the rest as the name writes it, so
+    `decision record` reads `Decision record` and `pull request on GitHub` reads `Pull
+    request on GitHub`. A name whose first word holds a capital already, as a proper name
+    such as `iPhone app` may, stands as it is. So does a first letter whose capital is no
+    single letter that lowers back to it, such as `ß`, so the heading's slug is always
+    the name's (`heading_slug`)."""
+    words = name.split(maxsplit=1)
+    if not words or any(ch.isupper() for ch in words[0]):
+        return name
+    first = name[0]
+    capital = first.upper()
+    if len(capital) != 1 or capital.lower() != first:
+        return name
+    return capital + name[1:]
+
+
 def headings_match(headings: Sequence[tuple[int, str]], context: Context) -> list[Breach]:
     """How a repeated section's `headings`, each its line and its text, break the form
     `headings-match-front-matter`: each is the name of the term the front matter's
-    `explains` lists in its place, by `context.titles`, white space aside, any text where
-    the analysis holds no such term; one for each entry, in order; and no two give one
-    slug. An `explains` that is no list of ids is the schema's to report, and only the
-    slugs are compared then."""
+    `explains` lists in its place, by `context.titles`, in sentence case
+    (`sentence_case`), white space aside, any text where the analysis holds no such term;
+    one for each entry, in order; and no two give one slug. An `explains` that is no list
+    of ids is the schema's to report, and only the slugs are compared then."""
     found: list[Breach] = []
     listed = _ids(context.fields.get(EXPLAINS))
     if listed is not None:
@@ -1399,15 +1417,19 @@ def headings_match(headings: Sequence[tuple[int, str]], context: Context) -> lis
                 )
                 continue
             name = context.titles.get(listed[n])
-            if name is not None and " ".join(text.split()) != " ".join(name.split()):
+            if name is None:
+                continue
+            heading = " ".join(sentence_case(name).split())
+            if " ".join(text.split()) != heading:
                 found.append(
                     Breach(
                         BREAKS_FORM,
                         line,
                         f"the {_ordinal(n + 1)} section is headed `{_shown(text)}`, and "
                         f"`explains` lists {listed[n]} in its place, whose name is "
-                        f"`{name}`: each section is headed by its term's name, in the order "
-                        f"of `explains`",
+                        f"`{name}`: each section is headed by its term's name in sentence "
+                        f"case, its first letter capitalized, in the order of `explains` — "
+                        f"head it `{heading}`",
                     )
                 )
         missing = listed[len(headings) :]

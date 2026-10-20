@@ -380,7 +380,7 @@
         },
         {
           "const": "headings-match-front-matter",
-          "description": "A repeated section's headings: one section for each entry of the front matter's `explains`, in the same order, each headed by the name of the term the entry names, exactly, white space aside. Where the analysis holds no such term, any heading will do. No two of its headings give one slug, the heading's text in lower case with every character but letters, digits, spaces and hyphens dropped, and each space made a hyphen (COR-050 point 2), so a page anchor on one names one section (software-analysis DEC-004 point 2)."
+          "description": "A repeated section's headings: one section for each entry of the front matter's `explains`, in the same order, each headed by the name of the term the entry names in sentence case, exactly, white space aside: its first letter capitalized and the rest as the name writes it, or the name as it stands where its first word holds a capital already. Where the analysis holds no such term, any heading will do. No two of its headings give one slug, the heading's text in lower case with every character but letters, digits, spaces and hyphens dropped, and each space made a hyphen (COR-050 point 2), so a page anchor on one names one section (software-analysis DEC-004 point 2)."
         },
         {
           "const": "definition",
