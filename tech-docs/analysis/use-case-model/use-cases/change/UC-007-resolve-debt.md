@@ -31,9 +31,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T00:35:45Z
+      at: 2026-10-20T02:03:37Z
       outcome: unchanged
-      unchanged-because: The analysis-resolver now also covers domain-model views, and reads the view that explains a term when it revalidates the term. It still proposes each answer with its evidence and the commands, and runs none, so how a developer resolves debt is untouched.
+      unchanged-because: Both agents now end a fixer run in the run contract's line forms, a none carrying one of its reasons, and the resolver takes a run's quoted pull-request text as intent. In a session each still proposes the answers with evidence and commands and runs none, so how a developer resolves debt is untouched.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

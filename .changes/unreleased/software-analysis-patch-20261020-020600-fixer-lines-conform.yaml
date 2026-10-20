@@ -1,0 +1,17 @@
+component: software-analysis
+kind: patch
+custom:
+  category: Changed
+body: >
+  The `analysis-resolver` ends a fixer run in the exact forms of
+  project-management's run contract (DEC-056 point 3), so the command that
+  starts fixers reads every line it writes. Its `none` line carries one of the
+  contract's reasons before the reason in words, such as `not-mine` for an
+  artefact that is not the analysis's, and `refused` where the run refuses
+  `pkit analysis propose` or it cannot start there. In a run it takes the
+  pull-request text the command's brief quotes as evidence of intent: it
+  passes the words that say whether a change was meant to
+  `pkit analysis propose` with `--intended-from` and the pull request's URL,
+  which shows the quote unverified. Its storyboard shows the result lines in a
+  fenced block of their own, never behind a quote's `>`, which the contract
+  would not count.

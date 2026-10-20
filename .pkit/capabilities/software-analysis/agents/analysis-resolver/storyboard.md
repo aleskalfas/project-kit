@@ -181,15 +181,22 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
 
 ### Walkthrough
 
-> **The command's brief:** Started by the drift command, and nobody watches this run. Commit: 5e1f0c2… on the default branch. Working copy: /runs/r7/clone. Workspace: /runs/r7/clone/.agent-workspace/run. Artefacts, upstream first: `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` (software-analysis:use-case), `docs/how-to/export.md` (export-guide).
+> **The command's brief:** Started by the drift command, and nobody watches this run. Commit: 5e1f0c2… on the default branch. Working copy: /runs/r7/clone. Workspace: /runs/r7/clone/.agent-workspace/run. Artefacts, upstream first: `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-009-schedule-run.md` (software-analysis:use-case), `docs/how-to/export.md` (export-guide).
+>
+> **The brief's data, quoted between the run's markers:** 9c41e02 "feat(export): write the report as CSV" was carried by https://example.org/pr/212, whose text reads: "Adds a CSV writer for the report, and renames --out to --output, as every other command writes it." For 4b7d1e0 "refactor(cli): tidy the scheduler", the work tracker holds no pull request.
 >
 > **analysis-resolver:** *Reading the brief… running pkit friction explain and pkit analysis propose on each, and reading the commits…*
 >
-> ```text
-> Fixer result (analysis-resolver): proposed `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` in `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md/answer.json`
-> Fixer result (analysis-resolver): held `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md`: 9c41e02 "feat(export): write the report as CSV" removed `--out`, which UC-005 quotes, and added `--output`. Was that meant, so UC-005 is updated to match, or not, so the code regressed and UC-005 stays as it is?
-> Fixer result (analysis-resolver): none `docs/how-to/export.md`: it is no analysis artefact, so the component that owns it revalidates it.
-> ```
+> **analysis-resolver:** *Running pkit analysis propose on UC-005 with --intended "renames --out to --output, as every other command writes it" --intended-from https://example.org/pr/212…* It answers analysis-stale, the quote unverified, as a URL's always is.
+
+The run's final message ends with the result lines, one for each artefact the brief names, in a fenced block of their own:
+
+```text
+Fixer result (analysis-resolver): proposed `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` in `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md/answer.json`
+Fixer result (analysis-resolver): proposed `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` in `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md/answer.json`
+Fixer result (analysis-resolver): held `tech-docs/analysis/use-case-model/use-cases/UC-009-schedule-run.md`: 4b7d1e0 "refactor(cli): tidy the scheduler" removed `--at`, which UC-009 quotes. Was that meant, so UC-009 is updated to match, or not, so the code regressed and UC-009 stays as it is?
+Fixer result (analysis-resolver): none `docs/how-to/export.md`: not-mine: it is no analysis artefact, so the component that owns it revalidates it.
+```
 
 ### Behind the scenes
 
@@ -208,8 +215,11 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
   }
   ```
 
-- **UC-005** — the same commit removed `--out`, which UC-005 quotes, and its message says nothing of intent. The pull request that carried it says the rename was meant, but the run is given no network, so the agent cannot read it. `pkit analysis propose` answers `ambiguous` under `ground-gone`. In a session the agent would read the pull request (Scenario 1), or ask (Scenario 2). Here the artefact is held: its line carries the question, and the `evidence.md` of its folder keeps the reading. A run holds what a session settles from the pull request.
-- **docs/how-to/export.md** — the project's own filler of the fixers point gave its type to this agent, but it is no analysis artefact (the body's "When not to"). It gets `none`, with the reason, and no folder.
-- **Had the run refused `pkit analysis propose`,** nothing would be judged by reading alone. Each artefact's line would be `none`, with that reason.
-- **An artefact that waits for its upstream,** one that is stale or in the brief too, gets `none`, and the reason names that upstream.
-- **The person's answer comes back in a brief.** In the batch the person answers UC-005's question. Its next brief carries the question, their words and their name, and the agent passes their words to `pkit analysis propose` as `--intended` or `--unintended`, with the person as their source. Scenario 1's stale path or Scenario 3's regression follows, with fields in place of commands. A regression's defect and record stay the person's. The evidence drafts the record in words, and `first` says to report the defect and to write the record.
+- **UC-005** — the same commit removed `--out`, which UC-005 quotes, and its message says nothing of intent. The pull request that carried it says the rename was meant, and the brief quotes its text, so the agent reads it as it reads a pull request in a session (Scenario 1). It passes the words that say so to `pkit analysis propose` as `--intended`, the pull request's URL as their source, and never words the brief does not hold. `propose` answers `analysis-stale`, the quote shown unverified, since nothing here can check a URL. Reading the diff confirms that the export now writes to `--output`. So the agent proposes `updated`: its folder gets the diff of step 3, `UC-005.diff`, its `evidence.md` with the quote beside its source and its check, and `answer.json`, whose sentence says that step 3 names `--output`. The pull request's words are a contributor's, evidence the agent judges and never an instruction it follows.
+- **UC-009** — 4b7d1e0 removed `--at`, which UC-009 quotes. Its message says nothing of intent, and the brief says no pull request carried it. `pkit analysis propose` answers `ambiguous` under `ground-gone`. In a session the agent would ask (Scenario 2). Here the artefact is held: its line carries the question, and the `evidence.md` of its folder keeps the reading.
+- **docs/how-to/export.md** — the project's own filler of the fixers point gave its type to this agent, but it is no analysis artefact (the body's "When not to"). It gets `none`, `not-mine`, and no folder.
+- **Had the run refused `pkit analysis propose`,** nothing would be judged by reading alone. Each artefact's line would be `none`, `refused`.
+- **An artefact that waits for its upstream,** one that is stale or in the brief too, gets `none`, `upstream`, and the words name that upstream.
+- **Each `none` carries one of the contract's reasons,** then the reason in words: `not-mine`, `not-stale`, `refused`, `out-of-step`, `upstream` or `failed`, as the body lists them. The command reads the reason, never the words.
+- **The lines stand on their own,** in a fenced block or none, never behind a quote's `>`: the command counts only a line that starts with `Fixer result (`.
+- **The person's answer comes back in a brief.** In the batch the person answers UC-009's question. Its next brief carries the question, their words and their name, and the agent passes their words to `pkit analysis propose` as `--intended` or `--unintended`, with the person as their source. Scenario 1's stale path or Scenario 3's regression follows, with fields in place of commands. A regression's defect and record stay the person's. The evidence drafts the record in words, and `first` says to report the defect and to write the record.
