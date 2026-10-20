@@ -130,6 +130,7 @@ from _lib import (
     backbone,
     forms,
     history,
+    links,
     markdown,
     numbering,
     project_structure,
@@ -280,7 +281,9 @@ def stamp(
         refuse_links(root, target, location)
         if target.exists():
             raise Refused(f"{location} exists already")
-        text = _document(root, kind, new_id, request, analysis)
+        text = _defined(
+            _document(root, kind, new_id, request, analysis), location, request, analysis
+        )
         recorded, linked = _write_view(root, target, location, text, request, analysis, record)
         notes += [line for line in (recorded,) if line]
         notes.append(linked)
@@ -833,6 +836,20 @@ def _document(root: Path, kind: str, new_id: str, request: Request, analysis: An
     named = [views.heading(analysis, term) for term in request.explains]
     body = render.body(structured, heading, written, repeats=named)
     return f"---\n{dump(data)}---\n\n{body}"
+
+
+def _defined(text: str, location: str, request: Request, analysis: Analysis) -> str:
+    """A new view's `text` with each section opening with its link to its term's entry in
+    the glossary, right below its heading, the k-th section the k-th term `explains`
+    lists (DEC-004 point 7)."""
+    lines = text.split("\n")
+    sections = links.view_sections(lines, links.body_start(lines))[1:]
+    wanted: list[str | None] = []
+    for term_id in request.explains:
+        artefact = analysis.of(term_id, TERM)
+        term = links.term_of(artefact) if artefact is not None else None
+        wanted.append(links.defined(term, location) if term is not None else None)
+    return "\n".join(links.with_definitions(lines, sections, request.explains, wanted)[0])
 
 
 def _write_view(

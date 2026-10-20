@@ -122,12 +122,23 @@ What is checked, each against the record's words:
   before its first part, that links to that view's section on it, exactly as
   the stamp writes it; a term no view in force explains holds none. A project
   with no domain model meets none of this.
+- **The links between terms and views** (DEC-004 point 7), whatever any rule's
+  status, in an analysis that keeps a domain model: each view section's link to
+  its term, and each mention's link to a term's entry, against what `pkit
+  analysis link` writes (`_lib/links.py`) — a link missing, extra or stale, the
+  message naming the command.
+- **One name, one concept** (points 1 and 2), whatever any rule's status, as a
+  shared id is refused: no two terms in force of an analysis share a name, a
+  noun form counted, and none takes a name another replaces; no term takes a
+  name of an analysis it builds on, listed by its head or not; and no two
+  analyses it builds on share one. Each `other-senses` phrase holds one of its
+  term's names, and more.
 - **What an analysis builds on** (point 2): each glossary's head data,
   `builds-on`, against its shape, always; only a listed analysis's head lists
-  what it takes from another, and only from one its entry builds on; a term of
-  its own never takes the name of a term its head lists; and a head whose links
-  name another version than the floor its component declares is a warning. The
-  head's text against that data is its form, held where the format rule binds.
+  what it takes from another, and only from one its entry builds on; and a head
+  whose links name another version than the floor its component declares is a
+  warning. The head's text against that data is its form, held where the format
+  rule binds.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -288,6 +299,7 @@ from _lib import (
     backbone,
     chain,
     evidence,
+    links,
     markdown,
     project_structure,
     render,
@@ -420,6 +432,8 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _one_view_per_term(analysis)
     outcome.findings += _view_anchors(analysis)
     outcome.findings += _term_links(root, analysis)
+    outcome.findings += _names(analysis, listing)
+    outcome.findings += _mention_links(root, analysis, listing)
     record_findings, copies, read = _record_findings(root, records, analysis)
     outcome.findings += record_findings
     if copies:
@@ -1188,7 +1202,6 @@ def _built_on(root: Path, analysis: Analysis, listing: analyses.Listing) -> list
     - **each glossary's head data**, its `builds-on`, against its shape, always, as a
       kind's schema checks its front matter. Only a listed analysis builds on another,
       and its head names only the analyses its entry builds on;
-    - **no clash:** a term of its own never takes the name of a term its head lists;
     - **the links' version:** where the component declares the lowest version it needs
       of an analysis's component, a head whose links name another is warned of. The
       analysis whose component is `core` is the backbone's, whose floor a capability
@@ -1250,7 +1263,6 @@ def _built_on(root: Path, analysis: Analysis, listing: analyses.Listing) -> list
                             f"floor is what a reader of this one can count on (DEC-001 point 2)",
                         )
                     )
-        found += _clashes(analysis, folder, head)
     return found
 
 
@@ -1292,31 +1304,236 @@ def _declared_dependencies(root: Path, listing: analyses.Listing) -> list[Findin
     return found
 
 
-def _clashes(analysis: Analysis, folder: str | None, head: analyses.Head) -> list[Finding]:
-    """A term of the analysis's own whose name is that of a term its head lists from an
-    analysis it builds on: never so (DEC-001 point 2)."""
-    listed = {
-        name.casefold(): (term_id, taken.analysis)
-        for taken in head.taken
-        for term_id, name in taken.terms
+#: Why one name means one concept, as each finding on a shared name gives it.
+_ONE_NAME = (
+    "one name means one concept, within an analysis and across those it builds on — when "
+    "two concepts need one word, give each a qualified name, such as `business process` and "
+    "`system process`"
+)
+
+
+def _names(analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
+    """One name, one concept (DEC-001 points 1 and 2), whatever any rule's status, as a
+    shared id is refused:
+
+    - **within an analysis:** no two terms in force share a name, their `name` or one of
+      their `noun-forms`, ignoring case, and no term takes a name another term in force
+      replaces. The term that comes later in its glossary is reported;
+    - **across the analyses it builds on,** required or optional: no term takes a name
+      of a term in force of one the configuration lists, whether its head lists that term
+      or not, nor a name such a term replaces. For any other, such as one in another
+      repository, the names its glossary's head lists stand for its terms. No two terms
+      of the analyses it builds on share a name either.
+
+    A name of an analysis in another repository that the head does not give is a
+    reviewer's, under RS-SAN-012. Each `other-senses` phrase holds one of the term's
+    names, and more."""
+    folders: list[str | None] = [a.folder for a in listing.analyses] if listing.several else [None]
+    terms = {
+        folder: [
+            t for t in analysis.of_kind(TERM) if t.folder == folder and not t.withdrawn and t.id
+        ]
+        for folder in folders
     }
     found: list[Finding] = []
-    for term in analysis.in_folder(folder):
-        name = term.fields.get("name")
-        if term.kind != TERM or term.withdrawn or not isinstance(name, str):
-            continue
-        clash = listed.get(name.casefold())
-        if clash is not None:
+    for folder in folders:
+        own = terms[folder]
+        found += _senses(own)
+        held: dict[str, tuple[Artefact, str]] = {}
+        replacing: dict[str, list[Artefact]] = defaultdict(list)
+        for term in own:
+            for name in links.replaced(term):
+                replacing[name.casefold()].append(term)
+        for term in own:
+            for field, name in links.names(term):
+                key = name.casefold()
+                first = held.get(key)
+                if first is not None and first[0].id != term.id:
+                    found.append(
+                        Finding(
+                            ERROR,
+                            at(term.location, f"/{field}"),
+                            f"its {_said(field)}, {name}, is the {_said(first[1])} of "
+                            f"{first[0].id} too: {_ONE_NAME} (DEC-001 point 1)",
+                        )
+                    )
+                held.setdefault(key, (term, field))
+                for other in replacing.get(key, []):
+                    if other.id != term.id:
+                        found.append(
+                            Finding(
+                                ERROR,
+                                at(term.location, f"/{field}"),
+                                f"its {_said(field)}, {name}, is a name {other.id} replaces: a "
+                                f"replaced name is no longer any term's, and no other term "
+                                f"takes it — {_ONE_NAME} (DEC-001 point 1)",
+                            )
+                        )
+        found += _names_across(analysis, listing, folder, own, terms)
+    return found
+
+
+def _said(field: str) -> str:
+    """How a message names the field a name comes from: `name`, or `noun form`."""
+    return "name" if field == "name" else "noun form"
+
+
+def _names_across(
+    analysis: Analysis,
+    listing: analyses.Listing,
+    folder: str | None,
+    own: Sequence[Artefact],
+    terms: Mapping[str | None, Sequence[Artefact]],
+) -> list[Finding]:
+    """A term of the analysis in `folder` that takes a name of a term of an analysis it
+    builds on, or a name such a term replaces; and two terms of the analyses it builds on
+    that share a name, reported at its glossary's head, or at its entry in the settings
+    where it has no glossary (DEC-001 point 2)."""
+    listed = listing.of_folder(folder) if listing.several else None
+    head = analyses.head(analysis, folder)
+    sources: list[str] = []
+    if listed is not None:
+        sources = [b.analysis for b in listed.builds_on]
+    if head is not None:
+        sources += [t.analysis for t in head.taken if t.analysis not in sources]
+    # Each name each analysis it builds on holds, by its key, and what holds it there.
+    held_by: dict[str, dict[str, str]] = {}
+    for other in sources:
+        taken: dict[str, str] = {}
+        held = listing.of_component(other) if listing.several else None
+        if held is not None and held.folder in terms:
+            for term in terms[held.folder]:
+                for field, name in links.names(term):
+                    taken.setdefault(name.casefold(), f"the {_said(field)} of {other}:{term.id}")
+                for name in links.replaced(term):
+                    taken.setdefault(name.casefold(), f"a name {other}:{term.id} replaces")
+        listing_of = head.of(other) if head is not None else None
+        for term_id, name in listing_of.terms if listing_of is not None else ():
+            taken.setdefault(
+                name.casefold(), f"the name of {other}:{term_id}, which the head lists"
+            )
+        held_by[other] = taken
+    found: list[Finding] = []
+    for term in own:
+        for field, name in links.names(term):
+            holder = next(
+                (t[name.casefold()] for t in held_by.values() if name.casefold() in t), None
+            )
+            if holder is None:
+                continue
             found.append(
                 Finding(
                     ERROR,
-                    at(term.location, "/name"),
-                    f"its name, {name}, is the name of {clash[1]}:{clash[0]}, which the head "
-                    f"lists: a term of its own never takes the name of a term its head lists "
-                    f"(DEC-001 point 2) — rename it, or use the listed term",
+                    at(term.location, f"/{field}"),
+                    f"its {_said(field)}, {name}, is {holder}: a term never takes the name of a "
+                    f"term of an analysis it builds on, whether its head lists that term or not — "
+                    f"{_ONE_NAME}, or use the other analysis's term (DEC-001 point 2)",
+                )
+            )
+    glossary = analyses.glossary_of(analysis, folder)
+    where = (
+        at(glossary, f"/{analyses.HEAD}")
+        if glossary is not None
+        else (listed.where if listed is not None else ".")
+    )
+    names = list(held_by)
+    for i, first in enumerate(names):
+        for second in names[i + 1 :]:
+            for key in sorted(set(held_by[first]) & set(held_by[second])):
+                found.append(
+                    Finding(
+                        ERROR,
+                        where,
+                        f"two analyses it builds on hold one name: {held_by[first][key]}, and "
+                        f"{held_by[second][key]} — its text reads both, and {_ONE_NAME}; "
+                        f"rename one of the two in its own analysis (DEC-001 point 2)",
+                    )
+                )
+    return found
+
+
+def _senses(own: Sequence[Artefact]) -> list[Finding]:
+    """Each phrase a term lists in `other-senses` holds one of the term's names, its `name`
+    or a noun form, as a mention reads it, and more than that alone (DEC-001 point 1)."""
+    found: list[Finding] = []
+    for term in own:
+        listed = term.fields.get(links.OTHER_SENSES)
+        if not isinstance(listed, list):
+            continue
+        names = [name for _field, name in links.names(term)]
+        for index, phrase in enumerate(listed):
+            if not isinstance(phrase, str):
+                continue  # the schema reports it
+            holds = [n for n in names if links.mentions(phrase, n)]
+            if not holds:
+                problem = "holds none of its names, its name or a noun form"
+            elif any(phrase.strip().casefold() == n.casefold() for n in names):
+                problem = "is one of its names alone, so no such mention of it would be linked"
+            else:
+                continue
+            found.append(
+                Finding(
+                    ERROR,
+                    at(term.location, f"/{links.OTHER_SENSES}/{index}"),
+                    f"the phrase {phrase} {problem}: each phrase in `{links.OTHER_SENSES}` "
+                    f"holds the term's name in another sense, one its distinctions tell apart "
+                    f"(DEC-001 point 1)",
                 )
             )
     return found
+
+
+def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
+    """Each section's link to its term, and the mentions' links, in every analysis that
+    keeps a domain model (DEC-004 point 7), whatever any rule's status: a link missing,
+    one extra and one whose target is stale, each against what `pkit analysis link`
+    writes (`_lib/links.py`). An analysis whose folder of views holds none is not read."""
+    texts: dict[str, str | None] = {}
+    read: dict[str, str | None] = {}
+    for rel in links.files(analysis, listing):
+        text = _cached(root, rel, texts)
+        read[rel] = text.replace("\r\n", "\n") if text is not None else None
+    found: list[Finding] = []
+    for linked in links.plan(analysis, listing, read):
+        for d in linked.departures:
+            found.append(Finding(ERROR, d.location, _link_message(d)))
+    return found
+
+
+def _link_message(d: links.Departure) -> str:
+    """What a departure of a link says, and what mends it."""
+    mend = "run `pkit analysis link`, which writes the links (DEC-004 point 7)"
+    if d.defined:
+        if d.how == links.MISSING:
+            return (
+                f"line {d.line} heads a section with no link to its term: each section opens "
+                f"with `{d.wanted}` — {mend}"
+            )
+        if d.how == links.STALE:
+            return (
+                f"line {d.line} links the section to its term as `{d.written}`, where it is "
+                f"`{d.wanted}` — {mend}"
+            )
+        return (
+            f"line {d.line} links the section to a term where no such link belongs, "
+            f"`{d.written}`: a section's one link to its term is its first line below its "
+            f"heading, to its own term while that term is in force — {mend}"
+        )
+    if d.how == links.MISSING:
+        return (
+            f"line {d.line}: `{d.text}` is the first mention of {d.term} in its section, and "
+            f"takes a link to its entry, `{d.wanted}` — {mend}"
+        )
+    if d.how == links.STALE:
+        return (
+            f"line {d.line}: `{d.text}` links to `{d.written}`, and its term's entry is "
+            f"`{d.wanted}` — {mend}"
+        )
+    return (
+        f"line {d.line}: `{d.text}` links to a glossary entry, `{d.written}`, where no link "
+        f"belongs: only the first mention of a term in force in each section takes one, never "
+        f"in its own section, nor after `{links.ESCAPE}` — {mend}"
+    )
 
 
 # --- anchors -------------------------------------------------------------------------------
@@ -2829,6 +3046,9 @@ def _artefact_structure(
             if artefact.entry and artefact.span is not None
             else structure.body_lines(text)
         )
+        if artefact.kind == VIEW:
+            # A section's link to its term is no content of its explanation (DEC-004 point 7).
+            lines = [(n, "" if links.DEFINED_LINE.match(t) else t) for n, t in lines]
         departing = structure.departures(lines, kind, fields=artefact.fields, titles=titles)
     found: list[tuple[Finding, tuple[object, ...]]] = [
         (
