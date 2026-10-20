@@ -37,6 +37,10 @@ What a body is made of, precisely:
   part runs to the next declared label or to a heading of its level or above.
   An opening runs from below the element listed before it, or from the body's
   start, to the next heading or declared label.
+- **A label right before an opening** holds its paragraph alone: its part ends
+  at the first blank line below it, outside fenced code and comments, and the
+  opening runs from there. So a domain-model view's *Why* and the explanation
+  below it are two parts, the explanation with no label (DEC-004 point 2).
 - **A part's content:** what it holds besides its label, with comments and
   white space left out.
 
@@ -409,17 +413,20 @@ class _Mark:
 class _Body:
     """A body read: each line's number and its content — the line with comments left out,
     a fenced line whole — whether fenced code opens on it or holds it (`forms.OPENS_FENCE`,
-    `forms.IN_FENCE`), and its marks, in order."""
+    `forms.IN_FENCE`), and its marks, in order. `blanks` says of each line whether it ends a
+    paragraph: blank as written, outside fenced code and outside a comment."""
 
     numbers: tuple[int, ...]
     content: tuple[str, ...]
     marks: tuple[_Mark, ...]
     fences: tuple[int, ...] = ()
+    blanks: tuple[bool, ...] = ()
 
 
 def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
     content: list[str] = []
     fences: list[int] = []
+    blanks: list[bool] = []
     marks: list[_Mark] = []
     fence: tuple[str, int] | None = None
     in_comment = False
@@ -428,6 +435,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         if fence is not None:
             content.append(line)
             fences.append(forms.IN_FENCE)
+            blanks.append(False)
             if _closes(line, fence):
                 fence = None
             continue
@@ -435,6 +443,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         visible, in_comment = _without_comments(line, in_comment)
         content.append(visible)
         fences.append(0)
+        blanks.append(not line.strip() and not started_in_comment)
         if started_in_comment:
             continue
         opening = _FENCE.match(visible)
@@ -458,7 +467,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
             offset = len((label["item"] or "").expandtabs(4))
             marks.append(_Mark(index, LABEL, heading_level + 1, label["text"], rest, offset))
     numbers = tuple(n for n, _ in lines)
-    return _Body(numbers, tuple(content), tuple(marks), tuple(fences))
+    return _Body(numbers, tuple(content), tuple(marks), tuple(fences), tuple(blanks))
 
 
 def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
@@ -745,7 +754,14 @@ def _part(
     line = body.numbers[mark.index]
     lead = forms.Row(line, mark.rest) if mark.type == LABEL else None
     item = body.content[mark.index] if mark.offset else ""
-    return forms.Part(line, _rows(body, _extent(mark, body)), lead, item)
+    extent = _extent(mark, body, paragraph=_before_opening(i, elements))
+    return forms.Part(line, _rows(body, extent), lead, item)
+
+
+def _before_opening(i: int, elements: Sequence[Element]) -> bool:
+    """Whether the element at `i` is a label listed right before an opening, which holds
+    its paragraph alone, such as a domain-model view's *Why* (DEC-004 point 2)."""
+    return elements[i].type == LABEL and i + 1 < len(elements) and elements[i + 1].type == OPENING
 
 
 def _rows(body: _Body, extent: range) -> tuple[forms.Row, ...]:
@@ -853,9 +869,10 @@ def _taken(
     return taken
 
 
-def _extent(mark: _Mark, body: _Body) -> range:
+def _extent(mark: _Mark, body: _Body, *, paragraph: bool = False) -> range:
     """The lines below a mark that its part holds: to the next declared label, or to a
-    heading of the mark's level or above."""
+    heading of the mark's level or above. With `paragraph`, a label right before an
+    opening, it ends sooner at the first blank line outside fenced code and comments."""
     end = len(body.content)
     for other in body.marks:
         if other.index <= mark.index:
@@ -863,15 +880,21 @@ def _extent(mark: _Mark, body: _Body) -> range:
         if other.type == LABEL or other.level <= mark.level:
             end = other.index
             break
+    if paragraph:
+        end = next((k for k in range(mark.index + 1, end) if body.blanks[k]), end)
     return range(mark.index + 1, end)
 
 
 def _after_previous(i: int, elements: Sequence[Element], at: Mapping[int, int], body: _Body) -> int:
     """The line an opening starts at: below the mark of the nearest element listed before
-    it that the body carries, or the body's first."""
+    it that the body carries, or the body's first. Below a label listed right before it,
+    the opening starts after the label's paragraph."""
     for previous in range(i - 1, -1, -1):
         if previous in at:
-            return body.marks[at[previous]].index + 1
+            mark = body.marks[at[previous]]
+            if _before_opening(previous, elements):
+                return _extent(mark, body, paragraph=True).stop
+            return mark.index + 1
     return 0
 
 

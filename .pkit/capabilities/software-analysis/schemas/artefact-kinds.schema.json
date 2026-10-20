@@ -105,7 +105,7 @@
           "$ref": "#/$defs/word"
         },
         "type": {
-          "description": "`heading`: a heading written with one to six `#` at the start of a line. `label`: a bold label, its text then a colon, as `**Goal:**`, that opens a paragraph or a top-level list item. `opening`: the text before the body's first label. `repeated`: a section that repeats, once for each entry of a front-matter list, each headed at its `level` and holding the parts its `sections` give, such as a domain-model view's section for each concept it explains (software-analysis DEC-004 point 2). Every heading of that level is one of its sections, and the stamp writes each heading. Only a declared label marks a part, so a bold run the kind does not declare is content.",
+          "description": "`heading`: a heading written with one to six `#` at the start of a line. `label`: a bold label, its text then a colon, as `**Goal:**`, that opens a paragraph or a top-level list item. A label listed right before an opening holds its paragraph alone, up to the first blank line. `opening`: the text before the body's first label, or below the paragraph of the label listed right before it. `repeated`: a section that repeats, once for each entry of a front-matter list, each headed at its `level` and holding the parts its `sections` give, such as a domain-model view's section for each concept it explains (software-analysis DEC-004 point 2). Every heading of that level is one of its sections, and the stamp writes each heading. Only a declared label marks a part, so a bold run the kind does not declare is content.",
           "enum": [
             "heading",
             "label",
@@ -115,7 +115,7 @@
           "default": "heading"
         },
         "sections": {
-          "description": "A repeated section's parts, in order, each held in every one of its sections as a body's element is: an opening, then labels. A part's id is unique within its kind, the elements outside the repeated section included. A repeated section holds no repeated section.",
+          "description": "A repeated section's parts, in order, each held in every one of its sections as a body's element is, such as a domain-model view's *Why*, its explanation, then labels (software-analysis DEC-004 point 2). A part's id is unique within its kind, the elements outside the repeated section included. A repeated section holds no repeated section.",
           "type": "array",
           "minItems": 1,
           "items": {

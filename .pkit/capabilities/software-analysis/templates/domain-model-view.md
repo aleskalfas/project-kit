@@ -1,6 +1,9 @@
 ---
 # A domain-model view (software-analysis DEC-004): a group of related concepts,
-# each explained in a section of its own, and drawn as they relate. Stamp it,
+# each explained in a section of its own, and drawn as they relate. It explains
+# purpose first: its opening states the problem the concepts solve, and each
+# section opens with its `**Why:**`, one paragraph, then what the concept is,
+# its reasons taken from the records it anchors. Stamp it,
 # never copy it: `pkit analysis new view <slug> --number <number> --explains
 # <TERM-id> …` writes `<number>-<slug>.md` in `domain-model/` under the analysis
 # location. The number gives the view's place in the domain model's order, and
@@ -29,11 +32,13 @@ pkit:
 
 # VIEW-view — <Title>
 
-<!-- pkit:hint What the group of concepts covers, then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized. Example: The concepts of ordering goods and paying for them, and how a payment settles an order. -->
+<!-- pkit:hint The problem the group's concepts solve together, then each concept named as a part of the answer. Then its class diagram. Draw the concepts, how they relate and the attributes that matter, in a Mermaid fence with an `accTitle`, an `accDescr` and no styling. Label each concept's box by its term's name with its first letter capitalized. Example: A shop must know what each customer asked for, and whether it is paid, before it sends anything. An order holds what was asked for, and a payment settles it. -->
 
 ## <Term>
 
-<!-- pkit:hint What the concept is, in plain words for a newcomer. What it says fits exactly what the term's definition fits. Example: An order is what a customer asks the shop to send, before anything is paid or sent. -->
+**Why:** <!-- pkit:hint What the concept is for, the problem it answers, in one paragraph of plain words. Say again a reason the Context or the Rationale of a record the view anchors gives. Name no actor, and cite no actor's need. Write `None.` when no record gives one. Example: A shop must know what a customer asked for before it takes any money or sends any goods. -->
+
+<!-- pkit:hint What the concept is, in plain words for a newcomer, below the Why part and a blank line. What it says fits exactly what the term's definition fits. Example: An order is what a customer asks the shop to send, before anything is paid or sent. -->
 
 **Attributes:** <!-- pkit:hint What each instance of the concept holds, in words. Write `None.` when there is none. Example: Each order holds its lines, the customer who placed it and the day it was placed. -->
 

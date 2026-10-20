@@ -669,9 +669,9 @@ DOCUMENT_OPENINGS = {
     # A requirement's obligation is in its front matter, so its body opens with what
     # verifies it (DEC-002 point 4).
     **dict.fromkeys(REQUIREMENTS, "**Verified by:** <!-- pkit:hint "),
-    # A domain-model view opens with what its group covers, then its class diagram
-    # (DEC-004 point 2).
-    "domain-model-view": "<!-- pkit:hint What the group of concepts covers",
+    # A domain-model view opens with the problem its group's concepts solve, then its
+    # class diagram (DEC-004 point 2).
+    "domain-model-view": "<!-- pkit:hint The problem the group's concepts solve together",
 }
 
 
