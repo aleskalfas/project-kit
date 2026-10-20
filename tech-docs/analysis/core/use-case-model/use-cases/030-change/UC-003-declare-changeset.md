@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T01:38:22Z
+      at: 2026-10-20T03:23:02Z
       outcome: unchanged
-      unchanged-because: "It moved into the core's area 030-change with no word changed. Its precondition, that the project declares changesets, holds as written. No use case of the core's analysis produces it yet, so it names no producer: Develop the methodology in its source repository is not written yet (#1719)."
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-003 — Declare what my change means for the next release

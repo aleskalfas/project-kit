@@ -21,7 +21,9 @@ in `project/config.yaml`. Each finding says why a fixer starts no agent:
 - **report** — a capability's entry that names a type not its own, an agent it
   does not ship or that is not deployed, an agent such as above, or that comes
   through a command filler. The project cannot mend these, so they fail nothing
-  (COR-055 point 1).
+  (COR-055 point 1). Also a refusal in the grant list for a type no entry gives
+  that agent, with the words to remove it by hand: it asks nothing and starts
+  nothing, so it fails nothing either.
 
 An unresolved point is the `connections` member's finding, so it is only said
 in the summary here. A query: read-only and offline, run by `pkit validate` with

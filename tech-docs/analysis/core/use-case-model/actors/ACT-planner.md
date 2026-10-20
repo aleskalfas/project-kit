@@ -15,9 +15,9 @@ pkit:
         - project-management:DEC-016
         - project-management:DEC-018
     revalidated:
-      at: 2026-10-20T01:36:59Z
+      at: 2026-10-20T03:22:53Z
       outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
+      unchanged-because: DEC-029 now says a fixer the drift command starts is no dispatch of the project manager's. The planner's needs, and the project manager planning and filing only on their approval, are untouched.
 ---
 
 # ACT-planner — Planner

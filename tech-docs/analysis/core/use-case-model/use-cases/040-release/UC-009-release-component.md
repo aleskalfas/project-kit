@@ -25,8 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T01:38:28Z
-      outcome: updated
+      at: 2026-10-20T03:23:04Z
+      outcome: unchanged
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-009 — Release my component on its own version

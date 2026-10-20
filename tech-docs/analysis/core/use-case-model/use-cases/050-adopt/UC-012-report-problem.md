@@ -27,8 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-20T01:38:31Z
-      outcome: updated
+      at: 2026-10-20T03:23:08Z
+      outcome: unchanged
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

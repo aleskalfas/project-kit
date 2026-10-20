@@ -14,7 +14,7 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T02:03:35Z
+      at: 2026-10-20T03:23:28Z
       outcome: updated
 ---
 
@@ -333,7 +333,7 @@ What it will not do:
 - **Fetch a source.** For a page stale on a `source` anchor it reads the versions recorded and the address from the source file's history (`git show <commit> -- <file>`), names the source, both versions and the link, and asks you what changed in the source that bears on the page's statements. It never rewrites a page from a version change alone.
 - **Read a friction document of a version it does not read.** The `explain`, `debt` and `check --all` documents carry a `schema_version`; one other than 1 it refuses, naming the command and the version, and proposes nothing from it. One without the key, from a backbone before it, reads as 1.
 
-**As the fixer of your pages.** Where you granted it, a work-tracking command may start the agent with nobody watching ("Connections" above). That needs a work-tracking capability that ships such a command. In such a run the agent only proposes friction fixes, on the pages the command names, and writes in the workspace the command gives it:
+**As the fixer of your pages.** Where you granted it, a work-tracking command may start the agent with nobody watching ("Connections" above). project-management ships one, `pkit pm fix-drift` ([its README, "Starting the fixers"](../project-management/README.md#starting-the-fixers--fix-drift)). In such a run the agent only proposes friction fixes, on the pages the command names, and writes in the workspace the command gives it:
 
 - **For each page it proposes,** it writes the evidence, the answer as fields, and, for an `updated` answer, a diff of the page's text and anchors. The command builds the answer's command from those fields, and never runs a command the agent wrote.
 - **A page whose fix needs what only you know,** such as what changed in a source, it holds with one question. Your answer goes with the page's next run.

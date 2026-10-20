@@ -1,16 +1,19 @@
-"""The Claude Code adapter's agent runner, `run-agent.py` (ADR-066 points 1, 2, 4 and 10; #1742).
+"""The Claude Code adapter's agent runner, `run-agent.py`, in its unconfined form (ADR-066
+points 1, 2, 4, 8 and 10; #1742, #1744). The confined form has its own tests,
+`test_claude_code_confined_run.py`.
 
 - it reads a request and refuses one it does not run: another version, a key
-  of the confined form or any other, an agent that is no name, an empty brief,
-  a folder that is not an absolute directory, a limit out of range, an effort
-  outside the levels;
+  it does not know, an agent that is no name, an empty brief, a folder that is
+  not an absolute directory, a limit out of range, an effort outside the levels;
+- inside a run, the marker set even empty, it refuses and starts nothing, and
+  it sets the marker for every run it starts;
 - it passes the harness the closed set of flags and nothing else, and refuses
   a command line with any other: none of the flags ADR-066 point 4 rules out
   can be passed;
 - it finds the agent where Claude Code does, and refuses an agent that is not
   deployed, and a harness that is not on PATH;
-- the harness gets the brief on standard input, starts in the folder, and gets
-  none of the backbone's run variables;
+- the harness gets the brief on standard input, starts in the folder, gets
+  none of the backbone's run variables, and gets the marker;
 - at the limit it ends the harness and every process still descended from it,
   a shell command in a session of its own included, and asked to stop it ends
   them first;
@@ -101,8 +104,9 @@ def env(tmp_path: Path) -> dict[str, str]:
     bin_dir.mkdir()
     home = tmp_path / "home"
     home.mkdir()
+    outside_a_run = {key: value for key, value in os.environ.items() if key != "PKIT_AGENT_RUN"}
     return {
-        **os.environ,
+        **outside_a_run,
         "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
         "CLAUDE_CONFIG_DIR": str(home),
     }
@@ -215,7 +219,9 @@ def test_the_agent_is_found_where_claude_code_finds_it(runner: ModuleType, tmp_p
     )
 
 
-def test_the_harness_gets_none_of_the_backbones_run_variables(runner: ModuleType) -> None:
+def test_the_harness_gets_none_of_the_backbones_run_variables_and_the_marker(
+    runner: ModuleType,
+) -> None:
     env = {
         "PATH": "/bin",
         "HOME": "/home/x",
@@ -223,7 +229,30 @@ def test_the_harness_gets_none_of_the_backbones_run_variables(runner: ModuleType
         "PKIT_COMMAND_STRAYS": "/tmp/x",
         "PKIT_RUN_CACHE": "/tmp/y",
     }
-    assert runner.harness_environment(env) == {"PATH": "/bin", "HOME": "/home/x"}
+    assert runner.harness_environment(env) == {
+        "PATH": "/bin",
+        "HOME": "/home/x",
+        "PKIT_AGENT_RUN": "1",
+    }
+
+
+# --- the marker of a run --------------------------------------------------------------
+
+
+@pytest.mark.parametrize("value", ["1", "", "anything"])
+def test_inside_a_run_the_runner_refuses_and_starts_nothing(
+    tmp_path: Path, env: dict[str, str], value: str
+) -> None:
+    """The marker set at all, even empty, means this runner was started inside
+    an agent run, and a run starts no other agent (ADR-066 point 8)."""
+    _deploy(tmp_path)
+    started = tmp_path / "started"
+    _script(_bin(env) / "claude", f"open({str(started)!r}, 'w').write('x')\n")
+    answer = _run(_request(tmp_path), {**env, "PKIT_AGENT_RUN": value})
+    assert answer["ending"] == "refused"
+    assert "PKIT_AGENT_RUN is set" in str(answer["reason"])
+    assert "refused_calls" not in answer
+    assert not started.exists()
 
 
 # --- runs -----------------------------------------------------------------------------
@@ -253,7 +282,8 @@ def test_a_run_finishes_with_the_harness_exit(tmp_path: Path, env: dict[str, str
         "import json, os, sys\n"
         f"open({str(record)!r}, 'w').write(json.dumps({{'argv': sys.argv[1:], "
         "'brief': sys.stdin.read(), 'cwd': os.getcwd(), "
-        "'deadline': os.environ.get('PKIT_COMMAND_DEADLINE')}))\n"
+        "'deadline': os.environ.get('PKIT_COMMAND_DEADLINE'), "
+        "'marker': os.environ.get('PKIT_AGENT_RUN')}))\n"
         "print('the review')\nprint('a warning', file=sys.stderr)\nsys.exit(5)\n",
     )
     env = {**env, "PKIT_COMMAND_DEADLINE": "9999999999.0"}
@@ -271,6 +301,7 @@ def test_a_run_finishes_with_the_harness_exit(tmp_path: Path, env: dict[str, str
     assert seen["brief"] == "Review --dangerously-skip-it"
     assert Path(seen["cwd"]).resolve() == tmp_path.resolve()
     assert seen["deadline"] is None
+    assert seen["marker"] == "1"
 
 
 # A harness that starts what Claude Code starts: a child in its own process

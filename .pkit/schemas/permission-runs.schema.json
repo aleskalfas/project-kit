@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "permission-runs.schema.json",
+  "title": "The rules of agent runs",
+  "description": "Formal shape of a capability's `permissions/runs.yaml`: the rules of the agent runs its commands start through the adapter's runner (ADR-066 point 5), and the privileges they name. Each run is keyed by the command that starts it. Its rules are denies in the permission model (COR-028 point 1). One of them denies every call that none of what the run needs recognises, so the adapter holds it by allowing only that; the others are a floor of denies. No session's model composes this file: the backbone's run command reads it at the pinned commit, for a run whose command it names, and projects it through the shared decision core for that run alone. A privilege here takes the catalog's entry shape, with three forms of its own that only a run fills in: `args` (the tokens a command starts with, where `{working-copy}` and `{workspace}` stand for the run's folders), `kit` (the backbone's reading commands, or the commands other components declare queries), and `except` (every call the rest of the recognizer matches, or every call where it has no other key, that none of the named privileges recognises). They live in this file and not in the session catalog, so an older permission core never reads one. Companion per COR-018.",
+  "type": "object",
+  "required": ["schema_version", "privileges", "runs"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "source": { "$ref": "refs.schema.json#/$defs/source" },
+    "privileges": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/privilege" }
+      },
+      "additionalProperties": false,
+      "description": "The privileges this file's rules name, keyed by bare kebab-case ids. A rule names one as `[privilege-catalog:<capability>:<id>]`, as a capability's catalog fragment does (ADR-021), or names a privilege of the session catalog as `[privilege-catalog:<id>]`."
+    },
+    "runs": {
+      "type": "object",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": { "$ref": "#/$defs/run" }
+      },
+      "additionalProperties": false,
+      "description": "Each run, keyed by the command of this capability that starts it."
+    }
+  },
+  "$defs": {
+    "folder": {
+      "type": "string",
+      "enum": ["{working-copy}", "{workspace}"],
+      "description": "A folder of the run: its working copy, or its workspace. The backbone fills in the run's absolute path."
+    },
+    "token": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^(?:\\{working-copy\\}|\\{workspace\\}|[^\\s'\"`*(){}\\\\$;&|<>]+)$",
+      "description": "One token of a command: a word with no whitespace, quote, glob, parenthesis, brace or shell operator, or a folder of the run."
+    },
+    "bash_matcher": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cmd"],
+      "description": "A shell command that starts with `cmd`, then with `args` in order where they are given.",
+      "properties": {
+        "cmd": { "$ref": "#/$defs/token" },
+        "args": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/token" },
+          "minItems": 1
+        }
+      }
+    },
+    "privilege_ref": {
+      "type": "string",
+      "pattern": "^\\[privilege-catalog:[a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?\\]$"
+    },
+    "privilege": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "recognize"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "recognize": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "path": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["folders", "tools"],
+              "description": "A file tool on a file in one of the run's folders, or below it.",
+              "properties": {
+                "folders": {
+                  "type": "array",
+                  "items": { "$ref": "#/$defs/folder" },
+                  "minItems": 1,
+                  "uniqueItems": true
+                },
+                "tools": {
+                  "type": "array",
+                  "items": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
+                  "minItems": 1,
+                  "uniqueItems": true
+                }
+              }
+            },
+            "tool": {
+              "type": "array",
+              "items": { "type": "string", "pattern": "^[A-Z][A-Za-z]*$" },
+              "minItems": 1,
+              "uniqueItems": true,
+              "description": "A tool, wherever it is pointed."
+            },
+            "bash": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/bash_matcher" },
+              "minItems": 1
+            },
+            "kit": {
+              "type": "string",
+              "enum": ["reading", "queries"],
+              "description": "`reading`: the backbone's reading commands, each `pkit <command>` with any arguments. `queries`: each command another installed component declares a query (`query-contract: true`), as `pkit <component or alias> <command>`, the capability that declares this file left out."
+            },
+            "except": {
+              "type": "array",
+              "items": { "$ref": "#/$defs/privilege_ref" },
+              "minItems": 1,
+              "uniqueItems": true,
+              "description": "The call is recognised only where none of these privileges recognises it. With no other key, the privilege is every call that none of them recognises."
+            }
+          }
+        }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["description", "rules"],
+      "properties": {
+        "description": { "type": "string", "minLength": 1 },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["subject", "privilege", "effect"],
+            "properties": {
+              "subject": {
+                "const": "all",
+                "description": "Every agent: the command starts agents other components ship, so a run's rule cannot name them (ADR-066 point 5). The grant list decides which start."
+              },
+              "privilege": { "$ref": "#/$defs/privilege_ref" },
+              "effect": { "const": "deny" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

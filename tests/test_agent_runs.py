@@ -13,13 +13,18 @@
   one that cannot start did not start;
 - past the limit and its margin the runner is asked to stop before it is
   killed, and `SIGTERM` to `pkit agents run` stops the runner and its harness;
+- the marker of a run refuses the run before anything is read (ADR-066 point 8);
+- the calls the harness refused are read leniently from the runner's answer;
 - the command's document, exits and usage errors.
+
+The confined form, its clone and its check are `tests/test_agent_confinement.py`'s.
 """
 
 from __future__ import annotations
 
 import dataclasses
 import importlib.util
+import io
 import json
 import os
 import signal
@@ -297,6 +302,8 @@ def test_the_copies_across_the_three_layers_agree() -> None:
         ({"limit_seconds": True}, "the limit"),
         ({"limit_seconds": agent_runs.MAX_LIMIT_SECONDS + 1}, "the limit"),
         ({"effort": "bypass"}, "effort 'bypass'"),
+        ({"commit": "0" * 40}, "never both"),
+        ({"folder": None}, "all three"),
     ],
 )
 def test_a_request_with_a_problem_is_refused_before_any_runner(
@@ -306,6 +313,48 @@ def test_a_request_with_a_problem_is_refused_before_any_runner(
     run = run_agent(tmp_path / "no-project", _request(tmp_path, **overrides))
     assert run.ending == agent_runs.REFUSED
     assert says in run.reason
+
+
+# --- the marker of a run ----------------------------------------------------------
+
+
+@pytest.mark.parametrize("value", ["", "1"])
+def test_the_marker_refuses_a_run_before_anything_else(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    """Set at all, empty included, the marker refuses first: before the deadline,
+    the request's problems and the project are looked at."""
+    monkeypatch.setenv(agent_runs.MARKER_ENV, value)
+    monkeypatch.setattr(agent_runs.command_runner, "inherited_deadline", lambda: 1.0)
+    run = run_agent(tmp_path / "no-project", _request(tmp_path, brief=""))
+    assert (run.ending, run.reason) == (agent_runs.REFUSED, agent_runs.INSIDE_A_RUN)
+    assert (run.confined, run.check) == (False, None)
+
+
+class _UnreadStdin(io.BytesIO):
+    """A standard input that fails the test if the command reads it."""
+
+    def read(self, size: int | None = -1) -> bytes:
+        if size == 0:  # click probes a stream with an empty read
+            return b""
+        raise AssertionError("the command read its standard input")
+
+
+def test_the_command_refuses_inside_a_run_before_it_reads_anything(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Outside any project, with the brief unread: the refusal is the run's document."""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv(agent_runs.MARKER_ENV, "")
+    result = CliRunner().invoke(
+        main,
+        ["agents", "run", AGENT, "--folder", str(tmp_path), "--limit", "5", "--json"],
+        input=_UnreadStdin(),
+    )
+    assert result.exit_code == 1, result.output
+    document = json.loads(result.stdout)
+    assert (document["ending"], document["reason"]) == ("refused", agent_runs.INSIDE_A_RUN)
+    assert document["confined"] is False
 
 
 # --- the run, through the claude-code adapter's runner --------------------------
@@ -390,6 +439,36 @@ def test_the_runners_answer_is_the_run(make_adopter_repo: MakeAdopterRepo, tmp_p
     _sole_runner(root, f"import json, sys\nsys.stdin.read()\nprint(json.dumps({answer!r}))\n")
     run = run_agent(root, _request(tmp_path))
     assert (run.ending, run.reason, run.runner) == ("refused", "no harness", "other-harness")
+    assert run.refused_calls == ()
+
+
+@pytest.mark.parametrize(
+    ("reported", "read"),
+    [
+        (
+            [{"tool": "Bash", "input": "gh pr list"}, {"tool": 3}, "Edit", {"tool": "Edit"}],
+            [{"tool": "Bash", "input": "gh pr list"}],
+        ),
+        ("not a list", []),
+        (None, []),
+    ],
+    ids=["entries-of-another-shape-dropped", "not-a-list", "null"],
+)
+def test_the_refused_calls_are_read_leniently(
+    make_adopter_repo: MakeAdopterRepo, tmp_path: Path, reported: object, read: list[object]
+) -> None:
+    root = make_adopter_repo().root
+    answer = {
+        "schema_version": 1,
+        "ending": "finished",
+        "exit_code": 0,
+        "refused_calls": reported,
+        "start_report": {"mode": "dontAsk"},
+    }
+    _sole_runner(root, f"import json, sys\nsys.stdin.read()\nprint(json.dumps({answer!r}))\n")
+    run = run_agent(root, _request(tmp_path))
+    assert run.ending == agent_runs.FINISHED
+    assert run.as_json()["refused_calls"] == read
 
 
 def test_the_request_reaches_the_runner_on_standard_input(
@@ -491,6 +570,13 @@ def test_the_command_writes_the_runs_document(
         "output": f"Reviewer agent (local, {AGENT}): APPROVED\n",
         "diagnostics": "said on standard error\n",
         "reason": "",
+        # An unconfined run: no commit, no check, no files, nothing excluded.
+        "refused_calls": [],
+        "confined": False,
+        "commit": None,
+        "check": None,
+        "files": None,
+        "excluded": [],
     }
     assert list(json.loads(result.stdout.strip())) == sorted(document)
 
@@ -537,8 +623,17 @@ def test_a_refused_run_exits_1_with_its_reason(
         ([AGENT], "Go."),
         ([AGENT, "--limit", "0"], "Go."),
         ([AGENT, "--limit", "5", "--effort", "auto"], "Go."),
+        ([AGENT, "--limit", "5", "--commit", "0" * 40], "Go."),
     ],
-    ids=["flag-as-agent", "agent-with-space", "no-brief", "no-limit", "zero-limit", "bad-effort"],
+    ids=[
+        "flag-as-agent",
+        "agent-with-space",
+        "no-brief",
+        "no-limit",
+        "zero-limit",
+        "bad-effort",
+        "folder-and-commit",
+    ],
 )
 def test_a_usage_error_exits_2(
     make_adopter_repo: MakeAdopterRepo, args: list[str], brief: str

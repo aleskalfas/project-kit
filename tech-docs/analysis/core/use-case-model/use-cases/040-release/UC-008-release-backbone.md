@@ -31,8 +31,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T01:38:27Z
-      outcome: updated
+      at: 2026-10-20T03:23:03Z
+      outcome: unchanged
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
