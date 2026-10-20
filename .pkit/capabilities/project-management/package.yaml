@@ -237,17 +237,20 @@ commands:
     help: "List the fixers the pkit::work-tracking:fixers point declares (DEC-056 point 1) — which agent fixes the artefacts of each type — with the project's answer for each from the grant list (`fixers` in project/config.yaml): granted, refused or not asked. An entry that fails a check says why its agent starts no agent, and a grant no entry names is listed with the command that revokes it. --json prints one document. Read-only. Exit 1 when the point does not resolve or the grant list cannot be read."
   grant-fixer:
     script: scripts/grant-fixer.py
-    help: "Grant a fixer (DEC-056 point 2): `grant-fixer <agent> [--type <type>]...` records in the grant list that the agent may start on its own on the stale artefacts of every type the fixers point gives it, or only the types named. Running it is the person's answer yes. Refuses an agent no entry names and a type the point does not give it; notes a granted type whose entry fails a check. The change shows in the project's diff and counts once it merges into the default branch. --dry-run writes nothing."
+    help: "Grant a fixer (DEC-056 point 2): `grant-fixer <agent> [--type <type>]...` records in the grant list that the agent may start on its own on the stale artefacts of every type the fixers point gives it, or only the types named. Running it is the person's answer yes. Refuses an agent no entry names and a type the point does not give it; notes a granted type whose entry fails a check. The change shows in the project's diff and counts once it merges into the default branch. --dry-run writes nothing, and refuses where the configuration does not exist, as a real run does."
   revoke-fixer:
     script: scripts/revoke-fixer.py
-    help: "Revoke a fixer (DEC-056 point 2): `revoke-fixer <agent> [--type <type>]...` records a refusal for every type the fixers point gives the agent and every type it is granted, or only the types named, so nothing asks about them again. Works on the grant list alone while the point does not resolve. --dry-run writes nothing."
+    help: "Revoke a fixer (DEC-056 point 2): `revoke-fixer <agent> [--type <type>]...` records a refusal for every type the fixers point gives the agent and every type it is granted, or only the types named, so nothing asks about them again. Works on the grant list alone while the point does not resolve. --dry-run writes nothing, and refuses where the configuration does not exist, as a real run does."
   ask-fixers:
     script: scripts/ask-fixers.py
     help: "Ask, for each agent of the fixers point, whether it may start on its own on the types nobody was asked about (DEC-056 point 2), in words built from the declaration. At a terminal each answer is recorded in the grant list as it is given: yes a grant, no a refusal. With nobody at a terminal nothing is granted or recorded, and each question is printed with the one command line that grants its fixer. Exempt from the bootstrap gate, so install and upgrade can ask it."
   check-fixers:
     script: scripts/check-fixers.py
-    help: "The project-management:fixers validator (DEC-056 points 1 and 2): each entry of the fixers point and the grant list. An error for the project's own entry naming an agent that is not deployed, and for a grant list that cannot be read; a warning for the project's own entry naming an agent that claims paths, lists no tools (so the harness grants it every tool) or holds a tool that changes existing files or starts agents, and for a grant no entry names (with the command that revokes it); a report for a capability's entry naming a type not its own, an agent it does not ship or that is not deployed, such an agent, or coming through a command filler. --json prints the document validation reads. A query: read-only, offline."
+    help: "The project-management:fixers validator (DEC-056 points 1 and 2): each entry of the fixers point and the grant list. An error for the project's own entry naming an agent that is not deployed, and for a grant list that cannot be read; a warning for the project's own entry naming an agent that claims paths, lists no tools (so the harness grants it every tool) or holds a tool that changes existing files or starts agents, and for a grant no entry names (with the command that revokes it); a report for a capability's entry naming a type not its own, an agent it does not ship or that is not deployed, such an agent, or coming through a command filler, and for a refusal in the grant list of a type no entry gives that agent, which asks nothing and starts nothing. --json prints the document validation reads. A query: read-only, offline."
     query-contract: true
+  fix-drift:
+    script: scripts/fix-drift.py
+    help: "Start each granted fixer on what the default branch left out of date (DEC-056 points 3 to 6). Pins the default branch's commit and reads, in a detached copy of it, the whole-repository check, each artefact's type, the fixers point and the grant list. Dispatches only stale artefacts whose type's fixer is granted, upstream first, within a cap per fixer (--cap, $PKIT_DRIFT_CAP, 5), and lists every other artefact with its reason: deferred, not judged, no type or a tied one, no fixer or none granted, a name that could forge a line, an open pull request that changes it, a stale upstream, an answer that still stands. Each fixer starts through `pkit agents run`, confined to a clone at the commit under the rules of permissions/runs.yaml (ADR-066), at most --parallel at once, each within --timeout seconds ($PKIT_DRIFT_AGENT_TIMEOUT, 1800), with one brief: its frame, and each pull request behind the friction quoted as data. A start that failed for a cause outside the fixer's work is retried once. Reads each fixer's result lines and answers by the run's contract, sets a run aside on a breach, and gathers the proposals into the main working tree's agent workspace, under project-management/drift/, with an index. One run at a time, held by a lock; refuses inside an agent run. Asks the fixers question at a terminal first. --dry-run says what it would start and starts nothing; --force dispatches what stands."
 # The `project-management:fixers` member of `pkit validate`: a component joins
 # validation by naming a command it registers (COR-055 point 3); the block's
 # keys are ADR-058's. It checks the fixers point's entries and the grant list
@@ -324,6 +327,10 @@ connections:
           reasons (DEC-056 points 1, 3 and 6).
         combination: union
         inert: fail
+        # Asked after an install or upgrade that reaches this point, where a
+        # person can answer (COR-061): one question for each fixer nobody was
+        # asked about (DEC-056 point 2).
+        question: ask-fixers
   extensions:
     contributes:
       # The point's always-included default filler: the project's code-to-doc

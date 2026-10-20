@@ -15,7 +15,7 @@ pkit:
         - .pkit/capabilities/project-management/decisions/**
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-19T09:37:35Z
+      at: 2026-10-20T03:23:23Z
       outcome: updated
 ---
 
@@ -445,10 +445,10 @@ ready: 1a2b3c4 — CI passed, all required verdicts approved, what changed in 1 
 - **ci.** The checks on the pinned head, read together with the head and judged by `done-work`'s CI gate, waited for up to `--wait-minutes` (30 by default; `--no-wait` reads once). No check reported yet is never green, and neither is a green run on an earlier head. A failed check stops the run, naming the check and where to read it. A PR that conflicts with its base stops it at once, with the merge to make: GitHub runs no `pull_request` workflow on such a PR. A wait that runs out with no check reported names the other cases where none will start: no workflow runs on pull requests, the workflows skip the paths the PR changes, `[skip ci]`, a run from a fork awaiting approval. **A project that runs no checks on pull requests** has nothing to wait for: land with `review-pr <N>`, then, on the person's authorisation, `done-work <N> --yes` — and only such a project: `done-work`'s gate does not wait for a check nobody reported, so falling back to it because a wait ran out would merge a head no check ran on.
 - **review.** In agent review mode, `review-pr` on the pinned head: a verdict judged fresh for that head is kept, a stale or missing one re-run. The reviewers it re-runs run at the same time, so the step waits for the slowest of them ("The reviewers run at the same time" below). A head that moved while they ran stops the run, and the verdicts they made are posted against the pinned head. A `CHANGES_REQUESTED` stops the run before the merge, with the first line of each `[block]` finding ("Findings a person judges" below) — else the verdict's first lines — and it is reported ahead of a reviewer that could not be run. The advisories of the approvals — `[advisory]` findings, and findings with no tag — are printed in this step too, with where to read every verdict in full. In human review mode, or with no local reviewer registered, the approval is `done-work`'s gate.
 - **findings to judge.** Each `[person]` finding, printed whole under its reviewer, from each reviewer's latest verdict as the merge gate reads it; one whose verdict no longer stands for the pinned head is marked stale, with why. A `--yes` run merges only when it found each such verdict at its start, standing for the head; otherwise it stops on the `ready:` line, which says why ("Findings a person judges" below). A run with no `[person]` finding prints no line here and goes on as it would without the step. The verdicts that cannot be read, or — with a `[person]` finding among them — whose reviewers cannot be resolved, stop the run with nothing merged. So does a remote reviewer's verdict carrying a `[person]` finding on a PR whose author cannot be read, since it cannot be told from the author's own; a local reviewer's finding is shown as before (the merge gate's "An author the gate cannot read" below).
-- **documents this change affects.** The change check's list of the answers the change wrote, and the friction settings the change alters, derived at the pinned head against the PR's base — named to the check, and fetched first — is printed in full, in the plain words of the description's section: the question once, then each answer and each setting on its own line. Each updated document carries the sentence on what changed in it that the PR's author wrote under the description's `## What changed in each updated document`, or says there is none. It is written into the PR's description where it is not there already ("The answers a change wrote, in its pull request" below); the step's lines begin `documents this change affects:` and count the documents the answers are on. A `## Documentation this change affects` section no command wrote is removed — and so is one under `## Friction answers`, the heading an earlier run wrote — and the line says so. A change that wrote none and alters no setting goes on exactly as it would without the step, and a list an earlier head left in the description is removed. The step stops the run, with nothing merged, when the list cannot be derived or the base cannot be fetched — never read as a pass — and refuses, with nothing written: a file the change touches whose front matter the check cannot read, since words on it cannot be listed; a word that reads as a closing reference, which the host would act on at merge, or that holds an HTML comment's delimiter (`<!--`, `-->`), which could hide the list or its markers — reworded where it is written, and an author's sentence in the description with `edit-pr`; a list the description cannot hold (65,536 characters) — the description's own text shortened, the change split or the anchor narrowed, the only other way being `done-work`, whose merge writes no list; and, where there is a list, a base whose commits since the head left it changed a file the list's words are on — an answer's artefact — or changed the friction settings it shows, since the merge could then land words the list does not show: merge the base into the branch and run again. A base that moved on and changed none of them stops nothing — the change check itself only reports an outdated base (COR-050 point 12). A write the host answers with an error stops the run with nothing merged (exit 7). The host may have kept it all the same, and running again writes the list or finds it there. A change with answers merges under the same authorisation as any other: a `--yes` run that writes the list goes on to merge in the same run.
+- **documents this change affects.** The change check's list of the answers the change wrote, and the friction settings the change alters, derived at the pinned head against the PR's base — named to the check, and fetched first — is printed in full, in the plain words of the description's section: the question once, then each answer and each setting on its own line. Each updated document carries the sentence on what changed in it that the PR's author wrote under the description's `## What changed in each updated document`, or says there is none. It is written into the PR's description where it is not there already ("The answers a change wrote, in its pull request" below); the step's lines begin `documents this change affects:` and count the documents the answers are on. A `## Documentation this change affects` section no command wrote is removed — and so is one under `## Friction answers`, the heading an earlier run wrote — and the line says so. A change that wrote none and alters no setting goes on exactly as it would without the step, and a list an earlier head left in the description is removed. The step stops the run, with nothing merged, when the list cannot be derived or the base cannot be fetched — never read as a pass — and refuses, with nothing written: a file the change touches whose front matter the check cannot read, since words on it cannot be listed; a word that reads as a closing reference, which the host would act on at merge, or that holds an HTML comment's delimiter (`<!--`, `-->`), which could hide the list or its markers — reworded where it is written, and an author's sentence in the description with `edit-pr`; a list the description cannot hold (65,536 characters) — the description's own text shortened, the change split or the anchor narrowed, the only other way being `done-work`, whose merge writes no list; and, where there is a list, a base whose commits since the head left it changed a file the list's words are on — an answer's artefact — or changed the friction settings it shows, since the merge could then land words the list does not show: merge the base into the branch and run again. A base that moved on and changed none of them stops nothing — the change check itself only reports an outdated base (COR-050 point 12). A write the host answers with an error stops the run with nothing merged (exit 7). The host may have kept it all the same, and running again writes the list or finds it there. A change with answers merges under the same authorisation as any other: a `--yes` run that writes the list goes on to merge in the same run. The step also prints, a line each, every grant and refusal the change adds to the fixers' grant list or removes from it, read where the head left its base and at the pinned head ([project-management:DEC-056-drift-fixers] point 2). Those lines are printed only, never written into the description, and the `ready:` line names "a change to which fixers may start" among what it tells. A grant list that cannot be read stops the run (exit 2), since what the step cannot read it cannot show.
 - **merge.** `--yes --expect-head <sha>` is the authorisation to merge that head, Review → Done being user-authorised. An authorisation is for a named head ([project-management:DEC-055-pr-lists-answers] point 3), so `--yes` without `--expect-head` is refused (exit 2) before anything is read, waited for or reviewed, `--dry-run` included (#1760). A `--yes` that named no head would merge whatever head the run found, one the person may not have been shown. The refusal offers no command with a head in it: run `land-work <N>` without `--yes`, and its `ready:` line names the head and the command that merges it. Without `--yes`, off a terminal, `land-work` runs `done-work`'s gates as a dry run and stops on that `ready:` line. At a terminal, `done-work`'s prompt asks, naming the head, as `move-issue`'s does, after the answers. The lines just above the `ready:` line tell what changed in each updated document, in its author's sentence, which documents are left out of date, with each deferral's words, which targets of a link a revisit entry leaves out of date, with the source that names each and the entry's words, and each friction setting changed. That is information, not a gate. `--expect-head` names the head the authorisation is for. That authorisation also covers a later head after a merge round that changed nothing but answers ([project-management:DEC-055-pr-lists-answers] point 3). Every change since must lie inside `revalidated` blocks or `revisited` lists, apart from what a clean merge of the base brings. A `revisited` list holds the entries a link asks of its source. An entry or a deferral rewritten, added or removed lies inside, and a block or a list removed whole, or emptied, lies outside. The backbone's `pkit friction since` answers that.
   - **At the later head,** the run goes on as at any head, and its `head:` line says the authorisation covers it. The checks, the review and `done-work`'s gates run on that head.
-  - **It stops at `ready:`,** naming the later head, where it finds a finding to judge or an answer the change check did not ask for. Each needs the person, and the run cannot tell whether they were shown it.
+  - **It stops at `ready:`,** naming the later head, where it finds a finding to judge, an answer the change check did not ask for, or a change to the fixers' grant list other than the one at the head authorised, or one it cannot read there. Each needs the person, and the run cannot tell whether they were shown it.
   - **When it merges,** its `merge:` line says which head merged and why the authorisation covered it.
   - **Any other later head** stops the run before anything is checked (exit 3), naming the changes outside the blocks and lists. So does a later head the backbone cannot answer for.
 
@@ -471,6 +471,8 @@ The exit code says what to do next, and the last line says why:
 | 8 | ready, not merged: everything passed, and no authorisation was given — no `--yes` off a terminal, or the prompt declined — or a verdict carrying a finding to judge came after this run's `--yes`, could not be read at its start, or does not stand for the head (the line names the review it waits for), or a later head the authorisation for an earlier one covers holds a finding to judge or an answer the change check did not ask for | where the line names a review, have it run first, then run again without `--yes`; show the user the findings to judge above the `ready:` line, whole, and tell them what the lines just above it say changed and is left out of date, as information; on their authorisation, the `ready:` line's command |
 
 Outside `--dry-run`, a run that did not merge never exits 0, and 0 means everything after the merge ran too. With `--dry-run` nothing is reviewed or merged, and 0 means every step would go on.
+
+**How many proposals wait.** Just before its last line, whatever the outcome, a run prints how many of the fixers' proposals wait for the person, where any wait: `fixers: 2 proposals wait for you — pkit pm fix-drift gathered them in <folder>` ([project-management:DEC-056-drift-fixers] point 6; "Starting the fixers — `fix-drift`" above). A queue that cannot be read prints a `warn:` line there instead, and changes nothing else.
 
 Running `land-work` again resumes: green checks on the same head are not waited for, fresh verdicts are not re-run, a list of answers already in the description is not written again, and a PR that merged meanwhile is completed through `done-work`.
 
@@ -1116,7 +1118,7 @@ living-docs can keep your pages true on its own. After each merge, its agent liv
 - **With nobody at a terminal,** such as in CI, nothing is granted or recorded. Each question is printed with the one command that grants its fixer.
 - **Running the command is never the consent.** Only your answer is, or your running the grant command.
 
-Install and upgrade do not ask the question yet. Until they do, run `pkit pm ask-fixers` after installing or upgrading a capability that declares a fixer. The command that starts the granted fixers will ask it too.
+**Where it is asked.** The fixers point names `ask-fixers` as its question, so install and upgrade ask it, where a person can answer, after installing or upgrading a capability whose fixers reach the point (COR-061). The drift command asks it too, at a terminal, before it starts anything ("Starting the fixers" below). You can run `pkit pm ask-fixers` at any time.
 
 **The grant list.** Each answer goes into `project/config.yaml`, under `fixers`, keyed by the agent:
 
@@ -1135,13 +1137,14 @@ The commands write only that block, and keep every other byte of the file. Each 
 - `pkit pm grant-fixer <agent> [--type <type>]...` grants the agent every type the point gives it, or only the types named. It refuses an agent or a type that no entry names.
 - `pkit pm revoke-fixer <agent> [--type <type>]...` records a refusal for the agent's types. It works on the grant list alone while the point does not resolve, so a grant that validation reports can always be revoked.
 
-Both write commands take `--dry-run`. All five fixer commands are exempt from the bootstrap gate, since they read and write nothing a bootstrap provides.
+Both write commands take `--dry-run`, which writes nothing and, as a real run does, refuses where the configuration does not exist. All five fixer commands are exempt from the bootstrap gate, since they read and write nothing a bootstrap provides.
 
 **What validation checks.** The `project-management:fixers` member of `pkit validate` (`check-fixers`) reads the point and the grant list:
 
 - **An error:** your own entry names an agent that is not deployed, or the grant list cannot be read.
 - **A warning:** your own entry names an agent that does more than propose, or a grant names what no entry gives. A warning about a grant names the command that revokes it.
 - **A report:** a capability's entry is bad. It may name a type that is not the capability's own, or an agent the capability does not ship or has not deployed. It may come through a command filler, or name an agent that does more than propose. You cannot mend such an entry, so it fails nothing. No agent starts for it.
+- **A report too:** a refusal in the grant list for a type no entry gives that agent. It asks nothing and starts nothing, and the finding says how to remove it by hand.
 
 An agent does more than propose when its deployed definition does one of these:
 
@@ -1150,6 +1153,70 @@ An agent does more than propose when its deployed definition does one of these:
 - lists no tools, since the harness then grants it every tool
 
 A tool that writes new files is allowed, for its workspace.
+
+#### Starting the fixers — `fix-drift`
+
+`pkit pm fix-drift` starts each fixer you granted on what the default branch left out of date, and gathers what it proposes for you ([project-management:DEC-056-drift-fixers] points 3 to 6). You run it, or the project manager runs it in the session that landed a merge. Nothing it gathers is applied until you accept it. Unlike the five commands above, it passes the bootstrap gate, since it reads the work tracker.
+
+```
+pkit pm fix-drift [--dry-run] [--force] [--cap N] [--parallel N] [--timeout SECONDS] [--effort LEVEL]
+```
+
+**What it reads.** It pins the default branch's commit, as `pkit repository base` resolves it, and reads everything that decides a dispatch at that commit, in a detached copy of it, never in your checkout:
+
+- the whole-repository check (`pkit friction check --all`)
+- each artefact's type (`pkit friction artefacts`)
+- the fixers point and the grant list, so a grant counts once its change merged
+- each candidate's friction and the commits behind it (`pkit friction explain`)
+- the command forms the run's rules allow (`pkit agents rules project-management:fix-drift`)
+
+**What it starts.** Only stale artefacts whose type's fixer you granted, upstream first. Every other artefact the check reports is listed with its reason:
+
+- deferred debt, and an artefact the check could not judge
+- a dead or ambiguous anchor, which validation reports
+- no type, a tied type, a type no entry names, or a fixer that is not granted or fails its checks
+- a name that could forge a result line: a backtick, a control character, a line or paragraph separator, a `.` or `..` part, or a folder in the run's temp folder
+- a stale upstream, which the artefact waits for, even where the upstream has no granted fixer
+- a file an open pull request already changes, and every artefact when the work tracker cannot say
+- an answer that still stands: a proposal or a question waiting for you, a refusal you gave, or a `none` that stands, against the same friction or the same setup
+
+`--force` dispatches what stands. `--dry-run` says what it would start, and starts and writes nothing.
+
+**The bounds.** Each is set as the review command sets its own: a flag, else a variable, else the default.
+
+| Bound | Flag | Variable | Default |
+|---|---|---|---|
+| artefacts for each fixer, counting only those with no standing proposal | `--cap` | `PKIT_DRIFT_CAP` | 5 |
+| fixers at once | `--parallel` | `PKIT_DRIFT_PARALLEL` | all |
+| each fixer's wall-clock limit, in seconds | `--timeout` | `PKIT_DRIFT_AGENT_TIMEOUT` | 1800 |
+| the effort each fixer reasons at | `--effort` | `PKIT_DRIFT_AGENT_EFFORT` | its own |
+
+One run at a time works on the queue, held by a lock. A fixer that reaches its limit is marked failed, with each of its artefacts. A start that failed for a cause outside the fixer's work, and wrote nothing, is retried once; when it fails again, no further fixer starts.
+
+**How a fixer runs.** Each starts through the backbone's run command, `pkit agents run`, confined ([ADR-066](../../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md)). It runs in a clone at the commit, under the rules this capability declares for its runs (Permissions, below), with one brief and no other message:
+
+- **The frame** names the commit, the working copy, the workspace and its temp folder, the artefacts with their types, the command forms the rules allow, and the result lines the run's contract asks for.
+- **The data** is quoted with its source between markers made new for each run, and never instructs: for each commit behind an artefact's friction, the title and text of the pull request that carried it, cut at 4,000 characters and marked so, or that the work tracker holds none or could not be reached; and for an artefact held in an earlier run, its question, your answer and who gave it.
+
+The command refuses to start inside an agent run, since a fixer starts no other agent. Where the harness cannot confine a run, the run is refused, the fixer starts nothing, and the command says why.
+
+**What it gathers.** It reads each fixer's result lines and answers by the run's contract ("Connections" below), never prose:
+
+- A proposed artefact's answer must pass `schemas/fixer-answer.schema.json`, name the same artefact, and keep its diff in the artefact's folder and on the artefact's own file.
+- A breach that the check after the run finds, or a diff that reaches another file, sets that fixer's files aside, under `set-aside/`. None of its proposals is kept, and its artefacts are dispatched again at the next run.
+- A `none` the artefact clears (`not-mine`, `not-stale`) stands until the artefact's friction changes. One the setup clears (`refused`, `out-of-step`) stands until the setup changes, and is reported at every run as a fault of the setup. The setup is the fixer's definition and the overlay, the run's rules and every component's version. One the next run clears (`upstream`, `failed`) is dispatched again. An artefact failing at two runs in a row stands as a fault of the setup.
+
+**The queue.** The command gathers every run into the agent workspace of the repository's main working tree, so removing a worktree removes no proposal. A repository with no main working tree gathers nothing, and the command says why.
+
+```
+.agent-workspace/project-management/drift/
+  index.json            each artefact's state, its fixer, its proposal and the commit it was judged at
+  runs/<run>/<agent>/   each run's files: <artefact>/answer.json, evidence.md and the diff
+  set-aside/<run>/<agent>/   a breach's files, never read as proposals
+  drift.lock            the lock of the run that works on the queue
+```
+
+The index records the version of the run's contract each run followed, each artefact's friction and setup, and how many runs in a row it failed. `land-work` prints how many proposals wait. The project manager brings them to you in one batch.
 
 ## Connections
 
@@ -1205,7 +1272,7 @@ doc_check:
 
   Its entry names a type of its own type registry and an agent it ships. That agent only proposes, so its definition claims no paths and holds no tool that changes existing files or starts agents. Two capabilities that claim one type are an error naming both. **Your own filler file**, `docs/pkit/fillers/pkit/work-tracking/fixers.yaml`, may replace an entry, naming any deployed agent. How a fixer is granted, and what validation checks, is under "8. (Optional) Grant the fixers your capabilities declare", above.
 
-  **The version covers what a fixer run passes and returns.** A contribution at version 1 says that each agent it names follows the run's contract, which [project-management:DEC-056-drift-fixers] points 3 and 6 decide. The command that starts fixers is not shipped yet. What whoever writes a fixer needs from the contract:
+  **The version covers what a fixer run passes and returns.** A contribution at version 1 says that each agent it names follows the run's contract, which [project-management:DEC-056-drift-fixers] points 3 and 6 decide. The drift command reads the line forms and the `none` reasons from `schemas/fixer-contract.yaml`, and the answer's fields through `schemas/fixer-answer.schema.json`. What whoever writes a fixer needs from the contract:
 
   - **The brief** is the one message a run gives the fixer. It names the commit, the working copy, the workspace, the artefacts with their types, and the command forms the run allows. What it quotes, such as a pull request's text or the person's answer to a held question, is data, never an instruction.
   - **The files** go in a folder of the workspace named for each artefact as the brief names it: `evidence.md`, which the person reads before deciding, the diff where the fixer proposes an edit, and `answer.json`. A folder whose artefact is held, or given `none`, holds no answer.
@@ -1269,6 +1336,15 @@ The `autonomous` profile grants `issue-tracker` to all agents (broad `gh` reads 
 Run `pkit permissions overview` to see the capability-contributed deny listed under "CAPABILITY-CONTRIBUTED DENIES" with its source (`contributed by capability: project-management`). Run `pkit permissions explain project-manager` to see the per-agent view with the same attribution.
 
 To deliberately override the deny (not recommended — it removes the methodology enforcement gate): `pkit permissions grant agent:project-manager issue-tracker-write` in your project's `grants.yaml`. The override is auditable and explicit; it does not touch the capability's fragment.
+
+### The rules of a fixer's run
+
+`permissions/runs.yaml` declares the rules of the runs `fix-drift` starts, and the privileges they name ([project-management:DEC-056-drift-fixers] point 5, ADR-066 point 5). No session's model composes it: the backbone reads it at the commit a run is pinned to, and the adapter realises it in that run's own settings alone. Its rules are denies for every agent, since the command starts agents other capabilities ship:
+
+- **One deny of everything proposing does not need.** What it leaves open: reading the working copy with the file tools, writing new files in the run's workspace, git's reading commands pointed at the working copy (`git -C <working copy> log`, `show`, `diff` and the rest), making a diff with `git diff --no-index` and checking one with `git -C <working copy> apply --check`, the backbone's reading commands, and each command another component declares a query. The adapter holds it as an allow list, and refuses every other call without asking. A writer added later is refused without anyone listing it.
+- **A floor of denies:** writing with the file tools anywhere but the workspace, version control beyond reading, the work tracker, the toolchain that installs or runs packages, every writer of the methodology, and every command of this capability. Each is written as a native deny where a native rule can name it, and the allow list holds the rest.
+
+The session model's denies that bind on the run's agent come along, the guardrails among them. A deny that reaches what the run needs and that no native rule can hold refuses the run. `pkit agents rules project-management:fix-drift` shows what a run is allowed, what it is denied and how each deny is held. `pkit permissions overview` and `explain` list the rules under "RULES OF AGENT RUNS", with this capability as their source.
 
 ## Upgrading
 

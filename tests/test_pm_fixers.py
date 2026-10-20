@@ -1166,3 +1166,119 @@ def test_the_schemas_name_agents_and_types_as_the_readers_do() -> None:
 def test_a_resolved_point_with_no_entry_says_so() -> None:
     point = fixers.point_of(_document([]))
     assert (point.resolved, point.entries, point.why) == (True, (), "the point holds no entry")
+
+
+# --- #1744: a stray refusal, the dry run's configuration, the grant list at a commit -------------
+
+
+def test_validation_reports_a_refusal_no_entry_names_with_how_to_remove_it() -> None:
+    """A refusal for a type the point never gives the agent asks nothing and starts
+    nothing, and no command removes it, so it is reported with the words to remove
+    it by hand. A refusal an entry names is no finding."""
+    point = fixers.Point(True, entries=(_entry(),))
+    answers = fixers.answers_of(
+        {"fixers": {FIXER: {"refused": [PAGE, GUIDE]}, "gone": {"refused": ["x"]}}}
+    )
+    assert fixers.stale_refusals(point, answers) == [(FIXER, GUIDE), ("gone", "x")]
+    found = fixers.findings(point, [fixers.Checked(_entry())], answers, "cfg.yaml")
+    assert [(f.severity, f.location, f.message) for f in found] == [
+        (
+            "report",
+            f"cfg.yaml:/fixers/{FIXER}/refused",
+            f"the refusal of {GUIDE} to {FIXER} names what no entry of {POINT} gives it, so it "
+            f"asks nothing and starts nothing. To remove it, delete {GUIDE} from "
+            f"`fixers.{FIXER}.refused` in cfg.yaml by hand.",
+        ),
+        (
+            "report",
+            "cfg.yaml:/fixers/gone/refused",
+            f"the refusal of x to gone names what no entry of {POINT} gives it, so it asks "
+            "nothing and starts nothing. To remove it, delete x from `fixers.gone.refused` in "
+            "cfg.yaml by hand.",
+        ),
+    ]
+
+
+def test_validation_of_a_stray_refusal_fails_nothing(project: AdopterRepo) -> None:
+    (project.root / CONFIG_REL).write_text(
+        CONFIG + f"fixers:\n  gone:\n    refused: [{PAGE}]\n", encoding="utf-8"
+    )
+    result = _run(project, "check-fixers", "--json")
+    assert result.returncode == 0, result.stderr
+    (finding,) = json.loads(result.stdout)["findings"]
+    location = f"{CONFIG_REL}:/fixers/gone/refused"
+    assert (finding["severity"], finding["location"]) == ("report", location)
+    assert _run(project, "check-fixers").returncode == 0
+
+
+@pytest.mark.parametrize("verb", ["grant-fixer", "revoke-fixer"])
+def test_a_dry_run_checks_the_configuration_exists_as_the_write_does(
+    project: AdopterRepo, verb: str
+) -> None:
+    dry = _run(project, verb, FIXER, "--dry-run")
+    assert dry.returncode == 0, dry.stderr
+    assert f"Would record in {CONFIG_REL}, which exists:" in dry.stdout
+    (project.root / CONFIG_REL).unlink()
+    dry = _run(project, verb, FIXER, "--dry-run")
+    real = _run(project, verb, FIXER)
+    assert (dry.returncode, real.returncode) == (1, 1)
+    missing = "does not exist: author project-management's configuration first"
+    assert missing in dry.stderr
+    assert missing in real.stderr
+    assert "Nothing was written (--dry-run)." in dry.stderr
+    assert not (project.root / CONFIG_REL).exists()
+
+
+def _answers_of(**agents: dict[str, list[str]]) -> fixers.Answers:
+    return fixers.answers_of({"fixers": agents})
+
+
+def test_the_grant_list_s_change_is_each_grant_and_refusal_added_or_removed() -> None:
+    before = _answers_of(a={"granted": ["t:1", "t:2"], "refused": ["t:3"]}, b={"granted": ["t:1"]})
+    after = _answers_of(a={"granted": ["t:1", "t:3"], "refused": ["t:2"]}, c={"refused": ["t:9"]})
+    change = fixers.grant_change(before, after)
+    assert [c.said() for c in change] == [
+        "Fixer grant removed: a no longer starts on its own on t:2",
+        "Fixer refusal added: a is refused t:2",
+        "Fixer refusal removed: a is no longer refused t:3",
+        "Fixer grant added: a may start on its own on t:3",
+        "Fixer grant removed: b no longer starts on its own on t:1",
+        "Fixer refusal added: c is refused t:9",
+    ]
+    assert fixers.grant_change(before, before) == ()
+    assert fixers.grant_change(fixers.Answers(), fixers.Answers()) == ()
+
+
+_GIT = ("git", "-c", "commit.gpgsign=false", "-c", "user.email=o@example.com", "-c", "user.name=O")
+
+
+def _commit(root: Path, message: str) -> str:
+    subprocess.run([*_GIT, "add", "-A"], cwd=root, check=True)
+    subprocess.run([*_GIT, "commit", "-q", "--allow-empty", "-m", message], cwd=root, check=True)
+    head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=root, capture_output=True, text=True)
+    return head.stdout.strip()
+
+
+def test_the_grant_list_is_read_at_a_commit_from_git_objects(tmp_path: Path) -> None:
+    subprocess.run(["git", "init", "-q", "-b", "main"], cwd=tmp_path, check=True)
+    config, path = tmp_path / CONFIG_REL, CONFIG_REL.as_posix()
+    absent = _commit(tmp_path, "nothing")
+    config.parent.mkdir(parents=True)
+    config.write_text(CONFIG + f"fixers:\n  {FIXER}:\n    granted: [{PAGE}]\n", encoding="utf-8")
+    granted = _commit(tmp_path, "grant")
+    config.write_text(CONFIG + "fixers: [x]\n", encoding="utf-8")
+    malformed = _commit(tmp_path, "malformed")
+    config.unlink()
+    config.symlink_to("elsewhere.yaml")
+    linked = _commit(tmp_path, "link")
+    # The working tree says something else: the commit's object is what is read.
+    config.unlink()
+    config.write_text(CONFIG, encoding="utf-8")
+    assert fixers.answers_at(absent, path, cwd=tmp_path) == fixers.Answers()
+    assert fixers.answers_at(granted, path, cwd=tmp_path).agents == {FIXER: {PAGE: "granted"}}
+    with pytest.raises(fixers.Malformed, match="maps each agent"):
+        fixers.answers_at(malformed, path, cwd=tmp_path)
+    with pytest.raises(fixers.Malformed, match="is not a file"):
+        fixers.answers_at(linked, path, cwd=tmp_path)
+    with pytest.raises(fixers.Unreadable, match="could not be read"):
+        fixers.answers_at("0" * 40, path, cwd=tmp_path)

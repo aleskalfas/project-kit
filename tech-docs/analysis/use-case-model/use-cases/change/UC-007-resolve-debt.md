@@ -26,14 +26,14 @@ pkit:
         - ADR-055#5
         - software-analysis:DEC-001#5
         - living-docs:DEC-001#5
+        - project-management:DEC-056#3
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T02:03:37Z
-      outcome: unchanged
-      unchanged-because: Both agents now end a fixer run in the run contract's line forms, a none carrying one of its reasons, and the resolver takes a run's quoted pull-request text as intent. In a session each still proposes the answers with evidence and commands and runs none, so how a developer resolves debt is untouched.
+      at: 2026-10-20T03:23:29Z
+      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date
@@ -73,6 +73,7 @@ pkit:
 - **1a.** The clone is shallow, and an artefact's revalidation point lies beyond the cut. The check reports the artefact `unreachable`, and does not judge it until `git fetch --unshallow` brings the history. The path goes on at step 2 for the other debts.
 - **1b.** An anchor's resolver gives no answer, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
 - **3a.** The artefact is an analysis artefact or a page. The developer dispatches the `analysis-resolver` or the `living-docs` agent. It proposes the outcome with its evidence and the commands to run, and runs none. The path goes on at step 4.
+- **3b.** The project granted the fixer of the artefact's type. The drift command, `pkit pm fix-drift`, starts the fixer on the default branch's stale artefact, confined and with nobody watching. Its proposal waits as a file, and the landing command counts it (project-management DEC-056 point 3). The developer reads the proposal, and the path goes on at step 4.
 - **4a.** The analysis artefact still describes what is wanted, and the code regressed. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect. Where stale versus regressed is unclear, a person decides first (software-analysis DEC-001 point 5).
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The change check asks for that revalidation, so it is not flagged at step 5.
 - **5a.** An answer the developer gives is `updated`, so the artefact's content changed. Each artefact anchored to it owes an answer in the same change (COR-050 point 6), and the path rejoins at step 4 for each one.

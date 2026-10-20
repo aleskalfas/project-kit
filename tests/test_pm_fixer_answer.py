@@ -10,8 +10,10 @@ holds, `schemas/fixer-answer.schema.json`. These tests hold:
   for the outcomes its body says it proposes. Where a fixer's body or
   storyboard is on this tree, the fields it lists and the example it gives are
   read from it;
-- answers off the contract are refused;
-- the `none` reasons the README lists are the record's.
+- answers off the contract are refused.
+
+The line forms and the `none` reasons are data, `schemas/fixer-contract.yaml`:
+`test_pm_fixer_contract.py` holds the record and the README to it.
 """
 
 from __future__ import annotations
@@ -30,13 +32,9 @@ REPO = Path(__file__).resolve().parent.parent
 PM = REPO / ".pkit" / "capabilities" / "project-management"
 SCHEMA = PM / "schemas" / "fixer-answer.schema.json"
 README = PM / "README.md"
-RECORD = PM / "decisions" / "DEC-056-drift-fixers.md"
 
 #: The answer's fields, in the order the contract and both fixers list them.
 FIELDS = ("artefact", "outcome", "justification", "sentence", "keep", "diff", "first")
-
-#: The `none` reasons of the run's contract (DEC-056 point 3).
-REASONS = ("not-mine", "not-stale", "refused", "out-of-step", "upstream", "failed")
 
 
 def _validator() -> Draft202012Validator:
@@ -296,27 +294,3 @@ def test_the_readme_names_the_schema_s_fields() -> None:
     answer = _readme_contract().split("- **The answer,**", 1)[1].split("\n  - ", 1)[0]
     assert tuple(re.findall(r"`([a-z]+)`", answer)) == FIELDS
     assert "`schemas/fixer-answer.schema.json`" in answer
-
-
-def test_the_readme_s_line_forms_are_the_record_s() -> None:
-    def forms(text: str) -> list[str]:
-        block = text.split("```text\n", 1)[1].split("```", 1)[0]
-        return [line.strip() for line in block.splitlines() if line.strip()]
-
-    record = RECORD.read_text(encoding="utf-8").split("- **The result.**", 1)[1]
-    assert forms(_readme_contract()) == forms(record)
-    assert [f.split("): ", 1)[1].split(" ", 1)[0] for f in forms(record)] == [
-        "proposed",
-        "held",
-        "none",
-    ]
-
-
-def test_the_readme_lists_the_record_s_none_reasons() -> None:
-    readme = re.findall(r"^    \| `([a-z-]+)` \| ", _readme_contract(), flags=re.MULTILINE)
-    assert tuple(readme) == REASONS
-    record = RECORD.read_text(encoding="utf-8").split("**The `none` reasons**", 1)[1]
-    record = record.split("\n### ", 1)[0]
-    # each reason is named in backticks and glossed after a comma
-    named = re.findall(r"`([a-z]+(?:-[a-z]+)*)`, ", record)
-    assert tuple(code for code in named if code != "none") == REASONS

@@ -25,9 +25,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-19T19:45:26Z
+      at: 2026-10-20T03:23:05Z
       outcome: unchanged
-      unchanged-because: The only change to the CLI module is the friction check's help text, which names the new shared-id warning. The commands this use case runs, and what they do, are untouched.
+      unchanged-because: The CLI module gains the confined form of agents run and the agents rules command, which start and show an unwatched agent's run. The commands this use case runs, and what they do, are untouched.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

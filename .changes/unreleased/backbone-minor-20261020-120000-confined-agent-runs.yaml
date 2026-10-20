@@ -1,0 +1,28 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The run command, `pkit agents run`, gains its confined form (ADR-066
+  points 3 to 8): `--commit <sha> --rules-of <capability>:<command>
+  --files-to <dir>`, in place of `--folder`. The run works in a fresh clone
+  at the commit that shares no object with your repository, in a folder of
+  the backbone's outside every working tree
+  (`$XDG_STATE_HOME/pkit/agent-runs`, else `~/.local/state/pkit/agent-runs`),
+  under the rules the capability declares for the command's runs. The clone
+  is provisioned, given its workspace and a `pkit` of the run's own, and
+  checked after the run: a change outside the workspace, git's own
+  configuration, hooks and references included, is a breach the document
+  names. The run's files are then copied to `<dir>`, and the clone removed.
+  The document adds `confined`, `commit`, `check`, `files`, `refused_calls`
+  and `excluded`, at `schema_version` 1. Every run, confined or not, is
+  refused inside an agent run, where `PKIT_AGENT_RUN` is set. A new command,
+  `pkit agents rules <capability>:<command>`, shows what a confined run is
+  allowed and denied, and how each deny is held. A capability declares a
+  run's rules in `permissions/runs.yaml`, shaped by the new
+  `.pkit/schemas/permission-runs.schema.json`, and the shared decision core
+  projects them (`projection.py`, `project_run`). No session's model reads
+  that file, so the session catalog and its schema do not change.
+  `pkit permissions overview` and `explain` list each run's rules. The
+  harness requirements gain `unattended-confined-run` (ADR-066 point 13). The
+  CLI, adapters, permissions and lifecycle READMEs document it.
