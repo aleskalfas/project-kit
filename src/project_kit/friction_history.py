@@ -745,11 +745,35 @@ class Points:
     own_paths: frozenset[str]  # every name the file had: a change under one is never an anchor's
     unreachable: str | None  # which point the clone's history does not reach, when one
     cut: bool = False  # the file's history reaches a shallow clone's cut
+    # For answers read from answer files, whether a live revalidation reaches each deferral
+    # of `deferrals` — keeps it in its own entry, or read its file (COR-062 point 5); `None`
+    # for answers read from the block, where a revalidation point reaches a deferral point
+    # by ancestry (COR-050 point 4). An anchor may then have several deferrals, made apart.
+    kept: tuple[bool, ...] | None = None
 
     @property
     def revalidation(self) -> int | None:
         """The newest revalidation point, or `None` when the clone does not reach one."""
         return self.revalidations[0] if self.revalidations else None
+
+    def answering(self, history: History, anchor: Anchor) -> tuple[int, ...]:
+        """The states `anchor` is measured from (COR-050 points 3 and 4): every revalidation
+        point, and its deferral point where no revalidation reaches it — one kept through a
+        revalidation answers nothing. Read from a block, a revalidation point reaches a
+        deferral point by ancestry; read from answer files, a revalidation reaches a
+        deferral only where it keeps it or read its file (`kept`, COR-062 point 5), and
+        each deferral of the anchor made apart adds its own point (COR-062 point 7)."""
+        if self.kept is None:
+            deferral = dict(self.deferrals).get(anchor)
+            if deferral is None or deferral in history.reached(self.revalidations):
+                return self.revalidations
+            return (*self.revalidations, deferral)
+        extra = [
+            point
+            for (deferred, point), kept in zip(self.deferrals, self.kept, strict=True)
+            if deferred == anchor and point is not None and not kept
+        ]
+        return tuple(dict.fromkeys((*self.revalidations, *extra)))
 
 
 @dataclass(frozen=True)
@@ -939,6 +963,19 @@ class Walker:
         (`read_writes`), since a write changes how often the file holds it — so
         no other version is read.
         """
+        found = self.block_writes(like, value, among)
+        if found.unreachable:
+            return found
+        return self.first_carried(like, found.points, cut=found.cut)
+
+    def block_writes(
+        self, like: Artefact, value: Any, among: frozenset[int] | None = None
+    ) -> Carried:
+        """Every write of `value` in the file of `like`, newest first, as `Carried.points`:
+        each version that carries it where no parent of its commit did, read in the
+        artefact's own block alone (`carried` keeps the first of them). The answer reader
+        adds the writes in answer files to these, for a value's point across homes
+        (`answer_files`, COR-062 point 6)."""
         holds_value = carrier(value)
 
         def carries(state: TreeEntry | None, path: str | None) -> bool:
@@ -946,10 +983,9 @@ class Walker:
                 return False
             return holds_value(self.artefact_in(state, path, like))
 
-        versions = list(self.history.versions(like.path))
         writes: list[int] = []
         cut = False
-        for version in versions:
+        for version in self.history.versions(like.path):
             at_cut = self.history.is_cut(version.index)
             if among is not None and not at_cut and version.index not in among:
                 continue
@@ -962,15 +998,23 @@ class Walker:
                 break
             if here and not any(carries(state, source) for state, source in version.parents()):
                 writes.append(version.index)
-        points = self._first(writes)
+        return Carried(tuple(writes), cut=cut)
+
+    def first_carried(self, like: Artefact, writes: Sequence[int], *, cut: bool = False) -> Carried:
+        """The points among `writes` of a value for `like`: the writes no other write is
+        an ancestor of — for a collection entry, none from before where the entry was
+        last added to its file (`carried`)."""
+        writes = sorted(set(writes))
+        points = self.first(writes)
         if like.kind is ArtefactKind.ENTRY and len(points) < len(writes):
+            versions = list(self.history.versions(like.path))
             gone = self._entry_gone(versions, like, writes[0])
             if gone is not None:
                 before = self.history.ancestors(gone)
-                points = self._first([w for w in writes if w not in before])
+                points = self.first([w for w in writes if w not in before])
         return Carried(tuple(points), cut=cut)
 
-    def _first(self, writes: Sequence[int]) -> list[int]:
+    def first(self, writes: Sequence[int]) -> list[int]:
         """Of `writes`, those no other write is an ancestor of, newest first."""
         return sorted(
             w for w in writes if not any(o != w and o in self.history.ancestors(w) for o in writes)
@@ -1075,30 +1119,25 @@ class Walker:
 
     # --- both, for one artefact ---------------------------------------------------
 
-    def points(self, artefact: Artefact) -> Points:
+    def points(
+        self,
+        artefact: Artefact,
+        carried: Callable[[Artefact, Any], Carried] | None = None,
+    ) -> Points:
         """The revalidation points and every deferral point of `artefact`, from its file's
         history back to where it was last added (COR-050 points 3 and 4), its file's
-        names, and the renames no revalidation point reaches (`Points.moves`)."""
+        names, and the renames no revalidation point reaches (`Points.moves`).
+
+        `carried`, where given, finds where a value was first carried in place of
+        `carried` here: the answer reader's, which reads the artefact's answer files
+        beside its block (COR-062 point 6)."""
         at = parsed_at(artefact)
         value = BLOCK if at is None else at
         versions = list(self.history.versions(artefact.path))
-        own: set[str] = {artefact.path}
-        renames: list[Version] = []
-        for version in versions:
-            own.add(version.path)
-            own.update(source for source in version.sources if source is not None)
-            if version.entry.status == "R":
-                renames.append(version)
         wanted = [d.anchor for d in artefact.deferrals]
         if not versions:
-            return Points(
-                (),
-                tuple((a, None) for a in wanted),
-                (),
-                frozenset(own),
-                "the commit that added its file (none in this clone touches it)",
-            )
-        found = self.carried(artefact, value)
+            return self.unwalked(artefact, tuple((a, None) for a in wanted))
+        found = (carried or self.carried)(artefact, value)
         unreachable = "its revalidation point" if found.unreachable else None
         revalidations = found.points
         if not revalidations and unreachable is None:
@@ -1114,17 +1153,57 @@ class Walker:
             if point is None and not deferred.unreachable:
                 point = versions[-1].index
             deferrals.append((anchor, point))
+        return self.walked(
+            artefact,
+            revalidations,
+            tuple(deferrals),
+            unreachable=unreachable,
+            cut=found.cut and unreachable is None,
+        )
+
+    def unwalked(
+        self, artefact: Artefact, deferrals: tuple[tuple[Anchor, int | None], ...]
+    ) -> Points:
+        """The points of an artefact whose file no commit of this clone touches: none."""
+        return Points(
+            (),
+            deferrals,
+            (),
+            frozenset({artefact.path}),
+            "the commit that added its file (none in this clone touches it)",
+        )
+
+    def walked(
+        self,
+        artefact: Artefact,
+        revalidations: tuple[int, ...],
+        deferrals: tuple[tuple[Anchor, int | None], ...],
+        *,
+        unreachable: str | None,
+        cut: bool,
+        kept: tuple[bool, ...] | None = None,
+    ) -> Points:
+        """`Points` from the points found, with the file's names and the renames no
+        revalidation point reaches (`Points.moves`) read from its history."""
+        own: set[str] = {artefact.path}
+        renames: list[Version] = []
+        for version in self.history.versions(artefact.path):
+            own.add(version.path)
+            own.update(source for source in version.sources if source is not None)
+            if version.entry.status == "R":
+                renames.append(version)
         moves: tuple[Version, ...] = ()
         if revalidations:
             reached = self.history.reached(revalidations)
             moves = tuple(v for v in renames if v.index not in reached)
         return Points(
             revalidations=revalidations,
-            deferrals=tuple(deferrals),
+            deferrals=deferrals,
             moves=moves,
             own_paths=frozenset(own),
             unreachable=unreachable,
-            cut=found.cut and unreachable is None,
+            cut=cut,
+            kept=kept,
         )
 
 

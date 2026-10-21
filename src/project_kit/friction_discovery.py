@@ -2579,7 +2579,14 @@ def revalidated_field(artefact: Artefact, key: str) -> Any:
 
 def parsed_at(artefact: Artefact) -> Any:
     """The parsed value of `at`: the instant, so a quoting or formatting change is no change."""
-    value = revalidated_field(artefact, "at")
+    return parse_at(revalidated_field(artefact, "at"))
+
+
+def parse_at(value: Any) -> Any:
+    """A value of `at` as written, parsed (`parsed_at`): the UTC instant it denotes, or the
+    text stripped where it denotes none; anything else as it is. An answer file's `at` is
+    read by it too (`answer_files`), so a value keeps its point across homes (COR-062
+    point 6)."""
     if not isinstance(value, str):
         return value
     try:
