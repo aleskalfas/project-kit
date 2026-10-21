@@ -37,9 +37,8 @@ pkit:
         - TERM-data-point
         - TERM-process
     revalidated:
-      at: 2026-10-21T17:41:02Z
-      outcome: unchanged
-      unchanged-because: COR-027 says COR-005 is partially superseded and stays accepted, its adapter pattern standing. The view cites COR-027 only for the adapter as the kind of component that carries one harness and no discipline, which holds.
+      at: 2026-10-21T19:08:58Z
+      outcome: updated
 ---
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points

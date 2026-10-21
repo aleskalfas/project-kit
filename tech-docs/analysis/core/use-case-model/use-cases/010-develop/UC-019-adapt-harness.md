@@ -17,7 +17,10 @@ pkit:
         - src/project_kit/cli.py
         - src/project_kit/install.py
         - src/project_kit/package_validate.py
+        - src/project_kit/harness_support.py
+        - src/project_kit/schemas_validate.py
         - .pkit/schemas/harness-requirements.yaml
+        - .pkit/schemas/harness-support.schema.json
         - .pkit/adapters/README.md
         - .pkit/skills/core/adapter-author.md
         - .pkit/lifecycle/ownership.py
@@ -58,10 +61,11 @@ pkit:
 4. The system records the adapter in the manifest as `kit-shipped`, and prints `Stamped: .pkit/adapters/<name>/`.
 5. The author writes the scripts that the system runs, each found by its name and each optional: `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh` and `deploy-agents.sh`. A fifth, `undeploy-capability.sh`, takes back what the adapter deployed for one capability (COR-005 and COR-013).
 6. The author writes the adapter's `permission-enforcement.yaml`. For each kind of permission, such as `command-deny` or `network-egress`, it says where the harness enforces it. It also says whether the harness does so `native`, at `runtime` or `none` (COR-028 point 3).
-7. In the adapter's README, the author states how far the harness meets each need that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete` (COR-047 point 2).
+7. The author writes the adapter's support declaration, `harness-support.yaml`. For each need that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete`, it gives a grade, the harness versions the answer holds for and the evidence (COR-047 point 2). The adapter's README states the same answers in prose.
 8. The author runs `pkit sync` in the source repository.
 9. The system runs the scripts of every adapter in the order of the adapters' names (UC-014). So the new adapter's scripts deploy the skills and agent definitions where the new harness reads them.
-10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range.
+10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range. Its `schemas` member checks the support declaration against its schema.
+11. The author runs `pkit harness report --adapter <name>`. The system reads the declaration and no harness, so it reports a need `unsatisfied` where the answer grades it `not-achievable` for every version, and `indeterminate` otherwise (COR-047 points 3 to 5). It exits with status `1` while any need is not `satisfied`.
 
 **Variants:**
 
@@ -72,16 +76,19 @@ pkit:
 
   The system refuses with the reason, such as `adapter '<name>' already exists at .pkit/adapters/<name>.`, and writes nothing. The path rejoins at step 1.
 - **5a.** The adapter has no `undeploy-capability.sh`. Where a capability is unregistered and its subtree stays, the system warns that the adapter `ships no undeploy-capability.sh`, and that the capability stays deployed in its harness.
+- **7a.** The declaration leaves a need out, or answers it for no harness version. The report gives that need `indeterminate`, with no grade, so a missing answer never reads as a met one (COR-047 point 3).
 - **9a.** A script exits with an error. The system stops with `adapter primitive <script> exited with status <n>. See the output above for details.` The author mends the script, and the path rejoins at step 8.
+- **10a.** The support declaration breaks its schema, such as an `at-cost` answer with no `cost`. Validation reports it and fails, and the report exits with status `3`. The author mends the declaration, and the path rejoins at step 10.
 
 **Postconditions:**
 
 - The adapter is recorded in the source repository's manifest, and its package metadata gives its version and its range on the backbone.
 - Sync runs the adapter's scripts, which deploy the skills and agent definitions where the harness reads them.
-- The adapter's README says how far its harness meets each need the methodology states of it. Its `permission-enforcement.yaml` says what of the methodology's permissions the harness enforces, and what it cannot.
+- The adapter's support declaration says how far its harness meets each need the methodology states of it, and `pkit harness report` lists what it leaves unmet. Its `permission-enforcement.yaml` says what of the methodology's permissions the harness enforces, and what it cannot.
 
 **Minimal guarantees:**
 
 - A refused name leaves nothing written, since the system checks the name before it writes the folder (`scaffolds.py`).
 - An adapter never takes a name a capability holds (`capabilities.py`).
 - A script that fails stops sync with its exit status, so a partial deploy never reads as a whole one (`install.py`).
+- A need the declaration does not answer never reads as met: the report gives it `indeterminate` and exits with status `1` (`harness_support.py`).

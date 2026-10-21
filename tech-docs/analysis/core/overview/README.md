@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=2 fingerprint=sha256:cb05dc24256151098ace05d2d3665d7c6555c98490052df2e22f3291a8786588 -->
+<!-- pkit:overview reads=3 fingerprint=sha256:5890fc62ded6a8c72964bbd3de9096657a185256cc759a54db7f9ea78dfde899 -->
 
 What the analysis of core holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
