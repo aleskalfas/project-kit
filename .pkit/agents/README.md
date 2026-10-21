@@ -19,9 +19,14 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-19T19:45:59Z
+      at: 2026-10-21T17:40:55Z
       outcome: unchanged
-      unchanged-because: COR-050 gains a warning on an anchor on a shared id, never failed. The README's account of agents, of the friction writers and of who decides an answer is untouched.
+      unchanged-because: COR-005 says what pkit new adapter stamps and where an adapter's scripts are documented, and keeps its pairing table without a status column. The agents README cites COR-005 for each adapter deploying its own agents and for pairing pkit new agent with agent-author, and both hold.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction writers write an answer the artefact carries and owe a combined state after a conflict, which COR-062 replaces with answer files. #1779 builds it and rewrites the section."
 ---
 
 # Agents

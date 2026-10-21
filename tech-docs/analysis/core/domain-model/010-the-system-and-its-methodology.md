@@ -31,6 +31,10 @@ pkit:
         - TERM-acceptance-gate
         - TERM-operational-rule
         - TERM-methodology
+    revalidated:
+      at: 2026-10-21T14:26:00Z
+      outcome: unchanged
+      unchanged-because: COR-051 changes only in point 2, on where a rule's answers sit and that a synced rule owes none. The view's account of the system and its methodology names neither, so it holds.
 ---
 
 # VIEW-the-system-and-its-methodology — The system and its methodology

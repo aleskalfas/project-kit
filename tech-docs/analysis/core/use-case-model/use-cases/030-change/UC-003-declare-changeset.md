@@ -24,9 +24,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T10:10:45Z
+      at: 2026-10-21T13:59:04Z
       outcome: unchanged
-      unchanged-because: The required job gains a short form for a pull request head that changed only answers (ADR-067). The changeset guard runs on every pull request in both forms, so step 7 and variant 7a hold.
+      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-003 — Declare what my change means for the next release

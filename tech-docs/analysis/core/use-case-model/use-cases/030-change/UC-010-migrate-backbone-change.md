@@ -27,9 +27,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T10:10:50Z
+      at: 2026-10-21T13:59:14Z
       outcome: unchanged
-      unchanged-because: The required job may now skip the test suite on a pull request head that changed only answers since its passing full run (ADR-067). The migration check runs on every pull request in both forms, so step 7 holds.
+      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

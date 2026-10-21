@@ -33,8 +33,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T10:10:46Z
-      outcome: updated
+      at: 2026-10-21T14:26:08Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that the check judges what an answer read against the change's own head. On the developer's clone that is HEAD, so checking before a push runs as the use case says.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

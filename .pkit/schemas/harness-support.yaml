@@ -1,0 +1,25 @@
+# Harness support (per COR-047 point 2) — the shape of an adapter's support
+# declaration, `.pkit/adapters/<name>/harness-support.yaml`.
+#
+# The core declares what it requires of its harness in
+# `harness-requirements.yaml`. Each adapter answers for its own harness, in its
+# own folder: one answer per core requirement, keyed by the requirement's id.
+# An answer holds
+#
+#   grade:            supported | at-cost | not-achievable — the vocabulary the
+#                     adapters README owns
+#   cost:             what an at-cost answer asks of the adopter; only there
+#   harness_versions: `unbounded`, [lowest, highest] tested (both included), or
+#                     [] while no version is tested — required, so dropping it
+#                     never widens an answer to every version
+#   evidence:         how the author knows
+#
+# A requirement left out resolves indeterminate, never satisfied (COR-047
+# point 3). `pkit harness report` resolves each requirement for the project's
+# harness; `pkit validate` checks each declaration against this file's
+# companion. Where a harness enforces each dimension of the permission model is
+# the adapter's `permission-enforcement.yaml` (COR-028 point 3).
+
+schema_version: 1
+
+requirements: {}

@@ -13,9 +13,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T05:27:39Z
+          at: 2026-10-21T12:12:22Z
           outcome: unchanged
-          unchanged-because: The change to DEC-001 point 1 drops the overview's read of a view's opening. Needs and goals, and the voice they speak in, are untouched.
+          unchanged-because: DEC-001 point 1 gains the Not built yet box and a use case's shortfalls. Needs and goals, and the voice they speak in, are untouched.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}

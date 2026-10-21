@@ -19,9 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-18T19:27:48Z
+      at: 2026-10-21T15:44:45Z
       outcome: unchanged
-      unchanged-because: The CLI reference's new migration section, under Authoring commands, now says how the stamp chooses a migration's version and refuses a released one. This index only points to that section for authoring an area, adapter, capability or migration, so it holds.
+      unchanged-because: The CLI reference's new adapter section says the stamp writes package.yaml, README.md and migrations/ and no script or settings. This index only points to Authoring commands for authoring an adapter, so it holds.
 ---
 
 # project-kit

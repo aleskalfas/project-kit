@@ -25,8 +25,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-20T01:38:24Z
-      outcome: updated
+      at: 2026-10-21T14:26:09Z
+      outcome: unchanged
+      unchanged-because: COR-062 leaves anchors in the document's block, checked by validation and the change check as before. Only answers move to answer files, which this use case does not write, so it holds.
 ---
 
 # UC-005 — Say what my document rests on

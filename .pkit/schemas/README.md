@@ -8,6 +8,10 @@ pkit:
       path:
         - .pkit/schemas/_defs/**
         - .pkit/schemas/backbone/**
+        - .pkit/schemas/harness-requirements.yaml
+        - .pkit/schemas/harness-requirements.schema.json
+        - .pkit/schemas/harness-support.yaml
+        - .pkit/schemas/harness-support.schema.json
         - src/project_kit/schemas.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/schemas_authoring.py
@@ -20,8 +24,25 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-19T20:58:18Z
+      at: 2026-10-21T13:58:41Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-056
+          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
 ---
 
 # Schemas
@@ -643,10 +664,12 @@ A schema's value depends on tooling actually consuming the companion. Five tooli
 ├── privilege-catalog.schema.json   # ... + companion, side by side
 ├── harness-requirements.yaml
 ├── harness-requirements.schema.json
+├── harness-support.yaml       # the shape of each adapter's support declaration (COR-047)
+├── harness-support.schema.json
 └── …                          # further core-owned pairs, one per namespace
 ```
 
-This area is a **schemas home** in its own right — the core-owned one, owner name `core` — holding the pairs that belong to the core rather than to any capability (the permission model's catalogs and profiles, the harness requirements, …). It sits alongside each installed capability's `schemas/` and is walked first by every schemas verb. The `_defs/` directory holds JSON Schema fragments that every capability (and adopter project) `$ref` into. New shared patterns land as additional `$defs` in `refs.schema.json`, or as additional sibling files when a coherent group of patterns earns its own file.
+This area is a **schemas home** in its own right — the core-owned one, owner name `core` — holding the pairs that belong to the core rather than to any capability (the permission model's catalogs and profiles, the harness requirements and the shape of each adapter's answers to them, …). It sits alongside each installed capability's `schemas/` and is walked first by every schemas verb. The `_defs/` directory holds JSON Schema fragments that every capability (and adopter project) `$ref` into. New shared patterns land as additional `$defs` in `refs.schema.json`, or as additional sibling files when a coherent group of patterns earns its own file.
 
 ## What's *not* in this area
 

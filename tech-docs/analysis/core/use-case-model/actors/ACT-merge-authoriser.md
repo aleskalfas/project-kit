@@ -14,9 +14,9 @@ pkit:
         - COR-050#3
         - project-management:DEC-028
     revalidated:
-      at: 2026-10-20T01:36:56Z
+      at: 2026-10-21T14:26:04Z
       outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
+      unchanged-because: COR-062 keeps COR-050 point 3's telling of what a change updated and what it leaves out of date before its merge. That is what this actor is told, so it holds.
 ---
 
 # ACT-merge-authoriser — Merge authoriser

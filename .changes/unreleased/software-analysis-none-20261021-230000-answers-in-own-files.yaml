@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README's account of answers in the friction block is deferred
+  to #1779, which builds COR-062's answer files, and RS-SAN-005 still holds.
+  Nothing you run changes.

@@ -17,8 +17,9 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-20T03:31:55Z
-      outcome: updated
+      at: 2026-10-21T13:58:58Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 changes one bullet of point 13: each adapter now answers the requirement in its support declaration, and the Claude Code adapter's answer holds for the runner's tested range. The page's account of a confined run's rules and how the adapter holds them is as it was."
 ---
 
 # Permissions — decision core

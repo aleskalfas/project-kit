@@ -11,9 +11,9 @@ TERM-acceptance-gate:
         record:
           - COR-051#4
       revalidated:
-        at: 2026-10-20T01:37:00Z
+        at: 2026-10-21T13:00:59Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The decisions README gains how pkit refs lookup prints the file a record's id names. Which records bind, and the gate on proposed ones, are untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -27,9 +27,9 @@ TERM-adapter:
           - COR-028
           - COR-047
       revalidated:
-        at: 2026-10-20T01:37:01Z
+        at: 2026-10-21T15:45:07Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says pkit new adapter stamps package.yaml, README.md and migrations/, and where an adapter's scripts are documented. An adapter still carries the methodology into one harness, so the definition holds.
 TERM-agent-definition:
   name: agent definition
   noun-forms: [agent definitions]
@@ -62,9 +62,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-20T01:37:04Z
+        at: 2026-10-21T14:25:40Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 moves only answers out of the artefact. Anchors stay in its block, of the same kinds, and a dead anchor is still an error, so this definition of an anchor holds.
 TERM-answer:
   name: answer
   status: active
@@ -81,6 +81,15 @@ TERM-answer:
         at: 2026-10-20T01:37:05Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        deferred:
+          - anchor:
+              kind: record
+              value: COR-050#3
+            reason: "It defines an answer as a statement in the artefact's friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the definition."
+          - anchor:
+              kind: record
+              value: COR-050#4
+            reason: "A deferral moves from the block to an answer file under COR-062, so the definition's block is out of date. #1779 builds it and rewrites the definition."
 TERM-area:
   name: area
   noun-forms: [areas]
@@ -109,9 +118,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-20T01:37:07Z
+        at: 2026-10-21T14:25:42Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 leaves an artefact a document or a collection entry in a place, carrying its own anchors. Only its answers move to answer files, which the definition does not mention, so it holds.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -211,9 +220,9 @@ TERM-change:
           - COR-050#3
           - COR-050#6
       revalidated:
-        at: 2026-10-20T01:37:14Z
+        at: 2026-10-21T14:25:43Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-050 is partially superseded and its point 6 says where an answer is judged. A change is still a unit of work that lands on the branch it targets, so the definition holds.
 TERM-change-check:
   name: change check
   noun-forms: [change checks]
@@ -229,9 +238,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-20T01:37:16Z
+        at: 2026-10-21T14:25:44Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 has the change check judge what each answer read against the change's own head, and adds findings. It still compares a head with its base, finds friction and dead anchors, and lists the answers the diff wrote.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -357,6 +366,11 @@ TERM-debt:
         at: 2026-10-20T01:37:25Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        deferred:
+          - anchor:
+              kind: record
+              value: COR-050#9
+            reason: "COR-050 point 9 gains debt answered apart, which this term's definition and section do not name. #1779 builds it and rewrites them."
 TERM-decision-record:
   name: decision record
   noun-forms: [decision records]
@@ -443,9 +457,9 @@ TERM-finding:
           - COR-055#5
           - COR-057#3
       revalidated:
-        at: 2026-10-20T01:37:31Z
+        at: 2026-10-21T14:25:46Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 adds findings to both checks and to validation, of the same nature. A finding is still a statement a check reports whose severity says whether it fails, so the definition holds.
 TERM-friction:
   name: friction
   status: active
@@ -465,6 +479,23 @@ TERM-friction:
         at: 2026-10-20T01:37:32Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        deferred:
+          - anchor:
+              kind: record
+              value: COR-050#1
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#5
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#6
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#9
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
 TERM-harness:
   name: harness
   status: active
@@ -490,9 +521,9 @@ TERM-head:
           - COR-050#5
           - COR-050#6
       revalidated:
-        at: 2026-10-20T01:37:35Z
+        at: 2026-10-21T14:25:49Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-050 point 6 now names the change's own head beside a merge a host builds. That own head is this term's head, the branch's latest commit, so the definition holds.
 TERM-install:
   name: install
   status: active
@@ -621,9 +652,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-20T01:37:45Z
+        at: 2026-10-21T14:25:50Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 keeps the answer folder out of every place, and a place still says where the backbone looks for anchored documents, so the definition holds.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -824,9 +855,9 @@ TERM-reviewer:
           - COR-057#3
           - COR-057#5
       revalidated:
-        at: 2026-10-20T01:37:58Z
+        at: 2026-10-21T14:25:51Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 keeps who decides an answer, and that a reviewer other than its writer checks it (COR-050 point 3). A reviewer is still defined by its remit, so the definition holds.
 TERM-role:
   name: role
   noun-forms: [roles]
@@ -878,9 +909,9 @@ TERM-rule-set:
           - COR-051#6
           - COR-051#7
       revalidated:
-        at: 2026-10-20T01:38:02Z
+        at: 2026-10-21T14:25:53Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-051 point 2 now keeps a rule's answers in answer files and asks none of a synced rule. A rule set is still a collection file of named statements with a version, inheritance and scope.
 TERM-seeding:
   name: seeding
   status: active
@@ -914,9 +945,9 @@ TERM-skill:
           - COR-006
           - COR-020
       revalidated:
-        at: 2026-10-20T01:38:05Z
+        at: 2026-10-21T17:40:51Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says what the adapter stamp writes and keeps its pairing table without a status column. A skill is still a procedure an AI agent loads, paired with a stamp, so the definition holds.
 TERM-source-repository:
   name: source repository
   noun-forms: [source repositories]
@@ -932,9 +963,9 @@ TERM-source-repository:
           - COR-041
           - ADR-059#1
       revalidated:
-        at: 2026-10-20T01:38:06Z
+        at: 2026-10-21T14:25:59Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 keeps answers in the source repository's own answer folder, which no sync carries. A source repository is still where the originals are authored, so the definition holds.
 TERM-stamp:
   name: stamp
   status: active
@@ -947,9 +978,9 @@ TERM-stamp:
         record:
           - COR-005
       revalidated:
-        at: 2026-10-20T01:38:07Z
+        at: 2026-10-21T15:45:09Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says the adapter stamp writes package.yaml, README.md and migrations/, and that templates live in the CLI's code. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
 TERM-storyboard:
   name: storyboard
   noun-forms: [storyboards]
@@ -978,9 +1009,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-20T01:38:08Z
+        at: 2026-10-21T14:25:54Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: This change touches COR-050's preamble and points 6 and 9, and none says what a surface change is. The definition holds.
 TERM-sync:
   name: sync
   status: active
@@ -1016,9 +1047,9 @@ TERM-synced-copy:
           - COR-059#2
           - COR-041
       revalidated:
-        at: 2026-10-20T01:38:11Z
+        at: 2026-10-21T14:25:56Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 says an artefact received by sync owes no answer, its answers staying with its source. A synced copy is still a file sync writes and the project never edits, so the definition holds.
 TERM-system:
   name: system
   status: active
@@ -1116,9 +1147,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-20T01:38:19Z
+        at: 2026-10-21T14:25:57Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 adds debt answered apart to what the whole-repository check reports, and it still never fails. It still compares every artefact at the latest commit with its revalidation point.
 ---
 
 # Glossary
