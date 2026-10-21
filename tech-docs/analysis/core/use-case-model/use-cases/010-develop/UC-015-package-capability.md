@@ -59,7 +59,7 @@ pkit:
 - **2c.** The name is a backbone command's, such as `sync`, or an adapter holds it. The system refuses, saying which, and writes nothing. The path rejoins at step 1.
 - **2d.** A capability of that name exists. The system refuses with `capability '<name>' already exists at .pkit/capabilities/<name>.`, and writes nothing. The path rejoins at step 1.
 
-**Postconditions:** The project holds the capability's subtree, `.pkit/capabilities/<name>/`, beside the methodology's files, and none of those files is edited. Its package metadata gives its version and its range on the backbone. The capability is not registered yet, so none of its skills or agent definitions is deployed.
+**Postconditions:** The project holds the capability's subtree, `.pkit/capabilities/<name>/`, beside the methodology's files, and none of those files is edited. The capability's package metadata gives its version and its range on the backbone. The capability is not registered yet, so none of its skills or agent definitions is deployed.
 
 **Minimal guarantees:**
 

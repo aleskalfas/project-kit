@@ -84,7 +84,7 @@ pkit:
 
 - The adapter is recorded in the source repository's manifest, and its package metadata gives its version and its range on the backbone.
 - Sync runs the adapter's scripts, which deploy the skills and agent definitions where the harness reads them.
-- The adapter's support declaration says how far its harness meets each need the methodology states of it, and `pkit harness report` lists what it leaves unmet. Its `permission-enforcement.yaml` says what of the methodology's permissions the harness enforces, and what it cannot.
+- The adapter's support declaration says how far its harness meets each need the methodology states of it, and `pkit harness report` lists what the harness leaves unmet. The adapter's `permission-enforcement.yaml` says what of the methodology's permissions the harness enforces, and what it cannot.
 
 **Minimal guarantees:**
 
