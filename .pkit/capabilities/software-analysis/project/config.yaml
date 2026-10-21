@@ -4,6 +4,18 @@
 pkit_schema: software-analysis:config
 schema_version: 1
 
+# The analyses project-kit keeps, one for each component that keeps one
+# (software-analysis DEC-001 point 2; RS-ANA-004 in ANA,
+# tech-docs/rule-sets/analysis.md). The core's, and software-engineering's,
+# which builds on the core's. The other capabilities keep none yet.
+analyses:
+  - component: core
+    folder: core
+  - component: software-engineering
+    folder: software-engineering
+    builds-on:
+      - analysis: core
+
 numbering:
   # Ids declared free again. An entry may list only ids that nothing cites
   # (software-analysis DEC-001 point 3; the capability's README,

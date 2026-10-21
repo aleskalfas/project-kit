@@ -1,8 +1,8 @@
 """software-analysis: the analysis-author skill (#888).
 
 The skill walks an author through `pkit analysis new` for each kind — actor,
-term, use case, journey, the three kinds of requirement (#1692), revalidation
-record. Held here:
+term, domain-model view (#1817), use case, journey, the three kinds of
+requirement (#1692), revalidation record. Held here:
 
 - **its shape** — a composite skill (COR-020) whose `composes` is exactly its
   sub-procedures, clean under `pkit refs validate`, deployed beside them;
@@ -63,6 +63,7 @@ DEPLOYED = REPO / ".claude" / "skills" / "analysis-author"
 SUB_PROCEDURES = {
     "actor.md": ("actor",),
     "term.md": ("term",),
+    "view.md": ("view",),
     "use-case.md": ("use-case",),
     "journey.md": ("journey",),
     "requirement.md": ("quality-requirement", "functional-requirement", "constraint"),
@@ -80,7 +81,7 @@ BUILDING = "build-analysis.md"
 #: The build's four steps, each with the words that tie it to its item of DEC-001 point
 #: 12's list, and the kinds' sub-procedures it walks, in the order it first names them.
 BUILD_STEPS = (
-    ("## 1. The concepts, then the actors", "concepts", ("term.md", "actor.md")),
+    ("## 1. The concepts, then the actors", "concepts", ("term.md", "view.md", "actor.md")),
     (
         "## 2. The requirements that bind the whole system",
         "requirements that bind the whole system",

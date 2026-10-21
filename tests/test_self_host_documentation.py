@@ -325,6 +325,8 @@ def _friction(front: dict) -> dict:
     return (front.get("pkit") or {}).get("friction") or {}
 
 
+# Asserts what this tree's answers hold, so the short check runs it (ADR-067).
+@pytest.mark.answers
 @pytest.mark.parametrize("place", _project_places())
 def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> None:
     """A place's document is a page (living-docs DEC-001 point 4): its reader —

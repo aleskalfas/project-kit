@@ -24,6 +24,20 @@
       "minItems": 1,
       "uniqueItems": true,
       "items": { "$ref": "analysis.schema.json#/$defs/text" }
+    },
+    "noun-forms": {
+      "description": "Other forms of the term's name as a noun, such as its plural, each one that cannot read as a verb, such as `payments` and never `orders` (DEC-001 point 1). A language that inflects its nouns lists more, such as their cases. Each is one of the term's names, so no other term takes it, and the links between terms take it as a mention of the term (software-analysis DEC-004 point 7).",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/text" }
+    },
+    "other-senses": {
+      "description": "Each phrase in which the term's name has another sense, one its distinctions tell apart, such as `in order to` beside the `order` a customer places (DEC-001 point 1). No link names the term inside such a phrase (software-analysis DEC-004 point 7). Each holds one of the term's names, and more.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/text" }
     }
   }
 }

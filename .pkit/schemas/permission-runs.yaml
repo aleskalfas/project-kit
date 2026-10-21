@@ -1,0 +1,25 @@
+# The rules of agent runs (per ADR-066 point 5) — the shape of a capability's
+# `permissions/runs.yaml`.
+#
+# A capability whose command starts agents through the adapter's runner
+# declares, for each such command, the rules of the runs it starts and the
+# privileges they name. The rules are denies in the permission model
+# (COR-028 point 1), subject `all`. One denies every call that none of what
+# the run needs recognises (a privilege written with `except` and nothing
+# else), so the adapter holds it by allowing only that and refusing the rest
+# without asking. The others are a floor of denies, which the adapter writes
+# as native deny rules.
+#
+# No session's model composes such a file. The backbone's run command reads
+# it at the pinned commit, for the run whose command it names, fills in the
+# run's folders, and projects it through the shared decision core
+# (`.pkit/permissions/projection.py`, `project_run`). `pkit agents rules
+# <capability>:<command>` shows what a run is allowed and denied, and
+# `pkit permissions overview` lists each run's rules with the capability
+# that contributed them.
+
+schema_version: 1
+
+privileges: {}
+
+runs: {}

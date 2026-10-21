@@ -35,6 +35,11 @@ template shows exactly its kind's structure.
 - **A collection's file head**, the glossary's heading and opening, holds the
   words the declaration gives the stamp. It is written once, when the file is
   created.
+- **A repeated section**, a domain-model view's section for each concept it
+  explains, is written once for each name it is given, in order: a heading of
+  its level reading the name, then each of its parts as above (DEC-004 point
+  2). Its template shows one, headed by the term's name as the glossary's
+  template writes it, `<Term>`.
 
 A hint is matched by its marker, `<!-- pkit:hint`, wherever a hint is left in
 (`_lib/structure.py`'s `hints`), in a body or a field, so it never needs a
@@ -43,10 +48,10 @@ list of its own texts.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from _lib.structure import HEADING, LABEL, OPENING, RECORD, Element, Field, Kind
+from _lib.structure import HEADING, LABEL, OPENING, RECORD, REPEATED, Element, Field, Kind
 
 #: The mark that makes an HTML comment a hint, after `<!--` and a space.
 HINT = "pkit:hint"
@@ -58,7 +63,16 @@ _CLOSE = "-->"
 #: template, so never a writer's to fill: an artefact's id, its title or name, its
 #: status, its actor and its steps, and a requirement's actors and the requirements it
 #: refines.
-STAMPED = frozenset({"id", "title", "name", "status", "actor", "steps", "actors", "refines"})
+STAMPED = frozenset(
+    {"id", "title", "name", "status", "actor", "steps", "actors", "refines", "explains"}
+)
+
+#: How a domain-model view's template heads the section of each term it explains: the
+#: term's name as the glossary's template writes it.
+TEMPLATE_TERM = "<Term>"
+
+#: The front-matter field whose entries a repeated section repeats for (DEC-004 point 2).
+EXPLAINS = "explains"
 
 
 def hint(element: Element) -> str:
@@ -99,13 +113,26 @@ def _marked(name: str, said: str, example: str | None) -> str:
 
 
 def body(
-    kind: Kind, title: str, written: Mapping[str, str] | None = None, *, hints: bool = True
+    kind: Kind,
+    title: str,
+    written: Mapping[str, str] | None = None,
+    *,
+    hints: bool = True,
+    repeats: Sequence[str] = (),
 ) -> str:
     """The body of an artefact or a record of `kind`, its title heading reading `title`:
     each part a writer fills holds its hint, unless `hints` is false, and then what
-    `written` gives it by the element's id."""
+    `written` gives it by the element's id. A repeated section is written once for each
+    of `repeats`, its heading reading it (DEC-004 point 2)."""
     given = written or {}
-    blocks = [_block(element, title, given.get(element.id), hints) for element in kind.sections]
+    blocks: list[str] = []
+    for element in kind.sections:
+        if element.type != REPEATED:
+            blocks.append(_block(element, title, given.get(element.id), hints))
+            continue
+        for name in repeats:
+            blocks.append(f"{'#' * (element.level or 2)} {name}")
+            blocks += [_block(part, title, given.get(part.id), hints) for part in element.parts]
     return "\n\n".join(block for block in blocks if block) + "\n"
 
 
@@ -143,7 +170,9 @@ def template(kind: Kind, front: Mapping[str, Any]) -> str:
         name = entry["name"]
         return f"{head(kind)}\n{body(kind, f'{entry_id} — {name}')}"
     named = front.get("title", front.get("name"))
-    return body(kind, title_heading(kind, str(front["id"]), str(named)))
+    explained = front.get(EXPLAINS)
+    repeats = [TEMPLATE_TERM for _term in explained] if isinstance(explained, list) else []
+    return body(kind, title_heading(kind, str(front["id"]), str(named)), repeats=repeats)
 
 
 def title_heading(kind: Kind, artefact_id: str, title: str) -> str:

@@ -26,7 +26,7 @@
       "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:structures`."
     },
     "kinds": {
-      "description": "What the project changes of each kind's structure, keyed by a kind `artefact-kinds.yaml` declares: `actor`, `use-case`, `journey`, `term`, `quality-requirement`, `functional-requirement`, `constraint` or `revalidation-record`. A key that names no kind of the capability's is refused, since a new kind needs a decision of its own (DEC-001 point 11).",
+      "description": "What the project changes of each kind's structure, keyed by a kind `artefact-kinds.yaml` declares: `actor`, `use-case`, `journey`, `term`, `quality-requirement`, `functional-requirement`, `constraint`, `domain-model-view` or `revalidation-record`. A key that names no kind of the capability's is refused, since a new kind needs a decision of its own (DEC-001 point 11).",
       "type": "object",
       "propertyNames": {
         "$ref": "artefact-kinds.schema.json#/$defs/word"
@@ -34,6 +34,9 @@
       "properties": {
         "revalidation-record": {
           "$ref": "#/$defs/record-kind"
+        },
+        "domain-model-view": {
+          "$ref": "#/$defs/view-kind"
         }
       },
       "additionalProperties": {
@@ -109,6 +112,33 @@
         "tighten": {
           "description": "Refused: any group is one too many, since a tightening of a revalidation record could never bind.",
           "maxItems": 0
+        }
+      }
+    },
+    "view-kind": {
+      "title": "What the project changes of a domain-model view",
+      "description": "As for any artefact kind, save that the project adds labels, never a heading (software-analysis DEC-004 point 2). A view's headings are its title and one section for each concept it explains, which the stamp writes. A label goes in its opening, after `opening`, or in each concept's section, after one of that section's parts.",
+      "allOf": [
+        {
+          "$ref": "#/$defs/kind"
+        }
+      ],
+      "properties": {
+        "tighten": {
+          "items": {
+            "properties": {
+              "add": {
+                "items": {
+                  "properties": {
+                    "type": {
+                      "description": "Refused unless `label`: a view takes no heading of a project's.",
+                      "const": "label"
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     },

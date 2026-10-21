@@ -18,8 +18,8 @@
       "$ref": "analysis.schema.json#/$defs/status"
     },
     "actor": {
-      "description": "The actor who takes the journey, by id.",
-      "$ref": "analysis.schema.json#/$defs/actor-id"
+      "description": "The actor who takes the journey, by id: an actor of its analysis, or one of an analysis it builds on, named with that analysis (DEC-001 points 2 and 4).",
+      "$ref": "analysis.schema.json#/$defs/actor-ref"
     },
     "steps": {
       "description": "The use cases the journey passes through, in order, by id — at least two, since a journey spans several use cases, and each a use case of the journey's actor. A use case may appear more than once.",

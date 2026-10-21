@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "domain-model-view.schema.json",
+  "title": "A domain-model view's own fields — software-analysis capability",
+  "description": "The front matter of one domain-model view, a file `<number>-<slug>.md` in `domain-model/` under the analysis location (software-analysis DEC-004 points 2 and 4): a view of a group of related concepts, which explains each concept in a section of its own and draws how they relate. Its file's name opens with a number, which gives the view's place in the domain model's order and is no part of its id. These are the view's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A view anchors each term its `explains` lists, which the stamp writes and the capability's check holds equal to the list, and each record its statements cite or apply. It anchors no code (DEC-004 point 5). Applied by the capability's check, `pkit software-analysis validate`; unknown fields are refused, so a misspelt one is never silently ignored.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "title", "status", "explains"],
+  "properties": {
+    "id": {
+      "description": "The view's id, `VIEW-` and the slug its file's name gives after its number and the hyphen. A view given another number keeps it, and it is never used again once the view is withdrawn (DEC-004 point 4).",
+      "$ref": "analysis.schema.json#/$defs/view-id"
+    },
+    "title": {
+      "description": "What the group of concepts is called. The body's heading repeats it after the id, `# VIEW-<slug> — <title>`, and the capability's check requires the two to match. It may change; the id does not.",
+      "$ref": "analysis.schema.json#/$defs/text"
+    },
+    "status": {
+      "$ref": "analysis.schema.json#/$defs/status"
+    },
+    "explains": {
+      "description": "The terms whose concepts the view explains, each by its id, in the order of its sections: one term at least, each once. A tool reads this list, never the sections (DEC-004 point 2). Each is a term of the view's own analysis, and in force while the view is in force (point 5).",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "analysis.schema.json#/$defs/term-id" }
+    }
+  }
+}

@@ -37,6 +37,10 @@ What a body is made of, precisely:
   part runs to the next declared label or to a heading of its level or above.
   An opening runs from below the element listed before it, or from the body's
   start, to the next heading or declared label.
+- **A label right before an opening** holds its paragraph alone: its part ends
+  at the first blank line below it, outside fenced code and comments, and the
+  opening runs from there. So a domain-model view's *Why* and the explanation
+  below it are two parts, the explanation with no label (DEC-004 point 2).
 - **A part's content:** what it holds besides its label, with comments and
   white space left out.
 
@@ -71,6 +75,14 @@ The elements are the kind's as it ships them, or as a project's own structure
 relabels and tightens them (`_lib/project_structure.py`): an element a project
 adds, or makes required, names the rule that asks for it (`Element.rule`).
 
+**A repeated section** (`REPEATED`) is a domain-model view's section for each
+concept it explains (DEC-004 point 2): every heading of its level opens one,
+which runs to the next. Each is read as a body of its own, its heading then its
+parts, and the body above the first is read against the elements before it. The
+headings themselves are held to the section's form against the front matter's
+`explains` (`forms.headings_match`). A departure inside one names its heading
+(`Departure.within`).
+
 What each form reads, and how a part's list is read, is `_lib/forms.py`'s.
 Labels and sections a writer adds are never reported: the check judges only
 the declared elements. What a writer adds inside a part is that part's
@@ -91,6 +103,7 @@ that still holds its hint is never judged against the field's form here.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 from collections.abc import Iterator, Mapping, Sequence
@@ -113,8 +126,13 @@ KINDS_SCHEMA = SCHEMAS / "artefact-kinds.schema.json"
 #: The kind of a revalidation record, which has no type of its own (DEC-001 point 2).
 RECORD = "revalidation-record"
 
-#: An element's types.
-HEADING, LABEL, OPENING = "heading", "label", "opening"
+#: The use-case kind, and the permanent id of its part that names what holds before it
+#: starts, each line opening with its producers (DEC-001 point 1).
+USE_CASE_KIND, PRECONDITIONS = "use-case", "preconditions"
+
+#: An element's types. A repeated section holds parts of its own, once for each entry of
+#: a front-matter list (DEC-004 point 2).
+HEADING, LABEL, OPENING, REPEATED = "heading", "label", "opening", "repeated"
 
 #: How a body departs from its kind's structure: its parts, and then their forms
 #: (`_lib/forms.py`), the `sentence` form's own breach and every other form's.
@@ -156,7 +174,8 @@ class Element:
     it required (`_lib/project_structure.py`); `None` for a part as the kind ships it.
     `added` says the project added the element, rather than requiring a shipped one.
     `aliases` are the texts a project relabelled it from, which a body written before
-    the relabel may carry (`Kind.as_written`)."""
+    the relabel may carry (`Kind.as_written`). A repeated section's `parts` are the
+    elements each of its sections holds, in order (DEC-004 point 2)."""
 
     id: str
     type: str
@@ -170,12 +189,14 @@ class Element:
     rule: str | None = None
     added: bool = False
     aliases: tuple[str, ...] = ()
+    parts: tuple[Element, ...] = ()
 
     @property
     def filled(self) -> bool:
         """Whether a writer fills the part: an opening always, and a heading or a label
-        that has a hint. A heading the stamp writes has none."""
-        return self.type == OPENING or self.hint is not None
+        that has a hint. A heading the stamp writes has none, and a repeated section's
+        headings are the stamp's too: its parts are what a writer fills."""
+        return self.type == OPENING or (self.hint is not None and self.type != REPEATED)
 
 
 @dataclass(frozen=True)
@@ -220,9 +241,9 @@ class Kind:
     @property
     def labels(self) -> frozenset[str]:
         """The texts of the labels that mark a part, as they are compared: those the kind
-        declares, and those `delimiting` gives — with `as_written`, each relabelled
-        label's earlier text too."""
-        declared = [e for e in (*self.sections, *self.head) if e.type == LABEL and e.text]
+        declares, a repeated section's included, and those `delimiting` gives — with
+        `as_written`, each relabelled label's earlier text too."""
+        declared = [e for e in (*elements(self), *self.head) if e.type == LABEL and e.text]
         texts = {comparable(e.text or "") for e in declared}
         if self.as_written:
             texts |= {comparable(alias) for e in declared for alias in e.aliases}
@@ -233,12 +254,38 @@ class Kind:
 class Departure:
     """A declared element a body lacks, carries out of order, leaves empty, fills with
     `None.` where it may not, or fills with what breaks its form — at `line` of the
-    file, where the body carries it, and with what exactly the form found (`detail`)."""
+    file, where the body carries it, and with what exactly the form found (`detail`).
+    `within` is the heading of the repeated section it lies in, where it lies in one."""
 
     element: Element
     how: str
     line: int | None = None
     detail: str = ""
+    within: str | None = None
+
+
+def elements(kind: Kind) -> tuple[Element, ...]:
+    """Every element of `kind`'s body, in order: each repeated section followed by its
+    parts. A collection's file head is not among them."""
+    return tuple(found for element in kind.sections for found in (element, *element.parts))
+
+
+def siblings(kind: Kind, element: Element) -> tuple[Element, ...]:
+    """The elements `element` is listed among, as a message places it: the kind's body,
+    or one section of a repeated section, its heading then its parts, such as the
+    section of each concept a domain-model view explains (DEC-004 point 2)."""
+    for repeated in kind.sections:
+        if repeated.type != REPEATED:
+            continue
+        if element in repeated.parts or (element.type == HEADING and element.id == repeated.id):
+            return section_elements(repeated)
+    return kind.sections
+
+
+def section_elements(repeated: Element) -> tuple[Element, ...]:
+    """The elements of one section of a repeated section: its heading, which the stamp
+    writes, then its parts."""
+    return (Element(repeated.id, HEADING, level=repeated.level), *repeated.parts)
 
 
 @dataclass(frozen=True)
@@ -310,6 +357,7 @@ def _element(item: Mapping[str, Any], *, head: bool = False) -> Element:
         form=item.get("form"),
         hint=item.get("hint"),
         example=item.get("stamp") if head else item.get("example"),
+        parts=tuple(_element(part) for part in item.get("sections") or ()),
     )
 
 
@@ -365,17 +413,20 @@ class _Mark:
 class _Body:
     """A body read: each line's number and its content — the line with comments left out,
     a fenced line whole — whether fenced code opens on it or holds it (`forms.OPENS_FENCE`,
-    `forms.IN_FENCE`), and its marks, in order."""
+    `forms.IN_FENCE`), and its marks, in order. `blanks` says of each line whether it ends a
+    paragraph: blank as written, outside fenced code and outside a comment."""
 
     numbers: tuple[int, ...]
     content: tuple[str, ...]
     marks: tuple[_Mark, ...]
     fences: tuple[int, ...] = ()
+    blanks: tuple[bool, ...] = ()
 
 
 def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
     content: list[str] = []
     fences: list[int] = []
+    blanks: list[bool] = []
     marks: list[_Mark] = []
     fence: tuple[str, int] | None = None
     in_comment = False
@@ -384,6 +435,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         if fence is not None:
             content.append(line)
             fences.append(forms.IN_FENCE)
+            blanks.append(False)
             if _closes(line, fence):
                 fence = None
             continue
@@ -391,6 +443,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
         visible, in_comment = _without_comments(line, in_comment)
         content.append(visible)
         fences.append(0)
+        blanks.append(not line.strip() and not started_in_comment)
         if started_in_comment:
             continue
         opening = _FENCE.match(visible)
@@ -414,7 +467,7 @@ def _read(lines: Sequence[Line], labels: frozenset[str]) -> _Body:
             offset = len((label["item"] or "").expandtabs(4))
             marks.append(_Mark(index, LABEL, heading_level + 1, label["text"], rest, offset))
     numbers = tuple(n for n, _ in lines)
-    return _Body(numbers, tuple(content), tuple(marks), tuple(fences))
+    return _Body(numbers, tuple(content), tuple(marks), tuple(fences), tuple(blanks))
 
 
 def _without_comments(line: str, in_comment: bool) -> tuple[str, bool]:
@@ -522,7 +575,12 @@ def departures(
     `head` — in declared order: an element missing or out of order, once, and otherwise
     what its content breaks, each breach of its form at its own line. A form that
     matches the front matter reads `fields`, the artefact's or record's own, and a
-    journey's steps read each use case's title in `titles`, by id."""
+    journey's steps read each use case's title in `titles`, by id, as a domain-model
+    view's sections read each term's name. A kind with a repeated section is read one
+    section at a time (`_repeating`)."""
+    repeated = next((i for i, e in enumerate(kind.sections) if e.type == REPEATED), None)
+    if not head and repeated is not None:
+        return _repeating(lines, kind, repeated, fields, titles)
     elements = kind.head if head else kind.sections
     body = _read(lines, kind.labels)
     found, at = _located(body, elements, kind)
@@ -541,6 +599,48 @@ def departures(
             found[i] = [Departure(element, b.how, b.line, b.detail) for b in breaches]
     undeclared = [] if head else _undeclared(body, kind, elements, carried)
     return [departure for i in sorted(found) for departure in found[i]] + undeclared
+
+
+def _repeating(
+    lines: Sequence[Line],
+    kind: Kind,
+    at: int,
+    fields: Mapping[str, Any] | None,
+    titles: Mapping[str, str] | None,
+) -> list[Departure]:
+    """How a body departs from a kind whose element at `at` is a repeated section, a
+    domain-model view's section for each concept (DEC-004 point 2). Every heading of the
+    section's level, outside fenced code and comments, opens one of its sections, which
+    runs to the next. The lines above the first are held to the elements listed before
+    the section, and each section to its heading and its parts, each departure in it
+    naming its heading. The headings are held to the section's form, and a body with no
+    such heading lacks the section."""
+    repeated = kind.sections[at]
+    body = _read(lines, frozenset())
+    starts = [
+        (mark.index, mark.text)
+        for mark in body.marks
+        if mark.type == HEADING and mark.level == repeated.level
+    ]
+    above = starts[0][0] if starts else len(lines)
+    head = dataclasses.replace(kind, sections=kind.sections[:at])
+    found = departures(lines[:above], head, fields=fields, titles=titles)
+    section = dataclasses.replace(kind, sections=section_elements(repeated))
+    for n, (start, text) in enumerate(starts):
+        end = starts[n + 1][0] if n + 1 < len(starts) else len(lines)
+        found += [
+            dataclasses.replace(departure, within=text)
+            for departure in departures(lines[start:end], section, fields=fields, titles=titles)
+            if not (departure.element.type == HEADING and departure.element.id == repeated.id)
+        ]
+    if not starts:
+        return found + ([Departure(repeated, MISSING)] if repeated.required else [])
+    headings = [(lines[start][0], text) for start, text in starts]
+    found += [
+        Departure(repeated, b.how, b.line, b.detail)
+        for b in forms.headings_match(headings, forms.Context(fields or {}, titles or {}))
+    ]
+    return found
 
 
 def parts(lines: Sequence[Line], kind: Kind) -> list[tuple[Element, forms.Part]]:
@@ -600,13 +700,21 @@ def _undeclared(
     """Where a project's rule closes the kind's list of labels (`kind.closed`), each bold
     run ending in a colon that opens a line or a top-level list item and that no element
     declares, outside fenced code and comments, as a label is read. A part with a form
-    is not read for it, so a step's or a seam's bold run stays content."""
+    is not read for it, so a step's or a seam's bold run stays content. Nor is a
+    precondition's opening in a use case's *Preconditions*, which names its producers,
+    such as `**From UC-003:**` (DEC-001 point 1)."""
     if not kind.closed or kind.as_written:
         return []
     formed = {
         number
         for i, part in parts.items()
         if elements[i].form is not None
+        for number in (part.line, *(row.number for row in part.rows))
+    }
+    producing = {
+        number
+        for i, part in parts.items()
+        if kind.name == USE_CASE_KIND and elements[i].id == PRECONDITIONS and not elements[i].added
         for number in (part.line, *(row.number for row in part.rows))
     }
     found: list[Departure] = []
@@ -620,6 +728,8 @@ def _undeclared(
         if not (text.rstrip().endswith(":") or label["rest"].startswith(":")):
             continue
         if comparable(text) in kind.labels:
+            continue
+        if body.numbers[k] in producing and forms.named_producers(text, label["rest"]):
             continue
         shown = Element("", LABEL, text=text.rstrip().rstrip(":").strip(), rule=kind.closed[0])
         found.append(Departure(shown, UNDECLARED, body.numbers[k], ", ".join(kind.closed)))
@@ -644,7 +754,14 @@ def _part(
     line = body.numbers[mark.index]
     lead = forms.Row(line, mark.rest) if mark.type == LABEL else None
     item = body.content[mark.index] if mark.offset else ""
-    return forms.Part(line, _rows(body, _extent(mark, body)), lead, item)
+    extent = _extent(mark, body, paragraph=_before_opening(i, elements))
+    return forms.Part(line, _rows(body, extent), lead, item)
+
+
+def _before_opening(i: int, elements: Sequence[Element]) -> bool:
+    """Whether the element at `i` is a label listed right before an opening, which holds
+    its paragraph alone, such as a domain-model view's *Why* (DEC-004 point 2)."""
+    return elements[i].type == LABEL and i + 1 < len(elements) and elements[i + 1].type == OPENING
 
 
 def _rows(body: _Body, extent: range) -> tuple[forms.Row, ...]:
@@ -752,9 +869,10 @@ def _taken(
     return taken
 
 
-def _extent(mark: _Mark, body: _Body) -> range:
+def _extent(mark: _Mark, body: _Body, *, paragraph: bool = False) -> range:
     """The lines below a mark that its part holds: to the next declared label, or to a
-    heading of the mark's level or above."""
+    heading of the mark's level or above. With `paragraph`, a label right before an
+    opening, it ends sooner at the first blank line outside fenced code and comments."""
     end = len(body.content)
     for other in body.marks:
         if other.index <= mark.index:
@@ -762,15 +880,21 @@ def _extent(mark: _Mark, body: _Body) -> range:
         if other.type == LABEL or other.level <= mark.level:
             end = other.index
             break
+    if paragraph:
+        end = next((k for k in range(mark.index + 1, end) if body.blanks[k]), end)
     return range(mark.index + 1, end)
 
 
 def _after_previous(i: int, elements: Sequence[Element], at: Mapping[int, int], body: _Body) -> int:
     """The line an opening starts at: below the mark of the nearest element listed before
-    it that the body carries, or the body's first."""
+    it that the body carries, or the body's first. Below a label listed right before it,
+    the opening starts after the label's paragraph."""
     for previous in range(i - 1, -1, -1):
         if previous in at:
-            return body.marks[at[previous]].index + 1
+            mark = body.marks[at[previous]]
+            if _before_opening(previous, elements):
+                return _extent(mark, body, paragraph=True).stop
+            return mark.index + 1
     return 0
 
 

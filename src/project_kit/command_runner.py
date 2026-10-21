@@ -86,6 +86,15 @@ never beyond `COMMAND_TIMEOUT_SECONDS`; the outermost kill is never late.
   prints, not a JSON document; anything else omits the workstream from the
   report — silently where the verb is absent or printed nothing, with a
   warning naming how the run ended and what the verb said where it failed;
+- the *agent-run* policy (`agent_runs.run_agent`, ADR-066 point 1): the
+  runner an adapter registers, started with no arguments and the run's
+  request as one JSON document on standard input, the caller's environment
+  unchanged but for the run's deadline, and bounded by the run's own limit
+  plus the time the runner keeps to end the harness and answer. On overrun,
+  or an interrupt, the runner is asked to stop first, so it can end the
+  harness it started in a session of its own, and is killed after
+  `END_GRACE_SECONDS`. Anything but the runner's answer is a run with no
+  answer;
 - a *subscriber* policy joins when events run subscribers (COR-053 point 9
   sets its limits; point 11 asks the kinds to share one command runner).
 
@@ -284,16 +293,20 @@ class CommandRun:
     stdout: str = ""
     stderr: str = ""
     detail: str = ""
+    # The run's own bound, where its policy set one (an agent run's limit);
+    # None: `COMMAND_TIMEOUT_SECONDS`.
+    own_bound_seconds: float | None = None
 
     @property
     def clipped(self) -> bool:
         """Whether the run gave no answer for want of the time its caller had
         left rather than of its own bound: a nested run that timed out under
-        less than `COMMAND_TIMEOUT_SECONDS`, or had no time left to start. A
-        caller with more time might have had an answer."""
+        less than its own bound, or had no time left to start. A caller with
+        more time might have had an answer."""
         if self.ending is Ending.NOT_STARTED:
             return self.detail == NO_TIME_LEFT
-        return self.ending is Ending.TIMED_OUT and self.bound_seconds < COMMAND_TIMEOUT_SECONDS
+        own = COMMAND_TIMEOUT_SECONDS if self.own_bound_seconds is None else self.own_bound_seconds
+        return self.ending is Ending.TIMED_OUT and self.bound_seconds < own
 
     @property
     def bound_described(self) -> str:
@@ -366,6 +379,9 @@ def run_command(
     cwd: Path,
     extra_env: Mapping[str, str] | None = None,
     drop_env: Collection[str] = (),
+    bound_seconds: float | None = None,
+    stdin: bytes | None = None,
+    grace_seconds: float | None = None,
 ) -> CommandRun:
     """Run `script` with `args` from `cwd`, in its own process group, bounded by
     `COMMAND_TIMEOUT_SECONDS`, and read its answer. `extra_env` is laid over
@@ -376,14 +392,24 @@ def run_command(
     not execute, or an argument cannot be passed, as one holding a NUL byte
     cannot — is not started, never an exception.
 
+    A policy may set three more things. `bound_seconds` is the run's own
+    bound, in place of `COMMAND_TIMEOUT_SECONDS`. `stdin` is written to the
+    command's standard input; without it the command inherits the caller's.
+    `grace_seconds` is the time the command has to end what it started once
+    asked to stop: on overrun or an interrupt, the processes the run would
+    kill are sent `SIGTERM` first, and killed once the grace has passed.
+
     Inside a live run (`inherited_deadline`) the run is nested (the module
     docstring): bounded by the time remaining, in the outermost run's process
     group. With no time remaining its command is not started."""
     inherited = inherited_deadline()
     now = time.time()
-    bound = COMMAND_TIMEOUT_SECONDS if inherited is None else _remaining(inherited, now)
+    own = COMMAND_TIMEOUT_SECONDS if bound_seconds is None else bound_seconds
+    bound = own if inherited is None else _remaining(inherited, now, own)
     if bound <= 0:
-        return CommandRun(Ending.NOT_STARTED, 0, detail=NO_TIME_LEFT)
+        return CommandRun(
+            Ending.NOT_STARTED, 0, detail=NO_TIME_LEFT, own_bound_seconds=bound_seconds
+        )
     tree = _Tree.nested() if inherited is not None else _Tree.outermost()
     env = {**os.environ, **(extra_env or {})}
     for name in drop_env:
@@ -397,6 +423,7 @@ def run_command(
             [str(script), *args],
             cwd=str(cwd),
             env=env,
+            stdin=None if stdin is None else subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             start_new_session=not tree.is_nested,
@@ -404,16 +431,18 @@ def run_command(
     except (OSError, ValueError) as exc:
         # `ValueError`: an argument the system cannot pass — one holding a NUL byte.
         tree.leave(None, ended=True)
-        return CommandRun(Ending.NOT_STARTED, bound, detail=str(exc))
+        return CommandRun(
+            Ending.NOT_STARTED, bound, detail=str(exc), own_bound_seconds=bound_seconds
+        )
     ended = False
     try:
-        raw_stdout, raw_stderr = process.communicate(timeout=bound)
+        raw_stdout, raw_stderr = process.communicate(input=stdin, timeout=bound)
         ended = True
     except subprocess.TimeoutExpired:
-        tree.stop(process)
-        return CommandRun(Ending.TIMED_OUT, bound)
+        tree.stop(process, grace_seconds)
+        return CommandRun(Ending.TIMED_OUT, bound, own_bound_seconds=bound_seconds)
     except BaseException:
-        tree.stop(process)
+        tree.stop(process, grace_seconds)
         raise
     finally:
         tree.leave(process, ended=ended)
@@ -431,17 +460,36 @@ def run_command(
             stdout=_decode(raw_stdout),
             stderr=stderr,
             detail=f"standard output is not UTF-8: {exc}",
+            own_bound_seconds=bound_seconds,
         )
     if process.returncode != 0:
         return CommandRun(
-            Ending.ABNORMAL_EXIT, bound, returncode=process.returncode, stdout=stdout, stderr=stderr
+            Ending.ABNORMAL_EXIT,
+            bound,
+            returncode=process.returncode,
+            stdout=stdout,
+            stderr=stderr,
+            own_bound_seconds=bound_seconds,
         )
     try:
         document = parse_document(stdout)
     except ValueError:
-        return CommandRun(Ending.UNPARSABLE, bound, returncode=0, stdout=stdout, stderr=stderr)
+        return CommandRun(
+            Ending.UNPARSABLE,
+            bound,
+            returncode=0,
+            stdout=stdout,
+            stderr=stderr,
+            own_bound_seconds=bound_seconds,
+        )
     return CommandRun(
-        Ending.ANSWERED, bound, document=document, returncode=0, stdout=stdout, stderr=stderr
+        Ending.ANSWERED,
+        bound,
+        document=document,
+        returncode=0,
+        stdout=stdout,
+        stderr=stderr,
+        own_bound_seconds=bound_seconds,
     )
 
 
@@ -523,11 +571,11 @@ def _in_a_live_run() -> bool:
     return os.getpgrp() == os.getsid(0) and os.path.isdir(strays)
 
 
-def _remaining(deadline: float, now: float) -> float:
+def _remaining(deadline: float, now: float, own: float) -> float:
     """A nested run's bound: the time left until the inherited deadline, rounded
     down to a tenth of a second — so its own deadline never falls after its
-    caller's — and never more than a run's own bound."""
-    return min(COMMAND_TIMEOUT_SECONDS, math.floor((deadline - now) * 10) / 10)
+    caller's — and never more than the run's own bound, `own`."""
+    return min(own, math.floor((deadline - now) * 10) / 10)
 
 
 def _written_deadline(deadline: float) -> str:
@@ -571,9 +619,13 @@ class _Tree:
         os.close(handle)
         return cls(True, strays, marker)
 
-    def stop(self, process: subprocess.Popen[bytes]) -> None:
+    def stop(self, process: subprocess.Popen[bytes], grace_seconds: float | None = None) -> None:
         """End a command that overran or was interrupted: the outermost run's
-        whole group; a nested run's command alone, its marker left behind."""
+        whole group; a nested run's command alone, its marker left behind.
+        With `grace_seconds`, the same processes are first asked to stop, and
+        killed once the grace has passed (`_ask_to_stop`)."""
+        if grace_seconds:
+            _ask_to_stop(process, group=not self.is_nested, grace_seconds=grace_seconds)
         if self.is_nested:
             _kill_command(process)
         else:
@@ -604,6 +656,21 @@ def _marked(strays: str) -> bool:
             return any(True for _ in entries)
     except OSError:
         return False
+
+
+def _ask_to_stop(process: subprocess.Popen[bytes], *, group: bool, grace_seconds: float) -> None:
+    """Send `SIGTERM` to the command's whole group when it leads one, else to
+    the command alone, and wait up to `grace_seconds` for the command to end.
+    A command that started something in a session of its own, as an agent
+    runner starts its harness, ends it on that signal. The kill that follows
+    could not reach it."""
+    with contextlib.suppress(ProcessLookupError, PermissionError):  # it ended meanwhile
+        if group and hasattr(os, "killpg"):
+            os.killpg(process.pid, signal.SIGTERM)
+        else:
+            process.terminate()
+    with contextlib.suppress(subprocess.TimeoutExpired):
+        process.wait(timeout=grace_seconds)
 
 
 def _kill_process_group(process: subprocess.Popen[bytes]) -> None:

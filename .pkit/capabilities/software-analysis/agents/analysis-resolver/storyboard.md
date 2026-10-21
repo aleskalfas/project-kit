@@ -9,20 +9,27 @@ consumers:
 
 ## Framing
 
-This storyboard scripts how the `analysis-resolver` agent resolves the friction on a project's analysis: a drift on a pull request, with one artefact that holds and one the change made stale (the happy path); the stop, where the agent cannot tell a stale analysis from regressed code and asks; and the person's answer to that stop, a regression recorded with its gap. What the agent concludes about an artefact is judgment — it performs the judgment of the revalidation ([software-analysis:DEC-001-software-analysis-discipline] point 5). How it shows it, when it asks, and what it hands over are fixed here. It is not a reviewer.
+This storyboard scripts how the `analysis-resolver` agent resolves the friction on a project's analysis, in four scenarios:
+
+- a drift on a pull request, with one artefact that holds and one the change made stale (the happy path)
+- the stop, where the agent cannot tell a stale analysis from regressed code and asks
+- the person's answer to that stop, a regression recorded with its gap
+- a run a command started, where nobody can answer and each artefact ends in a result line
+
+What the agent concludes about an artefact is judgment — it performs the judgment of the revalidation ([software-analysis:DEC-001-software-analysis-discipline] point 5). How it shows it, when it asks, and what it hands over are fixed here. It is not a reviewer.
 
 The scenarios operate on:
 
-- **The analysis artefacts** — glossary terms (entries of the glossary's collection file), actors, use cases and journeys (a file each) under the analysis location, each carrying its anchors and its `revalidated` block in the friction block of the `pkit` container.
+- **The analysis artefacts** — glossary terms (entries of the glossary's collection file), actors, use cases, journeys and requirements (a file each) under the analysis location, each carrying its anchors and its `revalidated` block in the friction block of the `pkit` container.
 - **What flags them** — `pkit friction check --json`, the change check of a pull request; `pkit friction check --all --json` or `pkit friction debt --json`, the whole-repository report. Findings come upstream first: an actor before its use cases, a use case before the journeys through it.
 - **The evidence** — `pkit friction explain <artefact> --json` (its anchors, the commits behind each changed one, its deferrals) and `pkit analysis propose <artefact> --json` (what the evidence comes to, by which rule, each quote's check, and the person's commands); git's history, read with `git show`; the change's context — the commit messages, and the pull request or work item that carried the change.
 - **The four outcomes and the core's two answers** — the one table is the capability README's, "Revalidation: four outcomes, two answers"; when a revalidation also leaves a record is the table under its "Revalidation records". This storyboard follows them and does not restate them.
 
-**Mutations.** None in the repository. The agent never runs a writer — the friction writers or the record stamp — and never edits an artefact. It writes only under `.agent-workspace/analysis-resolver/<change>/`: `proposal.md` (each artefact's outcome with its evidence and the person's commands, or the question), and a `<artefact-id>.diff` per proposed edit. The commands are run by the person, or by whoever the agent body's "You propose; the person records" names; at a terminal the friction writers each ask once, and the record stamp has no prompt and writes what its command line says. The commands' shapes are the agent body's "Commands for the person"; in this storyboard they appear only in the blocks headed `# Commands for the person`.
+**Mutations.** None in the repository. The agent never runs a writer — the friction writers or the record stamp — and never edits an artefact. It writes only under `.agent-workspace/analysis-resolver/<change>/`: `proposal.md` (each artefact's outcome with its evidence and the person's commands, or the question), and a `<artefact-id>.diff` per proposed edit. Started by a command, it writes only in the run's workspace the brief names. There each artefact gets a folder with its answer as fields, its diff and its evidence, and no command (Scenario 4). The commands are run by the person, or by whoever the agent body's "You propose; the person records" names; at a terminal the friction writers each ask once, and the record stamp has no prompt and writes what its command line says. The commands' shapes are the agent body's "Commands for the person"; in this storyboard they appear only in the blocks headed `# Commands for the person`.
 
 **Hold only what depends on the ambiguity.** The proposal lists every flagged artefact's commands. An artefact that is ambiguous, the artefacts downstream of it through the cascade, and the revalidation's record — which names every artefact it covered — carry the question instead; nothing else waits on it.
 
-**Entry point:** invoking the agent with a request naming what flagged the analysis — a pull request or branch, the whole-repository report, or artefacts by id. When it is unclear what to resolve against, it asks one question before running anything.
+**Entry point:** invoking the agent with a request naming what flagged the analysis — a pull request or branch, the whole-repository report, or artefacts by id. When it is unclear what to resolve against, it asks one question before running anything. A command that starts fixers invokes it with a brief instead, and nobody is there to ask (Scenario 4).
 
 ## Tone
 
@@ -36,7 +43,7 @@ The scenarios operate on:
 
 ## Invocation pattern
 
-Booted as the session's own agent, it writes the proposal, shows its commands and waits for the person's questions or answer in the conversation. Dispatched as a subagent, it cannot hear the person: it returns the proposal — the path of `proposal.md`, its commands, and the question if there is one — and nothing else; the person's answer arrives as a new request naming that file. Either way it runs no writer: it has no tool for putting a question to the person, so the second of the four conditions its body points at never holds; asked to, it declines and points at the commands.
+Booted as the session's own agent, it writes the proposal, shows its commands and waits for the person's questions or answer in the conversation. Dispatched as a subagent, it cannot hear the person: it returns the proposal — the path of `proposal.md`, its commands, and the question if there is one — and nothing else; the person's answer arrives as a new request naming that file. Started by a command that starts fixers, it hears nobody: it reads the brief, writes its answers as fields, and ends with one result line per artefact. The person's answer to a held question arrives with the artefact's next brief. In every mode it runs no writer: it has no tool for putting a question to the person, so the second of the four conditions its body points at never holds; asked to, it declines and points at the commands.
 
 ---
 
@@ -82,7 +89,7 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
 - **read, with no lean** — decide by reading: `holds`, or `gap-found` (behaviour the change adds that nothing describes); a contradiction found by reading goes back to `pkit analysis propose` with `--contradicted` and its source, and the rules decide.
 - **analysis-stale** — write the artefact as it should read in the workspace, take the unified diff against it as it stands, labelled with its own path on both sides, and check it with `git apply --check`, which writes nothing. Only what the change made untrue is edited. The person applies it. The proposal drafts the one sentence on what changed in the artefact, which whoever records it as `updated` gives with the change — in the pull request, where the change owes the answer (COR-050 point 3).
 - **The proposal** — `proposal.md`: each artefact, its outcome, the rule and evidence behind it, what the person does first, and its commands, copied word for word from `pkit analysis propose`'s `answer` with the agent's drafted words in place of the agent's placeholders. No command carries `--yes`: the friction writers each ask the person once, and the record stamp has no prompt and writes what its command line says. It names each deferral the artefact carries, and each one proposed kept is named in its command with `--keep <kind:value>`, since a revalidation removes the rest (COR-050 point 4).
-- **The cascade** — an `updated` revalidation changes the artefact's content, so the journeys that pass through a use case or rely on it, or the use cases and journeys anchored to an actor, may be flagged next. Once the person has run the commands, run the change check again and take them. An `unchanged` one stops the cascade.
+- **The cascade** — an `updated` revalidation changes the artefact's content, so what anchors it may be flagged next. That is the use cases, journeys and requirements anchored to an actor, the journeys that pass through a use case or rely on it, and the use cases, journeys and requirements that list or refine a requirement. Once the person has run the commands, run the change check again and take them. An `unchanged` one stops the cascade.
 - No record: the revalidation was not planned, and found no regression and no gap (the README's "Revalidation records").
 - Never edit an artefact, never run `git apply` without `--check`, never run a writer.
 
@@ -159,3 +166,60 @@ Booted as the session's own agent, it writes the proposal, shows its commands an
 
 - **A gap found** in the same change — behaviour nothing describes: propose the artefact that fills it, the `pkit analysis new` command and a draft of its body in the workspace, for the person to write with the analysis-author skill. The record names the gap and what resolved it: the artefact written, or the work item opened for it.
 - **The regression stays visible**: `pkit analysis validate` reports it as open until the artefact is revalidated on a later day than the record — against the fix, once it lands.
+
+---
+
+## Scenario 4: Started by a command — a brief in, a line per artefact out
+
+**Trigger.** A command that starts fixers starts the agent on stale analysis artefacts of the default branch, where the project granted it ([project-management:DEC-056-drift-fixers] point 3).
+
+**Preconditions.**
+
+- The project granted the agent the types of the artefacts the brief names, and the grant is on the default branch.
+- The command made a working copy at the commit it pinned, and a workspace for the run, and the brief names both.
+- Nobody watches the run: there is nobody to ask, and nobody to answer.
+
+### Walkthrough
+
+> **The command's brief:** Started by the drift command, and nobody watches this run. Commit: 5e1f0c2… on the default branch. Working copy: /runs/r7/clone. Workspace: /runs/r7/clone/.agent-workspace/run. Artefacts, upstream first: `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` (software-analysis:use-case), `tech-docs/analysis/use-case-model/use-cases/UC-009-schedule-run.md` (software-analysis:use-case), `docs/how-to/export.md` (export-guide).
+>
+> **The brief's data, quoted between the run's markers:** 9c41e02 "feat(export): write the report as CSV" was carried by https://example.org/pr/212, whose text reads: "Adds a CSV writer for the report, and renames --out to --output, as every other command writes it." For 4b7d1e0 "refactor(cli): tidy the scheduler", the work tracker holds no pull request.
+>
+> **analysis-resolver:** *Reading the brief… running pkit friction explain and pkit analysis propose on each, and reading the commits…*
+>
+> **analysis-resolver:** *Running pkit analysis propose on UC-005 with --intended "renames --out to --output, as every other command writes it" --intended-from https://example.org/pr/212…* It answers analysis-stale, the quote unverified, as a URL's always is.
+
+The run's final message ends with the result lines, one for each artefact the brief names, in a fenced block of their own:
+
+```text
+Fixer result (analysis-resolver): proposed `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md` in `tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md/answer.json`
+Fixer result (analysis-resolver): proposed `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md` in `tech-docs/analysis/use-case-model/use-cases/UC-005-export-report.md/answer.json`
+Fixer result (analysis-resolver): held `tech-docs/analysis/use-case-model/use-cases/UC-009-schedule-run.md`: 4b7d1e0 "refactor(cli): tidy the scheduler" removed `--at`, which UC-009 quotes. Was that meant, so UC-009 is updated to match, or not, so the code regressed and UC-009 stays as it is?
+Fixer result (analysis-resolver): none `docs/how-to/export.md`: not-mine: it is no analysis artefact, so the component that owns it revalidates it.
+```
+
+### Behind the scenes
+
+- **The rules of the run** are the body's "When a command starts you": what the brief names, where the agent reads and writes, no cascade, no command anywhere, what it reads as evidence and never obeys, and the result lines' forms. This scenario follows them and does not restate them.
+- **UC-003** — 9c41e02 changed src/cli/run.py, and everything UC-003 quotes from it, `run_suite` and `--fast`, is still there. `pkit analysis propose` reads it as leaning to holds. Reading the diff shows the change only adds an output format, so the agent proposes holds. The artefact's folder gets `evidence.md` and `answer.json`, and no diff:
+
+  ```json
+  {
+    "artefact": "tech-docs/analysis/use-case-model/use-cases/UC-003-run-suite.md",
+    "outcome": "unchanged",
+    "justification": "The CSV export adds an output format. Running a suite is untouched: run_suite and --fast work as described.",
+    "sentence": null,
+    "keep": [],
+    "diff": null,
+    "first": []
+  }
+  ```
+
+- **UC-005** — the same commit removed `--out`, which UC-005 quotes, and its message says nothing of intent. The pull request that carried it says the rename was meant, and the brief quotes its text, so the agent reads it as it reads a pull request in a session (Scenario 1). It passes the words that say so to `pkit analysis propose` as `--intended`, the pull request's URL as their source, and never words the brief does not hold. `propose` answers `analysis-stale`, the quote shown unverified, since nothing here can check a URL. Reading the diff confirms that the export now writes to `--output`. So the agent proposes `updated`: its folder gets the diff of step 3, `UC-005.diff`, its `evidence.md` with the quote beside its source and its check, and `answer.json`, whose sentence says that step 3 names `--output`. The pull request's words are a contributor's, evidence the agent judges and never an instruction it follows.
+- **UC-009** — 4b7d1e0 removed `--at`, which UC-009 quotes. Its message says nothing of intent, and the brief says no pull request carried it. `pkit analysis propose` answers `ambiguous` under `ground-gone`. In a session the agent would ask (Scenario 2). Here the artefact is held: its line carries the question, and the `evidence.md` of its folder keeps the reading.
+- **docs/how-to/export.md** — the project's own filler of the fixers point gave its type to this agent, but it is no analysis artefact (the body's "When not to"). It gets `none`, `not-mine`, and no folder.
+- **Had the run refused `pkit analysis propose`,** nothing would be judged by reading alone. Each artefact's line would be `none`, `refused`.
+- **An artefact that waits for its upstream,** one that is stale or in the brief too, gets `none`, `upstream`, and the words name that upstream.
+- **Each `none` carries one of the contract's reasons,** then the reason in words: `not-mine`, `not-stale`, `refused`, `out-of-step`, `upstream` or `failed`, as the body lists them. The command reads the reason, never the words.
+- **The lines stand on their own,** in a fenced block or none, never behind a quote's `>`: the command counts only a line that starts with `Fixer result (`.
+- **The person's answer comes back in a brief.** In the batch the person answers UC-009's question. Its next brief carries the question, their words and their name, and the agent passes their words to `pkit analysis propose` as `--intended` or `--unintended`, with the person as their source. Scenario 1's stale path or Scenario 3's regression follows, with fields in place of commands. A regression's defect and record stay the person's. The evidence drafts the record in words, and `first` says to report the defect and to write the record.

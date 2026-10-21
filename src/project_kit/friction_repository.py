@@ -84,7 +84,9 @@ after the point with no revalidation — with its origin (author, date,
 change); *deferred* — every deferral, with its point's origin and, in the
 human view, its age; *left-out* — a widening of `friction.exclude` since the
 point that asks nothing; dead anchors, unresolved kinds and resolvers that
-gave no answer, all of them, not only a change's; *over-broad* anchors. An
+gave no answer, all of them, not only a change's; *over-broad* anchors;
+*shared-id* — an artefact anchor on an id two artefacts share, read as naming
+the first in walk order and judged so, warned of and never failed. An
 artefact with an anchor that cannot be resolved — its kind has no resolver
 that may run, or its resolver gave no answer — is **not judged**: its state
 is `unresolved`, never `current`, as an artefact whose points lie beyond a
@@ -247,6 +249,8 @@ class RepositoryFindingKind(Enum):
     UNRESOLVED_KIND = "unresolved-kind"  # a kind nothing installed may resolve
     NO_ANSWER = "no-answer"  # a registered kind's resolver gave no answer
     OVER_BROAD = "over-broad"
+    # An artefact anchor on an id two artefacts share: ambiguous, warned of (COR-050 point 7).
+    SHARED_ID = "shared-id"
     UNREACHABLE = "unreachable"
     UNREADABLE = "unreadable"
 
@@ -873,6 +877,17 @@ class _Judge:
         return RepositoryFinding(
             RepositoryFindingKind.DEAD_ANCHOR, self.head.why_dead(anchor), anchor=anchor
         )
+
+    def shared_id(self, anchor: Anchor) -> RepositoryFinding | None:
+        """An artefact anchor whose id two artefacts share at HEAD (point 7): ambiguous, and
+        warned of, never failed. It is read as naming the first in walk order, and judged
+        so; the finding names every artefact with the id and that one."""
+        if anchor.kind != "artefact":
+            return None
+        warning = self.head.part_of(anchor.value).shared_id
+        if warning is None:
+            return None
+        return RepositoryFinding(RepositoryFindingKind.SHARED_ID, warning, anchor=anchor)
 
     def over_broad(self, anchor: Anchor) -> RepositoryFinding | None:
         """An anchor standing on more than `OVER_BROAD_SHARE` of the tracked files (point 7):
@@ -1657,6 +1672,9 @@ def _check_artefact(
         over = judge.over_broad(anchor)
         if over is not None:
             broad.append(finding(over.kind, over.message, anchor))
+        shared = judge.shared_id(anchor)
+        if shared is not None:
+            broad.append(finding(shared.kind, shared.message, anchor))
     if artefact.excluded:
         return None, problems + broad
 
@@ -2356,6 +2374,9 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
     RepositoryFindingKind.OVER_BROAD: (
         f"an anchor standing on more than {round(100 * OVER_BROAD_SHARE)}% of the tracked files"
     ),
+    RepositoryFindingKind.SHARED_ID: (
+        "an anchor on an id two artefacts share, read as naming the first: reported only"
+    ),
     RepositoryFindingKind.UNREACHABLE: "a point beyond this clone's history",
     RepositoryFindingKind.UNREADABLE: (
         "front matter, or a revalidation point's `friction.exclude`, the check cannot read"
@@ -2517,6 +2538,7 @@ def _summary(result: RepositoryCheck) -> str:
         (RepositoryFindingKind.UNRESOLVED_KIND, "unresolved kind", "unresolved kinds"),
         (RepositoryFindingKind.NO_ANSWER, "missing answer", "missing answers"),
         (RepositoryFindingKind.OVER_BROAD, "over-broad anchor", "over-broad anchors"),
+        (RepositoryFindingKind.SHARED_ID, "anchor on a shared id", "anchors on a shared id"),
         (RepositoryFindingKind.UNREACHABLE, "unreachable", "unreachable"),
     ]
     return ", ".join(

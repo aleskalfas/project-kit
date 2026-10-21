@@ -29,11 +29,14 @@ the same functions:
     harness then grants it every tool), or holds a tool that changes existing
     files or starts agents (`CHANGING_TOOLS`, `STARTING_TOOLS`). A tool that
     writes new files stays, for its workspace.
-- **The grant list** (`answers_of`, `record`): each agent the person was asked
-  about, the types it was granted and the types it was refused. A type has at
-  most one answer for an agent. `record` writes answers into the project
-  configuration as text, every byte outside the `fixers` block kept, and reads
-  the file back before it writes.
+- **The grant list** (`answers_of`, `record`, `answers_at`, `grant_change`):
+  each agent the person was asked about, the types it was granted and the types
+  it was refused. A type has at most one answer for an agent. `record` writes
+  answers into the project configuration as text, every byte outside the
+  `fixers` block kept, and reads the file back before it writes. `answers_at`
+  reads the list at a commit, from git objects, and `grant_change` is each
+  grant and refusal a change adds or removes, which the landing command lists
+  before it stops ready, asks or merges.
 - **The question** (`questions`, `question_text`, `grant_line`, `ask`): one
   question for each agent, about the types of its entries that pass the checks
   and have no answer. Its words are built from the declaration: the
@@ -41,9 +44,11 @@ the same functions:
   each at a terminal and hands each answer to its caller, which records it.
   With nobody to ask, `grant_line` is the one command line that grants the
   fixer the types the question named.
-- **What may start** (`startable`, `stale_grants`): the entries that pass the
-  checks and are granted, and each grant that no entry names. Such a grant
-  starts nothing, and validation reports it with the command that revokes it.
+- **What may start** (`startable`, `stale_grants`, `stale_refusals`): the
+  entries that pass the checks and are granted, and each grant or refusal that
+  no entry names. Such a grant starts nothing, and validation warns of it with
+  the command that revokes it. Such a refusal asks nothing and starts nothing,
+  and validation reports it with the words to remove it by hand.
 
 Nothing here decides when a grant counts. The drift command reads the grant
 list at the default branch's commit (DEC-056 point 3), so a grant counts once
@@ -449,17 +454,116 @@ def load_config(path: Path) -> Mapping[str, Any]:
     parse, or is not a mapping, raises Malformed. An absent file is empty."""
     if not path.is_file():
         return {}
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise Malformed(f"{path.name} cannot be read: {exc}") from exc
+    return config_of(text, path.name)
+
+
+def config_of(text: str, name: str) -> Mapping[str, Any]:
+    """The configuration `text` holds, read as `load_config` reads a file; `name`
+    is the file as a message names it."""
     if YAML is None:  # pragma: no cover — ruamel is in the kit's pyproject
         raise Malformed("ruamel.yaml is not installed")
     try:
-        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, YAMLError) as exc:
-        raise Malformed(f"{path.name} cannot be read: {exc}") from exc
+        data = YAML(typ="safe").load(text)
+    except YAMLError as exc:
+        raise Malformed(f"{name} cannot be read: {exc}") from exc
     if data is None:
         return {}
     if not isinstance(data, Mapping):
-        raise Malformed(f"{path.name} is not a mapping")
+        raise Malformed(f"{name} is not a mapping")
     return data
+
+
+def missing_config(path: Path) -> str | None:
+    """Why no answer can be written into the configuration at `path`, or None: an
+    absent file is the project's to author first. A dry run says it as the write
+    would."""
+    if path.is_file():
+        return None
+    return (
+        f"{path} does not exist: author project-management's configuration first "
+        '(its README, "Adopter setup")'
+    )
+
+
+def answers_at(
+    commit: str, path: str, run: Runner = subprocess.run, cwd: Path | None = None
+) -> Answers:
+    """The grant list as the configuration at `path`, a path from the repository's
+    root, holds it at `commit`, read from git objects. A commit without the file
+    has an empty list. Raises Unreadable where git cannot read the commit, and
+    Malformed where the file is no configuration or its grant list is off its
+    shape."""
+    listed = _git_out(run, cwd, "ls-tree", "-z", commit, "--", path)
+    if listed is None:
+        raise Unreadable(f"the files of {commit[:7]} could not be read")
+    record_ = listed.decode("utf-8", "replace").split("\0", 1)[0]
+    if not record_:
+        return Answers()
+    meta, _tab, _name = record_.partition("\t")
+    mode, kind, oid = [*meta.split(" "), "", "", ""][:3]
+    if kind != "blob" or mode == "120000":
+        raise Malformed(f"{path} at {commit[:7]} is not a file")
+    blob = _git_out(run, cwd, "cat-file", "blob", oid)
+    if blob is None:
+        raise Unreadable(f"{path} at {commit[:7]} could not be read")
+    try:
+        text = blob.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise Malformed(f"{path} at {commit[:7]} is not UTF-8") from exc
+    return answers_of(config_of(text, f"{path} at {commit[:7]}"))
+
+
+def _git_out(run: Runner, cwd: Path | None, *argv: str) -> bytes | None:
+    """`git <argv>`'s output as bytes, or None where it failed or could not run."""
+    try:
+        proc = run(["git", *argv], cwd=cwd, capture_output=True, check=False, timeout=TIMEOUT)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if proc.returncode != 0:
+        return None
+    return proc.stdout if isinstance(proc.stdout, bytes) else str(proc.stdout).encode("utf-8")
+
+
+@dataclass(frozen=True, order=True)
+class GrantChange:
+    """One grant or refusal a change adds to the grant list or removes from it."""
+
+    agent: str
+    type: str
+    added: bool
+    answer: str  # `granted` or `refused`
+
+    def said(self) -> str:
+        """The change as a line says it to the person who authorises the merge."""
+        if self.answer == GRANTED:
+            if self.added:
+                return f"Fixer grant added: {self.agent} may start on its own on {self.type}"
+            return f"Fixer grant removed: {self.agent} no longer starts on its own on {self.type}"
+        if self.added:
+            return f"Fixer refusal added: {self.agent} is refused {self.type}"
+        return f"Fixer refusal removed: {self.agent} is no longer refused {self.type}"
+
+
+def grant_change(before: Answers, after: Answers) -> tuple[GrantChange, ...]:
+    """Each grant and refusal `after` adds to `before` or removes from it, by agent
+    and type, a removal before an addition. A type moved from refused to granted
+    is a refusal removed and a grant added."""
+    out: list[GrantChange] = []
+    for agent in set(before.agents) | set(after.agents):
+        types = set(before.agents.get(agent, {})) | set(after.agents.get(agent, {}))
+        for artefact_type in types:
+            was, now = before.of(agent, artefact_type), after.of(agent, artefact_type)
+            if was == now:
+                continue
+            if was is not None:
+                out.append(GrantChange(agent, artefact_type, False, was))
+            if now is not None:
+                out.append(GrantChange(agent, artefact_type, True, now))
+    return tuple(sorted(out))
 
 
 def answers_of(config: Mapping[str, Any]) -> Answers:
@@ -510,11 +614,9 @@ def record(path: Path, agent: str, types: Iterable[str], answer: str) -> bool:
     configuration is the project's to author first."""
     if answer not in ANSWERS:
         raise ValueError(f"an answer is {GRANTED!r} or {REFUSED!r}, not {answer!r}")
-    if not path.is_file():
-        raise Refused(
-            f"{path} does not exist: author project-management's configuration first "
-            '(its README, "Adopter setup")'
-        )
+    missing = missing_config(path)
+    if missing is not None:
+        raise Refused(missing)
     try:
         config = load_config(path)
         before = answers_of(config)
@@ -729,6 +831,17 @@ def stale_grants(point: Point, answers: Answers) -> list[tuple[str, str]]:
     ]
 
 
+def stale_refusals(point: Point, answers: Answers) -> list[tuple[str, str]]:
+    """`(agent, type)` for each refusal no entry of the point names. It asks nothing
+    and starts nothing, and no command removes it: a revoke only records one."""
+    return [
+        (agent, artefact_type)
+        for agent, answered in answers.agents.items()
+        for artefact_type, answer in answered.items()
+        if answer == REFUSED and artefact_type not in point.types_of(agent)
+    ]
+
+
 # --- validation ----------------------------------------------------------------------------
 
 
@@ -769,5 +882,15 @@ def findings(
             f"it, so it starts nothing. Revoke it: `{revoke_line(agent, [artefact_type])}`.",
         )
         for agent, artefact_type in stale_grants(point, answers)
+    ]
+    out += [
+        Finding(
+            REPORT,
+            f"{config_location}:/{CONFIG_KEY}/{agent}/{REFUSED}",
+            f"the refusal of {artefact_type} to {agent} names what no entry of {POINT} gives "
+            f"it, so it asks nothing and starts nothing. To remove it, delete {artefact_type} "
+            f"from `{CONFIG_KEY}.{agent}.{REFUSED}` in {config_location} by hand.",
+        )
+        for agent, artefact_type in stale_refusals(point, answers)
     ]
     return out

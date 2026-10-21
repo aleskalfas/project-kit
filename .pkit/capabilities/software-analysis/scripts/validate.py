@@ -20,7 +20,9 @@ journey whose use-case anchors do not match its steps and its `relies-on`, a
 requirement's `actors` and `refines` against the analysis and its anchors
 within it (DEC-002 points 6 and 7), a use case's and a journey's
 `requirements` against the analysis and its requirement anchors against the
-list (point 7), and the revalidation
+list (point 7), two terms of one name within an analysis or across those
+it builds on (DEC-001 points 1 and 2), the links between terms and views
+where an analysis keeps a domain model (DEC-004 point 7), and the revalidation
 records' front matter, the artefacts they cite and the evidence
 they copy. Where it reads the evidence point, it warns on an entry whose `id`
 is not its own `<artefact>@<commit>#<check>`, and on a capability's entry whose

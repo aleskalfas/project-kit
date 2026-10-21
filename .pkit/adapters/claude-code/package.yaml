@@ -11,3 +11,10 @@ footprint:
   - .claude/skills
   - .claude/agents
   - CLAUDE.md
+# The agent runner (ADR-066 point 1): the backbone's `pkit agents run` finds it
+# under this one reference, and starts Claude Code through it. No command
+# calls `claude` itself.
+commands:
+  run-agent:
+    script: run-agent.py
+    help: Run one agent in Claude Code with nobody watching, for `pkit agents run`.

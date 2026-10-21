@@ -77,6 +77,7 @@ ROLE = "pkit::analysis"
 EVIDENCE = "pkit::analysis:revalidation-evidence"
 READERS = "pkit::documentation:readers"
 USE_CASE_POINT = "pkit::work-tracking:use-cases"
+FIXERS_POINT = "pkit::work-tracking:fixers"
 PROJECT_MANAGEMENT = REPO / ".pkit" / "capabilities" / "project-management"
 EVIDENCE_FILLER = "tech-docs/pkit/fillers/pkit/analysis/revalidation-evidence.yaml"
 RECORD = "tech-docs/analysis/revalidations/2026-10-01-first-run.md"
@@ -204,7 +205,7 @@ def test_the_package_provides_the_role_and_declares_the_point_and_the_contributi
     assert point["description"].strip()
     assert (CAPABILITY / "schemas" / point["schema"]).is_file()
 
-    contribution, use_cases = connections["extensions"]["contributes"]
+    contribution, use_cases, fixers = connections["extensions"]["contributes"]
     assert contribution == {
         "point": READERS,
         "schema_version": 1,
@@ -232,6 +233,10 @@ def test_the_package_provides_the_role_and_declares_the_point_and_the_contributi
     assert command["query-contract"] is True and command["reads"] == ["settled"]
     assert (CAPABILITY / command["script"]).is_file()
 
+    # The fixers contribution is a static value; `test_software_analysis_fixer.py`
+    # holds its entries.
+    assert fixers["point"] == FIXERS_POINT and "command" not in fixers
+
 
 def _constant(script: Path, name: str) -> Any:
     """A module-level constant of one of the capability's scripts, read from its
@@ -249,7 +254,11 @@ def test_the_filler_answers_the_point_and_version_the_package_declares() -> None
     """The envelope's `schema_version` is the filler's; the version the backbone binds
     the contribution by is the package's. Held equal, the filler never answers a
     version the contribution does not declare."""
-    contributes = _package(CAPABILITY)["connections"]["extensions"]["contributes"]
+    contributes = [
+        c
+        for c in _package(CAPABILITY)["connections"]["extensions"]["contributes"]
+        if "command" in c  # a static value has no filler
+    ]
     for contribution, module in zip(contributes, ("readers", "settled_use_cases"), strict=True):
         filler = CAPABILITY / "scripts" / "_lib" / f"{module}.py"
         assert _constant(filler, "POINT") == contribution["point"]
@@ -346,13 +355,13 @@ def test_alone_the_contributions_are_inert_and_their_fillers_never_run(
 ) -> None:
     """No capability provides the documentation role, or the work-tracking role: each
     contribution is reported as having no active provider, never as an error, and its
-    filler never runs."""
+    filler, where it has one, never runs."""
     for filler in (FILL, FILL_USE_CASES):
         (project.root / filler).write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
     result = CliRunner().invoke(main, ["--color", "never", "validate", "--only", "connections"])
     assert result.exit_code == 0, result.output
     assert "pkit::analysis → software-analysis" in result.output
-    for point in (READERS, USE_CASE_POINT):
+    for point in (READERS, USE_CASE_POINT, FIXERS_POINT):
         assert f"software-analysis contributes {point!r}: no active provider" in result.output
     assert "0 error(s), 0 warning(s)." in result.output
     assert _resolve(READERS) == {
@@ -370,8 +379,10 @@ def test_alone_the_contributions_are_inert_and_their_fillers_never_run(
     assert "Roles it provides (1)\n    pkit::analysis — software-analysis" in shown.output
     assert f"contributes {READERS} (v1, command fill-readers)" in shown.output
     assert f"contributes {USE_CASE_POINT} (v1, command fill-use-cases)" in shown.output
+    assert f"contributes {FIXERS_POINT} (v1)" in shown.output  # a value, no command
     assert shown.output.endswith(
-        f"What connects here (2)\n    out software-analysis contributes {READERS}: "
+        f"What connects here (3)\n    out software-analysis contributes {READERS}: "
+        f"no active provider\n    out software-analysis contributes {FIXERS_POINT}: "
         f"no active provider\n    out software-analysis contributes {USE_CASE_POINT}: "
         "no active provider\n"
     )

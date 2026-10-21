@@ -16,7 +16,7 @@ Name each other actor who takes part with `--other-actor <ACT-id>`: one the use 
 
 - **Slug** — the goal, verb first: `run-suite`, `export-report`. It names the file only.
 - **`--title`** — the goal as the heading reads it: `Export the report as a file`. The heading is `# UC-NNN — <title>`, and the check keeps the two in step.
-- **`--area <word>`** — a folder per functional area, when the project groups use cases. Moving a use case to another area later never changes its id; a move renames the file, so revalidate it in the same change (COR-050 point 3).
+- **`--area <word>`** — a folder per functional area, when the project groups use cases. Moving a use case to another area later never changes its id; a move renames the file, so revalidate it in the same change (COR-050 point 3). The word may open with a number and a hyphen, such as `010-develop`. The number gives one valid order in which the areas build on each other, and is no part of the id (DEC-001 point 2).
 
 ## 4. Decide what it rests on
 
@@ -40,6 +40,8 @@ It takes the next free number on the default branch and in the working tree.
 ## 6. Fill it
 
 Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. Where a step names a command, a flag, a function or a message, quote it in backticks (the shared framing's "Quote the code you describe"). The goal and each minimal guarantee name their source (the shared framing's "Name the source of what the system must do"). Write each concept by its term (the shared framing's "Use the glossary's terms").
+
+**Preconditions.** Open each line with its producers, the use cases in force that make it true, such as `**From UC-003:**` or `**From UC-059, or Environment:**`. What the environment gives alone is an assumption, written in *Assumptions* only. A use case that needs no other one reads `None.` there. You may also list the producers in the front matter as `after`, one entry for each line, in its order, such as `after: [[UC-003], [UC-059, environment]]` (DEC-001 point 1). `after` draws no anchor. Where `RS-SAN-009` binds, the check holds it to the analysis, the words and the areas' numbers. `pkit analysis diagram chain` draws it.
 
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging.
 

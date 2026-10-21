@@ -2,7 +2,7 @@
 
 Adopting the capability includes choosing each kind's parts: the structure its template shows (DEC-001 point 1). The shipped parts are a starting point you review, never a default you skip. So choose a kind's parts before you write its first artefact, or its first record.
 
-Go one kind at a time, in the order you write them: the actor, the use case, the journey, the three kinds of requirement, the term, then the record. For each kind you review its shipped parts, fill a candidate with one of your own examples, and choose. Each kind ends with its shipped parts kept, or with your relabels and additions in your `structures.yaml`.
+Go one kind at a time, in the order you write them: the actor, the use case, the journey, the three kinds of requirement, the term, the domain-model view where you keep a domain model, then the record. For each kind you review its shipped parts, fill a candidate with one of your own examples, and choose. Each kind ends with its shipped parts kept, or with your relabels and additions in your `structures.yaml`.
 
 **The choice is the project's.** An agent following this sub-procedure shows the person each filled candidate and the entries it proposes. It writes an entry or a rule only once the person accepts it.
 
@@ -23,7 +23,8 @@ A template read empty hides what each part asks of a writer. So judge the parts 
 
 - **Choose the example.** Take a real case from your project: a role, a goal, a path or a word you would write anyway. Prefer one that gives most parts something to say, such as a use case with other actors and variants. If it is unusual, fill a second, ordinary one too.
   - **A requirement's example** is of its kind. A quality requirement says how well the system behaves, and a constraint limits the solution. A functional requirement holds across use cases: behaviour that serves one actor's goal is a use case instead (DEC-002 point 1).
-- **Stamp it and fill it** as the kind's sub-procedure says: `actor.md`, `use-case.md`, `journey.md`, `requirement.md`, `term.md` or `revalidation-record.md`. Fill each part as its hint says.
+- **Stamp it and fill it** as the kind's sub-procedure says: `actor.md`, `use-case.md`, `journey.md`, `requirement.md`, `term.md`, `view.md` or `revalidation-record.md`. Fill each part as its hint says.
+  - **A domain-model view** explains terms, so stamp them first. Each of its sections repeats the same parts, one section for each term.
   - **A journey** needs two use cases of its actor, so stamp a second use case first. It can be your ordinary example.
   - **A revalidation record** has no hints, since its stamp writes every part from its command line. Stamp it for a revalidation of your own that has something to say, such as a change you plan to what a candidate describes.
 - **Commit nothing yet.** The kind's sub-procedure ends in a commit, but a candidate waits until step 6. Once committed, its id is taken for good.
@@ -50,6 +51,7 @@ Choose one of these for the kind, or several. Nothing lets you drop, loosen or r
   - The part binds once its rule and the format rule are both accepted, where both bind.
   - An added part is stamped into every new artefact of the kind, with its hint. So add one only where your examples show it recurs.
   - A group may also close the kind's list of labels, where its parts hold no labels of their own.
+  - A domain-model view takes labels, never a heading. A label after `opening` goes in its opening, and one after a part of a concept's section goes in each of its sections.
   - A revalidation record takes no added part, since no rule binds on a record.
 - **Propose a change to a shipped part you find wrong.** It is a change to the capability, so file it with `pkit report change-request`, through the `report-author` skill. Keep the part meanwhile.
 

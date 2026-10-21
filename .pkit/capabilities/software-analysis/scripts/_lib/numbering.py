@@ -49,7 +49,7 @@ from ruamel.yaml.error import YAMLError
 
 from _lib import backbone, history, markdown, schemas
 from _lib.findings import ERROR, REPORT, Finding, at
-from _lib.model import NUMBERED, id_in_name, number_of
+from _lib.model import NUMBERED, id_in_name, number_of, under_place
 
 #: The capability's settings file, relative to the project root.
 CONFIG = ".pkit/capabilities/software-analysis/project/config.yaml"
@@ -342,7 +342,7 @@ def _removal(root: Path, commit: str, default: str, places: list[str]) -> _Remov
         path: number
         for path in deleted
         if (number := id_in_name(path)) is not None
-        and any(path.startswith(f"{place}/") for place in places)
+        and any(under_place(path, place) for place in places)
     }
     if not gone:
         return _Removal()

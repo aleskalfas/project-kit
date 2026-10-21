@@ -11,8 +11,8 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - it holds the **append-only rule**, `RS-SAN-002`, accepted, its origin DEC-001 and
   its anchor DEC-001 point 3 (#1370);
 - both rules were **accepted together**, on 17 October (#1370), so the set is at 1.0.0;
-- it holds six **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
-  with DEC-001 as its origin, and the three below, each proposed and declaring no
+- it holds nine **judgement rules**, `RS-SAN-003` to `RS-SAN-005` (#1577), each
+  with DEC-001 as its origin, and the six below, each proposed and declaring no
   check: a reviewer judges each. Each
   *How* leaves out what the stamp and the check hold always, and judges an artefact
   in force alone. Proposed rules move no version, so the set stays at 1.0.0;
@@ -29,9 +29,19 @@ Held to software-analysis DEC-001 point 1 ("When it binds") and COR-051:
 - the **concept rule**, `RS-SAN-008`, holds what the build order of DEC-001 point 12
   leaves in the analysis: a domain concept only where one term of the glossary
   defines it, by that term's name (#1784). It stays proposed with the others;
+- the anchors rule and the concept rule **read domain-model views** (#1814): a view
+  anchors the terms it explains and the records it rests on, never code, and each
+  section explains its term's concept in the term's sense. A Mermaid fence's labels
+  are statements (software-analysis DEC-003 point 10, DEC-004). The **order rule**,
+  `RS-SAN-011`, its origin DEC-004, lets a view name only the concepts lower views of
+  its analysis explain;
+- the **consequence rule**, `RS-SAN-009`, asks each precondition to name the use
+  cases that make it true, and the **one-way rule**, `RS-SAN-010`, lets an analysis
+  name only the analyses its component depends on (#1809). Both stay proposed;
 - each rule **declares the part a check enforces** beside it, under `checks`: the
   format rule names the command behind the `software-analysis:artefacts` member of
-  `pkit validate`, and the append-only rule `check-numbers`;
+  `pkit validate`, and the append-only rule `check-numbers`. The consequence rule
+  names the same command for what a script reads of `after` (#1816);
 - **validation accepts the set**, and **it binds nothing while its rule is
   proposed**, even where a project set with a scope inherits it: a proposed copy
   shows it. Accepted, as shipped, the same rule binds there, and its declared part
@@ -60,21 +70,25 @@ SAN = CAPABILITY / "rule-sets" / "san.md"
 SAN_REL = f"{SA.as_posix()}/rule-sets/san.md"
 RULE = "RS-SAN-001"
 STEPS_RULE = "RS-SAN-002"
-#: The judgement rules (#1577, #1695, #1681, #1784): each statement, and the record points it
-#: anchors to.
+#: The rule of logical consequence, whose part a script can read of `after` the
+#: capability's check enforces (#1816).
+LOGIC_RULE = "RS-SAN-009"
+#: The judgement rules (#1577, #1695, #1681, #1784, #1809, #1814): each statement, and the record
+#: points it anchors to.
 JUDGEMENT_RULES = {
     "RS-SAN-003": (
         "A use case's actor is the one whose goal it is, and each other actor that takes "
         "part in it is one of its `other-actors`.",
         [
             "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#2",
             "software-analysis:DEC-001#3",
             "software-analysis:DEC-001#4",
         ],
     ),
     "RS-SAN-004": (
         "A use case's goal is one of its actor's needs.",
-        ["software-analysis:DEC-001#1"],
+        ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"],
     ),
     "RS-SAN-005": (
         "An analysis artefact's anchors name what its statements rest on. A use case's or "
@@ -88,6 +102,7 @@ JUDGEMENT_RULES = {
             "software-analysis:DEC-002#5",
             "software-analysis:DEC-002#6",
             "software-analysis:DEC-002#7",
+            "software-analysis:DEC-004#5",
             "COR-050#1",
             "COR-050#2",
             "COR-050#5",
@@ -120,7 +135,33 @@ JUDGEMENT_RULES = {
             "software-analysis:DEC-001#2",
             "software-analysis:DEC-001#12",
             "software-analysis:DEC-002#4",
+            "software-analysis:DEC-003#10",
+            "software-analysis:DEC-004#3",
         ],
+    ),
+    "RS-SAN-009": (
+        "A use case starts only from what is already true. Each of its preconditions names the "
+        "use cases of its analysis that make it true.",
+        [
+            "software-analysis:DEC-001#1",
+            "software-analysis:DEC-001#2",
+            "software-analysis:DEC-001#12",
+        ],
+    ),
+    "RS-SAN-010": (
+        "An analysis artefact names another analysis only where its component depends on that "
+        "analysis's component, and names an optional one only as an option.",
+        ["software-analysis:DEC-001#2", "software-analysis:DEC-001#4", "COR-030"],
+    ),
+    "RS-SAN-011": (
+        "A domain-model view names a concept that another view of its analysis explains only "
+        "where that view's number is lower.",
+        ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"],
+    ),
+    "RS-SAN-012": (
+        "No two terms in force share a name, within an analysis and across the analyses it "
+        "builds on. No term takes a name another term in force replaces.",
+        ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"],
     ),
 }
 #: Each judgement rule's origin, where a decision record holds it. The source rule's is
@@ -131,6 +172,10 @@ ORIGINS = {
     "RS-SAN-005": "software-analysis:DEC-001",
     "RS-SAN-006": "software-analysis:DEC-002",
     "RS-SAN-008": "software-analysis:DEC-001",
+    "RS-SAN-009": "software-analysis:DEC-001",
+    "RS-SAN-010": "software-analysis:DEC-001",
+    "RS-SAN-011": "software-analysis:DEC-004",
+    "RS-SAN-012": "software-analysis:DEC-001",
 }
 SOURCE_RULE = "RS-SAN-007"
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
@@ -333,7 +378,8 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     # stays (COR-051 point 2).
     assert (
         "A missing title heading of an actor, a use case, a journey, a quality requirement, "
-        "a functional requirement or a constraint is left to the heading check"
+        "a functional requirement, a constraint or a domain-model view is left to the heading "
+        "check"
     ) in part
     assert data["version"] == "1.0.0"
     assert "record" not in part
@@ -349,16 +395,21 @@ def test_the_format_rule_declares_the_part_the_capability_s_check_enforces() -> 
     assert "validate" in package["commands"]
 
 
+# Asserts what the shipped rules' answers hold, so the short check runs it (ADR-067).
+@pytest.mark.answers
 def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     """The maintainer's three judgement rules (8 October, on #1360), proposed until he
     accepts them (#1577), each with DEC-001 as its origin. Beside them the record rule,
     from DEC-002 point 8 (#1695), the source rule (#1681) and the concept rule, from
     DEC-001 point 12 (#1784), proposed until all are accepted in one major. Each anchors
-    to the points it rests on. None declares a check: a reviewer judges each (COR-057).
-    A proposed rule moves no version (COR-051 point 7), so `SAN` stays at 1.0.0."""
+    to the points it rests on. None declares a check but the consequence rule, whose
+    check holds what a script reads of `after` (#1816): a reviewer judges the rest of
+    each (COR-057). A proposed rule moves no version (COR-051 point 7), so `SAN` stays at
+    1.0.0."""
     data, body = _shipped()
     assert data["version"] == "1.0.0"
     assert set(ORIGINS) | {SOURCE_RULE} == set(JUDGEMENT_RULES)
+    assert [rule_id for rule_id in JUDGEMENT_RULES if rule_id in data["checks"]] == [LOGIC_RULE]
     for rule_id, (statement, anchors) in JUDGEMENT_RULES.items():
         entry = data["rules"][rule_id]
         assert entry["status"] == "proposed", rule_id
@@ -371,11 +422,30 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
         revalidated = entry["pkit"]["friction"].get("revalidated", {})
         assert isinstance(revalidated, dict), rule_id
         assert "deferred" not in revalidated, rule_id
-        assert rule_id not in data["checks"], rule_id
         assert "checks" not in entry, rule_id
         section = _section(body, rule_id)
         assert section.split("\n\n")[1] == statement, rule_id
         assert "- **How:**" in section, rule_id
+
+
+def test_the_consequence_rule_declares_what_the_check_reads_of_after() -> None:
+    """RS-SAN-009 names what a script can read of `after`, and leaves it to a reviewer
+    until its set declares a check of it (#1809). The set now declares the capability's
+    check of it, beside the rule and no part of its content, so neither the rule nor
+    `SAN`'s version moves (COR-051 point 2)."""
+    data, body = _shipped()
+    (declared,) = data["checks"][LOGIC_RULE]
+    assert declared["check"] == "software-analysis:validate"
+    part = " ".join(declared["part"].split())
+    assert part.startswith("Of a use case in force that writes `after`: each producer is")
+    assert "each entry names a producer in no later area" in part
+    assert part.endswith(
+        "Whoever judges the rest of the rule judges a producer in an area without a number "
+        "or in no area, and each use case that writes no `after`."
+    )
+    how = " ".join(_section(body, LOGIC_RULE).split())
+    assert "Until this set declares a check of them under `checks`, a reviewer judges" in how
+    assert data["version"] == "1.0.0"
 
 
 def test_each_judgement_rule_leaves_the_checks_their_part_by_its_own_words() -> None:
@@ -429,7 +499,13 @@ def test_the_anchors_rule_asks_a_use_case_for_what_answers_or_realises_it() -> N
     an anchor on either is never judged unasked once the rule is accepted."""
     _data, body = _shipped()
     listed = _anchors_list(body)
-    assert list(listed) == ["An actor or a term", "A use case", "A journey", "A requirement"]
+    assert list(listed) == [
+        "An actor or a term",
+        "A domain-model view",
+        "A use case",
+        "A journey",
+        "A requirement",
+    ]
     use_case = listed["A use case"]
     # What a use case rests on is what its statements cite or apply, as point 11's
     # "rests on" reads. Point 4's "relies on" also takes in the decisions that answer
@@ -497,6 +573,24 @@ def test_the_anchors_rule_names_the_requirements_a_use_case_or_a_journey_lists()
     ) in held
     judged = section.split("**What this rule judges.**", 1)[1].split("**A break.**")[0]
     assert "`requirements`" not in judged
+
+
+def test_the_anchors_rule_asks_a_domain_model_view_for_its_terms_and_records() -> None:
+    """software-analysis DEC-004 point 5 (#1814): a domain-model view anchors each term
+    it explains and the records its statements cite or apply, and no code, since it
+    describes the domain. The check holds its term anchors to its sections whatever any
+    rule's status, so the rule leaves them to it."""
+    _data, body = _shipped()
+    view = _anchors_list(body)["A domain-model view"]
+    assert "rests on each term it explains, and the decisions its statements cite or" in view
+    assert "It rests on no code, since it describes the domain, never the software." in view
+    assert not re.search(r"\b(?:answers?|answered|realises?|realised)\b", view)
+    section = " ".join(_section(body, "RS-SAN-005").split())
+    held = section.split("**What the check holds.**", 1)[1].split("**What this rule judges.**")[0]
+    assert (
+        "Once the domain-model view is built, it requires a view's anchors on exactly the "
+        "terms its `explains` lists, and refuses a path anchor on one."
+    ) in held
 
 
 @pytest.mark.parametrize("kind", ["An actor or a term", "A journey"])
@@ -713,6 +807,28 @@ def test_the_concept_rule_holds_what_the_build_order_leaves() -> None:
     assert "in the order point 12 gives, the concepts first." in decision
 
 
+def test_the_concept_rule_reads_domain_model_views_and_diagram_labels() -> None:
+    """software-analysis DEC-004 points 3 and 6 (#1814): a view's section explains its
+    term's concept in the term's sense, and the order rule lets a view name a concept
+    another view of its analysis explains only where that view's number is lower. A
+    Mermaid fence quotes no code, so its labels are statements the rule reads (DEC-003
+    point 10)."""
+    _data, body = _shipped()
+    section = " ".join(_section(body, CONCEPT_RULE).split())
+    uses_none = section.split("**What uses no concept.**", 1)[1].split("**Where to read")[0]
+    assert (
+        "A Mermaid fence quotes no code. The labels its diagram shows, its `accTitle` and its "
+        "`accDescr` are statements. An id the diagram never shows uses no concept."
+    ) in uses_none
+    view = section.split("**A domain-model view.**", 1)[1].split("**Where to read")[0]
+    assert "explains the concept that the term its heading names defines, in that term's" in view
+    assert "widens or narrows what the term's `definition` fits." in view
+    order = " ".join(_section(body, "RS-SAN-011").split())
+    assert "compared as a number. Two views may share one, and then neither names" in order
+    assert "**A new section.** A view also breaks this rule while a view of its analysis" in order
+    assert "this rule asks nothing of it." in order  # another analysis's term
+
+
 def test_the_new_rules_name_parts_each_kind_declares() -> None:
     """The source rule and the anchors rule find a part by its permanent id, so a
     project's own label never hides it. Each id they name, read from their text, is one
@@ -861,7 +977,8 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
 ) -> None:
     """A copy with the judgement rules accepted, a fixture and not the acceptance: each
     binds on the route above, and the answer gives it no check's part, so a reviewer
-    judges the whole of it (COR-057 point 1). Accepting a rule gives `SAN` a new major,
+    judges the whole of it (COR-057 point 1). The consequence rule alone leaves its part
+    to the capability's check, which is there. Accepting a rule gives `SAN` a new major,
     and the set re-pins to it, as an acceptance would (COR-051 point 7). The source
     rule's origin gains its why, as its acceptance must give it."""
     _with_an_actor_and_a_set_inheriting_san(project, major=2)
@@ -875,5 +992,8 @@ def test_accepted_each_judgement_rule_binds_with_no_check_to_leave(
     ]
     document = reading.reach_document(project.root)
     (entry,) = [a for a in document["artefacts"] if a["location"] == ACTOR]
-    checks = {r["id"]: r["checks"] for r in entry["rules"]}
-    assert [checks[rule_id] for rule_id in JUDGEMENT_RULES] == [[]] * len(JUDGEMENT_RULES)
+    checks = {r["id"]: [(c["check"], c["there"]) for c in r["checks"]] for r in entry["rules"]}
+    assert {rule_id: checks[rule_id] for rule_id in JUDGEMENT_RULES} == {
+        **{rule_id: [] for rule_id in JUDGEMENT_RULES},
+        LOGIC_RULE: [("software-analysis:validate", True)],
+    }
