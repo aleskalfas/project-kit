@@ -1,0 +1,11 @@
+component: backbone
+kind: none
+body: >
+  Three authoring texts say what the system does. The capability-author skill
+  registers a built capability with `pkit capabilities register`, lists
+  `migrations/` among a capability's folders, and says a project takes a new
+  version only through a version transition (COR-059). COR-016 declares a
+  storyboard in `storyboards:` by its bare sibling filename, as the stamp
+  writes it and the deploy rewrites it to the source path. The process skill
+  names the shipped `process-author` agent and the paths a project grants it.
+  The texts follow behaviour that already shipped, and no command changes.
