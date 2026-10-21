@@ -53,6 +53,10 @@ pkit:
       outcome: updated
       deferred:
         - anchor:
+            kind: path
+            value: src/project_kit/friction_check.py
+          reason: "The change check keeps answer files out of what a path anchor stands on, beside the answers COR-062 moves out of the block, which the steps still put there. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."
+        - anchor:
             kind: record
             value: COR-050#12
           reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."

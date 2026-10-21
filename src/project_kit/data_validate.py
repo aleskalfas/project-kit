@@ -39,7 +39,7 @@ from referencing.exceptions import Unresolvable
 from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
-from project_kit import backbone_schemas, validators
+from project_kit import answer_files, backbone_schemas, validators
 from project_kit.manifest import read_backbone_manifest
 from project_kit.schemas_validate import (
     _ID_COLLECTION_ANNOTATION,
@@ -936,9 +936,13 @@ def discover_repository_data_files(target_root: Path) -> list[Path]:
     The files are the working tree's one listing (`working_tree`, ADR-057
     point 2) — the files git sees, as friction discovery reads them — in the
     order a walk of the folders meets them: a folder's files before its
-    sub-folders, each by name. A link to a folder is not walked."""
+    sub-folders, each by name. A link to a folder is not walked. An answer file is
+    claimed by its location (ADR-056 point 2) and never offered: the friction pass of
+    `pkit validate` applies its schema (COR-062 point 10)."""
     found: list[tuple[str, ...]] = []
     for rel in working_tree(target_root).files():
+        if answer_files.is_answer_file(rel):
+            continue
         parts = PurePosixPath(rel).parts
         folders = parts[:-1]
         if not parts[-1].endswith(".yaml") or (target_root / rel).is_dir():
@@ -992,6 +996,11 @@ def validate_files(
     instances: list[tuple[ResolvedBinding, Any]] = []
     checked = 0
     for data_path in files:
+        claimed = _answer_file_issues(data_path, target_root)
+        if claimed is not None:  # claimed by its location, never by a binding (ADR-056)
+            checked += 1
+            all_issues.extend(claimed)
+            continue
         binding = resolve_binding(data_path, target_root, capability_bindings=cap_bindings)
         if bound_only and isinstance(binding, BindingError) and binding.unbound:
             continue
@@ -1011,6 +1020,27 @@ def validate_files(
     if resolve_references and instances:
         all_issues.extend(_resolve_references_in_scope(instances, target_root))
     return DataValidationReport(files_checked=checked, issues=tuple(all_issues))
+
+
+def _answer_file_issues(data_path: Path, target_root: Path) -> list[DataValidationIssue] | None:
+    """The shape findings of an answer file named to the focused surface, against the
+    answer files' schema the location rule binds it to (ADR-056 point 2); `None` for any
+    other file."""
+    rel = _rel(data_path, target_root)
+    if not answer_files.is_answer_file(PurePosixPath(rel).as_posix()):
+        return None
+    schema, why = answer_files.load_schema(target_root)
+    if schema is None:
+        return [DataValidationIssue(rel, why or "no answer-file schema", "warning")]
+    try:
+        raw: bytes | None = data_path.read_bytes()
+    except OSError:
+        raw = None
+    read = answer_files.read_answer_file(data_path.name, raw)
+    return [
+        DataValidationIssue(f"{rel}:{pointer}" if pointer else rel, message)
+        for pointer, message in answer_files.shape_findings(read, schema)
+    ]
 
 
 def outcome(target_root: Path) -> validators.Outcome:

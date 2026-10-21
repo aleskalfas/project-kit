@@ -21,6 +21,13 @@ is where that class is loaded and where its shared rendering lives:
   and `expand_schema_error` route a JSON Schema validator's
   `additionalProperties` violation through it, one finding per key, so every
   pass that validates against a schema phrases the finding the same way.
+- The answer-file location rule (ADR-056 point 2, after the fixed path): a YAML
+  file directly in the folder of friction answers the backbone fixes (COR-062
+  point 2) is bound to the answer files' schema, kind `friction-answers`
+  (`ANSWER_FILE_SCHEMA_KIND`). The folder's path and the test of whether a file is
+  an answer file have their one home in `answer_files` (ADR-057 point 2), which
+  applies the schema through `schema_findings`, so a capability's data binding
+  never claims such a file.
 - `filler_subpath` / `filler_address` — the filler path location rule (ADR-056
   point 2): a point address `<publisher>::<role>:<point>` maps to
   `<publisher>/<role>/<point>.yaml` under the backbone's sub-path of the
@@ -146,7 +153,7 @@ class BackboneSchemaInvalid(ValueError):
     """The tree's schema for this kind does not load as a Draft 2020-12 schema."""
 
 
-def load_backbone_schema(target_root: Path, kind: str) -> dict:
+def load_backbone_schema(target_root: Path, kind: str) -> dict[str, Any]:
     """Load the schema for `kind` from the project's tree.
 
     Raises `BackboneSchemaMissing` when the tree lacks it — a tree recorded
@@ -317,6 +324,18 @@ def envelope_findings(document: Any, schema: Mapping[str, Any]) -> list[tuple[st
     """`(JSON Pointer, message)` per violation of the filler envelope's schema,
     by position; an unknown key reads through the shared renderer. The value
     inside is the point's to judge, not this schema's."""
+    return schema_findings(document, schema)
+
+
+#: The kind of the answer files' schema (`backbone_schema_path`): every answer file is
+#: bound to it by its location (ADR-056 point 2; COR-062 point 1).
+ANSWER_FILE_SCHEMA_KIND = "friction-answers"
+
+
+def schema_findings(document: Any, schema: Mapping[str, Any]) -> list[tuple[str, str]]:
+    """`(JSON Pointer, message)` per violation of a backbone file schema that binds a whole
+    file — the filler envelope's, an answer file's — by position; an unknown key reads
+    through the shared renderer (ADR-056 point 4)."""
     validator = Draft202012Validator(schema)
     errors = sorted(
         validator.iter_errors(document), key=lambda e: [str(p) for p in e.absolute_path]

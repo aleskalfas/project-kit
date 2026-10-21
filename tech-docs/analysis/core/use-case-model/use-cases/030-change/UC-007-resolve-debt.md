@@ -49,6 +49,18 @@ pkit:
             value: .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
           reason: "The resolver's commands gain the boxed regression, revalidated as updated. Variant 4a names only the unchanged case until #1856 revises it."
         - anchor:
+            kind: path
+            value: src/project_kit/friction_check.py
+          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_report.py
+          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_repository.py
+          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
+        - anchor:
             kind: record
             value: ADR-055#5
           reason: "ADR-055 point 5 gains only that a merge queue gives the check each change's own head. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."

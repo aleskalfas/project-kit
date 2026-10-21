@@ -300,6 +300,10 @@ class _Tree:
             self._read[name] = found
             return found
 
+    def names(self) -> tuple[str, ...]:
+        """Every name the tree holds, sorted."""
+        return tuple(sorted(name.decode("utf-8", "surrogateescape") for name in self._raw))
+
     def names_differing(self, other: _Tree) -> frozenset[str]:
         """The names this tree and `other` hold otherwise — a different entry, or one only."""
         return frozenset(
@@ -333,6 +337,13 @@ class TreeReader:
     def entry(self, commit: str, path: str) -> TreeEntry | None:
         folder, _, name = path.rpartition("/")
         return self._folder(commit, folder).get(name)
+
+    def listing(self, commit: str, folder: str) -> dict[str, TreeEntry]:
+        """Every entry directly in `folder` at `commit`, by name, sorted — files, folders
+        and links alike; none where the commit holds no such folder."""
+        tree = self._folder(commit, folder)
+        found = {name: tree.get(name) for name in tree.names()}
+        return {name: entry for name, entry in found.items() if entry is not None}
 
     def entries(self, commit: str, paths: Iterable[str]) -> dict[str, TreeEntry | None]:
         """The entry of each of `paths` at `commit`, `None` where it holds none — every

@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-21T14:26:09Z
+      at: 2026-10-21T18:17:50Z
       outcome: unchanged
-      unchanged-because: COR-062 leaves anchors in the document's block, checked by validation and the change check as before. Only answers move to answer files, which this use case does not write, so it holds.
+      unchanged-because: This change keeps the answer folder out of places and anchors, and validation now checks answer files. Anchoring a document and how validation checks its anchors are as the use case says.
 ---
 
 # UC-005 — Say what my document rests on
