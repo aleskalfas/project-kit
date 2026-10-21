@@ -33,11 +33,10 @@ pkit:
         - .pkit/schemas/backbone/package.schema.json
         - .pkit/schemas/backbone/filler.schema.json
         - hatch_build.py
-      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
+      record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-21T19:11:19Z
-      outcome: unchanged
-      unchanged-because: This change adds no package-metadata key and no lifecycle step. Discovery only leaves the answer folder out of the places, which the README does not describe.
+      at: 2026-10-21T21:47:20Z
+      outcome: updated
 ---
 
 # Lifecycle
@@ -487,6 +486,7 @@ A capability registers an anchor kind under `friction.kinds` ("Field layout and 
 - each entry is a repository-relative POSIX path naming a file of the state the check reads — the working tree's one listing for the change check and for validation, the named commit's files for the change check with `--head <rev>`, HEAD's files for the whole-repository check and the commands that read HEAD;
 - a path named twice counts once, and order does not matter;
 - an empty list is an answer: the value denotes nothing, and the anchor is dead.
+- an answer file it names is left out, since no anchor stands on one (COR-062 point 2), so an answer that names only answer files leaves the anchor dead, reported as `its resolver names only answer files (<n>), on which no anchor stands`.
 
 **Why this shape.** The engine must tell whether what an anchor denotes changed between two points — the revalidation point and now, or the change check's base and head. A resolver reads the files on disk alone: it takes one subject and cannot read the project at an older commit. So it answers where the anchored thing lives, and the engine does what it does for a path anchor: it reads those files' history from git. Nothing is stored — the friction block keeps no fingerprint and gains no field — and the resolver needs no history, no points and no knowledge of the engine.
 
