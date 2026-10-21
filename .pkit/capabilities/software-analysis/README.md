@@ -13,7 +13,7 @@ pkit:
         - .pkit/capabilities/software-analysis/review-contributions.yaml
         - .pkit/capabilities/software-analysis/package.yaml
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
-      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
+      artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
       at: 2026-10-21T12:12:32Z
       outcome: updated
