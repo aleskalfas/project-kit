@@ -27,8 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-20T09:39:05Z
-      outcome: updated
+      at: 2026-10-21T15:08:55Z
+      outcome: unchanged
+      unchanged-because: "Only pkit refs lookup changed in cli.py: it takes several citations, a point of a record and --json. This use case runs no lookup, so its steps hold as written."
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

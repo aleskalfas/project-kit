@@ -19,7 +19,7 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-21T13:01:00Z
+      at: 2026-10-21T15:09:17Z
       outcome: updated
 ---
 

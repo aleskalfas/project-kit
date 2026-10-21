@@ -13,9 +13,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T12:12:22Z
+          at: 2026-10-21T15:09:02Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains the Not built yet box and a use case's shortfalls. Needs and goals, and the voice they speak in, are untouched.
+          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}

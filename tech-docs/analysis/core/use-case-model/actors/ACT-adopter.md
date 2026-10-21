@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-21T12:12:19Z
+      at: 2026-10-21T15:09:00Z
       outcome: unchanged
-      unchanged-because: DEC-001 point 1 gains a use case's Not built yet boxes and its shortfalls, which a use case's writer keeps. The adopter's needs, such as choosing each kind's parts as it adopts the analysis, are untouched.
+      unchanged-because: DEC-001 point 1 now says the link command places a link at a citation too. Nothing the adopter actor states rests on how a tool reads a body.
 ---
 
 # ACT-adopter — Adopter

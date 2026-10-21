@@ -19,9 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-21T13:00:55Z
+      at: 2026-10-21T15:09:12Z
       outcome: unchanged
-      unchanged-because: The record lookup in refs.py now resolves a capability's decision as well. The README's account of the reference-graph check, pkit refs validate, is untouched.
+      unchanged-because: The record lookup in refs.py gains a point of a record, a rule's heading anchor and --json. The README's account of the reference-graph checks is unchanged.
 ---
 
 # project-kit

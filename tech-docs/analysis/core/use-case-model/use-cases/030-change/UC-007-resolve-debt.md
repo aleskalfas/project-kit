@@ -32,9 +32,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
     revalidated:
-      at: 2026-10-20T13:09:34Z
+      at: 2026-10-21T15:08:58Z
       outcome: unchanged
-      unchanged-because: The resolver's commands for the person gain pkit analysis link before an analysis-stale update, where an analysis keeps a domain model. Who proposes and who writes the answers on the debt are unchanged, so this use case holds as written.
+      unchanged-because: The resolver's commands now run pkit analysis link before an analysis-stale update in every analysis, since every analysis links its citations. Who proposes and who writes the answers on the debt is unchanged, so this use case holds as written.
       deferred:
         - anchor:
             kind: path

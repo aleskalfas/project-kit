@@ -87,8 +87,9 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-20T03:31:56Z
-      outcome: updated
+      at: 2026-10-21T15:09:16Z
+      outcome: unchanged
+      unchanged-because: cli.py changes pkit refs lookup alone, and document_parts.py gains GitHub's anchor of a heading. The CLI README describes neither.
 ---
 
 # Command-line interface

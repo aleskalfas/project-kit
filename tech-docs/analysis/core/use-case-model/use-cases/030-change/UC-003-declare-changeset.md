@@ -22,9 +22,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T10:10:45Z
+      at: 2026-10-21T15:08:47Z
       outcome: unchanged
-      unchanged-because: The required job gains a short form for a pull request head that changed only answers (ADR-067). The changeset guard runs on every pull request in both forms, so step 7 and variant 7a hold.
+      unchanged-because: "Only pkit refs lookup changed in cli.py: it takes several citations, a point of a record and --json. This use case runs no lookup, so its steps hold as written."
 ---
 
 # UC-003 — Declare what my change means for the next release
