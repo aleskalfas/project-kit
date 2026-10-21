@@ -2,6 +2,10 @@
 authors:
   - Aleš Kalfas <kalfas.ales@gmail.com>
 started: 2026-10-19
+retired: 2026-10-21
+produced:
+  - COR-062
+  - ADR-068
 ---
 
 # Answers merge cleanly — two pull requests that answer on one document both land
