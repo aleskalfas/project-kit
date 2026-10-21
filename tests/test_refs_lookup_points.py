@@ -166,6 +166,22 @@ def test_a_rule_resolves_to_its_place_and_its_heading_s_anchor() -> None:
     assert found[0].locations == ("tech-docs/rule-sets/writing.md#RS-WRITE-005",)
 
 
+def test_a_capability_s_decision_resolves_its_points_too() -> None:
+    """In this repository, a point of a capability's decision, with its slug or without,
+    resolves as a core record's does: its file and its heading's anchor."""
+    found = refs.lookup_citations(
+        REPO,
+        [
+            "software-analysis:DEC-001#13",
+            "software-analysis:DEC-001-software-analysis-discipline#1",
+        ],
+    )
+    path = ".pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md"
+    assert [(f.path, f.problem) for f in found] == [(path, None), (path, None)]
+    assert found[0].anchor == "13-a-citation-of-a-record-links-to-what-it-cites"
+    assert found[1].anchor == "1-what-it-keeps-and-in-what-shape"
+
+
 def test_the_command_answers_several_citations_and_as_data(records: Path) -> None:
     """Plain, each location on a line, and exit 1 naming what does not resolve; with
     `--json`, one object for each citation, in order, and exit 0."""
