@@ -211,6 +211,29 @@ def test_stamp_with_storyboard_declares_it_on_the_agent(kit_target: Path) -> Non
     assert "`storyboard.md`" in target.read_text(encoding="utf-8").split("---\n", 2)[2]
 
 
+COR_016 = (
+    Path(__file__).resolve().parent.parent
+    / ".pkit"
+    / "decisions"
+    / "core"
+    / "COR-016-scripted-scenario-storyboards.md"
+)
+
+
+def test_cor_016_declares_a_storyboard_as_the_stamp_does(kit_target: Path) -> None:
+    """COR-016's consumer-side example and `--with-storyboard` name the storyboard
+    the same way, by its bare sibling filename, so the record and the stamp agree."""
+    from ruamel.yaml import YAML
+
+    blocks = re.findall(r"```yaml\n(.*?)```", COR_016.read_text(encoding="utf-8"), re.S)
+    example = next(block for block in blocks if "storyboards:" in block)
+    declared = YAML(typ="safe").load(example.split("---\n")[1])["storyboards"]
+    target = agents.stamp_new_agent(
+        kit_target, name="review-agent", namespace="project", with_storyboard=True
+    )
+    assert declared == _front_matter(target)["storyboards"]
+
+
 def test_flat_stamp_declares_no_storyboard(kit_target: Path) -> None:
     target = agents.stamp_new_agent(kit_target, name="plain", namespace="project")
     assert "storyboards" not in _front_matter(target)

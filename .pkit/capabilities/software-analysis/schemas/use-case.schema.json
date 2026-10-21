@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "use-case.schema.json",
   "title": "A use case's own fields — software-analysis capability",
-  "description": "The front matter of one use case, a file `UC-NNN-<slug>.md` in `use-case-model/use-cases/` under the analysis location, optionally in a folder per functional area, whose name may open with a number such as `010-` (software-analysis DEC-001 points 1 to 3): one actor's goal and how the system fulfils it. The body says when it starts, the main path in numbered steps, the variants lettered after the step they branch from, and when it is done; steps and variants are append-only, since journeys and evidence cite them. These are the use case's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A use case anchors to its actor and to each other actor it involves, as artefact anchors, and to the code it exercises and the decisions it relies on: those it rests on and those that answer it. It anchors each architecture view that realises it too (DEC-001 points 4 and 11); the capability's check requires each actor anchor. It anchors each requirement it lists in `requirements`, and the check requires those anchors to match the list (DEC-002 point 7). Its optional `after` names each precondition's producers, and draws no anchor (DEC-001 point 1). Applied by `pkit software-analysis validate`; unknown fields are refused.",
+  "description": "The front matter of one use case, a file `UC-NNN-<slug>.md` in `use-case-model/use-cases/` under the analysis location, optionally in a folder per functional area, whose name may open with a number such as `010-` (software-analysis DEC-001 points 1 to 3): one actor's goal and how the system fulfils it. The body says when it starts, the main path in numbered steps, the variants lettered after the step they branch from, and when it is done; steps and variants are append-only, since journeys and evidence cite them. These are the use case's own fields: its friction block sits in the methodology's container beside them and is the core's (COR-050, COR-053 point 10). A use case anchors to its actor and to each other actor it involves, as artefact anchors, and to the code it exercises and the decisions it relies on: those it rests on and those that answer it. It anchors each architecture view that realises it too (DEC-001 points 4 and 11); the capability's check requires each actor anchor. It anchors each requirement it lists in `requirements`, and the check requires those anchors to match the list (DEC-002 point 7). Its optional `after` names each precondition's producers, and draws no anchor (DEC-001 point 1). Its optional `shortfalls` names each step or variant the system does not carry out yet, with its issue and its record (DEC-001 point 1). Applied by `pkit software-analysis validate`; unknown fields are refused.",
   "type": "object",
   "additionalProperties": false,
   "required": ["id", "title", "status", "actor"],
@@ -48,6 +48,36 @@
           ]
         },
         "contains": { "$ref": "analysis.schema.json#/$defs/use-case-id" }
+      }
+    },
+    "shortfalls": {
+      "description": "Each step or variant the system does not carry out yet, though an accepted record decides it (software-analysis DEC-001 point 1). Below each stands a box in the body's *Main path* or *Variants*, a block quote whose first line is `[!WARNING]` and whose text opens with `**Not built yet:**`, naming the issue and the record. Whatever any rule's status, the capability's check holds each box to an entry and each entry to a box, and requires each entry's record among the use case's record anchors, and accepted. The overview lists every entry of a use case in force under \"Not built yet\". The change that builds the behaviour removes the box and its entry. Absent where the system carries out every step and variant.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["at", "issue", "record"],
+        "properties": {
+          "at": {
+            "description": "The step or the variant, as the body numbers it: a step's number, such as `4`, or a variant's number and letter, such as `\"4a\"`.",
+            "anyOf": [
+              { "type": "integer", "minimum": 1 },
+              { "type": "string", "pattern": "^[1-9][0-9]*[a-z]?$" }
+            ]
+          },
+          "issue": {
+            "description": "The issue that tracks building the behaviour, as the project's tracker names it, in one word: such as `\"#1853\"`, quoted since YAML reads `#` as a comment, `PROJ-42`, or the issue's link. The box's text holds it as written.",
+            "type": "string",
+            "pattern": "^\\S+$"
+          },
+          "record": {
+            "description": "The accepted decision record that decides the behaviour, whole or one of its points, written as one of the use case's record anchors writes it, such as `COR-047#2` or `project-management:DEC-054#5`. The box names its id, the part before any `#`, such as `COR-047` or `DEC-054`.",
+            "type": "string",
+            "pattern": "^(?:(?:COR|PRJ|ADR)-[0-9]+|[a-z][a-z0-9-]*[a-z0-9]:DEC-[0-9]+(?:-[a-z0-9]+)*)(?:#[^#\\s]+)?$"
+          }
+        }
       }
     }
   }

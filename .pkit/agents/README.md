@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-19T19:45:59Z
+      at: 2026-10-21T14:09:59Z
       outcome: unchanged
-      unchanged-because: COR-050 gains a warning on an anchor on a shared id, never failed. The README's account of agents, of the friction writers and of who decides an answer is untouched.
+      unchanged-because: "COR-016 now declares a storyboard in storyboards: by its bare sibling filename, accepts a project-root-relative path, and says the deploy rewrites a sibling entry to the source path. The Storyboards section already says each of these, so it holds."
 ---
 
 # Agents

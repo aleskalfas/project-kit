@@ -30,9 +30,9 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-21T05:27:07Z
+      at: 2026-10-21T12:12:19Z
       outcome: unchanged
-      unchanged-because: DEC-001 point 1 drops the overview's read of a view's opening, so every tool but the one that links terms reads front matter alone. The adopter's need to choose each kind's parts as it adopts the analysis, which rests on that point, holds as written.
+      unchanged-because: DEC-001 point 1 gains a use case's Not built yet boxes and its shortfalls, which a use case's writer keeps. The adopter's needs, such as choosing each kind's parts as it adopts the analysis, are untouched.
 ---
 
 # ACT-adopter — Adopter

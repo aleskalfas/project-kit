@@ -71,7 +71,7 @@ When an agent owns multiple distinct scripted scenarios that don't share framing
 
 Other application classes (when they materialise) follow the analogous shape: a CLI command's storyboard sibling under `.pkit/cli/`, an interactive migration's storyboard sibling in the migration's directory, etc. The naming convention (`storyboard.md` or `<scenario-slug>.storyboard.md`) and source-only-with-runtime-read lifecycle stay the same.
 
-**Source-only, runtime-readable via source path.** Storyboards are not propagated by the adapter — they stay at their source location (`.pkit/agents/<ns>/<name>/storyboard.md` for agent storyboards). At runtime, the implementing artifact reads them directly from the source path; the harness's working directory is the project root, and `.pkit/` is committed alongside the rest of the project tree, so the path resolves cleanly via the artifact's `Read` tool. The agent body's reference to its storyboard is therefore **load-bearing** — the agent expects the storyboard at the declared path and instructs the runtime to load it at session start.
+**Source-only, runtime-readable via source path.** Storyboards are not propagated by the adapter — they stay at their source location (`.pkit/agents/<ns>/<name>/storyboard.md` for agent storyboards, `.pkit/capabilities/<capability>/agents/<name>/storyboard.md` for a capability's agent). At runtime, the implementing artifact reads them directly from the source path; the harness's working directory is the project root, and `.pkit/` is committed alongside the rest of the project tree, so the path resolves cleanly via the artifact's `Read` tool. The agent body's reference to its storyboard is therefore **load-bearing** — the agent expects the storyboard at the declared path and instructs the runtime to load it at session start.
 
 This is "source-only" in the deploy sense (the adapter doesn't copy storyboards to `.claude/`), but "runtime-accessible" in the operational sense (the runtime reads them from source). The combination keeps the storyboard as a single source of truth (no copy to drift from) while letting the agent execute scripted scenarios from a long-form spec rather than a compressed sketch.
 
@@ -87,11 +87,13 @@ name: review-agent
 description: ...
 tools: [Read, Edit, ...]   # Read is required when storyboards are declared
 storyboards:
-  - .pkit/agents/project/review-agent/storyboard.md
+  - storyboard.md
 ---
 ```
 
-`storyboards:` is a list of project-root-relative paths. Each entry must resolve to a file on disk. `pkit refs validate` checks both that the file exists and that the body cites the path. Tools must include `Read` so the runtime can load the file.
+`storyboards:` is a list of paths. Each entry names a storyboard by its bare sibling filename (`storyboard.md`, `<scenario-slug>.storyboard.md`), resolved against the consumer's own folder, and the body cites the same name. The sibling form stays right wherever the consumer's folder lives and when the folder moves. A project-root-relative path names the same file and is accepted too. Each entry must resolve to a file on disk. `pkit refs validate` checks both that the file exists and that the body cites the entry as written. Tools must include `Read` so the runtime can load the file.
+
+The deployed copy of the consumer lives elsewhere, where a bare sibling name resolves to nothing. So the deploy rewrites each sibling entry to the storyboard's project-root-relative source path, in the deployed copy's `storyboards:` and wherever its body cites the entry, and the runtime reads the storyboard from source.
 
 **Storyboard side:**
 
@@ -110,14 +112,14 @@ consumers:
 
 - `kind` — the consumer's artifact type. Today the only supported value is `agent`. Future application classes (per the "Other application classes" section above) add their own kinds (`cli`, `migration`, etc.) when they materialise.
 - `name` — the consumer's name, matching its frontmatter `name` field.
-- `namespace` — the consumer's namespace (`core` or `project` for agents).
+- `namespace` — the consumer's namespace (`core` or `project` for an agent of the agents area, the capability's name for a capability's agent).
 
 The list form (rather than a single `agent:` scalar) is intentional: today every storyboard has exactly one consumer, but the shape is the same for future cases where a storyboard is genuinely shared between multiple consumers. Adding a second consumer is a frontmatter edit, not a schema change.
 
 **Bidirectional consistency.** The validator checks:
 
 - Each declared consumer exists on disk.
-- Each declared consumer's frontmatter (`storyboards:` for agents) includes this storyboard's path.
+- Each declared consumer's frontmatter (`storyboards:` for agents) names this storyboard, in either form of its path.
 - The storyboard's filesystem location is consistent with one of its declared consumers' folder (the *primary owning* consumer — the one whose folder the storyboard sits in).
 - Storyboard files in an agent's folder must declare that agent as a consumer (orphan check).
 
@@ -184,8 +186,8 @@ There's a secondary reason: deploying storyboards alongside agents at `.claude/a
 - **Authoring tooling.** A new command `pkit new storyboard <artifact-kind> <name> [--scenario <slug>]` ships, paired (per COR-005) with a **`storyboard-author`** skill. The first positional identifies the kind of implementing artifact the storyboard belongs to. Today the only supported value is `agent`; future application classes (`cli`, `migration`, etc.) slot in as additional handlers without renaming the command. The command stamps `storyboard.md` (or `<slug>.storyboard.md` with `--scenario`) at the location appropriate for the artifact kind. The skill walks the author through framing, tone, and scenario sections, applying the disciplines.
 
   Concretely today:
-  - `pkit new storyboard agent <name>` → stamps `.pkit/agents/<ns>/<name>/storyboard.md` (resolves namespace by looking up where the named agent lives; errors if ambiguous).
-  - `pkit new storyboard agent <name> --scenario <slug>` → stamps `.pkit/agents/<ns>/<name>/<slug>.storyboard.md` alongside.
+  - `pkit new storyboard agent <name>` → stamps `storyboard.md` in the named agent's folder, `.pkit/agents/<ns>/<name>/` or a capability's `agents/<name>/`. It finds the agent where agents ship from, in the deploy's order, so it stamps beside the agent that deploys; `--namespace` pins the lookup to one location.
+  - `pkit new storyboard agent <name> --scenario <slug>` → stamps `<slug>.storyboard.md` in the same folder.
 
 - **`pkit new agent` updates.** The command surfaces the scripted-scenario question at namespace/name choice: *does this agent drive any scripted workflows?* If yes, it stamps folder-form per COR-015 with a sibling storyboard scaffold. If no, flat form as today. The question is independent of the agent's role — an agent can answer "no" today and gain a storyboard later when a scripted scenario emerges.
 
@@ -193,9 +195,9 @@ There's a secondary reason: deploying storyboards alongside agents at `.claude/a
 
 - **Agents area README.** Gains a "Storyboards" section covering: what a scripted scenario is, the three-layer storyboard structure, location convention (sibling to the owning agent), source-only lifecycle, and the multiple-scenarios-per-agent shape.
 
-- **Adapter deploy primitives are unchanged.** Storyboards stay at source; deploy operates on the agent file alone. No new exclusion rule needed — siblings other than the canonical `<name>.md` were already ignored. The runtime reads storyboards from their source path (`.pkit/agents/<ns>/<name>/storyboard.md`) using the agent's `Read` tool.
+- **Adapter deploy primitives copy no storyboard.** Storyboards stay at source; deploy operates on the agent file alone, and ignores siblings other than the canonical `<name>.md`. In the agent file it deploys, it rewrites each storyboard declared by its sibling name to the storyboard's source path (`.pkit/agents/<ns>/<name>/storyboard.md`), where the runtime reads it using the agent's `Read` tool.
 
-- **Two-sided frontmatter.** Consumers (today: agents) declare their storyboards via `storyboards:` (list of paths). Storyboards declare their consumers via `consumers:` (list of `{kind, name, namespace}` entries). The agent's `tools` must include `Read` when `storyboards:` is non-empty. The `consumers:` list shape supports future multi-consumer sharing without schema change; today every storyboard has exactly one consumer.
+- **Two-sided frontmatter.** Consumers (today: agents) declare their storyboards via `storyboards:` (list of paths, each a sibling filename or a project-root-relative path). Storyboards declare their consumers via `consumers:` (list of `{kind, name, namespace}` entries). The agent's `tools` must include `Read` when `storyboards:` is non-empty. The `consumers:` list shape supports future multi-consumer sharing without schema change; today every storyboard has exactly one consumer.
 
 - **Reference graph (`pkit refs validate`).** Extended to walk both sides of the storyboard relationship:
   - Each consumer's declared storyboard path exists on disk and is cited in the consumer's body; the consumer's tools include `Read`.
@@ -203,7 +205,7 @@ There's a secondary reason: deploying storyboards alongside agents at `.claude/a
   - Storyboard files present in a consumer's folder must declare that consumer (orphan check).
   Cross-references between consumers and their storyboards become part of the graph.
 
-- **Authoring tooling stamps both sides.** `pkit new storyboard agent <name>` writes the `consumers:` frontmatter on the storyboard automatically (filling `kind: agent`, `name`, `namespace` from context); `pkit new agent <ns> <name> --with-storyboard` does the same for the storyboard scaffold it stamps. The author doesn't hand-write the cross-references on first stamp.
+- **Authoring tooling stamps the cross-references.** `pkit new agent <ns> <name> --with-storyboard` stamps both sides: the agent's `storyboards:` names the sibling `storyboard.md` and its body cites it, and the storyboard's `consumers:` names the agent. `pkit new storyboard agent <name>` writes the `consumers:` frontmatter on the storyboard it stamps beside an existing agent (filling `kind: agent`, `name`, `namespace` from context); the author then declares the storyboard's sibling name in the agent's `storyboards:` and cites it in the body.
 
 - **Existing agents are not retroactively migrated.** The discipline applies to new scripted scenario authoring. Existing agents whose authors find the prose-only form sufficient can stay; those who want to formalize a scripted scenario they're already running can adopt the storyboard pattern voluntarily — adding `storyboards:` to their frontmatter, ensuring `Read` is in their tools, and writing a body that loads + follows the declared storyboards.
 

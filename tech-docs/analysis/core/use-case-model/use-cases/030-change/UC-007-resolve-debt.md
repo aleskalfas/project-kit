@@ -39,6 +39,15 @@ pkit:
     revalidated:
       at: 2026-10-21T13:49:30Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
+          reason: "The resolver's commands gain the boxed regression, revalidated as updated. Variant 4a names only the unchanged case until #1856 revises it."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001#5
+          reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 4a names only the unchanged case until #1856 revises it."
 ---
 
 # UC-007 — Resolve what the default branch left out of date

@@ -163,6 +163,11 @@ JUDGEMENT_RULES = {
         "builds on. No term takes a name another term in force replaces.",
         ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"],
     ),
+    "RS-SAN-013": (
+        "A use case describes a step or a variant the system has never carried out only "
+        "where an accepted decision record decides it, and a box below it says so.",
+        ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"],
+    ),
 }
 #: Each judgement rule's origin, where a decision record holds it. The source rule's is
 #: the maintainer's decision of 17 October (#1648, choice 6), which no record holds.
@@ -176,6 +181,7 @@ ORIGINS = {
     "RS-SAN-010": "software-analysis:DEC-001",
     "RS-SAN-011": "software-analysis:DEC-004",
     "RS-SAN-012": "software-analysis:DEC-001",
+    "RS-SAN-013": "software-analysis:DEC-001",
 }
 SOURCE_RULE = "RS-SAN-007"
 #: The concept rule (#1784): what an artefact uses of the domain, the glossary defines.
