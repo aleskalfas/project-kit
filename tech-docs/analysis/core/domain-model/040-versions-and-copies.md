@@ -40,6 +40,10 @@ pkit:
         - TERM-source-repository
         - TERM-distribution
         - TERM-component-origin
+    revalidated:
+      at: 2026-10-21T14:26:02Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 14 stays as it was, and COR-062 adds that a synced artefact owes no answer. The view's account of versions and synced copies holds.
 ---
 
 # VIEW-versions-and-copies — Versions and copies

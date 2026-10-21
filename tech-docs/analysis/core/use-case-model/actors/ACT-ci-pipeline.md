@@ -18,9 +18,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-20T01:36:53Z
+      at: 2026-10-21T14:26:03Z
       outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
+      unchanged-because: COR-050 changes in its partial supersession and points 6 and 9. The pipeline still runs the checks unattended against one named base, and they bind once required, so the actor holds.
 ---
 
 # ACT-ci-pipeline — CI pipeline

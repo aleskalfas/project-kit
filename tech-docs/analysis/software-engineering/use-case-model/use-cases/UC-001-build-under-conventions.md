@@ -26,9 +26,9 @@ pkit:
         - COR-017
         - COR-031
     revalidated:
-      at: 2026-10-20T10:10:43Z
+      at: 2026-10-21T14:26:06Z
       outcome: unchanged
-      unchanged-because: Project rule 2 adds that CI skips the suite on a pull request whose only changes since a passing full run are answers. The agent still runs the tests of what it changed and leaves the full suite to the pre-push hook and CI, as the use case says.
+      unchanged-because: DEC-032 D1 now leaves the answer folder out of the code floor, and COR-050 point 3 keeps who writes and checks an answer. The agent still writes its change's answers and its reviewers judge them.
 ---
 
 # UC-001 — Build my change under my project's conventions

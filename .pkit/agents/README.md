@@ -22,6 +22,11 @@ pkit:
       at: 2026-10-21T13:00:56Z
       outcome: unchanged
       unchanged-because: The record lookup in refs.py now resolves a capability's decision as well. What pkit refs validate checks of an agent's references and its owns entries is untouched.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction writers write an answer the artefact carries and owe a combined state after a conflict, which COR-062 replaces with answer files. #1779 builds it and rewrites the section."
 ---
 
 # Agents
