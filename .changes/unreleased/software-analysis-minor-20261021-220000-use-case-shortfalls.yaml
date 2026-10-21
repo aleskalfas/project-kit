@@ -2,6 +2,7 @@ component: software-analysis
 kind: minor
 custom:
   category: Added
+  requires_backbone: release
 body: >
   A use case shows where the system falls short of an accepted record. Below
   each step or variant the system does not carry out yet stands a box, a
@@ -10,7 +11,9 @@ body: >
   lists each one as data: its step or variant, its issue and its record.
   `pkit analysis validate` holds each box to an entry and each entry to a box,
   whatever any rule's status, and requires each entry's record among the use
-  case's record anchors, and accepted. The overview ends with a "Not built
+  case's record anchors, and accepted, found through `pkit refs lookup`,
+  which the backbone this release ships resolves a capability's decision with:
+  upgrade the capability together with the backbone. The overview ends with a "Not built
   yet" section listing every open shortfall. Its fingerprint reads the
   entries, and its version is 3, so an overview written before is a warning
   until `pkit analysis overview` writes it anew. DEC-001 points 1, 5 and 9

@@ -155,9 +155,8 @@ What is checked, each against the record's words:
   `shortfalls` that names that step or variant, an issue the box holds and a record
   whose id it names, and each entry to a box. Each entry's step or variant is one the
   body numbers, and its record is one of the use case's record anchors, written alike,
-  and accepted, as the record's front matter says. Where the record lies is the
-  backbone's answer (`pkit refs lookup`), a capability's decision read from its
-  capability's `decisions` folder.
+  and accepted, as the record's front matter says. Where the record lies, a
+  capability's decision included, is the backbone's answer (`pkit refs lookup`).
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:

@@ -40,9 +40,10 @@ backbone through its commands:
   each marked when it binds only under the preview. The script never walks a
   rule set's scope or inheritance itself;
 - **where a record lies** — `pkit refs lookup <id>`: the file a core, project or
-  architecture record's id names, whose status the check of a use case's shortfalls
-  reads (DEC-001 point 1). A capability's decision lies in its capability's
-  `decisions` folder, read there as its package metadata is (`record_file`);
+  architecture record's id names, or a capability's decision's,
+  `<capability>:DEC-NNN`, whose status the check of a use case's shortfalls reads
+  (DEC-001 point 1; `record_file`). The script never looks for a record's file
+  itself;
 - **one data point as it resolves** — `pkit connections resolve <address>
   --json`: the check reads the evidence point the capability defines
   (DEC-001 point 7) through it. The command exits 1 on a point that does not
@@ -88,7 +89,6 @@ from __future__ import annotations
 import itertools
 import json
 import os
-import re
 import subprocess
 import sys
 from collections.abc import Callable, Iterable, Mapping
@@ -372,37 +372,11 @@ def location_recorded(root: Path, run: Runner = subprocess.run) -> bool:
     return proc.returncode == 0 and (proc.stdout or "").strip().endswith("(recorded already)")
 
 
-#: A capability's decision as a record anchor names it, `<capability>:DEC-NNN`, with its
-#: slug after the number or not (COR-050 point 2).
-_CAPABILITY_RECORD = re.compile(
-    r"^(?P<capability>[a-z][a-z0-9-]*[a-z0-9]):(?P<number>DEC-[0-9]+)(?P<slug>(?:-[a-z0-9]+)*)$"
-)
-
-#: Where a capability keeps its decisions, as its package metadata lies in its folder.
-DECISIONS = ".pkit/capabilities/{name}/decisions"
-
-
 def record_file(root: Path, record: str, run: Runner = subprocess.run) -> str | None:
-    """The file a record's id names, repository-relative; `None` where it names none. A
-    capability's decision, `<capability>:DEC-NNN`, lies in its capability's `decisions`
-    folder, as its package metadata lies in its folder. A core, project or architecture
-    record is the backbone's to resolve, through `pkit refs lookup`, which reads where the
-    project keeps its architecture records. Raises Unreadable where `pkit` cannot be run."""
-    found = _CAPABILITY_RECORD.match(record)
-    if found is not None:
-        folder = DECISIONS.format(name=found["capability"])
-        number, slug = found["number"], found["slug"]
-        names = sorted(p.name for p in (root / folder).glob(f"{number}*.md") if p.is_file())
-        wanted = [
-            n
-            for n in names
-            if (
-                n == f"{number}{slug}.md"
-                if slug
-                else n == f"{number}.md" or n.startswith(f"{number}-")
-            )
-        ]
-        return f"{folder}/{wanted[0]}" if wanted else None
+    """The file a record's id names, repository-relative, as `pkit refs lookup` resolves
+    it: a core, project or architecture record, or a capability's decision,
+    `<capability>:DEC-NNN`; `None` where it names none. Raises Unreadable where `pkit`
+    cannot be run."""
     proc = _run(root, ["pkit", "refs", "lookup", record], run)
     lines = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
     return lines[-1] if proc.returncode == 0 and lines else None

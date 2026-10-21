@@ -869,7 +869,7 @@ While any of these stands, none of the file applies: the check holds no body to 
 - **a `Not built yet` box out of its place or form** — inside an item, above a part's first item, below an item that opens with no step's number or variant's label, or outside *Main path* and *Variants*; with no blank line below it; or a block quote whose text opens with "Not built yet" in another form, such as under `[!NOTE]` (what the system does not do yet, in [The artefacts](#the-artefacts), above);
 - **a box with no entry in `shortfalls`, or an entry with no box** — an entry's box stands below its step or variant, holds its issue as written, and names its record's id. The message names what to write;
 - **an entry naming a step or a variant the body does not number**;
-- **an entry's record that is no record anchor of the use case, names no record, or is not accepted** — a shortfall rests on its record, and only an accepted record grounds a step the system does not carry out. The check reads the record's `status` in its own front matter. The backbone's `pkit refs lookup` finds a core, project or architecture record, and a capability's decision lies in its capability's `decisions` folder.
+- **an entry's record that is no record anchor of the use case, names no record, or is not accepted** — a shortfall rests on its record, and only an accepted record grounds a step the system does not carry out. The check reads the record's `status` in its own front matter. The backbone's `pkit refs lookup` finds the record's file, a capability's decision's included.
 
 The check reads the boxes and `shortfalls` of each use case in force, whatever any rule's status, since the overview lists the entries wherever it is kept. A withdrawn use case is history, so it is not read.
 
