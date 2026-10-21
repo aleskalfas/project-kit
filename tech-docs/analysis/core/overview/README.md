@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=1 fingerprint=sha256:11c39f795e2eaaac1bfdccbf747ce5d3b0d69d59252472cc51e1027805d5711e -->
+<!-- pkit:overview reads=2 fingerprint=sha256:cb05dc24256151098ace05d2d3665d7c6555c98490052df2e22f3291a8786588 -->
 
 What the analysis of core holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
@@ -10,25 +10,105 @@ The [glossary](../glossary.md) defines each term.
 
 Each view of the domain model explains a group of related concepts:
 
-- [VIEW-the-system-and-its-methodology — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md): A way of working that only a few people know cannot be handed on, and one written as loose prose cannot be trusted (COR-007, COR-051). Each choice needs its reasons recorded, and each part that others cite needs a name that never moves (COR-025, COR-051, COR-058). Nothing should bind before a review accepts it (COR-051). The methodology also works inside sessions that another tool hosts, and relies on behaviour it cannot set (COR-047).
-- [VIEW-parts-of-the-system — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md): The system has parts that work only together, and parts that can move alone (COR-010). Whoever takes up a newer version of a part needs to know whether it breaks what works (COR-010). The methodology's content must reach more than one harness, with each kind of content in a home of its own (COR-006). It must also enter repositories that already hold files (COR-017).
-- [VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md): Some disciplines suit only some projects, yet forcing them on every project is wrong, and copying them into each loses their reuse (COR-017). A component can also fail without a word when what it builds on changes incompatibly (COR-030). Other components must help each other without either depending on the other (COR-052, COR-053). Every project also needs fixed homes, with declared layouts, for its kinds of content (COR-011).
-- [VIEW-versions-and-copies — Versions and copies](../domain-model/040-versions-and-copies.md): A project holds copies of the methodology's files so improvements reach it (COR-001). It also needs a routine repair that rebuilds those copies, and moves no version (COR-059). If its files move to a newer version without the migrations between, it holds content they never reached, and nothing says so (COR-059).
-- [VIEW-a-projects-own-files — A project's own files](../domain-model/050-a-projects-own-files.md): A project adds content of its own, which the methodology must never take away (COR-001). Yet some of its files need entries the methodology ships (COR-002). Overwriting such a file destroys the project's entries, and writing it only once misses later ones (COR-002). Facts that no part owns, such as the project's name, must not be guessed either (COR-048).
-- [VIEW-changes-review-and-releases — Changes, review and releases](../domain-model/060-changes-review-and-releases.md): Work reaches the shared history in logical units, each best judged before it lands, while a fix is still cheap (COR-009, COR-050). A check that compares such a unit with the wrong state of the shared history asks another question, and its result still looks right (COR-054). Whoever hits a problem with the system needs a way to raise it with the distribution it came from (PRJ-008). A version should move only for what someone could break against, so that the number stays a signal (PRJ-002).
-- [VIEW-artefacts-and-friction — Artefacts and friction](../domain-model/070-artefacts-and-friction.md): A document is true only against something, such as the code it explains or a decision it applies (COR-050). When that changes and the document does not, it goes stale, and a review of the edit seldom sees it (COR-050). Rules need the same tracking, and must reach only the artefacts meant for them (COR-051, COR-056).
+- [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md)
+- [020 — Parts of the system, and projects](../domain-model/020-parts-of-the-system.md)
+- [030 — Capabilities, areas and connection points](../domain-model/030-capabilities-areas-and-connection-points.md)
+- [040 — Versions and copies](../domain-model/040-versions-and-copies.md)
+- [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
+- [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
+- [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
 
 ## Actors
 
-- [ACT-adopter — Adopter](../use-case-model/actors/ACT-adopter.md)
-- [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md)
-- [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md)
-- [ACT-component-author — Component author](../use-case-model/actors/ACT-component-author.md)
-- [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md)
-- [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md)
-- [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md)
-- [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md)
-- [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md)
+### [ACT-adopter — Adopter](../use-case-model/actors/ACT-adopter.md)
+
+The use cases it is the main actor of:
+
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+
+The use cases it takes part in:
+
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+
+### [ACT-ai-agent — AI agent](../use-case-model/actors/ACT-ai-agent.md)
+
+The use cases it takes part in:
+
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+
+### [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md)
+
+The use cases it takes part in:
+
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+- [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
+- [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md)
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+
+### [ACT-component-author — Component author](../use-case-model/actors/ACT-component-author.md)
+
+The use cases it is the main actor of:
+
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-018 — Know my capability is ready to share](../use-case-model/use-cases/010-develop/UC-018-check-shareable.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+
+### [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md)
+
+The use cases it is the main actor of:
+
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+- [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
+- [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
+- [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+
+### [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md)
+
+The use cases it takes part in:
+
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+
+### [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md)
+
+The use cases it is the main actor of:
+
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+
+The use cases it takes part in:
+
+- [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+
+### [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md)
+
+No use case names it yet.
+
+### [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md)
+
+No use case names it yet.
 
 ## Areas
 

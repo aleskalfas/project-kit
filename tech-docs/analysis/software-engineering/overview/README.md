@@ -1,12 +1,30 @@
 # Overview of the analysis of software-engineering
 
-<!-- pkit:overview reads=1 fingerprint=sha256:dd22a8f5cdbb1a2543ac52487d70be85f927588e4fa4537b31332c03401acae6 -->
+<!-- pkit:overview reads=2 fingerprint=sha256:bbf99c84acaf2d12f0ce1cf5bf785ed7400483b3d23688b7117b7e3c4f805ece -->
 
 What the analysis of software-engineering holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
 ## Concepts
 
 The [glossary](../glossary.md) defines each term.
+
+## Actors
+
+### core:ACT-ai-agent — AI agent
+
+An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists.
+
+The use cases it takes part in:
+
+- [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
+
+### core:ACT-developer — Developer
+
+An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists.
+
+The use cases it is the main actor of:
+
+- [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
 
 ## Use cases
 
