@@ -2,6 +2,19 @@
 # project chooses. The capability's README describes each, in its section
 # "Configuration".
 #
+# - `analyses` — the analyses the project keeps, one per component that keeps
+#   one (software-analysis DEC-001 point 2): each with its component, the
+#   folder of the analysis location it lies in, named after the component, and
+#   the analyses it builds on. Left out, the project keeps one analysis, at the
+#   top of the analysis location.
+# - `areas` — each area of an analysis's use cases with its goal, one line
+#   beside the area's folder name that says what the area makes possible
+#   (software-analysis DEC-003 point 8): in a listed analysis's entry, or at
+#   the file's top for the one analysis at the location's top. The overview
+#   shows each goal beside its area.
+# - `overview` — whether each analysis keeps its generated overview, the
+#   reader's entry point (software-analysis DEC-003 point 8). True unless set.
+#   Set to false, the stamp writes none and the check asks for none.
 # - `numbering.freed-by` — ids a person declares free again, declaring that
 #   nothing cites them: a pilot abandoned before anything cited it, say
 #   (software-analysis DEC-001 point 3). Each entry names the commit that
@@ -28,6 +41,10 @@ binds_to:
 pkit_schema: software-analysis:config
 
 # --- reference instance -------------------------------------------------
+
+analyses: []
+
+overview: true
 
 numbering:
   freed-by: []

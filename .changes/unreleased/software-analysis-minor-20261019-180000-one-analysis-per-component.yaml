@@ -1,0 +1,31 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  DEC-001 decides how an analysis is built from what is already true, and how
+  a project with several components keeps one analysis per component (#1809).
+  The capability reads none of it yet: a later release builds it, and every
+  part stays optional for a project.
+  **Preconditions (point 1).** Each precondition names its producers, the use
+  cases that make it true, such as `**From UC-003:**`. A producer is another
+  use case of the same analysis, or the use case itself. What the environment
+  gives alone is an assumption, stated once. A use case's optional `after`
+  lists the producers as data, and draws no anchor.
+  **One analysis per component (points 2, 3, 4 and 8).** A component may keep
+  an analysis of its own, where it is developed, and never ships it. An
+  analysis builds only on the analyses of the components its component depends
+  on. Its glossary's head lists the terms and actors it takes from them, by
+  name with a link, and its artefacts anchor the records behind them. Only
+  the actors a use case, a journey or a requirement names may be another
+  analysis's. Journeys and the chain of preconditions stay within one
+  analysis. Ids are unique across a
+  repository's analyses, with one numbering of each numbered kind, and
+  DEC-002 point 2 numbers requirements the same way. An area's folder may
+  open with a number, which gives the order the areas build in (point 12).
+  `SAN` holds two new judgement rules, proposed: `RS-SAN-009`, the rule of
+  logical consequence, with the check a script can hold and its seven limits,
+  and `RS-SAN-010`, which lets an analysis name only the analyses its
+  component depends on. `RS-SAN-003`, `RS-SAN-004`, `RS-SAN-005` and
+  `RS-SAN-008` read an actor or a term of another analysis. Proposed rules
+  bind nothing, so `SAN` stays at 1.0.0.

@@ -13,8 +13,26 @@ you changed, `uv run pytest -q tests/test_<module>.py ...`, and the fast gates,
 `uv run pkit migrations check-diff`, `uv run pkit decisions check-diff` and
 `uv run pkit release check`.
 
+**CI skips the suite where only answers changed.** On a pull request whose only
+changes since its most recent full run, which passed, are answers, CI runs the
+short check: the aggregator without the suite (ADR-067, and
+[CONTRIBUTING.md](../CONTRIBUTING.md), "Running checks"). Of the suite, it runs
+only the tests marked `answers`.
+
+- **Mark a test `@pytest.mark.answers`** when what it asserts can change with
+  the repository's own answers, the `revalidated` blocks and `revisited` lists
+  of its files, beyond what `pkit validate` checks. An example is a test that
+  every declared place carries a revalidation. So can a test that reads an
+  artefact file's bytes: one that compares the file whole with a copy, hashes
+  it, or reads its line numbers.
+- **No mark is needed** for a test that only runs a validator over the tree.
+  The short check runs `pkit validate` itself.
+- **Unmarked,** such a test is skipped where only answers changed. An answer it
+  would reject passes the short check, and the full run on `main` finds it after
+  the landing.
+
 **The full suite runs in parallel.** `scripts/check.sh` — the one command the
-pre-push hook and CI run, with no arguments in both — runs it in
+pre-push hook and CI's full run call, with no arguments in both — runs it in
 [pytest-xdist](https://pytest-xdist.readthedocs.io/) workers, `-n auto` (one per
 CPU), and then the tests marked `serial` on their own, in one process, in the
 same step. `PKIT_TEST_WORKERS` sets the number of workers; `0` runs the whole

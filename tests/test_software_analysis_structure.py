@@ -472,6 +472,7 @@ def test_the_declaration_is_read_whole_or_not_at_all(tmp_path: Path) -> None:
     assert sorted(KINDS) == [
         "actor",
         "constraint",
+        "domain-model-view",
         "functional-requirement",
         "journey",
         "quality-requirement",

@@ -14,7 +14,7 @@ import math
 import os
 import shlex
 import sys
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Generator, Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -27,6 +27,7 @@ if TYPE_CHECKING:
 
 from project_kit import (
     __version__,
+    agent_runs,
     cli_render,
     default_branch,
     friction_check,
@@ -323,6 +324,289 @@ def agents_adopt(agent_name: str, yes: bool) -> None:
         lines.append("")
         lines.append(cli_render.style("strong", f"agent {agent_name!r} deployed."))
     click.echo("\n".join(lines))
+
+
+class _AskedToStop(BaseException):
+    """`SIGTERM` or `SIGHUP` reached `agents run`. Raised so the run stops its
+    runner as an interrupt would, rather than leaving it behind."""
+
+    def __init__(self, signum: int) -> None:
+        super().__init__(signum)
+        self.signum = signum
+
+
+@contextlib.contextmanager
+def _stops_on_signal() -> Generator[None]:
+    """While the block runs, `SIGTERM` and `SIGHUP` raise `_AskedToStop`.
+
+    A caller that ends `agents run` at its own bound, as project-management
+    does, asks it to stop with `SIGTERM`. Python would otherwise exit at once,
+    and the runner, in a session of its own, would run on. Raised here, the
+    signal stops the runner as an interrupt does. The first signal sets both
+    to be ignored, so a second one cannot cut short the stop it began. Off
+    the main thread no handler can be set, and the block runs without one.
+
+    A project pinned to another backbone version runs this command through the
+    router's `uvx`, which a `SIGTERM` to the router does not reach. There the
+    runner still ends the harness at the run's limit."""
+    import signal
+
+    def asked_to_stop(signum: int, _frame: object) -> None:
+        for each in (signal.SIGTERM, signal.SIGHUP):
+            signal.signal(each, signal.SIG_IGN)
+        raise _AskedToStop(signum)
+
+    previous: dict[int, Any] = {}
+    try:
+        for signum in (signal.SIGTERM, signal.SIGHUP):
+            previous[signum] = signal.signal(signum, asked_to_stop)
+    except ValueError:  # not the main thread
+        pass
+    try:
+        yield
+    finally:
+        for signum, handler in previous.items():
+            signal.signal(signum, handler)
+
+
+@agents.command("run")
+@click.argument("agent_name", metavar="AGENT")
+@click.option(
+    "--folder",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    default=None,
+    help="The folder an unconfined run runs in. The run takes the person's and the project's "
+    "settings there, as a session started in it would.",
+)
+@click.option(
+    "--commit",
+    default=None,
+    metavar="SHA",
+    help="Confined: the full id of the commit the run's clone is made at.",
+)
+@click.option(
+    "--rules-of",
+    "rules_of",
+    default=None,
+    metavar="CAPABILITY:COMMAND",
+    help="Confined: the command whose run rules hold the run.",
+)
+@click.option(
+    "--files-to",
+    "files_to",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True, path_type=Path),
+    default=None,
+    help="Confined: the folder the run's files are copied to after the run.",
+)
+@click.option(
+    "--limit",
+    "limit_seconds",
+    type=click.IntRange(1, agent_runs.MAX_LIMIT_SECONDS),
+    required=True,
+    metavar="SECONDS",
+    help="The run's wall-clock limit. At it the runner ends the harness and the processes "
+    "still descended from it.",
+)
+@click.option(
+    "--effort",
+    type=click.Choice(agent_runs.EFFORT_LEVELS),
+    default=None,
+    help="The effort level the agent reasons at. Unset: the agent's own, else the harness default.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def agents_run(
+    agent_name: str,
+    folder: Path | None,
+    commit: str | None,
+    rules_of: str | None,
+    files_to: Path | None,
+    limit_seconds: int,
+    effort: str | None,
+    as_json: bool,
+) -> None:
+    """Run AGENT once, with nobody watching, on the brief read from standard input.
+
+    The one way a command starts an agent (ADR-066 point 1). The backbone
+    starts the runner the project's adapter registers in its `commands:` tree
+    as `run-agent`. With no adapter's runner, or more than one, the run is
+    refused and the refusal names the adapters. Inside an agent run, where
+    `PKIT_AGENT_RUN` is set at all, it is refused before anything is read
+    (ADR-066 point 8). Inside a command the backbone runs, it is refused too.
+    No runner passes a flag that bypasses permissions (ADR-066 point 4).
+
+    \b
+    Two forms:
+    - Unconfined, with --folder: the runner starts the harness in FOLDER, in
+      the mode the settings there, or the harness, choose.
+    - Confined, with --commit, --rules-of and --files-to, together: the run
+      runs in a fresh clone at the commit, held by the run rules of the named
+      command, and its files are copied to the folder after the clone is
+      checked (ADR-066 points 6 and 7). The brief's markers
+      {{pkit:working-copy}}, {{pkit:workspace}}, {{pkit:temp}} and
+      {{pkit:commit}} are replaced with the run's values.
+
+    \b
+    With --json, one line of JSON, keys sorted: `schema_version` (1), `agent`,
+    `runner` (the adapter, or null), `ending` (`finished`, `not-started`,
+    `timed-out`, `refused`, `no-answer`), `exit_code` (the harness's, when it
+    finished), `output` (the agent's), `diagnostics`, `reason`,
+    `refused_calls` (the calls the harness refused), `confined`, and for a
+    confined run `commit`, `check` (`verdict`: `clean`, `breach` or
+    `not-run`, and its `changes`), `files` (the folder, once copied) and
+    `excluded` (the commands run outside the sandbox). Without it, the agent's
+    output, and on standard error how the run ended, and for a confined run
+    the check and the excluded commands.
+
+    Exit 0 when the harness finished and exited 0; 1 on any other ending; 2 on a
+    usage error. A caller decides on the document's `ending`, never on the exit.
+    Reference: `.pkit/cli/README.md`, "Agent runs".
+    """
+    confined_options = (commit, rules_of, files_to)
+    confined = folder is None and any(option is not None for option in confined_options)
+    marked = agent_runs.inside_a_run(agent_name, confined=confined, commit=commit)
+    if marked is not None:
+        sys.exit(_show_agent_run(marked, as_json))
+    if folder is not None and confined_options != (None, None, None):
+        raise click.UsageError("--folder and --commit, --rules-of, --files-to exclude each other.")
+    if folder is None and None in confined_options:
+        raise click.UsageError(
+            "give --folder, or --commit, --rules-of and --files-to, all three together."
+        )
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    brief = click.get_binary_stream("stdin").read().decode("utf-8", errors="replace")
+    request = agent_runs.Request(
+        agent=agent_name,
+        brief=brief,
+        folder=None if folder is None else folder.resolve(),
+        limit_seconds=limit_seconds,
+        effort=effort,
+        commit=commit,
+        rules_of=rules_of,
+        files_to=None if files_to is None else files_to.resolve(),
+    )
+    problem = request.problem(target_root)
+    if problem is not None:
+        raise click.UsageError(problem)
+
+    try:
+        with _stops_on_signal():
+            run = agent_runs.run_agent(target_root, request)
+    except _AskedToStop as stopped:
+        sys.exit(128 + stopped.signum)
+    sys.exit(_show_agent_run(run, as_json))
+
+
+def _show_agent_run(run: agent_runs.AgentRun, as_json: bool) -> int:
+    """Show how `run` ended (`agents run`), and return the command's exit status."""
+    if as_json:
+        click.echo(agent_runs.render_json(run), nl=False)
+    else:
+        if run.output:
+            click.echo(run.output, nl=not run.output.endswith("\n"))
+        click.echo(f"agent {run.agent}: {run.described}", err=True)
+        if run.check is not None:
+            click.echo(f"check: {run.check.verdict}", err=True)
+            for change in run.check.changes:
+                click.echo(f"  {change}", err=True)
+        for command in run.excluded:
+            click.echo(f"excluded from the sandbox: {shlex.join(command)}", err=True)
+    return 0 if run.succeeded else 1
+
+
+@agents.command("rules")
+@click.argument("rules_of", metavar="CAPABILITY:COMMAND")
+@click.option(
+    "--agent",
+    "agent_name",
+    default="",
+    metavar="AGENT",
+    help="Bring along the session model's denies for AGENT too, as a run of it does.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def agents_rules(rules_of: str, agent_name: str, as_json: bool) -> None:
+    """Show what a confined run of CAPABILITY:COMMAND is allowed and denied (ADR-066 point 5).
+
+    Reads the rules CAPABILITY declares for the runs COMMAND starts, in its
+    `permissions/runs.yaml`, fills in the backbone's reading commands and the
+    queries other components declare, and projects them through the shared
+    decision core, as the run command does for a run, with the session model's
+    denies for every agent (and for AGENT, with --agent) brought along. Each
+    folder of the run is named by the marker a brief names it with,
+    `{{pkit:working-copy}}` or `{{pkit:workspace}}`. Read-only.
+
+    \b
+    With --json: `schema_version` (1), `rules_of`, `refused` (why no run
+    starts under these rules, or null), `allow` and `deny` (each rule as
+    `{"tool"}`, `{"tool", "folder"}` or `{"command": [...]}`), `held` (each
+    deny with how it is held: the allow list, a native deny, or both),
+    `forms` (the forms a brief names) and `excluded_candidates` (the allowed
+    commands whose work starts `uv`, which macOS runs outside the sandbox).
+
+    Exit 0 when the rules project; 1 when a run under them would be refused.
+    Reference: `.pkit/cli/README.md`, "Agent runs".
+    """
+    import json
+
+    from project_kit import run_rules
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    projected = run_rules.view(target_root, rules_of, agent_name)
+    if isinstance(projected, str):
+        if as_json:
+            refusal: dict[str, Any] = {
+                "schema_version": 1,
+                "rules_of": rules_of,
+                "refused": projected,
+                "allow": [],
+                "deny": [],
+                "held": [],
+                "forms": [],
+                "excluded_candidates": [],
+            }
+            click.echo(json.dumps(refusal, indent=2, sort_keys=True))
+        else:
+            click.echo(f"no run starts under the rules of {rules_of}: {projected}", err=True)
+        sys.exit(1)
+    if as_json:
+        document: dict[str, Any] = {
+            "schema_version": 1,
+            "rules_of": rules_of,
+            "refused": None,
+            "allow": list(projected.allow),
+            "deny": list(projected.deny),
+            "held": list(projected.held),
+            "forms": list(projected.forms),
+            "excluded_candidates": [list(c) for c in projected.excluded_candidates],
+        }
+        click.echo(json.dumps(document, indent=2, sort_keys=True))
+    else:
+        click.echo(cli_render.style("title", f"The rules of a run of {rules_of}"))
+        click.echo("\nAllowed, and nothing else:")
+        for form in projected.forms:
+            click.echo(f"  {form}")
+        click.echo("\nDenied as native rules:")
+        for rule in projected.deny:
+            shown = (
+                " ".join(rule["command"])
+                if "command" in rule
+                else f"{rule['tool']}" + (f" in {rule['folder']}" if "folder" in rule else "")
+            )
+            click.echo(f"  {shown}")
+        click.echo("\nHow each deny is held:")
+        for held in projected.held:
+            click.echo(f"  {held['privilege']}: {held['how']}")
+        if projected.excluded_candidates:
+            click.echo("\nRun outside the sandbox on macOS, where uv still needs it:")
+            for words in projected.excluded_candidates:
+                click.echo(f"  {' '.join(words)}")
 
 
 def _target_kit() -> Path:
@@ -1750,15 +2034,17 @@ def friction_check_command(
     word: each revalidation, deferral and reason for having no anchors. Exit 1
     in enforcing mode on friction, a dead anchor, an unresolved kind, a
     resolver's missing answer (no-answer) or a bump; an outdated base never
-    fails, nor a dead anchor it cannot lay at the change (dead-unattributed).
+    fails, nor a dead anchor it cannot lay at the change (dead-unattributed),
+    nor an anchor on an id two artefacts share (shared-id).
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against its revalidation point — the commit where it first carried the
     `at` it carries (derived from git, renames followed) — an anchor stale
     where what it stands on differs between the two. Reports stale
     and deferred debt with their origins, dead anchors, over-broad anchors,
-    unanchored artefacts — those accepted with a reason listed apart, never
-    counted — and uncovered surface. Reads each artefact's history back to
+    anchors on an id two artefacts share, unanchored artefacts — those
+    accepted with a reason listed apart, never counted — and uncovered
+    surface. Reads each artefact's history back to
     where it was last added; in a shallow clone it marks what the cut hides,
     and exits 0 in either mode.
     """

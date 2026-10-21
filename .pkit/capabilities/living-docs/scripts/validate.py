@@ -10,8 +10,9 @@
 
 Checks the places the spaces' pages are found in and their assignment to a
 space, what is never a page, the pages' own fields, each page's reader where
-RS-LDOC-003 binds on it and its body against the structure its kind declares
-where RS-LDOC-004 binds (DEC-001 point 3), each space's entry point and
+RS-LDOC-003 binds on it, its body against the structure its kind declares
+where RS-LDOC-004 binds (DEC-001 point 3) and its diagrams' text alternatives
+where RS-LDOC-008 binds (DEC-002 point 8), each space's entry point and
 definition with its scope, whether the two spaces are separate, and the
 captured sources' layout and what names them (DEC-001 point 4).
 `_lib/spaces.py` and `_lib/sources.py` state every check and the record point

@@ -1,0 +1,25 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  The domain model is decided: an analysis may keep a few views of its
+  concepts beside the glossary, written by hand (#1814, software-analysis
+  DEC-004). The capability reads none of it yet: a later release builds the
+  kind, and a domain model stays optional for a project.
+  **The view kind.** A view lies in `domain-model/`, one for each group of
+  related concepts. Its file's name opens with its number, such as
+  `010-orders-and-payments.md`, and its id is `VIEW-orders-and-payments`. It
+  opens with what its group covers and the group's class diagram. Then it
+  gives one section to each concept its `explains` lists, headed by its
+  term's name. A section explains the concept, then gives its attributes,
+  relations, states and what is always true of it.
+  **Anchors and order.** A view anchors each term it explains and the
+  records it rests on, never code. A view uses only the views of its
+  analysis with lower numbers. The glossary stays as it is, and a term a
+  view explains links to its section. DEC-001 points 1, 2, 3, 4 and 12 name
+  what the record adds.
+  **Rules.** `SAN`'s `RS-SAN-005` and `RS-SAN-008` read views, and
+  `RS-SAN-008` reads a Mermaid diagram's labels as statements. A new rule,
+  `RS-SAN-011`, holds the order of the views. Proposed rules bind nothing,
+  so `SAN` stays at 1.0.0.

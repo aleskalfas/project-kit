@@ -168,7 +168,7 @@ def compare(root: Path, ref: str | None = None, *, preview: bool = False) -> Com
     except Unreadable as exc:
         raise CannotCompare(f"the base could not be read: {exc}") from exc
     setting = numbering.resolve(root, written, reading.default_branch)
-    numbered = {analysis.places[k] for k in NUMBERED if k in analysis.places}
+    numbered = analysis.place_folders(NUMBERED)
     freeing = numbering.freeing(root, setting, reading.default_branch.commit, numbered)
     said = _freeing(freeing)
     problems = [*setting.problems, *freeing.problems, *freeing.reports]
@@ -200,7 +200,7 @@ def compare(root: Path, ref: str | None = None, *, preview: bool = False) -> Com
         f"{base.commit[: backbone.SHORT]})."
     )
     outdated = Finding(REPORT, analysis.location or ".", f"outdated base: {_outdated(base)}")
-    folders = {a.places[k] for a in (analysis, on_base) for k in NUMBERED if k in a.places}
+    folders = analysis.place_folders(NUMBERED) | on_base.place_folders(NUMBERED)
     theirs = _taken(root, base, analysis, on_base, before, folders, set(ours), freeing.files)
     findings = _collisions(root, base, ours, theirs, folders) if theirs else []
     outcome = Outcome([line, *said, *appended], [outdated, *problems, *findings, *departing])

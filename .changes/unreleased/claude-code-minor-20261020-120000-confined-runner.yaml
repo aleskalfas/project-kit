@@ -1,0 +1,18 @@
+component: claude-code
+kind: minor
+custom:
+  category: Added
+body: >
+  The agent runner gains its confined form (ADR-066 points 2 to 9). It reads
+  the agent's definition from the run's clone as the deploy resolves it, and
+  refuses a field outside the methodology's shape. It passes only its own
+  settings: the run's allow list and denies as native rules, `dontAsk`, the
+  sandbox on and failing closed with no retry outside it and no network host,
+  and memory off. It starts Claude Code in the run's workspace with a closed
+  set of flags and a scrubbed environment, and ends the run at once where the
+  start report does not match those settings. A confined run is refused
+  outside the Claude Code versions the adapter's author tested it on. That
+  range ships empty, so no confined run starts until the author runs the new
+  probe, `probe-confined-run.py`, and widens it. Every run, confined or not,
+  is refused inside an agent run and sets `PKIT_AGENT_RUN` for the harness.
+  The adapter's README states the form, its flags and what stays open.

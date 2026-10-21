@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. The README is revalidated unchanged against COR-050, which warns
+  of an artefact anchor on an id two artefacts share (#1818). Only the
+  README's friction block changes, and nothing you run or read changes.

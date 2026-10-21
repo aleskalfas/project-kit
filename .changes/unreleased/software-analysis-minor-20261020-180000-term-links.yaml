@@ -1,0 +1,31 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  An analysis's terms are cross-linked, and one name means one concept, as
+  DEC-004 point 7 and DEC-001 points 1 and 2 decide (#1841).
+  **The links.** In an analysis that keeps a domain model, one whose
+  `domain-model/` folder holds a view, `pkit analysis link` opens each view
+  section with `Defined in [<TERM-id>](<glossary>#<anchor>).`. It links the
+  first mention of each term in each section to the term's glossary entry,
+  in a view's opening and its sections and in each glossary entry. A term is
+  never linked in its own section or entry, and front matter and the
+  glossary's head take no link. A mention is a term's name or one of its
+  declared `noun-forms`, whole, the longest first. Code, headings, bold
+  labels, comments and links are skipped. A phrase a term lists in
+  `other-senses` never links it, and `<!-- pkit:not-the-term -->` right
+  before a mention marks it as no mention. A term the glossary's head lists
+  from an analysis the settings list links to its entry there. Whatever any
+  rule's status, `pkit analysis validate` reports a link missing, extra or
+  stale and names the command, and `pkit analysis new view` writes each
+  section's link to its term. An analysis without a view sees no change.
+  **One name, one concept.** Whatever any rule's status, `pkit analysis
+  validate` refuses two terms in force of one name, a noun form counted and
+  case ignored, and a name another term replaces. It refuses a term that
+  takes a name of an analysis it builds on, listed by its head or not, and
+  two analyses it builds on that share a name. Give each concept a qualified
+  name, such as `business process` and `system process`. The term schema
+  gains `noun-forms` and `other-senses`. A new rule, `RS-SAN-012`, proposed,
+  holds what validation cannot read, and takes over `RS-SAN-008`'s item on a
+  listed term's name. Proposed rules bind nothing, so `SAN` stays at 1.0.0.

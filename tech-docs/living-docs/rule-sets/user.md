@@ -14,9 +14,9 @@ rules:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
         revalidated:
-          at: 2026-10-17T11:56:30Z
+          at: 2026-10-19T16:10:30Z
           outcome: unchanged
-          unchanged-because: "living-docs DEC-001 point 3 refines the rule on a fact's home, and states the consequence of the spaces' separation as: a page of the user space never has a fact's home on a page of the technical space. Its sentence that the user space adds one rule, that reader paths stay unbroken, is as it was, so this rule holds."
+          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its sentence that the user space adds one rule, that reader paths stay unbroken, is as it was, so this rule holds.
 ---
 
 # The user space's definition

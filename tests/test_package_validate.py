@@ -1015,14 +1015,19 @@ def test_friction_places_lie_inside_a_declared_location_or_the_project(
     }
 
 
+#: The package schema's pattern of a held folder's `path`, as a finding quotes it.
+HELD_PATH = "'^(?!.*\\\\*\\\\*)(?:.*/)?[^/*?\\\\[]+/?$'"
+
+
 def test_friction_held_folders_name_a_location_and_are_folders_in_it(
     schema: dict[str, Any], component_dir: Path
 ) -> None:
     """A held folder is written as a place is, but names the location it lies within
-    and is a folder there — never a glob (COR-050 point 1). The schema says so and
-    refuses another key in an entry; the repository checks hold its path and
-    location as a place's, and repeat the two held rules for a tree without a
-    schema, with the same locations."""
+    and is a folder there, or a glob of folders at one depth before a plain last
+    segment — never `**`, never a glob in that last segment (COR-050 point 1;
+    #1821). The schema says so and refuses another key in an entry; the
+    repository checks hold its path and location as a place's, and repeat the
+    held rules for a tree without a schema, with the same locations."""
     raw = _package(
         docs={"locations": {"records": {"path": "records"}}},
         friction={
@@ -1031,7 +1036,10 @@ def test_friction_held_folders_name_a_location_and_are_folders_in_it(
                 {"path": "notes/acts"},
                 {"location": "logs", "path": "runs"},
                 {"location": "records", "path": "../outside"},
+                {"location": "records", "path": "runs/**"},
                 {"location": "records", "path": "runs/*"},
+                {"location": "records", "path": "*/runs"},
+                {"location": "records", "path": "[ab]?/runs/"},
             ]
         },
     )
@@ -1046,11 +1054,12 @@ def test_friction_held_folders_name_a_location_and_are_folders_in_it(
             "'../outside' is not a path relative to its location or the project: it contains "
             "a `..` segment."
         ),
-        "/friction/held/4/path": "'runs/*' does not match '^[^*?\\\\[]+$'",
+        "/friction/held/4/path": f"'runs/**' does not match {HELD_PATH}",
+        "/friction/held/5/path": f"'runs/*' does not match {HELD_PATH}",
     }
     raw["friction"]["held"].append({"location": "records", "path": "runs", "kind": "records"})
     errors = _messages(_validate(raw, schema, component_dir), pv.Severity.ERROR)
-    assert "/friction/held/5/kind" in errors
+    assert "/friction/held/8/kind" in errors
 
     without_schema = _messages(_validate(raw, None, component_dir), pv.Severity.ERROR)
     assert without_schema["/friction/held/1"] == (
@@ -1058,13 +1067,19 @@ def test_friction_held_folders_name_a_location_and_are_folders_in_it(
         "`docs.locations` (COR-050 point 1)."
     )
     assert without_schema["/friction/held/4/path"] == (
-        "held folder 'runs/*' is a glob: a held folder is a folder (COR-050 point 1)."
+        "held folder 'runs/**' spans folders with `**`: a held folder is a folder, or a glob "
+        "of folders at one depth (COR-050 point 1)."
+    )
+    assert without_schema["/friction/held/5/path"] == (
+        "held folder 'runs/*' ends in a glob: only the segments before the folder's own name "
+        "may be globs (COR-050 point 1)."
     )
     assert set(without_schema) == {
         "/friction/held/1",
         "/friction/held/2/location",
         "/friction/held/3/path",
         "/friction/held/4/path",
+        "/friction/held/5/path",
     }
 
 

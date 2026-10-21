@@ -29,17 +29,21 @@ is the one reader of those declarations and the one walker of the places:
 - `held_folders` — the folders of **held documents** a capability declares
   (`friction.held`, COR-050 point 1): files that belong to it but are not
   artefacts, such as a log of reviews it carried out. A held folder is written
-  as a place is, with a `location` it lies within and a folder — never a glob
-  — as its `path`, and matched as a place is, but nothing in it is walked as
-  an artefact: no place — a root, another component's or the project's, its
-  own or a rule-set folder — reads a held file, so neither measure counts it.
-  It is bounded: one that equals or encloses a documentation root or another
-  declaration's place, or shares a file with another held folder, its own
-  component's place or a rule-set folder, holds nothing and says why
-  (`HeldFolder.skipped`) — one holder per file, and rules stay artefacts
-  (COR-051 point 2). A project declares none: it narrows its own places, and
-  keeps what must not count out of the measures with `exclude` (COR-050
-  point 14).
+  as a place is, with a `location` it lies within and, as its `path`, a folder
+  or a glob of folders at one depth — never `**`, and its last segment plain —
+  and matched as a place is, every Markdown file beneath a folder it names
+  (`HeldFolder.holding`), but nothing in it is walked as an artefact: no
+  place — a root, another component's or the project's, its own or a
+  rule-set folder — reads a held file, so neither measure counts it, and its
+  own component's places leave its files to it. It is bounded: one that
+  equals or encloses a documentation root or any declaration's place, its own
+  component's included, shares a file with another component's held folder
+  or a rule-set folder, or equals, encloses or lies within another of its own
+  held folders, holds nothing and says why (`HeldFolder.skipped`) — one
+  holding component per file, no declaration emptied, and rules stay
+  artefacts (COR-051 point 2). A project declares none: it narrows its own
+  places, and keeps what must not count out of the measures with `exclude`
+  (COR-050 point 14).
 - `rule_set_places` / `rule_set_files` — the location rule for rule-set files
   (COR-051 point 2, ADR-056 point 2): the places declared to hold rule sets,
   each with the component that owns the sets in it, and the Markdown files
@@ -835,7 +839,8 @@ def _capability_places(
     recorded location, else its declared `{path, root?}` under the root it
     names (COR-049 points 4 and 5). Without one, `path` is repository-relative.
     A held folder lies within one of the capability's locations, so it names
-    one, and its `path` is a folder inside it (`_resolve_capability_place`).
+    one, and its `path` is a folder, or a glob of folders at one depth with a
+    plain last segment, inside it (`_resolve_capability_place`).
     A place may also name a type of the capability's own registry, `type`,
     kept in full as `<capability>:<name>` (COR-056 point 2). A name the
     package schema refuses names no type.
@@ -963,8 +968,9 @@ def _resolve_capability_place(
     `path` is the entry's own, `pattern` the repository-relative form the walk
     follows, and `location` the `(name, where it lies)` of the location it
     names, or `None`. A held folder lies within one of the capability's
-    locations (COR-050 point 1): it names one, and its `path` is a folder there
-    — no glob, nothing absolute, no `..` segment. Whether the pattern stays
+    locations (COR-050 point 1): it names one, and its `path` is a folder there,
+    or a glob of folders at one depth with a plain last segment — no `**`,
+    nothing absolute, no `..` segment. Whether the pattern stays
     inside the repository is left to the validation pass, which follows links
     on disk; here only the shape is judged.
     """
@@ -1012,12 +1018,22 @@ def _resolve_capability_place(
 
 
 def _held_path_problem(path: str) -> str | None:
-    """Why a held folder's `path` is not a folder within its location, or `None`."""
-    if any(ch in _GLOB_CHARS for ch in path):
-        return "is a glob, not a folder"
+    """Why a held folder's `path` is not a folder, or a glob of folders at one depth
+    with a plain last segment, within its location, or `None`.
+
+    A `**` would let it name folders at any depth, which its bounds are not judged
+    for (`_lies_within`, `_could_share`). A glob in its last segment, `*` say, would
+    let one line take every folder of a root but the files at its top, which the
+    root bound does not see (`_encloses`): only the segments before the folder's
+    own name may be globs, as in `*/revalidations`.
+    """
+    if "**" in path:
+        return "spans folders with `**`, not a folder or a glob of folders at one depth"
     parts = PurePosixPath(path).parts
     if PurePosixPath(path).is_absolute() or ".." in parts:
         return "leaves its location (absolute, or with a `..` segment)"
+    if _is_glob(PurePosixPath(_normal(path)).name):
+        return "ends in a glob: only the segments before the folder's own name may be globs"
     return None
 
 
@@ -1227,8 +1243,13 @@ class HeldFolder:
 
     @property
     def pattern(self) -> str:
-        """The repository-relative folder, as the walk matches it."""
+        """The repository-relative folder, or glob of folders, as declared and resolved."""
         return self.place.pattern
+
+    @property
+    def holding(self) -> Place:
+        """The place its files are matched by (`_holding_place`)."""
+        return _holding_place(self.place)
 
     @property
     def declaration(self) -> SettingsPath:
@@ -1248,17 +1269,22 @@ def held_folders(
     """The folders of held documents, each capability's by name in written order,
     each with why it holds nothing, if it does (COR-050 point 1).
 
-    A held folder is bounded, so that every held file has one holder and no
+    A held folder is bounded, so that one component holds every held file and no
     declaration empties what another declares. One that leaves the repository —
     through its location or a link — holds nothing (`SKIP_OUTSIDE`), and so
-    does one that equals or encloses a documentation root or another
-    declaration's place, or shares files with its own component's place,
-    another held folder or a rule-set folder, whose files the location rule
-    reads as rules (`SKIP_OVERLAP`; COR-051 point 2). Lying inside another
-    declaration's place — a root's, say — is what a held folder is for: that
-    place leaves its files out. Judged on the declarations, never on which files
-    exist, so a folder empty today is judged as it will be read. `rule_sets` are
-    the rule-set places, when the caller has them (`rule_set_places`).
+    does one that equals or encloses a documentation root or any declaration's
+    place, its own component's included, or shares files with another
+    component's held folder or a rule-set folder, whose files the location rule
+    reads as rules (`SKIP_OVERLAP`; COR-051 point 2), or that equals, encloses
+    or lies within another of its own component's held folders. Lying inside a
+    declaration's place, or sharing some of its files — a root's, say, or its
+    own component's place whose glob reaches into it — is what a held folder is
+    for: that place leaves its files out, and the held folder wins. Two of one
+    component's held folders that share only some files hold them for that
+    component either way: the first declared holds each (`_match_places`).
+    Judged on the declarations, never on which files exist, so a folder empty
+    today is judged as it will be read. `rule_sets` are the rule-set places,
+    when the caller has them (`rule_set_places`).
     """
     if not settings.held:
         return ()
@@ -1290,42 +1316,60 @@ def _held_overlaps(
     """How a held folder inside the repository oversteps its bounds, one clause
     each (`held_folders`); none when it keeps them.
 
-    The roots are judged as the document's `encloses` judges them (`_encloses`).
-    Another declaration's place is refused only when it lies within the folder,
-    which would empty it (`_lies_within`); its own component's place, another
-    held folder and a rule-set folder whenever they could share a file
-    (`_could_share`).
+    The roots are judged as the document's `encloses` judges them (`_encloses`),
+    on the place the folder's files are matched by (`_holding_place`). A
+    declaration's place, its own component's included, is refused only when it
+    lies within the folder, which would empty it (`_lies_within`): one that
+    shares only some of its files leaves them to the folder. Another component's
+    held folder and a rule-set folder are refused whenever they could share a
+    file (`_could_share`): one component holds each held file, and rules stay
+    artefacts. Another of its own component's held folders is refused only when
+    one of the two lies within the other, which would empty it.
     """
     folder = _normal(held.pattern)
+    holding = _holding_place(held)
     clauses = [
         f"equals or encloses the {audience} documentation root {root!r}"
         for audience, root in settings.roots.items()
-        if _encloses(held, root)
+        if _encloses(holding, root)
     ]
     rule_set_patterns = {_normal(r.pattern) for r in rule_sets}
     for place in declared_places(settings):
         shown = _normal(place.pattern)
         if shown in rule_set_patterns:
             continue  # a rule-set folder, judged as one below
-        if place.source == held.source:
-            if _could_share(place.pattern, folder):
-                clauses.append(f"overlaps its own place {shown!r}")
-        elif _lies_within(place.pattern, folder):
-            clauses.append(f"equals or encloses {_declarer(place.source)}'s place {shown!r}")
+        if _lies_within(place.pattern, folder):
+            whose = "its own" if place.source == held.source else f"{_declarer(place.source)}'s"
+            clauses.append(f"equals or encloses {whose} place {shown!r}")
     clauses += [
         f"overlaps the rule-set folder {_normal(r.pattern)!r}, whose files are rules "
         f"(COR-051 point 2)"
         for r in rule_sets
         if _could_share(r.pattern, folder)
     ]
-    clauses += [
-        f"overlaps {_declarer(other.source)}'s held folder {other.resolved!r}"
-        if other.source != held.source
-        else f"overlaps its own held folder {other.resolved!r}"
-        for other in others
-        if _could_share(other.resolved, folder)
-    ]
+    for other in others:
+        theirs = _normal(other.resolved)
+        if other.source != held.source:
+            if _could_share(_holding_place(Place(theirs, other)).pattern, folder):
+                clauses.append(f"overlaps {_declarer(other.source)}'s held folder {theirs!r}")
+        elif _lies_within(theirs, folder) or _lies_within(folder, theirs):
+            clauses.append(f"overlaps its own held folder {theirs!r}")
     return clauses
+
+
+def _holding_place(folder: Place) -> Place:
+    """The place a held folder's files are matched by, through the one reading of a
+    place (`listed_files_in_place`): a folder is read as a directory is, every
+    Markdown file beneath it; a glob of folders is followed by `**`, every Markdown
+    file beneath any folder it matches."""
+    if _is_glob(folder.pattern):
+        return replace(folder, pattern=f"{_normal(folder.pattern)}/**")
+    return folder
+
+
+def _is_glob(pattern: str) -> bool:
+    """Whether a path or glob carries a glob character."""
+    return any(ch in _GLOB_CHARS for ch in pattern)
 
 
 def _normal(pattern: str) -> str:
@@ -1339,25 +1383,71 @@ def _declarer(source: str) -> str:
 
 
 def _lies_within(pattern: str, folder: str) -> bool:
-    """Whether every file `pattern` could match lies at or beneath the literal `folder`."""
+    """Whether every file `pattern` could match lies at or beneath `folder` — a folder,
+    or a glob of folders at one depth, in its normal form.
+
+    Beneath a folder, the pattern is the folder or lies beneath it. Beneath a glob,
+    judged segment by segment: the pattern has at least the glob's segments, and
+    every name each of those matches, the glob's segment matches too
+    (`_segment_within`). Where both segments are globs, containment is seen only
+    when the glob's segment is all `*`, so this errs towards finding a pattern
+    not within — towards refusing too little, where `_could_share` errs towards
+    refusing too much. A held folder's last segment is plain
+    (`_held_path_problem`), so the miss needs a glob within a glob before it.
+    """
     normalised = _normal(pattern)
-    return folder == "." or normalised == folder or normalised.startswith(folder + "/")
+    if folder == ".":
+        return True
+    if not _is_glob(folder):
+        return normalised == folder or normalised.startswith(folder + "/")
+    if normalised == ".":
+        return False
+    segments, parts = normalised.split("/"), folder.split("/")
+    return len(segments) >= len(parts) and all(map(_segment_within, segments, parts))
+
+
+def _segment_within(segment: str, part: str) -> bool:
+    """Whether every name a pattern's `segment` matches, a folder's segment `part`
+    matches too: the same segment; a name `part` matches; or any segment within one
+    segment when `part` is all `*`. A whole `**` spans folders, so it is within none
+    but itself."""
+    if segment == part:
+        return True
+    if segment == "**" or not _is_glob(part):
+        return False
+    if not _is_glob(segment):
+        return re.fullmatch(_segment_regex(part), segment) is not None
+    return set(part) == {"*"}
+
+
+def _segments_meet(segment: str, part: str) -> bool:
+    """Whether one name could match both a pattern's `segment` and a folder's segment
+    `part`: two names when they are the same, a glob and a name when the glob matches
+    it, and two globs always — read as meeting, so a bound refuses rather than
+    misses a file they could share."""
+    if not _is_glob(part):
+        return re.fullmatch(_segment_regex(segment), part) is not None
+    if not _is_glob(segment):
+        return re.fullmatch(_segment_regex(part), segment) is not None
+    return True
 
 
 def _could_share(pattern: str, folder: str) -> bool:
     """Whether `pattern` — a path or a glob, read as a place reads it — could match
-    a file at or beneath the literal `folder`.
+    a file at or beneath `folder`, a folder or a glob of folders at one depth, in
+    its normal form.
 
     A path without glob characters shares files with the folder when one of the
-    two lies within the other. A glob is walked segment by segment against the
-    folder's segments — `**` spanning any number of them — and could match
+    two could lie within the other: their segments meet pairwise, as far as the
+    shorter goes (`_segments_meet`). A glob is walked segment by segment against
+    the folder's segments — `**` spanning any number of them — and could match
     beneath it when it has segments left once the folder's are consumed.
     """
     normalised = _normal(pattern)
     if "." in (normalised, folder):
         return True
-    if not any(ch in _GLOB_CHARS for ch in normalised):
-        return _lies_within(normalised, folder) or folder.startswith(normalised + "/")
+    if not _is_glob(normalised):
+        return all(map(_segments_meet, normalised.split("/"), folder.split("/")))
     segments = normalised.split("/")
 
     def spanned(states: set[int]) -> set[int]:
@@ -1379,7 +1469,7 @@ def _could_share(pattern: str, folder: str) -> bool:
             segment = segments[index]
             if segment == "**":
                 following.add(index)
-            elif re.fullmatch(_segment_regex(segment), part):
+            elif _segments_meet(segment, part):
                 following.add(index + 1)
         states = spanned(following)
         if not states:
@@ -1407,9 +1497,10 @@ class HeldFile:
 
     No place walks it — a root, another component's or the project's, its own
     or a rule-set folder — so it is never an artefact, and neither measure
-    counts it. `folder` is the held folder holding it — the one, since held
-    folders never share a file (`held_folders`) — whose declaration names its
-    owner. `places` are the places that match it and so left it out, in walk
+    counts it. `folder` is the held folder holding it — the one, or, where two
+    of one component's held folders share it, the first declared, since two
+    components' held folders never share a file (`held_folders`) — whose
+    declaration names its owner. `places` are the places that match it and so left it out, in walk
     order. It is read for its front matter alone: `front_matter` as written
     when that is a mapping, `unreadable` why the file or its front matter could
     not be read, and `blocks` the JSON Pointer, in the front matter, of every
@@ -2682,11 +2773,28 @@ class Discovery:
         return not self.places or (not self.with_container and not self.unreadable)
 
     def find(self, reference: str) -> Artefact | None:
-        """The artefact an `anchors.artefact` value names, or None; first in walk order wins."""
+        """The artefact an `anchors.artefact` value names, or None; first in walk order wins.
+
+        Where two artefacts or more share the name (`named`), an anchor on it is
+        ambiguous: the checks warn of it, naming the one this gives (COR-050 point 7).
+        """
+        named = self.named(reference)
+        return named[0] if named else None
+
+    def named(self, reference: str) -> tuple[Artefact, ...]:
+        """Every artefact an `anchors.artefact` value names, in walk order: more than one
+        where two artefacts share the id (COR-050 point 7)."""
+        return self._identified.get(reference, ())
+
+    @functools.cached_property
+    def _identified(self) -> Mapping[str, tuple[Artefact, ...]]:
+        """The artefacts by each name an `anchors.artefact` value may give them
+        (`Artefact.identifiers`), each name's in walk order, read once."""
+        found: dict[str, list[Artefact]] = {}
         for artefact in self.artefacts:
-            if reference in artefact.identifiers:
-                return artefact
-        return None
+            for name in artefact.identifiers:
+                found.setdefault(name, []).append(artefact)
+        return {name: tuple(artefacts) for name, artefacts in found.items()}
 
     def holding(self, path: str) -> HeldFile | None:
         """The held file at the repository-relative `path`, or None."""
@@ -2851,10 +2959,12 @@ def _match_places(
     folders = held_folders(target_root, settings, rule_set_places_found)
     listing = tree if tree is not None else working_tree(target_root)
     files = listing.files()
-    holder: dict[str, HeldFolder] = {}  # each held file: the folder holding it
+    # Each held file: the folder holding it, the first declared where two of one
+    # component's folders share it (`held_folders`).
+    holder: dict[str, HeldFolder] = {}
     for folder in folders:
         if folder.skipped is None:
-            for rel in listed_files_in_place(folder.place, files):
+            for rel in listed_files_in_place(folder.holding, files):
                 holder.setdefault(rel, folder)
     is_synced_copy = synced_copy_test(target_root) if declared else None
     matched: list[tuple[Place, str]] = []
@@ -3916,7 +4026,7 @@ def unplaced_files(discovery: Discovery, listing: RepositoryTree) -> tuple[Unpla
             holders.setdefault(capability_name(place.source), []).append(place)
     for folder in discovery.held_folders:
         if folder.skipped is None:
-            holders.setdefault(folder.component, []).append(folder.place)
+            holders.setdefault(folder.component, []).append(folder.holding)
     files = listing.files()
     found: list[UnplacedFile] = []
     for location in settings.locations:

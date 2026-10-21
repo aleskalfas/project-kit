@@ -12,11 +12,13 @@ pkit:
         - .pkit/adapters/claude-code/permission-hook.py
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
-      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060]
+        - src/project_kit/run_rules.py
+        - .pkit/schemas/permission-runs.schema.json
+      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+      artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-19T06:39:14Z
-      outcome: unchanged
-      unchanged-because: ADR-009 now names the 1.150.0 migration that untracks runtime-ignored files by its new number, 002, and decides nothing new. This page relies on its visibility and untrack rules, which read as before, and names no migration file.
+      at: 2026-10-20T03:31:55Z
+      outcome: updated
 ---
 
 # Permissions — decision core
@@ -123,6 +125,18 @@ order (per issue #57):
 **Implication:** in a session with a configured default agent, a human's
 `!`-typed command is also bound to that agent's grants — consistent, because the
 session runs *as* the agent.
+
+**A session started with `--agent`.** The review command's runs name their
+agent on the command line, through the agent runner ([the adapters README, "The
+agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing
+`.claude/settings.json`, the file rule 2 reads. A confined run, such as a
+fixer's, loads no project settings, so the hook is not registered there at all
+("The rules of an agent run" below). So the hook may judge such a
+run as the project's default agent, or as `operator`, rather than as the agent
+it names. No grant for one agent counts in those runs until the probe shows
+which subject the hook judges
+([ADR-066](../../tech-docs/architecture/decisions/ADR-066-unattended-agent-runner.md)
+point 11).
 
 Without this resolution (the pre-#57 behaviour), the main session always resolved
 to `operator` even when `settings.json` set `agent: project-manager`, making
@@ -235,3 +249,21 @@ runtime exactly (a token it passes is a token the hook binds).
 ### Deny/negation scopes are intentionally unsupported
 
 Negation globs (`!*.ru`) in a domain-scoped grant are **explicitly rejected** with an error rather than silently accepted or partially enforced. Rationale (ADR-004, Alternatives considered, "Relabel `network-egress` as natively enforced…"): a tool-layer denylist is a false boundary — an agent's raw `bash curl` bypasses it at the sandbox layer, which is agent-blind. Advertising negation enforcement would overstate fidelity and violate COR-028's honesty discipline. Only positive allow-lists are supported; if you need to block a host, remove it from the allow-list rather than adding a negation glob.
+
+## The rules of an agent run (ADR-066 point 5)
+
+A command that starts agents with nobody watching may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment, keyed by the command whose runs they bind. Its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is the first such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
+
+**In the model, a run's rules are denies,** subject `all`, so COR-028 needs no change. One denies every call that none of what the run needs recognises. The others are a floor of denies. A deny prevails over every allow, the shared baseline's included, so a run may do only what the first deny leaves open, whatever else allows.
+
+**No session's model composes the file.** `load_model` never reads it, and no hook sees it. The backbone's run command reads it at the commit the run is pinned to, fills in the run's folders, and projects it through this area's shared core, `projection.py`'s `project_run`. The adapter realises the result in that run's own settings, never in a settings file of the project's ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)).
+
+**Its privileges take the catalog's entry shape, with three forms of their own,** which only a run fills in. They live in the run's file and never in the session catalog, so an older permission core never reads one, and the catalog schema's version does not move:
+
+- `args`, the words a command starts with after its `cmd`, where `{working-copy}` and `{workspace}` stand for the run's folders, as in `git -C {working-copy} log`. A path-scoped privilege names those folders too.
+- `kit: reading`, the backbone's reading commands, and `kit: queries`, each command another installed component declares a query, as `pkit <component or alias> <command>`. The backbone fills in both from the commit.
+- `except`, the form ADR-066 point 5 adds: a call the rest of the recognizer matches, or every call where it has no other key, that none of the named privileges recognises.
+
+**How the projection holds each deny.** The first deny becomes an allow list: each privilege it leaves open, in a native rule's form. Every other deny, the run's floor and the session model's denies for every agent or for the run's agent, is held in one of two ways. A deny that reaches nothing the allow list allows is held by the list, and each part of it a native rule can name is also written as a native deny. A deny that reaches something the allow list allows must be written as native denies there, which take it from the list; where no native rule can name it, the run is refused. Where the projection cannot tell that two recognizers never match the same call, it takes them to.
+
+`pkit agents rules <capability>:<command>` shows the allow list, the denies and how each is held ([the CLI README, "agents rules"](../cli/README.md#agents-rules-capabilitycommand---agent-agent---json)). `pkit permissions overview` and `explain` list each run's rules under "RULES OF AGENT RUNS", with the capability that contributed them (ADR-016 point 7).

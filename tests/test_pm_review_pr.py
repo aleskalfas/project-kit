@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import importlib.util
-import subprocess
 import sys
 import threading
 import time
@@ -159,20 +158,15 @@ def test_format_verdict_strips_blank_body(rpr) -> None:
 
 
 def _stub_claude(rpr, monkeypatch, stdout, *, returncode=0, stderr=""):
-    """Make `_invoke_agent` see `claude` on PATH and return `stdout`."""
-    import subprocess
+    """Make the reviewer's run finish with `returncode` and print `stdout`.
 
-    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
-
-    def fake_run(args, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=returncode,
-            stdout=stdout,
-            stderr=stderr,
-        )
-
-    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    The run is the backbone's (`_lib.agent_runs`, ADR-066); the harness's
+    command line is the adapter's runner's, tested in
+    `test_claude_code_run_agent.py`."""
+    run = rpr.agent_runs.AgentRun(
+        rpr.agent_runs.FINISHED, exit_code=returncode, output=stdout, diagnostics=stderr
+    )
+    monkeypatch.setattr(rpr.agent_runs, "run_agent", lambda *_args, **_kwargs: run)
 
 
 def test_invoke_verdict_on_first_line(rpr, monkeypatch) -> None:
@@ -301,46 +295,29 @@ def test_timeout_invalid_env_errors_and_names_env(rpr) -> None:
     assert rpr.AGENT_TIMEOUT_ENV in str(exc.value)
 
 
-def test_invoke_agent_passes_timeout_to_subprocess(rpr, monkeypatch) -> None:
-    """The resolved timeout reaches `subprocess.run`'s `timeout=` kwarg."""
-    import subprocess
+def test_timeout_above_a_week_errors_before_any_run(rpr) -> None:
+    """The backbone's run command takes a limit of at most a week, so a longer
+    timeout is refused up front rather than refused once per reviewer."""
+    week = rpr.agent_runs.MAX_LIMIT_SECONDS
+    assert rpr._resolve_agent_timeout(str(week), {}) == week
+    with pytest.raises(ValueError) as exc:
+        rpr._resolve_agent_timeout(str(week + 1), {})
+    assert "--timeout" in str(exc.value)
+    assert "at most 604800 seconds" in str(exc.value)
 
-    captured: dict = {}
-    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
 
-    def fake_run(args, **kwargs):
-        captured.update(kwargs)
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n",
-            stderr="",
-        )
-
-    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+def test_invoke_agent_passes_timeout_as_the_runs_limit(rpr, monkeypatch) -> None:
+    """The resolved timeout reaches the run as its limit."""
+    captured = _capture_invocation(rpr, monkeypatch)
     rpr._invoke_agent("reviewer", 99, {}, 720)
-    assert captured["timeout"] == 720
+    assert captured["limit_seconds"] == 720
 
 
 def test_invoke_agent_defaults_timeout_to_1200(rpr, monkeypatch) -> None:
     """Omitting the timeout arg uses the raised default, not the old 300/600."""
-    import subprocess
-
-    captured: dict = {}
-    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
-
-    def fake_run(args, **kwargs):
-        captured.update(kwargs)
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n",
-            stderr="",
-        )
-
-    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    captured = _capture_invocation(rpr, monkeypatch)
     rpr._invoke_agent("reviewer", 99, {})
-    assert captured["timeout"] == 1200
+    assert captured["limit_seconds"] == 1200
 
 
 # ---- _post_comment ----------------------------------------------
@@ -512,23 +489,9 @@ def test_review_brief_leaves_an_unknown_base_as_a_placeholder(rpr) -> None:
 
 def test_invoke_agent_sends_the_brief(rpr, monkeypatch) -> None:
     """The brief is what reaches the reviewer session as its prompt."""
-    import subprocess
-
-    captured: dict = {}
-    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
-
-    def fake_run(args, **kwargs):
-        captured["args"] = args
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n",
-            stderr="",
-        )
-
-    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    captured = _capture_invocation(rpr, monkeypatch)
     rpr._invoke_agent("reviewer", 99, {}, 720, base="main", head="feat/147-x")
-    prompt = captured["args"][captured["args"].index("-p") + 1]
+    prompt = captured["brief"]
     assert prompt == rpr._review_brief(
         "reviewer",
         99,
@@ -1675,38 +1638,57 @@ def test_effort_invalid_config_errors_and_names_the_key(rpr) -> None:
 
 
 def _capture_invocation(rpr, monkeypatch) -> dict:
-    import subprocess
-
+    """Capture what `_invoke_agent` asks of the run (`_lib.agent_runs`): the
+    agent, the brief, and the folder, limit and effort it passes."""
     captured: dict = {}
-    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
 
-    def fake_run(args, **kwargs):
-        captured["args"] = list(args)
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout="Reviewer agent (local, reviewer): APPROVED\n",
-            stderr="",
+    def fake_run_agent(name, brief, **kwargs):
+        captured.update(name=name, brief=brief, **kwargs)
+        return rpr.agent_runs.AgentRun(
+            rpr.agent_runs.FINISHED,
+            exit_code=0,
+            output=f"Reviewer agent (local, {name}): APPROVED\n",
         )
 
-    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    monkeypatch.setattr(rpr.agent_runs, "run_agent", fake_run_agent)
     return captured
 
 
 def test_invoke_agent_passes_effort_to_the_harness(rpr, monkeypatch) -> None:
     captured = _capture_invocation(rpr, monkeypatch)
     rpr._invoke_agent("reviewer", 99, {}, 720, effort="medium")
-    args = captured["args"]
-    assert args[-2:] == ["--effort", "medium"]
-    assert args[:2] == ["/usr/bin/claude", "-p"]
-    assert args[-4:-2] == ["--agent", "reviewer"]
+    assert captured["effort"] == "medium"
+    assert captured["name"] == "reviewer"
 
 
 def test_invoke_agent_passes_no_effort_when_unset(rpr, monkeypatch) -> None:
     captured = _capture_invocation(rpr, monkeypatch)
     rpr._invoke_agent("reviewer", 99, {}, 720)
-    assert "--effort" not in captured["args"]
-    assert captured["args"][-2:] == ["--agent", "reviewer"]
+    assert captured["effort"] is None
+    assert captured["name"] == "reviewer"
+
+
+def test_invoke_agent_runs_the_reviewer_in_the_working_folder(rpr, monkeypatch, tmp_path) -> None:
+    """The reviewer runs where `review-pr` runs, as it did when it called the
+    harness itself (ADR-066 point 10)."""
+    monkeypatch.chdir(tmp_path)
+    captured = _capture_invocation(rpr, monkeypatch)
+    rpr._invoke_agent("reviewer", 99, {}, 720)
+    assert captured["folder"] == tmp_path
+
+
+def test_a_refused_run_posts_no_verdict_and_says_why(rpr, monkeypatch, capsys) -> None:
+    """A project whose adapters have no runner gets no review, and the
+    reviewer's line names the refusal (ADR-066 point 10)."""
+    refused = rpr.agent_runs.AgentRun(
+        rpr.agent_runs.REFUSED, reason="no registered adapter registers an agent runner"
+    )
+    monkeypatch.setattr(rpr.agent_runs, "run_agent", lambda *_a, **_k: refused)
+    assert rpr._invoke_agent("reviewer", 99, {}) == (None, "")
+    assert (
+        "[reviewer] invocation refused: no registered adapter registers an agent runner"
+        in capsys.readouterr().err
+    )
 
 
 def test_resolution_error_ruled_artefacts_names_the_cause(rpr) -> None:
@@ -1909,29 +1891,32 @@ def test_a_reviewer_that_fails_or_times_out_does_not_stop_the_others(
         invoked=[],
     )
     monkeypatch.setattr(rpr, "_invoke_agent", real_invoke)
-    monkeypatch.setattr(rpr.shutil, "which", lambda _bin: "/usr/bin/claude")
+    runs = rpr.agent_runs
 
-    def fake_run(args, **kwargs):
-        name = args[args.index("--agent") + 1]
+    def fake_run_agent(name, _brief, **kwargs):
         if name == "docs-reviewer":
-            raise subprocess.TimeoutExpired(args, kwargs["timeout"])
+            return runs.AgentRun(
+                runs.TIMED_OUT,
+                reason=f"the agent did not finish within {kwargs['limit_seconds']} s, so the "
+                "harness was ended with every process still descended from it",
+            )
         if name == "code-reviewer":
-            return subprocess.CompletedProcess(args, 1, stdout="", stderr="crashed")
+            return runs.AgentRun(runs.FINISHED, exit_code=1, diagnostics="crashed")
         if name == "security-reviewer":
             raise OSError("no such device")
-        return subprocess.CompletedProcess(
-            args, 0, stdout=f"Reviewer agent (local, {name}): APPROVED\n", stderr=""
+        return runs.AgentRun(
+            runs.FINISHED, exit_code=0, output=f"Reviewer agent (local, {name}): APPROVED\n"
         )
 
-    monkeypatch.setattr(rpr.subprocess, "run", fake_run)
+    monkeypatch.setattr(runs, "run_agent", fake_run_agent)
     run = rpr.review()
     assert run.exit_code == 3
     assert list(run.posted) == ["pm-reviewer"]
     failed = "the invocation failed, so there is no verdict to post"
     assert run.failed == {name: failed for name in _SET[1:]}
     err = capsys.readouterr().err
-    assert "[docs-reviewer] invocation error: Command" in err
-    assert "timed out after 1200 seconds" in err
+    assert "[docs-reviewer] invocation error: the agent did not finish" in err
+    assert "within 1200 s" in err
     assert "[code-reviewer] agent exited 1: crashed" in err
     assert "[security-reviewer] invocation error: no such device" in err
 

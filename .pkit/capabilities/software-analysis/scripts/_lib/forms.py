@@ -106,9 +106,36 @@ each with what it reads:
 - **`definition`**, a term's front-matter `definition`: a phrase whose first
   word is no article, `a`, `an` or `the`, whose last character is no full
   stop, and that holds no whole word of the term's own `name`, in any case.
+- **`builds-on-matches-front-matter`**, a glossary's opening: where the
+  glossary's front matter lists what its analysis takes from the analyses it
+  builds on, `builds-on` (DEC-001 point 2), one top-level item for each entry,
+  in the same order, opening `**From <analysis> at <version>:**`, then the
+  area it builds on in words. Nested in it, one item for each term,
+  `**Term:** [<name>](<link>)`, then one for each actor, `**Actor:**
+  [<name>](<link>)`, each name its entry's, exactly, and each link to its
+  home in that analysis. Nested in an actor's item, one item for each need
+  its entry gives, the need's words, exactly, white space aside. Only items
+  opening `**From ` stand for an entry, so a list of the writer's own in the
+  opening stays content. Where `builds-on` lists nothing, the form asks
+  nothing.
+- **`headings-match-front-matter`**, a domain-model view's repeated section
+  (DEC-004 point 2), read from the section's headings rather than from a part
+  (`headings_match`): one section for each entry of the front matter's
+  `explains`, in the same order, each headed by the name of the term its
+  entry names in sentence case (`sentence_case`), exactly, white space aside.
+  Where the analysis holds no such term, any heading will do. Every heading of
+  the section's level is one of its sections. No two headings give one slug
+  (`heading_slug`), so a page anchor on a section names one (COR-050 point 7).
 
 What no form checks is whether the words are true: friction flags the artefact
 when what it rests on changes, and a person rereads it (DEC-001 point 4).
+
+**A precondition's producers** are no form, and read with no rule of their own
+(`preconditions`): each item of a use case's *Preconditions* opens with them,
+such as `**From UC-003:**`, `**From UC-001 or UC-064:**` or `**From UC-059, or
+Environment:**` (DEC-001 point 1). The check of a use case's `after` compares
+them with that field (`_lib/chain.py`), and no closed list of labels reads such
+an opening as a label (`structure._undeclared`).
 """
 
 from __future__ import annotations
@@ -127,6 +154,15 @@ STEPS_MATCH = "steps-match-front-matter"
 OUTCOMES_MATCH = "outcomes-match-front-matter"
 GAPS_MATCH = "gaps-match-outcomes"
 DEFINITION = "definition"
+BUILDS_ON_MATCH = "builds-on-matches-front-matter"
+HEADINGS_MATCH = "headings-match-front-matter"
+
+#: A domain-model view's front-matter list of the terms it explains, which its sections'
+#: headings match (DEC-004 point 2).
+EXPLAINS = "explains"
+
+#: The glossary's front-matter key its head data lies under (DEC-001 point 2).
+BUILDS_ON = "builds-on"
 
 #: The forms of a part whose items are the steps a variant branches from.
 STEP_FORMS = frozenset({NUMBERED_STEPS, STEPS_MATCH})
@@ -448,6 +484,8 @@ def judge(form: str | None, part: Part, context: Context) -> list[Breach]:
         return _outcomes_match(part, context)
     if form == GAPS_MATCH:
         return _gaps_match(part, context)
+    if form == BUILDS_ON_MATCH:
+        return _builds_on_match(part, context)
     return []
 
 
@@ -518,6 +556,79 @@ def _after(rest: str, item: Item) -> str:
     """An item's text after its number or label, `rest` on its first row: every row, white
     space folded."""
     return " ".join(" ".join([rest, *(row.text for row in item.rows[1:])]).split())
+
+
+# --- a precondition's producers -------------------------------------------------------------
+
+#: A bold run that opens a line, and what follows it on the line.
+_BOLD_OPENING = re.compile(r"^\*\*(?P<text>[^*\n]+?)\*\*(?P<rest>.*)$")
+
+#: The text of a precondition's opening, `From <producers>`, a colon at its end or right
+#: after the bold run.
+_PRODUCERS = re.compile(r"^From[ \t]+(?P<named>.+?)[ \t]*:?$")
+
+#: A use case's id as the words may write it, any number of digits: the field's schema
+#: holds the spelling, and the comparison reads a number as `identity` spells it.
+_USE_CASE_WORD = re.compile(r"^UC-[0-9]+$")
+
+#: How the words write the environment, in any case, and how `after` writes it.
+_ENVIRONMENT = "environment"
+
+
+@dataclass(frozen=True)
+class Precondition:
+    """One precondition as a use case's *Preconditions* writes it: the line it opens on,
+    and the producers its opening names, in the order written, each use case by its id and
+    the environment as `environment`; `named` is `None` where it opens with none."""
+
+    line: int
+    named: tuple[str, ...] | None
+
+
+def named_producers(text: str, rest: str = ":") -> tuple[str, ...] | None:
+    """The producers a bold opening names, its `text` such as `From UC-059, or
+    Environment:` and `rest` what follows the bold run: each use case's id and
+    `environment`, in the order written, separated by commas and `or`. `None` where it
+    is no such opening: it does not start `From `, it ends in no colon, inside the bold
+    run or right after it, or it holds a word that names no producer."""
+    stripped = text.strip()
+    if not (stripped.endswith(":") or rest.startswith(":")):
+        return None
+    found = _PRODUCERS.match(stripped)
+    if found is None:
+        return None
+    named: list[str] = []
+    for word in re.split(r"[,\s]+", found["named"].rstrip(":")):
+        if not word or word.lower() == "or":
+            continue
+        if word.lower() == _ENVIRONMENT:
+            named.append(_ENVIRONMENT)
+        elif _USE_CASE_WORD.match(word):
+            named.append(word)
+        else:
+            return None
+    return tuple(named) or None
+
+
+def preconditions(part: Part) -> list[Precondition]:
+    """Each precondition a use case's *Preconditions* holds, in order: each top-level item
+    of its list, or, where it holds no item, its text as one. None where it reads `None.`
+    or nothing. Each opens with its producers, `**From UC-003:**` (DEC-001 point 1)."""
+    flat = " ".join(part.text.split())
+    if not flat or flat == NONE:
+        return []
+    items = listing(part).items
+    if items:
+        return [_precondition(item.line, item.rows[0].text if item.rows else "") for item in items]
+    rows = [row for row in ((part.lead,) if part.lead else ()) + part.rows if row.text.strip()]
+    return [_precondition(rows[0].number, rows[0].text.strip())]
+
+
+def _precondition(line: int, first: str) -> Precondition:
+    opening = _BOLD_OPENING.match(first.strip())
+    if opening is None:
+        return Precondition(line, None)
+    return Precondition(line, named_producers(opening["text"], opening["rest"]))
 
 
 def _sentence(part: Part) -> list[Breach]:
@@ -1099,6 +1210,254 @@ def definition_problems(text: str, name: object) -> list[str]:
             shown = ", ".join(f"`{w}`" for w in held)
             problems.append(f"it holds {shown}, a word of the term's name")
     return problems
+
+
+# --- a glossary's head ---------------------------------------------------------------------------
+
+_FROM = re.compile(r"^\*\*From (?P<label>[^*\n]*?):\*\*")
+_TAKEN = re.compile(
+    r"^\*\*(?P<what>Term|Actor):\*\*\s*\[(?P<name>[^\]\n]*)\]\((?P<link>[^)\s]+)\)$"
+)
+
+
+def _builds_on_match(part: Part, context: Context) -> list[Breach]:
+    """A glossary's opening against what its front matter's `builds-on` lists: one
+    top-level item opening `**From <analysis> at <version>:**` for each entry, in order,
+    with the entry's terms, its actors and each actor's needs nested in it."""
+    entries = _entries(context.fields.get(BUILDS_ON))
+    if not entries:
+        return []
+    items = [item for item in listing(part).items if _FROM.match(_item_text(item))]
+    found: list[Breach] = []
+    for n, entry in enumerate(entries):
+        label = f"**From {entry['analysis']} at {entry['version']}:**"
+        if n >= len(items):
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    part.line,
+                    f"`builds-on` lists {entry['analysis']}, and no item stands for it: write "
+                    f"`- {label}` and the area it builds on, with its terms and actors nested "
+                    f"in it",
+                )
+            )
+            continue
+        item = items[n]
+        opening = _FROM.match(_item_text(item))
+        if opening is None or opening.group(0) != label:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    item.line,
+                    f"the {_ordinal(n + 1)} item reads `{_shown(_item_text(item))}`, where it "
+                    f"opens `{label}`: the {_ordinal(n + 1)} entry of `builds-on`, its analysis "
+                    f"and the version its links name",
+                )
+            )
+        found += _taken_items(item, entry)
+    for item in items[len(entries) :]:
+        found.append(
+            Breach(
+                BREAKS_FORM,
+                item.line,
+                f"the item `{_shown(_item_text(item))}` stands for no entry of `builds-on`: "
+                f"list the analysis there, or remove the item",
+            )
+        )
+    return found
+
+
+def _entries(value: object) -> list[Mapping[str, Any]]:
+    """`builds-on`'s entries of the shape the form reads: each with its analysis and its
+    version. Its schema reports any other shape."""
+    if not isinstance(value, list):
+        return []
+    return [
+        entry
+        for entry in value
+        if isinstance(entry, Mapping)
+        and isinstance(entry.get("analysis"), str)
+        and isinstance(entry.get("version"), (str, int, float))
+    ]
+
+
+def _taken_items(item: Item, entry: Mapping[str, Any]) -> list[Breach]:
+    """What an analysis's item breaks of its entry: one nested item for each of its
+    terms, then each of its actors, an actor's needs nested in its own."""
+    wanted: list[tuple[str, str, list[str] | None]] = [
+        ("Term", str(t.get("name")), None)
+        for t in entry.get("terms") or []
+        if isinstance(t, Mapping)
+    ] + [
+        ("Actor", str(a.get("name")), [str(n) for n in a.get("needs") or []])
+        for a in entry.get("actors") or []
+        if isinstance(a, Mapping)
+    ]
+    written = nested(item).items
+    found: list[Breach] = []
+    for k, (what, name, needs) in enumerate(wanted):
+        line = f"**{what}:** [{name}](<its link>)"
+        if k >= len(written):
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    item.line,
+                    f"`builds-on` lists the {what.lower()} {name}, and the item holds no "
+                    f"`- {line}` for it, in `builds-on`'s order",
+                )
+            )
+            continue
+        text = _item_text(written[k])
+        taken = _TAKEN.match(text)
+        if taken is None or taken["what"] != what or taken["name"] != name:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    written[k].line,
+                    f"the item reads `{_shown(text)}`, where it is `{line}`: each term, then each "
+                    f"actor, by its name in `builds-on` and a link to its home in that analysis",
+                )
+            )
+            continue
+        if needs is not None:
+            found += _needs(written[k], name, needs)
+    for extra in written[len(wanted) :]:
+        found.append(
+            Breach(
+                BREAKS_FORM,
+                extra.line,
+                f"the item `{_shown(_item_text(extra))}` stands for no term or actor `builds-on` "
+                f"lists: list it there, or remove the item",
+            )
+        )
+    return found
+
+
+def _needs(item: Item, actor: str, needs: Sequence[str]) -> list[Breach]:
+    """An actor's item against the needs its entry gives: one nested item each, in order."""
+    written = [" ".join(_item_text(n).split()) for n in nested(item).items]
+    wanted = [" ".join(need.split()) for need in needs]
+    if written == wanted:
+        return []
+    return [
+        Breach(
+            BREAKS_FORM,
+            item.line,
+            f"the needs under {actor} ({len(written)} item(s)) are not those `builds-on` gives "
+            f"it ({len(wanted)}): one nested item for each need, its words exactly, in order",
+        )
+    ]
+
+
+def _item_text(item: Item) -> str:
+    """An item's own text: its first paragraph, up to a blank line or a nested item, white
+    space runs read as one space."""
+    lines = [item.rows[0].text] if item.rows else []
+    for row in item.rows[1:]:
+        text = row.text.expandtabs(4)
+        if not text.strip() or _opens_item(text):
+            break
+        lines.append(text)
+    return " ".join(" ".join(lines).split())
+
+
+# --- a repeated section's headings (DEC-004 point 2) -------------------------------------------
+
+
+def heading_slug(title: str) -> str:
+    """A heading's slug, as COR-050 point 2 makes it and a page anchor names a section by
+    it: its title in lower case, with every character but letters, digits, spaces and
+    hyphens dropped, and each space made a hyphen. The rule is the backbone's own
+    (`project_kit.document_parts.heading_slug`), which a capability's script never
+    imports, so a test holds this copy equal to it. A title made only of other
+    characters has an empty slug, which names no section."""
+    kept = (ch for ch in title.lower() if ch.isalpha() or ch.isdigit() or ch in " -")
+    return "".join(kept).replace(" ", "-")
+
+
+def sentence_case(name: str) -> str:
+    """A term's name as a domain-model view heads its section and labels its box (DEC-004
+    point 2): its first letter capitalized, and the rest as the name writes it, so
+    `decision record` reads `Decision record` and `pull request on GitHub` reads `Pull
+    request on GitHub`. A name whose first word holds a capital already, as a proper name
+    such as `iPhone app` may, stands as it is. So does a first letter whose capital is no
+    single letter that lowers back to it, such as `ß`, so the heading's slug is always
+    the name's (`heading_slug`)."""
+    words = name.split(maxsplit=1)
+    if not words or any(ch.isupper() for ch in words[0]):
+        return name
+    first = name[0]
+    capital = first.upper()
+    if len(capital) != 1 or capital.lower() != first:
+        return name
+    return capital + name[1:]
+
+
+def headings_match(headings: Sequence[tuple[int, str]], context: Context) -> list[Breach]:
+    """How a repeated section's `headings`, each its line and its text, break the form
+    `headings-match-front-matter`: each is the name of the term the front matter's
+    `explains` lists in its place, by `context.titles`, in sentence case
+    (`sentence_case`), white space aside, any text where the analysis holds no such term;
+    one for each entry, in order; and no two give one slug. An `explains` that is no list
+    of ids is the schema's to report, and only the slugs are compared then."""
+    found: list[Breach] = []
+    listed = _ids(context.fields.get(EXPLAINS))
+    if listed is not None:
+        for n, (line, text) in enumerate(headings):
+            if n >= len(listed):
+                found.append(
+                    Breach(
+                        BREAKS_FORM,
+                        line,
+                        f"`{_shown(text)}` is the section of no term: `explains` lists "
+                        f"{len(listed)} term(s), and each heading at this level is the section "
+                        f"of the term `explains` lists in its place — add its term to "
+                        f"`explains`, or remove the section",
+                    )
+                )
+                continue
+            name = context.titles.get(listed[n])
+            if name is None:
+                continue
+            heading = " ".join(sentence_case(name).split())
+            if " ".join(text.split()) != heading:
+                found.append(
+                    Breach(
+                        BREAKS_FORM,
+                        line,
+                        f"the {_ordinal(n + 1)} section is headed `{_shown(text)}`, and "
+                        f"`explains` lists {listed[n]} in its place, whose name is "
+                        f"`{name}`: each section is headed by its term's name in sentence "
+                        f"case, its first letter capitalized, in the order of `explains` — "
+                        f"head it `{heading}`",
+                    )
+                )
+        missing = listed[len(headings) :]
+        if missing and headings:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    headings[-1][0],
+                    f"`explains` lists {', '.join(missing)} after the last section, and no "
+                    f"section is headed by {'its' if len(missing) == 1 else 'their'} name: "
+                    f"each term `explains` lists has a section, in its order",
+                )
+            )
+    seen: dict[str, str] = {}
+    for line, text in headings:
+        slug = heading_slug(text)
+        if slug and slug in seen:
+            found.append(
+                Breach(
+                    BREAKS_FORM,
+                    line,
+                    f"`{_shown(text)}` gives the slug `{slug}`, as `{_shown(seen[slug])}` "
+                    f"does: a page anchor on either would be ambiguous, so no two sections' "
+                    f"headings give one slug",
+                )
+            )
+        seen.setdefault(slug, text)
+    return found
 
 
 # --- shown in a message ------------------------------------------------------------------------

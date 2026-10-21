@@ -801,7 +801,7 @@
       "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"
     },
     "friction-held": {
-      "description": "A folder of held documents: `path`, a folder — never a glob — inside the declared location `location` names (COR-050 point 1).",
+      "description": "A folder of held documents: `path`, a folder, or a glob of folders at one depth — `*`, `?` and `[...]` within a segment before the folder's own name, never in its last segment, never `**` — inside the declared location `location` names (COR-050 point 1).",
       "type": "object",
       "additionalProperties": false,
       "required": [
@@ -819,7 +819,7 @@
               "$ref": "#/$defs/relative-path"
             },
             {
-              "pattern": "^[^*?\\[]+$"
+              "pattern": "^(?!.*\\*\\*)(?:.*/)?[^/*?\\[]+/?$"
             }
           ]
         },

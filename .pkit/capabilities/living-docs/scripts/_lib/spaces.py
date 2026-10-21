@@ -58,7 +58,7 @@ What is checked, each against the record's words:
   the backbone's one answer (`binding`, COR-051 point 7). `LDOC` binds only
   through a set of the project's own whose scope selects the page, such as the
   page's space definition. No answer is one error, and then no page's
-  structure or reader is checked.
+  structure, reader or diagram is checked.
 - **Page formats** (point 3; RS-LDOC-004). A page whose kind declares its
   structure — the sections its body carries, in order where order matters, in
   this capability's `schemas/page-kinds.yaml` — is checked against it where
@@ -71,6 +71,13 @@ What is checked, each against the record's words:
   one that gives no reading is one error, "structures unreadable", and no body
   is checked. A checked page whose body cannot be read is an error of its own.
   `formats` says what a section is.
+- **Diagrams' text alternatives** (DEC-002 point 8; RS-LDOC-008). Where
+  RS-LDOC-008 binds on a page, each `mermaid` fence of its body carries an
+  `accTitle` and an `accDescr`, each followed by text that is not blank: a
+  fence lacking either is an error, naming its line. Under any status but accepted the rule
+  binds nothing, and the summary says why. A page whose body cannot be read is
+  one error, unless the format check already gave it. `formats` says what a
+  diagram is.
 - **Readers** (points 3, 4 and 7). Where RS-LDOC-003 binds on a page, the page
   names its reader in `reader`, and the reader resolves against the readers
   point, `pkit::documentation:readers`, read as it resolves (`readers`) — only
@@ -512,6 +519,7 @@ def checked(
     _separation_findings(decl, outcome)
     reader_note = _reader_findings(decl, walk, binding, read, outcome)
     format_note = _format_findings(root, decl, walk, binding, outcome)
+    diagram_note = _diagram_findings(root, decl, walk, binding, outcome)
     captured = sources.check(root, decl.artefacts)
     outcome.findings.extend(
         Finding(
@@ -524,7 +532,7 @@ def checked(
         walk,
         entry_notes,
         definition_notes,
-        (reader_note, format_note, captured.summary, scope_note),
+        (reader_note, format_note, diagram_note, captured.summary, scope_note),
         outcome,
     )
     return Checked(outcome, decl, walk)
@@ -803,8 +811,8 @@ def _binding(
     """Where the rules bind on the pages, read once from the backbone's one answer
     (COR-051 point 7; DEC-001 point 3), and only when there is a page. A check of a
     part of a rule runs only where the rule binds (COR-051 point 2). So when the
-    answer cannot be read, that is one error, and neither a page's structure nor
-    its reader is checked: `None`."""
+    answer cannot be read, that is one error, and no page's structure, reader or
+    diagram is checked: `None`."""
     if not walk.pages:
         return Binding()
     try:
@@ -815,9 +823,9 @@ def _binding(
                 ERROR,
                 BACKBONE_CONFIG,
                 f"where {LDOC}'s rules bind cannot be read — {str(exc).rstrip('.')}. No page's "
-                f"structure or reader is checked until it can: {CAPABILITY} checks each part of a "
-                f"rule only where the rule binds, read through the backbone's `pkit rule-sets "
-                f"reach --json` (DEC-001 point 3; COR-051 point 7).",
+                f"structure, reader or diagram is checked until it can: {CAPABILITY} checks each "
+                f"part of a rule only where the rule binds, read through the backbone's `pkit "
+                f"rule-sets reach --json` (DEC-001 point 3; COR-051 point 7).",
                 check="binding-unreadable",
             )
         )
@@ -1025,6 +1033,82 @@ def _format_findings(
         + (f"; {unreadable} page(s) that cannot be read" if unreadable else "")
         + (f"; {unbound} page(s) {rule} does not bind on, not checked" if unbound else "")
         + "."
+    )
+
+
+def _diagram_findings(
+    root: Path, decl: Declarations, walk: _Walk, binding: Binding | None, outcome: Outcome
+) -> str:
+    """Each `mermaid` fence of a page carries an `accTitle` and an `accDescr`, where
+    RS-LDOC-008 binds on the page, as the backbone's answer gives it (DEC-002 point
+    8; DEC-001 point 6; COR-051 point 7). There a fence lacking either is an error.
+    No body is read on a page the rule does not bind on, and under any status but
+    accepted it binds on none. Returns the summary's line about it."""
+    rule = formats.ALTERNATIVE_RULE
+    if binding is None:
+        return f"diagrams: not checked — where {rule} binds cannot be read."
+    bound = sorted(rel for rel in walk.pages if binding.binds(rel, cited(rule)))
+    unbound = len(walk.pages) - len(bound)
+    if not bound:
+        why = _unaccepted(rule, decl)
+        if why is not None:
+            return f"diagrams: not checked — {why}."
+        if walk.pages:
+            return (
+                f"diagrams: not checked — {rule} binds on none of the {unbound} page(s) "
+                f"(COR-051 point 7): {LDOC} binds only through a set of the project's own whose "
+                f"scope selects a page, such as a space's definition (DEC-001 point 2)."
+            )
+    told = {f.location for f in outcome.findings if f.check == "body-unreadable"}
+    checked = fences = lacking = unreadable = 0
+    for rel in bound:
+        try:
+            text = (root / rel).read_text(encoding="utf-8")
+        except (OSError, UnicodeDecodeError) as exc:
+            unreadable += 1
+            if rel not in told:
+                outcome.findings.append(
+                    Finding(ERROR, rel, _unread_diagrams_message(rel, exc), check="body-unreadable")
+                )
+            continue
+        checked += 1
+        for diagram in formats.diagrams(text):
+            fences += 1
+            if not diagram.lacking:
+                continue
+            lacking += 1
+            outcome.findings.append(
+                Finding(
+                    ERROR,
+                    rel,
+                    _alternative_message(rel, diagram),
+                    check="diagram-alternative",
+                )
+            )
+    return (
+        f"diagrams ({rule}, accepted): {fences} `{formats.MERMAID}` fence(s) in {checked} "
+        f"page(s) checked for a text alternative, {lacking} lacking one"
+        + (f"; {unreadable} page(s) that cannot be read" if unreadable else "")
+        + (f"; {unbound} page(s) {rule} does not bind on, not checked" if unbound else "")
+        + "."
+    )
+
+
+def _alternative_message(rel: str, diagram: formats.Diagram) -> str:
+    lacks = " and ".join(f"an `{name}`" for name in diagram.lacking)
+    return (
+        f"{rel}: the `{formats.MERMAID}` fence at line {diagram.line} lacks {lacks} followed "
+        f"by text that is not blank, so the diagram has no text alternative. Add `accTitle: "
+        f"<what the diagram is>` and `accDescr: <what it shows>` inside the fence, after its "
+        f"first line ({formats.ALTERNATIVE_RULE}; DEC-002 point 8)."
+    )
+
+
+def _unread_diagrams_message(rel: str, exc: Exception) -> str:
+    why = exc.strerror if isinstance(exc, OSError) and exc.strerror else "it is not UTF-8 text"
+    return (
+        f"{rel} cannot be read ({why}), so its diagrams are not checked for a text "
+        f"alternative ({formats.ALTERNATIVE_RULE})."
     )
 
 

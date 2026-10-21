@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  The README says that keeping a component's analysis is the work of the
+  repository that holds it, and that the component takes no dependency on this
+  capability. Nothing an adopter installs changes.

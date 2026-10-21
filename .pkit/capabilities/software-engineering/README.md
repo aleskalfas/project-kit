@@ -13,8 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-18T18:53:43Z
-      outcome: updated
+      at: 2026-10-19T19:45:57Z
+      outcome: unchanged
+      unchanged-because: COR-050 gains a warning on an anchor on a shared id, reported by both checks and never failed. The README's account of the friction answers its agents write and its reviewers check is untouched.
 ---
 
 # software-engineering capability

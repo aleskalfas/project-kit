@@ -124,7 +124,8 @@ def test_the_validator_is_a_member_of_pkit_validate(seeded: AdopterRepo) -> None
     assert result.exit_code == 0, result.output
     assert "software-analysis:artefacts" in result.output
     assert (
-        "1 actor(s), 0 term(s), 2 use case(s), 1 journey(s), 0 quality requirement(s), "
+        "1 actor(s), 0 term(s), 0 domain-model view(s), 2 use case(s), 1 journey(s), "
+        "0 quality requirement(s), "
         "0 functional requirement(s), 0 constraint(s)" in result.output
     )
     seeded.write({f"{USE_CASES}/UC-003-broken.md": "---\nid: UC-003\nstatus: active\n---\n"})
@@ -209,7 +210,8 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
     document = check(seeded)
     assert document == {
         "summary": [
-            "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 3 use case(s), "
+            "analysis at tech-docs/analysis: 2 actor(s), 1 term(s), 0 domain-model view(s), "
+            "3 use case(s), "
             "1 journey(s), 0 quality requirement(s), 0 functional requirement(s), "
             "0 constraint(s); 0 revalidation record(s).",
             # The format rule is accepted, yet no set of this repository's own inherits

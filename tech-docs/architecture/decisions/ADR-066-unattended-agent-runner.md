@@ -96,7 +96,8 @@ The points:
 
 **The caller gets back:**
 - how the run ended: finished with the harness's exit, could not start, stopped at its limit, or refused, with the reason
-- the agent's output, and the calls the harness refused where it reports them
+- the agent's final message, its own text and no tool's result
+- the calls the harness refused, where it reports them
 - for a confined run, the run's files as untrusted data, the check's verdict (point 7), and each command the run ran outside the sandbox (point 6)
 
 **A run is refused before it starts when:**
@@ -105,22 +106,32 @@ The points:
 - for a confined run, the harness cannot confine it:
   - the harness's version lies outside the range the adapter's author tested the confined form on. Only that author widens the range, after the probe passes on a newer harness (COR-047 point 2).
   - the platform offers no sandbox the harness can use, or the harness cannot run with only the run's settings (point 3)
-  - the agent's definition carries a field outside the allowed set, or a deny that binds the run cannot be held natively (point 3)
+  - the agent's definition fails its check: a field outside the methodology's shape, a file the deploy would not resolve, or a value the run passes that the deploy would drop (point 3)
+  - a deny that binds the run cannot be held natively (point 3)
   - the run's settings fail the harness's settings schema (point 3)
   - the clone, or the shell's temp folder inside the workspace, cannot be made (points 6 and 7)
 
-Each refusal names its cause. A start report that does not match the run's settings ends the run at once (point 9). At the wall-clock limit, the runner ends the harness and every process it started.
+Each refusal names its cause. A start report that does not match the run's settings ends the run at once (point 9). At the wall-clock limit, the runner ends the harness and every process of the run it can reach (point 11).
 
 ### 3. A confined run loads only its own settings and a checked definition
 
 - **No settings file of the person's or the project's.** The run loads its own settings and the admin-managed ones, which nothing drops. `--restricted` or `--setting-sources` does this today, and the probe picks which (point 12). So the project's hooks and MCP servers, which run with full access outside the sandbox, never start in a run.
 - **The denies of those files come along.** The run's settings carry the deny rules of each settings file the run leaves out. They also carry each deny the model holds for the run's agent or for every agent, the baseline's guardrails among them. A deny the adapter cannot hold natively refuses the run.
 - **Held in the harness's native rules, never in a hook.** Native rules fail closed, and the hook fails open (ADR-002 point 3). COR-028 point 2 puts a deny that must hold on such a mechanism.
-- **Read at the pinned commit.** The run's rules, the project's grants, the catalog, the agent's definition, the candidate exclusions and the runner itself are read from the clone. So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
-- **A checked agent definition.** The runner always passes the definition itself, with `--agents`, built from the agent's file at the pinned commit.
-  - It keeps only what a run needs: the description, the instructions, the tool list and the model.
-  - A definition with any other field, such as hooks, MCP servers, a permission mode, memory, skills or isolation, is refused, not trimmed. So the agent's owner sees why.
-  - The definition gets a name unique to the run. So no agent of the person's, the project's or the organisation's answers to it.
+- **Read at the pinned commit.** These are read from the clone:
+  - the run's rules, the project's grants and the catalog
+  - the agent's definition, and the overlay that resolves it
+  - the candidate exclusions
+  - the runner itself, and the deploy's resolution of an agent, which the runner applies
+
+  So no unmerged change shapes a run nobody watches, as DEC-056 point 3 keeps for the agent.
+- **A checked agent definition.** The runner always passes the definition itself, with `--agents`. It makes it from the agent's file at the pinned commit.
+  - **As the deploy resolves it.** The file is the one the adapter's deploy picks among agents of one name. The overlay is applied. Each storyboard is named by its path from the clone's root, where the run reads it.
+  - **Refused where the deploy would not carry it.** The run is refused where the deploy would not resolve the file, such as over an overlay category its checks refuse ([ADR-051](ADR-051-process-author-edit-authority.md) and [ADR-052](ADR-052-optional-read-category-empty-tolerance.md)). It is refused too where the deploy would drop a value the run passes, such as a model it does not accept. Nobody watches the run to read the deploy's warning.
+  - **Only the methodology's shape.** Every field is one the methodology defines: a field of the front matter it gives its agents and skills ([COR-013](../../../.pkit/decisions/core/COR-013-agent-architecture.md) point 2, and the agents README, "Frontmatter schema"), or `storyboards` ([COR-016](../../../.pkit/decisions/core/COR-016-scripted-scenario-storyboards.md)). A field outside that shape, such as hooks, MCP servers, a permission mode, memory, preloaded skills or isolation, is refused, not trimmed. So the agent's owner sees why.
+  - **It passes only what a run needs:** the description, the instructions, the tool list, the model and the effort. A caller's effort, where it sets one, wins over the definition's, as the review command's does (the agents README, "Model and effort").
+  - **The rest is read, never passed,** such as `reads`, `owns`, `needs`, `gates` and `storyboards`. The harness gives these no meaning. A caller may read them, as the drift command reads what a fixer owns (DEC-056 point 1). Carrying them refuses no run.
+  - **The name is read, and replaced.** The runner reads it to find the agent, and the definition gets a name unique to the run. So no agent of the person's, the project's or the organisation's answers to it.
 - **The settings are out of the run's reach.** They are passed inline, or from a file in no folder the run writes. The adapter first checks them against the harness's settings schema, since the harness skips a value it rejects.
 - **No memory.** The run's settings turn the harness's own memory off. So a run leaves no note that loads into the person's later sessions.
 
@@ -220,7 +231,7 @@ Moving the review command onto the runner keeps what its reviewers may do. Its r
 
 **What changes around them:**
 - A project whose registered adapters have no runner loses its reviews, as a project without `claude` loses them today.
-- The wall-clock limit now ends the harness and every process it started.
+- The wall-clock limit ends the harness and every process of the run it can reach (point 11).
 - The review command needs the backbone that ships the run command, so project-management's changeset declares that need (PRJ-002).
 - A project with another harness answers through its own adapter's runner, not by editing the review command's script.
 - Once the marker is built, a reviewer cannot start agents through the runner.
@@ -249,6 +260,12 @@ Each item says what holds the intent and what is left (COR-028 point 3).
 - **The person's instructions.** The harness reads every `CLAUDE.md` above the folder it starts in, and the person's own. No file of the person's checkout reaches a run, but the person's own instructions may.
 - **An organisation's managed settings.** They reach every run, and nothing drops them. They may allow more, run hooks of their own, or set the run's rules aside. The runner cannot always read them, so the organisation closes this.
 - **The review command's runs** are unconfined (point 10). A reviewer runs in the person's checkout, may write there, and may start in a mode that approves calls no rule allows. Nothing checks its run.
+- **What the limit reaches.** At the wall-clock limit, the runner ends the harness and every process of the run it can reach (points 2 and 10). The Claude Code runner reaches each process descended from the harness at that moment, one in a session of its own included. What is left:
+  - A process that left the tree before the limit, such as one that daemonised, is not reached. It may run on after the run.
+  - Started inside the sandbox, such a process stays inside it. Whether the sandbox ends it with the run differs by platform, and the probe shows which (point 12).
+  - Started by an excluded command, it runs outside the sandbox with the person's full access, for as long as it runs.
+  - The check of point 7 misses what such a process changes after the check. What the process writes in the workspace before the copy goes into the run's files, which are untrusted data in any case.
+  - A person closes this outside the harness, as for network egress, by running their session in a container or a virtual machine.
 
 ### 12. The probe, and the trial
 
@@ -265,6 +282,8 @@ Before the confined form is built, a probe of the harness confirms the facts bel
 - On macOS, the exclusion lets the allowed commands that start `uv` run with the retry off (ADR-028 point 3).
 - A run started from inside a sandboxed session starts its own sandbox and reaches its model.
 - The marker reaches the run's shell, and the credential variables do not.
+- An agent passed with `--agents` runs with the model and the effort the runner gives it.
+- On each platform, whether the sandbox ends a process that left the harness's tree when the run ends.
 - In a review command's run, the hook judges a subject the probe names.
 - A harness release that makes bare mode the default for `-p`, as announced, falls outside the tested range. Bare mode signs in with an API key only.
 
@@ -285,6 +304,10 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 **Why the adapter, through its registered commands.** A harness's command line belongs in its adapter, as every other harness tie does (COR-005). A capability that calls `claude` ties its command to one harness, as the review command does today. The backbone already has one lookup and one bounded run for registered commands (ADR-057 point 5), so the runner joins them.
 
 **Why a confined run loads no settings file and no unchecked definition.** The run's allows then hold in native rules, which fail closed, since settings lists only add to each other. The project's hooks and MCP servers, and the hooks a definition can carry, run with full access outside the sandbox. Loading none of them means a merged change cannot add one that runs unwatched.
+
+**Why the methodology's own fields refuse nothing.** Every agent the methodology ships carries them, so refusing them would refuse every run. Apart from the name, which the runner replaces, the harness gives them no meaning. So passing none of them loses nothing and loads nothing. A field outside the methodology's shape can change what a run may do, so it refuses. Naming the methodology's shape, not a list of the harness's fields, keeps the set closed as the harness gains fields. A field the methodology adds refuses runs until the runner knows it, which fails closed.
+
+**Why the definition is the deploy's.** The deploy turns an agent's file into what a harness runs: the agent its precedence picks, the overlay applied, and each storyboard named where a run reads it. A run then starts the agent the deploy would give a session at that commit, as one resolved file serves every reader (COR-013 point 5). A definition made without the deploy would cite a storyboard where none lies, and drop the model and the effort the project set. Where the deploy would not resolve the file, or would drop a value the run passes, the run is refused, since nobody watches it to read the warning.
 
 **Why the run's rules are denies.** DEC-056 point 5 places them in the model that way, and COR-028 point 1 already lets a deny prevail over every allow. So a run is held to its list with no change to the model. The native allow list is how a harness holds a deny that names everything else.
 
@@ -312,7 +335,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 - **Keep the project's settings files, and add the run's denies.** Rejected. The project's hooks and MCP servers would run unwatched with full access, and a hook's allow would approve calls the run's list does not name.
 - **The harness started at the clone's root.** Rejected. The shell could then change code an excluded command runs.
 - **Refusing a run whose workspace holds a git or `uv` configuration file.** Rejected. It is a list over an open-ended set of files, and pinning the root closes the set.
-- **Trimming a definition's extra fields.** Rejected. Refusing shows the agent's owner what a run would not accept.
+- **Trimming a field outside the methodology's shape.** Rejected. Refusing shows the agent's owner what a run would not accept.
 - **A writable `uv` cache on Linux.** Rejected, for the reasons above.
 - **`--bare`.** Rejected. It signs in with an API key only.
 - **`auto` with `--permission-prompts none`,** the documentation's own example of an unattended run. Rejected. A classifier approves calls no rule allows.
@@ -332,7 +355,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
   - ADR-008 point 4: that widening reaches a run with no person's gesture. It lands in no file of the project's, and the run's result reports it.
 - **Docs:**
   - the adapters README gains a section on the runner's contract: a registered command, run once for each run, not idempotent, and refusing inside a run
-  - the Claude Code adapter's README lists the closed set of flags and the run's settings
+  - the Claude Code adapter's README lists the closed set of flags, the run's settings, and the fields of a definition the runner passes
   - the adapter's enforcement declaration names what holds a run, and what stays open (COR-028 point 3)
   - the permissions README, "Default-agent subject resolution", says that `--agent` sets a session's agent without changing the file the hook reads
   - the CLI reference documents the backbone's run command
@@ -342,7 +365,8 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 - **Stands on these accepted records:**
   - the drift fixers (DEC-056)
   - the permission model, harness requirements and pattern extraction (COR-028, COR-047 and COR-007)
-  - adapters as a harness's translation (COR-005 and COR-013), and the rules for migrations and versions (COR-010 and PRJ-002)
+  - adapters as a harness's translation, an agent's fields and its storyboards (COR-005, COR-013 and COR-016), and the rules for migrations and versions (COR-010 and PRJ-002)
   - the permission realiser and its shared core (ADR-002 and ADR-003), intent and confinement (ADR-004), and confinement allowances (ADR-008)
+  - the deploy's checks of the overlay: write-carrying categories (ADR-051) and optional reads (ADR-052)
   - the macOS stance and its required exclusion (ADR-014 and ADR-027), and the sealed retry (ADR-028)
   - capability grants and privileges (ADR-016 and ADR-021), registered commands (ADR-057), the agent workspace (ADR-060), and the migration runner's `pkit` and marker (ADR-065)

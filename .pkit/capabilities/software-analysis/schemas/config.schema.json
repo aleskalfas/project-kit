@@ -25,6 +25,22 @@
       "type": "string",
       "description": "Self-describing adopter-data binding (COR-023). Expected value: `software-analysis:config`."
     },
+    "analyses": {
+      "description": "The analyses the project keeps, one for each component that keeps one (DEC-001 point 2). Absent, or empty, where it keeps one, at the top of the analysis location. Listed, each lies in a folder of the location named after its component, and an artefact no listed analysis holds is refused. One numbering of each numbered kind runs across them, and no two of their artefacts share an id (DEC-001 point 3).",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/analysis"
+      }
+    },
+    "areas": {
+      "description": "Each area's goal of the one analysis at the top of the analysis location, where the project lists no analyses (DEC-003 point 8). A listed analysis keeps its own in its entry's `areas`, and this key is refused beside a list. See `$defs/areas`.",
+      "$ref": "#/$defs/areas"
+    },
+    "overview": {
+      "description": "Whether each analysis keeps its generated overview, `overview/README.md` in its folder, the reader's entry point (DEC-003 point 8). True unless set. Set to false, the stamp writes none, `pkit analysis overview` refuses, and `pkit analysis validate` asks for none.",
+      "type": "boolean",
+      "default": true
+    },
     "numbering": {
       "description": "How use cases, journeys and requirements are numbered (DEC-001 point 3, DEC-002 point 2).",
       "type": "object",
@@ -42,6 +58,62 @@
     }
   },
   "$defs": {
+    "analysis": {
+      "description": "One analysis: its component, the folder of the analysis location it lies in, and the analyses it builds on.",
+      "type": "object",
+      "required": [
+        "component",
+        "folder"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "component": {
+          "description": "The component it describes, a part of the system developed and versioned on its own, by its name. `core` names a methodology's core, the backbone; a capability goes by its own name.",
+          "$ref": "analysis.schema.json#/$defs/slug"
+        },
+        "folder": {
+          "description": "The folder of the analysis location it lies in, one word, named after its component.",
+          "$ref": "analysis.schema.json#/$defs/slug"
+        },
+        "builds-on": {
+          "description": "The analyses it builds on: those of the components its component depends on, required or optional, and no other (DEC-001 point 2; RS-SAN-010). Where the component declares its dependencies, as a capability does in its package metadata, validation holds this list to them.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "analysis"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "analysis": {
+                "description": "The analysis it builds on, by its component's name.",
+                "$ref": "analysis.schema.json#/$defs/slug"
+              },
+              "optional": {
+                "description": "Whether its component is an optional dependency: used only where present, and the analysis works without it. False unless set.",
+                "type": "boolean",
+                "default": false
+              }
+            }
+          }
+        },
+        "areas": {
+          "description": "Each area's goal of this analysis (DEC-003 point 8). See `$defs/areas`.",
+          "$ref": "#/$defs/areas"
+        }
+      }
+    },
+    "areas": {
+      "description": "Each area of the analysis's use cases with its goal: the area's folder name, a word that may open with a number and a hyphen, such as `010-develop`, and beside it one line that says what the area makes possible. The overview shows each goal beside its area, so a reader sees why the use cases are cut as they are. `pkit analysis validate` fails a goal that names no folder of the use cases and, where the overview is kept, warns of an area of the use cases in force without a goal. An analysis whose use cases lie in no area keeps none.",
+      "type": "object",
+      "propertyNames": {
+        "pattern": "^(?:[0-9]+-)?[a-z][a-z0-9-]*$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^[^\\n]*\\S[^\\n]*$"
+      }
+    },
     "entry": {
       "description": "One commit and the ids it frees.",
       "type": "object",

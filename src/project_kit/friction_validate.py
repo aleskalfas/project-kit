@@ -21,13 +21,14 @@ settings that declare them, this pass reports:
   whenever it is declared, for the same reason: a surface nothing is measured
   against must never look like a covered one;
 - **a capability held folder not held** — a `friction.held` entry discovery
-  could not read in its shape (no `location`, a glob or a path leaving its
+  could not read in its shape (no `location`, a `**` or a path leaving its
   location, or any shape a place could not have), or one that leaves the
   repository, through a link included; it holds nothing, so the places
   matching its documents read them as artefacts. Reported whenever declared,
   dormant or not. A held folder overstepping its bounds — equal to or
-  enclosing a root or another declaration's place, sharing files with its own
-  place, another held folder or a rule-set folder — is the packages pass's
+  enclosing a root or any declaration's place, sharing files with another
+  component's held folder or a rule-set folder, or nested with another of its
+  own held folders — is the packages pass's
   finding, at the declaration (`package_validate`);
 - **a held document whose front matter does not parse** — a friction block
   in it could not be looked for, so a YAML typo never hides one; and **a
@@ -455,8 +456,8 @@ def _capability_held_findings(discovery: Discovery) -> Iterable[FrictionFinding]
             message=(
                 f"{entry.reason}, so friction discovery holds nothing under it, and a place "
                 f"matching its documents reads them as artefacts; a held folder is "
-                f"`{{location, path, description?}}`, `path` a folder within that location "
-                f"(COR-050 point 1)."
+                f"`{{location, path, description?}}`, `path` a folder, or a glob of folders at "
+                f"one depth, within that location (COR-050 point 1)."
             ),
         )
     for folder in discovery.held_folders:

@@ -1,0 +1,27 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+  requires_backbone: release
+body: >
+  A repository may keep one analysis for each component, as DEC-001 point 2
+  decides. List them in the capability's settings file as `analyses`, each
+  with its component, its folder and the analyses it builds on. Each lies in a
+  folder named after its component, with the layout of one analysis. The
+  places and the records' folder are declared one folder down too, so they
+  match both layouts. A project that lists nothing keeps its one analysis at
+  the top, and needs no change.
+  `pkit analysis new` takes `--analysis <component>` to write in a listed
+  analysis, and `pkit analysis diagram` takes it to draw one. Ids stay unique
+  across the analyses, and each numbered kind has one numbering across them.
+  `pkit analysis validate` refuses a file no listed analysis holds, an id two
+  analyses share, and a field naming another analysis's artefact. An actor of
+  an analysis it builds on is the exception, named with it, such as
+  `core:ACT-developer`, where the glossary's head lists it. The head lists what
+  an analysis takes from each one it builds on, as `builds-on` data, and the
+  check holds its text to that data where the format rule binds. The list is
+  held to what a capability's package metadata declares, and the analysis of
+  `core` is the backbone's. A head whose links name another version than that
+  floor is warned of. The readers point gives each actor the needs every
+  analysis states for it. It needs the backbone that lets a held folder be a
+  glob of folders, which this release ships.

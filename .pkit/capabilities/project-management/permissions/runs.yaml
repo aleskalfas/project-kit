@@ -1,0 +1,161 @@
+schema_version: 1
+# The rules of the agent runs this capability's commands start through the
+# adapter's runner (ADR-066 point 5; DEC-056 point 5). Shaped by
+# .pkit/schemas/permission-runs.schema.json.
+#
+# No session's model composes this file. The backbone's run command reads it at
+# the commit a run is pinned to, for the run whose command it names, fills in
+# the run's folders, and projects it through the shared decision core. The
+# adapter realises it in that run's own settings alone: the first deny as an
+# allow list of what proposing needs, with every other call refused without
+# asking, and the floor's denies as native deny rules where a native rule can
+# name them. `pkit agents rules project-management:fix-drift` shows the result.
+
+privileges:
+  # --- what proposing needs -----------------------------------------------
+  read-working-copy:
+    description: Read and search the files of the run's working copy with the file tools.
+    recognize:
+      path:
+        folders: ["{working-copy}"]
+        tools: [Read, Grep, Glob]
+  write-workspace:
+    description: Write new files in the run's own workspace with the file tools.
+    recognize:
+      path:
+        folders: ["{workspace}"]
+        tools: [Write]
+  read-version-control:
+    description: >-
+      Git's reading commands, each pointed at the working copy as
+      `git -C <working copy>`. A rule allows a command with any arguments
+      after its words, so no command is listed that an option can make run
+      another program: `git grep` is left out, since `--open-files-in-pager`
+      runs one, and the Grep tool searches instead. An option that writes a
+      file, such as `--output`, is held by the sandbox, which lets the run
+      write only its workspace. `--ext-diff` and `--textconv` run only a
+      driver the working copy's or the person's git configuration names,
+      which the run cannot write.
+    recognize:
+      bash:
+        - {cmd: git, args: ["-C", "{working-copy}", "log"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "show"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "diff"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "status"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "ls-files"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "ls-tree"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "cat-file"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "rev-parse"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "rev-list"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "blame"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "merge-base"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "describe"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "name-rev"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "shortlog"]}
+  make-diff:
+    description: >-
+      Make a diff between a file of the working copy and one in the
+      workspace, and check that a diff applies to the working copy. An option
+      that would write, such as `--output`, or `--apply` beside `--check`, is
+      held by the sandbox, which lets the run write only its workspace, and by
+      the check of the clone after the run.
+    recognize:
+      bash:
+        - {cmd: git, args: ["diff", "--no-index"]}
+        - {cmd: git, args: ["-C", "{working-copy}", "apply", "--check"]}
+  backbone-reading:
+    description: The backbone's reading commands, called bare as `pkit <command>`.
+    recognize:
+      kit: reading
+  component-queries:
+    description: Each command another installed component declares a query, called bare as `pkit <component> <command>`.
+    recognize:
+      kit: queries
+  # --- the one deny of everything else ------------------------------------
+  beyond-proposing:
+    description: Every call that none of what proposing needs recognises.
+    recognize:
+      except:
+        - "[privilege-catalog:project-management:read-working-copy]"
+        - "[privilege-catalog:project-management:write-workspace]"
+        - "[privilege-catalog:project-management:read-version-control]"
+        - "[privilege-catalog:project-management:make-diff]"
+        - "[privilege-catalog:project-management:backbone-reading]"
+        - "[privilege-catalog:project-management:component-queries]"
+  # --- the floor ------------------------------------------------------------
+  write-outside-workspace:
+    description: Writing with the file tools anywhere but the run's own workspace.
+    recognize:
+      tool: [Write, Edit, MultiEdit, NotebookEdit]
+      except:
+        - "[privilege-catalog:project-management:write-workspace]"
+  version-control-beyond-reading:
+    description: Every git call but its reading commands and the forms that make or check a diff.
+    recognize:
+      bash:
+        - {cmd: git}
+      except:
+        - "[privilege-catalog:project-management:read-version-control]"
+        - "[privilege-catalog:project-management:make-diff]"
+  toolchain:
+    description: The toolchain that installs or runs packages.
+    recognize:
+      bash:
+        - {cmd: uv}
+        - {cmd: uvx}
+        - {cmd: pip}
+        - {cmd: pip3}
+        - {cmd: pipx}
+        - {cmd: poetry}
+        - {cmd: conda}
+        - {cmd: npm}
+        - {cmd: npx}
+        - {cmd: pnpm}
+        - {cmd: yarn}
+        - {cmd: bun}
+        - {cmd: bunx}
+        - {cmd: gem}
+        - {cmd: bundle}
+        - {cmd: cargo}
+        - {cmd: go}
+        - {cmd: brew}
+  methodology-writers:
+    description: Every command of the methodology but the backbone's reading commands and the queries other components declare.
+    recognize:
+      bash:
+        - {cmd: pkit}
+      except:
+        - "[privilege-catalog:project-management:backbone-reading]"
+        - "[privilege-catalog:project-management:component-queries]"
+  this-capability:
+    description: Every command of this capability.
+    recognize:
+      bash:
+        - {cmd: pkit, args: [pm]}
+        - {cmd: pkit, args: [project-management]}
+
+runs:
+  fix-drift:
+    description: A fixer's run, started by `pkit pm fix-drift` on the default branch's stale artefacts of its types (DEC-056 point 5). It reads, writes its own workspace, and proposes.
+    rules:
+      - subject: all
+        privilege: "[privilege-catalog:project-management:beyond-proposing]"
+        effect: deny
+      - subject: all
+        privilege: "[privilege-catalog:project-management:write-outside-workspace]"
+        effect: deny
+      - subject: all
+        privilege: "[privilege-catalog:project-management:version-control-beyond-reading]"
+        effect: deny
+      - subject: all
+        privilege: "[privilege-catalog:issue-tracker]"
+        effect: deny
+      - subject: all
+        privilege: "[privilege-catalog:project-management:toolchain]"
+        effect: deny
+      - subject: all
+        privilege: "[privilege-catalog:project-management:methodology-writers]"
+        effect: deny
+      - subject: all
+        privilege: "[privilege-catalog:project-management:this-capability]"
+        effect: deny

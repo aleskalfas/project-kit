@@ -10,6 +10,7 @@ pkit:
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
         - scripts/check_deployed_agents.py
+        - scripts/short_check.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
         - .github/workflows/friction-report.yml
@@ -18,15 +19,14 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, "project-management:DEC-053"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053"]
       artefact:
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-19T06:13:50Z
-      outcome: unchanged
-      unchanged-because: "COR-004 gained two sentences: the rule lists the core layer's operations, and a data point's question is the definer's command and none of them. This page cites COR-004 as an example of design rules for the command surface that list no commands, which still holds."
+      at: 2026-10-20T09:24:32Z
+      outcome: updated
 ---
 
 # Contributing to project-kit
@@ -51,6 +51,12 @@ The same aggregator runs in two places, so the gate can't drift:
 
 - **Pre-push hook** (`.githooks/pre-push`) — runs it before every push for fast local feedback. Opt in once per clone: `git config core.hooksPath .githooks` (bypass in a pinch with `git push --no-verify`).
 - **CI** (`.github/workflows/checks.yml`) — runs `pkit sync`, then the same aggregator, on a clean Linux runner for every PR, every merge the merge queue is about to make, and every push to `main`: the unbypassable backstop plus the platform / clean-install / post-merge coverage a local hook can't give.
+
+**When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` instead of the whole aggregator in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
+- **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
+- **Only answers changed since.** `pkit friction since` says every change from that run's head lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
+
+The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 
 **The full suite is the hook's and CI's, not a builder's.** The aggregator's test step runs the suite in parallel workers, then the tests marked `serial` on their own, and lets at most two full suites run on a machine at once — a third waits and says whose runs it waits for. While you build, run the test modules for the files you changed and the fast gates instead (`.pkit/rules/project.md`); [`tests/README.md`](tests/README.md) "Running the suite" has the details.
 

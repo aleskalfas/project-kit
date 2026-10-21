@@ -1,0 +1,15 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  The overview of each analysis lists each domain-model view by its number and
+  title, and reads front matter only again: it no longer quotes a view's
+  opening. Under each actor it lists the use cases the actor is the main actor
+  of and those it takes part in, each linked. In an analysis that builds on
+  another, each actor of that analysis the glossary's head lists, or a use case
+  names, follows the analysis's own actors, by its id with that analysis and
+  the name the head gives it. The fingerprint reads the head's names, and its
+  version is 2, so an overview written before is a warning until `pkit
+  analysis overview` writes it anew. DEC-001 point 1 and DEC-003 point 8 are
+  refined in place.
