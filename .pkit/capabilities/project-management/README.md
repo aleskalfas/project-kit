@@ -19,6 +19,15 @@ pkit:
       at: 2026-10-21T13:58:53Z
       outcome: unchanged
       unchanged-because: "ADR-066 changes one bullet of point 13: each adapter now answers the requirement in its support declaration, and the Claude Code adapter's answer holds for the runner's tested range. The page's account of the agent runs its commands start is as it was."
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
 ---
 
 # project-management capability

@@ -39,6 +39,30 @@ pkit:
       deferred:
         - anchor:
             kind: record
+            value: COR-050#12
+          reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."
+        - anchor:
+            kind: record
+            value: COR-050#13
+          reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."
+        - anchor:
+            kind: record
+            value: COR-050#2
+          reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."
+        - anchor:
+            kind: record
+            value: COR-050#3
+          reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."
+        - anchor:
+            kind: record
+            value: COR-050#4
+          reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."
+        - anchor:
+            kind: record
+            value: COR-050#6
+          reason: "Its steps write the revalidated key of the artefact's block, which COR-062 moves to an answer file the change adds. #1779 builds it and rewrites the steps."
+        - anchor:
+            kind: record
             value: software-analysis:DEC-001#5
           reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 5b names only the unchanged case until #1856 revises it."
 ---
