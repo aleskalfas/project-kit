@@ -6,10 +6,12 @@ reads as an artefact. A reader on a repository host sees there, with no setup, w
 analysis holds, in the order it is built (DEC-001 point 12):
 
 - **the concepts:** the glossary, linked, then the domain model: each view in force, in
-  the order of its number, linked, with its title and the first paragraph of its
-  opening, which states the problem its concepts solve. The opening is read by its
-  part's permanent id, as the check reads it, its links kept as their text;
-- **the actors** in force, linked;
+  the order of its number, linked, by its number and its title;
+- **the actors** in force, each linked, with the use cases in force it is the main actor
+  of, its `actor`, and those it takes part in, its `other-actors`, each linked. After
+  them, each actor of another analysis that the glossary's head lists, or that a use
+  case in force names, such as `core:ACT-developer`, by that id and the name the head
+  gives it, with its use cases the same way;
 - **the requirements** in force, linked, then their map, where any is in force;
 - **the areas** of the use cases in force, in the order of their numbers, each with its
   goal and its use cases, linked, then the chain of use cases and the use-case diagram.
@@ -20,6 +22,10 @@ Each diagram is the query's own output, `pkit analysis diagram` (`_lib/diagrams.
 its text alternative, in a section of its own, so two branches that each change what one
 diagram draws conflict on that section alone.
 
+**Front matter only.** The overview reads the front matter of the analysis it shows, and
+the paths of its files, never a body (DEC-001 point 1). It reads no file of another
+analysis: an actor of one is shown as this analysis's glossary's head names it.
+
 **An area's goal** is one line kept in the capability's settings file beside the area's
 folder name (`_lib/analyses.py`): what the area makes possible. It is the one text the
 overview shows that no artefact holds. Where the project keeps its overview, the check
@@ -29,7 +35,8 @@ folder of the use cases, whatever the setting.
 **Fresh by fingerprint.** The overview carries a fingerprint of what it draws: the data
 it reads, never its text (`fingerprint`), with the version of what it reads (`VERSION`).
 That is each artefact in force of the kinds it shows, with its id, its path and the
-fields it reads, each view's opening as it is quoted, and the goal of each area it shows.
+fields it reads, each actor of another analysis it shows with its name, and the goal of
+each area it shows.
 Validation compares it with the analysis in the working tree, and fails a stale
 overview, naming the command. A release that only
 prints the overview differently changes no fingerprint, so it fails no project. One that
@@ -57,8 +64,8 @@ import hashlib
 import json
 import posixpath
 import re
-from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from _lib import analyses, backbone, chain, diagrams, stamp, structure
@@ -69,6 +76,7 @@ from _lib.model import (
     JOURNEY,
     MUST_MEET,
     OTHER_ACTORS,
+    QUALIFIER,
     RELIES_ON,
     REQUIREMENTS,
     USE_CASE,
@@ -77,6 +85,7 @@ from _lib.model import (
     Artefact,
     Unreadable,
     number_in,
+    qualified,
     under_place,
     view_name,
 )
@@ -93,7 +102,7 @@ COMMAND = "pkit analysis overview"
 #: The version of what the fingerprint reads. A release that reads more of the analysis
 #: raises it. An overview written under another version is a warning, never a failure,
 #: until its command rewrites it, so such a release fails no project.
-VERSION = 1
+VERSION = 2
 
 #: The line that carries the fingerprint and the version it reads, an HTML comment a
 #: repository host does not show.
@@ -112,26 +121,20 @@ _FIELDS: Mapping[str, tuple[str, ...]] = {
     VIEW: ("title",),
 }
 
-#: A Markdown link, which the overview quotes as its text: a view's opening may link a
-#: term's entry by a path from its own folder (DEC-004 point 7).
-_LINK = re.compile(r"!?\[([^\]\n]*)\]\([^()\s]*\)")
-
-#: The permanent id of a view's opening, the part the overview quotes.
-_OPENING = "opening"
-
 
 @dataclass(frozen=True)
 class Read:
     """What the overview of one analysis reads: the artefacts in force of the kinds it
-    shows, each view's opening as it is quoted, by the view's path, the goal of each area
-    it shows, `None` where the area has none, the analysis's folder, and its glossary's
-    path, `None` where it keeps none."""
+    shows, the goal of each area it shows, `None` where the area has none, the analysis's
+    folder, its glossary's path, `None` where it keeps none, and each actor of another
+    analysis it shows, by its id with that analysis, such as `core:ACT-developer`, with
+    the name the glossary's head gives it, `None` where the head lists it not."""
 
     artefacts: tuple[Artefact, ...]
-    openings: Mapping[str, str]
     areas: Mapping[str, str | None]
     location: str
     glossary: str | None = None
+    foreign: Mapping[str, str | None] = field(default_factory=dict)
 
     def of(self, *kinds: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind in kinds]
@@ -149,9 +152,9 @@ def _top(analysis: Analysis, folder: str | None) -> str:
     return location if folder is None else posixpath.join(location, folder)
 
 
-def read(root: Path, analysis: Analysis, listing: analyses.Listing, folder: str | None) -> Read:
-    """What the overview of the analysis in `folder` reads. Raises diagrams.NoAnswer where
-    a diagram it shows cannot be drawn in full, or a view it quotes cannot be read."""
+def read(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> Read:
+    """What the overview of the analysis in `folder` reads: front matter and paths alone.
+    Raises diagrams.NoAnswer where a diagram it shows cannot be drawn in full."""
     diagrams.diagrams(analysis, None, {}, folder)
     artefacts = tuple(
         sorted(
@@ -163,23 +166,23 @@ def read(root: Path, analysis: Analysis, listing: analyses.Listing, folder: str 
             key=_order,
         )
     )
-    openings = {v.path: _opening(root, v) for v in artefacts if v.kind == VIEW}
     goals = listing.goals(folder)
     shown = _areas(analysis, [a for a in artefacts if a.kind == USE_CASE])
     return Read(
         artefacts,
-        openings,
         {area: goals.get(area) for area in shown},
         _top(analysis, folder),
         analyses.glossary_of(analysis, folder),
+        _foreign(analysis, folder, [a for a in artefacts if a.kind == USE_CASE]),
     )
 
 
 def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
     """The fingerprint of what the overview draws: each artefact it reads, by its kind, its
-    id, its path within the analysis and the fields it reads, each view's opening as
-    quoted, each area's goal, the glossary's path and the analysis's component. Never the
-    overview's text, so a release that only prints it differently changes none."""
+    id, its path within the analysis and the fields it reads, each actor of another
+    analysis it shows, with its name, each area's goal, the glossary's path and the
+    analysis's component. Never the overview's text, so a release that only prints it
+    differently changes none."""
     data = {
         "version": VERSION,
         "component": component,
@@ -189,11 +192,11 @@ def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
                 "id": a.id,
                 "path": posixpath.relpath(a.path, read_.location),
                 "fields": {f: a.fields[f] for f in _FIELDS[a.kind] if f in a.fields},
-                **({"opening": read_.openings.get(a.path, "")} if a.kind == VIEW else {}),
                 **({"area": analysis.area(a)} if a.kind == USE_CASE else {}),
             }
             for a in read_.artefacts
         ],
+        "foreign": dict(read_.foreign),
         "areas": dict(read_.areas),
         "glossary": (posixpath.relpath(read_.glossary, read_.location) if read_.glossary else None),
     }
@@ -217,7 +220,6 @@ def written_fingerprint(text: str) -> tuple[int, str] | None:
 
 
 def render(
-    root: Path,
     analysis: Analysis,
     listing: analyses.Listing,
     folder: str | None,
@@ -225,7 +227,7 @@ def render(
 ) -> str:
     """The overview of the analysis in `folder`, as its command writes it. Raises
     diagrams.NoAnswer where it cannot be drawn in full."""
-    read_ = read(root, analysis, listing, folder)
+    read_ = read(analysis, listing, folder)
     listed = listing.of_folder(folder) if listing.several else None
     component = listed.component if listed is not None else None
     drawn = {d.id: d for d in diagrams.diagrams(analysis, None, shown_as, folder)}
@@ -257,14 +259,22 @@ def render(
         if views:
             out += [""] if read_.glossary else []
             out += ["Each view of the domain model explains a group of related concepts:", ""]
-        for view in views:
-            opening = read_.openings.get(view.path, "")
-            out.append(f"- {link(view)}" + (f": {opening}" if opening else ""))
+        out += [f"- {link(v)}" for v in views]
 
     actors = read_.of(ACTOR)
-    if actors:
-        out += ["", "## Actors", ""]
-        out += [f"- {link(a)}" for a in actors]
+    if actors or read_.foreign:
+        out += ["", "## Actors"]
+        for actor in actors:
+            out += ["", f"### {link(actor)}", "", *_use_cases_of(str(actor.id), read_, link)]
+        for reference, name in read_.foreign.items():
+            out += ["", f"### {reference}" + (f" — {name}" if name else ""), ""]
+            of = f"An actor of the analysis of {qualified(reference)[0]}"
+            if name is not None and read_.glossary:
+                glossary = posixpath.relpath(read_.glossary, here)
+                out.append(f"{of}, which the head of the [glossary]({glossary}) lists.")
+            else:
+                out.append(f"{of}.")
+            out += ["", *_use_cases_of(reference, read_, link)]
 
     requirements = read_.of(*REQUIREMENTS)
     if requirements:
@@ -310,14 +320,68 @@ def _fence(diagram: diagrams.Diagram | None) -> list[str]:
 
 
 def _label(artefact: Artefact, shown_as: Mapping[str, str]) -> str:
-    """`<id> — <title>`, an actor's name in its place, and `<id> · <kind> · <title>` for a
-    requirement, as its heading shows it."""
+    """`<id> — <title>`, an actor's name in its place and a view's number, as its file's
+    name spells it, in its id's, and `<id> · <kind> · <title>` for a requirement, as its
+    heading shows it."""
     if artefact.kind in REQUIREMENTS:
         title = artefact.fields.get("title")
         shown = shown_as.get(artefact.kind, artefact.kind)
         return f"{artefact.id} · {shown}" + (f" · {title}" if isinstance(title, str) else "")
     name = artefact.fields.get("name" if artefact.kind == ACTOR else "title")
-    return f"{artefact.id} — {name}" if isinstance(name, str) else str(artefact.id)
+    first = _number(artefact) if artefact.kind == VIEW else None
+    first = first or str(artefact.id)
+    return f"{first} — {name}" if isinstance(name, str) else first
+
+
+def _number(view: Artefact) -> str | None:
+    """A view's number as its file's name spells it, `010` for `…/010-orders.md`; `None`
+    for a name that opens with no number (DEC-004 point 4)."""
+    if view_name(view.path) is None:
+        return None
+    return view.path.rsplit("/", 1)[-1].split("-", 1)[0]
+
+
+def _taking_part(use_case: Artefact) -> tuple[str | None, list[str]]:
+    """The actor whose goal a use case is, its `actor`, and the other actors who take
+    part, its `other-actors`, the main actor left out, each as written."""
+    main = use_case.fields.get("actor")
+    main = main if isinstance(main, str) else None
+    others = use_case.fields.get(OTHER_ACTORS)
+    listed = others if isinstance(others, list) else []
+    return main, list(dict.fromkeys(o for o in listed if isinstance(o, str) and o != main))
+
+
+def _use_cases_of(actor_id: str, read_: Read, link: Callable[[Artefact], str]) -> list[str]:
+    """The lines under an actor's heading: the use cases in force it is the main actor
+    of, then those it takes part in, each linked, or a line that says none names it."""
+    use_cases = [(u, *_taking_part(u)) for u in read_.of(USE_CASE)]
+    main = [f"- {link(u)}" for u, actor, _ in use_cases if actor == actor_id]
+    part = [f"- {link(u)}" for u, _, others in use_cases if actor_id in others]
+    if not main and not part:
+        return ["No use case names it yet."]
+    out = ["The use cases it is the main actor of:", "", *main] if main else []
+    if part:
+        out += [*([""] if out else []), "The use cases it takes part in:", "", *part]
+    return out
+
+
+def _foreign(
+    analysis: Analysis, folder: str | None, use_cases: Sequence[Artefact]
+) -> dict[str, str | None]:
+    """Each actor of another analysis the overview shows, by its id with that analysis, in
+    the order of that id: each the glossary's head lists, with the name it gives, and each
+    a use case in force names, `None` where the head lists it not (DEC-001 point 2)."""
+    head = analyses.head(analysis, folder)
+    named: dict[str, str | None] = {}
+    for taken in head.taken if head is not None else ():
+        for actor in taken.actors:
+            named.setdefault(f"{taken.analysis}{QUALIFIER}{actor.id}", actor.name)
+    for use_case in use_cases:
+        main, others = _taking_part(use_case)
+        for reference in (main, *others):
+            if reference is not None and qualified(reference)[0] is not None:
+                named.setdefault(reference, None)
+    return dict(sorted(named.items()))
 
 
 def _order(artefact: Artefact) -> tuple[int, int, str, str]:
@@ -332,29 +396,6 @@ def _order(artefact: Artefact) -> tuple[int, int, str, str]:
 def _areas(analysis: Analysis, use_cases: Sequence[Artefact]) -> list[str]:
     """The areas `use_cases` lie in, in the order of their numbers, then by name."""
     return chain.ordered_areas([a for u in use_cases if (a := analysis.area(u)) is not None])
-
-
-def _opening(root: Path, view: Artefact) -> str:
-    """The first paragraph of a view's opening, read by the part's permanent id, on one
-    line, each link kept as its text; empty where the view writes none yet. Raises
-    diagrams.NoAnswer where the file cannot be read."""
-    try:
-        text = (root / view.path).read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError) as exc:
-        raise diagrams.NoAnswer(f"{view.path} could not be read: {exc}") from exc
-    kind = structure.read_kinds()[VIEW]
-    for element, part in structure.parts(structure.body_lines(text), kind):
-        if element.id != _OPENING:
-            continue
-        paragraph: list[str] = []
-        for row in part.rows:
-            if row.fence or not row.text.strip():
-                if paragraph:
-                    break
-                continue
-            paragraph.append(row.text)
-        return " ".join(_LINK.sub(r"\1", " ".join(paragraph)).split())
-    return ""
 
 
 # --- writing it --------------------------------------------------------------------------------
@@ -382,7 +423,7 @@ def write(
     at all, recording the analysis location through `record` where it is not recorded yet
     (COR-049 point 5). Raises diagrams.NoAnswer where it cannot be drawn in full, and
     stamp.Refused where it cannot be written."""
-    text = render(root, analysis, listing, folder, shown_as)
+    text = render(analysis, listing, folder, shown_as)
     rel = path_of(analysis, folder)
     target = root / rel
     if target.is_file() and target.read_bytes() == text.encode("utf-8"):
@@ -541,10 +582,10 @@ def _freshness(
     try:
         now = fingerprint(
             analysis,
-            read(root, analysis, listing, folder),
+            read(analysis, listing, folder),
             listed.component if listed is not None else None,
         )
-    except (diagrams.NoAnswer, structure.Unreadable) as exc:
+    except diagrams.NoAnswer as exc:
         return [
             Finding(
                 REPORT,
@@ -572,7 +613,7 @@ def _freshness(
             ERROR,
             rel,
             f"it is stale: what it draws changed since it was written, such as a title, a "
-            f"relation, a status, a view's opening or an area's goal. Run `{COMMAND}` to "
-            f"write it anew, and commit it with the change (DEC-003 point 8)",
+            f"relation, a status, an actor of a use case or an area's goal. Run `{COMMAND}` "
+            f"to write it anew, and commit it with the change (DEC-003 point 8)",
         )
     ]
