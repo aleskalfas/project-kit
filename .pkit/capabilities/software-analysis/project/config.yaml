@@ -11,6 +11,14 @@ schema_version: 1
 analyses:
   - component: core
     folder: core
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8; RS-ANA-005 in ANA). 020-set-up joins
+    # when its first use case is written.
+    areas:
+      010-develop: "The methodology exists and can be extended, in its own source repository: capabilities, adapters, and a project's own skills and agent definitions."
+      030-change: "A change to a project is checked, answered and landed, so what the project states stays true as it changes."
+      040-release: "The backbone and each component are released on their own versions, so projects can move to them and pin them."
+      050-adopt: "Another project takes the system in, keeps it current, and reports what goes wrong with it."
   - component: software-engineering
     folder: software-engineering
     builds-on:

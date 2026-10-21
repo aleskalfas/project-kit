@@ -4,6 +4,8 @@ title: Say what my document rests on
 status: active
 actor: ACT-developer
 other-actors: []
+after:
+  - [UC-014]
 pkit:
   friction:
     anchors:
@@ -34,7 +36,7 @@ pkit:
 
 **Other actors:** None.
 
-**Preconditions:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

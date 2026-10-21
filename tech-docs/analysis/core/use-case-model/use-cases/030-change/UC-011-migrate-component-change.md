@@ -6,6 +6,8 @@ actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+after:
+  - [UC-015, UC-019]
 pkit:
   friction:
     anchors:
@@ -39,7 +41,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs the migration check on every pull request, with no person to answer. It does so where the component's repository wires the check in, as project-kit's does (UC-006).
 - **AI agent** (`ACT-ai-agent`): writes the migration for the author through the `migration-author` skill, which pairs with the stamp of step 2.
 
-**Preconditions:** The author's component exists as a capability or an adapter, and its `package.yaml` holds its version.
+**Preconditions:** **From UC-015 or UC-019:** The author's component exists as a capability or an adapter, and its `package.yaml` holds its version.
 
 **Assumptions:**
 
