@@ -43,8 +43,9 @@ pkit:
         - TERM-install
         - TERM-project
     revalidated:
-      at: 2026-10-21T19:08:59Z
-      outcome: updated
+      at: 2026-10-21T21:57:51Z
+      outcome: unchanged
+      unchanged-because: The view cites COR-004 only for first install refusing to run again. The refinement changes which commands offer `--dry-run`, which the view does not describe.
 ---
 
 # VIEW-parts-of-the-system — Parts of the system, and projects

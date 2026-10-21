@@ -90,7 +90,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-21T18:39:01Z
+      at: 2026-10-21T21:57:59Z
       outcome: updated
       deferred:
         - anchor:
@@ -1959,7 +1959,7 @@ implementation.
 
 - **`--help`** on every command, including the root.
 - **`--version`** on the root, equivalent to running the `version` subcommand.
-- **`--dry-run`** on every mutating command (`init`, `sync`, `merge`, `upgrade`, `capabilities install`, `capabilities register`, `capabilities uninstall`, `capabilities upgrade`, `capabilities refresh`, `process new`, `process couple`, `process hand-off`, `friction revalidate`, `friction defer`, `friction revisit`, `friction record-status`). Shows the plan without applying any changes. On the process stamps it runs every check a real run runs, including the shape lint of the would-be definition, and reports the stubs it would scaffold.
+- **`--dry-run`** on each command that changes or removes content that already exists, beyond the one value or entry you name (per COR-004). A command outside that class may offer it too. Among the commands that offer it: `init`, `sync`, `merge`, `upgrade`, `capabilities install`, `capabilities register`, `capabilities uninstall`, `capabilities upgrade`, `capabilities refresh`, `process new`, `process couple`, `process hand-off`, `friction revalidate`, `friction defer`, `friction revisit`, `friction record-status`. Some commands of the class do not offer it. Shows the plan without applying any changes. On the process stamps it runs every check a real run runs, including the shape lint of the would-be definition, and reports the stubs it would scaffold.
 - **`--color {auto,always,never}`** on the root (default `auto`). Colourizes human output via the semantic styling layer (per ADR-011); resolved once at the command boundary. Honours `NO_COLOR`; styling is never load-bearing (plain text carries all structure), so this never changes machine output or piped/redirected output.
 
 ## Command output conventions
