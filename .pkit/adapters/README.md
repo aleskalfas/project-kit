@@ -26,7 +26,7 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-21T15:44:42Z
+      at: 2026-10-21T18:39:17Z
       outcome: updated
 ---
 
