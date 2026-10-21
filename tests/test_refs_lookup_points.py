@@ -188,6 +188,7 @@ def test_the_command_answers_several_citations_and_as_data(records: Path) -> Non
             "path": ".pkit/decisions/core/COR-900-anchors.md",
             "anchor": "1-anchors-name-parts",
             "problem": None,
+            "received": False,
         },
         {
             "citation": "COR-999",
@@ -195,5 +196,6 @@ def test_the_command_answers_several_citations_and_as_data(records: Path) -> Non
             "path": None,
             "anchor": None,
             "problem": "no record matches 'COR-999'",
+            "received": False,
         },
     ]

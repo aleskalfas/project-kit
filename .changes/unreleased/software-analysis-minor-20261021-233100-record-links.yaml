@@ -21,4 +21,6 @@ body: >
   missing, extra or stale and names the command. It fails into a file the
   project writes, and warns into one it receives as a synced copy, such as a
   core record. Run `pkit analysis link` once after you take this release, and
-  again after a version transition that rewords a heading you cite.
+  again after a version transition that rewords a heading you cite. The
+  examples the hints ship cite a project's own record, such as `PRJ-003`, in
+  place of a bare `DEC-003`, which names no capability.
