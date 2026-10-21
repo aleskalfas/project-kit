@@ -122,7 +122,7 @@ An adapter that declares nothing owes nothing to exist: **silence resolves indet
 3. `not-achievable` for every version: `unsatisfied`, `computed`. The answer says no configuration helps, so the declaration is the whole input.
 4. `supported` or `at-cost` for every version: `indeterminate`, since nothing was read to confirm the grade. An adopter's own configuration can undo what the harness does by default, so a grade alone never reads as `satisfied`.
 
-So the report gives no `satisfied` result until a pass can read what the harness does. That needs an adapter to give the pass a way to observe it, which none does yet. The command exits 1 while anything is unmet, so an automated check reads `indeterminate` as a failure, never as clean ([the CLI README, "`harness report`"](../cli/README.md#harness-report---adapter-name---json)).
+So the report gives no `satisfied` result until a pass can read what the harness does. That needs an adapter to give the pass a way to observe it, which none does yet. How an automated check reads its result is in [the CLI README, "`harness report`"](../cli/README.md#harness-report---adapter-name---json).
 
 The layer **detects**; it does not alter the harness's configuration or duplicate a harness-owned value into methodology state. It runs on demand, never on a per-operation path. `pkit validate` checks each declaration against its schema, and warns on an answer to a requirement the core does not declare, one that was retired or is newer than this backbone. The code is `src/project_kit/harness_support.py`.
 
