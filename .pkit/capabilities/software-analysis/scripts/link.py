@@ -6,10 +6,17 @@
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
-"""software-analysis capability — link: the links between terms and views (DEC-004 point 7).
+"""software-analysis capability — link: the links between terms and views (DEC-004 point 7),
+and the links of citations (DEC-001 point 13).
+
+In every analysis, it links the first citation of each record, point and rule in each
+section of each artefact in force to what it cites: a record's file, a point's
+heading, a rule's heading. `_lib/citations.py` states the forms a citation takes, and
+`pkit refs lookup --json`, in one call, says where each leads, with the host's anchor
+of a heading. A citation that resolves to nothing takes no link, and is named.
 
 In every analysis that keeps a domain model — its `domain-model/` folder holds a
-view — it writes each section's link to its term, right below the section's
+view — it also writes each section's link to its term, right below the section's
 heading, and links the first mention of each term in each section to the term's
 entry in the glossary: in a view's opening and its sections, and in each glossary
 entry below its heading. `_lib/links.py` states what a mention is, and the
@@ -18,16 +25,18 @@ safeguards that keep a link from naming the wrong term.
 It reads the analysis in the working tree through the backbone's discovery, `pkit
 friction artefacts --json`, and takes its data from front matter alone: each term's
 name, `noun-forms` and `other-senses`, and each view's `explains`. It reads a body only
-to place its links. It writes a file only where its links change, each whole or not
-at all, with the file's own line ends, and needs no network. `pkit analysis
-validate` holds what it writes, whatever any rule's status.
+to place its links, at the mentions and the citations its text makes. It writes a file
+only where its links change, each whole or not at all, with the file's own line ends,
+and needs no network. `pkit analysis validate` holds what it writes, whatever any
+rule's status.
 
 Usage:
   pkit analysis link    write the links, and name each file written
 
 Exit codes:
   0  written, or nothing to write
-  1  the analysis could not be read, or a file could not be read or written
+  1  the analysis could not be read, the citations could not be looked up, or a file
+     could not be read or written
 """
 
 from __future__ import annotations
@@ -47,10 +56,11 @@ def main() -> int:
     argparse.ArgumentParser(
         prog="pkit analysis link",
         description=(
-            "Write the links between the terms and the views of each analysis that keeps a "
-            "domain model (software-analysis DEC-004 point 7): each view section's link to "
-            "its term, and the first mention of each term in each section linked to its "
-            "glossary entry, in the views and the glossary entries. Writes only where a link "
+            "Write the links of the analysis: in every analysis, the first citation of each "
+            "record, point and rule in each section linked to what it cites (software-analysis "
+            "DEC-001 point 13); in each analysis that keeps a domain model, each view "
+            "section's link to its term, and the first mention of each term in each section "
+            "linked to its glossary entry (DEC-004 point 7). Writes only where a link "
             "changes; `pkit analysis validate` holds the links."
         ),
     ).parse_args()
@@ -79,9 +89,24 @@ def main() -> int:
             return 1
         crlf[rel] = "\r" in text
         read[rel] = text.replace("\r\n", "\n")
-    planned = links.plan(analysis, listing, read)
+    try:
+        lookups = backbone.lookup(root, links.asked(analysis, listing, read))
+    except Unreadable as exc:
+        print(
+            f"error: the citations could not be looked up: {exc}; nothing is linked.",
+            file=sys.stderr,
+        )
+        return 1
+    planned = links.plan(analysis, listing, read, lookups)
     written = 0
     for linked in planned:
+        for d in linked.departures:
+            if d.how == links.UNRESOLVED:
+                print(
+                    f"note: {linked.path}:{d.line}: `{d.text}` takes no link: {d.wanted} "
+                    f"(DEC-001 point 13)"
+                )
+        mended = [d for d in linked.departures if d.how != links.UNRESOLVED]
         if linked.linked == linked.text:
             continue
         target = root / linked.path
@@ -92,10 +117,10 @@ def main() -> int:
         except (Refused, OSError) as exc:
             print(f"error: {linked.path} could not be written: {exc}", file=sys.stderr)
             return 1
-        print(f"linked {linked.path} ({len(linked.departures)} link(s) written or mended)")
+        print(f"linked {linked.path} ({len(mended)} link(s) written or mended)")
         written += 1
     if not planned:
-        print("No analysis keeps a domain model, so no link is written (DEC-004 point 7).")
+        print("The analysis holds no artefact in force, so no link is written.")
     elif not written:
         print("Every link is as it should be; nothing written.")
     return 0

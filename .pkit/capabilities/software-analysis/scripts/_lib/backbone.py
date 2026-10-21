@@ -45,7 +45,12 @@ backbone through its commands:
   resolve and still prints its document, so the document decides, never the
   exit code. A filler never asks for a point: the readers filler reads only
   the analysis, and the use-case filler only the analysis the default branch
-  holds.
+  holds;
+- **where a citation leads** — `pkit refs lookup --json <citation>...`, in one
+  call: the file of each record the analysis's prose cites, the host's anchor
+  of each point's heading, and each rule's set and its heading's anchor, which
+  the links of citations name (DEC-001 point 13; `lookup`). The script never
+  looks for a record or a rule set itself.
 
 Git answers which commit a name resolves to, who is working here — the
 default author of a revalidation record — whether the clone
@@ -91,6 +96,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from _lib.citations import Found
 from _lib.model import CAPABILITY, LOCATION, Analysis, Unreadable, analysis_of, under_place
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -379,6 +385,43 @@ def read_point(root: Path, address: str, run: Runner = subprocess.run) -> Mappin
     if not isinstance(document, Mapping) or "resolved" not in document:
         raise Unreadable(_failed(argv, proc))
     return document
+
+
+def lookup(root: Path, citations: Iterable[str], run: Runner = subprocess.run) -> dict[str, Found]:
+    """Where each of `citations` leads, by the citation, as `pkit refs lookup --json`
+    answers in one call: a record's file, a point's file and the host's anchor of its
+    heading, or a rule's set and its heading's anchor, and whether that file arrives as a
+    synced copy, which the project receives (DEC-001 point 13). The script
+    never looks for a record or a rule set itself. None asked, nothing is run. Raises
+    Unreadable when there is no document to read — from a backbone that predates the
+    option, too, saying so."""
+    asked = sorted(set(citations))
+    if not asked:
+        return {}
+    argv = ["pkit", "refs", "lookup", "--json", "--", *asked]
+    proc = _run(root, argv, run)
+    if proc.returncode != 0 and "No such option" in (proc.stderr or ""):
+        raise Unreadable(
+            "`pkit refs lookup --json` is not an option of the installed backbone, which "
+            "predates it — upgrade it (`pkit upgrade`)"
+        )
+    try:
+        document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
+    except ValueError:
+        document = None
+    if not isinstance(document, list):
+        raise Unreadable(_failed(argv, proc))
+    found: dict[str, Found] = {}
+    for entry in document:
+        if isinstance(entry, Mapping) and isinstance(entry.get("citation"), str):
+            path, anchor, problem = (entry.get(k) for k in ("path", "anchor", "problem"))
+            found[entry["citation"]] = Found(
+                path if isinstance(path, str) else None,
+                anchor if isinstance(anchor, str) else None,
+                problem if isinstance(problem, str) else None,
+                entry.get("received") is True,
+            )
+    return found
 
 
 def commit_of(root: Path, name: str) -> str | None:

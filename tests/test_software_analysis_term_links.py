@@ -429,15 +429,16 @@ def test_two_sections_naming_each_other_s_terms_are_each_mended(project: Adopter
 
 
 def test_an_analysis_with_no_domain_model_takes_no_link(bare: AdopterRepo) -> None:
-    """A glossary with no view beside it is never linked nor held, a link written in it by
-    hand included (DEC-004 point 7)."""
+    """A glossary with no view beside it is never linked to its terms nor held, a link
+    written in it by hand included (DEC-004 point 7). It cites no record, so the links of
+    citations write nothing either (DEC-001 point 13)."""
     stamped(bare, "term", "order", "--name", "order", "--path", "src/run.py")
     stamped(bare, "term", "payment", "--name", "payment", "--path", "src/run.py")
     fill(bare)
     _set_entries(bare, {"TERM-order": ("a payment settles an order.", " None.")})
     before = _read(bare, GLOSSARY)
     completed = link(bare)
-    assert "No analysis keeps a domain model" in completed.stdout
+    assert completed.stdout.strip() == "Every link is as it should be; nothing written."
     assert _read(bare, GLOSSARY) == before
     assert _validate(bare) == []
 

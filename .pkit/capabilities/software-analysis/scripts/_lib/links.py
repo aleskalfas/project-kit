@@ -69,8 +69,8 @@ from collections import Counter
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 
-from _lib import analyses, forms
-from _lib.model import EXPLAINS, TERM, VIEW, Analysis, Artefact
+from _lib import analyses, citations, forms
+from _lib.model import EXPLAINS, KINDS, TERM, VIEW, Analysis, Artefact
 
 #: A term's other noun forms, and the phrases in which its name has another sense (DEC-001
 #: point 1).
@@ -82,8 +82,9 @@ ESCAPE = "<!-- pkit:not-the-term -->"
 #: What a section's link to its term opens with.
 DEFINED = "Defined in"
 
-#: How a written link departs from what the command writes.
-MISSING, EXTRA, STALE = "missing", "extra", "stale"
+#: How a written link departs from what the command writes, and a citation that takes no
+#: link since it resolves to nothing (DEC-001 point 13).
+MISSING, EXTRA, STALE, UNRESOLVED = "missing", "extra", "stale", "unresolved"
 
 #: The target of a link to a glossary entry: a path with no scheme to a `glossary.md`, or
 #: the anchor alone, `#term-…`.
@@ -92,6 +93,10 @@ _ENTRY = r"(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*"
 #: A Markdown link to a glossary entry, as the command writes one: its text, and its
 #: target.
 _TERM_LINK = re.compile(rf"(?<!!)\[(?P<text>[^\[\]]+)\]\((?P<target>{_ENTRY})\)")
+
+#: An inline Markdown link, its text holding brackets one deep: its text, and its target.
+#: The links of citations the command writes are those `citations.is_cited_link` reads so.
+_ANY_LINK = re.compile(r"(?<!!)\[(?P<text>(?:[^\[\]]|\[[^\[\]]*\])+)\]\((?P<target>[^()\s]+)\)")
 
 #: A line in the form of a section's link to its term, on its own: the term's id, and its
 #: link to a glossary entry. In a view, outside fenced code, it is read for no mention:
@@ -281,8 +286,11 @@ def _forms(term: Term) -> tuple[str, ...]:
 @dataclass(frozen=True)
 class Difference:
     """How one written link departs from what the command writes: `how`, the line it is
-    on, counted from 1 in the file, the mention's text, the target written and the
-    target wanted, and the term wanted, each `None` where there is none."""
+    on, counted from 1 in the file, the mention's or the citation's text, the target
+    written and the target wanted, and the term wanted, each `None` where there is none.
+    `cited` marks a citation's link, or a citation that takes none (`UNRESOLVED`), whose
+    `wanted` then says why (DEC-001 point 13); `received`, a link wanted into a file the
+    project receives as a synced copy, which the check only warns of."""
 
     how: str
     line: int
@@ -290,6 +298,8 @@ class Difference:
     written: str | None
     wanted: str | None
     term: str | None
+    cited: bool = False
+    received: bool = False
 
 
 @dataclass(frozen=True)
@@ -297,6 +307,19 @@ class _Found:
     start: int
     end: int
     target: str
+    cited: bool = False
+
+
+@dataclass(frozen=True)
+class Cites:
+    """What the citations of one analysis resolve against (DEC-001 point 13): what the
+    lookup answered, by what it was asked, and the analysis's component, whose decisions a
+    bare `DEC-NNN` names. `asked` gathers what the citations ask, so a first pass with no
+    answers says what to look up."""
+
+    lookups: Mapping[str, citations.Found]
+    component: str | None
+    asked: set[str] = dataclasses.field(default_factory=set)
 
 
 @dataclass(frozen=True)
@@ -339,10 +362,13 @@ def _char(ch: str, *, first: bool) -> str:
     return re.escape(ch)
 
 
-def _strip(text: str, hide: Collection[int]) -> tuple[str, list[_Found]]:
-    """`text` with each link to a glossary entry outside code and comments unwritten, its
+def _strip(
+    text: str, hide: Collection[int], *, terms: bool = True, cited: bool = False
+) -> tuple[str, list[_Found]]:
+    """`text` with each link the command writes outside code and comments unwritten, its
     text kept, and each such link, by where its text lies in what is left; the lines
-    `hide` gives are kept as written."""
+    `hide` gives are kept as written. With `terms`, a link to a glossary entry is the
+    command's; with `cited`, a link of a citation (`citations.is_cited_link`)."""
     hidden = _hidden_lines(text, hide)
     code = [
         (m.start(), m.end())
@@ -352,13 +378,18 @@ def _strip(text: str, hide: Collection[int]) -> tuple[str, list[_Found]]:
     out: list[str] = []
     found: list[_Found] = []
     at = 0
-    for match in _TERM_LINK.finditer(text):
-        if _overlaps(match.start(), match.end(), code):
+    for match in _ANY_LINK.finditer(text):
+        if match.start() < at or _overlaps(match.start(), match.end(), code):
+            continue
+        link, target = match["text"], match["target"]
+        term = terms and _TERM_LINK.fullmatch(match.group(0)) is not None
+        record = not term and cited and citations.is_cited_link(link, target)
+        if not term and not record:
             continue
         out.append(text[at : match.start()])
         start = sum(len(part) for part in out)
-        out.append(match["text"])
-        found.append(_Found(start, start + len(match["text"]), match["target"]))
+        out.append(link)
+        found.append(_Found(start, start + len(link), target, record))
         at = match.end()
     out.append(text[at:])
     return "".join(out), found
@@ -437,10 +468,15 @@ class _Mention:
 
 
 def _chosen(
-    text: str, vocabulary: Vocabulary, hide: Collection[int]
+    text: str,
+    vocabulary: Vocabulary,
+    hide: Collection[int],
+    cited: Sequence[tuple[int, int]] = (),
 ) -> tuple[list[_Mention], list[int]]:
-    """The mentions in `text`, the longest first, and where each escape ends."""
+    """The mentions in `text`, the longest first, and where each escape ends. A citation,
+    each span of `cited`, holds no mention (DEC-001 point 13)."""
     skipped, escapes = _skipped(text, hide)
+    skipped += list(cited)
     blocked: dict[str, list[tuple[int, int]]] = {}
     for term in vocabulary.terms:
         for phrase in term.other_senses:
@@ -467,11 +503,16 @@ def _chosen(
 
 
 def _wanted(
-    text: str, own: str | None, vocabulary: Vocabulary, path: str, hide: Collection[int]
+    text: str,
+    own: str | None,
+    vocabulary: Vocabulary,
+    path: str,
+    hide: Collection[int],
+    cited: Sequence[tuple[int, int]] = (),
 ) -> list[_Wanted]:
     """The links the command writes in one section's `text`: the first mention of each term
-    that is not the section's own and no escape marks."""
-    mentions, escapes = _chosen(text, vocabulary, hide)
+    that is not the section's own and no escape marks, outside the spans of `cited`."""
+    mentions, escapes = _chosen(text, vocabulary, hide, cited)
     linked: set[str] = set()
     wanted: list[_Wanted] = []
     for mention in mentions:
@@ -489,54 +530,95 @@ def _wanted(
     return wanted
 
 
-def _render(text: str, wanted: Sequence[_Wanted]) -> str:
+def _render(text: str, wanted: Sequence[tuple[int, int, str]]) -> str:
     out = text
-    for link in sorted(wanted, key=lambda w: w.start, reverse=True):
-        out = f"{out[: link.start]}[{out[link.start : link.end]}]({link.target}){out[link.end :]}"
+    for start, end, target in sorted(wanted, key=lambda w: w[0], reverse=True):
+        out = f"{out[:start]}[{out[start:end]}]({target}){out[end:]}"
     return out
 
 
 def section(
     text: str,
     own: str | None,
-    vocabulary: Vocabulary,
+    vocabulary: Vocabulary | None,
     path: str,
     first_line: int,
     hide: Collection[int] = (),
+    cites: Cites | None = None,
 ) -> tuple[str, list[Difference]]:
-    """One section's `text`, its links to terms written as the command writes them, and how
-    the links it holds depart from those; `first_line` is the line `text` starts on in
-    the file at `path`, `own` the id of the section's own term, and `hide` the lines of
+    """One section's `text`, its links written as the command writes them, and how the
+    links it holds depart from those; `first_line` is the line `text` starts on in the
+    file at `path`, `own` the id of the section's own term, and `hide` the lines of
     `text`, counted from 0, that link a view's section to a term, which are neither read
-    nor rewritten here (`with_definitions`)."""
-    plain, found = _strip(text, hide)
-    wanted = _wanted(plain, own, vocabulary, path, hide)
+    nor rewritten here (`with_definitions`).
+
+    With a `vocabulary`, the first mention of each term takes its link (DEC-004 point 7);
+    with `cites`, the first citation of each record, point or rule takes its link, and a
+    citation that resolves to nothing is noted (DEC-001 point 13). A citation holds no
+    mention. Without one of them, the links of its kind are the writer's, left as written."""
+    plain, found = _strip(text, hide, terms=vocabulary is not None, cited=cites is not None)
+    placed = citations.Placed((), (), ())
+    if cites is not None:
+        skipped, _escapes = _skipped(plain, hide)
+        hidden = _hidden_lines(plain, hide)
+        cites.asked.update(citations.keys(citations.found(plain, skipped, cites.component)))
+        placed = citations.placed(plain, skipped, hidden, cites.component, cites.lookups, path)
+    terms = (
+        _wanted(plain, own, vocabulary, path, hide, placed.spans) if vocabulary is not None else []
+    )
 
     def line(offset: int) -> int:
         return first_line + plain.count("\n", 0, offset)
 
-    differences: list[Difference] = []
-    by_span = {(w.start, w.end): w for w in wanted}
+    # Each link wanted, by its span: its target, its term, whether a citation's, and
+    # whether into a file the project receives.
+    wanted: dict[tuple[int, int], tuple[str, str | None, bool, bool]] = {
+        (w.start, w.end): (w.target, w.term, False, False) for w in terms
+    }
+    wanted.update({(w.start, w.end): (w.target, None, True, w.received) for w in placed.links})
     held = {(f.start, f.end): f for f in found}
+    differences: list[Difference] = []
     for key, link in sorted(held.items()):
-        want = by_span.get(key)
-        mention = plain[link.start : link.end]
-        if want is None:
+        want = wanted.get(key)
+        text_of = plain[link.start : link.end]
+        if want is None or want[2] != link.cited:
             differences.append(
-                Difference(EXTRA, line(link.start), mention, link.target, None, None)
+                Difference(EXTRA, line(link.start), text_of, link.target, None, None, link.cited)
             )
-        elif want.target != link.target:
+        elif want[0] != link.target:
             differences.append(
-                Difference(STALE, line(link.start), mention, link.target, want.target, want.term)
+                Difference(
+                    STALE,
+                    line(link.start),
+                    text_of,
+                    link.target,
+                    want[0],
+                    want[1],
+                    link.cited,
+                    want[3],
+                )
             )
-    for key, want in sorted(by_span.items()):
-        if key not in held:
-            mention = plain[want.start : want.end]
+    for key, (target, term, cited, received) in sorted(wanted.items()):
+        link = held.get(key)
+        if link is None or link.cited != cited:
+            text_of = plain[key[0] : key[1]]
             differences.append(
-                Difference(MISSING, line(want.start), mention, None, want.target, want.term)
+                Difference(MISSING, line(key[0]), text_of, None, target, term, cited, received)
             )
+    for note in placed.notes:
+        differences.append(
+            Difference(
+                UNRESOLVED,
+                line(note.start),
+                plain[note.start : note.end],
+                None,
+                note.why,
+                None,
+                True,
+            )
+        )
     differences.sort(key=lambda d: d.line)
-    return _render(plain, wanted), differences
+    return _render(plain, [(s, e, w[0]) for (s, e), w in wanted.items()]), differences
 
 
 # --- a section's link to its term --------------------------------------------------------------
@@ -641,7 +723,9 @@ def _take_out(lines: list[str], index: int) -> None:
 @dataclass(frozen=True)
 class Departure:
     """A link in a file that departs from what the command writes, at the location of the
-    artefact that holds it."""
+    artefact that holds it, or a citation that takes none since it resolves to nothing
+    (`UNRESOLVED`, `cited`), its `wanted` saying why. `received` marks a link wanted into
+    a file the project receives as a synced copy (DEC-001 point 13)."""
 
     location: str
     how: str
@@ -651,6 +735,8 @@ class Departure:
     wanted: str | None
     term: str | None
     defined: bool = False
+    cited: bool = False
+    received: bool = False
 
 
 @dataclass(frozen=True)
@@ -668,11 +754,12 @@ def glossary(
     path: str,
     text: str,
     entries: Sequence[Artefact],
-    vocabulary: Vocabulary,
+    vocabulary: Vocabulary | None,
+    cites: Cites | None = None,
 ) -> Linked:
-    """The glossary at `path`, LF `text`, with the mentions' links of each of `entries`, the
-    terms in force it holds, written: each entry's section as the backbone spans it,
-    below its heading."""
+    """The glossary at `path`, LF `text`, with the links of each of `entries`, the terms
+    in force it holds, written: each entry's section as the backbone spans it, below its
+    heading. Its head takes none."""
     lines = text.split("\n")
     departures: list[Departure] = []
     for entry in sorted(entries, key=lambda e: e.span or (0, 0), reverse=True):
@@ -682,7 +769,9 @@ def glossary(
         body = lines[first : min(last, len(lines))]
         if not body:
             continue
-        rewritten, found = section("\n".join(body), entry.id, vocabulary, path, first + 1)
+        rewritten, found = section(
+            "\n".join(body), entry.id, vocabulary, path, first + 1, cites=cites
+        )
         lines[first : first + len(body)] = rewritten.split("\n")
         departures += [_departure(entry.location, d) for d in found]
     departures.sort(key=lambda d: (d.line, d.location))
@@ -693,11 +782,12 @@ def view(
     artefact: Artefact,
     text: str,
     vocabulary: Vocabulary,
+    cites: Cites | None = None,
 ) -> Linked:
-    """A view in force, LF `text`, with each section's link to its term and the mentions'
-    links written: its opening and each section below its heading. A line in the form of
-    a section's link to its term in the opening is taken out, as one below a section's
-    own link is."""
+    """A view in force, LF `text`, with each section's link to its term and the links of
+    its mentions and its citations written: its opening and each section below its
+    heading. A line in the form of a section's link to its term in the opening is taken
+    out, as one below a section's own link is."""
     path = artefact.path
     written = text.split("\n")
     start = body_start(written)
@@ -716,14 +806,14 @@ def view(
         Departure(artefact.location, how, number, line or "", line, want, None, True)
         for how, number, line, want in held
     ]
-    # The mentions are compared on the text as written, so each departure gives its line
+    # The links are compared on the text as written, so each departure gives its line
     # there, and written on the text with each section's link to its term in place.
     departures += [
         _departure(artefact.location, d)
-        for _rewritten, found in _mentions(written, start, owners, vocabulary, path)
+        for _rewritten, found in _parts(written, parts, owners, vocabulary, path, cites)
         for d in found
     ]
-    pieces = _mentions(lines, start, owners, vocabulary, path)
+    pieces = _parts(lines, view_sections(lines, start), owners, vocabulary, path, cites)
     linked: list[str] = list(lines[:start])
     for rewritten, _found in pieces:
         linked += rewritten.split("\n")
@@ -731,25 +821,63 @@ def view(
     return Linked(path, text, "\n".join(linked), tuple(departures))
 
 
-def _mentions(
+def document(artefact: Artefact, text: str, cites: Cites) -> Linked:
+    """An artefact in force of a kind with a file of its own, but a view, LF `text`, with
+    the links of its citations written, in each of its parts (`part_sections`, DEC-001
+    point 13)."""
+    lines = text.split("\n")
+    start = body_start(lines)
+    parts = part_sections(lines, start)
+    linked: list[str] = list(lines[:start])
+    departures: list[Departure] = []
+    for rewritten, differences in _parts(lines, parts, (), None, artefact.path, cites):
+        linked += rewritten.split("\n")
+        departures += [_departure(artefact.location, d) for d in differences]
+    departures.sort(key=lambda d: (d.line, d.how))
+    return Linked(artefact.path, text, "\n".join(linked), tuple(departures))
+
+
+#: A line that opens a part of an artefact: a bold label that opens the line, or a list
+#: item at the top level, such as `**Goal:**`, `- **Human role:**` or `- **1a.**`.
+_PART = re.compile(r"^(?:(?:[-+*]|[0-9]{1,9}[.)])[ \t]+)?\*\*[^*\n]+?\*\*")
+
+
+def part_sections(lines: Sequence[str], start: int) -> list[tuple[int, int]]:
+    """Where each part of a body lies among `lines`, the body starting at index `start`:
+    from the body's start to the first heading or part, then from each heading, and each
+    line that opens with a bold label at the top level (`_PART`), to the next, each as the
+    index of its first line and the index past its last. A line inside fenced code opens
+    none."""
+    body = lines[start:]
+    starts = [
+        start + index
+        for index, (line, fenced) in enumerate(zip(body, _fenced(body), strict=True))
+        if not fenced and (_HEADING.match(line) or _PART.match(line))
+    ]
+    bounds = [start, *starts, len(lines)]
+    return [(bounds[k], bounds[k + 1]) for k in range(len(bounds) - 1)]
+
+
+def _parts(
     lines: Sequence[str],
-    start: int,
+    parts: Sequence[tuple[int, int]],
     owners: Sequence[str | None],
-    vocabulary: Vocabulary,
+    vocabulary: Vocabulary | None,
     path: str,
+    cites: Cites | None,
 ) -> list[tuple[str, list[Difference]]]:
-    """Each part of a view's body among `lines`, its opening then each section, with its
-    mentions' links written, and how the links it holds depart from those. A part's own
-    term is `owners`' entry in its place: none for the opening. Its lines in the form of
-    a section's link to its term are `with_definitions`', and read for no mention."""
+    """Each of `parts` of a body among `lines`, with its links written, and how the links
+    it holds depart from those. A part's own term is `owners`' entry in its place: none
+    for a view's opening. Its lines in the form of a section's link to its term are
+    `with_definitions`', and read for no mention and no citation."""
     found: list[tuple[str, list[Difference]]] = []
-    for k, (first, past) in enumerate(view_sections(lines, start)):
+    for k, (first, past) in enumerate(parts):
         if first == past:
-            continue  # an opening with no line holds nothing to link
+            continue  # a part with no line holds nothing to link
         own = owners[k] if k < len(owners) else None
         hide = [index - first for index in definition_lines(lines, first, past)]
         text = "\n".join(lines[first:past])
-        found.append(section(text, own, vocabulary, path, first + 1, hide))
+        found.append(section(text, own, vocabulary, path, first + 1, hide, cites))
     return found
 
 
@@ -771,23 +899,43 @@ def _departure(location: str, difference: Difference) -> Departure:
         difference.written,
         difference.wanted,
         difference.term,
+        cited=difference.cited,
+        received=difference.received,
     )
+
+
+#: The kinds whose artefacts in force take the links of their citations, each a file of
+#: its own: every kind but the term, whose glossary is a collection, and the view.
+_DOCUMENT_KINDS = tuple(kind for kind in KINDS if kind not in (TERM, VIEW))
+
+
+def component(listing: analyses.Listing, folder: str | None) -> str | None:
+    """The component whose analysis lies in `folder`; `None` for the one analysis at the
+    location's top, which names none, so a bare `DEC-NNN` there names no capability."""
+    listed = listing.of_folder(folder) if listing.several else None
+    return listed.component if listed is not None else None
 
 
 def plan(
     analysis: Analysis,
     listing: analyses.Listing,
     read: Mapping[str, str | None],
+    lookups: Mapping[str, citations.Found] | None = None,
+    asked: set[str] | None = None,
 ) -> list[Linked]:
-    """Each file the links reach in the analyses that keep a domain model, the glossary and
-    each view in force of each, as the command writes it. `read` gives each file's text by
-    its path, LF line ends, `None` where it cannot be read, which is left out."""
+    """Each file the links reach, as the command writes it. In every analysis, each
+    artefact in force takes the links of its citations, from `lookups`, what the lookup
+    answered (DEC-001 point 13). In one that keeps a domain model, the glossary and each
+    view in force take the links between terms too (DEC-004 point 7). `read` gives each
+    file's text by its path, LF line ends, `None` where it cannot be read, which is left
+    out. `asked`, where given, gathers what the citations ask the lookup, so a pass with
+    no `lookups` says what to look up."""
     folders = [a.folder for a in listing.analyses] if listing.several else [None]
     found: list[Linked] = []
     for folder in folders:
-        if not keeps_domain_model(analysis, folder):
-            continue
-        words = vocabulary(analysis, listing, folder)
+        domain = keeps_domain_model(analysis, folder)
+        words = vocabulary(analysis, listing, folder) if domain else None
+        cites = Cites(lookups or {}, component(listing, folder))
         entries = [
             t for t in analysis.of_kind(TERM) if t.folder == folder and not t.withdrawn and t.id
         ]
@@ -797,24 +945,54 @@ def plan(
         for path, held in sorted(by_glossary.items()):
             text = read.get(path)
             if text is not None:
-                found.append(glossary(path, text, held, words))
+                found.append(glossary(path, text, held, words, cites))
         for artefact in sorted(analysis.of_kind(VIEW), key=lambda v: v.path):
-            if artefact.folder != folder or artefact.withdrawn:
+            if artefact.folder != folder or artefact.withdrawn or words is None:
                 continue
             text = read.get(artefact.path)
             if text is not None:
-                found.append(view(artefact, text, words))
+                found.append(view(artefact, text, words, cites))
+        for artefact in sorted(_documents(analysis, folder), key=lambda a: a.path):
+            text = read.get(artefact.path)
+            if text is not None:
+                found.append(document(artefact, text, cites))
+        if asked is not None:
+            asked |= cites.asked
     return found
 
 
+def _documents(analysis: Analysis, folder: str | None) -> list[Artefact]:
+    """The artefacts in force of the analysis in `folder` that take the links of their
+    citations alone, each a file of its own."""
+    return [
+        a
+        for kind in _DOCUMENT_KINDS
+        for a in analysis.of_kind(kind)
+        if a.folder == folder and not a.withdrawn and not a.entry
+    ]
+
+
+def asked(
+    analysis: Analysis, listing: analyses.Listing, read: Mapping[str, str | None]
+) -> set[str]:
+    """What the citations of every analysis ask the lookup: each record, point and rule
+    they may name, read as `plan` reads them."""
+    gathered: set[str] = set()
+    plan(analysis, listing, read, None, gathered)
+    return gathered
+
+
 def files(analysis: Analysis, listing: analyses.Listing) -> list[str]:
-    """The paths `plan` reads: each glossary and each view in force of every analysis that
-    keeps a domain model."""
+    """The paths `plan` reads: in every analysis, each glossary that holds a term in force
+    and each artefact in force of another kind, and each view in force where it keeps a
+    domain model."""
     folders = [a.folder for a in listing.analyses] if listing.several else [None]
     paths: set[str] = set()
     for folder in folders:
-        if not keeps_domain_model(analysis, folder):
-            continue
         paths |= {t.path for t in analysis.of_kind(TERM) if t.folder == folder and not t.withdrawn}
-        paths |= {v.path for v in analysis.of_kind(VIEW) if v.folder == folder and not v.withdrawn}
+        if keeps_domain_model(analysis, folder):
+            paths |= {
+                v.path for v in analysis.of_kind(VIEW) if v.folder == folder and not v.withdrawn
+            }
+        paths |= {a.path for a in _documents(analysis, folder)}
     return sorted(paths)
