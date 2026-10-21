@@ -67,6 +67,7 @@ pkit:
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/adapters/README.md#the-agent-runner
+        - .pkit/adapters/README.md#harness-requirements
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#what-sync-writes

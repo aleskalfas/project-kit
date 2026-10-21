@@ -13,7 +13,12 @@ pkit:
         - src/project_kit/agent_runs.py
         - src/project_kit/harness_support.py
       record: [COR-005, COR-006, COR-028, COR-047, ADR-066]
-      artefact: [.pkit/adapters/claude-code/README.md, ".pkit/lifecycle/README.md#how-a-registered-command-is-run"]
+      artefact:
+        - .pkit/adapters/claude-code/README.md
+        - .pkit/adapters/claude-code/README.md#what-this-adapter-ships
+        - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
+        - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
+        - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
       at: 2026-10-21T13:58:38Z
       outcome: updated
@@ -39,7 +44,7 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Currently shipped
 
-- **`claude-code/`** — the Claude Code adapter. Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, ["The agent runner"](#the-agent-runner) below), its support declaration (harness-support.yaml, ["Harness requirements"](#harness-requirements) below), and the runtime conventions Claude Code expects.
+- **`claude-code/`** — the Claude Code adapter ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)). Ships permissions baseline (settings/), the deploy scripts for skills and agents (deploy-skills.sh, deploy-agents.sh), the undeploy script for one capability (undeploy-capability.sh), the agent runner (run-agent.py, ["The agent runner"](#the-agent-runner) below), its support declaration (harness-support.yaml, ["Harness requirements"](#harness-requirements) below), and the runtime conventions Claude Code expects.
 
 ## Primitives the lifecycle calls
 
@@ -126,9 +131,9 @@ So the report gives no `satisfied` result until a pass can read what the harness
 
 The layer **detects**; it does not alter the harness's configuration or duplicate a harness-owned value into methodology state. It runs on demand, never on a per-operation path. `pkit validate` checks each declaration against its schema, and warns on an answer to a requirement the core does not declare, one that was retired or is newer than this backbone. The code is `src/project_kit/harness_support.py`.
 
-**The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it. The support declaration does not repeat it.
+**The permission dimensions stay apart.** An adapter's `permission-enforcement.yaml` says where its harness enforces each dimension of the permission model. That is COR-028 point 3, the permission-domain instance of COR-047's rule. It is the permission engine's to read, and `pkit permissions diff` reads it ([the Claude Code adapter's README, "`permission-enforcement.yaml`"](claude-code/README.md#permission-enforcementyaml)). The support declaration does not repeat it.
 
-**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which the drift command depends on (ADR-066 point 13). The Claude Code adapter answers both. The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
+**Status.** The requirement set holds two entries: `delegated-result-complete`, and `unattended-confined-run`, which the drift command depends on (ADR-066 point 13). The Claude Code adapter answers both ([its README, "Harness support"](claude-code/README.md#harness-support-harness-supportyaml)). The report surfaces at no lifecycle boundary yet, such as install or upgrade (COR-047 point 8): it runs when asked.
 
 ## Adding a new harness
 
