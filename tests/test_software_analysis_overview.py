@@ -141,7 +141,7 @@ def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: Adop
     drawn field changed by hand makes it stale, and the command writes it anew."""
     text = _read(seeded)
     assert text.startswith(
-        "# Overview of the analysis\n\n<!-- pkit:overview reads=2 fingerprint=sha256:"
+        "# Overview of the analysis\n\n<!-- pkit:overview reads=3 fingerprint=sha256:"
     )
     assert _section(text, "## Actors") == (
         "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
