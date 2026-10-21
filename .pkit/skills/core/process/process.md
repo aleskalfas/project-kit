@@ -27,6 +27,7 @@ reads:
     - .pkit/process/README.md
     - .pkit/cli/README.md
     - .pkit/schemas/_defs/process.schema.json
+    - .pkit/agents/project/overlay.yaml
   records:
     - COR-016
     - COR-031
@@ -44,7 +45,7 @@ A process definition has two halves, and this skill owns exactly one of them (pe
 - **The shape** — declarative data with closed vocabularies. This skill's territory.
 - **The teeth** — the predicates behind every evaluable the shape declares ("how do I know a subject is in this state?", "what must be true to move?"). The stamps scaffold a fail-closed stub for each; a stub that is never implemented keeps the process honestly unreadable rather than falsely green.
 
-So a normal authoring session is two-phase: walk the shape here, then implement the stubs. The teeth are destined for a dedicated `process-author` agent, which **has not shipped yet** — until it does, the interim route is for the author (or whichever producer the project uses) to implement each stub by hand against the predicate-runner contract in `.pkit/process/README.md`. Either way: do not write predicate logic from this skill, and when teeth-work reveals a shape problem, route it back through these operations rather than hand-editing the shape.
+So a normal authoring session is two-phase: walk the shape here, then implement the stubs. The teeth are the work of the core `process-author` agent, which implements each stub against the predicate-runner contract in `.pkit/process/README.md`. Its write authority is the project's to grant: it writes only the definition files and predicate-script locations the project lists under `process-authoring-targets` in `.pkit/agents/project/overlay.yaml`, a list that ships empty (`.pkit/process/README.md`, "Its write authority is yours to grant"). Where the definition is not among them, the agent works read-only and says what it would write and where; the project then lists the paths, or the author (or whichever producer the project uses) implements each stub by hand against the same contract. Either way: do not write predicate logic from this skill, and when teeth-work reveals a shape problem, route it back through these operations rather than hand-editing the shape.
 
 ## Acceptance gate (run first)
 
