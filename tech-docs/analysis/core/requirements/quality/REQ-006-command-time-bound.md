@@ -37,7 +37,7 @@ pkit:
 - a run's own bound is thirty seconds
 - a run inside another has no more than the time its caller has left
 
-No test covers a program the command starts outside its own group, which the kill does not reach.
+No test covers a program the command starts outside the command's own group, which the kill does not reach.
 
 **Rationale:** The CI pipeline runs every check with no person to answer, and gates the merge on its exit status. A check that waited on a command for ever would never exit. COR-050 point 2 bounds the time of a command that resolves an anchor, so that a check "never hangs". COR-052 point 6 puts a command that fills a data point under the same limits, and COR-055 point 3 puts one that joins validation there.
 
