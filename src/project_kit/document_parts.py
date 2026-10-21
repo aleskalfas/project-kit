@@ -28,6 +28,11 @@ Artefact discovery cuts a collection entry's section with it
 with it (`rule_sets`). The home of a record's points reads a record's
 Decision with it (`record_points`).
 
+A link followed on a repository host names a heading by the host's anchor, not by
+the slug: `host_anchors` gives it as GitHub writes it, from the heading's text as it
+renders (`rendered_text`). The record lookup gives it for a record's point and a
+rule's heading (`refs.lookup_citations`), which the analysis's links name.
+
 An artefact anchor may name a document's section by its heading's slug, or its
 lead by a bare `#` (COR-050 point 2). The one reading of such an anchor
 (`artefact_parts`) finds the section by `sections_by_slug` and the lead by
@@ -37,9 +42,11 @@ part (ADR-057 point 2).
 
 from __future__ import annotations
 
+import html
 import io
 import re
-from collections.abc import Iterator, Mapping
+import unicodedata
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -238,6 +245,90 @@ def heading_slug(title: str) -> str:
     """
     kept = (ch for ch in title.lower() if ch.isalpha() or ch.isdigit() or ch in " -")
     return "".join(kept).replace(" ", "-")
+
+
+def host_anchors(headings: Sequence[Heading]) -> tuple[str, ...]:
+    """The anchor a repository host gives each of `headings`, a body's headings in order,
+    as GitHub writes it: the heading's text as it renders (`rendered_text`), in lower
+    case, with every character but letters, marks, digits, underscores, spaces and
+    hyphens dropped, and each space made a hyphen. A heading whose anchor an earlier one
+    already gives takes `-1`, the next `-2`, after it, past any an earlier heading gives
+    as its own, as `foo-1` does.
+
+    It is no slug of a section (`heading_slug`, COR-050 point 2): a link is followed on
+    the host, so it takes the host's anchor, which keeps an underscore and numbers a
+    repeat. An empty anchor is the host's too, and leads to the top of the file.
+    """
+    taken: dict[str, int] = {}
+    found: list[str] = []
+    for heading in headings:
+        base = "".join(
+            ch for ch in rendered_text(heading.title).lower() if ch in " -" or _word_char(ch)
+        ).replace(" ", "-")
+        anchor = base
+        while anchor in taken:
+            taken[base] += 1
+            anchor = f"{base}-{taken[base]}"
+        taken[anchor] = 0
+        found.append(anchor)
+    return tuple(found)
+
+
+def _word_char(ch: str) -> bool:
+    """A letter, a mark, a decimal digit or a connector such as the underscore: what a
+    host keeps of a heading in its anchor."""
+    category = unicodedata.category(ch)
+    return category[0] in "LM" or category in ("Nd", "Pc")
+
+
+# Inline Markdown in a heading's title: a code span, an image, an inline link, an autolink,
+# an HTML tag, and a backslash escape.
+_CODE_SPAN = re.compile(r"(`+)(.+?)(?<!`)\1(?!`)")
+_IMAGE = re.compile(r"!\[(?:[^\[\]]|\[[^\[\]]*\])*\](?:\([^()]*\)|\[[^\[\]]*\])")
+_INLINE_LINK = re.compile(r"\[((?:[^\[\]]|\[[^\[\]]*\])*)\](?:\([^()]*\)|\[[^\[\]]*\])")
+_AUTOLINK = re.compile(r"<([A-Za-z][A-Za-z0-9+.-]*:[^<>\s]*)>")
+_HTML_TAG = re.compile(r"</?[A-Za-z][A-Za-z0-9-]*(?:\s[^<>]*)?/?>")
+_ESCAPED = re.compile(r"\\([!-/:-@\[-`{-~])")
+_UNDERSCORES = re.compile(r"_+")
+
+
+def rendered_text(title: str) -> str:
+    """A heading's title as its text renders, the way a host reads it for its anchor: a
+    code span's text kept as written, an image dropped, a link's text kept without its
+    target, an autolink's address kept, an HTML tag dropped, an escape and an entity
+    read, and the underscores that mark emphasis dropped, those inside a word kept.
+    Other emphasis marks are kept, since the anchor drops them anyway."""
+    out: list[str] = []
+    at = 0
+    for span in _CODE_SPAN.finditer(title):
+        out.append(_rendered_prose(title[at : span.start()]))
+        code = span.group(2)
+        if len(code) > 1 and code.startswith(" ") and code.endswith(" ") and code.strip():
+            code = code[1:-1]
+        out.append(code)
+        at = span.end()
+    out.append(_rendered_prose(title[at:]))
+    return "".join(out)
+
+
+def _rendered_prose(text: str) -> str:
+    text = _IMAGE.sub("", text)
+    text = _INLINE_LINK.sub(lambda m: _rendered_prose(m.group(1)), text)
+    text = _AUTOLINK.sub(lambda m: m.group(1), text)
+    text = _HTML_TAG.sub("", text)
+    text = _UNDERSCORES.sub(lambda m: _emphasis_or_not(text, m), text)
+    text = _ESCAPED.sub(lambda m: m.group(1), text)
+    return html.unescape(text)
+
+
+def _emphasis_or_not(text: str, run: re.Match[str]) -> str:
+    """A run of underscores as it renders: kept inside a word, where it marks no emphasis,
+    and dropped at a word's edge, where it does. An escaped one is kept."""
+    before = text[run.start() - 1] if run.start() else ""
+    after = text[run.end()] if run.end() < len(text) else ""
+    if before == "\\":
+        return run.group(0)
+    return run.group(0) if before.isalnum() and after.isalnum() else ""
 
 
 @dataclass(frozen=True)

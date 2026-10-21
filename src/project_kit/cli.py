@@ -5174,36 +5174,40 @@ def refs_who_references(target: str) -> None:
 
 
 @refs.command("lookup")
-@click.argument("record_id")
-def refs_lookup(record_id: str) -> None:
-    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
-    `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
-    or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
-    to where an installed capability declares it."""
-    from project_kit import rule_sets as rule_sets_mod
+@click.argument("citations", metavar="CITATION...", nargs=-1, required=True)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    default=False,
+    help="Print one JSON object for each citation, in order — its locations, its file, "
+    "the host's anchor of a cited heading, and why it does not resolve — and exit 0.",
+)
+def refs_lookup(citations: tuple[str, ...], as_json: bool) -> None:
+    """Resolve each citation: a record ID (`COR-005`, `PRJ-002`) to its file, a point of
+    a record (`COR-050#14`, `PRJ-002#D1`) to its file and the anchor a repository host
+    gives its heading, a rule (`RS-CMN-001`, `RS-CMN-001#point`,
+    `[living-docs:RS-LDOC-001]`) to its place in its rule set, or a role or point address
+    (`[pkit::documentation]`, `[pkit::documentation:readers]`) to where an installed
+    capability declares it. Prints each location on a line of its own; exits 1 when a
+    citation does not resolve. With --json, prints a list with one object for each
+    citation, its `anchor` the host's anchor of a cited point's or rule's heading, and
+    exits 0 whatever resolves."""
+    import json
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    if refs_mod.is_address_citation(record_id):
-        address = refs_mod.resolve_address(target_root, record_id)
-        if address.malformed:
-            raise click.ClickException(f"{record_id!r} is {address.problem}.")
-        if not address.resolved:
-            raise click.ClickException(f"{record_id!r} does not resolve: {address.problem}.")
-        for location in address.locations:
+    found = refs_mod.lookup_citations(target_root, citations)
+    if as_json:
+        click.echo(json.dumps([lookup.as_json() for lookup in found], indent=2, ensure_ascii=False))
+        return
+    for lookup in found:
+        for location in lookup.locations:
             click.echo(location)
-        return
-    if rule_sets_mod.is_rule_citation(record_id):
-        resolution = refs_mod.resolve_rule_citation(target_root, record_id)
-        if not resolution.resolved:
-            raise click.ClickException(f"{record_id!r} does not resolve: {resolution.problem}.")
-        click.echo(resolution.location)
-        return
-    path = refs_mod.resolve_record(target_root, record_id)
-    if path is None:
-        raise click.ClickException(f"no record matches {record_id!r}.")
-    click.echo(path.relative_to(target_root))
+    problems = [lookup.problem for lookup in found if lookup.problem is not None]
+    if problems:
+        raise click.ClickException(".\n".join(problems) + ".")
 
 
 @refs.command("rename")
