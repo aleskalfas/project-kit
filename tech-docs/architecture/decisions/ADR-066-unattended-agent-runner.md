@@ -297,7 +297,7 @@ DEC-056's Implications name one requirement on the harness ([COR-047](../../../.
 
 - **Observation point:** outside a session, by starting a probe run.
 - **Evidence:** DEC-056 point 5, a design dependency (COR-047 point 9). It is no transient defect, so it names no retirement condition.
-- **Declared with the drift command.** That change adds it to the requirement set. The adapters' support declarations are not shipped yet (the adapters README, "Harness requirements"). Until they are, the tested version range (point 2) bounds where the Claude Code adapter starts a confined run.
+- **Declared with the drift command.** That change adds it to the requirement set. Each adapter answers it in its support declaration (the adapters README, "Harness requirements"). The Claude Code adapter's answer holds for the tested version range (point 2), the same range that bounds where its runner starts a confined run.
 
 ## Rationale
 
