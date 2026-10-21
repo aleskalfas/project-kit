@@ -4,7 +4,7 @@ title: A check never reads a missing answer as one that found nothing
 status: active
 statement: A check of the backbone never reads a missing answer, from a command it runs or from git, as one that found nothing.
 measure: No check passes on a command that gave no answer, or on a default branch git could not resolve. Each such case fails the check or is reported, as *Verified by* lists.
-applies-to: Each check the backbone runs and each value it resolves for one, whichever component's command fills it.
+applies-to: Each check the backbone runs and each value the backbone resolves for one, whichever component's command fills the value.
 actors:
   - ACT-ci-pipeline
   - ACT-adopter
