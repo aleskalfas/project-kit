@@ -13,6 +13,7 @@ requirements:
   - REQ-005
   - REQ-006
   - REQ-007
+  - REQ-009
 after:
   - [UC-014]
 pkit:
@@ -46,8 +47,9 @@ pkit:
         - REQ-005
         - REQ-006
         - REQ-007
+        - REQ-009
     revalidated:
-      at: 2026-10-21T13:49:27Z
+      at: 2026-10-21T22:00:58Z
       outcome: updated
       deferred:
         - anchor:

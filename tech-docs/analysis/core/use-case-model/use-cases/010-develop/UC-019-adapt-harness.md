@@ -9,6 +9,7 @@ after:
   - [UC-014]
 requirements:
   - REQ-008
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -34,8 +35,9 @@ pkit:
         - ACT-component-author
         - ACT-ai-agent
         - REQ-008
+        - REQ-009
     revalidated:
-      at: 2026-10-21T21:30:43Z
+      at: 2026-10-21T22:00:56Z
       outcome: updated
 ---
 

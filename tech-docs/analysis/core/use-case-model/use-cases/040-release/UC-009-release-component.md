@@ -5,6 +5,8 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
+requirements:
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -24,10 +26,10 @@ pkit:
       artefact:
         - ACT-component-author
         - ACT-ci-pipeline
+        - REQ-009
     revalidated:
-      at: 2026-10-21T13:59:11Z
-      outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      at: 2026-10-21T22:00:50Z
+      outcome: updated
 ---
 
 # UC-009 — Release my component on its own version

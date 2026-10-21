@@ -7,7 +7,8 @@ other-actors:
   - ACT-ai-agent
 after:
   - [UC-014]
-requirements: []
+requirements:
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -24,6 +25,10 @@ pkit:
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - REQ-009
+    revalidated:
+      at: 2026-10-21T22:00:52Z
+      outcome: updated
 ---
 
 # UC-015 — Package a recurring discipline as a capability

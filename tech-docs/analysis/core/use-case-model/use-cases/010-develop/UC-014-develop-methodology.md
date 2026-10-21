@@ -7,6 +7,7 @@ other-actors:
   - ACT-ai-agent
 requirements:
   - REQ-008
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -28,8 +29,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ai-agent
         - REQ-008
+        - REQ-009
     revalidated:
-      at: 2026-10-21T21:30:39Z
+      at: 2026-10-21T22:00:51Z
       outcome: updated
 ---
 

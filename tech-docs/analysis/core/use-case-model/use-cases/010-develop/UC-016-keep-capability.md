@@ -9,6 +9,7 @@ after:
   - [UC-014, UC-019]
 requirements:
   - REQ-002
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -24,8 +25,9 @@ pkit:
       artefact:
         - ACT-component-author
         - REQ-002
+        - REQ-009
     revalidated:
-      at: 2026-10-21T21:30:40Z
+      at: 2026-10-21T22:00:53Z
       outcome: updated
 ---
 
