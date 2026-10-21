@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-21T05:27:40Z
+      at: 2026-10-21T12:12:32Z
       outcome: updated
 ---
 
@@ -282,6 +282,29 @@ pkit:
 - **What it starts from** (DEC-001 point 1). Each line of *Preconditions* opens with its producers, the use cases in force of its analysis that make it true, any one enough, such as `**From UC-003:**` or `**From UC-059, or Environment:**`. A use case may name itself, as a release starts from the last release. What the environment gives alone is an assumption, written in *Assumptions* only. A use case that needs no other one reads `None.` there.
   - **`after`** lists the same producers as data, one entry for each line, in its order, such as `after: [[UC-003], [UC-059, environment]]`. It is optional. An entry never names `environment` alone, which the schema refuses. It draws no anchor, so a changed postcondition flags none of the use cases that follow from it. A reviewer of that change reads them.
   - **Its check** binds where `RS-SAN-009` binds, at its status ([Checking](#checking-pkit-analysis-validate), below). `pkit analysis diagram chain` draws it ([Diagrams](#diagrams-pkit-analysis-diagram), below).
+- **What the system does not do yet** (DEC-001 point 1). A use case describes what the system must do, as the accepted records decide it. A step or a variant the system has never carried out stands only where an accepted record decides it. Without one, the use case follows the code. Below each such step or variant stands a box, and the use case's `shortfalls` lists it.
+  - **The box** stands at the top level of *Main path* or *Variants*, right below the item of its step or variant, with a blank line above and below it. Never indent it into the item: the step's words stay the behaviour the record decides. A line right below a box would show inside it. It is a callout in the standard syntax, `> [!WARNING]`, whose text opens with `**Not built yet:**`. It says what the system does not do yet, and names the record's id and the issue as written:
+
+    ```markdown
+    2. The system writes the report to a file, and signs it.
+
+    > [!WARNING]
+    > **Not built yet:** the system writes the file unsigned. ADR-006 decides that each
+    > export is signed, and #12 tracks it.
+
+    3. The system says where the file is.
+    ```
+  - **`shortfalls`** lists each box as data: its step or variant, `at`, such as `2` or `"2a"`, its issue in one word, and its record, written as one of the use case's record anchors writes it. Quote an issue that opens with `#`, since YAML reads the rest of the line as a comment:
+
+    ```yaml
+    shortfalls:
+      - at: 2
+        issue: "#12"
+        record: ADR-006
+    ```
+  - **The check** holds each box to an entry and each entry to a box, whatever any rule's status. An entry's box stands below its step or variant, holds its issue as written and names its record's id, such as `ADR-006`, or `DEC-054` for `project-management:DEC-054#5`. Each entry's record is among the use case's record anchors, and accepted ([Checking](#checking-pkit-analysis-validate), below). The overview lists every entry under "Not built yet" ([The overview](#the-overview-pkit-analysis-overview), below).
+  - **A regression.** A step the system no longer carries out takes a box only where an accepted record decides it, its issue the defect's. Any other regressed step stays as written, and its revalidation names the defect (DEC-001 point 5).
+  - **Closing one.** The change that builds the behaviour removes the box and its entry, in the pull request that closes the issue.
 - **The heading** is the id and the `title`, `# <id> — <title>`, and the check requires the two to agree. So whoever reads only the front matter sees the title the page shows. The title may change, and the id does not.
 - **Steps and variants** are only ever added, since journeys and evidence cite them ("Steps and variants stay append-only", below).
 
@@ -842,7 +865,13 @@ While any of these stands, none of the file applies: the check holds no body to 
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
 - **a revalidation record copying evidence for an artefact it gives no outcome**: evidence supports an outcome and never replaces it, so the record is incomplete whatever the evidence says;
 - **an evidence entry whose `id` is not its own `<artefact>@<commit>#<check>`** — the entry's `artefact`, `commit` and `check`: the id is the three parts the result is for, and whether the id or those fields are meant cannot be told, so nothing else is read from that entry;
-- **a journey's evidence naming a step that is no use case of the analysis** — a journey's `steps` are the use cases its run passed through. Withdrawn ones are fine, and the journey's steps as they stand now are never compared: the record is history.
+- **a journey's evidence naming a step that is no use case of the analysis** — a journey's `steps` are the use cases its run passed through. Withdrawn ones are fine, and the journey's steps as they stand now are never compared: the record is history;
+- **a `Not built yet` box out of its place or form** — inside an item, above a part's first item, below an item that opens with no step's number or variant's label, or outside *Main path* and *Variants*; with no blank line below it; or a block quote whose text opens with "Not built yet" in another form, such as under `[!NOTE]` (what the system does not do yet, in [The artefacts](#the-artefacts), above);
+- **a box with no entry in `shortfalls`, or an entry with no box** — an entry's box stands below its step or variant, holds its issue as written, and names its record's id. The message names what to write;
+- **an entry naming a step or a variant the body does not number**;
+- **an entry's record that is no record anchor of the use case, names no record, or is not accepted** — a shortfall rests on its record, and only an accepted record grounds a step the system does not carry out. The check reads the record's `status` in its own front matter. The backbone's `pkit refs lookup` finds a core, project or architecture record, and a capability's decision lies in its capability's `decisions` folder.
+
+The check reads the boxes and `shortfalls` of each use case in force, whatever any rule's status, since the overview lists the entries wherever it is kept. A withdrawn use case is history, so it is not read.
 
 Where you keep several analyses, it also fails on (DEC-001 points 2 and 3):
 
@@ -984,11 +1013,12 @@ Each analysis keeps a generated overview, `overview/README.md` in its folder: th
   - **Requirements,** then their map, where there are any.
   - **Areas,** in the order of their numbers, each with its goal and its use cases. Then the chain of use cases and the use-case diagram. Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead.
   - **Journeys,** each with its flow, where there are any.
+  - **Not built yet,** last, where a use case in force lists any `shortfalls`: each entry with its use case, its step or variant, its record and its issue. So every step the system does not carry out yet shows in one place.
 
   Each diagram is `pkit analysis diagram`'s own output, with its text alternative, in a section of its own.
 - **Front matter only.** The overview reads your analysis's front matter and the paths of its files, never a body, and no file of another analysis.
-- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a use case's `other-actors`, a name in the glossary's head or a goal. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
-- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=2 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that reads more of the analysis raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
+- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a use case's `other-actors` or `shortfalls`, a name in the glossary's head or a goal. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
+- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=3 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that reads more of the analysis raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
 - **A missing overview** is a warning that names the command, so an upgrade fails nothing.
 - **Two branches** that each change what it shows conflict on it, as on a lock file: always on the fingerprint's line, and on each section both change. Resolve the conflict by running the command.
 - **Never edit it by hand.** It is a held document, listed as this capability's, and carries no anchors. Edit the analysis, then rewrite it.
@@ -1016,7 +1046,7 @@ Here is the start of the overview of the analysis the examples above come from:
 ```markdown
 # Overview of the analysis
 
-<!-- pkit:overview reads=2 fingerprint=sha256:… -->
+<!-- pkit:overview reads=3 fingerprint=sha256:… -->
 
 What the analysis holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
@@ -1049,6 +1079,16 @@ The use cases it takes part in:
 - [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
 ```
 
+Where a use case lists `shortfalls`, the overview ends with them:
+
+```markdown
+## Not built yet
+
+What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
+
+- [UC-001 — Run suite](../use-case-model/use-cases/010-run/UC-001-run-suite.md): step 2, decided by `ADR-006`, tracked in `#12`
+```
+
 In an analysis that builds on another, an actor of that analysis follows your own:
 
 ```markdown
@@ -1063,10 +1103,10 @@ The use cases it is the main actor of:
 
 ## The method rule set: `SAN`
 
-`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds eleven rules. Each has DEC-001, DEC-002 or DEC-004 as its origin, save the source rule, which names who decided it and when.
+`rule-sets/san.md` is this capability's method rule set (COR-051), cited `software-analysis:SAN`. It holds thirteen rules. Each has DEC-001, DEC-002 or DEC-004 as its origin, save the source rule, which names who decided it and when.
 
 - **Two accepted rules,** each of which a check enforces in part: the format rule (DEC-001 point 1), and the append-only rule (DEC-001 point 3).
-- **Nine proposed judgement rules,** which declare no check but the rule of logical consequence. Its check holds what a script can read of `after`. They cover:
+- **Eleven proposed judgement rules,** which declare no check but the rule of logical consequence. Its check holds what a script can read of `after`. They cover:
   - a use case's actors and its goal (DEC-001 points 1, 2 and 4)
   - what an artefact's anchors name (DEC-001 points 2, 4, 9 and 11, DEC-002 points 5 to 7, and DEC-004 point 5)
   - a requirement against the records it rests on (DEC-002 point 8)
@@ -1075,6 +1115,8 @@ The use cases it is the main actor of:
   - what makes each precondition true, the rule of logical consequence (DEC-001 points 1, 2 and 12)
   - which other analyses an analysis names (DEC-001 point 2)
   - the order of a domain model's views (DEC-004 point 6)
+  - one name for one concept (DEC-001 points 1 and 2)
+  - a step the system does not carry out yet, which an accepted record decides (DEC-001 points 1 and 5)
 
 | Rule | Status | Statement |
 |---|---|---|
@@ -1089,6 +1131,8 @@ The use cases it is the main actor of:
 | `RS-SAN-009` | proposed | A use case starts only from what is already true. Each of its preconditions names the use cases of its analysis that make it true. |
 | `RS-SAN-010` | proposed | An analysis artefact names another analysis only where its component depends on that analysis's component, and names an optional one only as an option. |
 | `RS-SAN-011` | proposed | A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. |
+| `RS-SAN-012` | proposed | No two terms in force share a name, within an analysis and across the analyses it builds on. No term takes a name another term in force replaces. |
+| `RS-SAN-013` | proposed | A use case describes a step or a variant the system has never carried out only where an accepted decision record decides it, and a box below it says so. |
 
 - **What the format rule binds.** The presence and the order of every part an artefact kind ships, and the form of each part and front-matter field its structure gives one. It binds the glossary's head too, wherever it binds on a term of the glossary. A withdrawn artefact is held to no part or form that came after its withdrawal. A revalidation record is no artefact, so the rule does not cover it: the capability checks a record's structure itself, always. A hint binds nothing, so the voice a hint asks for is no part of the rule. For text of the `sentence` form, the rule's *How* says where a sentence ends, and that a part of that form holds no list.
 - **What the append-only rule binds.** A use case's steps and variants keep their numbers and letters across a change, and a new one goes past them, as the rule's *How* says.
@@ -1106,8 +1150,9 @@ The use cases it is the main actor of:
   - Each precondition of a use case names its producers, the use cases that make it true. In a numbered area, the order binds where they may lie (the check of `after`, in [Checking](#checking-pkit-analysis-validate), above). What the environment gives alone is an assumption, stated once. Its *How* says what a check of `after` can hold, and seven limits a reviewer judges. `SAN` declares the capability's check of `after` under its `checks`, so a reviewer leaves that part to it ("Checking", above) (`RS-SAN-009`).
   - An analysis names another only where its component depends on that one's, and an optional one only as an option. Across analyses, an artefact anchors the records behind what it takes, never another analysis's artefacts (`RS-SAN-010`, `RS-SAN-005`).
   - A domain-model view names a concept that another view of its analysis explains only where that view's number is lower. A change that adds a section to a view owns the break where a view numbered at or below it already names that concept (`RS-SAN-011`).
+  - A step or a variant the system has never carried out stands only where an accepted record decides it, with its `Not built yet` box. The box says what its step states and the system lacks, and its record decides that behaviour. A box below a step that is built breaks the rule too (`RS-SAN-013`).
 - **What judges them.** A reviewer judges each where it binds, such as the rule-set reviewer (COR-057), and leaves `RS-SAN-009`'s declared part to its check. While the rules are proposed, they bind nothing, and nothing judges them.
-  - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003` and of `RS-SAN-005` names what each leaves to them.
+  - **What they leave out.** The stamp and the check refuse some things whatever any rule's status, such as a use case's actor the analysis does not hold. The *How* of `RS-SAN-003`, `RS-SAN-005`, `RS-SAN-012` and `RS-SAN-013` names what each leaves to them.
   - **Why in their own words.** A check declared under `checks` enforces its part only where its rule binds (COR-051 point 2). These checks run whatever any rule's status, so the rules leave those parts out in their own words instead.
   - **A change to anchors alone.** It alters no artefact's content, so the rule-set reviewer judges nothing there (COR-057 point 1). The friction check asks for the artefact's revalidation instead (COR-050 point 6).
   - **A break that starts outside a use case.** A change that records a decision answering a use case, or adds a view that realises it, alters no use case. So the rule-set reviewer does not judge the use case's missing anchor there (COR-057 point 1). Add that anchor in the same change.
@@ -1335,7 +1380,7 @@ A revalidation ends, for each artefact, in one of four outcomes, and each is rec
 |---|---|---|
 | `holds` | the description still stands | `pkit friction revalidate <artefact> --outcome unchanged --because "<why it still holds against this change>"` — and where the code it rests on only moved, re-point the anchor first: an edit to the anchors alone changes no content, so it is still `unchanged` (`updated` with no content change is a bump, COR-050 point 5) |
 | `analysis-stale` | the change was meant; the description is out of date | edit the artefact, then `pkit friction revalidate <artefact> --outcome updated` |
-| `code-regressed` | the description is still what is wanted; the change broke it | report the defect, then `pkit friction revalidate <artefact> --outcome unchanged --because "The description stands: <why it is still wanted>; <commit> broke it — defect <the defect reference> reported."` — the artefact is never rewritten to match |
+| `code-regressed` | the description is still what is wanted; the change broke it | report the defect, then `pkit friction revalidate <artefact> --outcome unchanged --because "The description stands: <why it is still wanted>; <commit> broke it — defect <the defect reference> reported."` — the artefact is never rewritten to match. Where an accepted record decides the regressed step, the person also adds its `Not built yet` box and its entry, naming the defect, and records `--outcome updated` (DEC-001 points 1 and 5) |
 | `gap-found` | behaviour nothing describes, or a description with no behaviour | `--outcome updated` where the artefact changed; `--outcome unchanged --because "<the gap, and the artefact that fills it>"` where a new artefact closes it |
 
 Friction you choose not to resolve yet is not an outcome but a deferral: `pkit friction defer <artefact> --anchor <kind:value> --reason "<why it can wait>"`, which keeps it in the debt listing. Whether the analysis was stale or the code regressed is a question of intent — was the change meant? — and where the change's context doesn't say, a person decides before anything is recorded. Words in angle brackets are for you to fill: the writers refuse a justification or reason that still holds one.

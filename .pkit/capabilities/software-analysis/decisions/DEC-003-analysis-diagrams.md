@@ -115,6 +115,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - the requirements and their map, where requirements exist
   - the areas in their numbered order, each with its goal and its use cases, then the chain of use cases and the use-case diagram
   - the journeys, each with its flow, where journeys exist
+  - last, under "Not built yet", each open shortfall, where a use case in force lists one: its use case, its step or variant, its record and its issue (DEC-001 point 1)
 
   Each diagram is the query's own output, with its text alternative (point 7), in a section of its own.
 - **Front matter only.** The overview reads the analysis's front matter and the paths of its files, never a body, as DEC-001 point 1 allows a tool.
@@ -132,7 +133,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **A missing overview** is a warning that names the command. So a project that installed the capability before fails nothing, and needs no migration.
 - **Keeping none:** a setting in the capability's configuration turns the overview off. The stamp then writes none, the command refuses, and validation asks for no overview and no goal. It warns of an overview left in place, which nothing keeps fresh.
 - **What it anchors:** nothing, since a held document carries no friction block (COR-050 point 12). Generation and the check that it is fresh keep it true to what it draws. The capability's maintainer took this as meeting "it anchors what it shows".
-- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a use case's actors and a goal are included. Two branches that each make such a change conflict on the overview, as on a lock file.
+- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a use case's actors and shortfalls, and a goal are included. Two branches that each make such a change conflict on the overview, as on a lock file.
   - **Where they conflict:** always on its fingerprint's line, and on each section both change. One section per diagram keeps the rest apart.
   - **Resolving it** is running the command.
 
@@ -192,6 +193,8 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why each actor's use cases.** A reader who comes to the analysis in one role looks first for what that role does with the system. The use-case diagram shows it, but a large diagram is hard to follow. A list under each actor names each use case and links it. The capability's maintainer asked for it on 21 October.
 
+**Why the open shortfalls, last.** Each marks a step where the system falls short of an accepted record. Listed in one place, they show a reader every such step at once. They come last, since they are no step of the order in which an analysis is built. The capability's maintainer decided it on 21 October ([project-kit#1855](https://github.com/aleskalfas/project-kit/issues/1855)).
+
 **Why the goals sit in the configuration.** DEC-001 rejects a project's additions to a structure in the configuration, since settings and data would then share a file. The goals sit beside the list of analyses, which is data of the same kind: each analysis's folder and what it builds on.
 
 **Why a fingerprint of what it draws.** A check of the overview's text would fail every adopter's overview at each release that prints it differently, until a migration rewrote it. A fingerprint of the data it reads tells a stale overview from one printed differently.
@@ -235,6 +238,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
   - each area's goal in the configuration, and its check
   - the fingerprint and its version, and the check that the overview is fresh
   - the setting that keeps none
+  - the list of open shortfalls, read from each use case's `shortfalls`
 - **`SAN`** gains the two proposed rules of point 10, and the validator their checkable part. Its judgement rules read a Mermaid fence's labels as statements. The forms check reads a fence as part of the text or the item it follows (point 2).
 - **DEC-001** points 1, 2 and 11 name what this record adds to them. Point 8 is not refined, since the capability contributes no diagram to another component's point.
 - **The authoring skill** tells a writer where a fence may sit, what it may show, and that it holds no styling (point 2).

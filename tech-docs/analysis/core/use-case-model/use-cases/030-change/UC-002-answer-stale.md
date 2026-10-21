@@ -36,6 +36,11 @@ pkit:
     revalidated:
       at: 2026-10-20T01:38:21Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001#5
+          reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 5b names only the unchanged case until #1856 revises it."
 ---
 
 # UC-002 — Answer what my change made stale

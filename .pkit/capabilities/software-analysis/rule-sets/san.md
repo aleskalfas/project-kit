@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-21T05:27:21Z
+          at: 2026-10-21T12:12:23Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 no longer names a read of a view's opening by the overview, which is a held document no structure governs. A kind's structure, and where the format rule binds, are untouched.
+          unchanged-because: "DEC-001 gains the Not built yet box and shortfalls, which no kind's structure declares: the check holds them whatever any rule's status. A kind's structure, and where the format rule binds, are untouched."
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-21T05:27:22Z
+          at: 2026-10-21T12:12:24Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 now keeps the overview to front matter, and the overview lists each actor's use cases from their actor and other-actors fields. Whose goal a use case is, and what the rule asks of its actor, are untouched.
+          unchanged-because: DEC-001 point 1's box and shortfalls name no actor, so whose goal a use case is, and its other actors, are untouched.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-21T05:27:23Z
+          at: 2026-10-21T12:12:25Z
           outcome: unchanged
-          unchanged-because: The change to DEC-001 point 1 removes the overview's quote of a view's opening. A use case's goal and its actor's needs are untouched, so the rule holds as written.
+          unchanged-because: DEC-001 point 1 lets a step the system does not carry out yet stand with its box. A use case's goal and its actor's needs are untouched.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -62,9 +62,8 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-20T22:11:31Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 calls the overview's folder the reader's entry point, held as the records' folder is. What an artefact anchors, and what answers a use case or a requirement, are untouched.
+          at: 2026-10-21T12:12:31Z
+          outcome: updated
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -90,9 +89,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-21T05:27:31Z
+          at: 2026-10-21T12:12:26Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 loses the overview's read of a view's opening by its part's permanent id. Where a goal, a minimal guarantee or a requirement names its source is untouched.
+          unchanged-because: DEC-001 point 1 lets a step stand on an accepted record with its box, and a step is no item this rule judges. The sources of a goal, a minimal guarantee and a requirement are untouched.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -107,9 +106,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-21T05:27:32Z
+          at: 2026-10-21T12:12:28Z
           outcome: unchanged
-          unchanged-because: The overview lists views by number and title and each actor's use cases, and it is a held document, no analysis artefact, so the statements this rule judges are untouched. DEC-003 point 10's rules are unchanged.
+          unchanged-because: A Not built yet box is a statement of its use case, read as any other, and its label is a part's label. The concepts and the terms that define them are untouched.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -121,9 +120,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-21T05:27:33Z
+          at: 2026-10-21T12:12:29Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1's change keeps the overview to front matter. The producers a precondition names, after, and the order of the areas are untouched, and the overview still shows the chain and judges nothing.
+          unchanged-because: DEC-001 point 1 adds shortfalls beside after. The producers a precondition names, after, and the order of the areas are untouched.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -157,9 +156,16 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T05:27:34Z
+          at: 2026-10-21T12:12:30Z
           outcome: unchanged
-          unchanged-because: DEC-001's change removes the overview's quote of a view's opening. Terms' names, noun forms and other senses are untouched, so one name still means one concept.
+          unchanged-because: DEC-001 point 1's boxes and shortfalls touch no term's names, so one name still means one concept.
+  RS-SAN-013:
+    status: proposed
+    origin: {decision: "software-analysis:DEC-001"}
+    pkit:
+      friction:
+        anchors:
+          record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -171,7 +177,7 @@ rules:
 # only where its rule binds. Whoever judges the rest of a rule leaves that part
 # to the check. Where a project's rule tightens a structure, the project's set
 # declares what the check enforces of that rule. RS-SAN-003 to RS-SAN-008,
-# RS-SAN-010 to RS-SAN-012 declare no check: a reviewer judges each.
+# RS-SAN-010 to RS-SAN-013 declare no check: a reviewer judges each.
 checks:
   RS-SAN-001:
     - check: "software-analysis:validate"
@@ -221,7 +227,7 @@ checks:
 
 # SAN — the software-analysis method
 
-The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 4, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 point 10 and DEC-004 points 3 to 6. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
+The rules for a project's analysis artefacts, whatever the project. They rest on software-analysis DEC-001 points 1 to 5, 9, 11 and 12, and DEC-002 points 4 to 8. They also rest on DEC-003 point 10 and DEC-004 points 3 to 6. Like every method rule set, this set takes no scope (COR-051 point 2). Its rules bind only through a set of the project's own that inherits it (COR-051 point 7). A rule binds nothing until it is accepted (COR-051 point 4). A revalidation record is a held document, which no rule binds on, so the capability checks its structure itself (DEC-001 point 1). How rules are named, grounded and inherited is the rule-set record's (COR-051), so it is not repeated here.
 
 A rule's statement and its *How* bind. Inside a *How*, a "such as" phrase and a sentence that starts with "So" only illustrate.
 
@@ -310,7 +316,7 @@ An analysis artefact's anchors name what its statements rest on. A use case's or
     - **The code that holds a requirement** is the code that keeps it, never all the code its `applies-to` reaches.
   - **Which anchor names it.** A path anchor names code, a record anchor a decision, and an artefact anchor another artefact. A view a place holds takes an artefact anchor, and any other view takes a path anchor on its file. An anchor on one part of a record or a document names only what that part stands on.
   - **Where to read the anchors.** An artefact's anchors are in its friction block. A glossary term's are in its entry.
-  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. Once the domain-model view is built, it requires a view's anchors on exactly the terms its `explains` lists, and refuses a path anchor on one. It does so whatever any rule's status, and this rule does not cover it.
+  - **What the check holds.** The capability's check requires a use case's anchors on its `actor` and on each of its `other-actors`. It requires a journey's on its actor, and on exactly the use cases of its `steps` and its `relies-on`. It requires the anchors of a use case and of a journey on exactly the requirements each lists in `requirements`. Once the domain-model view is built, it requires a view's anchors on exactly the terms its `explains` lists, and refuses a path anchor on one. It requires a use case's anchor on the record each entry of its `shortfalls` names. It does so whatever any rule's status, and this rule does not cover it.
   - **What this rule judges.** The rest:
     - the code and the decisions a statement rests on
     - the decisions that answer a use case or a requirement, and the views that realise one
@@ -474,3 +480,18 @@ No two terms in force share a name, within an analysis and across the analyses i
   - **A break.** A term breaks this rule while it holds a name another term holds or replaces. Renaming one of the two terms mends it.
   - **History.** This rule judges a term in force. A withdrawn term is history.
   - **Note:** the rule on domain concepts forbids two names for one concept. This rule forbids two concepts for one name.
+
+## RS-SAN-013 — A step the system does not carry out rests on an accepted record
+
+A use case describes a step or a variant the system has never carried out only where an accepted decision record decides it, and a box below it says so.
+
+- **How:**
+  - **What it judges.** The steps and variants of a use case in force, in its parts whose ids are `main-path` and `variants`, and each box below one. A box is a callout whose first line is `[!WARNING]`, and whose text opens with `**Not built yet:**`.
+  - **What a change owns.** The steps and variants it adds or rewords, and the boxes and entries it adds or removes. Friction brings the rest of a use case to a revalidation when what it rests on changes.
+  - **What the check holds.** The capability's check holds each box to its place, right below the item of a step or a variant, and to an entry of the use case's `shortfalls`. It holds each entry to a box, and to a step or a variant the body numbers. It requires each entry's record among the use case's record anchors, and accepted. It does so whatever any rule's status, and this rule does not cover it.
+  - **A step never carried out.** A use case breaks this rule where a step or a variant the system has never carried out stands with no box below it. It also breaks it where no accepted record decides that behaviour. Without such a record, the use case follows the code.
+  - **A regression.** A step the system carried out and no longer does breaks this rule only where an accepted record decides it and no box stands below it. A regressed step that no record decides is no break (DEC-001 point 5).
+  - **The box and its record.** The box says what the system lacks of its step or variant, the whole of it or a part. The record its entry names decides that behaviour, the whole record or the point the entry names. A box breaks this rule where its record decides something else, or where it says what its step does not state.
+  - **Only what is in force.** A proposed record decides nothing yet, and a superseded one no longer does. Nor does a point another record overturns.
+  - **A step that is built.** A box below a step or a variant the system carries out breaks this rule. So the change that builds the behaviour removes the box and its entry.
+  - **History.** This rule judges a use case in force. A withdrawn use case is history.

@@ -16,7 +16,10 @@ analysis holds, in the order it is built (DEC-001 point 12):
 - **the areas** of the use cases in force, in the order of their numbers, each with its
   goal and its use cases, linked, then the chain of use cases and the use-case diagram.
   An analysis whose use cases lie in no area lists them under its use cases;
-- **the journeys** in force, each linked, with its flow.
+- **the journeys** in force, each linked, with its flow;
+- **not built yet,** last, where a use case in force lists any `shortfalls`: each entry,
+  with its use case, linked, its step or variant, its record and its issue, in the
+  use cases' order and then the entries' (DEC-001 point 1; `_lib/shortfalls.py`).
 
 Each diagram is the query's own output, `pkit analysis diagram` (`_lib/diagrams.py`), with
 its text alternative, in a section of its own, so two branches that each change what one
@@ -68,7 +71,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from _lib import analyses, backbone, chain, diagrams, stamp, structure
+from _lib import analyses, backbone, chain, diagrams, shortfalls, stamp, structure
 from _lib.findings import ERROR, REPORT, WARNING, Finding
 from _lib.model import (
     ACTOR,
@@ -79,6 +82,7 @@ from _lib.model import (
     QUALIFIER,
     RELIES_ON,
     REQUIREMENTS,
+    SHORTFALLS,
     USE_CASE,
     VIEW,
     Analysis,
@@ -102,7 +106,7 @@ COMMAND = "pkit analysis overview"
 #: The version of what the fingerprint reads. A release that reads more of the analysis
 #: raises it. An overview written under another version is a warning, never a failure,
 #: until its command rewrites it, so such a release fails no project.
-VERSION = 2
+VERSION = 3
 
 #: The line that carries the fingerprint and the version it reads, an HTML comment a
 #: repository host does not show.
@@ -115,7 +119,7 @@ _MARKED = re.compile(
 #: what its diagrams draw (DEC-003 points 4 and 5).
 _FIELDS: Mapping[str, tuple[str, ...]] = {
     ACTOR: ("name",),
-    USE_CASE: ("title", "actor", OTHER_ACTORS, AFTER, MUST_MEET),
+    USE_CASE: ("title", "actor", OTHER_ACTORS, AFTER, MUST_MEET, SHORTFALLS),
     JOURNEY: ("title", "actor", diagrams.STEPS, RELIES_ON, MUST_MEET),
     **dict.fromkeys(REQUIREMENTS, ("title", diagrams.REFINES, diagrams.ACTORS)),
     VIEW: ("title",),
@@ -309,7 +313,31 @@ def render(
         out += ["", "## Journeys"]
         for journey in journeys:
             out += ["", f"### {link(journey)}", *_fence(drawn.get(f"journey-{journey.id}"))]
+
+    open_ = [(u, entry) for u in use_cases for entry in shortfalls.entries(u) or ()]
+    if open_:
+        out += [
+            "",
+            "## Not built yet",
+            "",
+            "What the use cases describe and the system does not do yet, each with the record "
+            "that decides it and the issue that tracks it (software-analysis DEC-001 point 1):",
+            "",
+        ]
+        out += [
+            f"- {link(u)}: {entry.place}, decided by `{entry.record}`, tracked in "
+            f"{_issue(entry.issue)}"
+            for u, entry in open_
+        ]
     return "\n".join(out) + "\n"
+
+
+def _issue(issue: str) -> str:
+    """An issue as the overview shows it: a link as itself, any other in a code span."""
+    if issue.startswith(("https://", "http://")):
+        return f"<{issue}>"
+    ticks = "``" if "`" in issue else "`"
+    return f"{ticks}{issue}{ticks}"
 
 
 def _fence(diagram: diagrams.Diagram | None) -> list[str]:

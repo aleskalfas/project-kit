@@ -1,0 +1,18 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Added
+body: >
+  A use case shows where the system falls short of an accepted record. Below
+  each step or variant the system does not carry out yet stands a box, a
+  `> [!WARNING]` callout whose text opens with `**Not built yet:**`, naming
+  the record and the issue, and the use case's new optional `shortfalls`
+  lists each one as data: its step or variant, its issue and its record.
+  `pkit analysis validate` holds each box to an entry and each entry to a box,
+  whatever any rule's status, and requires each entry's record among the use
+  case's record anchors, and accepted. The overview ends with a "Not built
+  yet" section listing every open shortfall. Its fingerprint reads the
+  entries, and its version is 3, so an overview written before is a warning
+  until `pkit analysis overview` writes it anew. DEC-001 points 1, 5 and 9
+  and DEC-003 point 8 are refined in place, and SAN gains RS-SAN-013,
+  proposed, which judges that each box, its step and its record agree.

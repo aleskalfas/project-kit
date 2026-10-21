@@ -736,6 +736,13 @@ def _undeclared(
     return found
 
 
+def rows(lines: Sequence[Line]) -> tuple[forms.Row, ...]:
+    """A body's lines as a part's rows are read: comments left out, and fenced code marked.
+    The check of a use case's boxes reads the whole body so (`_lib/shortfalls.py`)."""
+    body = _read(lines, frozenset())
+    return _rows(body, range(len(body.content)))
+
+
 def _part(
     i: int, elements: Sequence[Element], at: Mapping[int, int], body: _Body
 ) -> forms.Part | None:

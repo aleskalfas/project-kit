@@ -147,6 +147,17 @@ What is checked, each against the record's words:
   A goal that names no folder of the use cases is an error, and, where the overview
   is kept, an area of the use cases in force without a goal a warning. An overview
   written under another version of what it reads is a warning too.
+- **What a use case says the system does not do yet** (point 1; `_lib/shortfalls.py`),
+  of each use case in force, since a tool such as the overview reads its entries
+  whatever binds: each `Not built yet` box is in its form, a blank line below it, and
+  stands at the top level of its *Main path* or *Variants*, right below the item of a
+  step or a variant. Each box is matched to an entry of
+  `shortfalls` that names that step or variant, an issue the box holds and a record
+  whose id it names, and each entry to a box. Each entry's step or variant is one the
+  body numbers, and its record is one of the use case's record anchors, written alike,
+  and accepted, as the record's front matter says. Where the record lies is the
+  backbone's answer (`pkit refs lookup`), a capability's decision read from its
+  capability's `decisions` folder.
 - **Revalidation records** (points 5 and 6): each record's front matter
   against its schema, and the artefacts its outcomes cite are artefacts of the
   analysis, withdrawn ones included. The records are not anchored artefacts:
@@ -313,6 +324,7 @@ from _lib import (
     project_structure,
     render,
     schemas,
+    shortfalls,
     structure,
     views,
 )
@@ -341,6 +353,7 @@ from _lib.model import (
     REQUIREMENTS_FOLDER,
     REVALIDATED_AT,
     REVALIDATIONS,
+    SHORTFALLS,
     TERM,
     UNANCHORED_BECAUSE,
     UNPLACED,
@@ -453,6 +466,7 @@ def check(root: Path, *, preview: bool = False) -> Outcome:
     outcome.findings += _open_regressions(root, read, analysis)
     own = _own(root)
     outcome.findings += _own_findings(analysis, own)
+    outcome.findings += _shortfalls(root, analysis, own)
     reached = _Reach(root, backbone.reach)
     summary, departing = _structure(root, analysis, preview=preview, own=own, reach=reached)
     outcome.summary.append(summary)
@@ -2615,6 +2629,179 @@ def _producers_shown(named: Sequence[str]) -> str:
 
 def _counted(number: int, noun: str) -> str:
     return f"{number} {noun}" + ("" if number == 1 else "s")
+
+
+# --- what a use case says the system does not do yet (DEC-001 point 1) ----------------------
+
+#: Why a box and an entry go together, as each finding on either says it.
+_SHORTFALL = (
+    "each step or variant the system does not carry out yet carries a box below it and an "
+    f"entry in `{SHORTFALLS}`, which name the same issue and record (DEC-001 point 1)"
+)
+
+#: How the box opens, as a finding shows it.
+_BOX_SHOWN = f"`> {shortfalls.CALLOUT}`, then `> {shortfalls.LABEL}`"
+
+#: What a record's status reads where its id names no record.
+_NO_RECORD = "\x00no record"
+
+
+def _shortfalls(root: Path, analysis: Analysis, own: project_structure.Own | None) -> list[Finding]:
+    """Each use case in force against what it says the system does not do yet, whatever
+    any rule's status, since the overview lists its entries wherever it is kept (DEC-001
+    point 1; `_lib/shortfalls.py`). Each box stands right below a step or a variant and is
+    matched to an entry, and each entry to a box. Each entry's step or variant is one the
+    body numbers. Each entry's record is one of the use case's record anchors, and
+    accepted. Where the use case's structure cannot be read, its boxes are not read, and
+    the check of its body says why. A use case whose `shortfalls` is off its schema's
+    shape is the schema's."""
+    kind = _use_case_kind(own)
+    statuses: dict[str, str] = {}
+    found: list[Finding] = []
+    for use_case in sorted(analysis.of_kind(USE_CASE), key=lambda u: u.path):
+        listed = None if use_case.withdrawn else shortfalls.entries(use_case)
+        if listed is None:
+            continue
+        text = _read(root / use_case.path) if kind is not None else None
+        reading = shortfalls.read(text, kind) if text is not None and kind is not None else None
+        if not listed and (reading is None or not reading.boxes):
+            continue
+        found += _shortfall_records(root, use_case, listed, statuses)
+        if reading is not None:
+            found += _boxes(use_case, listed, reading)
+    return found
+
+
+def _shortfall_records(
+    root: Path,
+    use_case: Artefact,
+    listed: Sequence[shortfalls.Entry],
+    statuses: dict[str, str],
+) -> list[Finding]:
+    """Each entry's record, against the use case's record anchors and the record's own
+    status: anchored as written, and accepted."""
+    anchored = set(use_case.anchored_to("record"))
+    found: list[Finding] = []
+    for entry in listed:
+        where = at(use_case.location, f"/{SHORTFALLS}/{entry.index}/record")
+        if entry.record not in anchored:
+            found.append(
+                Finding(
+                    ERROR,
+                    where,
+                    f"`{entry.record}` is no record anchor of the use case: a shortfall rests "
+                    f"on its record, so the use case anchors it as the entry writes it, and a "
+                    f"change to the record flags the use case (DEC-001 points 1 and 11)",
+                )
+            )
+        try:
+            status = _record_status(root, entry.record_named, statuses)
+        except Unreadable as exc:
+            found.append(
+                Finding(
+                    ERROR, where, f"whether {entry.record_named} is accepted cannot be read: {exc}"
+                )
+            )
+            continue
+        if status == ACCEPTED:
+            continue
+        said = (
+            f"`{entry.record}` names no record the repository holds"
+            if status == _NO_RECORD
+            else f"{entry.record_named} is {status or 'of no status'}, not accepted"
+        )
+        found.append(
+            Finding(
+                ERROR,
+                where,
+                f"{said}: only an accepted record grounds a step or a variant the system does "
+                f"not carry out yet. Name the accepted record that decides {entry.place}, or "
+                f"describe it as the code does (DEC-001 point 1)",
+            )
+        )
+    return found
+
+
+def _record_status(root: Path, record: str, known: dict[str, str]) -> str:
+    """The status a record's front matter gives, as written, read once per record: empty
+    where it gives none, and `_NO_RECORD` where the id names no record. Where the record
+    lies is the backbone's answer (`backbone.record_file`). Raises Unreadable where `pkit`
+    cannot be run."""
+    if record not in known:
+        rel = backbone.record_file(root, record)
+        text = _read(root / rel) if rel is not None else None
+        if text is None:
+            known[record] = _NO_RECORD
+        else:
+            yaml_text = markdown.split(text)[0]
+            try:
+                front = markdown.load(yaml_text) if yaml_text is not None else None
+            except YAMLError:
+                front = None
+            status = front.get("status") if isinstance(front, Mapping) else None
+            known[record] = status if isinstance(status, str) else ""
+    return known[record]
+
+
+def _boxes(
+    use_case: Artefact, listed: Sequence[shortfalls.Entry], reading: shortfalls.Reading
+) -> list[Finding]:
+    """The boxes of a use case's body against its entries: a box placed where no box may,
+    an entry whose step or variant the body does not number, an entry with no box, and a
+    box with no entry."""
+    taken, untaken = shortfalls.matched(listed, reading.boxes)
+    found = [
+        Finding(
+            ERROR,
+            use_case.location,
+            f"the `Not built yet` box at line {box.line} is out of its place or form: "
+            f"{box.misplaced}. A box is {_BOX_SHOWN}, at the top level of the use case's steps "
+            f"or variants, right below the item of its step or variant, with a blank line above "
+            f"and below it, so the step's words stay as they are (DEC-001 point 1)",
+        )
+        for box in reading.boxes
+        if box.misplaced is not None
+    ]
+    for entry in listed:
+        if entry.index in taken:
+            continue
+        if entry.at not in reading.numbered:
+            found.append(
+                Finding(
+                    ERROR,
+                    at(use_case.location, f"/{SHORTFALLS}/{entry.index}/at"),
+                    f"{entry.place} is no step or variant the use case's body numbers: an entry "
+                    f"names the step or the variant its box stands below (DEC-001 point 1)",
+                )
+            )
+            continue
+        if any(box.at == entry.at for box in reading.boxes):
+            problem = (
+                f"no box below {entry.place} that another entry does not take holds both its "
+                f"issue, `{entry.issue}`, and its record's id, {entry.record_id}"
+            )
+        else:
+            problem = f"no `Not built yet` box stands below {entry.place}"
+        found.append(
+            Finding(
+                ERROR,
+                at(use_case.location, f"/{SHORTFALLS}/{entry.index}"),
+                f"{problem}: {_SHORTFALL}. Write one right below its item, at the top level of "
+                f"the part: {_BOX_SHOWN} and what the system does not do yet, naming "
+                f"{entry.record_id} and `{entry.issue}`",
+            )
+        )
+    found += [
+        Finding(
+            ERROR,
+            use_case.location,
+            f"the `Not built yet` box at line {box.line}, below {shortfalls.place(box.at or '')}, "
+            f"has no entry in `{SHORTFALLS}` that names {shortfalls.place(box.at or '')}, an "
+            f"issue the box holds and a record whose id it names: {_SHORTFALL}",
+        )
+        for box in untaken
+    ]
+    return found
 
 
 def _unbound(analysis: Analysis, reached: _Reach) -> tuple[str, list[Finding]]:

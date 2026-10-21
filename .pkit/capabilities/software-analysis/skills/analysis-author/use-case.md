@@ -43,6 +43,48 @@ Each part holds its hint, which says what goes there and gives an example. Fill 
 
 **Preconditions.** Open each line with its producers, the use cases in force that make it true, such as `**From UC-003:**` or `**From UC-059, or Environment:**`. What the environment gives alone is an assumption, written in *Assumptions* only. A use case that needs no other one reads `None.` there. You may also list the producers in the front matter as `after`, one entry for each line, in its order, such as `after: [[UC-003], [UC-059, environment]]` (DEC-001 point 1). `after` draws no anchor. Where `RS-SAN-009` binds, the check holds it to the analysis, the words and the areas' numbers. `pkit analysis diagram chain` draws it.
 
+## 7. Show what the system does not do yet
+
+Write each step and variant as the accepted records decide it (DEC-001 point 1). Where the system does not carry one out yet, keep it and add a box below it. Only an accepted record grounds such a step. Without one, write the step as the code does it. A proposed record decides nothing yet: accept it first, or leave the step out.
+
+1. **Find the record and the issue.** Name the accepted record that decides the behaviour, and its point where it has one. Name the issue that tracks building it. Where no issue tracks it, file one first.
+2. **Anchor the record.** It is among the use case's record anchors, written as the entry writes it, with its point where it names one. So a change to the record flags the use case.
+3. **Write the box.** Put it right below the item of the step or variant, at the top level of *Main path* or *Variants*, with a blank line above and below it. Never indent it into the item, so the step's words stay as journeys and evidence cite them. Say what the system does not do yet, then name the record and the issue.
+4. **List it in `shortfalls`.** One entry for each box: its step or variant, `at`, its issue in one word, and its record. Quote an issue that opens with `#`, since YAML reads the rest of the line as a comment. A variant's `at` is its number and letter, such as `"2a"`. A step may carry several boxes, one for each entry.
+
+A box below step 2, its record an architecture record's point 2:
+
+```markdown
+**Main path:**
+
+1. The analyst chooses `Export`.
+2. The system writes the report to a file, and signs it.
+
+> [!WARNING]
+> **Not built yet:** the system writes the file unsigned. ADR-006 point 2 decides
+> that each export is signed, and #12 tracks it.
+
+3. The system says where the file is.
+```
+
+Its entry, with the record among the use case's record anchors:
+
+```yaml
+shortfalls:
+  - at: 2
+    issue: "#12"
+    record: ADR-006#2
+pkit:
+  friction:
+    anchors:
+      record: [ADR-006#2]
+```
+
+The check holds each box to an entry and each entry to a box, whatever any rule's status. Each entry's record must be one of the use case's record anchors, and accepted. The overview lists every entry under "Not built yet".
+
+- **A regression.** A step the system no longer carries out keeps its words (DEC-001 point 5). Where an accepted record decides it, add its box, naming the defect's issue, and record the revalidation as `updated`. Any other regressed step takes no box.
+- **Closing one.** The change that builds the behaviour removes the box and its entry, in the pull request that closes the issue.
+
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first, and `pkit analysis check-numbers` before merging.
 
 ## Later

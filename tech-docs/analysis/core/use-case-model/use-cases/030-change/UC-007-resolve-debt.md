@@ -35,6 +35,15 @@ pkit:
       at: 2026-10-20T13:09:34Z
       outcome: unchanged
       unchanged-because: The resolver's commands for the person gain pkit analysis link before an analysis-stale update, where an analysis keeps a domain model. Who proposes and who writes the answers on the debt are unchanged, so this use case holds as written.
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
+          reason: "The resolver's commands gain the boxed regression, revalidated as updated. Variant 4a names only the unchanged case until #1856 revises it."
+        - anchor:
+            kind: record
+            value: software-analysis:DEC-001#5
+          reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 4a names only the unchanged case until #1856 revises it."
 ---
 
 # UC-007 — Resolve what the default branch left out of date
