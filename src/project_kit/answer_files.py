@@ -970,6 +970,7 @@ class AnswerHistory:
         self._parsed: dict[str, AnswerFile] = {}
         self._naming: dict[str, bool] = {}
         self._at: dict[str, Mapping[str, TreeEntry]] = {}
+        self._locations: dict[str, frozenset[str]] = {}
 
     @property
     def dormant(self) -> bool:
@@ -1017,7 +1018,11 @@ class AnswerHistory:
     # --- whether a commit's answers carry something --------------------------------
 
     def _names_artefact(self, like: Artefact) -> frozenset[str]:
-        return frozenset(head_locations(self.history)(like))
+        """Every location an answer may name `like` by (`head_locations`), read once."""
+        found = self._locations.get(like.location)
+        if found is None:
+            found = self._locations[like.location] = frozenset(head_locations(self.history)(like))
+        return found
 
     def ever_named(self, like: Artefact) -> bool:
         """Whether any answer file in the history names `like`."""
