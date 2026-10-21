@@ -7,7 +7,8 @@ other-actors: []
 after:
   - [UC-015]
   - [UC-014, UC-019]
-requirements: []
+requirements:
+  - REQ-002
 pkit:
   friction:
     anchors:
@@ -22,6 +23,10 @@ pkit:
         - ADR-059
       artefact:
         - ACT-component-author
+        - REQ-002
+    revalidated:
+      at: 2026-10-21T21:30:40Z
+      outcome: updated
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository

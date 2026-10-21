@@ -8,7 +8,8 @@ other-actors:
 after:
   - [UC-014]
   - [UC-014, UC-019]
-requirements: []
+requirements:
+  - REQ-002
 pkit:
   friction:
     anchors:
@@ -32,6 +33,10 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-ai-agent
+        - REQ-002
+    revalidated:
+      at: 2026-10-21T21:30:44Z
+      outcome: updated
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition
