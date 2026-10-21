@@ -1634,13 +1634,18 @@ def _under_skipped(rel: Path | PurePosixPath) -> bool:
 
 @functools.lru_cache(maxsize=16)
 def _documents(files: tuple[str, ...]) -> tuple[str, ...]:
-    """The Markdown files of a listing, in its order, none under a skipped top level:
-    worked out once per listing, however many places read it — a pure function of
-    the listing, so it is the same whichever place asks."""
+    """The Markdown files of a listing, in its order, none under a skipped top level and
+    none in the answer folder, which is never a place (COR-062 point 2): worked out once
+    per listing, however many places read it — a pure function of the listing, so it is
+    the same whichever place asks."""
+    from project_kit.answer_files import in_folder  # the folder's one home (ADR-057 point 2)
+
     return tuple(
         f
         for f in files
-        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX and not _under_skipped(PurePosixPath(f))
+        if PurePosixPath(f).suffix == DOCUMENT_SUFFIX
+        and not _under_skipped(PurePosixPath(f))
+        and not in_folder(f)
     )
 
 
@@ -2117,6 +2122,19 @@ class AnchorResolution:
     paths: tuple[str, ...] = ()
     no_answer: str | None = None
     overran: bool = False
+    # How many answer files it named, left out of `paths`: no anchor stands on one, so an
+    # anchor that names only answer files is dead (COR-062 point 2).
+    answer_files: int = 0
+
+    @property
+    def dead_reason(self) -> str:
+        """Why an anchor whose resolver names nothing it stands on is dead."""
+        if self.answer_files:
+            return (
+                f"its resolver names only answer files ({self.answer_files}), on which no "
+                f"anchor stands"
+            )
+        return "its resolver names no file for it"
 
 
 def resolver_answer(
@@ -2147,7 +2165,10 @@ def resolver_answer(
                 f"{expected}"
             )
         )
+    from project_kit.answer_files import is_answer_file  # the folder's one home
+
     paths: set[str] = set()
+    answers = 0
     for item in cast(list[Any], listed):
         if not isinstance(item, str) or item not in files:
             return AnchorResolution(
@@ -2157,8 +2178,11 @@ def resolver_answer(
                     f"names a file that state holds"
                 )
             )
-        paths.add(item)
-    return AnchorResolution(paths=tuple(sorted(paths)))
+        if is_answer_file(item):
+            answers += 1  # no anchor stands on an answer file (COR-062 point 2)
+        else:
+            paths.add(item)
+    return AnchorResolution(paths=tuple(sorted(paths)), answer_files=answers)
 
 
 def run_resolver(
