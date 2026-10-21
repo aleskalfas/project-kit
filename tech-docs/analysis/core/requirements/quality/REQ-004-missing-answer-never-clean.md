@@ -3,7 +3,7 @@ id: REQ-004
 title: A check never reads a missing answer as one that found nothing
 status: active
 statement: A check of the backbone never reads a missing answer, from a command it runs or from git, as one that found nothing.
-measure: A command that cannot start, ends abnormally, overruns its time or prints what cannot be read gives no answer. Such a validator fails validation. The change check reports such a resolver's anchor as having no answer, and fails on it where the project enforces the check. The whole-repository check never reports that anchor's artefact `current`. A data point declared `fail` stays unresolved, whole, when a command that fills it gives no answer. A default branch that git cannot resolve is reported, never guessed.
+measure: A command that cannot start, ends abnormally, overruns its time or prints what cannot be read gives no answer. A validator whose command gives no answer fails validation. The change check reports an anchor whose resolver gives no answer as having none, and fails on it where the project enforces the check. The whole-repository check never reports that anchor's artefact `current`. A data point declared `fail` stays unresolved, whole, when a command that fills it gives no answer. A default branch that git cannot resolve is reported, never guessed.
 applies-to: Validation, the change check, the whole-repository check, and each data point and default branch the backbone resolves for them, whichever component's command they run.
 actors:
   - ACT-ci-pipeline
