@@ -58,8 +58,15 @@ pkit:
 3. The system checks the name, and that no agent definition of the project, of a capability or of the core has it.
 4. The system writes the agent definition, `.pkit/agents/project/<name>/<name>.md`, and its storyboard, `storyboard.md`, beside it. The agent definition lists the storyboard in `storyboards:`, and the storyboard names the agent definition in `consumers:` (COR-016).
 5. The system prints `Stamped: .pkit/agents/project/<name>/<name>.md` and `Stamped: .pkit/agents/project/<name>/storyboard.md`.
-6. The developer writes the storyboard first, through the `storyboard-author` skill. It gives the framing and the tone, and each scenario's trigger, preconditions, walkthrough and what happens behind the scenes (COR-016).
-7. The developer writes the agent definition's body from the storyboard: when to delegate to it, what it reads and the paths it owns (COR-013).
+6. The developer writes the storyboard first, through the `storyboard-author` skill (COR-016). It gives the framing and the tone, and for each scenario:
+   - its trigger
+   - its preconditions
+   - a walkthrough
+   - what happens behind the scenes
+7. The developer writes the agent definition's body from the storyboard (COR-013). The body says:
+   - when to delegate work to the agent definition
+   - what it reads
+   - which paths it owns
 8. The developer runs `pkit sync`.
 9. The adapter deploys the agent definition. The `claude-code` adapter's `deploy-agents.sh`, for one, writes a copy where its harness reads it, `.claude/agents/<name>.md`, with each placeholder filled from `.pkit/agents/project/overlay.yaml` (COR-013 point 5). It prints `created .claude/agents/<name>.md`.
 10. The developer runs `pkit validate`. Its `refs` member checks that the agent definition's body cites what its front matter declares (COR-013 point 3). It also checks that the agent definition and its storyboard declare each other (COR-016).

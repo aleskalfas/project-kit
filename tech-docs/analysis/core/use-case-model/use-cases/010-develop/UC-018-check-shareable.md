@@ -35,7 +35,7 @@ pkit:
 
 **Assumptions:**
 
-- A project that pulls the capability takes it whole, at a ref of the repository where it is authored. That project gates it on the range it declares (COR-041 and ADR-040 point 4). The fetch that would pull it is not built yet (`manifest.py`), so this check is what the author has today.
+- A project that pulls the capability takes it whole, at a ref of the repository where it is authored. That project gates the capability on the range the capability declares (COR-041 and ADR-040 point 4). The fetch that would pull it is not built yet (`manifest.py`), so this check is what the author has today.
 - The author has run the capability on each backbone version its range admits. The check reads the range's form, never that claim, which the author owns (ADR-040 point 5).
 
 **Trigger:** The author means to let other repositories pull the capability.

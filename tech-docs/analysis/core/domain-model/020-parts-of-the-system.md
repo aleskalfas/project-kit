@@ -241,7 +241,11 @@ A storyboard is a document that scripts a dialogue with a person, scenario by sc
 
 - its framing: the scenarios it covers, the state they work on and where each one starts (COR-016)
 - its tone: the norms each turn of its scenarios keeps, such as one thought a turn (COR-016)
-- its scenarios, each with its trigger, its preconditions, a walkthrough of the dialogue and what happens behind the scenes (COR-016)
+- its scenarios (COR-016), each with:
+  - its trigger
+  - its preconditions
+  - a walkthrough of the dialogue
+  - what happens behind the scenes
 - `consumers:`, the agent definitions that follow it (COR-016)
 
 **Relations:**

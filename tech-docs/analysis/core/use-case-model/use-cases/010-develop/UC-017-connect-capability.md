@@ -43,7 +43,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): runs the commands of steps 3, 6 and 7 for the author through the `process` skill. As the `process-author` agent, it writes the scripts behind a process's states and conditions. It writes only in the files the project grants it (COR-044 point 2 and ADR-051).
+- **AI agent** (`ACT-ai-agent`): runs the commands of steps 3, 6 and 7 for the author through the `process` skill. Working by the `process-author` agent definition, it writes the scripts behind a process's states and conditions. It writes only in the files the project grants it (COR-044 point 2 and ADR-051).
 
 **Preconditions:**
 
@@ -62,7 +62,7 @@ pkit:
 5. The system prints `Stamped: <path>` and one `stub:` line for each script.
 6. Where the process waits on another, the author runs `pkit process couple <capability>:<id> --upstream <address> …` (COR-038). Then the author runs `pkit capabilities refresh <capability>`, which regenerates the package metadata's `depends-on` list from the definitions (COR-053 point 4).
 7. Where the wait is to be checked, the author also runs `pkit process hand-off …` (COR-042).
-8. The author writes the script behind each state and condition. Where the project grants it the files, the `process-author` agent writes them (COR-044 points 1 and 2).
+8. The author writes the script behind each state and condition. Where the project grants the files, an AI agent working by the `process-author` agent definition writes them (COR-044 points 1 and 2).
 9. The author offers the process to other components, under `extension-points.offers` with `kind: process` and `process: <id>` (COR-053 point 2).
 10. The author runs `pkit validate`. Its members `packages`, `connections` and `process` read what the capability declares. They check that:
     - each connection point lies under a role the capability provides
@@ -76,8 +76,8 @@ pkit:
 - **1a.** Another installed capability provides one of the capability's roles. At step 10, `pkit validate` fails with ``role '<role>' is provided by <capabilities> and no provider is selected``, and names `pkit connections providers set` (COR-053 point 1).
 - **4a.** A process of that id exists in the capability. The system refuses, since `process new` writes a process only once, and writes nothing. The path rejoins at step 3.
 - **6a.** The author skips `pkit capabilities refresh`. At step 10, `pkit validate` fails with ``the generated `depends-on` list is stale``, and names the command. The path rejoins at step 6.
-- **8a.** The project grants the `process-author` agent no file, since `process-authoring-targets` ships empty in `.pkit/agents/project/overlay.yaml`. The agent then proposes each script, and the author writes it (ADR-051 point 1).
-- **8b.** The overlay has no key `process-authoring-targets`, as in a project that upgraded from before it. The adapter deploys no `process-author` agent, and the author writes each script (ADR-051 point 1).
+- **8a.** The project grants the `process-author` agent definition no file, since `process-authoring-targets` ships empty in `.pkit/agents/project/overlay.yaml`. An AI agent working by it then proposes each script, and the author writes it (ADR-051 point 1).
+- **8b.** The overlay has no key `process-authoring-targets`, as in a project that upgraded from before it. The adapter deploys no `process-author` agent definition, and the author writes each script (ADR-051 point 1).
 - **10a.** A connection point lies under a role the capability does not provide, or its companion schema is missing. `pkit validate` fails on it, and the path rejoins at step 1.
 - **12a.** The script behind a state still fails as stamped, or cannot run. The system prints ``couldn't evaluate <kind> predicate '<command>'``. It refuses each move with `position is indeterminate — a detection predicate could not be evaluated; refusing to move (fail-closed)` (COR-033).
 - **12b.** The script behind a move's condition still fails as stamped. The system refuses that move with `gate refused:` and the script's reason, and allows the others (COR-033 P4).

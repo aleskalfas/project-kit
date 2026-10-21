@@ -54,7 +54,10 @@ pkit:
 4. The dispatcher runs the command with `uv run --quiet --project <root> python -m project_kit`. So the command runs the checkout's code as edited, and reads the methodology's files from the checkout's own `.pkit/` (`install.find_source_kit`). `pkit status` shows that tree on its line `Source kit:`.
 5. After adding a skill, or editing an agent definition or the settings the methodology merges, the maintainer runs `pkit sync`. The harness then reads the edit.
 6. The system recognises the source repository: the checkout's root holds the very tree that the running code reads (`install.is_self_host`, ADR-059 point 2). It prints `Syncing project-kit at <root> (self-host)` and `source == target: skipping propagation; running deploy primitives only.`, and copies no file.
-7. The system runs each adapter's merge delivery into the files its harness reads, such as `claude-code`'s into `.claude/settings.json` and `CLAUDE.md`. Each adapter deploys the skills and agent definitions as edited. It also renders `.pkit/.gitignore`, makes the agent workspace `.agent-workspace/`, and sets up each command a capability registers (ADR-065 point 11).
+7. The system runs each adapter's merge delivery into the files its harness reads, such as `claude-code`'s into `.claude/settings.json` and `CLAUDE.md`. Each adapter deploys the skills and agent definitions as edited. The system also does these (ADR-065 point 11):
+   - it renders `.pkit/.gitignore`
+   - it makes the agent workspace, `.agent-workspace/`
+   - it sets up each command a capability registers
 8. The system prints `Self-host sync complete (deploy primitives re-run).`
 
 **Variants:**
@@ -63,18 +66,16 @@ pkit:
 - **2b.** The maintainer runs `pkit init` in the checkout. The system refuses with `<root> is already a project-kit project.`, names `pkit sync` to refresh it, and writes nothing (`install.py`). The use case ends.
 - **2c.** The maintainer runs `pkit pin <version>`. The system refuses with ``refusing to pin <root>: it is the methodology's source repository``, since the checkout's own code runs before any pin is read, and writes nothing. To move the checkout to another release, the maintainer updates it with git (ADR-059 point 3). The use case ends.
 - **2d.** The maintainer runs `pkit capabilities install <name>` for a capability the tree authors. The system records the capability as `kit-shipped` in the manifest, copies nothing, and says that `nothing was copied (ADR-059)`. Uninstalling it later only takes it out of the manifest, after asking `Unregister '<name>' and keep .pkit/capabilities/<name>/?`, and the system refuses `--purge` there (ADR-059).
-- **3a.** The installed CLI started the command, and the dispatcher `.pkit/cli/pkit` is missing or not executable. The system warns on standard error that it runs the installed CLI's code instead, `which is not this checkout's code`. The warning names the repair: restore the dispatcher with `git checkout`, or make it executable (ADR-059).
-
-  The command runs with the installed CLI's code, and a sync meets 6a. Once the maintainer repairs the dispatcher, the path rejoins at step 2.
+- **3a.** The installed CLI started the command, and the dispatcher `.pkit/cli/pkit` is missing or not executable. The system warns on standard error that it runs the installed CLI's code instead, `which is not this checkout's code`. The warning names the repair: restore the dispatcher with `git checkout`, or make it executable (ADR-059). Until the maintainer repairs it, the command runs with the installed CLI's code and a sync meets 6a; then the path rejoins at step 2.
 - **3b.** The installed CLI started the command with routing switched off, by `PKIT_NO_ROUTE=1` or by `PKIT_ROUTED=1` inherited from another run. The command runs with the installed CLI's code, with no warning, and a sync meets 6a. Once the maintainer clears the variable, the path rejoins at step 2.
 - **5a.** The maintainer runs `pkit upgrade` instead. The system prints `Self-host: source is the installed state; no backbone upgrade needed.` and `Re-running deploy primitives via sync.`, and the path goes on at step 6.
-- **6a.** The running code is not the checkout's own (3a, 3b). So the root does not hold the tree that code reads, while the package source beside `.pkit/` still marks the source repository. The system refuses, and its message gives these:
+- **6a.** The running code is not the checkout's own (3a, 3b), so the root does not hold the tree that code reads, while the package source beside `.pkit/` still marks the source repository. The system refuses, and its message gives these:
   - the refusal, ``refusing to run `sync` in <root>: it is the methodology's source repository, and the running pkit is not its own code.``
   - `Nothing was written, and no flag overrides this refusal.`
   - how the run got there
   - the remedy, running `.pkit/cli/pkit sync` from the root
 
-  `pkit upgrade` refuses the same way (ADR-059 point 3). The use case ends.
+  `pkit upgrade` refuses the same way (ADR-059 point 3), and the use case ends.
 
 **Postconditions:**
 
