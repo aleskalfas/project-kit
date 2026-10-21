@@ -6,7 +6,7 @@ date: 2026-09-27
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **Partially superseded by [COR-062](COR-062-answers-in-own-files.md).** A change writes its answers in new files of its own, which it only adds, and never in the artefact. Overturned: that the answer lives in the artefact, where points 3, 4 and 16 put answers, and their rules on conflicts. Also overturned: that whoever merges two revalidations judges their combined state. That becomes debt, reported until a revalidation reads both. And point 4's "reaches" is read through what a revalidation read. Among what stands: anchors and what they stand on, the three answers and who decides them, and deferrals per anchor. So do the revalidation point read from git, both checks, and that no answer is read from a pull-request description. COR-062's "What this overturns, and what stands" lists each passage.
+> **Partially superseded by [COR-062](COR-062-answers-in-own-files.md).** A change writes its answers in new files of its own, never in the artefact, and never rewrites one its base holds. Overturned: that the answer lives in the artefact, where points 3, 4 and 16 put answers, and their rules on conflicts. Also overturned: that whoever merges two revalidations judges their combined state. That becomes debt, reported until a revalidation reads both. And point 4's "reaches" is read through what a revalidation read. Among what stands: anchors and what they stand on, the three answers and who decides them, and deferrals per anchor. So do the revalidation point read from git, both checks, and that no answer is read from a pull-request description. COR-062's "What this overturns, and what stands" lists each passage.
 
 ## Context
 

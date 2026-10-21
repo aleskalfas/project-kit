@@ -42,7 +42,7 @@ A rule set is one file. In the terms of the anchors-and-friction record (COR-050
 - **Its body holds the prose:** one section per rule, headed by the rule's id and title, containing the statement.
 - A schema fixes the data's shape. Validation checks the schema, and also that every rule in the body has data and every data entry has a rule in the body.
 - **Discovery:** rule sets are found where artefacts are found, in the places a component or the project declares to hold them (COR-050).
-- **A rule a project receives by sync** is an artefact there, as anywhere: it binds, and an anchor may name it. It owes that project no answer to friction. Its answers stay with its source, which no sync carries. So the project's checks neither ask an answer of it nor report it stale, as for an artefact under an excluded path (refinement per COR-062).
+- **A rule a project receives by sync** is an artefact there, as anywhere: it binds, and an anchor may name it. It owes that project no answer to friction (refinement per COR-062 point 9).
 
 **Scope.** A set's scope selects artefacts by the paths of their files and by their types (refinement per COR-056). It has three keys, each a list. A path is relative to the repository root. It names a file, a folder with everything beneath it, or a glob in which `**` matches across folders.
 - `paths`: an artefact is selected when one of these paths matches its file. Without `paths`, every file matches.
