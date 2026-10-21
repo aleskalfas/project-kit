@@ -19,9 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-20T09:24:31Z
+      at: 2026-10-21T13:00:55Z
       outcome: unchanged
-      unchanged-because: pyproject.toml registers a pytest marker, answers, for the tests the short check runs. The README's install and development instructions are untouched.
+      unchanged-because: The record lookup in refs.py now resolves a capability's decision as well. The README's account of the reference-graph check, pkit refs validate, is untouched.
 ---
 
 # project-kit

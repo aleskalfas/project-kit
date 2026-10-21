@@ -439,12 +439,17 @@ def _unbracket(text: str) -> str:
 def resolve_record(
     target_root: Path, record_id: str, *, files: Collection[str] | None = None
 ) -> Path | None:
-    """Resolve `COR-005` / `PRJ-NNN` / `ADR-NNN` to the matching record file, or None.
+    """Resolve `COR-005` / `PRJ-NNN` / `ADR-NNN`, or a capability's decision
+    `<capability>:DEC-NNN` with its slug or without, to the matching record file,
+    or None.
 
     With `files` — repository-relative POSIX paths, a listing of the tree at
     some state — the record is looked for in that listing instead of on disk,
     by the same rule; the ADR directory is still the overlay's, read from disk.
     """
+    decision = CAPABILITY_RECORD_RE.match(record_id)
+    if decision is not None:
+        return _capability_decision(target_root, decision, files)
     if not RECORD_RE.match(record_id):
         return None
     if record_id.startswith("COR-"):
@@ -479,6 +484,36 @@ def resolve_record(
     if matches:
         return matches[0]
     return None
+
+
+def _capability_decision(
+    target_root: Path, decision: re.Match[str], files: Collection[str] | None
+) -> Path | None:
+    """The file of a capability's decision, in its capability's `decisions` folder:
+    named by the number and the slug the id writes, or, where it writes no slug, by
+    the number alone or with any slug, the first in name order."""
+    directory = f".pkit/capabilities/{decision['capability']}/decisions"
+    number, slug = decision["number"], decision["slug"]
+
+    def named(name: str) -> bool:
+        if slug:
+            return name == f"{number}{slug}.md"
+        return name == f"{number}.md" or fnmatch.fnmatchcase(name, f"{number}-*.md")
+
+    if files is not None:
+        listed = sorted(
+            rel
+            for rel in files
+            if number in rel  # a name of either form holds the number; skip the parse
+            and PurePosixPath(rel).parent.as_posix() == directory
+            and named(PurePosixPath(rel).name)
+        )
+        return target_root / listed[0] if listed else None
+    folder = target_root / directory
+    if not folder.is_dir():
+        return None
+    matches = sorted(p for p in folder.glob(f"{number}*.md") if p.is_file() and named(p.name))
+    return matches[0] if matches else None
 
 
 def _adr_records_dir_or_none(target_root: Path) -> Path | None:
@@ -882,6 +917,11 @@ def outgoing_refs(artifact: Artifact) -> dict[str, list[str]]:
 
 
 RECORD_RE = re.compile(r"^(COR|PRJ|ADR)-\d+$")
+#: A capability's decision by its id, `<capability>:DEC-NNN`, with its slug after the
+#: number or without (COR-017; COR-050 point 2).
+CAPABILITY_RECORD_RE = re.compile(
+    r"^(?P<capability>[a-z][a-z0-9-]*[a-z0-9]):(?P<number>DEC-\d+)(?P<slug>(?:-[a-z0-9]+)*)$"
+)
 RECORD_TOKEN_RE = re.compile(r"\b(?:COR|PRJ|ADR)-\d+\b")
 HOOK_TOKEN_RE = re.compile(r"\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){1,2}\b")
 BACKTICK_RE = re.compile(r"`([^`\n]+)`")

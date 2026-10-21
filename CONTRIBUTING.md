@@ -25,8 +25,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-20T09:24:32Z
-      outcome: updated
+      at: 2026-10-21T13:00:57Z
+      outcome: unchanged
+      unchanged-because: The decisions README's Citing section gains how pkit refs lookup prints the file a record's id names. How a maintainer authors and cites a record is untouched.
 ---
 
 # Contributing to project-kit

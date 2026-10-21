@@ -1,0 +1,11 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The record lookup, `pkit refs lookup`, resolves a capability's decision,
+  written `<capability>:DEC-NNN` with its slug or without, to its file in
+  the capability's `decisions` folder, as it resolves a core, project or
+  architecture record. A capability's script finds a record's file through
+  it, never by looking in a folder itself. The decisions README, "Citing",
+  says how.

@@ -620,6 +620,41 @@ def test_resolve_record_rejects_malformed_id(kit_target: Path) -> None:
     assert refs.resolve_record(kit_target, "not-a-record") is None
 
 
+def test_resolve_record_finds_a_capability_s_decision_with_its_slug_or_without(
+    kit_target: Path,
+) -> None:
+    """A capability's decision, `<capability>:DEC-NNN`, lies in its capability's
+    `decisions` folder: the id names it with its slug or without, never a longer number,
+    and the files of a listing are read by the same rule."""
+    folder = kit_target / ".pkit" / "capabilities" / "widgets" / "decisions"
+    folder.mkdir(parents=True)
+    for name in ("DEC-001-first.md", "DEC-0011-other.md", "DEC-002.md"):
+        (folder / name).write_text("---\nid: DEC-001\n---\n", encoding="utf-8")
+    first = folder / "DEC-001-first.md"
+    assert refs.resolve_record(kit_target, "widgets:DEC-001") == first
+    assert refs.resolve_record(kit_target, "widgets:DEC-001-first") == first
+    assert refs.resolve_record(kit_target, "widgets:DEC-002") == folder / "DEC-002.md"
+    assert refs.resolve_record(kit_target, "widgets:DEC-001-second") is None
+    assert refs.resolve_record(kit_target, "widgets:DEC-003") is None
+    assert refs.resolve_record(kit_target, "gadgets:DEC-001") is None
+    listing = [".pkit/capabilities/widgets/decisions/DEC-0011-other.md", "DEC-001-first.md"]
+    assert refs.resolve_record(kit_target, "widgets:DEC-001", files=listing) is None
+    listing.append(".pkit/capabilities/widgets/decisions/DEC-001-first.md")
+    assert refs.resolve_record(kit_target, "widgets:DEC-001", files=listing) == first
+
+
+def test_cli_refs_lookup_prints_a_capability_s_decision(kit_target: Path) -> None:
+    folder = kit_target / ".pkit" / "capabilities" / "widgets" / "decisions"
+    folder.mkdir(parents=True)
+    (folder / "DEC-004-thing.md").write_text("---\nid: DEC-004\n---\n", encoding="utf-8")
+    result = CliRunner().invoke(main, ["refs", "lookup", "widgets:DEC-004"])
+    assert result.exit_code == 0, result.output
+    assert result.output.strip() == ".pkit/capabilities/widgets/decisions/DEC-004-thing.md"
+    missing = CliRunner().invoke(main, ["refs", "lookup", "widgets:DEC-005"])
+    assert missing.exit_code != 0
+    assert "no record matches" in missing.output
+
+
 def test_resolve_record_in_a_listing_finds_only_a_file_of_the_records_folder(
     kit_target: Path,
 ) -> None:

@@ -11,9 +11,9 @@ TERM-acceptance-gate:
         record:
           - COR-051#4
       revalidated:
-        at: 2026-10-20T01:37:00Z
+        at: 2026-10-21T13:00:59Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The decisions README gains how pkit refs lookup prints the file a record's id names. Which records bind, and the gate on proposed ones, are untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
