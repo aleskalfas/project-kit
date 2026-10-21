@@ -34,17 +34,17 @@ pkit:
 
 **Verified by:** Tests run commands that give no answer in each way the command runner recognises:
 
-- it cannot start;
-- it ends abnormally;
-- it overruns its time;
-- it prints output that cannot be read.
+- it cannot start
+- it ends abnormally
+- it overruns its time
+- it prints output that cannot be read
 
 Each is reported as giving no answer, and tests find that:
 
-- validation fails on such a command;
-- the change check fails on it where the project enforces the check;
-- the whole-repository check never reports its artefact `current`;
-- a data point declared `fail` stays unresolved when its command gives no answer;
-- a default branch the clone cannot read is reported, never guessed.
+- validation fails on such a command
+- the change check fails on it where the project enforces the check
+- the whole-repository check never reports its artefact `current`
+- a data point declared `fail` stays unresolved when its command gives no answer
+- a default branch the clone cannot read is reported, never guessed
 
 **Rationale:** A missing answer "is never an answer naming nothing" (COR-050 point 2). COR-055 gives the reason, under "Why no answer fails": "Silence must not read as health". A pass nobody earned means that "the gate reports the project in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.
