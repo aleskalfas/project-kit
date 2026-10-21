@@ -7,6 +7,10 @@ other-actors:
   - ACT-ai-agent
   - ACT-ci-pipeline
   - ACT-merge-authoriser
+requirements:
+  - REQ-002
+  - REQ-004
+  - REQ-005
 pkit:
   friction:
     anchors:
@@ -33,8 +37,11 @@ pkit:
         - ACT-ai-agent
         - ACT-ci-pipeline
         - ACT-merge-authoriser
+        - REQ-002
+        - REQ-004
+        - REQ-005
     revalidated:
-      at: 2026-10-20T01:38:21Z
+      at: 2026-10-21T13:49:27Z
       outcome: updated
 ---
 

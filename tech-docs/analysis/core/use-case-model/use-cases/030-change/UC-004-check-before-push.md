@@ -5,6 +5,9 @@ status: active
 actor: ACT-developer
 other-actors:
   - ACT-ci-pipeline
+requirements:
+  - REQ-004
+  - REQ-005
 pkit:
   friction:
     anchors:
@@ -30,8 +33,10 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
+        - REQ-004
+        - REQ-005
     revalidated:
-      at: 2026-10-20T10:10:46Z
+      at: 2026-10-21T13:49:28Z
       outcome: updated
 ---
 

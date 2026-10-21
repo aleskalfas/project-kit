@@ -6,6 +6,9 @@ actor: ACT-developer
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+requirements:
+  - REQ-004
+  - REQ-005
 pkit:
   friction:
     anchors:
@@ -31,10 +34,11 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - REQ-004
+        - REQ-005
     revalidated:
-      at: 2026-10-20T13:09:34Z
-      outcome: unchanged
-      unchanged-because: The resolver's commands for the person gain pkit analysis link before an analysis-stale update, where an analysis keeps a domain model. Who proposes and who writes the answers on the debt are unchanged, so this use case holds as written.
+      at: 2026-10-21T13:49:30Z
+      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date

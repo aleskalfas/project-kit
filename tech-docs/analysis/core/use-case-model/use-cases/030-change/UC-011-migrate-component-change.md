@@ -6,6 +6,8 @@ actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+requirements:
+  - REQ-001
 pkit:
   friction:
     anchors:
@@ -24,10 +26,10 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - REQ-001
     revalidated:
-      at: 2026-10-20T10:10:42Z
-      outcome: unchanged
-      unchanged-because: The required job gains a short form, the aggregator without its test suite, on a pull request head that changed only answers since its passing full run (ADR-067). The migration check runs in both forms, so step 7 and the CI pipeline's part hold.
+      at: 2026-10-21T13:49:32Z
+      outcome: updated
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

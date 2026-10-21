@@ -6,6 +6,8 @@ actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+requirements:
+  - REQ-001
 pkit:
   friction:
     anchors:
@@ -24,10 +26,10 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - REQ-001
     revalidated:
-      at: 2026-10-20T10:10:50Z
-      outcome: unchanged
-      unchanged-because: The required job may now skip the test suite on a pull request head that changed only answers since its passing full run (ADR-067). The migration check runs on every pull request in both forms, so step 7 holds.
+      at: 2026-10-21T13:49:31Z
+      outcome: updated
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

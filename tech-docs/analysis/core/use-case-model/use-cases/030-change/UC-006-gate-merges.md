@@ -5,6 +5,9 @@ status: active
 actor: ACT-adopter
 other-actors:
   - ACT-ci-pipeline
+requirements:
+  - REQ-002
+  - REQ-004
 pkit:
   friction:
     anchors:
@@ -26,10 +29,11 @@ pkit:
       artefact:
         - ACT-adopter
         - ACT-ci-pipeline
+        - REQ-002
+        - REQ-004
     revalidated:
-      at: 2026-10-20T10:10:44Z
-      outcome: unchanged
-      unchanged-because: In project-kit the required job now skips the test suite on a pull request head that changed only answers since its passing full run, the refinement ADR-055 point 5 points to (ADR-067). Each check the job runs still fails it, and pkit validate and pkit friction check run in both forms, so the steps and the postcondition hold.
+      at: 2026-10-21T13:49:29Z
+      outcome: updated
 ---
 
 # UC-006 — Make my merges wait on the system's checks
