@@ -11,7 +11,10 @@ gates:
   - COR-017
 reads:
   records:
+    - COR-010
     - COR-011
+    - COR-031
+    - COR-059
     - PRJ-002
   paths:
     - .pkit/cli/README.md
@@ -87,6 +90,7 @@ Read `.pkit/decisions/core/COR-017-capability-pattern.md`. Every capability ship
 - `package.yaml` — component metadata (`schema_version`, `kind: capability`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
 - `README.md` — adopter-facing intro: the discipline, the commands, the conventions.
 - Some non-empty subset of `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/`. A capability with no decisions and no skills is suspicious — at minimum, you'd expect one decision establishing the discipline's invariant plus one skill or script operationalising it.
+- `migrations/` — the capability's migrations, one folder for each version they bring an installed project to (`<major>.<minor>.0/`). It stays empty until the capability lands a change that breaks against an installed project's state. That change ships its migration here, stamped with `pkit new migration --tier capability --component <name> --name <slug>` through the `migration-author` skill (COR-010). A version transition runs it when it moves the project to that version (COR-059).
 
 ### 3. Stamp the scaffold
 
@@ -101,9 +105,9 @@ The command:
 - Creates `.pkit/capabilities/<name>/`.
 - Stamps `package.yaml` with `kind: capability`, `version: 0.1.0`, a placeholder `description` to replace with the one-line summary, and `requires_backbone` pinned to a range matching the project's current backbone.
 - Stamps `README.md` with placeholder prose explaining the discipline, install command, and citation form.
-- Creates empty `decisions/`, `skills/`, `agents/`, `scripts/`, and `schemas/` subdirectories with `.gitkeep`.
+- Creates empty `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/` and `migrations/` subdirectories, each holding a `.gitkeep`.
 
-Unlike bundles and adapters, the capability is **not** registered in the backbone manifest by the scaffolding step. Capabilities are kit-shipped from the source-of-edit's perspective; adopters register them per-project via `pkit capabilities install <name>`.
+Unlike `pkit new adapter`, the scaffolding step registers nothing. Once the capability is built, `pkit capabilities register <name>` registers it in place, in the project that authored it: it copies nothing, records the origin `incubated-in-repo`, and deploys the capability's skills and agents (COR-031). `sync` leaves a capability registered this way untouched, since the project's tree is its only source. A project takes a capability the methodology ships with `pkit capabilities install <name>` instead, which copies the capability's subtree in and records the origin `kit-shipped`; in the methodology's own source repository, where the subtree is that source, `install` registers it in place and copies nothing. `.pkit/cli/README.md`, "Capabilities — two ways in", holds both paths.
 
 The command refuses if a capability with that name already exists, if the slug isn't kebab-case, if the name is reserved (`core`, `project`, `adr` or `backbone`), if it is a backbone command's, or if an adapter holds it (see step 1).
 
@@ -180,7 +184,7 @@ Walk the capability against COR-017's universal-element checklist:
 
 If any check fails, revise.
 
-### 8. Smoke install + uninstall
+### 8. Register it and check it
 
 Before committing, validate the capability mechanically:
 
@@ -190,16 +194,14 @@ pkit refs validate                              # capability subtree is parsed c
 
 If the capability ships a `permissions/` fragment, also run `pkit schemas validate` — its fragment-token-resolution lint confirms each grant token resolves to a real privilege in the merged catalog (catches a bare-vs-scoped token).
 
-Then in a scratch adopter:
+Then bring it into the project:
 
 ```
-cd /tmp/scratch-adopter && pkit init --here     # --here installs into this fresh non-git dir (bypasses the off-CWD confirm)
-pkit capabilities install <name>               # subtree copies in, manifest registers
-pkit status                                     # capability appears under installed
-pkit capabilities uninstall <name>             # tree removed, manifest unregisters
+pkit capabilities register <name>              # registered in place, origin incubated-in-repo; its skills and agents deploy
+pkit status                                     # capability appears under installed, marked incubated
 ```
 
-Catch any layout or schema mistakes here, not at adopter time.
+`pkit capabilities uninstall <name>` takes it out again: it unregisters the capability and undeploys it, and keeps the subtree, which is the only copy of the work. Catch any layout or schema mistakes here, not at adopter time.
 
 ### 9. Commit
 
@@ -219,5 +221,5 @@ The capability lands at `version: 0.1.0`. Subsequent bumps follow the same surfa
 
 - **Adding decisions/skills/agents to an existing capability** — edit the capability's subtree directly. Refusing to use the scaffolding command for follow-up work is fine; the scaffold is just for the first instance.
 - **Adopters authoring their own capability** — same procedure, same command. An adopter who develops a discipline worth sharing creates it under their own copy of the methodology and contributes upstream if generally useful.
-- **Bumping a capability's version** — bump `version:` in `package.yaml` whenever the capability lands a surface change visible to adopters: new decision, new skill, new agent, new script, removed file, schema change. Adopters pick up the new version on the next `pkit sync` or `pkit capabilities upgrade <name>`.
+- **Moving a capability's version** — the capability's version moves whenever it lands a surface change visible to adopters: new decision, new skill, new agent, new script, removed file, schema change. The project's version-bump policy says how it moves, and a change that breaks against installed state ships its migration in `migrations/` (step 2). A project that installed the capability takes the new version only through a version transition (COR-059). `pkit upgrade` moves the capability with the release that ships it, and `pkit capabilities upgrade <name>` moves it alone, to the version the project's recorded release ships. Either runs its migrations from the version the project records. `pkit sync` copies the capability at the version the project records and moves no version. A capability registered in place moves when its project edits it, since no release ships it.
 - **Swappable implementations of the same capability** — defer until two implementations exist. COR-017's variants note (Implications section) captures this: if the same discipline ships in multiple flavours (e.g., evidence-yaml-python vs evidence-sqlite), pattern-extract a sub-structure when the second flavour lands per COR-007.
