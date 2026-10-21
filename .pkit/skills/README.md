@@ -10,9 +10,9 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-21T13:41:44Z
+      at: 2026-10-21T15:44:43Z
       outcome: unchanged
-      unchanged-because: capability-author now registers a built capability with capabilities register, lists migrations/ and says a version transition moves a version, and the process skill names the shipped process-author agent. This page names each skill, its paired command and what it walks the author through, none of which changed, so it holds.
+      unchanged-because: The adapter-author skill gains the contract of the scripts the lifecycle calls, and COR-005's pairing table says which commands shipped. This page names adapter-author, its paired command and what it walks the author through, none of which changed, so it holds.
 ---
 
 # Skills

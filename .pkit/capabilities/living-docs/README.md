@@ -14,9 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T10:34:35Z
+      at: 2026-10-21T15:44:55Z
       outcome: unchanged
-      unchanged-because: It says that nothing is applied until the person accepts it, and that fix-drift starts the agent, which the new batch commands and the project manager's fix-drift procedure keep true.
+      unchanged-because: COR-005 corrects what the adapter stamp writes and its pairing table's statuses. The README cites it only for docs-author pairing with pkit living-docs new, a pairing COR-005 still requires, so it holds.
       deferred:
         - anchor:
             kind: record

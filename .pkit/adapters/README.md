@@ -12,7 +12,7 @@ pkit:
       record: [COR-005, COR-006, COR-047, ADR-066]
       artefact: [.pkit/adapters/claude-code/README.md, ".pkit/lifecycle/README.md#how-a-registered-command-is-run"]
     revalidated:
-      at: 2026-10-20T03:23:25Z
+      at: 2026-10-21T15:44:42Z
       outcome: updated
 ---
 
@@ -29,7 +29,9 @@ That translation work lives here. Each harness has its own adapter directory, se
 ├── README.md                        # this file
 └── <harness-name>/                  # one directory per supported harness
     ├── README.md                    # what this adapter handles, how to deploy it
-    └── (harness-specific content)   # settings, deploy scripts, runtime artifacts
+    ├── package.yaml                 # component metadata (per COR-010)
+    ├── migrations/                  # the adapter's version migrations (per COR-010)
+    └── (harness-specific content)   # settings, the scripts the lifecycle calls, runtime artifacts
 ```
 
 Per COR-005's bundle/adapter pattern: each adapter is an alternative implementation of "translate kit content for a specific harness." Adopters install the adapter that matches their AI tooling.
@@ -40,10 +42,26 @@ Per COR-005's bundle/adapter pattern: each adapter is an alternative implementat
 
 ## Primitives the lifecycle calls
 
-The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync` and the capability verbs walk `.pkit/adapters/<name>/` and run each script present. That name is the whole contract — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). Every primitive is idempotent: run twice, it changes nothing the second time.
+The lifecycle drives an adapter through scripts it finds **by name** in the adapter's directory: `pkit init`, `pkit sync`, `pkit upgrade` and the capability verbs walk `.pkit/adapters/<name>/`, one adapter after another in name order, and run each script present. That name is the whole contract — the lifecycle carries no knowledge of where a harness keeps its skills, agents or settings; the adapter does ([COR-005](../decisions/core/COR-005-bundle-pattern.md), [COR-013](../decisions/core/COR-013-agent-architecture.md)). `pkit new adapter` stamps none of these scripts: an adapter provides the ones its harness needs, and the Claude Code adapter's are the worked example ([its README, "What this adapter ships"](claude-code/README.md#what-this-adapter-ships)).
 
-- **Deploy primitives** — `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh`, `deploy-agents.sh`, run in that order with no arguments whenever the harness side needs (re-)materialising: init, sync, and a capability's install, register, upgrade and uninstall. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`, and an absent one is skipped.
-- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active.
+What the lifecycle relies on, for every script:
+
+- **It runs as a program.** The lifecycle starts the file itself, from the project root, so the file is executable and opens with an interpreter line.
+- **It is idempotent.** Run twice, it changes nothing the second time.
+- **Its exit status counts.** A script that exits non-zero stops the lifecycle command, with an error naming the script; the script's own output says what failed.
+
+The scripts:
+
+| Script | Arguments | When the lifecycle runs it | If the adapter has none |
+|---|---|---|---|
+| `merge-settings.sh` | none | first of the deploy primitives | skipped silently |
+| `merge-claude-md.sh` | none | second | skipped silently |
+| `deploy-skills.sh` | none | third | skipped silently |
+| `deploy-agents.sh` | none | fourth | skipped silently |
+| `undeploy-capability.sh` | the capability's name | when a capability is unregistered but its subtree stays on disk | **reported** in a `warning` line naming the adapter |
+
+- **Deploy primitives** — the first four, run in that order whenever the harness side needs (re-)materialising: init, sync, upgrade, and a capability's install, register, upgrade and uninstall. The settings merge comes first, since a skill may rely on the settings being in place. They deploy what the tree ships and drop what they deployed from a source that is gone. Each is optional; a harness that loads skills from their canonical paths needs no `deploy-skills.sh`.
+- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, run when a capability is unregistered but its subtree stays on disk: an incubated capability's uninstall, and any capability's uninstall in the methodology's source repository. The deploy primitives cannot help there — the source files still exist, so a deploy re-run does not see the capability as gone. The script removes what the adapter deployed for that one capability, recognised by the adapter's own deploy mark, and never adopter content. An adapter that deploys nothing per capability can ship one that does nothing. Its absence is **reported**, not skipped: the lifecycle names the adapter in a `warning` line, because that harness keeps the unregistered capability active, and the uninstall goes on.
 
 ## The agent runner
 
@@ -103,8 +121,8 @@ The methodology depends on properties of the harness that hosts it — behaviour
 
 ## Adding a new harness
 
-1. Create `.pkit/adapters/<new-harness-name>/`.
-2. Add a `README.md` describing what the harness expects and how this adapter satisfies that.
+1. Run `pkit new adapter <new-harness-name>`, through the `adapter-author` skill. It stamps `.pkit/adapters/<new-harness-name>/` with `package.yaml`, `README.md` and `migrations/`, and registers the adapter. It stamps no script and no settings: those depend on the harness.
+2. Fill in the stamped `README.md`: what the harness expects and how this adapter satisfies that.
 3. Author the harness-specific content — typically some combination of settings/config files (matching the harness's format), deploy scripts (translating kit-shipped skills/agents to the harness's expected paths), an `undeploy-capability.sh` removing one capability's deployed skills/agents (see "Primitives the lifecycle calls" above), and any runtime artifacts the harness needs.
 4. Update this README's "Currently shipped" list.
 

@@ -47,12 +47,13 @@ Use the harness's canonical kebab-case name: `claude-code`, `codex`, `cursor`, e
 
 ### 2. Read the contract
 
-Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure" and "Universal elements"). Every adapter must ship:
+Read `.pkit/decisions/core/COR-005-bundle-pattern.md` ("Adapter structure", "Universal elements" and "Authoring surface"). Every adapter must ship:
 
 - `package.yaml` — component metadata per COR-010 (`schema_version`, `kind: adapter`, `name`, `version`, `description`, `requires_backbone`, all required; the package schema refuses a key it does not know — see `.pkit/lifecycle/README.md`, "Package metadata").
 - `README.md` — what the adapter handles, what content it ships, how to deploy it.
+- `migrations/` — the adapter's version migrations per COR-010, empty until its first one.
 
-Beyond these, an adapter's content is heterogeneous — settings files in the harness's expected format, deploy scripts that produce symlinks, runtime artifacts. Read `.pkit/adapters/claude-code/` as a reference shape; your harness may need a different mix.
+Beyond these, an adapter's content is heterogeneous — settings files in the harness's expected format, the scripts the lifecycle calls, runtime artifacts. Read `.pkit/adapters/README.md`, "Primitives the lifecycle calls", for the scripts and when each runs, and `.pkit/adapters/claude-code/` as the worked example; your harness may need a different mix.
 
 ### 3. Stamp the scaffold
 
@@ -70,6 +71,8 @@ The command:
 - Creates an empty `migrations/` directory.
 - Registers the adapter in the backbone manifest's `components` registry (so `pkit status` sees it immediately).
 
+It stamps no script and no settings template: which of them an adapter needs depends on its harness, so you write them in step 5 (COR-005, "Authoring surface").
+
 The command refuses if an adapter with that name already exists, if the slug isn't kebab-case, if the name is reserved (`backbone`, see step 1), or if a capability holds it (see step 1).
 
 ### 4. Fill in the README
@@ -84,11 +87,14 @@ Look at `.pkit/adapters/claude-code/README.md` as a reference.
 
 ### 5. Author the harness-specific content
 
-Add the artifacts the harness needs. Common shapes:
+Add the artifacts the harness needs. The lifecycle finds an adapter's scripts **by name** in its folder and runs each one present; that is the contract the core relies on, set out in full in the adapters README, "Primitives the lifecycle calls", with `.pkit/adapters/claude-code/` as the worked example:
 
-- **Settings file(s)** — typically a `core/` + `project/` split inside a `settings/` directory (universal area pattern applied internally), with a `merge-settings.sh` primitive that combines them into the harness's expected fixed-path file (per COR-002).
-- **Deploy script(s)** — typically `deploy-skills.sh` (and later `deploy-agents.sh`) that symlinks `.pkit/skills/<…>/` into the harness's expected location.
-- **Undeploy script** — `undeploy-capability.sh <capability-name>`, removing what the deploy scripts put in the harness for that one capability, recognised by their deploy mark. The lifecycle runs it when it unregisters a capability whose files stay, and names an adapter that ships none in a warning (the adapters README, "Primitives the lifecycle calls").
+- **Deploy primitives** — `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh`, `deploy-agents.sh`, run in that order, with no arguments, at init, sync, upgrade and a capability's install, register, upgrade and uninstall. Each is optional: one the adapter does not ship is skipped silently, so write only those your harness needs.
+  - `merge-settings.sh` combines a settings baseline and the project's additions into the harness's fixed-path file (per COR-002), typically from a `core/` + `project/` split inside a `settings/` directory (the universal area pattern applied internally).
+  - `merge-claude-md.sh` makes the harness's instructions file load the methodology's rules. The lifecycle calls it by this name whatever that file is called in your harness.
+  - `deploy-skills.sh` and `deploy-agents.sh` put the skills and agents where the harness looks for them, and drop what they deployed from a source that is gone.
+- **Undeploy primitive** — `undeploy-capability.sh <capability-name>`, removing what the deploy scripts put in the harness for that one capability, recognised by their deploy mark. The lifecycle runs it when it unregisters a capability whose files stay. Unlike the deploy primitives, its absence is reported: the lifecycle names an adapter that ships none in a `warning` line, since its harness keeps the capability active. An adapter that deploys nothing per capability ships one that does nothing.
+- **What every script owes** — it is executable, with an interpreter line, since the lifecycle starts it from the project root; it is idempotent; and it exits non-zero only when it fails, which stops the lifecycle command with an error naming it.
 - **Hook configuration** — if the harness supports hooks.
 
 Skills, agents, and decisions live in their own harness-agnostic areas (per COR-006); the adapter only translates them at deploy time.
@@ -97,9 +103,10 @@ Skills, agents, and decisions live in their own harness-agnostic areas (per COR-
 
 Walk the adapter against the COR-005 universal-element checklist:
 
-- *Does the adapter have a `README.md` and a `package.yaml`?*
+- *Does the adapter have a `README.md`, a `package.yaml` and a `migrations/` folder?*
 - *Does the `README.md` cover what the adapter handles, what's shipped, and how to deploy it?*
-- *Are the harness-specific deploy steps idempotent? Re-running them should be a no-op.*
+- *Is each script named as the lifecycle calls it, executable, and idempotent? Re-running it should be a no-op.*
+- *Does the adapter ship `undeploy-capability.sh`? Without it, a capability uninstalled with its files kept stays active in the harness, and the lifecycle warns.*
 - *Does the adapter respect COR-006's harness-agnostic discipline — core content lives at canonical paths, and the adapter only translates at deploy time?*
 
 If any check fails, revise.

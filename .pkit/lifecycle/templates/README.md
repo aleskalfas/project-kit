@@ -1,7 +1,5 @@
 # Lifecycle templates
 
-Scaffold templates consumed by the kit's authoring commands (per COR-005's authoring surface — `pkit new bundle`, `pkit new adapter`, `pkit new migration`).
+This folder holds no templates. The authoring commands (`pkit new adapter`, `pkit new capability`, `pkit new migration` and the others) keep theirs in the CLI's own scaffolding code, which ships with the CLI, so a release that changes a contract also changes what gets stamped (COR-005, "Authoring surface").
 
-Empty today; populated as the install/sync runtime ships per the build roadmap and the corresponding authoring commands graduate from "blocked on runtime" status.
-
-See `.pkit/lifecycle/README.md` for the contract each template instantiates and `.pkit/cli/README.md` for the commands that consume them.
+See `.pkit/cli/README.md`, "Authoring commands", for what each command stamps, and `.pkit/lifecycle/README.md` for the contract each stamp instantiates.

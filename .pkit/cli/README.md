@@ -1007,9 +1007,9 @@ Scaffolds a top-level adapter at `.pkit/adapters/<name>/` (per COR-005). Stamps:
 
 - `package.yaml` — versioned `0.1.0`, `requires_backbone` pinned to a range matching the project's current backbone (per COR-010's compatibility model).
 - `README.md` — skeleton.
-- `settings/core/settings.json` — empty baseline.
-- `deploy-skills.sh`, `merge-settings.sh` — primitive stubs.
 - `migrations/` — empty directory.
+
+It stamps no script and no settings: which an adapter needs depends on its harness. The scripts the lifecycle calls, and when it calls each, are in [the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls). It registers the adapter in `.pkit/manifest.yaml`.
 
 ### `new capability <name>`
 

@@ -9,7 +9,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import manifest
+from project_kit import install, manifest
 from project_kit.cli import main
 from project_kit.manifest import BackboneManifest, write_backbone_manifest
 from project_kit.scaffolds import register_kit_shipped_component, stamp_adapter
@@ -31,6 +31,38 @@ def test_stamp_adapter_creates_expected_layout(kit_target: Path) -> None:
     assert result.package_yaml.is_file()
     assert result.readme.is_file()
     assert result.migrations_dir.is_dir()
+
+
+def test_stamp_adapter_writes_what_cor_005_says(kit_target: Path) -> None:
+    """COR-005, "Authoring surface": the stamp writes `package.yaml`, `README.md` and
+    `migrations/`, the files every adapter has, and no script stub or settings
+    template, which wait for adapters for two harnesses to show what is general (#1854)."""
+    result = stamp_adapter(kit_target, name="new-harness")
+    written = sorted(
+        path.relative_to(result.adapter_dir).as_posix() for path in result.adapter_dir.rglob("*")
+    )
+    assert written == ["README.md", "migrations", "migrations/.gitkeep", "package.yaml"]
+
+
+def test_a_stamped_adapter_runs_through_the_lifecycle(
+    kit_target: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """The adapters README, "Primitives the lifecycle calls": a deploy primitive the
+    adapter lacks is skipped silently, and a missing undeploy primitive is reported,
+    naming the adapter."""
+    stamp_adapter(kit_target, name="new-harness")
+    ctx = install.InstallContext(target_root=kit_target, source_kit=kit_target, dry_run=False)
+
+    install.run_installed_adapter_primitives(ctx)
+    assert capsys.readouterr().out == ""
+
+    lacking = install.undeploy_capability_from_adapters(ctx, "some-capability")
+    assert lacking == ("new-harness",)
+    warning = " ".join(capsys.readouterr().out.split())
+    assert (
+        f"warning adapter 'new-harness' ships no {install.ADAPTER_UNDEPLOY_PRIMITIVE}: "
+        "capability 'some-capability' stays deployed in its harness."
+    ) in warning
 
 
 def test_stamp_adapter_package_yaml_has_adapter_kind(kit_target: Path) -> None:
