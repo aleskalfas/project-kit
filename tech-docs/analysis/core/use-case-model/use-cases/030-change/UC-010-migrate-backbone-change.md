@@ -28,9 +28,8 @@ pkit:
         - ACT-ai-agent
         - REQ-001
     revalidated:
-      at: 2026-10-21T13:59:14Z
-      outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      at: 2026-10-21T18:38:55Z
+      outcome: updated
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

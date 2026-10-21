@@ -32,9 +32,8 @@ pkit:
         - REQ-002
         - REQ-004
     revalidated:
-      at: 2026-10-21T13:59:07Z
-      outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      at: 2026-10-21T18:39:31Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
