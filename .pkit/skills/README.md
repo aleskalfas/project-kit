@@ -10,9 +10,8 @@ pkit:
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
     revalidated:
-      at: 2026-10-21T13:41:44Z
-      outcome: unchanged
-      unchanged-because: capability-author now registers a built capability with capabilities register, lists migrations/ and says a version transition moves a version, and the process skill names the shipped process-author agent. This page names each skill, its paired command and what it walks the author through, none of which changed, so it holds.
+      at: 2026-10-21T14:38:52Z
+      outcome: updated
 ---
 
 # Skills
@@ -48,7 +47,7 @@ The `core/` + `project/` split is the universal area pattern (per COR-003): core
 Core-shipped skills currently in `core/`:
 
 - **`decision-author`** — paired with `pkit new decision`. Walks the author through a new COR or PRJ record: disciplines (axiom / project-neutrality / principles-not-inventory), slug, command invocation for the stub, body drafting, self-checks, commit. See `.pkit/skills/core/decision-author.md`.
-- **`adapter-author`** — paired with `pkit new adapter`. Walks the author through adding a new harness adapter at `.pkit/adapters/<name>/`: contract review, scaffold, README + harness-specific content drafting, self-checks, commit. See `.pkit/skills/core/adapter-author.md`.
+- **`adapter-author`** — paired with `pkit new adapter`. Walks the author through adding a new harness adapter at `.pkit/adapters/<name>/`: contract review, scaffold, README + harness-specific content drafting, the harness's support declaration, self-checks, commit. See `.pkit/skills/core/adapter-author.md`.
 - **`migration-author`** — paired with `pkit new migration`. Walks the author through adding a new migration script: tier / scope / version / slug selection, scaffold, idempotent-body drafting, self-checks, commit. See `.pkit/skills/core/migration-author.md`.
 - **`area-author`** — paired with `pkit new area`. Walks the author through adding a new top-level area: name + variant selection, scaffold, README drafting per the variant's layout, self-checks, commit. See `.pkit/skills/core/area-author.md`.
 - **`scratchpad-author`** — paired with `pkit new scratchpad`. Walks the author through starting an exploratory note: slug, date stamping, framing prompts, retirement guidance. See `.pkit/skills/core/scratchpad-author.md`.

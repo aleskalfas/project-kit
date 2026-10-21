@@ -9,11 +9,12 @@ pkit:
         - .pkit/adapters/claude-code/*.py
         - .pkit/adapters/claude-code/settings/core/**
         - .pkit/adapters/claude-code/settings/project/settings.json
+        - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
-      record: [COR-002, COR-005, COR-028, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-030"]
+      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-20T03:23:21Z
+      at: 2026-10-21T13:58:39Z
       outcome: updated
 ---
 
@@ -37,6 +38,7 @@ Translates kit content for the [Claude Code](https://docs.claude.com/en/docs/cla
 ├── _resolve_agent.py                  # resolves one agent: overlay placeholders, model and effort, storyboard paths
 ├── run-agent.py                       # the agent runner: starts one agent in Claude Code for `pkit agents run`
 ├── probe-confined-run.py              # the probe of the runner's confined form; a person runs it, never a test
+├── harness-support.yaml               # how far Claude Code meets each harness requirement the core declares
 ├── permission-enforcement.yaml        # which permission dimensions this harness realizes, and via which layer
 └── permission-hook.py                 # the PreToolUse enforcement hook (registered by `pkit permissions enable`)
 ```
@@ -356,6 +358,13 @@ The harness-neutral contract is the permissions README's (*The agent workspace*:
 **What the hook adds.** With enforcement on (`pkit permissions enable`) and a shipped profile active, the hook allows the file tools — `Read`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit` — on a target in the folder, in any permission mode, the default one included, where an edit would otherwise ask. Outside the folder the grant has no opinion and the harness's normal flow applies. A shell command is never the workspace's: a here-document or redirect into the folder (`cat > .agent-workspace/body.md <<'EOF'`) is judged like any other shell write and may still prompt — write the file with `Write` instead. With enforcement off, only the harness's own approvals above hold.
 
 **Outside the working directory, none of this holds.** The per-session scratch directory the harness itself offers (its system prompt names one) lies outside a subagent's working directory — a worktree ten levels deep reaches it as `../../../../../../../../../../private/tmp/claude-…` — and absolute `Write` / `Edit` / `Read` allow rules for it in the machine-local settings did not stop the prompts ([#1043](https://github.com/aleskalfas/project-kit/issues/1043)'s field note). The workspace rule in `rules/core.md` takes precedence over that suggestion: intermediate files go in `.agent-workspace/`.
+
+### Harness support (`harness-support.yaml`)
+
+The adapter's support declaration ([COR-047](../../decisions/core/COR-047-harness-requirement-declaration.md) point 2): its answer to each requirement in `.pkit/schemas/harness-requirements.yaml`, with the evidence for each. The grades are [the adapters README's](../README.md#harness-requirements), and `pkit harness report` resolves them for a project. In prose:
+
+- **A delegated helper's full result reaches the agent that delegated to it** (`delegated-result-complete`): `at-cost`, for every version. It holds while Claude Code's experimental agent-teams feature is off. While it is on, it holds only for a helper dispatched without a name: a named helper becomes a teammate, and its result arrives cut at 4064 characters. The methodology dispatches its helpers without a name (project-management DEC-029).
+- **A process can start an agent unattended, confined for that one run** (`unattended-confined-run`): `at-cost`, for no version yet. The runner's confined form needs the platform's sandbox, which Claude Code runs on macOS, and on Linux with bubblewrap. On macOS an allowed command that starts `uv` runs outside it ("What stays open" above). The bound is the runner's tested range, `TESTED_RANGE`, empty until the probe passes ("The probe" above). Whoever widens the range widens the bound with it.
 
 ### `permission-enforcement.yaml`
 

@@ -1,0 +1,49 @@
+# yaml-language-server: $schema=../../schemas/harness-support.schema.json
+schema_version: 1
+
+# The Claude Code adapter's support declaration (COR-047 point 2): how far
+# Claude Code meets each harness requirement the core declares in
+# `.pkit/schemas/harness-requirements.yaml`. Shaped by
+# `.pkit/schemas/harness-support.schema.json`; the grades are the adapters
+# README's vocabulary. `pkit harness report` resolves them for a project. The
+# README's "Harness support" says the same in prose. Where Claude Code enforces
+# each dimension of the permission model is `permission-enforcement.yaml`'s
+# (COR-028 point 3).
+
+requirements:
+  delegated-result-complete:
+    grade: at-cost
+    cost: >-
+      Holds for every helper while the harness's experimental agent-teams
+      feature is off. While it is on, it holds only for a helper dispatched
+      without a name: a named helper's result arrives cut at 4064 characters,
+      the rest reachable only through a messaging tool the delegating agent may
+      not hold. The methodology dispatches its helpers without a name
+      (project-management DEC-029).
+    harness_versions: unbounded
+    evidence: >-
+      Measured in a live session on 2026-09-12: with the agent-teams feature
+      on, three helpers spawned with a name each became a teammate, and each
+      returned a result cut at exactly 4064 characters. A helper spawned
+      without a name is no teammate, and its result is the one the
+      methodology's reviewer dispatch reads. The core's entry for the
+      requirement records the measurement.
+  unattended-confined-run:
+    grade: at-cost
+    cost: >-
+      Needs the platform's sandbox, which Claude Code runs on macOS, and on
+      Linux with bubblewrap; the runner refuses a confined run without it. On
+      macOS an allowed command that starts `uv` runs outside the sandbox, held
+      by the run's rules alone. What else stays open is each dimension of
+      `permission-enforcement.yaml`'s `confined-run` enforced `none`.
+    # The runner's tested range, `TESTED_RANGE` in `run-agent.py`: only the
+    # author who ran the probe widens either (ADR-066 point 12). Empty while
+    # the probe has passed on no version.
+    harness_versions: []
+    evidence: >-
+      The adapter's runner, `run-agent.py`, confines a run with the harness's
+      own means: a permission mode that refuses a call no rule allows, the
+      run's own settings passed inline, and the sandbox failing closed
+      (ADR-066 points 2 to 6). Those facts rest on Claude Code's documentation
+      and its 2.1.302 release. The probe, `probe-confined-run.py`, has passed on
+      no version yet, so the runner refuses every confined run.

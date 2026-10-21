@@ -25,8 +25,9 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-20T09:38:58Z
-      outcome: updated
+      at: 2026-10-21T13:59:11Z
+      outcome: unchanged
+      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-009 — Release my component on its own version
