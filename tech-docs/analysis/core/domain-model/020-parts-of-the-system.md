@@ -40,9 +40,9 @@ pkit:
         - TERM-install
         - TERM-project
     revalidated:
-      at: 2026-10-21T15:44:56Z
+      at: 2026-10-21T17:40:53Z
       outcome: unchanged
-      unchanged-because: COR-005 corrects what the adapter stamp writes, where templates live and which authoring commands shipped. The view's stamp and adapter parts claim none of these, and every authoring command still pairs with a skill, so it holds.
+      unchanged-because: COR-005 says what the adapter stamp writes and where templates live, and keeps its pairing table without a status column. The view's stamp and adapter parts claim none of these, and every authoring command still pairs with a skill, so it holds.
 ---
 
 # VIEW-parts-of-the-system — Parts of the system, and projects

@@ -36,7 +36,8 @@ def test_stamp_adapter_creates_expected_layout(kit_target: Path) -> None:
 def test_stamp_adapter_writes_what_cor_005_says(kit_target: Path) -> None:
     """COR-005, "Authoring surface": the stamp writes `package.yaml`, `README.md` and
     `migrations/`, the files every adapter has, and no script stub or settings
-    template, which wait for adapters for two harnesses to show what is general (#1854)."""
+    template, which wait until what adapters for different harnesses share has
+    recurred (COR-007; #1854)."""
     result = stamp_adapter(kit_target, name="new-harness")
     written = sorted(
         path.relative_to(result.adapter_dir).as_posix() for path in result.adapter_dir.rglob("*")

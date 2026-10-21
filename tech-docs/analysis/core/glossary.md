@@ -931,9 +931,9 @@ TERM-skill:
           - COR-006
           - COR-020
       revalidated:
-        at: 2026-10-21T15:45:08Z
+        at: 2026-10-21T17:40:51Z
         outcome: unchanged
-        unchanged-because: COR-005 corrects its pairing table's statuses and what the adapter stamp writes. A skill is still a procedure an AI agent loads, paired with a stamp, so the definition holds.
+        unchanged-because: COR-005 says what the adapter stamp writes and keeps its pairing table without a status column. A skill is still a procedure an AI agent loads, paired with a stamp, so the definition holds.
 TERM-source-repository:
   name: source repository
   noun-forms: [source repositories]
