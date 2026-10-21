@@ -57,6 +57,10 @@ The answer folder sits at one path on the project-owned side of the methodology'
   - A change that removes a file in which an answer is live takes that answer away, as a revert does. It may add answer files of its own beside the removal.
 - **The finding.** The change check finds a change that rewrites an answer file its base holds. It also finds one that adds answer files and removes one in which no answer is live at its base, a prune mixed with answers. It fails on either in enforcing mode, as on friction (COR-050 point 12).
 - **A file put back.** A change may add an answer file with the path and the content that its base's history held. That puts back an answer as it was, and writes no new one. So point 4 does not apply to it, and the change check does not list it among the change's answers. Its values keep their points (point 6).
+- **An answer moved.** A change may add an answer that one live answer of its base, in the artefact's block, carries with the same words and values. Where the added answer names no file in `read`, it is moved. A moved answer writes no new answer. Point 4 does not apply to it, as to a file put back, and naming no file, it replaces nothing (point 5).
+  - **Compared per answer, and whole.** A revalidation is compared by its `at`, parsed as point 6 reads it, its outcome and its `unchanged-because`. A deferral is compared by its anchor and its reason. A revisit entry is compared by its target, its outcome and its reason. Each is compared with one answer of the base, never pieced together from several, and one word changed makes a new answer.
+  - **Listed apart.** The change check lists it apart from the change's answers, marked as moved. Nobody is asked to accept it.
+  - **Only from a block.** An answer that repeats the words of an answer file, as a partial revert may add, is not moved. It is asked as any answer is.
 - **A cherry-pick** carries an answer file unchanged, or leaves it out and writes that line's own answer in a new file. So one path never holds two contents.
 
 ### 4. Each answer names what it read
@@ -65,7 +69,7 @@ The answer folder sits at one path on the project-owned side of the methodology'
 - **The change's own head.** That tree is the head's, not the merge a host or a queue builds of the change with its base. So an answer landing on the default branch in parallel never fails the change's checks. The change check judges `read` against the change's own head wherever it runs.
 - **A merge of the base.** A change that merges its base in brings the answers other changes landed into its head. Each live answer of the change on those artefacts must then name them, and so take on the combined state. The change rewrites the answer, or replaces it with a new one that names them (point 5). A change stacked on another names its parent's answer files.
 - **Present, not only live.** Naming only live files would bring a replaced answer back when a middle one goes. Take answers X, Y and W, where Y read X and W read Y. Were W to name only Y, removing Y would leave X live beside W.
-- **The findings.** The change check finds an answer the change adds, live at the change's head, whose `read` leaves out such a file, and fails on it in enforcing mode. An answer the change added and then replaced with a later one of its own is not asked this, since the later answer read it. A name of a file the head does not hold names nothing. Two answers that each name the other's file have read neither, so validation fails the pair.
+- **The findings.** The change check finds an answer the change adds, live at the change's head, whose `read` leaves out such a file, and fails on it in enforcing mode. An answer the change added and then replaced with a later one of its own is not asked this, since the later answer read it. Nor is a moved answer (point 3). A name of a file the head does not hold names nothing. Two answers that each name the other's file have read neither, so validation fails the pair.
 
 ### 5. What an answer replaces
 
@@ -135,10 +139,12 @@ An artefact a project receives by sync, such as a rule of a method rule set (COR
   - an artefact answered apart, as debt in the whole-repository check, and on the base's tip in the change check (point 7)
   - the flag on a revalidation that replaces revalidations answered apart (point 7)
   - an answer that answers nothing because what it names is gone (point 5). Pruning removes it.
+  - the answers a change moved, listed apart from its answers (point 3)
 
 ### 11. The move, once, and what it costs
 
 - **Once, every answer.** A project's existing answers move out of the artefacts' blocks once, as the project takes up this record. Each artefact's answers go to an answer file of their own, and each value keeps its point (point 6). After the move no reader reads an answer from a block, but in history.
+- **No question for a person.** Each answer the move adds carries an answer of its base's block and names no file, so it is moved (point 3). The move asks nobody to accept an answer.
 - **Not a received file.** The move takes no answer out of a file the project receives by sync. Those answers are the source's, and move where it is authored (point 9).
 - **A backbone newer than the move.** A backbone that reads answer files, run over a project whose answers have not moved, says so once and names the move. It does not report each answer as missing.
 - **A line of work open at the move.** One that answered in the old blocks conflicts with the move where the move changed the same lines. Where it did not, as with a first answer in a block that held none, it merges cleanly. Validation then fails the answer left in the block (point 10), and the move, run again, takes it out into a new answer file. The move never rewrites an answer file, and run again over a state it already moved, it writes nothing.
@@ -198,6 +204,10 @@ This record partially supersedes COR-050. Each overturned passage stays in COR-0
 **Why each answer names what it read.** Replacing an answer needs to know that its replacer read it. The tree of the change's own head shows what was there to read. A merge built by a host or a queue also holds answers landed after the change answered. Judged against it, every later run of the change would fail for answers it could not have read. Only an answer still live is asked to name them: one the change replaced was read by its replacer. The names are verified against history. A name copied onto another line of work, or written wrong, keeps an answer live rather than clearing friction.
 
 **Why a file put back writes no answer.** Reverting a prune, or reverting a revert, puts back a file with the names it had. It leaves out every answer file added since, so point 4 would fail it. Rewriting its names to pass would make an old answer replace newer ones. Put back as history held it, it says only what it said before, with its points.
+
+**Why a moved answer asks nothing.** COR-050 point 3 asks a reviewer or a person to accept an answer, since it is a judgment the tool cannot make. A moved answer makes no new judgment. Its words were answered for when its base's block first carried them. Its values keep their points (point 6), and it reads no file, so it clears no friction and replaces no answer that its base did not. Asking again would send each moved answer to a person word for word.
+
+**Why only from a block, reading nothing.** The block named no file, so a moved answer has none to name. Reading none, it is answered apart from any answer file on its artefact (point 7), so a second run of the move beside a newer answer shows as debt. An answer that repeated an answer file's words would have to name the files beside it, and would replace them unseen. So it is asked as any answer is.
 
 **Why answered apart is a finding, not a conflict.** The conflict forced the judgment of the combined state on whoever landed second, at the cost of a round. Most rounds conflicted only in answers. The conflict's protection was also partial:
 - **A body edit without an answer.** It merges cleanly beside a change that answers, and nobody judges the combined state. Neither the conflict nor the finding covers it.
