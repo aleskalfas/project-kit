@@ -151,6 +151,11 @@ MUST_MEET = "requirements"
 AFTER = "after"
 ENVIRONMENT = "environment"
 
+#: The front-matter field DEC-001 point 1 adds to a use case: each step or variant the
+#: system does not carry out yet, with the issue that tracks it and the accepted record
+#: that decides it. Optional, and held to its boxes in the body (`_lib/shortfalls.py`).
+SHORTFALLS = "shortfalls"
+
 #: A number that opens an area's folder name, such as `010-` in `010-develop`: one valid
 #: order in which the areas build on each other, and no part of any id (DEC-001 point 2).
 _AREA_NUMBER = re.compile(r"^(?P<number>[0-9]+)-")

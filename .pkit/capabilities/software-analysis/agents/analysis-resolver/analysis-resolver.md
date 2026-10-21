@@ -83,6 +83,10 @@ pkit analysis link
 pkit friction revalidate <artefact> --outcome updated
 # code-regressed — after the person reports the defect
 pkit friction revalidate <artefact> --outcome unchanged --because "The description stands: <why it is still wanted>; <commit> broke it — defect <the defect reference> reported."
+# code-regressed, where an accepted record decides the regressed step — after the person
+# reports the defect and adds the step's Not built yet box and its entry, naming that
+# defect and that record (DEC-001 points 1 and 5)
+pkit friction revalidate <artefact> --outcome updated
 # gap-found — updated where the artefact changed; otherwise unchanged, naming the gap and what fills it
 pkit friction revalidate <artefact> --outcome unchanged --because "<the gap, and the artefact that fills it>"
 # not resolved yet — a deferral, not an outcome

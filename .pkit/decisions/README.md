@@ -19,9 +19,8 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-19T19:46:10Z
-      outcome: unchanged
-      unchanged-because: COR-050 point 7 gains an anchor on a shared id, among artefact anchors. The README's account of how an anchor names a record's point, and of a record whose points are a list, is untouched.
+      at: 2026-10-21T13:01:00Z
+      outcome: updated
 ---
 
 # Decision records
@@ -69,7 +68,7 @@ Rules are not decision records, but they share their guarantees ([COR-051](core/
 
 Each kind of thing a record, an agent or a skill cites has one written form, and a point of a record has two:
 
-- **A record** by its id: `COR-019`, `PRJ-007`, `ADR-012`. A capability's record goes in brackets with the capability in front: `[project-management:DEC-053-doc-check-slot]`.
+- **A record** by its id: `COR-019`, `PRJ-007`, `ADR-012`. A capability's record goes in brackets with the capability in front: `[project-management:DEC-053-doc-check-slot]`. `pkit refs lookup` prints the file an id names: `pkit refs lookup COR-019`, or, for a capability's record, `pkit refs lookup project-management:DEC-053`, with its slug or without.
 - **A point of a record** by the record and the point's id: "COR-050 point 11" in prose, and `COR-050#11` as an anchor's value ([COR-050](core/COR-050-anchors-and-friction.md) point 2). A labelled point is named by its label, as in `COR-033#P3`. A capability's record keeps its brackets in prose, "[project-management:DEC-055] point 3", and drops them in an anchor's value, `project-management:DEC-055#3`. A point written as a heading keeps its id for good, so its citations stay on it (see "Schema" below). A record whose points are still a list holds no point an anchor can name, since its numbers move (COR-050 point 7).
 - **A rule** by its rule id, as "Rule sets" above describes: `RS-CMN-003`, `[living-docs:RS-LDOC-003]`.
 - **A role or a point of a connection** by its address, in brackets ([COR-019](core/COR-019-schema-reference-form.md), [COR-053](core/COR-053-connection-points.md)): `[pkit::documentation]` names the documentation role and `[pkit::documentation:readers]` its readers point. The double colon marks an address; `[issue-types:task]`, with a single colon, stays a schema reference. An address resolves to what an installed capability declares in its package metadata. `pkit refs validate` reports an address that names no declared role or point, and reports a bracketed token with a double colon that is not an address — `[::documentation:readers]`, with no publisher — as malformed. `pkit refs lookup '[pkit::documentation:readers]'` prints where the point is declared.
