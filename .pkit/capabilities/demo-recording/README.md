@@ -11,9 +11,9 @@ pkit:
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
     revalidated:
-      at: 2026-10-17T15:21:41Z
+      at: 2026-10-21T13:41:42Z
       outcome: unchanged
-      unchanged-because: COR-017 now lets a capability declare one project rule set that its install creates. demo-recording declares none, so what its install copies and does, as this page lists it, is unchanged.
+      unchanged-because: COR-016's change is to how an agent declares its storyboards and where its stamp writes them. This page cites COR-016 only to tell its own storyboard-author sub-procedure apart from the core skill, so it holds.
 ---
 
 # demo-recording capability
