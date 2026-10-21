@@ -30,6 +30,23 @@ pkit:
       at: 2026-10-20T10:10:44Z
       outcome: unchanged
       unchanged-because: In project-kit the required job now skips the test suite on a pull request head that changed only answers since its passing full run, the refinement ADR-055 point 5 points to (ADR-067). Each check the job runs still fails it, and pkit validate and pkit friction check run in both forms, so the steps and the postcondition hold.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055#5
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the queue's path here does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: COR-050#12
+          reason: "Step 6 lists what the change check fails on, and COR-062 adds findings and a judgment against the change's own head. #1779 builds it and rewrites the list."
+        - anchor:
+            kind: record
+            value: COR-050#2
+          reason: "Step 6 lists what the change check fails on, and COR-062 adds findings and a judgment against the change's own head. #1779 builds it and rewrites the list."
+        - anchor:
+            kind: record
+            value: COR-050#6
+          reason: "Step 6 lists what the change check fails on, and COR-062 adds findings and a judgment against the change's own head. #1779 builds it and rewrites the list."
 ---
 
 # UC-006 — Make my merges wait on the system's checks

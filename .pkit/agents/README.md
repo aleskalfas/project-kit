@@ -22,6 +22,11 @@ pkit:
       at: 2026-10-21T14:09:59Z
       outcome: unchanged
       unchanged-because: "COR-016 now declares a storyboard in storyboards: by its bare sibling filename, accepts a project-root-relative path, and says the deploy rewrites a sibling entry to the source path. The Storyboards section already says each of these, so it holds."
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction writers write an answer the artefact carries and owe a combined state after a conflict, which COR-062 replaces with answer files. #1779 builds it and rewrites the section."
 ---
 
 # Agents

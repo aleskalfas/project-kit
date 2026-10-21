@@ -17,6 +17,19 @@ pkit:
       at: 2026-10-20T10:34:35Z
       outcome: unchanged
       unchanged-because: It says that nothing is applied until the person accepts it, and that fix-drift starts the agent, which the new batch commands and the project manager's fix-drift procedure keep true.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says two branches revalidating one page conflict in its block and friction resolve takes the base side's answer, which COR-062 replaces. #1779 builds it and rewrites the passage."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passage #1779 rewrites, since a revalidation would claim the whole README holds."
 ---
 
 # living-docs capability

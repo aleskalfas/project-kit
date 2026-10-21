@@ -62,8 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-21T12:12:31Z
-          outcome: updated
+          at: 2026-10-21T14:26:13Z
+          outcome: unchanged
+          unchanged-because: COR-062 moves answers, not anchors. What an analysis artefact's anchors must name is unchanged, so the rule holds.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}

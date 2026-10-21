@@ -22,6 +22,23 @@ pkit:
     revalidated:
       at: 2026-10-19T20:58:18Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-056
+          reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, whose files' schema is a backbone file schema. #1779 builds it and rewrites the README with it."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It models the friction block with its answers, which COR-062 moves to answer files with a schema of their own. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the README models in the block. #1779 builds it and rewrites it."
 ---
 
 # Schemas
