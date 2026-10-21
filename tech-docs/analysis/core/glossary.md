@@ -476,9 +476,26 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-21T14:25:47Z
+        at: 2026-10-20T01:37:32Z
         outcome: unchanged
-        unchanged-because: COR-062 moves where an answer is written, not what friction is. Friction is still a change to what an artefact rests on with no answer standing for it, so the definition holds.
+        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        deferred:
+          - anchor:
+              kind: record
+              value: COR-050#1
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#5
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#6
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#9
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
 TERM-harness:
   name: harness
   status: active
