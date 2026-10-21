@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-19T19:45:59Z
+      at: 2026-10-21T13:00:56Z
       outcome: unchanged
-      unchanged-because: COR-050 gains a warning on an anchor on a shared id, never failed. The README's account of agents, of the friction writers and of who decides an answer is untouched.
+      unchanged-because: The record lookup in refs.py now resolves a capability's decision as well. What pkit refs validate checks of an agent's references and its owns entries is untouched.
 ---
 
 # Agents
