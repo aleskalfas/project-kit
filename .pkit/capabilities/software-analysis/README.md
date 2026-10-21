@@ -17,6 +17,19 @@ pkit:
     revalidated:
       at: 2026-10-21T12:12:32Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
 ---
 
 # software-analysis capability

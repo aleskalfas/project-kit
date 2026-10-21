@@ -36,8 +36,9 @@ pkit:
         - REQ-004
         - REQ-005
     revalidated:
-      at: 2026-10-21T13:49:28Z
-      outcome: updated
+      at: 2026-10-21T14:26:08Z
+      outcome: unchanged
+      unchanged-because: COR-050 point 6 adds that the check judges what an answer read against the change's own head. On the developer's clone that is HEAD, so checking before a push runs as the use case says.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

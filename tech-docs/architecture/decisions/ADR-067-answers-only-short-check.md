@@ -10,7 +10,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 **In plain terms:** the `checks` job, the one status `main` requires, runs in one of two forms on a pull request. The *full run* is the check aggregator, `scripts/check.sh`, as before. The *short check* is the same aggregator without its test suite. A run takes the short form only on two conditions:
 - **A passing full run.** GitHub's record of this workflow's runs shows that the most recent full run on this pull request passed.
-- **Only answers since.** `pkit friction since` says every change from that run's head to this one lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
+- **Only answers since.** `pkit friction since` says every change from that run's head to this one lies in the change's answers to friction, as that command reads them (point 4). A merge of the base counts only for what differs from git's merge of it.
 
 Anything else, and any doubt, takes the full run. The decision is made by the base's code, the decider and the `pkit` it asks, not the pull request's.
 

@@ -58,9 +58,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-21T12:12:21Z
+      at: 2026-10-21T14:26:05Z
       outcome: unchanged
-      unchanged-because: DEC-001 points 5 and 9 gain the box a step the system does not carry out takes, in a revalidation and in onboarding. Who the developer is and what the developer needs are untouched.
+      unchanged-because: The developer's role, occasions and context name no answer's home, and every change still passes the friction check. So the actor holds against COR-062 and DEC-032 D1's answer folder.
 ---
 
 # ACT-developer — Developer

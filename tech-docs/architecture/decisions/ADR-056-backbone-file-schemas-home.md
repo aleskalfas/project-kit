@@ -26,6 +26,7 @@ Schemas are propagated data in this distribution (the permission core's decision
 
 A file is claimed by the first rule that matches; a claimed file never reaches the capability-data resolution of COR-023.
 - **Fixed path** — the configuration file at the path the CLI reference documents (COR-048 point 1).
+- **Answer file** — a YAML file in the folder of friction answers, which the backbone fixes ([COR-062](../../../.pkit/decisions/core/COR-062-answers-in-own-files.md) point 2), bound to the answer files' schema (refinement per [ADR-068](ADR-068-friction-answer-folder.md)).
 - **Filler path** — the path derived from a point address under the backbone-owned sub-path beneath the internal documentation root (COR-052 point 2). The mapping from `<publisher>::<role>:<point>` to a path is **injective on valid addresses**, so that no two points share a file and no path binds the wrong schema; the reference shows the mapping and its inverse.
 - **Rule-set file** — a collection file in a place declared to hold rule sets (COR-051 point 2). Its entries also carry the container, so the container rule applies inside it.
 - **Container** — the front matter of a Markdown document, or a collection entry, in a declared place (COR-050 point 1). A plain YAML data file in a declared place is not a document: it falls through to COR-023.
@@ -34,7 +35,7 @@ Consequences stated so nobody discovers them: `pkit data validate` delegates a l
 
 ### 3. Versions, as the records place them
 
-The filler envelope and each point block inside a role block carry `schema_version`, the companion integer of the point (COR-052 point 5, COR-053 point 10). Backbone-owned shapes — the configuration file, the friction block, the rule-set file's shape — carry no version: they change through migrations ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)), and a version key in the configuration file would be a key only a core record may own (COR-048 point 2). One invariant binds any migration of the friction block: it preserves the parsed value of `at`, or every revalidation point in the repository moves (COR-050 point 3).
+The filler envelope and each point block inside a role block carry `schema_version`, the companion integer of the point (COR-052 point 5, COR-053 point 10). Backbone-owned shapes — the configuration file, the friction block, an answer file, the rule-set file's shape — carry no version: they change through migrations ([COR-010](../../../.pkit/decisions/core/COR-010-resource-lifecycle.md)), and a version key in the configuration file would be a key only a core record may own (COR-048 point 2). One invariant binds any migration of the friction block or of answer files, the move of answers into answer files included: it preserves the parsed value of `at`, or every revalidation point in the repository moves (COR-050 point 3, COR-062 point 6).
 
 ### 4. One renderer
 

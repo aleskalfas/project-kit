@@ -46,6 +46,30 @@ pkit:
           reason: "The resolver's commands gain the boxed regression, revalidated as updated. Variant 4a names only the unchanged case until #1856 revises it."
         - anchor:
             kind: record
+            value: ADR-055#5
+          reason: "ADR-055 point 5 gains only that a merge queue gives the check each change's own head. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."
+        - anchor:
+            kind: record
+            value: COR-050#12
+          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: COR-050#2
+          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: COR-050#3
+          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: COR-050#6
+          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: COR-050#9
+          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
             value: software-analysis:DEC-001#5
           reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 4a names only the unchanged case until #1856 revises it."
 ---

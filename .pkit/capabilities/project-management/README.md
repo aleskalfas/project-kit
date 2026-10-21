@@ -18,6 +18,15 @@ pkit:
     revalidated:
       at: 2026-10-20T10:34:32Z
       outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
 ---
 
 # project-management capability
