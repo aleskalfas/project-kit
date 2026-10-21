@@ -745,10 +745,10 @@ class Points:
     own_paths: frozenset[str]  # every name the file had: a change under one is never an anchor's
     unreachable: str | None  # which point the clone's history does not reach, when one
     cut: bool = False  # the file's history reaches a shallow clone's cut
-    # For answers read from answer files, whether a live revalidation reaches each deferral
-    # of `deferrals` — keeps it in its own entry, or read its file (COR-062 point 5); `None`
-    # for answers read from the block, where a revalidation point reaches a deferral point
-    # by ancestry (COR-050 point 4). An anchor may then have several deferrals, made apart.
+    # For answers read from answer files, whether a live revalidation may reach each
+    # deferral of `deferrals` — keeps it in its own entry, or read its file (COR-062 point
+    # 5); `None` for answers read from the block, where ancestry alone decides (COR-050
+    # point 4). An anchor may then have several deferrals, made apart.
     kept: tuple[bool, ...] | None = None
 
     @property
@@ -760,18 +760,20 @@ class Points:
         """The states `anchor` is measured from (COR-050 points 3 and 4): every revalidation
         point, and its deferral point where no revalidation reaches it — one kept through a
         revalidation answers nothing. Read from a block, a revalidation point reaches a
-        deferral point by ancestry; read from answer files, a revalidation reaches a
-        deferral only where it keeps it or read its file (`kept`, COR-062 point 5), and
-        each deferral of the anchor made apart adds its own point (COR-062 point 7)."""
+        deferral point by ancestry; read from answer files, ancestry is not enough: the
+        revalidation must also keep the deferral or have read its file (`kept`, COR-062
+        point 5), and each deferral of the anchor made apart adds its own point (COR-062
+        point 7)."""
         if self.kept is None:
             deferral = dict(self.deferrals).get(anchor)
             if deferral is None or deferral in history.reached(self.revalidations):
                 return self.revalidations
             return (*self.revalidations, deferral)
+        reached = history.reached(self.revalidations)
         extra = [
             point
             for (deferred, point), kept in zip(self.deferrals, self.kept, strict=True)
-            if deferred == anchor and point is not None and not kept
+            if deferred == anchor and point is not None and not (kept and point in reached)
         ]
         return tuple(dict.fromkeys((*self.revalidations, *extra)))
 
