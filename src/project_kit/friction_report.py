@@ -58,15 +58,14 @@ from typing import Any
 
 import click
 
-from project_kit import cli_render
+from project_kit import answer_files, cli_render
 from project_kit import friction_repository as fr
+from project_kit.answer_files import Answers
 from project_kit.friction_check import (
     SHORT,
-    CommitTree,
     HeadState,
     anchors_of,
     counted,
-    deferral_reason,
 )
 from project_kit.friction_discovery import (
     Anchor,
@@ -74,15 +73,19 @@ from project_kit.friction_discovery import (
     Discovery,
     ResolverCommand,
     SettingsPath,
-    discover_artefacts,
     held_message,
 )
 from project_kit.friction_write import command_line
 
 _Kind = fr.RepositoryFindingKind
 
-#: The findings that are debt (COR-050 point 9), in the order the summary names them.
-DEBT_KINDS: tuple[fr.RepositoryFindingKind, ...] = (_Kind.STALE, _Kind.DEFERRED)
+#: The findings that are debt (COR-050 point 9), in the order the summary names them:
+#: answered apart among them, two revalidations made apart (COR-062 point 7).
+DEBT_KINDS: tuple[fr.RepositoryFindingKind, ...] = (
+    _Kind.STALE,
+    _Kind.DEFERRED,
+    _Kind.ANSWERED_APART,
+)
 
 #: What a person supplies in an answer: shown in the command, never guessed.
 BECAUSE = "<why the content still holds>"
@@ -159,10 +162,10 @@ class DebtEntry:
 
     finding: fr.RepositoryFinding
     origin: fr.Commit
-    reason: str | None  # a deferral's reason as HEAD writes it; `None` for stale debt
+    reason: str | None  # a deferral's reason as HEAD writes it; `None` for other debt
 
     def as_json(self) -> dict[str, Any]:
-        return {
+        document: dict[str, Any] = {
             "kind": self.finding.kind.value,
             "artefact": self.finding.artefact,
             "location": self.finding.location,
@@ -171,6 +174,9 @@ class DebtEntry:
             "reason": self.reason,
             "message": self.finding.message,
         }
+        if self.finding.files:  # answered apart: the answer files made apart
+            document["files"] = list(self.finding.files)
+        return document
 
 
 @dataclass(frozen=True)
@@ -208,21 +214,14 @@ def run_debt(
     check = fr.run_repository_check(target_root, registry=registry)
     if check.dormant or check.head is None:
         return DebtListing(True, None, None, (), ())
-    debt = [
-        (finding, finding.origin)
-        for finding in check.findings
-        if finding.kind in DEBT_KINDS and finding.origin is not None
-    ]
-    reasons = _deferral_reasons(target_root, check.head.commit, [f for f, _ in debt])
     entries = [
         DebtEntry(
             finding,
-            origin,
-            reasons.get((finding.location, finding.anchor))
-            if finding.kind is _Kind.DEFERRED
-            else None,
+            finding.origin,
+            (finding.reason or "") if finding.kind is _Kind.DEFERRED else None,
         )
-        for finding, origin in debt
+        for finding in check.findings
+        if finding.kind in DEBT_KINDS and finding.origin is not None
     ]
     entries.sort(key=lambda entry: entry.origin.date)
 
@@ -239,23 +238,6 @@ def run_debt(
         check.unanchored,
         check.accepted_unanchored,
     )
-
-
-def _deferral_reasons(
-    target_root: Path, head: str, findings: Sequence[fr.RepositoryFinding]
-) -> dict[tuple[str | None, Anchor | None], str]:
-    """The reason each deferred finding's entry carries at HEAD, by location and anchor."""
-    deferred = [f for f in findings if f.kind is _Kind.DEFERRED and f.anchor is not None]
-    if not deferred:
-        return {}
-    discovery = discover_artefacts(target_root, tree=CommitTree(target_root, head))
-    by_location = {artefact.location: artefact for artefact in discovery.artefacts}
-    reasons: dict[tuple[str | None, Anchor | None], str] = {}
-    for finding in deferred:
-        artefact = by_location.get(finding.location or "")
-        if artefact is not None and finding.anchor is not None:
-            reasons[(finding.location, finding.anchor)] = deferral_reason(artefact, finding.anchor)
-    return reasons
 
 
 #: The version of the document `render_debt_json` returns. A change a reader could
@@ -304,6 +286,10 @@ _DEBT_LEGEND: dict[fr.RepositoryFindingKind, str] = {
     _Kind.DEFERRED: (
         "friction deliberately postponed — since the commit that introduced the deferral"
     ),
+    _Kind.ANSWERED_APART: (
+        "two revalidations made apart, neither reading the other — since the first commit "
+        "holding both; the next revalidation that reads both clears it"
+    ),
 }
 
 
@@ -339,7 +325,9 @@ def render_debt_human(listing: DebtListing, *, now: datetime | None = None) -> s
             entry.origin.short,
             entry.origin.author,
             f'"{entry.origin.subject}"',
-            _age(now, entry.origin.date) + (f" — {entry.reason}" if entry.reason else ""),
+            _age(now, entry.origin.date)
+            + (f" — {entry.reason}" if entry.reason else "")
+            + (f" — {' and '.join(entry.finding.files)}" if entry.finding.files else ""),
         )
         for entry in listing.entries
     ]
@@ -504,6 +492,8 @@ class Explanation:
     report: fr.ArtefactReport | None  # `None`: nothing judged — no anchors, no deferrals, excluded
     anchors: tuple[ExplainedAnchor, ...]  # in written order
     findings: tuple[ExplainedFinding, ...]  # in the check's order
+    # Its answers at HEAD, from its block or its answer files (`answer_files`).
+    answers: Answers | None = None
 
     @property
     def state(self) -> str:
@@ -513,8 +503,11 @@ class Explanation:
 
     @property
     def deferred(self) -> tuple[Anchor, ...]:
-        """The anchors the artefact defers, as written."""
-        return tuple(d.anchor for d in self.artefact.deferrals)
+        """The anchors the artefact defers: its live deferrals, from its block or its
+        answer files, each anchor once."""
+        if self.answers is None:
+            return tuple(d.anchor for d in self.artefact.deferrals)
+        return tuple(dict.fromkeys(d.anchor for d in self.answers.deferrals))
 
 
 def run_explain(
@@ -556,6 +549,7 @@ def run_explain(
         report=check.report,
         anchors=anchors,
         findings=findings,
+        answers=check.answers,
     )
 
 
@@ -683,6 +677,12 @@ def _explained(
         )
     elif kind is _Kind.UNREACHABLE:
         clears = "fetch the full history (`git fetch --unshallow`) and run again"
+    elif kind is _Kind.ANSWERED_APART:
+        clears = (
+            "a revalidation that reads both answer files and judges their combined state "
+            "(COR-062 point 7); it is debt, never stale, so nothing waits on it"
+        )
+        answers = revalidate
     else:
         clears = f"see `pkit friction check --all` on {artefact.location}"
     return ExplainedFinding(finding, traced.commits, clears, answers)
@@ -761,8 +761,20 @@ def render_explain_json(explanation: Explanation) -> str:
         ),
         "anchors": [anchor.as_json() for anchor in explanation.anchors],
         "findings": [finding.as_json() for finding in explanation.findings],
+        "answers": _answers_json(explanation),
+        "answers_folder": answer_files.FOLDER,
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
+
+
+def _answers_json(explanation: Explanation) -> Mapping[str, Any] | None:
+    """The artefact's live answers with the points each keeps, as the check gives them
+    (`fr.ArtefactReport.answers`); without a report, its answers alone, pointless."""
+    if explanation.report is not None and explanation.report.answers is not None:
+        return explanation.report.answers
+    if explanation.answers is None:
+        return None
+    return {**explanation.answers.as_json(), "folder": answer_files.FOLDER}
 
 
 _STATE_GLOSS = {
