@@ -24,6 +24,26 @@ pkit:
       outcome: updated
       deferred:
         - anchor:
+            kind: path
+            value: .pkit/schemas/backbone/**
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/backbone_schemas.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/data_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_discovery.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_validate.py
+          reason: "The answer files' schema now ships under .pkit/schemas/backbone/, bound by its location, and validation and data validation apply it, which the README does not list. #1779 builds the move and rewrites the README with it."
+        - anchor:
             kind: record
             value: ADR-056
           reason: "ADR-056 point 2 gains a location rule for answer files, which the README's binding order does not list. #1779 builds it and rewrites it."

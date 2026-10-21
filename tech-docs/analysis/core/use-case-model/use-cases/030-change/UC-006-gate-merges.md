@@ -32,6 +32,10 @@ pkit:
       unchanged-because: In project-kit the required job now skips the test suite on a pull request head that changed only answers since its passing full run, the refinement ADR-055 point 5 points to (ADR-067). Each check the job runs still fails it, and pkit validate and pkit friction check run in both forms, so the steps and the postcondition hold.
       deferred:
         - anchor:
+            kind: path
+            value: src/project_kit/friction_check.py
+          reason: "The change check keeps answer files out of what a path anchor stands on, beside the answers COR-062 moves out of the block, which the steps still put there. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."
+        - anchor:
             kind: record
             value: ADR-055#5
           reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the queue's path here does not say. #1779 builds it and rewrites it."
