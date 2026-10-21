@@ -7,7 +7,8 @@ other-actors:
   - ACT-ai-agent
 after:
   - [UC-016]
-requirements: []
+requirements:
+  - REQ-006
 pkit:
   friction:
     anchors:
@@ -35,6 +36,10 @@ pkit:
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - REQ-006
+    revalidated:
+      at: 2026-10-21T21:30:41Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

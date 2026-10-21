@@ -8,6 +8,8 @@ other-actors:
 requirements:
   - REQ-004
   - REQ-005
+  - REQ-006
+  - REQ-007
 after:
   - [UC-014]
 pkit:
@@ -37,6 +39,8 @@ pkit:
         - ACT-ci-pipeline
         - REQ-004
         - REQ-005
+        - REQ-006
+        - REQ-007
     revalidated:
       at: 2026-10-21T15:14:38Z
       outcome: updated

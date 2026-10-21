@@ -11,6 +11,8 @@ requirements:
   - REQ-002
   - REQ-004
   - REQ-005
+  - REQ-006
+  - REQ-007
 after:
   - [UC-014]
 pkit:
@@ -42,6 +44,8 @@ pkit:
         - REQ-002
         - REQ-004
         - REQ-005
+        - REQ-006
+        - REQ-007
     revalidated:
       at: 2026-10-21T13:49:27Z
       outcome: updated
