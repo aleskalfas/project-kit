@@ -12,6 +12,7 @@ pkit:
         - .pkit/schemas/harness-support.schema.json
         - src/project_kit/agent_runs.py
         - src/project_kit/harness_support.py
+        - src/project_kit/schemas_validate.py
       record: [COR-005, COR-006, COR-028, COR-047, ADR-066]
       artefact:
         - .pkit/adapters/claude-code/README.md

@@ -8,6 +8,10 @@ pkit:
       path:
         - .pkit/schemas/_defs/**
         - .pkit/schemas/backbone/**
+        - .pkit/schemas/harness-requirements.yaml
+        - .pkit/schemas/harness-requirements.schema.json
+        - .pkit/schemas/harness-support.yaml
+        - .pkit/schemas/harness-support.schema.json
         - src/project_kit/schemas.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/schemas_authoring.py
