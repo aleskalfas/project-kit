@@ -65,6 +65,7 @@ pkit:
       record: [COR-004, COR-012, COR-043, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
+        - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/README.md#the-agent-runner
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
@@ -1009,7 +1010,7 @@ Scaffolds a top-level adapter at `.pkit/adapters/<name>/` (per COR-005). Stamps:
 - `README.md` — skeleton.
 - `migrations/` — empty directory.
 
-It stamps no script and no settings: which an adapter needs depends on its harness. The scripts the lifecycle calls, and when it calls each, are in [the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls). It registers the adapter in `.pkit/manifest.yaml`.
+It stamps no script and no settings. The scripts the lifecycle calls, and when it calls each, are in [the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls). It registers the adapter in `.pkit/manifest.yaml`.
 
 ### `new capability <name>`
 

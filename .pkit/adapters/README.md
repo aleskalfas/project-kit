@@ -9,6 +9,11 @@ pkit:
         - .pkit/schemas/harness-requirements.yaml
         - .pkit/schemas/harness-requirements.schema.json
         - src/project_kit/agent_runs.py
+        - src/project_kit/capabilities.py
+        - src/project_kit/cli.py
+        - src/project_kit/install.py
+        - src/project_kit/sync.py
+        - src/project_kit/upgrade.py
       record: [COR-005, COR-006, COR-047, ADR-066]
       artefact: [.pkit/adapters/claude-code/README.md, ".pkit/lifecycle/README.md#how-a-registered-command-is-run"]
     revalidated:
