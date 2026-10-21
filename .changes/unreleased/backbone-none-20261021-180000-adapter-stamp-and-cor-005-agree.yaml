@@ -1,0 +1,12 @@
+component: backbone
+kind: none
+body: >
+  COR-005 says what `pkit new adapter` writes: `package.yaml`, `README.md`
+  and `migrations/`, the files every adapter has, and no script stub or
+  settings template until what adapters for different harnesses share has
+  recurred (COR-007). Its bundle passages stand as they did under COR-027,
+  which says COR-005 is partially superseded and stays accepted. The
+  adapters README and the `adapter-author` skill set out the scripts the
+  lifecycle calls, when it calls each and what each owes, and the CLI and
+  lifecycle templates READMEs match the stamp. The texts follow behaviour
+  that already shipped, and no command changes.

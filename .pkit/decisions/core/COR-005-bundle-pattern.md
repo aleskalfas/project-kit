@@ -6,13 +6,13 @@ date: 2026-05-05
 author: Ales Kalfas <kalfas.ales@gmail.com>
 ---
 
-> **Refined by [COR-027](COR-027-alternative-impls-as-capability-data.md)** (2026-05-27). This record originally established three rules; one is retired and two stand:
+> **Partially superseded by [COR-027](COR-027-alternative-impls-as-capability-data.md).** Of this record's three rules, one is overturned and two stand:
 >
-> - **Bundle pattern** — *retired*. Capabilities ([COR-017](COR-017-capability-pattern.md)) subsumed the alternative-implementations use case; alternative variants now live as capability-internal data per COR-027. Do not author new bundles. Bundle-pattern content below is preserved as historical context.
-> - **Adapter pattern** — *operative*. Adapters remain the harness-translation mechanism at `.pkit/adapters/<name>/`.
+> - **Bundle pattern** — *overturned*. Capabilities ([COR-017](COR-017-capability-pattern.md)) take over the alternative-implementations use case, and alternative variants live as capability-internal data per COR-027, which removed the bundle commands and the `bundle-author` skill. Do not author new bundles. What this record says of bundles stays below as it stood.
+> - **Adapter pattern** — *operative*. Adapters are the harness-translation mechanism at `.pkit/adapters/<name>/`.
 > - **Skill / command pairing** — *operative*. Every authoring command in the methodology's CLI ships with a paired skill; the script does the stamp, the skill does the disciplines.
 >
-> Status stayed at `accepted` (rather than `superseded`) because two of the three rules continue to govern current authoring — the binary supersession status would have falsely refused gates from skills that depend on the still-operative halves (`adapter-author`, `agent-author`, `area-author`, `capability-author`, `migration-author`, `storyboard-author`, `scratchpad-author`, `methodology-reviewer` all cite COR-005 in their `gates:` field). When the entire record's content retires, the status flips to `superseded`; until then, this header is the carrier of the partial-refinement semantics.
+> The status is `accepted`, not `superseded`, because two of the three rules govern current authoring: a `superseded` status would refuse the gates of the skills and agents that cite this record in their `gates:` field for the rules that stand, such as `adapter-author`. When a later record overturns the rules that stand, the status becomes `superseded`.
 
 ## Context
 
@@ -75,6 +75,8 @@ Universal areas have one canonical version of each content type, so the core-sid
 ├── README.md                          # what an adapter is, how to add new harnesses
 └── <adapter-name>/                    # one directory per harness
     ├── README.md                      # what this adapter ships
+    ├── package.yaml                   # component metadata (COR-010)
+    ├── migrations/                    # the adapter's version migrations (COR-010)
     └── (harness-specific content)     # settings files, deploy scripts, runtime artifacts —
                                        # whatever the harness needs
 ```
@@ -97,6 +99,7 @@ Every **bundle** ships at minimum:
 Every **adapter** ships at minimum:
 
 - `README.md` — what the adapter handles, what content it ships, how to deploy it.
+- `package.yaml` and `migrations/` — the metadata and the version migrations COR-010 asks of every versioned component.
 
 Beyond these, internal structure is determined by the area's or harness's specific concerns.
 
@@ -107,24 +110,24 @@ For each component type defined here, core ships an authoring command that scaff
 The commands (specified in `.pkit/cli/README.md`, materialised by the install/sync runtime per the build roadmap):
 
 - **`pkit new bundle <area> <name>`** — scaffolds a bundle within an area declared (per COR-011) as the bundle-based variant. Stamps `package.yaml`, `README.md`, `migrations/`, `config.template.yaml`, and any area-specific internals the area's contract names.
-- **`pkit new adapter <name>`** — scaffolds a top-level adapter at `.pkit/adapters/<name>/` with `package.yaml`, `README.md`, baseline-settings template, primitive stubs, and `migrations/`.
-- **`pkit new migration --tier <backbone|bundle|adapter> [...]`** — drops a numbered script into the right `<major>.<minor>.0/` directory with the script-contract boilerplate from the lifecycle spec.
+- **`pkit new adapter <name>`** — scaffolds a top-level adapter at `.pkit/adapters/<name>/` with `package.yaml`, `README.md` and `migrations/`, the files every adapter has whatever its harness. The scripts an adapter provides, and when the lifecycle calls each, are documented in `.pkit/adapters/README.md` and in the `adapter-author` skill, with a shipped adapter as the worked example. The scaffold stamps no script stubs and no settings template: what adapters for different harnesses share earns a place in it once it recurs across them, not before (COR-007).
+- **`pkit new migration --tier <tier> [...]`** — drops a numbered script into the right `<major>.<minor>.0/` directory of a tier's component (the backbone and component tiers of COR-010), with the script-contract boilerplate from the lifecycle spec.
 
-Each command produces a directory whose layout matches the contract this record fixes; each wires the new component into the lifecycle spec's manifest layer (per COR-010) at scaffold time. Templates live where their contract lives — `.pkit/lifecycle/templates/` for migration scripts and per-component manifest skeletons; `.pkit/cli/scaffolds/` for bundle/adapter directory shapes — so a backbone upgrade that changes a contract also updates what gets stamped.
+Each command produces a directory whose layout matches the contract this record fixes; each wires the new component into the lifecycle spec's manifest layer (per COR-010) at scaffold time. Templates live in the CLI's own scaffolding code, which ships with the CLI, so a release that changes a contract also changes what gets stamped.
 
 ### Skill / command pairing
 
 Every authoring command in the methodology's CLI ships with a paired **skill** that is the agent-facing entry point for the corresponding authoring task. The script does the deterministic stamping; the skill does the disciplines, the slug choice, the body drafting, and the gates. Authors who explicitly want only the stamp call the script directly; agents and humans following the intended path invoke the skill.
 
-The pairing in effect today and as future commands ship:
+The pairing for the commands this record names; a command a later record adds pairs the same way:
 
-| Authoring command | Paired skill | Status |
-|---|---|---|
-| `pkit new decision <namespace> <slug>` | `decision-author` | ships today (`.pkit/skills/core/decision-author/`) |
-| `pkit new bundle <area> <name>` | `bundle-author` | ships when the command lands |
-| `pkit new adapter <name>` | `adapter-author` | ships when the command lands |
-| `pkit new migration [...]` | `migration-author` | ships when the command lands |
-| `pkit new area <name>` | `area-author` | ships when the command lands |
+| Authoring command | Paired skill |
+|---|---|
+| `pkit new decision <namespace> <slug>` | `decision-author` |
+| `pkit new bundle <area> <name>` | `bundle-author` |
+| `pkit new adapter <name>` | `adapter-author` |
+| `pkit new migration [...]` | `migration-author` |
+| `pkit new area <name>` | `area-author` |
 
 Each skill's frontmatter declares `metadata.wraps_command` naming the command it pairs with, so a skill registry (today: filesystem walk; future: a `pkit skills list` lookup) can answer "which skill is the entry point for command X?" deterministically.
 
@@ -144,11 +147,13 @@ Areas may carry project-side content not tied to a single bundle — for example
 
 **Why adapters need their own install model.** An adapter's content is heterogeneous — config files merged into adopter-side files, deploy scripts that produce symlinks, runtime artifacts. There is no single project-side directory whose presence means "installed." The adapter's README documents what installation means for that adapter.
 
-**Why the shared universal-element minimum (README plus optional config template) is so light.** Beyond these, what each bundle or adapter ships depends entirely on its specific concern. Imposing further universal structure (e.g., "every bundle must have a `primitives/` directory") would be wrong because non-workflow bundles wouldn't have primitives. Per-area and per-harness contracts handle the rest.
+**Why the shared universal-element minimum (README plus optional config template, and the version metadata COR-010 asks of an adapter) is so light.** Beyond these, what each bundle or adapter ships depends entirely on its specific concern. Imposing further universal structure (e.g., "every bundle must have a `primitives/` directory") would be wrong because non-workflow bundles wouldn't have primitives. Per-area and per-harness contracts handle the rest.
 
 **Why authoring belongs on the public surface.** Adopters who write their own bundles (custom workflow backends) or adapters (in-house AI harnesses) are first-class users of the methodology, not maintainers of the framework source. The contract this record fixes is theirs to satisfy; the tooling to satisfy it cleanly should be theirs to use. Hiding scaffolding behind framework-internal scripts would re-create the gap the record already closed for *consumption* — half the methodology surface available to adopters, the other half not.
 
 **Why scaffold commands rather than templates-only.** A doc plus a templates directory ("clone this directory, rename, fill in") would cover most of the work but would force every author to also wire the new component into manifests, registries, and the lifecycle spec by hand — exactly the kind of mechanical sequence that COR-007 says should earn tooling. The command performs the wiring deterministically; the templates are the command's substrate, not a parallel surface.
+
+**Why the adapter scaffold stops at the files every adapter has.** Which scripts an adapter provides, and what settings it carries, depend on its harness: one harness loads skills from their canonical paths and needs no deploy script, another needs one. A script stub or a settings template drawn from one adapter would copy that adapter's harness and present it as the contract. So the scaffold stamps what holds for any harness, and the scripts the lifecycle calls are documented with a shipped adapter as the worked example. Stubs and a settings template join the scaffold once what adapters for different harnesses share has recurred, the trigger COR-007 sets for extracting a pattern into tooling, rather than in anticipation of it.
 
 **Why bundle authoring takes area as an argument.** A bundle is area-internal by this record's structural rule (`.pkit/<area>/bundles/<name>/`). Treating "bundle" as an unqualified token would couple the verb to whichever area happens to host bundles today (workflow), which is exactly the coupling COR-011's areas-first-class principle is meant to break.
 
@@ -174,14 +179,14 @@ Areas may carry project-side content not tied to a single bundle — for example
 
 - **Each area's README declares its shape.** A universal area's README says what's in `core/`. A bundle-based area's README lists what's in `bundles/` and explains the install model. The `.pkit/adapters/` README explains the adapter umbrella; each adapter's own README explains what that adapter ships.
 - **The install/sync runtime manifest** treats core-side paths uniformly: every path under `core/`, `bundles/<name>/`, or `.pkit/adapters/<name>/` is propagation; project-side paths are extension. Per-adapter or per-bundle config files are extension targets, seeded from their respective `config.template.yaml` files.
-- **CLI bundle commands** (per COR-004's surface) operate on bundle-based areas: `list` reads `bundles/` and `project/<name>/`; `install` creates `project/<name>/` with seeded `config.yaml` and runs the bundle's stamping/setup; `remove` removes `project/<name>/` per COR-004's "leaves project-owned content alone" rule. Adapter-equivalent commands (likely `pkit adapter <verb>` or similar) follow when the CLI ships.
+- **CLI bundle commands** (per COR-004's surface) operate on bundle-based areas: `list` reads `bundles/` and `project/<name>/`; `install` creates `project/<name>/` with seeded `config.yaml` and runs the bundle's stamping/setup; `remove` removes `project/<name>/` per COR-004's "leaves project-owned content alone" rule.
 - **Suspension within a bundle** — overriding individual bundle internals (e.g. swapping a workflow primitive) — uses `.pkit/<area>/project/<bundle>/overrides/`. The precise precedence rule is per-area (and per-bundle-type within the area); each area documents its own.
 - **Adding a new bundle-based area** (CI, release, language profile) follows this pattern: `.pkit/<new-area>/{README.md, bundles/<name>/, project/<name>/}` with bundle internals shaped to the area's contract.
-- **Adding a new harness** (Codex, Cursor, etc.) means creating a new directory at `.pkit/adapters/<harness>/` with a README and the harness-specific content. No new structural decision needed.
+- **Adding a new harness** (Codex, Cursor, etc.) means creating a new directory at `.pkit/adapters/<harness>/` with the universal elements above and the harness-specific content. No new structural decision needed.
 - **Authoring CLI commands are public surface.** `pkit new bundle <area> <name>`, `pkit new adapter <name>`, `pkit new migration [...]` are documented in `.pkit/cli/README.md` alongside the consumption commands.
-- **Templates location.** `.pkit/lifecycle/templates/` for manifest + migration skeletons; `.pkit/cli/scaffolds/` for bundle/adapter directory shapes.
+- **Templates location.** The CLI's own scaffolding code, which ships with the CLI ("Authoring surface" above).
 - **Scaffold output is wired.** A new bundle or adapter created via these commands is registered and discoverable by `pkit status` immediately — no manual manifest edits needed.
-- **Implementation is blocked on the install/sync runtime** (the build roadmap); this record fixes the principle and the public command shapes, not the timeline.
+- **This record fixes the principle and the public command shapes.** What the adapter and migration commands stamp in detail is in `.pkit/cli/README.md`, and an adapter's scripts in `.pkit/adapters/README.md`.
 - **Skill / command pairing is enforced by review.** Every PR introducing a new authoring command must also ship its paired skill. Skills declare `metadata.wraps_command` so the pairing is queryable from the skill registry, not just prose.
 - **CLAUDE.md surfaces the pairing rule** so agents see "for authoring tasks, invoke the paired skill rather than the command directly" early in every session. The rule plus the pairing table is what closes the discipline gap empirically observed in earlier hand-authored records.
 

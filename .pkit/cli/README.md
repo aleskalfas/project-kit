@@ -66,6 +66,7 @@ pkit:
       record: [COR-004, COR-012, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
+        - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/README.md#the-agent-runner
         - .pkit/adapters/README.md#harness-requirements
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
@@ -89,7 +90,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-21T18:39:12Z
+      at: 2026-10-21T18:39:01Z
       outcome: updated
       deferred:
         - anchor:
@@ -1010,9 +1011,9 @@ Scaffolds a top-level adapter at `.pkit/adapters/<name>/` (per COR-005). Stamps:
 
 - `package.yaml` — versioned `0.1.0`, `requires_backbone` pinned to a range matching the project's current backbone (per COR-010's compatibility model).
 - `README.md` — skeleton.
-- `settings/core/settings.json` — empty baseline.
-- `deploy-skills.sh`, `merge-settings.sh` — primitive stubs.
 - `migrations/` — empty directory.
+
+It stamps no script and no settings. The scripts the lifecycle calls, and when it calls each, are in [the adapters README, "Primitives the lifecycle calls"](../adapters/README.md#primitives-the-lifecycle-calls). It registers the adapter in `.pkit/manifest.yaml`.
 
 ### `new capability <name>`
 

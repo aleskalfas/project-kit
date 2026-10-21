@@ -27,9 +27,9 @@ TERM-adapter:
           - COR-028
           - COR-047
       revalidated:
-        at: 2026-10-20T01:37:01Z
+        at: 2026-10-21T15:45:07Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says pkit new adapter stamps package.yaml, README.md and migrations/, and where an adapter's scripts are documented. An adapter still carries the methodology into one harness, so the definition holds.
 TERM-agent-definition:
   name: agent definition
   noun-forms: [agent definitions]
@@ -947,9 +947,9 @@ TERM-skill:
           - COR-006
           - COR-020
       revalidated:
-        at: 2026-10-20T01:38:05Z
+        at: 2026-10-21T17:40:51Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says what the adapter stamp writes and keeps its pairing table without a status column. A skill is still a procedure an AI agent loads, paired with a stamp, so the definition holds.
 TERM-source-repository:
   name: source repository
   noun-forms: [source repositories]
@@ -980,9 +980,9 @@ TERM-stamp:
         record:
           - COR-005
       revalidated:
-        at: 2026-10-20T01:38:07Z
+        at: 2026-10-21T15:45:09Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says the adapter stamp writes package.yaml, README.md and migrations/, and that templates live in the CLI's code. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
