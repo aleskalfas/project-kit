@@ -14,8 +14,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-21T13:58:39Z
-      outcome: updated
+      at: 2026-10-21T18:38:49Z
+      outcome: unchanged
+      unchanged-because: COR-005 names a shipped adapter as the worked example of the scripts the lifecycle calls, and says pkit new adapter stamps none of them. This README lists and explains each script the adapter ships, so it holds.
 ---
 
 # Claude Code adapter
