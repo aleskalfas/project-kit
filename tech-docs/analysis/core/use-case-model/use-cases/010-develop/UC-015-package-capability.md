@@ -49,7 +49,7 @@ pkit:
 3. The system writes the capability's subtree, `.pkit/capabilities/<name>/`. It holds `package.yaml`, a `README.md`, and the empty folders `decisions/`, `skills/`, `agents/`, `scripts/`, `schemas/` and `migrations/` (COR-017).
 4. The package metadata gives `version: 0.1.0`, and a range on the backbone from the version the project records, such as `requires_backbone: ">=1.149.0,<2.0.0"`.
 5. The system prints `Stamped: .pkit/capabilities/<name>/`, and registers nothing.
-6. The author writes the discipline into the subtree, from the methodology's primitives. Its decision records come from `pkit new decision <name> <slug>`, and its agent definitions from `pkit new agent <name> <agent>`. Its skills, its schemas and its scripts sit in their folders (COR-017 and COR-018).
+6. The author writes the discipline into the subtree, from the methodology's primitives. Its decision records come from `pkit new decision <name> <slug>`, and its agent definitions come from `pkit new agent <name> <agent>`. Its skills, its schemas and its scripts sit in their folders (COR-017 and COR-018).
 7. The author writes the capability's description in `package.yaml` and in its README, and edits no file outside the subtree.
 
 **Variants:**

@@ -82,7 +82,7 @@ pkit:
 - **12a.** The script behind a state still fails as stamped, or cannot run. The system prints ``couldn't evaluate <kind> predicate '<command>'``. It refuses each move with `position is indeterminate — a detection predicate could not be evaluated; refusing to move (fail-closed)` (COR-033).
 - **12b.** The script behind a move's condition still fails as stamped. The system refuses that move with `gate refused:` and the script's reason, and allows the others (COR-033 P4).
 
-**Postconditions:** The capability's package metadata declares its roles and its connection points. Each of its processes has a definition, with a script behind each state and condition. `pkit validate` passes them. `pkit connections graph` shows what connects to each connection point, and a component that connects through a role's address names no capability.
+**Postconditions:** The capability's package metadata declares its roles and its connection points. Each of its processes has a definition, with a script behind each state and condition. `pkit validate` passes the roles, the connection points and the processes. `pkit connections graph` shows what connects to each connection point, and a component that connects through a role's address names no capability.
 
 **Minimal guarantees:**
 
