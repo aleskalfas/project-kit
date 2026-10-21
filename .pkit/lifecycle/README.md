@@ -35,9 +35,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-21T18:38:50Z
+      at: 2026-10-21T19:11:19Z
       outcome: unchanged
-      unchanged-because: The templates folder's README says the folder holds no templates, since the authoring commands keep theirs in the CLI's scaffolding code, and COR-027 says COR-005 stays accepted, partially superseded. This README says the scaffolds are stamped by the CLI's own code and cites COR-027 only for the end of the bundle pattern, so it holds.
+      unchanged-because: This change adds no package-metadata key and no lifecycle step. Discovery only leaves the answer folder out of the places, which the README does not describe.
 ---
 
 # Lifecycle
