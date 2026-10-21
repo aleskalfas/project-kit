@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "harness-support.schema.json",
+  "title": "Harness support",
+  "description": "Formal shape of an adapter's support declaration, `.pkit/adapters/<name>/harness-support.yaml` (COR-047 point 2): how far the adapter's harness meets each harness requirement the core declares in harness-requirements.yaml. `pkit harness report` resolves the answers for a project; `pkit validate` checks each declaration against this shape. harness-support.yaml beside this file is the documented empty shape. Companion per COR-018 / the .pkit/schemas/ area conventions.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "requirements"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "requirements": {
+      "type": "object",
+      "description": "One answer per core harness requirement the adapter answers, keyed by the requirement's id in harness-requirements.yaml. A requirement left out resolves indeterminate, never satisfied (COR-047 point 3).",
+      "patternProperties": {
+        "^[a-z][a-z0-9-]*$": {
+          "$ref": "#/$defs/answer"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "answer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "grade",
+        "harness_versions",
+        "evidence"
+      ],
+      "description": "The adapter's answer to one harness requirement (COR-047 point 2).",
+      "properties": {
+        "grade": {
+          "type": "string",
+          "enum": [
+            "supported",
+            "at-cost",
+            "not-achievable"
+          ],
+          "description": "How far the harness meets the requirement, in the vocabulary the adapters README owns: supported — the harness provides the behaviour, nothing more asked of the adopter; at-cost — achievable, at the cost `cost` names; not-achievable — not achievable on this harness at all, whatever its configuration."
+        },
+        "cost": {
+          "type": "string",
+          "minLength": 1,
+          "description": "For an at-cost answer, and only for one: what the adopter pays for the behaviour to hold — a configuration, a discipline, a platform."
+        },
+        "harness_versions": {
+          "description": "The harness versions the answer holds for. `unbounded`: every version, as the author asserts. [lowest, highest], both included: the versions the author tested it on. []: no version yet, so the answer covers none. Required, so no answer widens to every version by an edit that drops it: only an author who has tested the claim widens it, never a tool (COR-047 point 2).",
+          "oneOf": [
+            {
+              "const": "unbounded"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^\\d+\\.\\d+\\.\\d+$"
+              },
+              "anyOf": [
+                {
+                  "maxItems": 0
+                },
+                {
+                  "minItems": 2,
+                  "maxItems": 2
+                }
+              ]
+            }
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "minLength": 1,
+          "description": "How the adapter's author knows the answer: a measurement, a test, the harness's documentation."
+        }
+      },
+      "if": {
+        "properties": {
+          "grade": {
+            "const": "at-cost"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "cost"
+        ]
+      },
+      "else": {
+        "not": {
+          "required": [
+            "cost"
+          ]
+        }
+      }
+    }
+  }
+}

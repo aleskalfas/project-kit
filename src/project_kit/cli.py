@@ -860,6 +860,70 @@ def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Bas
     return found
 
 
+@main.group("harness")
+def harness() -> None:
+    """The harness that hosts the methodology (COR-047): what the methodology requires
+    of it, and how far the project's adapter says its harness meets that.
+
+    Reference: `.pkit/adapters/README.md`, "Harness requirements".
+    """
+
+
+#: `pkit harness report`'s exit when the requirements or a declaration cannot be
+#: read: apart from 1, a report with something unmet, and 2, click's usage error.
+HARNESS_UNREADABLE_EXIT = 3
+
+
+@harness.command("report")
+@click.option(
+    "--adapter",
+    "adapters",
+    metavar="NAME",
+    multiple=True,
+    help="Report for this adapter, instead of each one the manifest registers. Repeatable.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+@click.pass_context
+def harness_report_command(ctx: click.Context, adapters: tuple[str, ...], as_json: bool) -> None:
+    """Report the harness requirements the project's harness leaves unmet (COR-047).
+
+    For each adapter the backbone manifest registers, every requirement the core
+    declares (`.pkit/schemas/harness-requirements.yaml`) resolves to one of
+    `satisfied`, `unsatisfied` or `indeterminate`, with the grade the adapter's
+    support declaration (`.pkit/adapters/<name>/harness-support.yaml`) gives and
+    whether the pass derived it (`computed`). It reads files only: it never starts
+    the harness, needs no network and writes nothing. So it confirms no answer:
+    no answer, an answer for no version or for versions it cannot check, and a
+    `supported` or `at-cost` answer are `indeterminate`, never `satisfied`; a
+    `not-achievable` answer is `unsatisfied`. Exit 0 when nothing is unmet, 1
+    when anything is, 3 when the requirements or a declaration cannot be read or
+    fail their schema.
+    """
+    from project_kit import harness_support
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    for name in adapters:
+        if not harness_support.is_adapter(target_root, name):
+            raise click.BadParameter(
+                f"no adapter {name!r} in .pkit/adapters/.", param_hint="--adapter"
+            )
+    try:
+        known = harness_support.requirements(target_root)
+        reports = harness_support.report(target_root, list(adapters) if adapters else None)
+    except harness_support.SupportError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        ctx.exit(HARNESS_UNREADABLE_EXIT)
+    if as_json:
+        click.echo(harness_support.render_json(reports, known), nl=False)
+    else:
+        click.echo(harness_support.render_human(reports, known), nl=False)
+    ctx.exit(1 if harness_support.unmet_count(reports, known) else 0)
+
+
 @main.group("pull-request")
 def pull_request() -> None:
     """Landing a pull request on the hosting service — the one merge mechanic.
