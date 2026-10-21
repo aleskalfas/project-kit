@@ -41,7 +41,7 @@ So ask: *what would make this source return nothing even though work is waiting,
 
 This is the **resolve** seam: given one upstream subject, which subject on your side corresponds to it — or none? Settle what the correspondence actually *is* in the author's terms ("the unit whose reference field carries the document's id"). Several answers are fine — existence of at least one satisfies the hand-off — and several upstream subjects legitimately resolving to the same downstream is fine too.
 
-Both seams are predicates, so their logic is teeth-work, not shape-work. Here you settle what each *must answer*, and the stamp scaffolds a fail-closed stub for each new one; implementing them is the `process-author` agent's territory once it ships, and until then a hand-authored predicate against the predicate-runner contract in `.pkit/process/README.md`.
+Both seams are predicates, so their logic is teeth-work, not shape-work. Here you settle what each *must answer*, and the stamp scaffolds a fail-closed stub for each new one; implementing them is the `process-author` agent's territory where the project granted it the definition's paths, and otherwise a hand-authored predicate against the predicate-runner contract in `.pkit/process/README.md`.
 
 ## Stamp it
 

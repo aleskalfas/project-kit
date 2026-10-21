@@ -65,7 +65,7 @@ The command writes the definition, one fail-closed stub per declared evaluable, 
 
 Say plainly what now exists and what does not: the shape is declared and the process is addressable, but **every predicate is an unimplemented stub, so the process reads as entirely unreadable until they are written**. That is deliberate, not a defect — a stub that reported "true" would invent a position the process cannot actually detect.
 
-The stub list is the next phase's worklist, in this order: detection predicates first (nothing else can be trusted until a position can be read), then gates, entry guards, wait conditions, and invariant checks. This is the teeth half — destined for the `process-author` agent, which has not shipped; until it does, implement each stub against the predicate-runner contract in `.pkit/process/README.md`, deleting each stub marker as you go.
+The stub list is the next phase's worklist, in this order: detection predicates first (nothing else can be trusted until a position can be read), then gates, entry guards, wait conditions, and invariant checks. This is the teeth half, the `process-author` agent's work: it implements each stub against the predicate-runner contract in `.pkit/process/README.md` and deletes each stub marker as it goes. It writes only the paths the project granted it, as the dispatcher (`process.md`) says; where the new definition is not among its paths, implement each stub by hand against the same contract, deleting each stub marker as you go.
 
 ## Wrap up
 
