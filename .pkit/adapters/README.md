@@ -121,7 +121,7 @@ An adapter that declares nothing owes nothing to exist: **silence resolves indet
 | `at-cost` | The harness can provide it, at the cost the answer names. |
 | `not-achievable` | The harness cannot provide it at all, whatever its configuration. |
 
-**What the report says.** `pkit harness report` resolves every requirement, for each adapter the backbone manifest registers, to `satisfied`, `unsatisfied` or `indeterminate`. Each result carries the adapter's grade, and `computed` where the pass derived the result from inputs it read in full (COR-047 points 4 and 5). The pass reads files only. It starts no harness and reads no configuration, environment or version of one, so it reaches no requirement's observation point. Each answer resolves by the first of these that applies:
+**What the report says.** `pkit harness report` resolves every requirement, for each adapter the backbone manifest registers, to `satisfied`, `unsatisfied` or `indeterminate`. Each result carries the adapter's grade where its answer covers some version, and `computed` where the pass derived the result from inputs it read in full (COR-047 points 4 and 5). The pass reads files only. It starts no harness and reads no configuration, environment or version of one, so it reaches no requirement's observation point. Each answer resolves by the first of these that applies:
 
 1. No answer, or an answer for no version (`[]`): `indeterminate`, with no grade, since nothing covers the harness.
 2. An answer bounded to tested versions: `indeterminate`, since the pass does not read the harness's version.
