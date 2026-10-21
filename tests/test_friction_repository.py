@@ -1397,6 +1397,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
     assert sorted(doc) == [
+        "answers",
         "artefacts",
         "check",
         "counts",
@@ -1432,6 +1433,12 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "unanchored": [],
         "uncovered_surface": [],
     }
+    # The answer folder, the files in it and those a prune would remove (COR-062 point 8).
+    assert doc["answers"] == {
+        "folder": ".pkit/project/friction/answers",
+        "files": 0,
+        "prunable": [],
+    }
     (finding,) = doc["findings"]
     assert finding == {
         "artefact": "guide",
@@ -1448,6 +1455,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
     }
     (report,) = doc["artefacts"]
     assert sorted(report) == [
+        "answers",
         "artefact",
         "cut",
         "deferral_points",
@@ -1464,6 +1472,23 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "date",
     ]
     assert report["revalidation_points"] == [report["revalidation_point"]]
+    # Its live answers, read from its block, each with the points it keeps (COR-062).
+    assert report["answers"] == {
+        "home": "block",
+        "folder": ".pkit/project/friction/answers",
+        "revalidations": [
+            {
+                "file": None,
+                "at": T1,
+                "outcome": "unchanged",
+                "unchanged_because": "the CLI surface is as described",
+                "points": [report["revalidation_point"]],
+            }
+        ],
+        "deferrals": [],
+        "revisits": [],
+        "answered_apart": [],
+    }
 
 
 def test_output_is_deterministic(timeline: Timeline) -> None:

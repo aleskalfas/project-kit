@@ -150,7 +150,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from project_kit import cli_render
+from project_kit import answer_files, cli_render
+from project_kit.answer_files import AnswerHistory, AnswerPoints, Answers, StateAnswers
 from project_kit.artefact_parts import part_standing
 from project_kit.friction_check import (
     ExclusionChange,
@@ -253,6 +254,9 @@ class RepositoryFindingKind(Enum):
     SHARED_ID = "shared-id"
     UNREACHABLE = "unreachable"
     UNREADABLE = "unreadable"
+    # Two live revalidations of one artefact, neither of which read the other: debt, never
+    # stale and never failed (COR-062 point 7).
+    ANSWERED_APART = "answered-apart"
 
 
 #: The findings that leave an anchor unresolved: whether what it denotes changed cannot
@@ -291,6 +295,9 @@ class RepositoryFinding:
     location: str | None = None  # `path`, or `path#id` for a collection entry
     anchor: Anchor | None = None
     origin: Commit | None = None
+    # A deferral's reason, for the debt listing; the files made apart, for answered apart.
+    reason: str | None = field(default=None, compare=False)
+    files: tuple[str, ...] = field(default=(), compare=False)
 
     def as_json(self) -> dict[str, Any]:
         return {
@@ -326,11 +333,15 @@ class ArtefactReport:
     deferral_points: tuple[tuple[Anchor, Commit | None], ...]  # in written order
     cut: bool = False
     revalidation_points: tuple[Commit, ...] = ()
+    # Its live answers, where they were read from and the points each keeps (COR-062
+    # points 1 and 6): what a component reads `at` through, never the file.
+    answers: Mapping[str, Any] | None = field(default=None, compare=False)
 
     def as_json(self) -> dict[str, Any]:
         return {
             "artefact": self.artefact,
             "location": self.location,
+            "answers": self.answers,
             "cut": self.cut,
             "state": self.state.value,
             "revalidation_point": (
@@ -387,6 +398,10 @@ class RepositoryCheck:
     excluded: int  # artefacts under an excluded path, left out of the measures (point 7)
     surface: int  # paths of the declared surface at HEAD, excluded ones left out
     uncovered: tuple[str, ...]  # those of them no artefact anchors to (point 8)
+    # The answer files HEAD holds, and those in which no answer is live: what a prune
+    # would remove (COR-062 point 8; ADR-068 point 4).
+    answer_files: int = 0
+    prunable: tuple[str, ...] = ()
 
     def count(self, kind: RepositoryFindingKind) -> int:
         return sum(1 for f in self.findings if f.kind is kind)
@@ -528,6 +543,15 @@ class _Judge:
         self.walker = walker
         self.blobs = blobs
         self.trees = TreeReader(blobs)
+        self.across = AnswerHistory(history, walker, blobs)
+        """The answer files through the history, beside each artefact's block (COR-062
+        point 6): the one reader of answers (`answer_files`)."""
+        self.answers: StateAnswers = (
+            self.across.head(history.commits[0].sha) if (history.commits) else self.across.state({})
+        )
+        """HEAD's answer files, judged (COR-062 points 4, 5 and 7)."""
+        self._answers: dict[str, Answers] = {}
+        self._points: dict[str, AnswerPoints] = {}
         self.kinds = AnchorKinds(head.root, registry, head.files, HEAD_STATE)
         """The anchor kinds, as HEAD's registrations declare them, and each registered
         kind's anchors as their resolvers answered — once per anchor value for the run
@@ -537,7 +561,11 @@ class _Judge:
         self.unreadable: dict[str, str] = {}
         """The revalidation points whose `friction.exclude` does not read, and why:
         each read under HEAD's instead, and reported (`unreadable_findings`)."""
-        self._tracked = frozenset(rel for rel in head.files if not head.excluded(rel))
+        self._tracked = frozenset(
+            rel
+            for rel in head.files
+            if not head.excluded(rel) and not answer_files.is_answer_file(rel)
+        )
         self._head_sha = history.commits[0].sha if history.commits else ""
         self._head_config = blobs.read(self._head_sha, _CONFIG) if self._head_sha else None
         self._by_config: dict[bytes | None, FrictionSettings] = {}
@@ -559,6 +587,26 @@ class _Judge:
         """By merge and answering state, the files a merge took whole from one side that
         `line` read as changes measured from that state: git's combined diff lists none of
         them, and `explain` names them behind the merge (`_touched_by`)."""
+
+    # --- an artefact's answers --------------------------------------------------------
+
+    def answers_of(self, artefact: Artefact) -> Answers:
+        """The artefact's answers at HEAD, from its block or its answer files
+        (`StateAnswers.answers`), read once."""
+        found = self._answers.get(artefact.location)
+        if found is None:
+            found = self.answers.answers(artefact, self.head.discovery)
+            self._answers[artefact.location] = found
+        return found
+
+    def points(self, artefact: Artefact) -> AnswerPoints:
+        """The points of the artefact's answers at HEAD, found across homes
+        (`AnswerHistory.points`), walked once."""
+        found = self._points.get(artefact.location)
+        if found is None:
+            found = self.across.points(artefact, self.answers_of(artefact))
+            self._points[artefact.location] = found
+        return found
 
     # --- a state under its own exclusions ------------------------------------------
 
@@ -867,9 +915,7 @@ class _Judge:
                 )
             if not resolution.paths:
                 return RepositoryFinding(
-                    RepositoryFindingKind.DEAD_ANCHOR,
-                    "its resolver names no file for it",
-                    anchor=anchor,
+                    RepositoryFindingKind.DEAD_ANCHOR, resolution.dead_reason, anchor=anchor
                 )
             return None
         if self.head.resolves(anchor):
@@ -1045,10 +1091,7 @@ class _Judge:
         """The states an anchor is measured from (COR-050 points 3 and 4): every
         revalidation point, and the anchor's deferral point where no revalidation
         point reaches it — one kept through a revalidation answers nothing."""
-        deferral = dict(points.deferrals).get(anchor)
-        if deferral is None or deferral in self.history.reached(points.revalidations):
-            return points.revalidations
-        return (*points.revalidations, deferral)
+        return points.answering(self.history, anchor)
 
     def _name_at(self, state: int, rel: str, names: Sequence[str]) -> str:
         """The name the file now at `rel` has at the state at `state`: the first of its
@@ -1561,7 +1604,7 @@ def _check_head(
     findings: list[RepositoryFinding] = []
     for index in truth_chain_order(discovery, head.record_path):
         artefact = discovery.artefacts[index]
-        if artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals):
+        if _judged(artefact, judge):
             report, found = _check_artefact(artefact, judge)
             if report is not None:
                 reports.append(report)
@@ -1594,7 +1637,17 @@ def _check_head(
         excluded=sum(1 for a in discovery.artefacts if a.excluded),
         surface=surface,
         uncovered=uncovered,
+        answer_files=len(judge.answers.files),
+        prunable=() if judge.answers.dormant else judge.answers.prunable(discovery),
     )
+
+
+def _judged(artefact: Artefact, judge: _Judge) -> bool:
+    """Whether the check judges the artefact: it carries a `friction` block, and anchors
+    or a live deferral (COR-050 point 4, COR-062 point 5)."""
+    if not artefact.has_friction_block:
+        return False
+    return bool(anchors_of(artefact)) or bool(judge.answers_of(artefact).deferrals)
 
 
 def _unanchored(discovery: Discovery) -> tuple[tuple[str, ...], tuple[AcceptedUnanchored, ...]]:
@@ -1654,9 +1707,12 @@ def _check_artefact(
         message: str,
         anchor: Anchor | None = None,
         origin: int | None = None,
+        reason: str | None = None,
     ) -> RepositoryFinding:
         commit = None if origin is None else judge.history.commits[origin]
-        return RepositoryFinding(kind, message, artefact.id, artefact.location, anchor, commit)
+        return RepositoryFinding(
+            kind, message, artefact.id, artefact.location, anchor, commit, reason=reason
+        )
 
     stale: list[RepositoryFinding] = []
     deferred: list[RepositoryFinding] = []
@@ -1678,8 +1734,11 @@ def _check_artefact(
     if artefact.excluded:
         return None, problems + broad
 
-    points = judge.walker.points(artefact)
+    answers = judge.answers_of(artefact)
+    found_points = judge.points(artefact)
+    points = found_points.points
     commits = judge.history.commits
+    described = _answers_json(answers, found_points, commits)
     deferral_points = dict(points.deferrals)
     if points.unreachable is not None or points.revalidation is None:
         what = points.unreachable or "its revalidation point"
@@ -1694,6 +1753,7 @@ def _check_artefact(
             None if points.revalidation is None else commits[points.revalidation],
             tuple((a, None if p is None else commits[p]) for a, p in points.deferrals),
             revalidation_points=tuple(commits[p] for p in points.revalidations),
+            answers=described,
         )
         unreachable = [finding(RepositoryFindingKind.UNREACHABLE, message)]
         return report, unreachable + problems + broad
@@ -1759,16 +1819,34 @@ def _check_artefact(
             )
         message += " — revalidate the artefact, or defer the anchor again"
         stale.append(finding(RepositoryFindingKind.STALE, message, anchor, change.origin))
-    for anchor, deferral_point in points.deferrals:
+    for anchor, deferral_point, reason in _deferrals(artefact, answers, found_points):
         if deferral_point is None:
             continue
         since = commits[deferral_point]
-        reason = deferral_reason(artefact, anchor)
         message = (
             f"deferred{' — ' + reason if reason else ''}; since {since.short} "
             f'"{since.subject}" ({since.author}, {since.day})'
         )
-        deferred.append(finding(RepositoryFindingKind.DEFERRED, message, anchor, deferral_point))
+        deferred.append(
+            finding(RepositoryFindingKind.DEFERRED, message, anchor, deferral_point, reason)
+        )
+    apart: list[RepositoryFinding] = []
+    for first, second in answers.apart:
+        origin = judge.across.first_holding(first, second)
+        message = (
+            f"answered apart: the revalidations in {first} and {second} each read neither, so "
+            f"nobody has judged their combined state"
+        )
+        if origin is not None:
+            by = commits[origin]
+            message += f'; both held since {by.short} "{by.subject}" ({by.author}, {by.day})'
+        message += " — the next revalidation that reads both judges it"
+        apart.append(
+            replace(
+                finding(RepositoryFindingKind.ANSWERED_APART, message, origin=origin),
+                files=(first, second),
+            )
+        )
 
     if any(found.kind in UNRESOLVED_KINDS for found in problems):
         state = ArtefactState.UNRESOLVED
@@ -1786,8 +1864,40 @@ def _check_artefact(
         tuple((a, None if p is None else commits[p]) for a, p in points.deferrals),
         cut=points.cut,
         revalidation_points=tuple(commits[p] for p in points.revalidations),
+        answers=described,
     )
-    return report, stale + deferred + left_out + problems + broad
+    return report, stale + deferred + apart + left_out + problems + broad
+
+
+def _deferrals(
+    artefact: Artefact, answers: Answers, found: AnswerPoints
+) -> list[tuple[Anchor, int | None, str]]:
+    """Each live deferral with the point its debt is dated from and its reason: read from
+    the block, each entry's point as the walk found it, the reason as the block gives
+    it; read from answer files, the oldest point it keeps (COR-062 point 6)."""
+    if not answers.from_files:
+        return [
+            (anchor, point, deferral_reason(artefact, anchor))
+            for anchor, point in found.points.deferrals
+        ]
+    return [
+        (deferral.anchor, max(points) if points else None, deferral.reason or "")
+        for deferral, points in zip(answers.deferrals, found.deferrals, strict=True)
+    ]
+
+
+def _answers_json(
+    answers: Answers, found: AnswerPoints, commits: Sequence[Commit]
+) -> dict[str, Any]:
+    """The artefact's live answers as the check's machine-readable output gives them, each
+    with the points it keeps, and the answer folder's path (COR-062 Implications)."""
+    document = answers.as_json()
+    document["folder"] = answer_files.FOLDER
+    for item, points in zip(document["revalidations"], found.revalidations, strict=False):
+        item["points"] = [commits[p].as_json() for p in points]
+    for item, points in zip(document["deferrals"], found.deferrals, strict=False):
+        item["points"] = [commits[p].as_json() for p in points]
+    return document
 
 
 def _left_out_finding(
@@ -1976,6 +2086,9 @@ class ArtefactCheck:
     findings: tuple[TracedFinding, ...]
     files: Mapping[Anchor, AnchorFiles] = field(default_factory=dict[Anchor, AnchorFiles])
     diffs: Mapping[Anchor, tuple[str, ...]] = field(default_factory=dict[Anchor, tuple[str, ...]])
+    # Its answers at HEAD, read from its block or its answer files (`answer_files`); `None`
+    # where it carries no `friction` block, or neither anchors nor answers to read.
+    answers: Answers | None = None
 
 
 def run_artefact_check(
@@ -2008,7 +2121,11 @@ def run_artefact_check(
         return None
     artefact = select(discovery)
     head = HeadState(head_sha, uncommitted_paths(target_root))
-    if not (artefact.has_friction_block and (anchors_of(artefact) or artefact.deferrals)):
+    unanswered = not anchors_of(artefact) and (
+        answer_files.block_holds_answers(artefact)
+        or not any(answer_files.is_answer_file(rel) for rel in tree.files())
+    )
+    if not artefact.has_friction_block or (unanswered and not artefact.deferrals):
         return ArtefactCheck(head, bool(shallow_commits(target_root)), artefact, None, ())
     registry = registered_anchor_kinds(target_root, tree) if registry is None else registry
     history = read_history(target_root, head_sha)
@@ -2016,6 +2133,9 @@ def run_artefact_check(
     try:
         side = Side(target_root, tree, discovery)
         judge = _Judge(side, tree, history, Walker(history, blobs), blobs, registry)
+        answers = judge.answers_of(artefact)
+        if not _judged(artefact, judge):
+            return ArtefactCheck(head, bool(history.shallow), artefact, None, (), answers=answers)
         report, findings = _check_artefact(artefact, judge)
         traced = _traced(artefact, judge, findings)
         point = None if report is None else _index_of(history, report)
@@ -2024,7 +2144,9 @@ def run_artefact_check(
         diffs = _part_diffs(judge, stale, point)
     finally:
         blobs.close()
-    return ArtefactCheck(head, bool(history.shallow), artefact, report, traced, files, diffs)
+    return ArtefactCheck(
+        head, bool(history.shallow), artefact, report, traced, files, diffs, answers
+    )
 
 
 def _index_of(history: History, report: ArtefactReport) -> int | None:
@@ -2108,7 +2230,7 @@ def _traced(
     if artefact.excluded:  # only its declarations were checked: nothing lies behind them
         return tuple(TracedFinding(f, ()) for f in findings)
     history = judge.history
-    points = judge.walker.points(artefact)  # the check's walk again: its blobs are cached
+    points = judge.points(artefact).points  # the check's own walk, kept
     if points.unreachable is not None or points.revalidation is None:
         return tuple(TracedFinding(f, ()) for f in findings)
     point, own = points.revalidation, points.own_paths
@@ -2351,6 +2473,11 @@ def render_json(result: RepositoryCheck) -> str:
             "accepted_unanchored": [entry.as_json() for entry in result.accepted_unanchored],
             "uncovered_surface": list(result.uncovered),
         },
+        "answers": {
+            "folder": answer_files.FOLDER,
+            "files": result.answer_files,
+            "prunable": list(result.prunable),
+        },
     }
     return json.dumps(document, indent=2, sort_keys=True) + "\n"
 
@@ -2378,6 +2505,10 @@ _LEGEND: dict[RepositoryFindingKind, str] = {
         "an anchor on an id two artefacts share, read as naming the first: reported only"
     ),
     RepositoryFindingKind.UNREACHABLE: "a point beyond this clone's history",
+    RepositoryFindingKind.ANSWERED_APART: (
+        "two revalidations made apart, neither reading the other: debt until the next "
+        "revalidation reads both, never stale"
+    ),
     RepositoryFindingKind.UNREADABLE: (
         "front matter, or a revalidation point's `friction.exclude`, the check cannot read"
     ),
@@ -2526,6 +2657,11 @@ def _measure_lines(result: RepositoryCheck) -> list[str]:
         surface = "no surface declared"
     lines.append(f"  Uncovered surface: {surface}")
     lines.extend(f"    {rel}" for rel in result.uncovered)
+    if result.answer_files:
+        lines.append(
+            f"  Answer files: {result.answer_files} in {answer_files.FOLDER}/, "
+            f"{len(result.prunable)} with no live answer, which a prune would remove"
+        )
     return lines
 
 
@@ -2540,6 +2676,7 @@ def _summary(result: RepositoryCheck) -> str:
         (RepositoryFindingKind.OVER_BROAD, "over-broad anchor", "over-broad anchors"),
         (RepositoryFindingKind.SHARED_ID, "anchor on a shared id", "anchors on a shared id"),
         (RepositoryFindingKind.UNREACHABLE, "unreachable", "unreachable"),
+        (RepositoryFindingKind.ANSWERED_APART, "answered apart", "answered apart"),
     ]
     return ", ".join(
         counted(result.count(kind), one, many) for kind, one, many in parts if result.count(kind)

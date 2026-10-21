@@ -62,9 +62,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-21T14:25:40Z
+        at: 2026-10-21T18:17:42Z
         outcome: unchanged
-        unchanged-because: COR-062 moves only answers out of the artefact. Anchors stay in its block, of the same kinds, and a dead anchor is still an error, so this definition of an anchor holds.
+        unchanged-because: This change makes no anchor stand on an answer file and calls one that matches only answer files dead, as COR-062 point 2 says. An anchor's kinds, and what makes one dead, are as the term defines them.
 TERM-answer:
   name: answer
   status: active
@@ -118,9 +118,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-21T14:25:42Z
+        at: 2026-10-21T18:17:43Z
         outcome: unchanged
-        unchanged-because: COR-062 leaves an artefact a document or a collection entry in a place, carrying its own anchors. Only its answers move to answer files, which the definition does not mention, so it holds.
+        unchanged-because: This change keeps every file in the answer folder out of the places, so no answer file is an artefact. An artefact is still a document or a collection entry in a place, as defined.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -137,9 +137,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-20T01:37:08Z
+        at: 2026-10-21T18:17:44Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "This change adds no type and resolves none differently: discovery only leaves the answer folder out of the places, so the term's definition holds."
 TERM-backbone:
   name: backbone
   status: active
@@ -238,9 +238,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-21T14:25:44Z
+        at: 2026-10-21T18:17:46Z
         outcome: unchanged
-        unchanged-because: COR-062 has the change check judge what each answer read against the change's own head, and adds findings. It still compares a head with its base, finds friction and dead anchors, and lists the answers the diff wrote.
+        unchanged-because: This change only keeps answer files out of what a path anchor stands on in the change check. It still compares a head with its base and reads a change's answers from the blocks, as the term says.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -368,6 +368,14 @@ TERM-debt:
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
         deferred:
           - anchor:
+              kind: path
+              value: src/project_kit/friction_report.py
+            reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_repository.py
+            reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
+          - anchor:
               kind: record
               value: COR-050#9
             reason: "COR-050 point 9 gains debt answered apart, which this term's definition and section do not name. #1779 builds it and rewrites them."
@@ -480,6 +488,14 @@ TERM-friction:
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
         deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_check.py
+            reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_repository.py
+            reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
           - anchor:
               kind: record
               value: COR-050#1
@@ -652,9 +668,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-21T14:25:50Z
+        at: 2026-10-21T18:18:08Z
         outcome: unchanged
-        unchanged-because: COR-062 keeps the answer folder out of every place, and a place still says where the backbone looks for anchored documents, so the definition holds.
+        unchanged-because: This change keeps every file in the answer folder out of the places. A place is still a declared path or glob within which the backbone looks for documents that carry anchors, as defined.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -1147,9 +1163,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-21T14:25:57Z
+        at: 2026-10-21T18:18:06Z
         outcome: unchanged
-        unchanged-because: COR-062 adds debt answered apart to what the whole-repository check reports, and it still never fails. It still compares every artefact at the latest commit with its revalidation point.
+        unchanged-because: This change makes the whole-repository check read answer files and also report debt answered apart. It still compares every artefact at the latest commit with its revalidation point and never fails, which is all the definition says.
 ---
 
 # Glossary

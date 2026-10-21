@@ -200,6 +200,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple, Self
 
 from project_kit import cli_render, default_branch, refs
+from project_kit.answer_files import is_answer_file
 from project_kit.artefact_parts import AnchoredPart, PartState, anchored_part, whole_target
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.friction_discovery import (
@@ -695,16 +696,18 @@ class Listing:
         return found
 
     def stands_on(self, pattern: str) -> Callable[[str], bool]:
-        """Whether a path anchor's `pattern` stands on a file: it matches it, and this
-        state's `friction.exclude` does not leave it out (COR-050 points 2 and 7).
+        """Whether a path anchor's `pattern` stands on a file: it matches it, this
+        state's `friction.exclude` does not leave it out (COR-050 points 2 and 7), and
+        it is no answer file (COR-062 point 2).
 
         The one rule both checks match a path pattern by: whether an anchor
         resolves, whether a changed path changed it, what it matched in
         history, how broad it is, and which paths of the declared surface
-        it anchors — the surface's own patterns are read by it too (point 8).
+        it anchors — the surface's own patterns are read by it too (point 8), so
+        the surface leaves the answer files out as well.
         """
         match = pattern_matcher(pattern)
-        return lambda rel: match(rel) and not self.excluded(rel)
+        return lambda rel: match(rel) and not self.excluded(rel) and not is_answer_file(rel)
 
     def matching(self, pattern: str, files: Iterable[str] | None = None) -> tuple[str, ...]:
         """The files a path anchor's `pattern` stands on (`stands_on`), sorted.
@@ -777,7 +780,13 @@ class Side(Listing):
         """
         if anchor.kind == "path":
             excluded = len(self.left_out(anchor.value))
-            return f"matches only excluded files ({excluded})" if excluded else "matches no file"
+            if excluded:
+                return f"matches only excluded files ({excluded})"
+            match = pattern_matcher(anchor.value)
+            answers = sum(1 for rel in self.files if is_answer_file(rel) and match(rel))
+            if answers:
+                return f"matches only answer files ({answers}), on which no anchor stands"
+            return "matches no file"
         if anchor.kind == "record":
             rel = self.record_path(anchor.value)
             found = None if rel is None else self.point_of(anchor, rel)
@@ -2224,11 +2233,11 @@ def _anchor_problem(
         if added:
             return (
                 FindingKind.DEAD_ANCHOR,
-                "its resolver names no file for it; the anchor was added in this diff",
+                f"{resolution.dead_reason}; the anchor was added in this diff",
             )
         return (
             FindingKind.DEAD_UNATTRIBUTED,
-            "its resolver names no file for it; whether this diff removed what it denoted "
+            f"{resolution.dead_reason}; whether this diff removed what it denoted "
             "cannot be told — the whole-repository check reports it as dead",
         )
     if head.resolves(anchor):
