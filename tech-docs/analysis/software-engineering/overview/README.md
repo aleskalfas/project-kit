@@ -1,6 +1,6 @@
 # Overview of the analysis of software-engineering
 
-<!-- pkit:overview reads=2 fingerprint=sha256:bbf99c84acaf2d12f0ce1cf5bf785ed7400483b3d23688b7117b7e3c4f805ece -->
+<!-- pkit:overview reads=3 fingerprint=sha256:44b50030f47cb330b4f611dd21bb33773b97276f51bcd0bc4b4b49342db8828f -->
 
 What the analysis of software-engineering holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
