@@ -58,8 +58,9 @@ pkit:
         - demo-recording:DEC-001
         - demo-recording:DEC-002#3
     revalidated:
-      at: 2026-10-20T01:36:55Z
-      outcome: updated
+      at: 2026-10-21T12:12:21Z
+      outcome: unchanged
+      unchanged-because: DEC-001 points 5 and 9 gain the box a step the system does not carry out takes, in a revalidation and in onboarding. Who the developer is and what the developer needs are untouched.
 ---
 
 # ACT-developer — Developer
