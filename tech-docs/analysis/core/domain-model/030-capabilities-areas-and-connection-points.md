@@ -290,7 +290,7 @@ A process is the course a capability declares for one kind of subject of its dis
 - A capability defines it, and the backbone's engine runs it (COR-033 P2).
 - A [connection point](../glossary.md#term-connection-point--connection-point) of the kind `process` offers it for other [components](../glossary.md#term-component--component) to depend on (COR-053 [point](../glossary.md#term-point--point) 2).
 - Its definition may declare that one of its states waits on another process (COR-044 point 3).
-- The `process` [skill](../glossary.md#term-skill--skill) writes its shape, and an AI agent working by the `process-author` [agent definition](../glossary.md#term-agent-definition--agent-definition) writes the scripts behind its states and conditions (COR-044 point 1).
+- The `process` [skill](../glossary.md#term-skill--skill) writes its shape (COR-044 point 1). An AI agent working by the `process-author` [agent definition](../glossary.md#term-agent-definition--agent-definition) writes the scripts behind the process's states and conditions.
 
 **States:** None.
 

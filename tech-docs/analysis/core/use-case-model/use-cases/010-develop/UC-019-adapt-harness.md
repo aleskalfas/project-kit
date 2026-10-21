@@ -61,11 +61,11 @@ pkit:
 4. The system records the adapter in the manifest as `kit-shipped`, and prints `Stamped: .pkit/adapters/<name>/`.
 5. The author writes the scripts that the system runs, each found by its name and each optional: `merge-settings.sh`, `merge-claude-md.sh`, `deploy-skills.sh` and `deploy-agents.sh`. A fifth, `undeploy-capability.sh`, takes back what the adapter deployed for one capability (COR-005 and COR-013).
 6. The author writes the adapter's `permission-enforcement.yaml`. For each kind of permission, such as `command-deny` or `network-egress`, it says where the harness enforces it. It also says whether the harness does so `native`, at `runtime` or `none` (COR-028 point 3).
-7. The author writes the adapter's support declaration, `harness-support.yaml`. For each need that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete`, it gives a grade, the harness versions the answer holds for and the evidence (COR-047 point 2). The adapter's README states the same answers in prose.
+7. The author writes the adapter's support declaration, `harness-support.yaml`. It answers each need that `.pkit/schemas/harness-requirements.yaml` lists, such as `delegated-result-complete` (COR-047 point 2). Each answer gives a grade, its harness versions and its evidence. The adapter's README states the same answers in prose.
 8. The author runs `pkit sync` in the source repository.
 9. The system runs the scripts of every adapter in the order of the adapters' names (UC-014). So the new adapter's scripts deploy the skills and agent definitions where the new harness reads them.
 10. The author runs `pkit validate`. Its `packages` member checks the adapter's package metadata: its name, its version and its range. Its `schemas` member checks the support declaration against its schema.
-11. The author runs `pkit harness report --adapter <name>`. The system reads the declaration and no harness, so it reports a need `unsatisfied` where the answer grades it `not-achievable` for every version, and `indeterminate` otherwise (COR-047 points 3 to 5). It exits with status `1` while any need is not `satisfied`.
+11. The author runs `pkit harness report --adapter <name>`. The system reads only the declaration, never the harness (COR-047 points 3 to 5). So it reports a need `unsatisfied` where the answer grades it `not-achievable` for every version, and `indeterminate` otherwise. It exits with status `1` while any need is not `satisfied`.
 
 **Variants:**
 
