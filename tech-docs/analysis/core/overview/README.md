@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=3 fingerprint=sha256:3244945871ffd7c7901fdad4ff752d318946f6ab425a4f87a778a88b6dc85a75 -->
+<!-- pkit:overview reads=3 fingerprint=sha256:43f232a90db01ec47178dc7fc737249e3f808978d3491196482fec12d9e150a8 -->
 
 What the analysis of core holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
@@ -40,6 +40,11 @@ The use cases it takes part in:
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
 - [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
 - [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
 
 ### [ACT-ci-pipeline — CI pipeline](../use-case-model/actors/ACT-ci-pipeline.md)
 
@@ -61,6 +66,11 @@ The use cases it is the main actor of:
 
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
 - [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-018 — Know my capability is ready to share](../use-case-model/use-cases/010-develop/UC-018-check-shareable.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
 
 ### [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md)
 
@@ -71,6 +81,7 @@ The use cases it is the main actor of:
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
 
 ### [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md)
 
@@ -85,6 +96,7 @@ The use cases it is the main actor of:
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
 - [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
 
 The use cases it takes part in:
 
@@ -142,9 +154,21 @@ flowchart LR
 
 ## Areas
 
+### 010-develop
+
+The methodology exists and can be extended, in its own source repository: capabilities, adapters, and a project's own skills and agent definitions.
+
+- [UC-014 — Develop the methodology in its source repository](../use-case-model/use-cases/010-develop/UC-014-develop-methodology.md)
+- [UC-015 — Package a recurring discipline as a capability](../use-case-model/use-cases/010-develop/UC-015-package-capability.md)
+- [UC-016 — Keep a capability I wrote in my own repository](../use-case-model/use-cases/010-develop/UC-016-keep-capability.md)
+- [UC-017 — Give my capability roles, data points and processes others connect to](../use-case-model/use-cases/010-develop/UC-017-connect-capability.md)
+- [UC-018 — Know my capability is ready to share](../use-case-model/use-cases/010-develop/UC-018-check-shareable.md)
+- [UC-019 — Adapt the system to another harness](../use-case-model/use-cases/010-develop/UC-019-adapt-harness.md)
+- [UC-020 — Turn recurring work into my project's own skill or agent definition](../use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md)
+
 ### 030-change
 
-No goal is written for this area yet.
+A change to a project is checked, answered and landed, so what the project states stays true as it changes.
 
 - [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
@@ -157,14 +181,14 @@ No goal is written for this area yet.
 
 ### 040-release
 
-No goal is written for this area yet.
+The backbone and each component are released on their own versions, so projects can move to them and pin them.
 
 - [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
 
 ### 050-adopt
 
-No goal is written for this area yet.
+Another project takes the system in, keeps it current, and reports what goes wrong with it.
 
 - [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
 - [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
@@ -174,8 +198,17 @@ No goal is written for this area yet.
 ```mermaid
 flowchart LR
   accTitle: The chain of use cases
-  accDescr: The chain of 12 use cases in force, grouped by area in the order of the areas' numbers. An arrow runs from each producer a use case names in `after` to that use case, the environment among them. A dotted arrow comes from a producer in a later area, an alternative its use case's area does not build on. No solid arrow is implied by others.
+  accDescr: The chain of 19 use cases in force, grouped by area in the order of the areas' numbers. An arrow runs from each producer a use case names in `after` to that use case, the environment among them. A dotted arrow comes from a producer in a later area, an alternative its use case's area does not build on. 2 solid arrows that other solid arrows imply are left out.
   environment(("The environment"))
+  subgraph area_010_develop["010-develop"]
+    UC_014(["UC-014 — Develop the methodology in its source repository"])
+    UC_015(["UC-015 — Package a recurring discipline as a capability"])
+    UC_016(["UC-016 — Keep a capability I wrote in my own repository"])
+    UC_017(["UC-017 — Give my capability roles, data points and processes others connect to"])
+    UC_018(["UC-018 — Know my capability is ready to share"])
+    UC_019(["UC-019 — Adapt the system to another harness"])
+    UC_020(["UC-020 — Turn recurring work into my project's own skill or agent definition"])
+  end
   subgraph area_030_change["030-change"]
     UC_002(["UC-002 — Answer what my change made stale"])
     UC_003(["UC-003 — Declare what my change means for the next release"])
@@ -196,6 +229,22 @@ flowchart LR
   end
   UC_008 --> UC_008
   UC_012 --> UC_013
+  UC_014 --> UC_002
+  UC_014 --> UC_003
+  UC_014 --> UC_004
+  UC_014 --> UC_005
+  UC_014 --> UC_006
+  UC_014 --> UC_008
+  UC_014 --> UC_010
+  UC_014 --> UC_015
+  UC_014 --> UC_019
+  UC_015 --> UC_011
+  UC_015 --> UC_016
+  UC_015 --> UC_018
+  UC_016 --> UC_017
+  UC_019 --> UC_011
+  UC_019 --> UC_016
+  UC_019 --> UC_020
   environment --> UC_008
 ```
 
@@ -204,7 +253,7 @@ flowchart LR
 ```mermaid
 flowchart LR
   accTitle: The use cases and their actors
-  accDescr: The system's boundary holds 12 use cases, and 9 actors stand around it. An arrow joins each use case to the actor whose goal it is, and a line joins it to each other actor who takes part.
+  accDescr: The system's boundary holds 19 use cases, and 9 actors stand around it. An arrow joins each use case to the actor whose goal it is, and a line joins it to each other actor who takes part.
   ACT_adopter["ACT-adopter — Adopter"]
   ACT_ai_agent["ACT-ai-agent — AI agent"]
   ACT_ci_pipeline["ACT-ci-pipeline — CI pipeline"]
@@ -227,6 +276,13 @@ flowchart LR
     UC_011(["UC-011 — Carry the projects that installed my component across a breaking change of it"])
     UC_012(["UC-012 — Report a problem with the system, and follow the report"])
     UC_013(["UC-013 — Receive adopters' reports, and link each to its fix"])
+    UC_014(["UC-014 — Develop the methodology in its source repository"])
+    UC_015(["UC-015 — Package a recurring discipline as a capability"])
+    UC_016(["UC-016 — Keep a capability I wrote in my own repository"])
+    UC_017(["UC-017 — Give my capability roles, data points and processes others connect to"])
+    UC_018(["UC-018 — Know my capability is ready to share"])
+    UC_019(["UC-019 — Adapt the system to another harness"])
+    UC_020(["UC-020 — Turn recurring work into my project's own skill or agent definition"])
   end
   ACT_adopter --> UC_006
   ACT_adopter --> UC_012
@@ -236,6 +292,11 @@ flowchart LR
   ACT_ai_agent --- UC_010
   ACT_ai_agent --- UC_011
   ACT_ai_agent --- UC_012
+  ACT_ai_agent --- UC_014
+  ACT_ai_agent --- UC_015
+  ACT_ai_agent --- UC_017
+  ACT_ai_agent --- UC_019
+  ACT_ai_agent --- UC_020
   ACT_ci_pipeline --- UC_002
   ACT_ci_pipeline --- UC_003
   ACT_ci_pipeline --- UC_004
@@ -247,14 +308,21 @@ flowchart LR
   ACT_ci_pipeline --- UC_011
   ACT_component_author --> UC_009
   ACT_component_author --> UC_011
+  ACT_component_author --> UC_015
+  ACT_component_author --> UC_016
+  ACT_component_author --> UC_017
+  ACT_component_author --> UC_018
+  ACT_component_author --> UC_019
   ACT_developer --> UC_002
   ACT_developer --> UC_003
   ACT_developer --> UC_004
   ACT_developer --> UC_005
   ACT_developer --> UC_007
+  ACT_developer --> UC_020
   ACT_merge_authoriser --- UC_002
   ACT_methodology_maintainer --> UC_008
   ACT_methodology_maintainer --> UC_010
   ACT_methodology_maintainer --- UC_012
   ACT_methodology_maintainer --> UC_013
+  ACT_methodology_maintainer --> UC_014
 ```
