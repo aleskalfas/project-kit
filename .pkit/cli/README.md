@@ -64,7 +64,7 @@ pkit:
         - src/project_kit/backbone_schemas.py
         - src/project_kit/artefact_parts.py
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
-      record: [COR-004, COR-012, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066]
+      record: [COR-004, COR-012, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
@@ -91,7 +91,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-21T19:43:25Z
+      at: 2026-10-21T20:16:14Z
       outcome: updated
       deferred:
         - anchor:
@@ -106,6 +106,10 @@ pkit:
             kind: record
             value: COR-051
           reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: COR-062
+          reason: "COR-062 has the friction writers write answer files and retires friction resolve, while the reference describes the writers and resolve as the code runs them today, on the block. #1779 builds the writers and rewrites that account."
 ---
 
 # Command-line interface
