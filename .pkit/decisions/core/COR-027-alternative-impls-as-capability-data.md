@@ -85,7 +85,7 @@ The capability's scripts and agent read the configured variant's schema at runti
 
 ### Records
 
-- [COR-005](COR-005-bundle-pattern.md) is **superseded** by this record. Its status flips to `superseded`; its body gains a top-of-file "Superseded by COR-027" line. The bundle pattern as a methodology mechanism is retired.
+- [COR-005](COR-005-bundle-pattern.md) is **partially superseded** by this record: its bundle pattern is overturned and its adapter pattern and skill / command pairing stand, so it stays `accepted` and its top line reads *Partially superseded by COR-027*.
 - [COR-011](COR-011-areas-first-class.md) refines in place: the `bundle-based` area variant is dropped from the taxonomy. The variant had one instance (`.pkit/workflow/`) which is also being removed.
 
 ### Code
