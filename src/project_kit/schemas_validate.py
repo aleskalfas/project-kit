@@ -68,7 +68,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 
 from project_kit import backbone_schemas, cli_render
-from project_kit.validators import Finding, Outcome
+from project_kit.validators import Finding, Outcome, Severity
 
 _yaml = YAML(typ="safe")
 
@@ -723,6 +723,10 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
     silently does not bind (the bare-vs-scoped fail-open hazard). This pass is
     scoped to the full project (it needs the manifest + merged catalog), so it
     runs only in the no-PATH `validate_all` gate, not in `validate_path`.
+
+    And checks each adapter's support declaration, `.pkit/adapters/<name>/
+    harness-support.yaml`, against `harness-support.schema.json` (COR-047
+    point 2), likewise only here.
     """
     report = _run_validation(
         discover_schema_pairs(target_root),
@@ -732,9 +736,13 @@ def validate_all(target_root: Path, *, resolve: bool = True) -> ValidationReport
     )
     backbone_checked, backbone_issues = _load_check_backbone_schemas(target_root)
     fragment_issues = _lint_fragment_grant_tokens(target_root)
+    support_issues = _check_adapter_support_declarations(target_root)
     return ValidationReport(
         pairs_checked=report.pairs_checked,
-        issues=report.issues + tuple(backbone_issues) + tuple(fragment_issues),
+        issues=report.issues
+        + tuple(backbone_issues)
+        + tuple(fragment_issues)
+        + tuple(support_issues),
         instances_checked=report.instances_checked,
         backbone_schemas_checked=backbone_checked,
     )
@@ -748,7 +756,8 @@ def outcome(target_root: Path) -> Outcome:
         f"{report.backbone_schemas_checked} backbone file schema(s) checked; "
         f"{len(report.issues)} error(s).",
     )
-    return Outcome(summary, tuple(Finding(i.location, i.message) for i in report.issues))
+    findings = tuple(Finding(i.location, i.message) for i in report.issues)
+    return Outcome(summary, findings + tuple(adapter_support_warnings(target_root)))
 
 
 def _load_check_backbone_schemas(target_root: Path) -> tuple[int, list[ValidationIssue]]:
@@ -791,6 +800,66 @@ def _lint_fragment_grant_tokens(target_root: Path) -> list[ValidationIssue]:
             )
         )
     return issues
+
+
+def _declared_adapters(target_root: Path) -> list[str]:
+    """Each adapter folder that holds a support declaration, sorted."""
+    from project_kit import harness_support
+
+    adapters_dir = target_root / ".pkit" / "adapters"
+    if not adapters_dir.is_dir():
+        return []
+    return [
+        path.parent.name
+        for path in sorted(adapters_dir.glob(f"*/{harness_support.DECLARATION}"))
+        if path.is_file()
+    ]
+
+
+def _check_adapter_support_declarations(target_root: Path) -> list[ValidationIssue]:
+    """Each adapter's support declaration (COR-047 point 2) against its schema. A
+    missing declaration, or a requirement left unanswered, is no finding: silence
+    resolves indeterminate (COR-047 point 3), which `pkit harness report`
+    reports. The pointered-instance walk reaches no adapter folder, so the check
+    is explicit; like the grant-token lint, only `validate_all` runs it."""
+    from project_kit import harness_support
+
+    issues: list[ValidationIssue] = []
+    for adapter in _declared_adapters(target_root):
+        rel = _rel(harness_support.declaration_path(target_root, adapter), target_root)
+        for pointer, message in harness_support.shape_problems(target_root, adapter):
+            issues.append(ValidationIssue(location=f"{rel}{pointer}", message=message))
+    return issues
+
+
+def adapter_support_warnings(target_root: Path) -> list[Finding]:
+    """A warning for each answer an adapter's support declaration gives to a
+    requirement the core does not declare: retired, or newer than this backbone.
+    A warning, not an error, so an upgrade that retires a requirement does not
+    fail a project whose own adapter still answers it."""
+    from project_kit import harness_support
+
+    declared = _declared_adapters(target_root)
+    if not declared:
+        return []
+    try:
+        known = harness_support.requirements(target_root)
+    except harness_support.SupportError as exc:
+        return [Finding(harness_support.REQUIREMENTS_FILE.as_posix(), str(exc))]
+    findings: list[Finding] = []
+    for adapter in declared:
+        rel = _rel(harness_support.declaration_path(target_root, adapter), target_root)
+        for rid in harness_support.unknown_answers(target_root, adapter, known):
+            findings.append(
+                Finding(
+                    f"{rel}/requirements/{rid}",
+                    f"answers {rid!r}, which the core does not declare "
+                    f"({harness_support.REQUIREMENTS_FILE.as_posix()}): retired, or newer "
+                    "than this backbone. Remove the answer, or upgrade.",
+                    Severity.WARNING,
+                )
+            )
+    return findings
 
 
 def validate_path(

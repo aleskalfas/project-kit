@@ -8,6 +8,7 @@ gates:
   - COR-006
   - COR-008
   - COR-010
+  - COR-047
 reads:
   records:
     - COR-002
@@ -18,6 +19,8 @@ reads:
     - .pkit/decisions/README.md
     - .pkit/decisions/core/COR-005-bundle-pattern.md
     - .pkit/adapters/claude-code/README.md
+    - .pkit/schemas/harness-requirements.yaml
+    - .pkit/schemas/harness-support.schema.json
 ---
 
 # Authoring an adapter
@@ -34,6 +37,7 @@ The current dependencies:
 - **COR-006** — artifact roles; harness-agnostic vs. harness-flavoured content split.
 - **COR-008** — git workflow conventions; the commit step.
 - **COR-010** — resource lifecycle; fixes the `package.yaml` schema, `requires_backbone` semantics, and migration directory layout.
+- **COR-047** — harness requirements; the adapter answers each one the core declares, in its support declaration.
 
 ## Procedure
 
@@ -93,7 +97,11 @@ Add the artifacts the harness needs. Common shapes:
 
 Skills, agents, and decisions live in their own harness-agnostic areas (per COR-006); the adapter only translates them at deploy time.
 
-### 6. Self-check
+### 6. Declare the harness's support
+
+Write `.pkit/adapters/<name>/harness-support.yaml`, shaped by `.pkit/schemas/harness-support.schema.json` (COR-047 point 2). Give one answer to each requirement in `.pkit/schemas/harness-requirements.yaml`: its `grade` (`supported`, `at-cost` or `not-achievable`), the `cost` of an `at-cost` answer, its `harness_versions` (`unbounded`, the `[lowest, highest]` you tested, or `[]`) and its `evidence`. The adapters README, "Harness requirements", says what each means. Answer only what you have evidence for. A requirement you leave out reports `indeterminate`, which is honest; a guessed grade is not. Then run `pkit validate` and `pkit harness report --adapter <name>`, and say the answers in prose in the adapter's README.
+
+### 7. Self-check
 
 Walk the adapter against the COR-005 universal-element checklist:
 
@@ -101,10 +109,11 @@ Walk the adapter against the COR-005 universal-element checklist:
 - *Does the `README.md` cover what the adapter handles, what's shipped, and how to deploy it?*
 - *Are the harness-specific deploy steps idempotent? Re-running them should be a no-op.*
 - *Does the adapter respect COR-006's harness-agnostic discipline — core content lives at canonical paths, and the adapter only translates at deploy time?*
+- *Does every answer in `harness-support.yaml` rest on evidence, with its versions bounded to what was tested?*
 
 If any check fails, revise.
 
-### 7. Commit
+### 8. Commit
 
 Per COR-008, conventional-commits format. Type is `feat`; scope is `adapters` (or the adapter name if more specific):
 

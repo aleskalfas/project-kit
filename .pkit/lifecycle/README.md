@@ -35,8 +35,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-20T03:23:22Z
-      outcome: updated
+      at: 2026-10-21T13:58:55Z
+      outcome: unchanged
+      unchanged-because: "ADR-066 changes one bullet of point 13: each adapter now answers the requirement in its support declaration, and the Claude Code adapter's answer holds for the runner's tested range. The page's account of how a registered command, the runner among them, is run is as it was."
 ---
 
 # Lifecycle
