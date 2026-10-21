@@ -2,9 +2,12 @@
 
 Held to software-analysis DEC-003 point 8:
 
-- **what it shows** — the concepts, the actors, the requirements, the areas with
-  their goals and use cases, the chain and the use-case diagram, and the journeys,
-  each artefact in force linked, each diagram the query's own output;
+- **what it shows** — the concepts, each view by its number and title, the actors,
+  each with the use cases it is the main actor of and those it takes part in, an
+  actor of another analysis as the glossary's head names it, the requirements, the
+  areas with their goals and use cases, the chain and the use-case diagram, and the
+  journeys, each artefact in force linked, each diagram the query's own output;
+- **front matter only** — a view's body is never read (DEC-001 point 1);
 - **who writes it** — the stamp, after each artefact, and `pkit analysis
   overview`, each only where its bytes change;
 - **fresh by fingerprint** — the check fails a stale overview, never one only
@@ -16,6 +19,7 @@ Held to software-analysis DEC-003 point 8:
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 from collections.abc import Mapping
@@ -137,10 +141,13 @@ def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: Adop
     drawn field changed by hand makes it stale, and the command writes it anew."""
     text = _read(seeded)
     assert text.startswith(
-        "# Overview of the analysis\n\n<!-- pkit:overview reads=1 fingerprint=sha256:"
+        "# Overview of the analysis\n\n<!-- pkit:overview reads=2 fingerprint=sha256:"
     )
     assert _section(text, "## Actors") == (
-        "- [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)"
+        "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
+        "The use cases it is the main actor of:\n\n"
+        "- [UC-001 — Run suite](../use-case-model/use-cases/UC-001-run-suite.md)\n"
+        "- [UC-002 — Read report](../use-case-model/use-cases/UC-002-read-report.md)"
     )
     assert _section(text, "## Use cases") == (
         "- [UC-001 — Run suite](../use-case-model/use-cases/UC-001-run-suite.md)\n"
@@ -194,7 +201,7 @@ def test_a_missing_overview_warns_and_one_it_cannot_judge_is_said(seeded: Adopte
     assert unmarked.startswith("it carries no fingerprint of what it draws")
 
     # Written by a release that read other data: a warning until it is written anew.
-    older = re.sub(r"reads=1 fingerprint=\S+", "reads=0 fingerprint=sha256:00", text)
+    older = re.sub(r"reads=[0-9]+ fingerprint=\S+", "reads=1 fingerprint=sha256:00", text)
     seeded.write({OVERVIEW_FILE: older})
     document = _check(seeded)
     assert _about(document, "error", OVERVIEW_FILE) == []
@@ -312,32 +319,161 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     assert not (project.root / OVERVIEW_FILE).exists()
 
 
-def test_a_views_opening_is_quoted_with_its_links_as_their_text(project: AdopterRepo) -> None:
-    """The concepts: the glossary, then each view with the first paragraph of its opening,
-    read by its permanent id, each link kept as its text. Writing the opening makes the
-    overview stale, as anything it draws does."""
+def test_each_view_is_listed_by_its_number_and_title(project: AdopterRepo) -> None:
+    """The concepts: the glossary, then each view by its number, as its file's name spells
+    it, and its title, in the order of its number. The overview reads no body, so writing
+    a view's opening leaves it fresh."""
     for slug in ("order", "payment"):
         stamped(project, "term", slug, "--name", slug, "--path", "src/run.py")
+    stamped(project, "view", "payments", "--number", "020", "--explains", "TERM-payment")
     stamped(project, "view", "orders", "--number", "010", "--explains", "TERM-order")
-    view = f"{DOMAIN_MODEL}/010-orders.md"
-    assert "- [VIEW-orders — Orders](../domain-model/010-orders.md)\n" in _read(project)
-    opening = (
-        "A shop must know what each [order](../glossary.md#term-order--order) asks.\n"
-        "An order holds it.\n\nThe second paragraph is not quoted.\n"
-    )
-    text = _read(project, view)
-    hint = re.search(r"(?m)^<!-- pkit:hint The problem.*-->\n", text)
-    assert hint is not None
-    project.write({view: text.replace(hint.group(0), opening, 1)})
-    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
-    assert stale.startswith("it is stale")
-    assert run_script(project, OVERVIEW).returncode == 0
     assert _section(_read(project), "## Concepts") == (
         "The [glossary](../glossary.md) defines each term.\n\n"
         "Each view of the domain model explains a group of related concepts:\n\n"
-        "- [VIEW-orders — Orders](../domain-model/010-orders.md): A shop must know what each "
-        "order asks. An order holds it."
+        "- [010 — Orders](../domain-model/010-orders.md)\n"
+        "- [020 — Payments](../domain-model/020-payments.md)"
     )
+    view = f"{DOMAIN_MODEL}/010-orders.md"
+    text = _read(project, view)
+    hint = re.search(r"(?m)^<!-- pkit:hint The problem.*-->\n", text)
+    assert hint is not None
+    project.write({view: text.replace(hint.group(0), "A shop must know what each order asks.\n")})
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+    again = run_script(project, OVERVIEW)
+    assert (again.returncode, again.stdout) == (0, f"fresh already: {OVERVIEW_FILE}\n")
+
+
+# --- each actor's use cases -------------------------------------------------------------------
+
+
+def test_each_actor_lists_the_use_cases_it_is_main_actor_of_and_takes_part_in(
+    project: AdopterRepo,
+) -> None:
+    """Under each actor, the use cases in force whose `actor` it is, then those whose
+    `other-actors` name it, each linked, in the order of their numbers; an actor no use
+    case names says so. A withdrawn use case is not listed, and a changed `other-actors`
+    makes the overview stale."""
+    for slug in ("auditor", "reviewer", "tester"):
+        stamped(project, "actor", slug, "--path", "src/**")
+    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester")
+    stamped(
+        project, "use-case", "review-run", "--actor", "ACT-reviewer", "--other-actor", "ACT-tester"
+    )
+    stamped(project, "use-case", "read-report", "--actor", "ACT-tester")
+    fill(project)
+    uc = "../use-case-model/use-cases"
+    assert _section(_read(project), "## Actors") == (
+        "### [ACT-auditor — Auditor](../use-case-model/actors/ACT-auditor.md)\n\n"
+        "No use case names it yet.\n\n"
+        "### [ACT-reviewer — Reviewer](../use-case-model/actors/ACT-reviewer.md)\n\n"
+        "The use cases it is the main actor of:\n\n"
+        f"- [UC-002 — Review run]({uc}/UC-002-review-run.md)\n\n"
+        "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
+        "The use cases it is the main actor of:\n\n"
+        f"- [UC-001 — Run suite]({uc}/UC-001-run-suite.md)\n"
+        f"- [UC-003 — Read report]({uc}/UC-003-read-report.md)\n\n"
+        "The use cases it takes part in:\n\n"
+        f"- [UC-002 — Review run]({uc}/UC-002-review-run.md)"
+    )
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+
+    review = f"{USE_CASES}/UC-002-review-run.md"
+    project.write(
+        {review: _read(project, review).replace("  - ACT-tester\n", "  - ACT-auditor\n", 1)}
+    )
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    read = f"{USE_CASES}/UC-003-read-report.md"
+    project.write({read: _read(project, read).replace("status: active", "status: withdrawn", 1)})
+    assert run_script(project, OVERVIEW).returncode == 0
+    actors = _section(_read(project), "## Actors")
+    assert "UC-003" not in actors
+    assert (
+        "### [ACT-auditor — Auditor](../use-case-model/actors/ACT-auditor.md)\n\n"
+        "The use cases it takes part in:\n\n"
+        f"- [UC-002 — Review run]({uc}/UC-002-review-run.md)\n"
+    ) in actors + "\n"
+
+
+#: The head of billing's glossary: what it takes from the core's analysis, ACT-tester among
+#: it (DEC-001 point 2).
+_HEAD = (
+    "builds-on:\n"
+    "  - analysis: core\n"
+    "    version: 1.0.0\n"
+    "    actors:\n"
+    "      - id: ACT-tester\n"
+    "        name: Tester\n"
+    "        needs: [Never lose a bill.]\n"
+)
+
+
+def test_an_actor_of_another_analysis_is_listed_as_the_glossarys_head_names_it(
+    project: AdopterRepo,
+) -> None:
+    """In an analysis that builds on another, each actor the glossary's head lists from
+    it follows the analysis's own actors, by its id with that analysis and the name the
+    head gives it, with its use cases. One a use case names that the head lists not is
+    shown by that id alone. The head's names are data the overview reads, and its needs
+    are not; the other analysis's overview lists none of this one's use cases."""
+    project.write(
+        {
+            SETTINGS: HEAD + "analyses:\n  - {component: core, folder: core}\n"
+            "  - component: billing\n    folder: billing\n    builds-on:\n"
+            "      - {analysis: core}\n"
+        }
+    )
+    stamped(project, "actor", "tester", "--analysis", "core", "--path", "src/**")
+    stamped(project, "actor", "clerk", "--analysis", "billing", "--path", "src/**")
+    stamped(project, "term", "bill", "--analysis", "billing", "--path", "src/**")
+    glossary = f"{ANALYSIS}/billing/glossary.md"
+    project.write({glossary: _read(project, glossary).replace("---\n", f"---\n{_HEAD}", 1)})
+    audit = stamped(
+        project,
+        "use-case",
+        "audit",
+        "--analysis",
+        "billing",
+        "--actor",
+        "core:ACT-tester",
+        "--other-actor",
+        "ACT-clerk",
+        "--record",
+        "COR-001",
+    )
+    assert audit == "UC-001"
+    billing = f"{ANALYSIS}/billing/overview/README.md"
+    link = "- [UC-001 — Audit](../use-case-model/use-cases/UC-001-audit.md)"
+    assert _section(_read(project, billing), "## Actors") == (
+        "### [ACT-clerk — Clerk](../use-case-model/actors/ACT-clerk.md)\n\n"
+        f"The use cases it takes part in:\n\n{link}\n\n"
+        "### core:ACT-tester — Tester\n\n"
+        "An actor of the analysis of core, which the head of the [glossary](../glossary.md) "
+        f"lists.\n\nThe use cases it is the main actor of:\n\n{link}"
+    )
+    core = f"{ANALYSIS}/core/overview/README.md"
+    assert _section(_read(project, core), "## Actors") == (
+        "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
+        "No use case names it yet."
+    )
+
+    head = _read(project, glossary)
+    project.write({glossary: head.replace("Never lose a bill.", "Never pay twice.")})
+    assert _about(_check(project), "error", billing) == []
+    project.write({glossary: head.replace("name: Tester", "name: Test author")})
+    (stale,) = _about(_check(project), "error", billing)
+    assert stale.startswith("it is stale")
+
+    use_case = f"{ANALYSIS}/billing/use-case-model/use-cases/UC-001-audit.md"
+    project.write(
+        {use_case: _read(project, use_case).replace("  - ACT-clerk\n", "  - core:ACT-pilot\n", 1)}
+    )
+    assert run_script(project, OVERVIEW).returncode == 0
+    actors = _section(_read(project, billing), "## Actors")
+    assert (
+        "### core:ACT-pilot\n\nAn actor of the analysis of core.\n\n"
+        f"The use cases it takes part in:\n\n{link}\n\n### core:ACT-tester — Test author\n"
+    ) in actors
 
 
 # --- the fingerprint, read alone ---------------------------------------------------------------
@@ -364,8 +500,18 @@ def _analysis(*artefacts: Any) -> Any:
 
 def _fingerprint(analysis: Any, goals: str = "") -> str:
     listing = analyses.Listing(areas=(("010-run", goals),) if goals else ())
-    return str(
-        overview.fingerprint(analysis, overview.read(Path("."), analysis, listing, None), None)
+    return str(overview.fingerprint(analysis, overview.read(analysis, listing, None), None))
+
+
+def _headed(*artefacts: Any, name: str = "Developer", needs: str = "A") -> Any:
+    """`_analysis`, its glossary's head listing core's ACT-developer as `name`."""
+    glossary = f"{ANALYSIS}/glossary.md"
+    taken = {"analysis": "core", "version": "1.0.0"}
+    actor = {"id": "ACT-developer", "name": name, "needs": [needs]}
+    return dataclasses.replace(
+        _analysis(*artefacts),
+        files={**{a.path: a.kind for a in artefacts}, glossary: "term"},
+        glossaries={glossary: {"builds-on": [{**taken, "actors": [actor]}]}},
     )
 
 
@@ -388,6 +534,10 @@ def test_the_fingerprint_reads_what_it_draws_and_nothing_else() -> None:
     )
     assert _fingerprint(_analysis(gone, use_case)) != first
     assert _fingerprint(_analysis(actor, use_case), "Runs.") != first
+    # An actor of another analysis: the name the head gives it is read, its needs are not.
+    headed = _fingerprint(_headed(actor, use_case))
+    assert headed not in (first, _fingerprint(_headed(actor, use_case, name="Dev")))
+    assert _fingerprint(_headed(actor, use_case, needs="B")) == headed
     marked = overview.mark(first)
     assert overview.written_fingerprint(f"# Overview\n\n{marked}\n") == (overview.VERSION, first)
     assert overview.written_fingerprint("# Overview\n") is None

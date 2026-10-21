@@ -110,16 +110,16 @@ A query prints each diagram as Mermaid text, computed from the analysis in the w
 Each analysis keeps a generated overview, the reader's entry point. A reader on a repository host, such as GitHub, sees there with no setup what the analysis holds, in the order it is built. The reader also sees why its areas are cut as they are.
 - **What it is:** a held document, `overview/README.md`, in a folder of held documents of its own in the analysis (COR-050 point 1). A held folder never equals or encloses a documentation root or another declaration's place.
 - **What it shows,** in the order an analysis is built (DEC-001 point 12), each artefact in force and linked:
-  - the concepts: the glossary, then each domain-model view in its numbered order, with its title and the first paragraph of its opening
-  - the actors
+  - the concepts: the glossary, then each domain-model view in its numbered order, by its number and its title
+  - the actors, each with the use cases it is the main actor of and those it takes part in
   - the requirements and their map, where requirements exist
   - the areas in their numbered order, each with its goal and its use cases, then the chain of use cases and the use-case diagram
   - the journeys, each with its flow, where journeys exist
 
   Each diagram is the query's own output, with its text alternative (point 7), in a section of its own.
-- **A view's opening.** Its first paragraph states the problem the view's concepts solve, or what the group covers where no record gives the problem ([software-analysis:DEC-004-domain-model-views] point 3). The overview quotes that paragraph, with each link kept as its text. A view whose opening holds no text yet shows its title alone.
-  - **Read by the part's permanent id,** as the check reads it. It is the only body part the overview reads, so it refines DEC-001 point 1.
-  - **A reader's text, shown to readers.** The overview acts on none of it, and draws nothing from it.
+- **Front matter only.** The overview reads the analysis's front matter and the paths of its files, never a body, as DEC-001 point 1 allows a tool.
+- **Each actor's use cases.** Under each actor, the overview lists the use cases whose `actor` it is, then those whose `other-actors` name it. It computes both lists from the use cases' front matter, so they state no fact of their own. The actor's own file lists none.
+  - **An actor of another analysis.** An analysis that builds on another may name that analysis's actors (DEC-001 point 2). Its overview lists each one its glossary's head lists, or a use case names, after its own actors. It shows the actor by its id with that analysis and the name the head gives it, with its use cases. It reads no file of the other analysis.
 - **An area's goal:** one line for each area of an analysis's use cases, kept as data in the capability's configuration beside the area's folder name. It says what the area makes possible, such as "010-ordering: a customer can place an order and pay for it".
   - **Each analysis its own.** Each analysis numbers its own areas (DEC-001 point 2), so it keeps the goals of its own areas.
   - **Its home** is the configuration. It is the one text the overview shows that no artefact holds. No anchor covers it, and no rule of `SAN` judges its words.
@@ -132,7 +132,7 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **A missing overview** is a warning that names the command. So a project that installed the capability before fails nothing, and needs no migration.
 - **Keeping none:** a setting in the capability's configuration turns the overview off. The stamp then writes none, the command refuses, and validation asks for no overview and no goal. It warns of an overview left in place, which nothing keeps fresh.
 - **What it anchors:** nothing, since a held document carries no friction block (COR-050 point 12). Generation and the check that it is fresh keep it true to what it draws. The capability's maintainer took this as meeting "it anchors what it shows".
-- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a view's opening and a goal are included. Two branches that each make such a change conflict on the overview, as on a lock file.
+- **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a use case's actors and a goal are included. Two branches that each make such a change conflict on the overview, as on a lock file.
   - **Where they conflict:** always on its fingerprint's line, and on each section both change. One section per diagram keeps the rest apart.
   - **Resolving it** is running the command.
 
@@ -163,7 +163,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why a diagram is never a fact's home.** A home is where a change to a fact is made. A picture cannot say which relation each line shows, so the change is always made in the field or the part that the picture restates.
 
-**Why front matter only, for now.** Reading front matter needs no change to an accepted point. It draws what the capability's maintainer took: who takes part, a journey's path and what meets a requirement. Reading body parts by their permanent id would draw paths and seams too, so it changes what DEC-001 point 1 allows a tool. It comes as a refinement of its own. The overview's quote of a view's opening draws nothing (point 8).
+**Why front matter only, for now.** Reading front matter needs no change to an accepted point. It draws what the capability's maintainer took: who takes part, a journey's path and what meets a requirement. Reading body parts by their permanent id would draw paths and seams too, so it changes what DEC-001 point 1 allows a tool. It comes as a refinement of its own.
 
 **Why a use-case diagram, not a context diagram.**
 - **What was asked** was a context diagram from actors and use cases. Drawn from them, it is UML's use-case diagram, which shows the system's boundary with the actors around it.
@@ -188,7 +188,9 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why the overview shows each area's goal.** The chain shows which use case follows from which, never why the use cases are split into those areas. The capability's maintainer asked, on 20 October, that a reader of the analysis can see the concept of the split. One line for each area says it, with no new kind of artefact.
 
-**Why the overview quotes a view's opening.** A title names a group of concepts, never the problem they solve. The quote is a reader's text shown to readers, never data a tool acts on. That is the line DEC-004 draws where it keeps the stamp from reading the terms a view explains from its headings. So the overview reads that one part, and nothing else of a body.
+**Why each view by its number and title.** The overview lists every kind the same way, by its label, so a reader scans each section alike. The capability's maintainer chose it on 21 October, on reading the core's overview. A view's opening states the problem its concepts solve on the view's own page, one link away. Quoted beside each title, it made the list of concepts long and uneven beside the other sections.
+
+**Why each actor's use cases.** A reader who comes to the analysis in one role looks first for what that role does with the system. The use-case diagram shows it, but a large diagram is hard to follow. A list under each actor names each use case and links it. The capability's maintainer asked for it on 21 October.
 
 **Why the goals sit in the configuration.** DEC-001 rejects a project's additions to a structure in the configuration, since settings and data would then share a file. The goals sit beside the list of analyses, which is data of the same kind: each analysis's folder and what it builds on.
 
@@ -209,8 +211,10 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **A generated diagram stored inside an artefact.** Rejected. See point 9.
 - **Diagrams on demand only, with no overview.** Rejected. It meets "it anchors what it shows" word for word, but shows nothing on a repository host.
 - **A check of the overview's text, not a fingerprint.** Rejected. See Rationale.
-- **A view's title alone, or its title and the terms it explains.** Not taken. Both read front matter alone, and neither says the problem the concepts solve.
+- **The first paragraph of each view's opening, beside its title.** Rejected. It made the list of concepts long and uneven beside the other sections, and it reads a body, which DEC-001 point 1 keeps from a tool.
 - **The problem in a field of the view's front matter.** Rejected. It would be a third home for a reason whose home is a record (DEC-004 point 3).
+- **Each actor's use cases in the actor's own file.** Not taken yet. A list a command writes there would change the actor's file at each new use case, and so the answers on it. It waits until a list written for navigation changes no answer ([project-kit#1844](https://github.com/aleskalfas/project-kit/issues/1844)).
+- **An actor of another analysis by its name in that analysis.** Rejected. The overview would read another analysis's files, which may lie in another repository, and go stale with them. The glossary's head names the actor in this analysis.
 - **Install or a migration writing the overview.** Not taken. Install runs no command of a capability (COR-017). A missing overview is a warning, so a project that installed the capability before needs no migration.
 - **Deleting the overview to keep none.** Rejected. The stamp's next rewrite would restore it, while a setting lasts.
 - **An area's goal in a file in the area's folder.** Rejected. The folder lies in the use cases' place, so a file there would read as a use case.

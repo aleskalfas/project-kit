@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-20T22:11:25Z
+          at: 2026-10-21T05:27:21Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 names the overview's read of a view's opening, and point 2 calls the overview the reader's entry point. A kind's structure, and where the format rule binds, are untouched, and the overview is a held document no structure governs.
+          unchanged-because: DEC-001 point 1 no longer names a read of a view's opening by the overview, which is a held document no structure governs. A kind's structure, and where the format rule binds, are untouched.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-20T22:11:27Z
+          at: 2026-10-21T05:27:22Z
           outcome: unchanged
-          unchanged-because: DEC-001's change names the overview's quote of a view's opening and calls the overview the reader's entry point. Who a use case's actor is, and what the rule asks of it, are untouched.
+          unchanged-because: DEC-001 point 1 now keeps the overview to front matter, and the overview lists each actor's use cases from their actor and other-actors fields. Whose goal a use case is, and what the rule asks of its actor, are untouched.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-20T22:11:29Z
+          at: 2026-10-21T05:27:23Z
           outcome: unchanged
-          unchanged-because: The change to DEC-001 point 1 lets the overview quote a view's opening to readers. A use case's goal and its actor's needs are untouched, so the rule holds as written.
+          unchanged-because: The change to DEC-001 point 1 removes the overview's quote of a view's opening. A use case's goal and its actor's needs are untouched, so the rule holds as written.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -90,9 +90,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-20T22:11:32Z
+          at: 2026-10-21T05:27:31Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains the overview's read of a view's opening, by its part's permanent id. Where a goal, a minimal guarantee or a requirement names its source is untouched.
+          unchanged-because: DEC-001 point 1 loses the overview's read of a view's opening by its part's permanent id. Where a goal, a minimal guarantee or a requirement names its source is untouched.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -107,9 +107,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-20T22:11:34Z
+          at: 2026-10-21T05:27:32Z
           outcome: unchanged
-          unchanged-because: The overview quotes a view's opening and shows each area's goal, and it is a held document, no analysis artefact, so the statements the rule judges are untouched. DEC-003 point 10's rules are unchanged.
+          unchanged-because: The overview lists views by number and title and each actor's use cases, and it is a held document, no analysis artefact, so the statements this rule judges are untouched. DEC-003 point 10's rules are unchanged.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -121,9 +121,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-20T22:11:35Z
+          at: 2026-10-21T05:27:33Z
           outcome: unchanged
-          unchanged-because: DEC-001's change adds the overview's quote of a view's opening and the role of its folder. The producers a precondition names, and the order of the areas, are untouched. The overview shows the chain and judges nothing.
+          unchanged-because: DEC-001 point 1's change keeps the overview to front matter. The producers a precondition names, after, and the order of the areas are untouched, and the overview still shows the chain and judges nothing.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -157,9 +157,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-20T22:11:39Z
+          at: 2026-10-21T05:27:34Z
           outcome: unchanged
-          unchanged-because: "DEC-001's change touches the overview alone: its quote of a view's opening and its folder's role. Terms' names, noun forms and other senses are untouched, so one name still means one concept."
+          unchanged-because: DEC-001's change removes the overview's quote of a view's opening. Terms' names, noun forms and other senses are untouched, so one name still means one concept.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only

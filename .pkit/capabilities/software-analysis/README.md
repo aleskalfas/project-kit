@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-20T22:11:23Z
+      at: 2026-10-21T05:27:40Z
       outcome: updated
 ---
 
@@ -979,15 +979,16 @@ It is a query: read-only and offline. It reads the working tree through the core
 Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). A reader who opens the folder on GitHub sees what the analysis holds, in the order it is built, and why its areas are cut as they are.
 
 - **What it shows,** each artefact in force, linked, in the order an analysis is built (DEC-001 point 12):
-  - **Concepts:** the glossary, then each domain-model view in the order of its number, with the first paragraph of its opening, the problem its concepts solve. Each link in it is kept as its text. A view whose opening holds no text yet shows its title alone.
-  - **Actors.**
+  - **Concepts:** the glossary, then each domain-model view in the order of its number, by its number and its title, such as *010 — Orders*.
+  - **Actors,** each with the use cases it is the main actor of, its `actor`, and those it takes part in, its `other-actors`. In an analysis that builds on another, each actor of that analysis your glossary's head lists, or a use case names, follows your own actors. It shows by its id with that analysis, such as `core:ACT-developer`, and the name the head gives it.
   - **Requirements,** then their map, where there are any.
   - **Areas,** in the order of their numbers, each with its goal and its use cases. Then the chain of use cases and the use-case diagram. Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead.
   - **Journeys,** each with its flow, where there are any.
 
   Each diagram is `pkit analysis diagram`'s own output, with its text alternative, in a section of its own.
-- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a view's opening or a goal. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
-- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=1 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that reads more of the analysis raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
+- **Front matter only.** The overview reads your analysis's front matter and the paths of its files, never a body, and no file of another analysis.
+- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a use case's `other-actors`, a name in the glossary's head or a goal. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
+- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=2 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that reads more of the analysis raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
 - **A missing overview** is a warning that names the command, so an upgrade fails nothing.
 - **Two branches** that each change what it shows conflict on it, as on a lock file: always on the fingerprint's line, and on each section both change. Resolve the conflict by running the command.
 - **Never edit it by hand.** It is a held document, listed as this capability's, and carries no anchors. Edit the analysis, then rewrite it.
@@ -1015,7 +1016,7 @@ Here is the start of the overview of the analysis the examples above come from:
 ```markdown
 # Overview of the analysis
 
-<!-- pkit:overview reads=1 fingerprint=sha256:… -->
+<!-- pkit:overview reads=2 fingerprint=sha256:… -->
 
 What the analysis holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
@@ -1025,11 +1026,39 @@ The [glossary](../glossary.md) defines each term.
 
 Each view of the domain model explains a group of related concepts:
 
-- [VIEW-runs-and-sandboxes — Runs and sandboxes](../domain-model/010-runs-and-sandboxes.md): A suite's tests change files, yet the files a suite starts from must stay as they were. Two concepts answer it: a run, one pass of the suite, and the sandbox it takes place in.
+- [010 — Runs and sandboxes](../domain-model/010-runs-and-sandboxes.md)
+- [020 — Reports and failures](../domain-model/020-reports-and-failures.md)
 
 ## Actors
 
-- [ACT-tester — Test author](../use-case-model/actors/ACT-tester.md)
+### [ACT-reviewer — Reviewer](../use-case-model/actors/ACT-reviewer.md)
+
+The use cases it is the main actor of:
+
+- [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
+
+### [ACT-tester — Test author](../use-case-model/actors/ACT-tester.md)
+
+The use cases it is the main actor of:
+
+- [UC-001 — Run suite](../use-case-model/use-cases/010-run/UC-001-run-suite.md)
+- [UC-002 — Read report](../use-case-model/use-cases/010-run/UC-002-read-report.md)
+
+The use cases it takes part in:
+
+- [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
+```
+
+In an analysis that builds on another, an actor of that analysis follows your own:
+
+```markdown
+### core:ACT-developer — Developer
+
+An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists.
+
+The use cases it is the main actor of:
+
+- [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
 ```
 
 ## The method rule set: `SAN`
