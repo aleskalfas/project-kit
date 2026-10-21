@@ -1,7 +1,7 @@
 ---
 id: COR-062
 title: A change's answers live in files of its own
-status: proposed
+status: accepted
 date: 2026-10-19
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---

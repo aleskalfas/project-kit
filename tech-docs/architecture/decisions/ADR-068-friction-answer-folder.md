@@ -1,7 +1,7 @@
 ---
 id: ADR-068
 title: Friction answers live in .pkit/project/friction/answers/
-status: proposed
+status: accepted
 date: 2026-10-21
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
