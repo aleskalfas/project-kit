@@ -15,13 +15,13 @@ pkit:
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
-      record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, ADR-049, ADR-064]
+      record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, PRJ-011, ADR-049, ADR-064]
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-21T13:00:55Z
+      at: 2026-10-22T15:13:33Z
       outcome: unchanged
-      unchanged-because: The record lookup in refs.py now resolves a capability's decision as well. The README's account of the reference-graph check, pkit refs validate, is untouched.
+      unchanged-because: "The README now rests on PRJ-011, the record of what project-kit is for. Its pitch already tells that story: a methodology installed and kept current like a dependency, so a fix made in one project reaches the others."
 ---
 
 # project-kit
