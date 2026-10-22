@@ -30,8 +30,9 @@ pkit:
         - ACT-ai-agent
         - REQ-001
     revalidated:
-      at: 2026-10-21T18:38:53Z
-      outcome: updated
+      at: 2026-10-22T16:24:15Z
+      outcome: unchanged
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

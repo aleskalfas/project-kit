@@ -2,6 +2,7 @@
 id: ACT-developer
 name: Developer
 status: active
+summary: "The person who builds: decisions, rules, notes, code and its documentation, one change at a time."
 needs:
   - Record my decisions beside the methodology's, and build only on accepted ones.
   - Author and extend my project's rule sets without editing the ones that ship with the system.

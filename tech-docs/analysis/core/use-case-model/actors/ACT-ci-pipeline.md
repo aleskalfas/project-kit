@@ -2,6 +2,7 @@
 id: ACT-ci-pipeline
 name: CI pipeline
 status: active
+summary: "A project's continuous integration, acting on the system from outside."
 needs:
   - Run every check with no terminal and no person to answer, and gate the merge on its exit status.
   - Compare a change with its real base, the pull request's target or the queued merge's base, named once for all the checks.

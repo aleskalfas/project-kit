@@ -41,53 +41,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-21T13:49:30Z
-      outcome: updated
-      deferred:
-        - anchor:
-            kind: path
-            value: .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
-          reason: "The resolver's commands gain the boxed regression, revalidated as updated. Variant 4a names only the unchanged case until #1856 revises it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_check.py
-          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_report.py
-          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_repository.py
-          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-055#5
-          reason: "ADR-055 point 5 gains only that a merge queue gives the check each change's own head. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."
-        - anchor:
-            kind: record
-            value: COR-050#12
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#2
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#3
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#6
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#9
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: software-analysis:DEC-001#5
-          reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 4a names only the unchanged case until #1856 revises it."
+      at: 2026-10-22T16:24:09Z
+      outcome: unchanged
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

@@ -21,9 +21,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-21T13:59:20Z
+      at: 2026-10-22T16:24:18Z
       outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix

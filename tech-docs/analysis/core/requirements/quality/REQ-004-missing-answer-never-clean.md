@@ -28,6 +28,10 @@ pkit:
       artefact:
         - ACT-ci-pipeline
         - ACT-adopter
+    revalidated:
+      at: 2026-10-22T16:24:32Z
+      outcome: unchanged
+      unchanged-because: The actors whose need it meets each gain a `summary`, the first sentence of their opening, and their needs are untouched. Its obligation and its measure hold.
 ---
 
 # REQ-004 · Quality · A check never reads a missing answer as one that found nothing

@@ -42,8 +42,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-21T15:14:38Z
-      outcome: updated
+      at: 2026-10-22T16:24:04Z
+      outcome: unchanged
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

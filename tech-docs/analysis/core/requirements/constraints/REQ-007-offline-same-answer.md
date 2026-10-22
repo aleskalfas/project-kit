@@ -27,6 +27,10 @@ pkit:
       artefact:
         - ACT-ci-pipeline
         - ACT-developer
+    revalidated:
+      at: 2026-10-22T16:24:36Z
+      outcome: unchanged
+      unchanged-because: The actors whose need it meets each gain a `summary`, the first sentence of their opening, and their needs are untouched. Its obligation and its measure hold.
 ---
 
 # REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic

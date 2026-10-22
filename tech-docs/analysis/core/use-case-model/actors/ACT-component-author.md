@@ -2,6 +2,7 @@
 id: ACT-component-author
 name: Component author
 status: active
+summary: "Someone who extends the system with a component (a capability or an adapter) rather than only using it."
 needs:
   - Package a recurring discipline as a capability from the methodology's primitives, without forking the methodology.
   - Keep a capability I wrote in my own repository, where sync never overwrites it and uninstall never deletes it.

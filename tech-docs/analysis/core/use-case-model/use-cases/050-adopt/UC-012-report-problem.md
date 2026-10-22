@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-21T13:59:18Z
+      at: 2026-10-22T16:24:17Z
       outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

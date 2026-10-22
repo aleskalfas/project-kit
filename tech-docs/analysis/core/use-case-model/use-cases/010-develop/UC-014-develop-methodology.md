@@ -31,8 +31,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-21T22:00:51Z
-      outcome: updated
+      at: 2026-10-22T16:24:20Z
+      outcome: unchanged
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-014 — Develop the methodology in its source repository

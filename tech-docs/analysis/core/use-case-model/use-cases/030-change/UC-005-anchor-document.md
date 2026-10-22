@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-21T18:17:50Z
+      at: 2026-10-22T16:24:06Z
       outcome: unchanged
-      unchanged-because: This change keeps the answer folder out of places and anchors, and validation now checks answer files. Anchoring a document and how validation checks its anchors are as the use case says.
+      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-005 — Say what my document rests on
