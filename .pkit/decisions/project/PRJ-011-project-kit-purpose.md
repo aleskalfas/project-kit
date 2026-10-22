@@ -1,7 +1,7 @@
 ---
 id: PRJ-011
 title: project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it
-status: proposed
+status: accepted
 date: 2026-10-22
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
