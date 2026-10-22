@@ -41,9 +41,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-22T16:24:09Z
+      at: 2026-10-22T22:13:51Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: "The change check reads the answer files a change adds, and the explanation pairs answers with their points strictly. Resolving debt runs as the steps say, and the kept deferrals name what #1779 and #1856 rewrite."
 ---
 
 # UC-007 — Resolve what the default branch left out of date

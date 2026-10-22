@@ -54,6 +54,13 @@ everything about them:
   first_holding`), where their debt originates (COR-050 point 9, COR-062 point 7).
 - **What a prune would remove** (`StateAnswers.prunable`): each answer file in
   which no answer is live (COR-062 point 8; ADR-068 point 4).
+- **What a change does to the folder** (`changed_files`; COR-062 point 3): the
+  answer files its diff adds, the ones of its base it rewrites, and the ones it
+  removes, a file paired with another as a rename read as one removed and one
+  added. A file it adds with a path and content its base's history held is put
+  back (`AnswerHistory.held`), and writes no answer. An answer one live answer of
+  the base's block carries word for word, in an entry that names no file, is
+  moved (`moved`), and asks nothing. The change check judges with these.
 
 Where no answer file exists, every artefact reads as it read before, and nothing
 here reads history (`AnswerHistory.dormant`).
@@ -92,6 +99,7 @@ from project_kit.friction_git import (
     LINK_MODE,
     BlobReader,
     CommitTree,
+    DiffEntry,
     FrictionCheckError,
     TreeEntry,
     TreeReader,
@@ -771,7 +779,10 @@ class StateAnswers:
         return not self.files
 
     def entries(self, artefact: Artefact) -> tuple[Entry, ...]:
-        """Every entry of the state's answer files naming `artefact`."""
+        """Every entry of the state's answer files naming `artefact`: none, its locations
+        unread, where the state holds no entry."""
+        if not self._by_location:
+            return ()
         found: list[Entry] = []
         for location in dict.fromkeys(self._locations(artefact)):
             found.extend(self._by_location.get(location, ()))
@@ -783,6 +794,9 @@ class StateAnswers:
         for a target no link takes answer nothing."""
         key = (artefact.location, artefact.path)
         found = self._liveness.get(key)
+        if found is None and not self.entries(artefact):
+            # No entry names it: nothing to judge, and no link of it to read.
+            found = self._liveness[key] = liveness((), self.files, self._honoured)
         if found is None:
             declared = frozenset(
                 Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values
@@ -938,6 +952,106 @@ def head_locations(history: History | None) -> Callable[[Artefact], tuple[str, .
     return locations
 
 
+# --- a change's answer files --------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ChangedFiles:
+    """What a change does to the answer folder (COR-062 point 3), each file by its name.
+
+    - `added`: the answer files it adds, which its base does not hold.
+    - `rewritten`: the answer files its base holds that it rewrites.
+    - `removed`: the answer files its base holds that it removes.
+
+    A file git paired with another as a rename is read as the one removed and the
+    other added: two answer files never share a history.
+    """
+
+    added: tuple[str, ...] = ()
+    rewritten: tuple[str, ...] = ()
+    removed: tuple[str, ...] = ()
+
+    @property
+    def touched(self) -> bool:
+        return bool(self.added or self.rewritten or self.removed)
+
+
+def changed_files(entries: Iterable[DiffEntry]) -> ChangedFiles:
+    """The answer files a diff from a change's base adds, rewrites and removes, sorted by
+    name (`ChangedFiles`)."""
+    added: set[str] = set()
+    rewritten: set[str] = set()
+    removed: set[str] = set()
+    for entry in entries:
+        if entry.status == "R":
+            if entry.old_path is not None and is_answer_file(entry.old_path):
+                removed.add(name_of(entry.old_path))
+            if is_answer_file(entry.path):
+                added.add(name_of(entry.path))
+        elif is_answer_file(entry.path):
+            if entry.status == "A":
+                added.add(name_of(entry.path))
+            elif entry.status == "D":
+                removed.add(name_of(entry.path))
+            else:
+                rewritten.add(name_of(entry.path))
+    return ChangedFiles(tuple(sorted(added)), tuple(sorted(rewritten)), tuple(sorted(removed)))
+
+
+@dataclass(frozen=True)
+class Moved:
+    """Which answers of one entry a change moved out of its base's block (COR-062 point 3):
+    its revalidation, and its deferrals and revisit entries by their written positions."""
+
+    revalidation: bool = False
+    deferrals: frozenset[int] = frozenset()
+    revisits: frozenset[int] = frozenset()
+
+    def whole(self, entry: Entry) -> bool:
+        """Whether every answer of `entry` was moved: then it reads nothing it must name."""
+        return (
+            (entry.revalidation is None or self.revalidation)
+            and all(d.index in self.deferrals for d in entry.deferrals)
+            and all(r.index in self.revisits for r in entry.revisits)
+            and (entry.revalidation is not None or bool(entry.deferrals or entry.revisits))
+        )
+
+
+def moved(entry: Entry, base: Answers) -> Moved:
+    """The answers of `entry` that one live answer of the base's block carries with the
+    same words and values, where the entry names no file in `read` (COR-062 point 3).
+
+    Each answer is compared whole with one answer of the block: a revalidation by
+    its parsed `at`, its outcome and its `unchanged-because`; a deferral by its anchor
+    and its reason; a revisit entry by its target, its outcome and its reason. An
+    answer that repeats an answer file's words is never moved: only a block is moved
+    from."""
+    if entry.read or base.home != BLOCK_HOME:
+        return Moved()
+    revalidation = entry.revalidation
+    return Moved(
+        revalidation is not None
+        and any(
+            (r.at, r.outcome, r.because)
+            == (revalidation.at, revalidation.outcome, revalidation.because)
+            for r in base.revalidations
+        ),
+        frozenset(
+            d.index
+            for d in entry.deferrals
+            if any((b.anchor, b.reason) == (d.anchor, d.reason) for b in base.deferrals)
+        ),
+        frozenset(
+            r.index
+            for r in entry.revisits
+            if any(
+                (b.anchor, b.outcome, b.reason) == (r.anchor, r.outcome, r.reason)
+                for b in base.revisits
+            )
+        ),
+    )
+
+
 # --- points across homes ------------------------------------------------------------
 
 
@@ -994,6 +1108,17 @@ class AnswerHistory:
                 found.append((index, entry.after))
         return found
 
+    def held(self, path: str, raw: bytes | None) -> bool:
+        """Whether a commit of this history left the answer file at `path` holding exactly
+        `raw`: a file a change adds with it is put back, and writes no answer (COR-062
+        point 3)."""
+        if raw is None:
+            return False
+        return any(
+            state[0] != LINK_MODE and self.blobs.read_object(state[1]) == raw
+            for _index, state in self.versions(path)
+        )
+
     def files_at(self, sha: str) -> Mapping[str, TreeEntry]:
         """The answer files a commit holds, by name."""
         found = self._at.get(sha)
@@ -1038,7 +1163,9 @@ class AnswerHistory:
             self._naming[like.location] = found
         return found
 
-    def _block_at(self, like: Artefact, sha: str) -> Artefact | None:
+    def artefact_at(self, like: Artefact, sha: str) -> Artefact | None:
+        """The artefact `like` as the commit `sha` holds it, its file read under any name
+        it had; `None` where that commit holds none."""
         for name in self.history.names(like.path):
             entry = self.trees.entry(sha, name)
             if entry is not None:
@@ -1061,7 +1188,7 @@ class AnswerHistory:
         in_block: Callable[[Artefact | None], bool],
         in_entry: Callable[[Entry], bool],
     ) -> bool:
-        if in_block(self._block_at(like, sha)):
+        if in_block(self.artefact_at(like, sha)):
             return True
         return any(in_entry(entry) for entry in self._entries_at(like, sha))
 
@@ -1163,6 +1290,14 @@ class AnswerHistory:
             return tuple(sorted(points)), unreachable
         return self._deferral_carried(like, deferral.anchor, deferral.reason)
 
+    def deferral_carried(
+        self, like: Artefact, anchor: Anchor, reason: str | None
+    ) -> tuple[tuple[int, ...], bool]:
+        """Where the artefact's answers, in either home, first carried a deferral of `anchor`
+        with `reason` (COR-050 point 4, COR-062 point 6): empty where none did, so a
+        deferral with them is new. Also whether one lies beyond a shallow clone."""
+        return self._deferral_carried(like, anchor, reason)
+
     def _deferral_carried(
         self, like: Artefact, anchor: Anchor, reason: str | None
     ) -> tuple[tuple[int, ...], bool]:
@@ -1217,6 +1352,7 @@ class AnswerHistory:
                     kept=tuple(d.kept for d in answers.deferrals),
                 ),
                 tuple(() for _ in answers.deferrals),
+                tuple(() for _ in answers.revalidations),
             )
         unreachable: str | None = None
         cut = False
@@ -1306,6 +1442,7 @@ __all__ = [
     "AnswerHistory",
     "AnswerPoints",
     "Answers",
+    "ChangedFiles",
     "Deferment",
     "Entry",
     "HistoryNames",
@@ -1313,18 +1450,21 @@ __all__ = [
     "LiveRevalidation",
     "LiveRevisit",
     "Liveness",
+    "Moved",
     "Revalidation",
     "RevisitAnswer",
     "StateAnswers",
     "WorkingNames",
     "block_answers",
     "block_holds_answers",
+    "changed_files",
     "commit_files",
     "head_locations",
     "in_folder",
     "is_answer_file",
     "liveness",
     "location_of",
+    "moved",
     "name_of",
     "path_of",
     "read_answer_file",

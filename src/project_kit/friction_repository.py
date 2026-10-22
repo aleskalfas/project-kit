@@ -1893,9 +1893,9 @@ def _answers_json(
     with the points it keeps, and the answer folder's path (COR-062 Implications)."""
     document = answers.as_json()
     document["folder"] = answer_files.FOLDER
-    for item, points in zip(document["revalidations"], found.revalidations, strict=False):
+    for item, points in zip(document["revalidations"], found.revalidations, strict=True):
         item["points"] = [commits[p].as_json() for p in points]
-    for item, points in zip(document["deferrals"], found.deferrals, strict=False):
+    for item, points in zip(document["deferrals"], found.deferrals, strict=True):
         item["points"] = [commits[p].as_json() for p in points]
     return document
 

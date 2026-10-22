@@ -1451,6 +1451,7 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
     assert result.exit_code == 1
     document = json.loads(result.stdout)
     assert sorted(document) == [
+        "answered_apart_at_tip",
         "answers",
         "base",
         "check",
@@ -1461,10 +1462,12 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
         "head",
         "history",
         "mode",
+        "moved",
         "schema_version",
         "unreadable",
     ]
     assert document["answers"] == []  # friction is not an answer: nothing was written
+    assert document["moved"] == [] and document["answered_apart_at_tip"] == []
     assert document["unreadable"] == []
     assert document["history"] == {"shallow": False, "cut": []}
     assert document["schema_version"] == fc.CHANGE_SCHEMA_VERSION == 1
@@ -1475,7 +1478,8 @@ def test_json_document_shape(repo: AdopterRepo) -> None:
         True,
     )
     assert sorted(document["base"]) == ["commit", "outdated", "ref", "tip"]
-    assert sorted(document["head"]) == ["commit", "uncommitted_paths"]
+    assert sorted(document["head"]) == ["commit", "own", "uncommitted_paths"]
+    assert document["head"]["own"] == document["head"]["commit"]  # unset: HEAD
     assert document["counts"]["friction"] == 1 and document["counts"]["places"] == 1
     (finding,) = document["findings"]
     assert finding == {
@@ -1536,8 +1540,12 @@ def _written(answer: str | None, reason: str | None, **fields: Any) -> dict[str,
         "new": False,
         "put_back": False,
         "changed": [],
+        "replaces_apart": [],
+        "moved": False,
     }
     entry.update(fields)
+    # A block's answer is in its artefact's own file (COR-062 point 1).
+    entry.setdefault("file", str(entry["location"]).split("#", 1)[0])
     return entry
 
 
@@ -2336,6 +2344,7 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
             **_written("unanchored", "a rule of the method itself, anchored to nothing", new=True),
             "artefact": "RS-XS-001",
             "location": ".pkit/rule-sets/xs.md#RS-XS-001",
+            "file": ".pkit/rule-sets/xs.md",
         },
         {
             **_written(
@@ -2346,6 +2355,7 @@ def test_a_named_head_reads_its_rule_set_folders_and_anchor_kinds_from_that_comm
             ),
             "artefact": "RS-KS-001",
             "location": ".pkit/capabilities/kinds/rule-sets/ks.md#RS-KS-001",
+            "file": ".pkit/capabilities/kinds/rule-sets/ks.md",
         },
     ]
     (unresolved,) = [f for f in read["findings"] if f["kind"] == "unresolved-kind"]

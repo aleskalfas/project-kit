@@ -26,8 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-21T18:39:17Z
-      outcome: updated
+      at: 2026-10-22T22:13:56Z
+      outcome: unchanged
+      unchanged-because: The lifecycle README now drops the change's own head from what a query inherits, and the CLI changes only the friction check's help. The runner's registration and its run hold as written.
 ---
 
 # Adapters

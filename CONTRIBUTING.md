@@ -25,9 +25,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-21T21:57:58Z
+      at: 2026-10-22T22:13:58Z
       outcome: unchanged
-      unchanged-because: CONTRIBUTING cites COR-004 for its design rules and for keeping the command list out of the record. The refinement states the dry-run class by effect and lists no command, so both hold.
+      unchanged-because: The workflow now names the pull request's own head to the change check, beside its base. CI still runs the aggregator, and the short check as described.
       deferred:
         - anchor:
             kind: record

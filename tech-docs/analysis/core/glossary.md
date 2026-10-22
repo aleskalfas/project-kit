@@ -186,9 +186,9 @@ TERM-base:
           - COR-054#2
           - COR-054#3
       revalidated:
-        at: 2026-10-20T01:37:12Z
+        at: 2026-10-22T22:12:25Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change check now reads the change's own head from PKIT_CHECK_HEAD, which a pipeline names beside the base. What a base is stays as the definition says.
 TERM-capability:
   name: capability
   noun-forms: [capabilities]
@@ -238,9 +238,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-21T18:17:46Z
+        at: 2026-10-22T22:12:28Z
         outcome: unchanged
-        unchanged-because: This change only keeps answer files out of what a path anchor stands on in the change check. It still compares a head with its base and reads a change's answers from the blocks, as the term says.
+        unchanged-because: The change check now reads the answer files a change adds, and judges what each read against the change's own head. It still compares a head with its base, finds friction and dead anchors, and lists every answer.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -363,9 +363,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-20T01:37:25Z
+        at: 2026-10-22T22:12:30Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "The explanation now pairs each live answer with its points strictly, which changes no debt. The kept deferrals name what #1779 still rewrites in the term."
         deferred:
           - anchor:
               kind: path
@@ -412,9 +412,9 @@ TERM-default-branch:
           - COR-054#2
           - COR-054#4
       revalidated:
-        at: 2026-10-20T01:37:28Z
+        at: 2026-10-22T22:12:33Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change only names PKIT_CHECK_HEAD, the change's own head, beside the base override, and no reader of the default branch reads it. The definition holds.
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -465,9 +465,9 @@ TERM-finding:
           - COR-055#5
           - COR-057#3
       revalidated:
-        at: 2026-10-21T14:25:46Z
+        at: 2026-10-22T22:12:35Z
         outcome: unchanged
-        unchanged-because: COR-062 adds findings to both checks and to validation, of the same nature. A finding is still a statement a check reports whose severity says whether it fails, so the definition holds.
+        unchanged-because: No query the backbone runs inherits PKIT_CHECK_HEAD now, as none inherits the base. A finding is still a statement whose severity says whether it fails, so the definition holds.
 TERM-friction:
   name: friction
   status: active
@@ -484,9 +484,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-20T01:37:32Z
+        at: 2026-10-22T22:12:38Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "The change check now reads the answer files a change adds, dormant while nothing writes one. Friction is still a change with no answer standing for it, and the kept deferrals name the section's rewrite in #1779."
         deferred:
           - anchor:
               kind: path
@@ -1163,9 +1163,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-21T18:18:06Z
+        at: 2026-10-22T22:12:41Z
         outcome: unchanged
-        unchanged-because: This change makes the whole-repository check read answer files and also report debt answered apart. It still compares every artefact at the latest commit with its revalidation point and never fails, which is all the definition says.
+        unchanged-because: Only the explanation's pairing of answers with their points changed here. The whole-repository check still compares every artefact at the latest commit with its revalidation point, and never fails.
 ---
 
 # Glossary

@@ -37,9 +37,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-22T16:24:29Z
+      at: 2026-10-22T22:13:10Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

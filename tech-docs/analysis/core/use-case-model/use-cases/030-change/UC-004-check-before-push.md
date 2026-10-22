@@ -42,9 +42,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-22T16:24:04Z
+      at: 2026-10-22T22:13:35Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a `summary`, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The workflow now names the pull request's own head to the change check, and no validator inherits it. Each check still reads the base the steps name, so they hold.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks
