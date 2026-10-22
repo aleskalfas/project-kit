@@ -60,6 +60,39 @@ cut is named (`history.cut`).
   else (`_NamedHeadKinds`). What discovery reads from the working tree
   whichever state it walks — which files are synced copies, where a link
   leads — stays the running checkout's.
+- *The change's own head* (`own_head`; COR-062 point 4, ADR-068 point 6) is
+  the tree each answer the change adds had to read: a head named with
+  `--head`, else the commit `$PKIT_CHECK_HEAD` names — HEAD or a parent of
+  it, anything else refused — else HEAD, read as the working tree. A host
+  that checks out its merge of the change with its base names the change's
+  head there, so an answer landed on the base in parallel never fails it.
+
+**Answers read from answer files** (COR-062; `_ChangeAnswers`,
+`_FileReading`). Where the diff touches the answer folder or either side
+holds an answer file, an artefact whose block holds no answer at head, and
+that an answer file names at head or at the base, is read from the answer
+files — the reading of a state until every answer has moved out of the blocks
+(`answer_files.StateAnswers.answers`). The change's answers are the live ones
+at head in the answer files its diff adds, a file put back — its path and
+content held in the base's history — writing none, and an answer moved word
+for word out of the base's block (`answer_files.moved`) listed apart, asking
+nothing. They answer as a block's do (COR-050 point 5), against the base's
+live answers: an `unchanged-because` must differ from that of each
+revalidation it read, a deferral replacing one it read keeps that one's
+point, a revisit entry answers where its reason differs from each entry it
+replaces, and a value new or written back is judged across both homes'
+history behind the base (`_Behind`). Where the change removes a file whose
+answer is live, the answer it brings back is judged against its points
+(COR-062 point 8). It also finds, failing in enforcing mode (COR-062 point
+10): a rewrite of an answer file the base holds; a prune mixed with answers;
+an answer the change adds, live at its own head, whose `read` leaves out a
+file there answering its artefact — naming `$PKIT_CHECK_HEAD` where it is
+unset and HEAD is a merge; and a deferral or revisit entry on what its
+artefact does not hold. It reports, failing nothing, an entry whose location
+holds no artefact, an entry on an artefact whose block still holds answers,
+which is not read until the move, and each live revalidation on the base's
+tip that the change's answer on an artefact did not read (`answered-apart`,
+point 7). It flags each revalidation that replaces two answered apart.
 
 **When an anchor changed** (point 5) — between the base and head, two states,
 so an edit undone within the change is none: a *path* anchor when a changed
@@ -149,11 +182,13 @@ check accepts it (`AnswerStatus`) — `written-back` where it puts
 back an `at`, or a deferral that covers nothing, the artefact carried before;
 every deferral put back is flagged `put_back`, whether it covers or not. It
 is the list the person authorising a merge is shown: derived from the
-artefacts, never composed.
+artefacts, never composed. Each answer names the file it is in; one read
+from answer files is listed from the change's own (`_written_file_answers`).
 
 **Modes** (point 12): `warning` reports and exits 0; `enforcing` exits 1 on
-friction, dead anchors, unresolved kinds, a resolver's missing answer, bumps
-and targets not revisited (`FAILING_KINDS`). An outdated base never fails. Dormant — counts only,
+friction, dead anchors, unresolved kinds, a resolver's missing answer, bumps,
+targets not revisited and answer files written against COR-062
+(`FAILING_KINDS`). An outdated base never fails. Dormant — counts only,
 exit 0 — when no place is declared or nothing in the places carries the
 container (point 15).
 
@@ -192,15 +227,38 @@ import os
 import re
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from concurrent.futures import ThreadPoolExecutor
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from fnmatch import fnmatchcase
 from functools import cached_property
 from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple, Self
 
-from project_kit import cli_render, default_branch, refs
-from project_kit.answer_files import is_answer_file
+from project_kit import answer_files, cli_render, default_branch, refs
+from project_kit.answer_files import (
+    BLOCK_HOME,
+    FILES_HOME,
+    AnswerHistory,
+    Answers,
+    ChangedFiles,
+    Deferment,
+    Entry,
+    HistoryNames,
+    Liveness,
+    LiveRevalidation,
+    Moved,
+    StateAnswers,
+    WorkingNames,
+    block_holds_answers,
+    changed_files,
+    commit_files,
+    head_locations,
+    is_answer_file,
+    location_of,
+    moved,
+    path_of,
+    working_tree_files,
+)
 from project_kit.artefact_parts import AnchoredPart, PartState, anchored_part, whole_target
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.friction_discovery import (
@@ -246,7 +304,9 @@ from project_kit.friction_git import (
 )
 from project_kit.friction_history import (
     BLOCK,
+    Carried,
     Commit,
+    History,
     Walker,
     Writes,
     changed_since,
@@ -273,6 +333,12 @@ from project_kit.working_tree import (
 #: The environment variable that names the base when no reference is given; with
 #: neither, the base is the default branch (COR-054 point 3, `default_branch`).
 BASE_ENV = default_branch.CHECK_BASE_ENV
+
+#: The environment variable that names the change's own head for a run that reads the
+#: working tree: the commit checked, or a parent of it, such as the change's head where a
+#: host checks out its merge of the change with its base (ADR-068 point 6). Unset or
+#: empty, the own head is HEAD; `--head REV` makes it REV, and it is not read.
+HEAD_ENV = default_branch.CHECK_HEAD_ENV
 
 #: The mode in which the change check fails (COR-050 point 12).
 ENFORCING = "enforcing"
@@ -317,6 +383,29 @@ class FindingKind(Enum):
     # An artefact anchor on an id two artefacts share, which the diff made so: ambiguous,
     # warned of and never failed (COR-050 point 7).
     SHARED_ID = "shared-id"
+    # What the change does to the answer folder against COR-062 point 3: it rewrites an
+    # answer file its base holds, or it adds answer files beside removing one in which no
+    # answer is live at its base, a prune mixed with answers.
+    ANSWER_FILE_REWRITTEN = "answer-file-rewritten"
+    PRUNE_MIXED = "prune-mixed"
+    # An answer the change adds, live at its own head, whose `read` leaves out an answer
+    # file there that answers its artefact (COR-062 point 4).
+    READ_INCOMPLETE = "read-incomplete"
+    # An answer the change writes on what its artefact does not hold: a deferral of an
+    # anchor it does not declare, or a revisit entry for a target no link takes (COR-062
+    # point 10).
+    ANSWERS_NOTHING = "answers-nothing"
+    # An entry the change writes whose location holds no artefact at head: it answers
+    # nothing, as an answer on what is gone does, and is reported only (COR-062 points 5
+    # and 10).
+    ANSWER_ON_WHAT_IS_GONE = "answer-on-what-is-gone"
+    # An entry the change writes on an artefact whose block still holds answers: the
+    # artefact is read from its block, so the entry is not read until the move (COR-062
+    # point 11). Reported only, so its reviewer sees it.
+    ANSWER_FILE_IGNORED = "answer-file-ignored"
+    # A live revalidation on the base's tip that the change's answer on the artefact did
+    # not read: merged, the two are answered apart. Reported only (COR-062 point 7).
+    ANSWERED_APART = "answered-apart"
 
 
 #: The findings enforcing mode fails on (COR-050 point 12). An unresolved kind
@@ -329,6 +418,10 @@ class FindingKind(Enum):
 #: cannot be told from a resolver asked about the head alone (ADR-057 point 3).
 #: Adding the kind here fails it instead; the legend and the failing summary follow
 #: this set, so nothing else in the code changes.
+#:
+#: The answer files a change writes against COR-062 fail too (its point 10): a rewrite
+#: or a prune mixed with answers, an answer leaving out a file it had to read, and an
+#: answer on what its artefact does not hold. Answers made apart never fail (point 7).
 FAILING_KINDS = frozenset(
     {
         FindingKind.FRICTION,
@@ -337,6 +430,10 @@ FAILING_KINDS = frozenset(
         FindingKind.UNRESOLVED_KIND,
         FindingKind.NO_ANSWER,
         FindingKind.UNREVISITED,
+        FindingKind.ANSWER_FILE_REWRITTEN,
+        FindingKind.PRUNE_MIXED,
+        FindingKind.READ_INCOMPLETE,
+        FindingKind.ANSWERS_NOTHING,
     }
 )
 
@@ -449,6 +546,14 @@ class WrittenAnswer:
       adds none; `fields`, the trigger fields the diff changed, where it
       triggered a link taking the target — empty otherwise. `None` and empty
       for every other answer, whose JSON leaves the four keys out.
+    - `file`: the file the answer is in, repository-relative — its answer file, or
+      the artefact's own file for an answer in its block; `None` for a target
+      revisited by changing it, which leaves no mark (COR-062 point 1).
+    - `replaces_apart`: on a revalidation in an answer file, the answer files of
+      the revalidations answered apart at the base that it replaces, by name — its
+      reason must judge their combined state (COR-062 point 7); empty otherwise.
+    - `moved`: an answer moved out of the base's block word for word, listed apart
+      from the change's answers (`ChangeCheck.moved`; COR-062 point 3).
     """
 
     artefact: str  # the artefact's id
@@ -466,6 +571,9 @@ class WrittenAnswer:
     target: Anchor | None = None
     links: tuple[str, ...] = ()
     fields: tuple[str, ...] = ()
+    file: str | None = None
+    replaces_apart: tuple[str, ...] = ()
+    moved: bool = False
 
     def as_json(self) -> dict[str, Any]:
         """The entry as the JSON document gives it: a revisit adds `outcome`, `target`,
@@ -482,6 +590,9 @@ class WrittenAnswer:
             "new": self.new,
             "put_back": self.put_back,
             "changed": [_anchor_json(anchor) for anchor in self.changed],
+            "file": self.file,
+            "replaces_apart": list(self.replaces_apart),
+            "moved": self.moved,
         }
         if self.answer == REVISITED:
             document["outcome"] = self.outcome
@@ -489,6 +600,32 @@ class WrittenAnswer:
             document["links"] = list(self.links)
             document["fields"] = list(self.fields)
         return document
+
+
+@dataclass(frozen=True)
+class ApartAtTip:
+    """An artefact the change revalidates in an answer file, and each live revalidation on
+    the base's tip its answer did not read (COR-062 point 7): merged, they would be
+    answered apart. The person who authorises the merge is told, as information."""
+
+    artefact: str  # the artefact's id
+    location: str
+    revalidations: tuple[LiveRevalidation, ...]
+
+    def as_json(self) -> dict[str, Any]:
+        return {
+            "artefact": self.artefact,
+            "location": self.location,
+            "revalidations": [
+                {
+                    "file": None if r.file is None else path_of(r.file),
+                    "at": r.written if isinstance(r.written, str) else None,
+                    "outcome": r.outcome,
+                    "unchanged_because": r.because,
+                }
+                for r in self.revalidations
+            ],
+        }
 
 
 @dataclass(frozen=True)
@@ -506,11 +643,21 @@ class HeadState:
     commit: str  # HEAD, or the commit named with `--head`
     uncommitted: int  # paths the working tree changes beyond HEAD, untracked included
     named: str | None = None  # the revision named with `--head`; `None` reads the working tree
+    # The change's own head (`own_head`): what each answer had to read (COR-062 point 4).
+    # `None` until it is read; then `commit`, or a parent of it named with `HEAD_ENV`.
+    own: str | None = None
+    own_source: str | None = None  # `HEAD_ENV` where the variable named it, else `None`
+    merge: bool = False  # the commit checked has more than one parent
 
     @property
     def name(self) -> str:
         """How the head is named in what the check says: `HEAD`, or the revision given."""
         return "HEAD" if self.named is None else self.named
+
+    @property
+    def own_head(self) -> str:
+        """The change's own head: `own`, else the commit checked."""
+        return self.commit if self.own is None else self.own
 
 
 @dataclass(frozen=True)
@@ -532,6 +679,12 @@ class ChangeCheck:
     # Locations of the artefacts whose history behind the base was read to a shallow
     # clone's cut: a value first carried inside the clone is read as first carried there.
     cut: tuple[str, ...] = ()
+    # The answers the change moved out of its base's blocks word for word, listed apart
+    # from `answers`: each asks nothing (COR-062 point 3).
+    moved: tuple[WrittenAnswer, ...] = ()
+    # Per artefact the change revalidates in an answer file, the live revalidations on the
+    # base's tip its answer did not read (COR-062 point 7): reported, never failed.
+    apart_at_tip: tuple[ApartAtTip, ...] = ()
 
     def count(self, kind: FindingKind) -> int:
         return sum(1 for f in self.findings if f.kind is kind)
@@ -574,6 +727,45 @@ def named_head(root: Path, rev: str) -> HeadState:
     if commit is None:
         raise FrictionCheckError(f"--head {rev!r} names no commit of this repository.")
     return HeadState(commit, 0, rev)
+
+
+def own_head(root: Path, head: HeadState) -> HeadState:
+    """`head` with the change's own head read (COR-062 point 4; ADR-068 point 6): the tree
+    each answer the change adds had to read, wherever the check runs.
+
+    - A head named with `--head` is its own head: `HEAD_ENV` is not read.
+    - Else `$PKIT_CHECK_HEAD` names it, read as unset where empty: the commit
+      checked, HEAD, or a parent of HEAD — the change's head, where a host checks
+      out its merge of the change with its base. Anything else is refused, failing
+      closed (`FrictionCheckError`), and says why.
+    - Unset, it is HEAD, and the working tree is read as it, uncommitted work
+      included, as the rest of the check reads it.
+
+    Whether the commit checked is a merge is read too: unset on a merge, a finding that
+    an answer leaves out a file names the variable (`READ_INCOMPLETE`)."""
+    listed = run_git(root, "rev-list", "--parents", "-n", "1", head.commit).stdout.decode()
+    parents = tuple(listed.split()[1:])
+    merge = len(parents) > 1
+    if head.named is not None:
+        return replace(head, own=head.commit, own_source=None, merge=merge)
+    value = (os.environ.get(HEAD_ENV) or "").strip()
+    if not value:
+        return replace(head, own=head.commit, own_source=None, merge=merge)
+    commit = None if value.startswith("-") else commit_of(root, value)
+    if commit is None:
+        raise FrictionCheckError(
+            f"${HEAD_ENV} {value!r} names no commit of this repository. It names the change's "
+            f"own head, HEAD or a parent of it (ADR-068 point 6): fetch that commit, or unset "
+            f"the variable."
+        )
+    if commit != head.commit and commit not in parents:
+        raise FrictionCheckError(
+            f"${HEAD_ENV} names {commit[:SHORT]}, which is neither HEAD ({head.commit[:SHORT]}) "
+            f"nor a parent of it. The change's own head is the commit checked, or the change's "
+            f"head where a host checks out its merge with the base (ADR-068 point 6): check "
+            f"out the change or that merge, or unset the variable."
+        )
+    return replace(head, own=commit, own_source=HEAD_ENV, merge=merge)
 
 
 def resolve_base(
@@ -1604,12 +1796,17 @@ class _WrittenBack:
 
 @dataclass(frozen=True)
 class _PutBack:
-    """A deferral the diff puts back, with an anchor and a reason the artefact carried
-    before: it keeps the point of the entry it puts back (COR-050 point 4) — `None`
-    where that lies beyond a shallow clone."""
+    """A deferral the diff writes that keeps earlier points: one that puts back an anchor
+    and a reason the artefact carried before keeps the point of the entry it puts back
+    (COR-050 point 4), and one in an answer file that replaces deferrals of its anchor
+    it read keeps theirs (COR-062 point 6). `points` is empty where they lie beyond a
+    shallow clone; `commit` is the newest point's. `reachable`: a revalidation point
+    may reach them — by ancestry for a block, and for an answer file only where a live
+    revalidation keeps the deferral or read its file (COR-062 point 5)."""
 
-    point: int | None
+    points: tuple[int, ...]
     commit: Commit | None
+    reachable: bool = True
 
 
 def _same_file(artefact: Artefact, before: Artefact, diff: Diff) -> bool:
@@ -1636,6 +1833,13 @@ class _Behind:
     word (`_ever_held`). In a shallow clone the walk always runs, since only it
     tells what the cut hides; each artefact read without history beyond the cut
     is listed (`cut`).
+
+    **Across homes** (COR-062 point 6). Where a commit behind the base touched the
+    answer folder (`folder_touched`, one `git log` asking), a value or a deferral
+    an answer file named the artefact with may have been carried there: the walk
+    then reads both homes (`answer_files.AnswerHistory`), and the file's own
+    reading no longer tells a value new on its own. Where none did, every answer
+    behind the base is in a block, and the reading is the block's alone.
     """
 
     def __init__(self, root: Path, base: BaseState, named: HeadState | None, head: Side) -> None:
@@ -1650,6 +1854,9 @@ class _Behind:
         self._blobs: BlobReader | None = None
         self._walker: Walker | None = None
         self._states: dict[str, tuple[Side, Diff]] = {}
+        self._folder: bool | None = None
+        self._answers: AnswerHistory | None = None
+        self._base_answers: StateAnswers | None = None
 
     def close(self) -> None:
         if self._blobs is not None:
@@ -1662,6 +1869,78 @@ class _Behind:
             self._blobs = BlobReader(self._root)
             self._walker = Walker(history, self._blobs)
         return self._walker
+
+    @property
+    def blobs(self) -> BlobReader:
+        """The one `git cat-file --batch` reader of the run, started with the walk."""
+        self.walker  # noqa: B018 — reading it starts the reader
+        assert self._blobs is not None
+        return self._blobs
+
+    @property
+    def answers(self) -> AnswerHistory:
+        """The answer files through the history behind the base, beside each artefact's
+        block (COR-062 point 6), read with the walk."""
+        if self._answers is None:
+            self._answers = AnswerHistory(self.walker.history, self.walker, self.blobs)
+        return self._answers
+
+    def base_answers(self) -> StateAnswers:
+        """The base's answer files, judged with the history behind it, read once."""
+        if self._base_answers is None:
+            self._base_answers = self.answers.head(self._base.commit)
+        return self._base_answers
+
+    @property
+    def folder_touched(self) -> bool:
+        """Whether a commit behind the base touched the answer folder: one `git log`, asked
+        once. Where none did, no answer file ever named an artefact there."""
+        if self._folder is None:
+            listed = run_git(
+                self._root,
+                "log",
+                "-1",
+                "--format=%H",
+                self._base.commit,
+                "--",
+                answer_files.FOLDER,
+            ).stdout
+            self._folder = bool(listed.strip())
+        return self._folder
+
+    def across(self, before: Artefact) -> bool:
+        """Whether an answer file behind the base ever named `before`: its answers' history
+        is then read in both homes."""
+        return self.folder_touched and self.answers.ever_named(before)
+
+    def carried(self, before: Artefact, value: Any, among: frozenset[int] | None = None) -> Carried:
+        """Where the artefact's answers behind the base first carried `value`, in either
+        home (`AnswerHistory.carried`); the block's walk alone where no answer file ever
+        named it (`Walker.carried`, `among` the commits that can have written it)."""
+        if self.across(before):
+            return self.answers.carried(before, value)
+        return self.walker.carried(before, value, among)
+
+    def value_back(
+        self, artefact: Artefact, before: Artefact, values: Iterable[Any]
+    ) -> _WrittenBack | None:
+        """Where the head's live revalidations carry `values` the base's do not, read from
+        answer files, whether the artefact's answers carried them before (COR-050 point 3,
+        COR-062 point 8): `None` where none of them was, so each is new; else every point
+        of each — the block's own marker, `None` meaning no live revalidation, judged
+        against the commit that first introduced the block. Empty where one lies beyond
+        a shallow clone: then the artefact is judged against the base."""
+        points: dict[int, None] = {}
+        for value in values:
+            found = self.carried(before, BLOCK if value is None else value)
+            if found.cut:
+                self._note_cut(artefact)
+            if found.unreachable:
+                return _WrittenBack(())
+            points.update(dict.fromkeys(found.points))
+        if not points:
+            return None
+        return _WrittenBack(tuple(self._point(index, before) for index in sorted(points)))
 
     def prefetch(self, pairs: Iterable[tuple[Artefact, Artefact]], diff: Diff) -> None:
         """Read at once the files `written_back` will read for these (head, base)
@@ -1739,15 +2018,16 @@ class _Behind:
         value = BLOCK if at is None else at
         writes = self._writes_of(before.path)
         listed = None if writes is None else writes.of(value)
-        if listed is not None and not listed:
+        across = value is not BLOCK and self.across(before)
+        if listed is not None and not listed and not across:
             return None
         history = self.walker.history
         among = (
             None
-            if listed is None
+            if listed is None or across
             else frozenset(index for sha in listed if (index := history.position(sha)) is not None)
         )
-        found = self.walker.carried(before, value, among)
+        found = self.carried(before, value, among)
         if found.cut:
             self._note_cut(artefact)
         if found.unreachable:
@@ -1757,10 +2037,16 @@ class _Behind:
         return _WrittenBack(tuple(self._point(index, before) for index in found.points))
 
     def _point(self, index: int, before: Artefact) -> _Point:
+        """The revalidation point at `index`: the artefact as that commit held it, read from
+        its file's version there, or, for a point an answer file made, from that commit's
+        tree (COR-062 point 6)."""
         history = self.walker.history
         commit = history.commits[index]
-        version = next(v for v in history.versions(before.path) if v.index == index)
-        then = self.walker.same_at(version, before)
+        version = next((v for v in history.versions(before.path) if v.index == index), None)
+        if version is not None:
+            then = self.walker.same_at(version, before)
+        else:
+            then = self.answers.artefact_at(before, commit.sha)
         side, diff = self.state(commit.sha)
         return _Point(index, commit, before if then is None else then, side, diff)
 
@@ -1787,16 +2073,32 @@ class _Behind:
         reason = next(
             (entry_reason(artefact, d) for d in artefact.deferrals if d.anchor == anchor), None
         )
+        if self.across(before):
+            # The entry may put back a deferral an answer file carried (COR-062 point 6).
+            points, unreachable = self.answers.deferral_carried(before, anchor, reason)
+            return self.kept_back(points, unreachable=unreachable)
         if not self._ever_held(before.path, reason_words(reason)):
             return None
         found = self.walker.deferral_point(before, anchor, reason)
         if found.cut:
             self._note_cut(artefact)
         if found.unreachable:
-            return _PutBack(None, None)
+            return _PutBack((), None)
         if found.point is None:
             return None
-        return _PutBack(found.point, self.walker.history.commits[found.point])
+        return _PutBack((found.point,), self.walker.history.commits[found.point])
+
+    def kept_back(
+        self, points: Sequence[int], *, unreachable: bool, reachable: bool = True
+    ) -> _PutBack | None:
+        """A deferral that keeps `points` (`_PutBack`): `None` where it keeps none, so it
+        is new; empty where they lie beyond a shallow clone."""
+        if unreachable:
+            return _PutBack((), None, reachable)
+        if not points:
+            return None
+        newest = min(points)  # the log lists the newest commit first
+        return _PutBack(tuple(points), self.walker.history.commits[newest], reachable)
 
     def kept_point(self, before: Artefact, anchor: Anchor) -> int | None:
         """The deferral point of the entry on `anchor` the base carries."""
@@ -1805,7 +2107,7 @@ class _Behind:
     def points_of(self, before: Artefact) -> tuple[int, ...]:
         """The revalidation points of the `at` the base carries."""
         at = parsed_at(before)
-        return self.walker.carried(before, BLOCK if at is None else at).points
+        return self.carried(before, BLOCK if at is None else at).points
 
     def reaches(self, points: Sequence[int], index: int) -> bool:
         return index in self.walker.history.reached(points)
@@ -1890,6 +2192,7 @@ class WrittenRevisit:
 
     entry: Revisit
     new_reason: bool
+    file: str | None = None  # the file it is in: the artefact's, or an answer file
 
 
 def revisits_written(artefact: Artefact, before: Artefact | None) -> list[WrittenRevisit]:
@@ -1903,7 +2206,7 @@ def revisits_written(artefact: Artefact, before: Artefact | None) -> list[Writte
         words.setdefault(entry.anchor, set()).add(entry.words)
         reasons.setdefault(entry.anchor, set()).add(entry.reason)
     return [
-        WrittenRevisit(e, e.reason not in reasons.get(e.anchor, set()))
+        WrittenRevisit(e, e.reason not in reasons.get(e.anchor, set()), artefact.path)
         for e in artefact.revisits
         if e.words not in words.get(e.anchor, set())
     ]
@@ -1941,9 +2244,12 @@ def _revisit_findings(
     base: Side,
     diff: Diff,
     kinds: AnchorKinds,
+    revisits: Sequence[WrittenRevisit],
 ) -> tuple[list[Finding], tuple[Anchor, ...]]:
     """The findings on each target the diff asks the source to revisit (COR-050 points 12
-    and 16), and the targets the diff answered by changing them.
+    and 16), and the targets the diff answered by changing them. `revisits` are the
+    revisit entries the change wrote on the source (`revisits_written`, or an answer
+    file's, `_FileReading.revisits`).
 
     A target is revisited when what it stands on differs between the base and
     head, by point 5's rule (`_anchor_question`, the source's own file left out),
@@ -1953,7 +2259,7 @@ def _revisit_findings(
     alone changed answers nothing: an old reason would answer a new change.
     """
     written: dict[Anchor, Revisit] = {}
-    for found in revisits_written(artefact, before):
+    for found in revisits:
         if found.new_reason:
             written.setdefault(found.entry.anchor, found.entry)
     findings: list[Finding] = []
@@ -2000,6 +2306,346 @@ class _Judged:
     changed: tuple[Anchor, ...] = ()
     triggers: tuple[_Trigger, ...] = ()
     changed_targets: tuple[Anchor, ...] = ()
+    revisits: tuple[WrittenRevisit, ...] = ()  # the revisit entries the change wrote
+
+
+class _BlockReading:
+    """An artefact's answers read from its block at the base and at head (COR-050 points 3,
+    4 and 16): the reading of every artefact the answer files do not answer
+    (`_ChangeAnswers.reading`), exactly as before them.
+
+    - `introduced`, `kept`: the anchors a deferral at head defers that the base's
+      block defers in no entry, and in one.
+    - `put_back`: an introduced deferral that puts back an entry the artefact carried
+      before keeps that entry's point (`_Behind.put_back`); `kept_back`, the point
+      of the entry the base carries.
+    """
+
+    def __init__(self, artefact: Artefact, before: Artefact, diff: Diff, behind: _Behind) -> None:
+        self.artefact = artefact
+        self.before = before
+        self._diff = diff
+        self._behind = behind
+        now = {d.anchor for d in artefact.deferrals}
+        was = {d.anchor for d in before.deferrals}
+        self.introduced = frozenset(now - was)
+        self.kept = frozenset(now & was)
+        self._backs: dict[Anchor, _PutBack | None] = {}
+
+    def written_back(self) -> _WrittenBack | None:
+        return self._behind.written_back(self.artefact, self.before, self._diff)
+
+    def revalidation(self) -> _Revalidation | None:
+        return _revalidation(self.artefact, self.before)
+
+    def wrote_back(self, written: _WrittenBack | None) -> bool:
+        """Whether the revalidation's `at` is written back: a value it carried before,
+        never an `at` removed."""
+        return written is not None and parsed_at(self.artefact) is not None
+
+    def put_back(self, anchor: Anchor) -> _PutBack | None:
+        if anchor not in self._backs:
+            self._backs[anchor] = self._behind.put_back(
+                self.artefact, self.before, anchor, self._diff
+            )
+        return self._backs[anchor]
+
+    @property
+    def put_backs(self) -> frozenset[Anchor]:
+        return frozenset(anchor for anchor, back in self._backs.items() if back is not None)
+
+    def kept_back(self, anchor: Anchor) -> _PutBack | None:
+        point = self._behind.kept_point(self.before, anchor)
+        return self._behind.kept_back(() if point is None else (point,), unreachable=False)
+
+    def base_points(self) -> tuple[int, ...]:
+        return self._behind.points_of(self.before)
+
+    def text(self, answer: Answer, anchor: Anchor | None = None) -> str:
+        return _answer_text(answer, self.artefact, anchor)
+
+    def revisits(self) -> list[WrittenRevisit]:
+        return revisits_written(self.artefact, self.before)
+
+
+#: An artefact's answers at the base where it has no counterpart there: none.
+_NO_ANSWERS = Answers(FILES_HOME)
+
+
+class _FileReading:
+    """An artefact's answers read from answer files at head (COR-062): the reading of every
+    artefact whose block holds no answer at head and an answer file names, at the base
+    or at head (`_ChangeAnswers.reading`).
+
+    The change's answers are the live ones at head in the answer files it wrote —
+    added, never put back (`_ChangeAnswers.wrote`) — save those moved word for
+    word out of the base's block (`moves`; COR-062 point 3), which write no answer.
+    The base's answers are the base's live ones, from its block or its answer files
+    (`StateAnswers.answers`). Against them, as COR-050 point 5 judges:
+
+    - **The revalidation** (`own`, `judged_rev`). One with a value the base's live
+      revalidations do not carry answers where its value is new behind the base, in
+      either home (`_Behind.value_back`): `updated` with a content change,
+      `unchanged` without one and with an `unchanged-because` that differs from each
+      revalidation it read (COR-062 point 5), else a bump. One whose value the
+      artefact's answers carried before is written back and answers nothing. One
+      the base's live revalidations carry is no new value. With none of the
+      change's own, where the live revalidations at head differ from the base's —
+      an answer file removed brings back one it replaced (COR-062 point 8) — the
+      artefact is judged against their points, as a value written back is.
+    - **Deferrals** (`mine`, `introduced`, `kept`). A deferral of the change is new,
+      covering its anchor as it stands at head, unless it replaces deferrals of its
+      anchor it read, keeping their points, or puts back an anchor and a reason
+      the artefact carried before, keeping that one's (COR-062 point 6;
+      `AnswerHistory.deferral_points`). A revalidation reaches it only where a live
+      one keeps it or read its file (`Liveness.kept`). Every other live deferral is
+      kept from the base.
+    - **Revisit entries** (`revisits`). One of the change answers its target where
+      its reason differs from each entry it replaces (COR-062 point 5). One that
+      repeats such an entry's words is not written.
+    """
+
+    def __init__(
+        self,
+        artefact: Artefact,
+        before: Artefact | None,
+        change: _ChangeAnswers,
+        behind: _Behind,
+    ) -> None:
+        self.artefact = artefact
+        self.before = before
+        self._behind = behind
+        head = change.head.answers(artefact, change.head_side.discovery)
+        assert head.liveness is not None  # read from answer files
+        self.head = head
+        self.judged: Liveness = head.liveness
+        self.base = (
+            _NO_ANSWERS
+            if before is None
+            else change.base.answers(before, change.base_side.discovery)
+        )
+        self.moves: dict[Entry, Moved] = {
+            e: moved(e, self.base) for e in self.judged.entries if change.wrote(e.file)
+        }
+        self.base_values = frozenset(r.at for r in self.base.revalidations)
+        self.base_deferred = frozenset(d.anchor for d in self.base.deferrals)
+        self.own: tuple[Entry, ...] = tuple(
+            e
+            for e in self.judged.revalidations
+            if e in self.moves and not self.moves[e].revalidation
+        )
+        self.judged_rev: Entry | None = next(
+            (e for e in self.own if _value(e) not in self.base_values),
+            self.own[0] if self.own else None,
+        )
+        self.mine: tuple[tuple[Entry, Deferment], ...] = tuple(
+            (e, d)
+            for e, d in self.judged.deferrals
+            if e in self.moves and d.index not in self.moves[e].deferrals
+        )
+        self.introduced = frozenset(d.anchor for _e, d in self.mine)
+        self.kept = frozenset(d.anchor for e, d in self.judged.deferrals if (e, d) not in self.mine)
+        self._backs: dict[tuple[Entry, Deferment], _PutBack | None] = {}
+        self._values: dict[Any, _WrittenBack | None] = {}
+
+    # --- the revalidation ------------------------------------------------------------
+
+    def _value_back(self, value: Any) -> _WrittenBack | None:
+        if value not in self._values:
+            assert self.before is not None
+            self._values[value] = self._behind.value_back(self.artefact, self.before, (value,))
+        return self._values[value]
+
+    def written_back(self) -> _WrittenBack | None:
+        rev = self.judged_rev
+        if rev is not None:
+            value = _value(rev)
+            return None if value in self.base_values else self._value_back(value)
+        at_head = frozenset(_value(e) for e in self.judged.revalidations)
+        if at_head == self.base_values:
+            return None
+        assert self.before is not None
+        found = self._behind.value_back(self.artefact, self.before, at_head or (None,))
+        return _WrittenBack(()) if found is None else found
+
+    def wrote_back(self, written: _WrittenBack | None) -> bool:
+        return written is not None and self.judged_rev is not None
+
+    def revalidation(self) -> _Revalidation | None:
+        return None if self.judged_rev is None else self._verdict(self.judged_rev)
+
+    def _verdict(self, entry: Entry) -> _Revalidation | None:
+        """What the change's revalidation in `entry` answers, its value new (COR-050 point
+        5); `None` where the base's live revalidations carry its value."""
+        rev = entry.revalidation
+        assert rev is not None and self.before is not None
+        if rev.at in self.base_values:
+            return None
+        changed = content_differs(self.artefact, self.before)
+        if rev.outcome == Answer.UPDATED.value:
+            if changed:
+                return _Revalidation(Answer.UPDATED)
+            return _Revalidation(
+                None, "`at` changed with `outcome: updated`, but the content did not change"
+            )
+        if rev.outcome == Answer.UNCHANGED.value:
+            if changed:
+                return _Revalidation(
+                    None, "`at` changed with `outcome: unchanged`, but the content changed"
+                )
+            if rev.because is None or rev.because in self.read_becauses(entry):
+                return _Revalidation(
+                    None,
+                    "`at` changed with `outcome: unchanged`, but `unchanged-because` is the "
+                    "same as that of a revalidation it read — say why the content holds "
+                    "against this change",
+                )
+            return _Revalidation(Answer.UNCHANGED)
+        return _Revalidation(None, "`at` changed without an `outcome` of `updated` or `unchanged`")
+
+    def read_becauses(self, entry: Entry) -> frozenset[str | None]:
+        """The `unchanged-because` of each revalidation on the artefact the entry read
+        (COR-062 point 5), and the base's block's while the base reads it from there."""
+        read = self.judged.reads.get(entry, frozenset())
+        found: set[str | None] = {
+            other.revalidation.because
+            for other in self.judged.entries
+            if other.file != entry.file and other.file in read and other.revalidation is not None
+        }
+        if self.base.home == BLOCK_HOME:
+            found.update(r.because for r in self.base.revalidations)
+        return frozenset(found)
+
+    def status(self, entry: Entry) -> AnswerStatus:
+        """How the answers list gives the change's revalidation in `entry`."""
+        if _value(entry) in self.base_values:
+            return AnswerStatus.EDITED
+        if self._value_back(_value(entry)) is not None:
+            return AnswerStatus.WRITTEN_BACK
+        verdict = self._verdict(entry)
+        if verdict is None:
+            return AnswerStatus.EDITED
+        return AnswerStatus.BUMP if verdict.answer is None else AnswerStatus.STANDS
+
+    def replaces_apart(self, entry: Entry) -> tuple[str, ...]:
+        """The answer files of the revalidations answered apart at the base that the
+        revalidation in `entry` replaces, reading both of a pair (COR-062 point 7)."""
+        read = self.judged.reads.get(entry, frozenset())
+        return tuple(sorted({f for pair in self.base.apart if set(pair) <= read for f in pair}))
+
+    # --- deferrals -------------------------------------------------------------------
+
+    def back_of(self, entry: Entry, deferral: Deferment) -> _PutBack | None:
+        """The points a live deferral at head keeps (`_PutBack`), or `None` where it keeps
+        none, so it is new (COR-062 point 6)."""
+        key = (entry, deferral)
+        if key not in self._backs:
+            assert self.before is not None
+            points, unreachable = self._behind.answers.deferral_points(
+                self.before, self.judged, entry, deferral
+            )
+            self._backs[key] = self._behind.kept_back(
+                points, unreachable=unreachable, reachable=key in self.judged.kept
+            )
+        return self._backs[key]
+
+    def put_back(self, anchor: Anchor) -> _PutBack | None:
+        backs = [self.back_of(e, d) for e, d in self.mine if d.anchor == anchor]
+        found = [back for back in backs if back is not None]
+        if not backs or len(found) < len(backs):
+            return None  # one of them is new: it covers the anchor as it stands at head
+        return _joined(found)
+
+    @property
+    def put_backs(self) -> frozenset[Anchor]:
+        return frozenset(
+            d.anchor
+            for e, d in self.mine
+            if not self.judged.inherited(e, d) and self.back_of(e, d) is not None
+        )
+
+    def kept_back(self, anchor: Anchor) -> _PutBack | None:
+        found = [
+            back
+            for e, d in self.judged.deferrals
+            if d.anchor == anchor and (e, d) not in self.mine
+            if (back := self.back_of(e, d)) is not None
+        ]
+        return _joined(found) if found else None
+
+    def base_points(self) -> tuple[int, ...]:
+        assert self.before is not None
+        if not self.base.from_files:
+            return self._behind.points_of(self.before)
+        return self._behind.answers.points(self.before, self.base).points.revalidations
+
+    # --- words -----------------------------------------------------------------------
+
+    def text(self, answer: Answer, anchor: Anchor | None = None) -> str:
+        if answer is Answer.UNCHANGED and self.judged_rev is not None:
+            rev = self.judged_rev.revalidation
+            return f"unchanged — {None if rev is None else rev.because}"
+        if answer is Answer.DEFERRED and anchor is not None:
+            reason = next((d.reason for _e, d in self.mine if d.anchor == anchor), None)
+            return f"deferred — {reason}" if reason else "deferred"
+        return answer.value
+
+    def revisits(self) -> list[WrittenRevisit]:
+        found: list[WrittenRevisit] = []
+        for entry, revisit in self.judged.revisits:
+            if entry not in self.moves or revisit.index in self.moves[entry].revisits:
+                continue
+            read = self.judged.reads.get(entry, frozenset())
+            replaced = [
+                other
+                for o in self.judged.entries
+                if o.file != entry.file and o.file in read
+                for other in o.revisits
+                if other.anchor == revisit.anchor
+            ]
+            if self.base.home == BLOCK_HOME:
+                words = [
+                    (b.outcome, b.reason) for b in self.base.revisits if b.anchor == revisit.anchor
+                ]
+            else:
+                words = []
+            words.extend((r.outcome, r.reason) for r in replaced)
+            if (revisit.outcome, revisit.reason) in words:
+                continue  # it repeats an entry it replaces: nothing written
+            found.append(
+                WrittenRevisit(
+                    Revisit(revisit.index, revisit.anchor, revisit.outcome, revisit.reason),
+                    revisit.reason not in {reason for _outcome, reason in words},
+                    path_of(entry.file),
+                )
+            )
+        return found
+
+    def entries(self) -> tuple[Entry, ...]:
+        """The change's entries naming the artefact that hold an answer live at head."""
+        live = set(self.judged.revalidations)
+        live.update(e for e, _d in self.judged.deferrals)
+        live.update(e for e, _r in self.judged.revisits)
+        return tuple(e for e in self.judged.entries if e in self.moves and e in live)
+
+
+def _value(entry: Entry) -> Any:
+    """The parsed `at` of the revalidation in `entry`."""
+    return None if entry.revalidation is None else entry.revalidation.at
+
+
+def _joined(backs: Sequence[_PutBack]) -> _PutBack:
+    """Several deferrals' kept points as one: every point, the newest point's commit, and
+    reachable where any is (COR-062 point 7: each deferral made apart adds its point)."""
+    points = tuple(sorted({p for back in backs for p in back.points}))
+    newest = next(
+        (back.commit for back in backs if points and back.points and min(back.points) == points[0]),
+        None,
+    )
+    return _PutBack(points, newest, any(back.reachable for back in backs))
+
+
+_Reading = _BlockReading | _FileReading
 
 
 def _judge(
@@ -2012,10 +2658,15 @@ def _judge(
     resolved_at_base: Callable[[str], bool],
     behind: _Behind,
     links: Sequence[RevisitLink] = (),
+    reading: _FileReading | None = None,
 ) -> tuple[list[Finding], list[_Question], _Judged]:
     """The findings about one head artefact carrying the `friction` block, the questions
     the diff asked it — none for a new or an excluded one — and what the answers list
     reads of the judgement (`_written_answers`).
+
+    Its answers are read from its block (`_BlockReading`), or, where `reading` is
+    given, from answer files (`_FileReading`; COR-062): the questions are the same
+    either way, and so is what answers one.
 
     Last, the targets of the `links` its places declare that the diff asks it to
     revisit (COR-050 point 16; `_triggers`, `_revisit_findings`), judged against
@@ -2068,7 +2719,10 @@ def _judge(
         findings.append(finding(FindingKind.ANSWERED, message, None, Answer.NEW))
         return findings, [], _Judged()
 
-    written = behind.written_back(artefact, before, diff)
+    answers: _Reading = (
+        _BlockReading(artefact, before, diff, behind) if reading is None else reading
+    )
+    written = answers.written_back()
     points = () if written is None else written.points
     if points:
         readings = [
@@ -2091,45 +2745,42 @@ def _judge(
             artefact, before, resolving, head, base, diff, kinds, _AGAINST_BASE
         )
         against_base = questions
-        revalidation = None if written is not None else _revalidation(artefact, before)
+        revalidation = None if written is not None else answers.revalidation()
     standing = revalidation.answer if revalidation is not None else None
-    deferred_now = {d.anchor for d in artefact.deferrals}
-    deferred_before = {d.anchor for d in before.deferrals}
-    introduced = deferred_now - deferred_before
-    kept = deferred_now & deferred_before
-    put_backs: dict[Anchor, _PutBack | None] = {}
+    introduced, kept = answers.introduced, answers.kept
     own = frozenset({artefact.path, before.path})
-
-    def put_back(anchor: Anchor) -> _PutBack | None:
-        if anchor not in put_backs:
-            put_backs[anchor] = behind.put_back(artefact, before, anchor, diff)
-        return put_backs[anchor]
 
     def covers(anchor: Anchor) -> bool:
         """Whether a deferral answers the question on `anchor` (COR-050 point 4).
 
         One introduced in the diff covers the anchor as it stands at head —
-        unless it puts back an entry the artefact carried before: then, like
-        any entry with its point behind the base, it covers the anchor only as
-        it stood at that point, and nothing once a revalidation point reaches
-        it. An entry kept from the base answers nothing new against the base;
-        against the point of a written-back `at`, it covers by the same rule.
+        unless it keeps earlier points: it puts back an entry the artefact
+        carried before, or, in an answer file, replaces deferrals of its anchor
+        it read (COR-062 point 6). Then, like any entry with its point behind
+        the base, it covers the anchor only as it stood at one of those points,
+        and nothing once a revalidation point reaches it — for an answer file,
+        only where a live revalidation keeps the deferral or read its file
+        (COR-062 point 5). An entry kept from the base answers nothing new
+        against the base; against the point of a written-back `at`, it covers
+        by the same rule.
         """
         if anchor in introduced:
-            back = put_back(anchor)
+            back = answers.put_back(anchor)
             if back is None:
                 return True
-            point = back.point
         elif anchor in kept and points:
-            point = behind.kept_point(before, anchor)
+            back = answers.kept_back(anchor)
+            if back is None:
+                return False
         else:
             return False
-        if point is None:
-            return False
-        reaching = [p.index for p in points] if points else list(behind.points_of(before))
-        if behind.reaches(reaching, point):
-            return False
-        return not behind.differs_since(point, anchor, own, head, kinds)
+        reaching = [p.index for p in points] if points else list(answers.base_points())
+        for point in back.points:
+            if back.reachable and behind.reaches(reaching, point):
+                continue
+            if not behind.differs_since(point, anchor, own, head, kinds):
+                return True
+        return False
 
     covering: set[Anchor] = set()
     for question in questions:
@@ -2140,33 +2791,35 @@ def _judge(
             answer = Answer.DEFERRED
             covering.add(anchor)
         else:
-            back = put_backs.get(anchor) if anchor is not None else None
+            back = answers.put_back(anchor) if anchor in introduced else None
             message = _friction_message(
                 question, deferral_predates=anchor in kept, back=back, written=bool(points)
             )
             findings.append(finding(FindingKind.FRICTION, message, anchor))
             continue
-        message = f"{question.subject}; answered: {_answer_text(answer, artefact, anchor)}"
+        message = f"{question.subject}; answered: {answers.text(answer, anchor)}"
         findings.append(finding(FindingKind.ANSWERED, message, anchor, answer))
     findings.extend(finding(FindingKind.LEFT_OUT, note, anchor) for anchor, note in notes)
     if revalidation is not None and revalidation.bump is not None:
         findings.append(finding(FindingKind.BUMP, revalidation.bump))
     if standing is not None and not questions:
-        message = f"revalidated with no changed anchor: {_answer_text(standing, artefact)}"
+        message = f"revalidated with no changed anchor: {answers.text(standing)}"
         findings.append(finding(FindingKind.REVALIDATED, message, None, standing))
     triggers = _triggers(artefact, before, links, resolving)
+    revisits = tuple(answers.revisits())
     revisit_findings, changed_targets = _revisit_findings(
-        artefact, before, triggers, own, head, base, diff, kinds
+        artefact, before, triggers, own, head, base, diff, kinds, revisits
     )
     findings.extend(revisit_findings)
     judged = _Judged(
         revalidation,
-        written is not None and parsed_at(artefact) is not None,
-        frozenset(anchor for anchor, back in put_backs.items() if back is not None),
+        answers.wrote_back(written),
+        answers.put_backs,
         frozenset(covering),
         tuple(dict.fromkeys(q.anchor for q in against_base if q.anchor is not None)),
         triggers,
         changed_targets,
+        revisits,
     )
     return findings, questions, judged
 
@@ -2370,11 +3023,15 @@ def _friction_message(
 # --- the answers the change wrote ------------------------------------------------
 
 
+#: A revalidation's outcomes (COR-050 point 3).
+_OUTCOMES = (Answer.UPDATED.value, Answer.UNCHANGED.value)
+
+
 def _written_outcome(artefact: Artefact) -> str | None:
     """A revalidation's `outcome` as the answers list gives it: `updated` or `unchanged`,
     else `None`."""
     outcome = revalidated_field(artefact, "outcome")
-    return outcome if outcome in (Answer.UPDATED.value, Answer.UNCHANGED.value) else None
+    return outcome if outcome in _OUTCOMES else None
 
 
 def _revalidation_fields(artefact: Artefact) -> tuple[Any, Any, str | None]:
@@ -2457,6 +3114,7 @@ def _written_answers(
             new=before is None,
             put_back=put_back,
             changed=about,
+            file=artefact.path,
         )
 
     # By anchor, an anchor's entries in written order (the sort is stable).
@@ -2538,6 +3196,7 @@ def _written_revisits(
     before: Artefact | None,
     judged: _Judged,
     links: Sequence[RevisitLink],
+    written: Sequence[WrittenRevisit] | None = None,
 ) -> list[WrittenAnswer]:
     """The revisits the change made on the artefact's targets (COR-050 points 12 and 16;
     `revisits_written`), sorted by target, each with the fields of the links listing its
@@ -2554,6 +3213,9 @@ def _written_revisits(
       the target's own change answered it — the first written for that target
       only (COR-050 point 16, "Who decides"). One whose outcome alone changed is
       `edited`, and answers nothing.
+
+    `written` are the revisit entries the change wrote, where they come from answer
+    files (`_FileReading.revisits`); else the block's (`revisits_written`).
     """
     triggered = {trigger.anchor: trigger for trigger in judged.triggers}
     listing: dict[Anchor, dict[str, None]] = {}
@@ -2564,7 +3226,12 @@ def _written_revisits(
                 names[link.targets] = None
 
     def revisit(
-        target: Anchor, outcome: str | None, reason: str | None, status: AnswerStatus, asked: bool
+        target: Anchor,
+        outcome: str | None,
+        reason: str | None,
+        status: AnswerStatus,
+        asked: bool,
+        file: str | None = None,
     ) -> WrittenAnswer:
         trigger = triggered.get(target)
         return WrittenAnswer(
@@ -2581,6 +3248,7 @@ def _written_revisits(
             target=target,
             links=tuple(listing.get(target, {})),
             fields=trigger.fields if trigger is not None else (),
+            file=file,
         )
 
     found: list[tuple[Anchor, int, WrittenAnswer]] = [
@@ -2588,16 +3256,525 @@ def _written_revisits(
         for target in judged.changed_targets
     ]
     answered: set[Anchor] = set()
-    for written in revisits_written(artefact, before):
-        entry = written.entry
+    for one in revisits_written(artefact, before) if written is None else written:
+        entry = one.entry
         target = entry.anchor
-        asked = written.new_reason and target in triggered and target not in answered
+        asked = one.new_reason and target in triggered and target not in answered
         if asked:
             answered.add(target)
-        status = AnswerStatus.STANDS if written.new_reason else AnswerStatus.EDITED
-        found.append((target, 1, revisit(target, entry.outcome, entry.reason, status, asked)))
+        status = AnswerStatus.STANDS if one.new_reason else AnswerStatus.EDITED
+        found.append(
+            (target, 1, revisit(target, entry.outcome, entry.reason, status, asked, one.file))
+        )
     found.sort(key=lambda item: (item[0].kind, item[0].value, item[1]))
     return [answer for _target, _rank, answer in found]
+
+
+def _written_file_answers(
+    artefact: Artefact,
+    before: Artefact | None,
+    questions: Sequence[_Question],
+    judged: _Judged,
+    reading: _FileReading,
+    links: Sequence[RevisitLink] = (),
+) -> tuple[list[WrittenAnswer], list[WrittenAnswer]]:
+    """The answers the change wrote on one head artefact in answer files (COR-062 points 1
+    and 3), and apart, those it moved out of the base's block word for word: each list as
+    `_written_answers` gives a block's, read from the change's entries live at head
+    (`_FileReading.entries`), in the order of their files, each with its file.
+
+    - A **revalidation** is listed with its status (`_FileReading.status`): `stands`
+      or a `bump` for a value new behind the base, `written-back` for one the
+      artefact's answers carried before, `edited` for one the base's live
+      revalidations carry. Each deferral its own entry keeps whose anchor the base
+      defers is named with it, and so are the revalidations answered apart it
+      replaces (`replaces_apart`). It is asked for where it stands and answers the
+      diff's questions.
+    - A **deferral** that replaces deferrals of its anchor it read keeps their point
+      (COR-062 point 6): listed `edited` where its reason is new, else not at all,
+      as a kept entry. Any other is introduced: flagged `put_back` where it puts
+      back an anchor and a reason carried before, as a block's is.
+    - A **reason for having no anchors** stays in the block, read as `_written_answers`
+      reads it. **Revisits** as `_written_revisits` gives them, from the entries the
+      change wrote (`_FileReading.revisits`).
+    - An answer **moved** out of the base's block asks nothing, and is listed apart.
+    """
+    changed = judged.changed
+    new = before is None
+
+    def answer(
+        kind: str | None,
+        anchor: Anchor | None,
+        reason: str | None,
+        file: str,
+        *,
+        status: AnswerStatus = AnswerStatus.STANDS,
+        asked: bool = False,
+        kept: tuple[KeptDeferral, ...] = (),
+        put_back: bool = False,
+        replaces_apart: tuple[str, ...] = (),
+        moved_out: bool = False,
+    ) -> WrittenAnswer:
+        about = ((anchor,) if anchor in changed else ()) if anchor is not None else changed
+        return WrittenAnswer(
+            artefact.id,
+            artefact.location,
+            kind,
+            anchor,
+            reason,
+            kept,
+            asked,
+            status,
+            new=new,
+            put_back=put_back,
+            changed=() if moved_out else about,
+            file=file,
+            replaces_apart=replaces_apart,
+            moved=moved_out,
+        )
+
+    listed: list[WrittenAnswer] = []
+    moved_out: list[WrittenAnswer] = []
+    live_deferrals = set(reading.judged.deferrals)
+    asked_for: set[Anchor] = set()
+    for entry in reading.entries():
+        moves = reading.moves[entry]
+        file = path_of(entry.file)
+        rev = entry.revalidation
+        if rev is not None and entry in reading.judged.revalidations:
+            outcome = rev.outcome if rev.outcome in _OUTCOMES else None
+            if moves.revalidation:
+                moved_out.append(answer(outcome, None, rev.because, file, moved_out=True))
+            elif new:
+                if rev.because is not None:
+                    listed.append(answer(outcome, None, rev.because, file))
+            else:
+                status = reading.status(entry)
+                kept = (
+                    ()
+                    if status is AnswerStatus.EDITED
+                    else tuple(
+                        KeptDeferral(d.anchor, d.reason)
+                        for d in sorted(
+                            entry.deferrals, key=lambda d: (d.anchor.kind, d.anchor.value)
+                        )
+                        if d.anchor in reading.base_deferred
+                    )
+                )
+                listed.append(
+                    answer(
+                        outcome,
+                        None,
+                        rev.because,
+                        file,
+                        status=status,
+                        asked=bool(questions)
+                        and status is AnswerStatus.STANDS
+                        and entry == reading.judged_rev,
+                        kept=kept,
+                        replaces_apart=reading.replaces_apart(entry),
+                    )
+                )
+        for deferral in sorted(entry.deferrals, key=lambda d: (d.anchor.kind, d.anchor.value)):
+            if (entry, deferral) not in live_deferrals:
+                continue
+            anchor = deferral.anchor
+            if deferral.index in moves.deferrals:
+                moved_out.append(
+                    answer(Answer.DEFERRED.value, anchor, deferral.reason, file, moved_out=True)
+                )
+                continue
+            if new:
+                listed.append(answer(Answer.DEFERRED.value, anchor, deferral.reason, file))
+                continue
+            inherited = reading.judged.inherited(entry, deferral)
+            if inherited:
+                if deferral.reason not in {earlier.reason for _e, earlier in inherited}:
+                    listed.append(
+                        answer(
+                            Answer.DEFERRED.value,
+                            anchor,
+                            deferral.reason,
+                            file,
+                            status=AnswerStatus.EDITED,
+                        )
+                    )
+                continue
+            put_back = reading.back_of(entry, deferral) is not None
+            covering = anchor in judged.covering
+            listed.append(
+                answer(
+                    Answer.DEFERRED.value,
+                    anchor,
+                    deferral.reason,
+                    file,
+                    status=(
+                        AnswerStatus.WRITTEN_BACK
+                        if put_back and not covering
+                        else AnswerStatus.STANDS
+                    ),
+                    asked=covering and anchor not in asked_for,
+                    put_back=put_back,
+                )
+            )
+            asked_for.add(anchor)
+        for revisit in entry.revisits:
+            if revisit.index in moves.revisits:
+                moved_out.append(
+                    replace(
+                        answer(REVISITED, None, revisit.reason, file, moved_out=True),
+                        outcome=revisit.outcome,
+                        target=revisit.anchor,
+                    )
+                )
+    unanchored = artefact.unanchored_because
+    if unanchored is not None and (before is None or unanchored != before.unanchored_because):
+        listed.append(replace(answer(UNANCHORED, None, unanchored, artefact.path), changed=()))
+    listed.extend(_written_revisits(artefact, before, judged, links, reading.revisits()))
+    return listed, moved_out
+
+
+# --- the answer files of the change ---------------------------------------------------
+
+
+class _ChangeAnswers:
+    """The answer files one run of the change check reads (COR-062; ADR-068 point 6).
+
+    `active` where the diff touches the answer folder or either side holds an answer
+    file; otherwise every artefact is read from its block, as before, and nothing here
+    reads a history. Each state's answer files are read once, as first asked for, each
+    judged with the names history agrees with (`answer_files.HistoryNames`):
+
+    - `head`: the state checked — the working tree, its uncommitted entries
+      honoured by HEAD's files (`WorkingNames`), or the commit `--head` names —
+      read with the head's history;
+    - `base`: the merge-base's, read with the history behind it (`_Behind.answers`);
+    - `own`: the change's own head's (`HeadState.own`), against which each answer
+      the change adds is asked what it read: the head's where it is the commit
+      checked, else that commit's, read with the head's history (COR-062 point 4);
+    - `tip`: the base's tip's, where it is not the merge-base, read with its own
+      history: what the answered-apart report reads (COR-062 point 7).
+
+    An answer file the change adds is one it **wrote** (`wrote`) unless it puts back
+    a file its base's history held, its path and content (COR-062 point 3).
+    """
+
+    def __init__(
+        self,
+        root: Path,
+        diff: Diff,
+        head_side: Side,
+        base_side: Side,
+        base_state: BaseState,
+        head_state: HeadState,
+        behind: _Behind,
+    ) -> None:
+        self.root = root
+        self.diff = diff
+        self.head_side = head_side
+        self.base_side = base_side
+        self.base_state = base_state
+        self.head_state = head_state
+        self.behind = behind
+        self.changed: ChangedFiles = changed_files(diff.entries)
+        self.active = (
+            self.changed.touched
+            or any(map(is_answer_file, head_side.files))
+            or any(map(is_answer_file, base_side.files))
+        )
+        self._head_history: History | None = None
+        self._head: StateAnswers | None = None
+        self._own: StateAnswers | None = None
+        self._tip: StateAnswers | None = None
+        self._put_back: dict[str, bool] = {}
+        self._prunable: frozenset[str] | None = None
+        self._located: dict[str, Artefact] | None = None
+
+    # --- the states ------------------------------------------------------------------
+
+    @property
+    def head_history(self) -> History:
+        if self._head_history is None:
+            self._head_history = read_history(self.root, self.head_state.commit)
+        return self._head_history
+
+    def locations(self, artefact: Artefact) -> tuple[str, ...]:
+        """Every location an answer at head may name `artefact` by: under each name its
+        file had in the head's history, and, where the diff renamed it in the working
+        tree, under each its earlier name had (COR-062 point 10)."""
+        history = self.head_history
+        names = dict.fromkeys(history.names(artefact.path))
+        earlier = self.diff.renamed_from.get(artefact.path)
+        if earlier is not None:
+            names.update(dict.fromkeys(history.names(earlier)))
+        return tuple(location_of(artefact, name) for name in names)
+
+    @property
+    def head(self) -> StateAnswers:
+        if self._head is None:
+            names = HistoryNames(self.head_history, self.behind.blobs)
+            commit = CommitTree(self.root, self.head_state.commit, self.behind.blobs)
+            if self.head_state.named is None:
+                honoured = WorkingNames(commit_files(commit), names).honoured
+                self._head = StateAnswers(working_tree_files(self.root), honoured, self.locations)
+            else:
+                self._head = StateAnswers(commit_files(commit), names.honoured, self.locations)
+        return self._head
+
+    @property
+    def base(self) -> StateAnswers:
+        return self.behind.base_answers()
+
+    @property
+    def own(self) -> StateAnswers:
+        own = self.head_state.own_head
+        if own == self.head_state.commit:
+            return self.head
+        if self._own is None:
+            names = HistoryNames(self.head_history, self.behind.blobs)
+            tree = CommitTree(self.root, own, self.behind.blobs)
+            self._own = StateAnswers(commit_files(tree), names.honoured, self.locations)
+        return self._own
+
+    @property
+    def tip(self) -> StateAnswers:
+        if self.base_state.tip == self.base_state.commit:
+            return self.base
+        if self._tip is None:
+            history = read_history(self.root, self.base_state.tip)
+            names = HistoryNames(history, self.behind.blobs)
+            tree = CommitTree(self.root, self.base_state.tip, self.behind.blobs)
+            self._tip = StateAnswers(commit_files(tree), names.honoured, head_locations(history))
+        return self._tip
+
+    # --- the files ---------------------------------------------------------------------
+
+    def put_back(self, name: str) -> bool:
+        """Whether the change adds the answer file `name` with a path and a content its
+        base's history held: it puts back an answer, and writes none (COR-062 point 3)."""
+        if name not in self._put_back:
+            rel = path_of(name)
+            raw = self.head_side.tree.read_bytes([rel]).get(rel)
+            self._put_back[name] = self.behind.answers.held(rel, raw)
+        return self._put_back[name]
+
+    def wrote(self, name: str) -> bool:
+        """Whether the change wrote the answer file `name`: it adds it, and puts back none."""
+        return name in self.changed.added and not self.put_back(name)
+
+    @property
+    def prunable_at_base(self) -> frozenset[str]:
+        """The answer files of the base in which no answer is live there (COR-062 point 8)."""
+        if self._prunable is None:
+            self._prunable = frozenset(self.base.prunable(self.base_side.discovery))
+        return self._prunable
+
+    def reads_files(self, artefact: Artefact, before: Artefact | None) -> bool:
+        """Whether the artefact's answers are read from answer files: its block holds none
+        at head, and an answer file names it at head or at the base — the reading of a
+        state until every answer has moved out of the blocks (`StateAnswers.answers`)."""
+        if not self.active or block_holds_answers(artefact):
+            return False
+        if self.head.entries(artefact):
+            return True
+        return before is not None and bool(self.base.entries(before))
+
+    def reading(self, artefact: Artefact, before: Artefact | None) -> _FileReading | None:
+        """The reading of the artefact's answers from answer files, or `None` where they are
+        read from its block (`reads_files`)."""
+        if not self.reads_files(artefact, before):
+            return None
+        return _FileReading(artefact, before, self, self.behind)
+
+    # --- what the change does wrong ---------------------------------------------------
+
+    def file_findings(self) -> list[Finding]:
+        """What the change does to the answer folder against COR-062 point 3, and each entry
+        it wrote whose location holds no artefact at head (point 5), each at its file."""
+        findings = [
+            Finding(
+                FindingKind.ANSWER_FILE_REWRITTEN,
+                "this change rewrites an answer file its base holds, which no change does: "
+                "a landed answer is never rewritten — restore it, and write the answer in a "
+                "new answer file that names it in `read` (COR-062 point 3)",
+                location=path_of(name),
+            )
+            for name in self.changed.rewritten
+        ]
+        written = [name for name in self.changed.added if self.wrote(name)]
+        if written:
+            findings.extend(
+                Finding(
+                    FindingKind.PRUNE_MIXED,
+                    f"this change removes an answer file in which no answer is live at its "
+                    f"base, beside adding {counted(len(written), 'answer file', 'answer files')}"
+                    f": a prune is a change of its own, which adds nothing — restore it here, "
+                    f"and prune apart (COR-062 point 3)",
+                    location=path_of(name),
+                )
+                for name in self.changed.removed
+                if name in self.prunable_at_base
+            )
+        located = self._locate()
+        for name in written:
+            answer_file = self.head.files.get(name)
+            for entry in () if answer_file is None else answer_file.entries:
+                if entry.location not in located:
+                    findings.append(
+                        Finding(
+                            FindingKind.ANSWER_ON_WHAT_IS_GONE,
+                            f"its entry {entry.index} names {entry.location}, which holds no "
+                            f"artefact at head, followed through the renames of its file: it "
+                            f"answers nothing, reported and never failed — name the artefact "
+                            f"by its location, or take the entry out (COR-062 points 5 and 10)",
+                            location=path_of(name),
+                        )
+                    )
+        return findings
+
+    def _locate(self) -> Mapping[str, Artefact]:
+        """Each location an answer at head may name an artefact by, to that artefact."""
+        if self._located is None:
+            found: dict[str, Artefact] = {}
+            for artefact in self.head_side.discovery.artefacts:
+                for location in self.locations(artefact):
+                    found.setdefault(location, artefact)
+            self._located = found
+        return self._located
+
+    def findings(self, artefact: Artefact, before: Artefact | None) -> list[Finding]:
+        """What the change's answers on one artefact do wrong (COR-062 points 4 and 10): a
+        deferral or a revisit entry it wrote naming no anchor or target of the artefact,
+        and an answer it added, live at its own head, whose `read` leaves out an answer
+        file there that answers the artefact. An answer moved out of the base's block
+        reads nothing it must name. An entry it wrote on an artefact whose block still
+        holds answers is reported: the block is read instead, until the move."""
+        if not self.active:
+            return []
+
+        def finding(kind: FindingKind, message: str, anchor: Anchor | None = None) -> Finding:
+            return Finding(kind, message, artefact.id, artefact.location, anchor)
+
+        found: list[Finding] = []
+        declared = frozenset(anchors_of(artefact))
+        targets = frozenset(
+            anchor
+            for link in self.head_side.discovery.links(artefact)
+            for anchor in link_targets(artefact, link)
+        )
+        ignored = block_holds_answers(artefact)
+        for entry in self.head.entries(artefact):
+            if not self.wrote(entry.file):
+                continue
+            file = path_of(entry.file)
+            if ignored:
+                found.append(
+                    finding(
+                        FindingKind.ANSWER_FILE_IGNORED,
+                        f"{file} answers it, and its block still holds answers, so the "
+                        f"artefact is read from its block and this entry is not read: move "
+                        f"the block's answers out, or write this answer in the block until the "
+                        f"move (COR-062 point 11)",
+                    )
+                )
+            for deferral in entry.deferrals:
+                if deferral.anchor not in declared:
+                    found.append(
+                        finding(
+                            FindingKind.ANSWERS_NOTHING,
+                            f"{file} defers an anchor the artefact does not declare: it answers "
+                            f"nothing — defer one of its anchors, or take the deferral out "
+                            f"(COR-062 point 10)",
+                            deferral.anchor,
+                        )
+                    )
+            for revisit in entry.revisits:
+                if revisit.anchor not in targets:
+                    found.append(
+                        finding(
+                            FindingKind.ANSWERS_NOTHING,
+                            f"{file} revisits a target no link of the artefact takes: it "
+                            f"answers nothing — revisit a target of its links, or take the "
+                            f"entry out (COR-062 point 10)",
+                            revisit.anchor,
+                        )
+                    )
+        own = self.own
+        judged = own.liveness(artefact, self.head_side.discovery)
+        live = set(judged.revalidations)
+        live.update(e for e, _d in judged.deferrals)
+        live.update(e for e, _r in judged.revisits)
+        base = (
+            _NO_ANSWERS if before is None else self.base.answers(before, self.base_side.discovery)
+        )
+        for entry in judged.entries:
+            if not self.wrote(entry.file) or entry not in live:
+                continue
+            if moved(entry, base).whole(entry):
+                continue
+            missing = sorted({o.file for o in judged.entries} - {entry.file} - set(entry.read))
+            if missing:
+                found.append(
+                    finding(FindingKind.READ_INCOMPLETE, self._read_message(entry, missing))
+                )
+        return found
+
+    def _read_message(self, entry: Entry, missing: Sequence[str]) -> str:
+        head = self.head_state
+        named = "this change's own head"
+        if head.own_source is not None:
+            named += f" ({head.own_head[:SHORT]}, from ${head.own_source})"
+        message = (
+            f"{path_of(entry.file)} answers it, live at {named}, and its `read` leaves out "
+            f"{_listed(missing)}, which answer it there: an answer names every other answer "
+            f"file on its artefact present at the change's own head — add "
+            f"{'it' if len(missing) == 1 else 'them'} to `read` (COR-062 point 4)"
+        )
+        if head.own_source is None and head.merge:
+            if head.named is None:
+                message += (
+                    f". HEAD is a merge: where it is a host's merge of the change with its "
+                    f"base, set ${HEAD_ENV} to the change's own head, a parent of HEAD"
+                )
+            else:
+                message += (
+                    f". --head {head.named} is a merge: where it is a host's merge of the "
+                    f"change with its base, name the change's own head with --head instead"
+                )
+        return message
+
+    # --- answered apart on the base's tip ---------------------------------------------
+
+    def apart_at_tip(
+        self, artefact: Artefact, before: Artefact | None, reading: _FileReading
+    ) -> ApartAtTip | None:
+        """The live revalidations on the base's tip on an artefact the change revalidates in
+        an answer file that its answer did not read (COR-062 point 7): merged, they and
+        the change's would be answered apart. `None` where there is none."""
+        if not reading.own:
+            return None
+        read: set[str] = set()
+        for entry in reading.own:
+            read.update(entry.read)
+            read.add(entry.file)
+        like = artefact if before is None else before
+        judged = self.tip.liveness(like)
+        found = tuple(
+            LiveRevalidation(
+                e.file,
+                e.revalidation.at,
+                e.revalidation.written,
+                e.revalidation.outcome,
+                e.revalidation.because,
+            )
+            for e in judged.revalidations
+            if e.revalidation is not None
+            and e.file not in read
+            and e.file not in self.changed.added
+        )
+        if not found:
+            return None
+        return ApartAtTip(artefact.id, artefact.location, found)
 
 
 # --- order ---------------------------------------------------------------------
@@ -2833,7 +4010,10 @@ def run_change_check(
     def resolved_at_base(kind: str) -> bool:
         return unresolved_kind_reason(kind, base_registry()) is None
 
-    head_state = HeadState(head_commit(target_root), diff.uncommitted) if named is None else named
+    head_state = own_head(
+        target_root,
+        HeadState(head_commit(target_root), diff.uncommitted) if named is None else named,
+    )
     findings: list[Finding] = []
     if base_state.outdated:
         findings.append(
@@ -2853,7 +4033,10 @@ def run_change_check(
         )
     counterparts = pair_artefacts(base.discovery, head.discovery, diff).counterparts
     answers: list[WrittenAnswer] = []
+    moved_out: list[WrittenAnswer] = []
+    apart: list[ApartAtTip] = []
     behind = _Behind(target_root, base_state, named, head)
+    change = _ChangeAnswers(target_root, diff, head, base, base_state, head_state, behind)
     try:
         behind.prefetch(
             ((head_discovery.artefacts[index], before) for index, before in counterparts.items()),
@@ -2861,14 +4044,38 @@ def run_change_check(
         )
         for index in truth_chain_order(head_discovery, head.record_path):
             artefact = head_discovery.artefacts[index]
+            before = counterparts.get(index)
             if artefact.has_friction_block:
-                before = counterparts.get(index)
                 links = head_discovery.links(artefact)
+                reading = change.reading(artefact, before)
                 found, questions, judgement = _judge(
-                    artefact, before, head, base, diff, kinds, resolved_at_base, behind, links
+                    artefact,
+                    before,
+                    head,
+                    base,
+                    diff,
+                    kinds,
+                    resolved_at_base,
+                    behind,
+                    links,
+                    reading,
                 )
                 findings.extend(found)
-                answers.extend(_written_answers(artefact, before, questions, judgement, links))
+                if reading is None:
+                    answers.extend(_written_answers(artefact, before, questions, judgement, links))
+                else:
+                    listed, carried = _written_file_answers(
+                        artefact, before, questions, judgement, reading, links
+                    )
+                    answers.extend(listed)
+                    moved_out.extend(carried)
+                    at_tip = change.apart_at_tip(artefact, before, reading)
+                    if at_tip is not None:
+                        apart.append(at_tip)
+                        findings.extend(_apart_findings(at_tip))
+            findings.extend(change.findings(artefact, before))
+        if change.active:
+            findings.extend(change.file_findings())
     finally:
         behind.close()
     for unreadable in sorted(head_discovery.unreadable, key=lambda u: u.path):
@@ -2894,7 +4101,26 @@ def run_change_check(
         places=counts.places,
         artefacts=counts.artefacts,
         carrying=counts.carrying,
+        moved=tuple(moved_out),
+        apart_at_tip=tuple(apart),
     )
+
+
+def _apart_findings(apart: ApartAtTip) -> list[Finding]:
+    """One `answered-apart` finding per live revalidation on the base's tip that the
+    change's answer did not read (COR-062 point 7): reported, never failed."""
+    return [
+        Finding(
+            FindingKind.ANSWERED_APART,
+            f"the base's tip holds a live revalidation in {path_of(r.file or '')}"
+            + (f" (at {r.written})" if isinstance(r.written, str) else "")
+            + " that this change's answer did not read: merged, the two are answered apart, "
+            "debt until a revalidation reads both (COR-062 point 7)",
+            apart.artefact,
+            apart.location,
+        )
+        for r in apart.revalidations
+    ]
 
 
 def _config_path(root: Path) -> str:
@@ -2960,7 +4186,11 @@ def render_json(result: ChangeCheck) -> str:
         "head": (
             None
             if result.head is None
-            else {"commit": result.head.commit, "uncommitted_paths": result.head.uncommitted}
+            else {
+                "commit": result.head.commit,
+                "uncommitted_paths": result.head.uncommitted,
+                "own": result.head.own_head,
+            }
         ),
         "counts": {
             "places": result.places,
@@ -2970,6 +4200,8 @@ def render_json(result: ChangeCheck) -> str:
         },
         "findings": [finding.as_json() for finding in result.findings],
         "answers": [answer.as_json() for answer in result.answers],
+        "moved": [answer.as_json() for answer in result.moved],
+        "answered_apart_at_tip": [apart.as_json() for apart in result.apart_at_tip],
         "unreadable": list(result.unreadable),
         "history": (
             None if result.shallow is None else {"shallow": result.shallow, "cut": list(result.cut)}
@@ -3014,11 +4246,33 @@ _LEGEND: dict[FindingKind, str] = {
         "the diff left an anchor on an id two artefacts share, read as naming the first: "
         "reported only"
     ),
+    FindingKind.ANSWER_FILE_REWRITTEN: "the change rewrites an answer file its base holds",
+    FindingKind.PRUNE_MIXED: (
+        "the change adds answer files and removes one in which no answer is live at its base"
+    ),
+    FindingKind.READ_INCOMPLETE: (
+        "an answer the change adds leaves out of `read` an answer file on its artefact at the "
+        "change's own head"
+    ),
+    FindingKind.ANSWERS_NOTHING: (
+        "an answer the change wrote defers or revisits what its artefact does not hold"
+    ),
+    FindingKind.ANSWER_ON_WHAT_IS_GONE: (
+        "an answer the change wrote names a location that holds no artefact: reported only"
+    ),
+    FindingKind.ANSWER_FILE_IGNORED: (
+        "an answer file the change wrote on an artefact whose block still holds answers, so it "
+        "is not read: reported only"
+    ),
+    FindingKind.ANSWERED_APART: (
+        "a live revalidation on the base's tip the change's answer did not read: reported only"
+    ),
 }
 
 _MODE_GLOSS = {
-    ENFORCING: "fails on friction, dead anchors, unresolved kinds, missing answers, bumps and "
-    "targets not revisited; an outdated base only reports",
+    ENFORCING: "fails on friction, dead anchors, unresolved kinds, missing answers, bumps, "
+    "targets not revisited and answer files written against COR-062; an outdated base only "
+    "reports",
     "warning": "reports and passes",
 }
 
@@ -3039,7 +4293,8 @@ def render_human(result: ChangeCheck) -> str:
     lines.extend(_header_lines(result))
 
     rows = [f for f in result.findings if f.location is not None and f.artefact is not None]
-    unreadable = [f for f in result.findings if f.kind is FindingKind.UNREADABLE]
+    # A file's own findings, about no artefact: an unreadable one, an answer file's.
+    unreadable = [f for f in result.findings if f.location is not None and f.artefact is None]
     lines.append("")
     lines.append(
         cli_render.style("heading", "FINDINGS")
@@ -3129,6 +4384,13 @@ def _answers_lines(result: ChangeCheck) -> list[str]:
         lines.extend(f"  {line}" for line in _answer_lines(answer))
     if not result.answers:
         lines.append("  none")
+    if result.moved:
+        lines.append(
+            cli_render.style("heading", "Answers moved in this change")
+            + cli_render.style("muted", " — out of the documents into answer files, word for word")
+        )
+        for answer in result.moved:
+            lines.extend(f"  {line}" for line in _answer_lines(answer))
     if result.unreadable:
         files = counted(len(result.unreadable), "file", "files")
         lines.append(
@@ -3153,7 +4415,7 @@ def _and(items: Sequence[str]) -> str:
 def _answer_flags(answer: WrittenAnswer) -> list[str]:
     """Every flag the check puts on an answer, in plain words."""
     flags = ["new document"] if answer.new else []
-    if not answer.asked:
+    if not answer.asked and not answer.moved:
         flags.append("not asked for by this change")
     if answer.status is AnswerStatus.BUMP:
         flags.append("re-check date changed with nothing behind it")
@@ -3171,6 +4433,13 @@ def _answer_flags(answer: WrittenAnswer) -> list[str]:
         )
     elif answer.put_back:
         flags.append("an entry it had before, covering the anchor as it stood then")
+    if answer.replaces_apart:
+        flags.append(
+            f"replaces re-checks made apart in {_and(list(answer.replaces_apart))}: its reason "
+            f"judges them together"
+        )
+    if answer.moved:
+        flags.append("moved word for word from the document, which asks nothing")
     return flags
 
 
@@ -3242,6 +4511,13 @@ def _header_lines(result: ChangeCheck) -> list[str]:
             f"+ working tree, {uncommitted}" if result.head.uncommitted else "(working tree clean)"
         )
         lines.append(f"  Head: {result.head.commit[:SHORT]} {working}")
+    if result.head is not None and result.head.own_source is not None:
+        lines.append(
+            f"  Own head: {result.head.own_head[:SHORT]}"
+            + cli_render.style(
+                "muted", f"   (${result.head.own_source}: what each answer had to read)"
+            )
+        )
     if result.shallow:
         read = counted(len(result.cut), "artefact", "artefacts")
         named = f" ({printable(_listed(result.cut))})" if result.cut else ""
@@ -3290,6 +4566,10 @@ def _failing_summary(result: ChangeCheck) -> str:
         (FindingKind.NO_ANSWER, "missing answer", "missing answers"),
         (FindingKind.BUMP, "bump", "bumps"),
         (FindingKind.UNREVISITED, "target not revisited", "targets not revisited"),
+        (FindingKind.ANSWER_FILE_REWRITTEN, "answer file rewritten", "answer files rewritten"),
+        (FindingKind.PRUNE_MIXED, "prune mixed with answers", "prunes mixed with answers"),
+        (FindingKind.READ_INCOMPLETE, "answer leaving out a file", "answers leaving out files"),
+        (FindingKind.ANSWERS_NOTHING, "answer naming nothing", "answers naming nothing"),
     ]
     return ", ".join(
         counted(result.count(kind), one, many)

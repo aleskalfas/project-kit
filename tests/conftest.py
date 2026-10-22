@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 
-from project_kit import command_runner, migrations, run_cache, session_guard
+from project_kit import command_runner, default_branch, migrations, run_cache, session_guard
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
@@ -47,6 +47,15 @@ def outside_any_route(monkeypatch: pytest.MonkeyPatch) -> None:
     for name in ("PKIT_ROUTED", "PKIT_NO_ROUTE", "PKIT_PIN_UNRESOLVED"):
         monkeypatch.setenv(name, "")
         monkeypatch.delenv(name)
+
+
+@pytest.fixture(autouse=True)
+def outside_any_pipeline_head(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Every test starts with no change's own head named, whatever started the suite: a
+    pipeline that runs it sets `$PKIT_CHECK_HEAD` to its pull request's head, which no
+    repository a test builds holds, and the change check refuses a head it cannot read
+    (ADR-068 point 6). A test that needs one sets it itself."""
+    monkeypatch.delenv(default_branch.CHECK_HEAD_ENV, raising=False)
 
 
 @pytest.fixture(autouse=True)

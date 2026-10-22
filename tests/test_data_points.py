@@ -984,6 +984,24 @@ def test_a_filler_never_sees_the_base_a_pipeline_names(
     assert _point(repo).value == ["none"]
 
 
+def test_a_filler_never_sees_the_change_s_own_head_a_pipeline_names(
+    repo: AdopterRepo, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`PKIT_CHECK_HEAD` is the change check's alone (ADR-068 point 6): no query inherits
+    it, as none inherits the base a pipeline names."""
+    _provider(repo)
+    _command_contributor(
+        repo,
+        "evidence",
+        "head = os.environ.get('PKIT_CHECK_HEAD')\n"
+        + "print(json.dumps({'schema_version': 1, 'value': [head or 'none']}))\n",
+        reads=["settled"],
+    )
+    head = repo.commit("initial")
+    monkeypatch.setenv("PKIT_CHECK_HEAD", head)
+    assert _point(repo).value == ["none"]
+
+
 def test_what_a_filler_read_reads_back_from_the_point_s_document(repo: AdopterRepo) -> None:
     """The run cache keeps a point as its document: what each filler read survives."""
     _provider(repo)

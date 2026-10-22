@@ -45,7 +45,8 @@ The override is a base, never a declaration: `$PKIT_CHECK_BASE` changes what a
 comparison compares with, and never what `resolve` answers — nor what a command
 that allocates from settled state reads, since such a command reads `resolve`.
 A query the backbone runs — a validator, a data point's filler — never sees
-the override at all (`validators.QUERY_DROPPED_ENV`).
+the override at all (`validators.QUERY_DROPPED_ENV`), nor `$PKIT_CHECK_HEAD`,
+the change's own head a pipeline names beside it for the change check alone.
 
 **The history at hand** (`head`, `is_shallow`): HEAD's commit, or why it names
 none — none yet, HEAD being a branch before its first commit (`Head.unborn`),
@@ -94,6 +95,11 @@ REMOTE = "origin"
 
 #: The environment variable a pipeline sets once to name every comparison's base (point 3).
 CHECK_BASE_ENV = "PKIT_CHECK_BASE"
+
+#: The environment variable a pipeline sets beside it to name the change's own head, where
+#: it checks out a merge of the change with its base (COR-062 point 4; ADR-068 point 6).
+#: Only the friction change check reads it (`friction_check.own_head`); no base reads it.
+CHECK_HEAD_ENV = "PKIT_CHECK_HEAD"
 
 #: A branch name as git accepts one (`git check-ref-format --branch`) and as the
 #: declaration takes it: not an option, not `HEAD` or `@`, no component opening
