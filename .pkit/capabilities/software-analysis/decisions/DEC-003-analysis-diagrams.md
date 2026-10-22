@@ -152,9 +152,11 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **The areas it acts in:** those of the use cases in force where the actor is the main actor, its `actor`, or takes part, its `other-actors`. They are computed from the use cases' front matter, so the table states no fact of its own.
   - **A use case in no area** is shown as such beside the areas. In an analysis without areas, the cell points to its use cases.
   - **An actor of another analysis.** An analysis that builds on another may name that analysis's actors (DEC-001 point 2). Its table lists each one its glossary's head lists, or a use case names, after its own actors. It shows the actor by its id with that analysis and the name the head gives it, and the areas it acts in. Who it is says which analysis it belongs to, and whether the head lists it. It reads no file of the other analysis.
-- **An area's goal:** one line for each area of an analysis's use cases, kept as data in the capability's configuration beside the area's folder name. It says what the area makes possible, such as "010-ordering: a customer can place an order and pay for it".
+- **An area's goal:** one line for each area of an analysis's use cases, kept as data in the capability's configuration beside the area's folder name. It is the area's summary goal, one level above its use cases, which are the steps toward it.
+  - **Its form:** one phrase that starts with its verb, as the capability's hints ask of a use case's goal (DEC-001 point 1). So it reads after "The goal is to …". It may end with "so" and its reason, what reaching the goal serves. An example is `010-ordering: Place an order and pay for it`.
+  - **No actor's voice:** it holds no *I* or *my*, since an area has several actors.
   - **Each analysis its own.** Each analysis numbers its own areas (DEC-001 point 2), so it keeps the goals of its own areas.
-  - **Its home** is the configuration. It is the one text the overview shows that neither an artefact nor a record holds. No anchor covers it, and no rule of `SAN` judges its words.
+  - **Its home** is the configuration. It is the one text the overview shows that neither an artefact nor a record holds. No anchor covers it, and no rule of `SAN` judges its words or its form. This record and the authoring skill carry its form.
   - **The check.** Where the project keeps its overview, it warns of an area of use cases or requirements in force without a goal. A goal whose area holds no use case shows that area as not written yet, so the check fails no goal.
   - **No areas.** A project whose use cases and requirements lie in no area keeps no goal.
 - **Who writes it:** its own command, which writes the overview of each analysis that holds an artefact, and the stamp, after it writes an artefact. Each writes a file only where its bytes change. The query writes nothing. Install writes none, since install runs no command of a capability (COR-017). So a project gets its overview from its first stamp, or from the command.
@@ -236,7 +238,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 **Why the purpose lives in a record, and the configuration points to it.**
 - **A reason belongs in a record.** What a component is for is the reason behind every area of its analysis. A decision holds a choice and why it was made (DEC-001 point 11, "Where a statement belongs"). A record is also reviewed and accepted. An artefact that rests on it, such as a view of the component's concepts, can anchor it.
 - **No rule judges a setting.** A purpose written as text in the configuration would be one more text that no artefact holds. No rule of `SAN` would judge it (point 8).
-- **The pointer is structure.** Like the entry's list of the analyses it builds on, it says which record the analysis rests on, never what that record says. So the configuration holds no reason of its own.
+- **The pointer is structure.** Like the entry's list of the analyses it builds on, it says which record the analysis rests on, never what that record says. So the pointer holds no reason of its own.
 - **Only an accepted record.** A proposed record decides nothing yet, so the overview shows none as what the component is for, as the acceptance gate asks.
 - **A pointer that fails, said on the page.** The page says what is wrong, and stays fresh for the rest of the analysis. Validation fails the pointer, so the change that broke it mends it.
 - **Its title.** The title states a record's decision in one line, and the overview reads front matter only.
@@ -249,6 +251,10 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **What it costs.** No check holds the areas' folder names together. A goal left behind when an area is renamed shows as an area not written yet. A requirement's folder named apart from its use cases' shows as an area of its own. A reader of the overview sees either, and the check warns of each such area that has no goal.
 
 **Why the overview shows each area's goal.** The chain shows which use case follows from which, never why the use cases are split into those areas. The capability's maintainer asked, on 20 October, that a reader of the analysis can see the concept of the split. One line for each area says it, with no new kind of artefact.
+
+**Why an area's goal is a summary goal that starts with its verb.** A goal answers "what is the goal of this area?". A statement of what holds once the area is done, such as "a customer can place an order", reads as a result, not a goal. Use-case practice names a goal with a verb phrase, as DEC-001's Rationale says of a use case's goal ("Why the actor's voice ships"). An area's goal is a summary goal over its use cases, which are the steps toward it. It takes no actor's voice, since an area has several actors. The capability's maintainer chose this form on 23 October.
+- **No rule of `SAN` judges its form.** The goal lives in the configuration, and no rule of `SAN` judges a settings value, as "Why the purpose lives in a record" says of a purpose. So this record and the authoring skill carry the form.
+- **Its reason is no record's.** A goal's "so" clause says what reaching it serves, in a few words, as part of the goal. It records no choice and why it was made, which is a record's to hold. What the component is for, the reason behind every area, stays in its purpose record.
 
 **Why each view by its number and title.** The concepts are listed by their labels alone, so a reader scans them as a list. The capability's maintainer chose it on 21 October, on reading the core's overview. A view's opening states the problem its concepts solve on the view's own page, one link away. Quoted beside each title, it made the list of concepts long and uneven. A view's problem is a reason, whose home is a record (DEC-004 point 3). Who an actor is lies in the actor's own front matter, so the table of who takes part shows it.
 
@@ -296,6 +302,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **An actor of another analysis by its name in that analysis.** Rejected. The overview would read another analysis's files, which may lie in another repository, and go stale with them. The glossary's head names the actor in this analysis.
 - **Install or a migration writing the overview.** Not taken. Install runs no command of a capability (COR-017). A missing overview is a warning, so a project that installed the capability before needs no migration.
 - **Deleting the overview to keep none.** Rejected. The stamp's next rewrite would restore it, while a setting lasts.
+- **An area's goal stated as what holds once the area is done,** such as "a customer can place an order". Rejected. It reads as a result, not a goal (see Rationale).
 - **An area's goal in a file in the area's folder.** Rejected. The folder lies in the use cases' place, so a file there would read as a use case.
 - **Regions on another component's pages, filled through a data point now.** Not taken yet. A page that must show an analysis diagram is the trigger. The capability would then contribute to that point, as it contributes to the readers point, refining DEC-001 point 8.
 - **Every producer drawn solid, implied arrows included.** Rejected. An early use case would draw an arrow to each use case after it, and the picture would show little else.
@@ -319,5 +326,5 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
   - the line that names the query and its subjects
 - **`SAN`** gains the two proposed rules of point 10, and the validator their checkable part. Its judgement rules read a Mermaid fence's labels as statements. The forms check reads a fence as part of the text or the item it follows (point 2).
 - **DEC-001** points 1, 2 and 11, and **DEC-002** point 3, name what this record adds to them. Point 8 is not refined, since the capability contributes no diagram to another component's point.
-- **The authoring skill** tells a writer where a fence may sit, what it may show, and that it holds no styling (point 2). It also tells a writer to print the chain before adding a use case, or changing what one names in `after`.
+- **The authoring skill** tells a writer where a fence may sit, what it may show, and that it holds no styling (point 2). It also tells a writer to print the chain before adding a use case, or changing what one names in `after`, and how to write each area's goal (point 8).
 - **Projects** print their analysis's diagrams with no setup, through the query their overview names. A project that adopts the rules at `SAN`'s next major reviews the diagrams in its artefacts for their text alternatives.
