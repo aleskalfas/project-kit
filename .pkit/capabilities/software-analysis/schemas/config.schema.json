@@ -112,7 +112,7 @@
       }
     },
     "areas": {
-      "description": "Each area of the analysis's use cases with its goal: the area's folder name, a word that may open with a number and a hyphen, such as `010-develop`, and beside it one line that says what the area makes possible. The overview shows each goal beside its area, so a reader sees why the use cases are cut as they are. An area whose goal is given and which holds no use case in force shows as not written yet. Where the overview is kept, `pkit analysis validate` warns of an area of the use cases in force without a goal. An analysis whose use cases lie in no area keeps none.",
+      "description": "Each area of the analysis's use cases with its goal: the area's folder name, a word that may open with a number and a hyphen, such as `010-develop`, and beside it one line that gives the area's goal: one phrase that starts with its verb, a summary goal over the area's use cases, in no actor's voice, such as `Place an order and pay for it`. The overview shows each goal beside its area, so a reader sees why the use cases are cut as they are. An area whose goal is given and which holds no use case in force shows as not written yet. Where the overview is kept, `pkit analysis validate` warns of an area of the use cases in force without a goal. An analysis whose use cases lie in no area keeps none.",
       "type": "object",
       "propertyNames": {
         "pattern": "^(?:[0-9]+-)?[a-z][a-z0-9-]*$"

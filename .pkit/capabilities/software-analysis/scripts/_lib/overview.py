@@ -52,10 +52,10 @@ that holds a producer in force its use cases name, save one in a later area, an
 alternative the area does not build on (DEC-003 point 5; DEC-001 point 12).
 
 **An area's goal** is one line kept in the capability's settings file beside the area's
-folder name (`_lib/analyses.py`): what the area makes possible. It is the one text the
-overview shows that neither an artefact nor a record holds. Where the project keeps its
-overview, the check warns of an area of use cases in force without a goal. A goal whose
-area holds no use case shows that area as not written yet.
+folder name (`_lib/analyses.py`), one phrase that starts with its verb. It is the one
+text the overview shows that neither an artefact nor a record holds. Where the project
+keeps its overview, the check warns of an area of use cases in force without a goal. A
+goal whose area holds no use case shows that area as not written yet.
 
 **What it is for.** The record `purpose` names is checked whatever the setting: the
 check fails a pointer to no record, and one to a record that is not accepted. The page
@@ -851,8 +851,8 @@ def _goals(analysis: Analysis, listing: analyses.Listing, folder: str | None) ->
         Finding(
             WARNING,
             _area_folder(analysis, lying[area], area),
-            f"the area {area} of {named} has no goal: write one line beside its folder name, "
-            f"in {where}, that says what the area makes possible. The overview shows it, so a "
+            f"the area {area} of {named} has no goal: write one beside its folder name, in "
+            f"{where}, as one phrase that starts with its verb. The overview shows it, so a "
             f"reader sees why the use cases are cut as they are (DEC-003 point 8)",
         )
         for area in sorted(in_force - listing.goals(folder).keys())

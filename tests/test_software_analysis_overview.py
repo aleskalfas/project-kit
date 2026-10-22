@@ -318,7 +318,7 @@ def test_an_analysis_with_areas_reads_as_its_story_then_reference(project: Adopt
     built yet, then the line that names the query of the diagrams, each a section below
     it. No line says where to start, no diagram but a journey's flow is on the page, and
     each link inside the page leads to a heading."""
-    project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
+    project.write({SETTINGS: HEAD + "areas:\n  010-run: Run the suites.\n"})
     stamped(project, "term", "suite", "--name", "suite", "--path", "src/run.py")
     stamped(project, "view", "runs", "--number", "010", "--explains", "TERM-suite")
     stamped(project, "actor", "tester", "--path", "src/**")
@@ -416,7 +416,7 @@ def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_is(
     record's title as a sentence, linked, then what the analysis is, and nothing
     more: the story goes on with the areas. The record's title is drawn, so a changed one
     makes the overview stale."""
-    project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
+    project.write({SETTINGS: HEAD + "areas:\n  010-run: Run the suites.\n"})
     stamped(project, "term", "suite", "--name", "suite", "--path", "src/run.py")
     stamped(project, "actor", "tester", "--path", "src/**")
     stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--area", "010-run")
@@ -434,7 +434,7 @@ def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_is(
 
     project.write(
         {
-            SETTINGS: HEAD + "purpose: PRJ-001\nareas:\n  010-run: Suites run.\n",
+            SETTINGS: HEAD + "purpose: PRJ-001\nareas:\n  010-run: Run the suites.\n",
             PURPOSE_REL: _record(),
         }
     )
@@ -500,8 +500,8 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     the overview stale."""
     project.write(
         {
-            SETTINGS: HEAD + "areas:\n  010-run: A suite runs, and its result can be read.\n"
-            "  030-share: A failure's cause can be shared.\n"
+            SETTINGS: HEAD + "areas:\n  010-run: Run a suite, and read its result.\n"
+            "  030-share: Share a failure's cause.\n"
         }
     )
     stamped(project, "actor", "tester", "--path", "src/**")
@@ -512,13 +512,13 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     uc = "../use-case-model/use-cases"
     text = _read(project)
     assert _section(text, "## Areas") == (
-        "### 010-run\n\nA suite runs, and its result can be read.\n\n"
+        "### 010-run\n\nRun a suite, and read its result.\n\n"
         "**Its requirements:** none.\n\n**Its use cases:**\n\n"
         f"- [UC-002 — Run suite]({uc}/010-run/UC-002-run-suite.md)\n\n"
         "### 020-report\n\nNo goal is written for this area yet.\n\n"
         "**Its requirements:** none.\n\n**Its use cases:**\n\n"
         f"- [UC-001 — Read report]({uc}/020-report/UC-001-read-report.md)\n\n"
-        "### 030-share\n\nA failure's cause can be shared.\n\nNot written yet.\n\n"
+        "### 030-share\n\nShare a failure's cause.\n\nNot written yet.\n\n"
         f"### Outside any area\n\n- [UC-003 — Set up]({uc}/UC-003-set-up.md)"
     )
     assert "Builds on" not in text
@@ -529,11 +529,11 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     assert _about(document, "error", SETTINGS) == []
     assert _about(document, "error", OVERVIEW_FILE) == []
 
-    project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
+    project.write({SETTINGS: HEAD + "areas:\n  010-run: Run the suites.\n"})
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
     assert run_script(project, OVERVIEW).returncode == 0
-    assert "### 010-run\n\nSuites run.\n" in _read(project)
+    assert "### 010-run\n\nRun the suites.\n" in _read(project)
     assert "030-share" not in _read(project)
 
 
@@ -689,7 +689,7 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
             "  - {component: core, folder: core}\n"
             "  - component: billing\n    folder: billing\n    builds-on:\n"
             "      - {analysis: core}\n    purpose: ledger:DEC-001\n    areas:\n"
-            "      010-pay: Invoices are paid.\n"
+            "      010-pay: Pay the invoices.\n"
         }
     )
     stamped(project, "actor", "tester", "--analysis", "core", "--path", "src/**")
@@ -709,7 +709,7 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     billing = f"{ANALYSIS}/billing/overview/README.md"
     assert _read(project, core).startswith("# Overview of the analysis of core\n")
     assert "[ACT-clerk" not in _read(project, core)
-    assert "### 010-pay\n\nInvoices are paid.\n" in _read(project, billing)
+    assert "### 010-pay\n\nPay the invoices.\n" in _read(project, billing)
     assert _opening(_read(project, core)) == (
         "No record states what core is for yet. Write one with `pkit new decision`, and "
         f"name it as `purpose` in the entry of core under `analyses` in `{SETTINGS}`.\n\n"

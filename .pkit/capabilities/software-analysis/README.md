@@ -1053,17 +1053,20 @@ analyses:
 - **The check.** `pkit analysis validate` fails a pointer to no record, to a record that is not accepted, or to another capability's decision, whatever the setting `overview`. The overview then shows no title, and says what is wrong instead.
 - **None named.** The overview says that no record states what the component is for yet, and names `pkit new decision` and the setting. Nothing fails.
 
-**Each area's goal.** One line for each area of your use cases, beside the area's folder name in the settings file ("Configuration", below), says what the area makes possible. The overview shows it under the area's heading, so a reader sees why the use cases are split as they are:
+**Each area's goal.** One line for each area of your use cases, beside the area's folder name in the settings file ("Configuration", below), gives the area's goal. The overview shows it under the area's heading, so a reader sees why the use cases are split as they are:
 
 ```yaml
 analyses:
   - component: core
     folder: core
     areas:
-      010-run: A suite runs against a sandbox, and its result can be read.
-      020-report: A failure's cause can be found and shared.
+      010-run: Run a suite against a sandbox, and read its result.
+      020-report: Find a failure's cause and share it.
 ```
 
+- **Its form.** Write one phrase that starts with its verb, as the shipped hints ask of a use case's goal. So it reads after "The goal is to …". It is a summary goal over the area's use cases, which are the steps toward it. It may end with "so" and its reason.
+- **No actor's voice.** Write no *I* or *my*, since an area has several actors.
+- **No rule judges it.** The goal is a setting, and no rule of `SAN` judges a setting. DEC-003 point 8 and the authoring skill give its form.
 - **One analysis.** A project that lists no analyses writes `areas` at the file's top.
 - **Each analysis its own.** Each analysis numbers its own areas, so it keeps the goals of its own.
 - **An area planned and not written yet.** Give its goal before its first use case, and the overview shows it in its place, marked *Not written yet*. So a goal left behind when you rename an area shows the same way: rename its goal with it.

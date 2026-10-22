@@ -8,7 +8,7 @@
 #   the analyses it builds on. Left out, the project keeps one analysis, at the
 #   top of the analysis location.
 # - `areas` — each area of an analysis's use cases with its goal, one line
-#   beside the area's folder name that says what the area makes possible
+#   beside the area's folder name: one phrase that starts with its verb
 #   (software-analysis DEC-003 point 8): in a listed analysis's entry, or at
 #   the file's top for the one analysis at the location's top. The overview
 #   shows each goal beside its area.

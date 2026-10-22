@@ -21,7 +21,7 @@ actor of another analysis is named with that analysis, `core:ACT-developer`, and
 resolves against the actors the head lists from it.
 
 **Areas' goals.** Each analysis may give each area of its use cases a goal: one line,
-kept as data beside the area's folder name, that says what the area makes possible
+kept as data beside the area's folder name, one phrase that starts with its verb
 (DEC-003 point 8). A listed analysis keeps them in its entry's `areas`, and the one
 analysis at the location's top in the file's own `areas`. The overview shows each beside
 its area (`_lib/overview.py`).

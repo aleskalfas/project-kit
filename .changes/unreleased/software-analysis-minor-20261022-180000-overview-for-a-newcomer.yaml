@@ -25,6 +25,9 @@ body: >
   `pkit analysis validate` fails a
   `purpose` that names no record, one that is not accepted, or another
   capability's decision, and warns of an area of requirements without a goal.
+  An area's goal is one phrase that starts with its verb, a summary goal over
+  the area's use cases, such as `010-ordering: Place an order and pay for it`,
+  as the README, the authoring skill and that warning say.
   The overview's fingerprint reads other data of the analysis, and its
   version is 4, so an overview written before is a warning until
   `pkit analysis overview` writes it anew. DEC-001 point 1, DEC-002 point 3
