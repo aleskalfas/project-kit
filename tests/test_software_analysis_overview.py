@@ -1,12 +1,16 @@
-"""software-analysis: the overview of each analysis, the reader's entry point (#1805).
+"""software-analysis: the overview of each analysis, the reader's entry point (#1805, #1887).
 
 Held to software-analysis DEC-003 point 8:
 
-- **what it shows** — the concepts, each view by its number and title, the actors,
-  each with the use cases it is the main actor of and those it takes part in, an
-  actor of another analysis as the glossary's head names it, the requirements, the
-  areas with their goals and use cases, the chain and the use-case diagram, and the
-  journeys, each artefact in force linked, each diagram the query's own output;
+- **what it shows** — for a newcomer first: the opening, with what the component is
+  for from its purpose record, what the analysis covers and where to start; the areas,
+  each with its goal, what it builds on, its requirements and its use cases, or "Not
+  written yet"; one table of who takes part, an actor of another analysis as the
+  glossary's head names it; the concepts, each view by its number and title; the
+  requirements in no area; the journeys; then the reference diagrams, each artefact in
+  force linked, each diagram the query's own output;
+- **its purpose** — `purpose` names an accepted record, whose title it shows; a pointer
+  to no record, or to one not accepted, fails the check and is said on the page;
 - **front matter only** — a view's body is never read (DEC-001 point 1);
 - **who writes it** — the stamp, after each artefact, and `pkit analysis
   overview`, each only where its bytes change;
@@ -36,6 +40,7 @@ from tests.analysis_repo import (
     CAPABILITY,
     DOMAIN_MODEL,
     OVERVIEW_FILE,
+    QUALITY,
     SA,
     SETTINGS,
     USE_CASES,
@@ -114,15 +119,33 @@ def _read(repo: AdopterRepo, rel: str = OVERVIEW_FILE) -> str:
 
 
 def _section(text: str, heading: str) -> str:
-    """The lines under `heading` up to the next heading of its level or above."""
+    """The lines under `heading` up to the next heading of its level or above, or the
+    break above the page's closing line."""
     level = heading.split(" ", 1)[0]
     lines = text.split("\n")
     start = lines.index(heading) + 1
     stop = next(
-        (i for i in range(start, len(lines)) if re.match(rf"^#{{1,{len(level)}}} ", lines[i])),
+        (
+            i
+            for i in range(start, len(lines))
+            if re.match(rf"^#{{1,{len(level)}}} ", lines[i]) or lines[i] == "---"
+        ),
         len(lines),
     )
     return "\n".join(lines[start:stop]).strip("\n")
+
+
+def _opening(text: str) -> str:
+    """The page's opening: below its fingerprint's line, up to its first section."""
+    lines = text.split("\n")
+    start = next(i for i, line in enumerate(lines) if line.startswith("<!-- pkit:overview")) + 1
+    stop = next(i for i in range(start, len(lines)) if lines[i].startswith("## "))
+    return "\n".join(lines[start:stop]).strip("\n")
+
+
+#: Who the seed's actor is, its summary and the first sentence of its opening, as `fill`
+#: writes the hints' example (DEC-001 point 1).
+WHO = "Someone who builds reports from their team's figures."
 
 
 def _fence(repo: AdopterRepo, subject: str) -> str:
@@ -141,23 +164,26 @@ def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: Adop
     drawn field changed by hand makes it stale, and the command writes it anew."""
     text = _read(seeded)
     assert text.startswith(
-        "# Overview of the analysis\n\n<!-- pkit:overview reads=3 fingerprint=sha256:"
+        "# Overview of the analysis\n\n<!-- pkit:overview reads=4 fingerprint=sha256:"
     )
-    assert _section(text, "## Actors") == (
-        "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
-        "The use cases it is the main actor of:\n\n"
-        "- [UC-001 — Run suite](../use-case-model/use-cases/UC-001-run-suite.md)\n"
-        "- [UC-002 — Read report](../use-case-model/use-cases/UC-002-read-report.md)"
+    assert _section(text, "## Who takes part") == (
+        "| Actor | Who they are | Areas they act in |\n| --- | --- | --- |\n"
+        f"| [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md) | {WHO} | "
+        "[the use cases](#use-cases) |"
     )
     assert _section(text, "## Use cases") == (
         "- [UC-001 — Run suite](../use-case-model/use-cases/UC-001-run-suite.md)\n"
         "- [UC-002 — Read report](../use-case-model/use-cases/UC-002-read-report.md)"
     )
-    assert _section(text, "## Use cases and their actors") == _fence(seeded, "use-cases")
+    assert _section(text, "### Use cases and their actors") == _fence(seeded, "use-cases")
     journey = "### [JRN-001 — First run](../use-case-model/journeys/JRN-001-first-run.md)"
     assert _section(text, journey) == _fence(seeded, "JRN-001")
-    for absent in ("## Concepts", "## Requirements", "## Areas", "## Chain of use cases"):
+    for absent in ("## Concepts", "Requirement", "## Areas", "### Chain of use cases"):
         assert absent not in text
+    assert text.endswith(
+        "\n\n---\n\nThe command `pkit analysis overview` writes this page from the "
+        "analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).\n"
+    )
     assert _about(_check(seeded), "error", OVERVIEW_FILE) == []
 
     (seeded.root / OVERVIEW_FILE).write_text(text + "\nPrinted otherwise.\n", encoding="utf-8")
@@ -239,18 +265,116 @@ def test_keeping_none(project: AdopterRepo) -> None:
     assert "nothing keeps this one fresh" in left
 
 
-# --- each area's goal -----------------------------------------------------------------------
+# --- the opening, and what the component is for ------------------------------------------------
+
+#: A project record that states what the component is for, as the purpose names it.
+PURPOSE_REL = ".pkit/decisions/project/PRJ-001-what-the-runner-is-for.md"
+PURPOSE_TITLE = "The runner exists so a team's suites run the same way on every machine"
+
+
+def _record(status: str = "accepted", title: str = PURPOSE_TITLE) -> str:
+    return (
+        f"---\nid: PRJ-001\ntitle: {title}\nstatus: {status}\ndate: 2026-10-22\n"
+        "author: A Person <person@example.com>\n---\n\n## Context\n\nA team's suites ran "
+        "differently on each machine.\n\n## Decision\n\n**The runner exists for it.**\n\n"
+        "## Rationale\n\nNone.\n\n## Implications\n\nNone.\n"
+    )
+
+
+def test_the_opening_shows_what_the_component_is_for_and_where_to_start(
+    project: AdopterRepo,
+) -> None:
+    """Without a purpose, the opening says no record states what the system is for, and
+    names the command and the setting; nothing fails. With one, it shows the accepted
+    record's title as a sentence, linked, then what the analysis covers and where to
+    start: the glossary where no view is kept, then the first area that holds a use case.
+    The record's title is drawn, so a changed one makes the overview stale."""
+    project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
+    stamped(project, "term", "suite", "--name", "suite", "--path", "src/run.py")
+    stamped(project, "actor", "tester", "--path", "src/**")
+    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--area", "010-run")
+    fill(project)
+    start = "Start with the [glossary](../glossary.md), then the area [010-run](#010-run)."
+    covers = "This analysis covers the system as one component, and builds on no other analysis."
+    assert _opening(_read(project)) == (
+        "No record states what the system is for yet. Write one with `pkit new decision`, "
+        "and name it as `purpose` at the top of "
+        f"`{SETTINGS}`.\n\n{covers}\n\n{start}"
+    )
+    assert _about(_check(project), "error", SETTINGS) == []
+
+    project.write(
+        {
+            SETTINGS: HEAD + "purpose: PRJ-001\nareas:\n  010-run: Suites run.\n",
+            PURPOSE_REL: _record(),
+        }
+    )
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    assert run_script(project, OVERVIEW).returncode == 0
+    assert _opening(_read(project)) == (
+        f"[{PURPOSE_TITLE}](../../../{PURPOSE_REL}).\n\n{covers}\n\n{start}"
+    )
+    document = _check(project)
+    assert _about(document, "error", SETTINGS) == _about(document, "error", OVERVIEW_FILE) == []
+
+    project.write({PURPOSE_REL: _record(title="The runner is for teams.")})
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    assert run_script(project, OVERVIEW).returncode == 0
+    assert _opening(_read(project)).startswith(
+        f"[The runner is for teams.](../../../{PURPOSE_REL})\n"
+    )
+
+
+def test_a_purpose_naming_no_accepted_record_fails_and_the_page_says_so(
+    project: AdopterRepo,
+) -> None:
+    """A purpose that names a record not accepted, or no record, fails the check, whatever
+    the setting `overview`. The page shows no title of such a record: it says what is
+    wrong, and the rest of it is written as usual."""
+    project.write(
+        {
+            SETTINGS: HEAD + "purpose: PRJ-001\n",
+            PURPOSE_REL: _record(status="proposed"),
+        }
+    )
+    stamped(project, "actor", "tester", "--path", "src/**")
+    fill(project)
+    (proposed,) = _about(_check(project), "error", f"{SETTINGS}:/purpose")
+    assert proposed.startswith("PRJ-001 is proposed, not accepted: only an accepted record")
+    assert _opening(_read(project)).startswith(
+        "`PRJ-001` is named as the record of what the system is for, and it is proposed, not "
+        "accepted. Only an accepted record states it (software-analysis DEC-003 point 8).\n"
+    )
+    assert PURPOSE_TITLE not in _read(project)
+    assert "## Who takes part" in _read(project)
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+
+    project.write({SETTINGS: HEAD + "purpose: PRJ-009\noverview: false\n"})
+    (missing,) = _about(_check(project), "error", f"{SETTINGS}:/purpose")
+    assert missing.startswith("`PRJ-009` names no record the repository holds")
+    project.write({SETTINGS: HEAD + "purpose: PRJ-009\n"})
+    assert run_script(project, OVERVIEW).returncode == 0
+    assert _opening(_read(project)).startswith(
+        "`PRJ-009` is named as the record of what the system is for, and the repository holds "
+        "no record of that id."
+    )
+
+
+# --- the areas ---------------------------------------------------------------------------------
 
 
 def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: AdopterRepo) -> None:
     """The areas in the order of their numbers, each with its goal, or a line saying it
-    has none, and its use cases, then those outside any area; the chain where a use case
-    writes `after`. An area without a goal is a warning, a goal no area takes an error,
-    and a changed goal makes the overview stale."""
+    has none, its requirements and its use cases, then those outside any area. An area
+    whose goal is given and that holds no use case reads "Not written yet.", and fails
+    nothing. An area of use cases without a goal is a warning, and a changed goal makes
+    the overview stale."""
     project.write(
         {
             SETTINGS: HEAD + "areas:\n  010-run: A suite runs, and its result can be read.\n"
-            "  030-gone: Nothing lies here.\n"
+            "  030-share: A failure's cause can be shared.\n"
         }
     )
     stamped(project, "actor", "tester", "--path", "src/**")
@@ -258,22 +382,25 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--area", "010-run")
     stamped(project, "use-case", "set-up", "--actor", "ACT-tester")
     fill(project)
+    uc = "../use-case-model/use-cases"
     text = _read(project)
     assert _section(text, "## Areas") == (
         "### 010-run\n\nA suite runs, and its result can be read.\n\n"
-        "- [UC-002 — Run suite](../use-case-model/use-cases/010-run/UC-002-run-suite.md)\n\n"
+        "**Its requirements:** none.\n\n**Its use cases:**\n\n"
+        f"- [UC-002 — Run suite]({uc}/010-run/UC-002-run-suite.md)\n\n"
         "### 020-report\n\nNo goal is written for this area yet.\n\n"
-        "- [UC-001 — Read report](../use-case-model/use-cases/020-report/UC-001-read-report.md)"
-        "\n\n### Outside any area\n\n"
-        "- [UC-003 — Set up](../use-case-model/use-cases/UC-003-set-up.md)"
+        "**Its requirements:** none.\n\n**Its use cases:**\n\n"
+        f"- [UC-001 — Read report]({uc}/020-report/UC-001-read-report.md)\n\n"
+        "### 030-share\n\nA failure's cause can be shared.\n\nNot written yet.\n\n"
+        f"### Outside any area\n\n- [UC-003 — Set up]({uc}/UC-003-set-up.md)"
     )
-    assert "## Chain of use cases" not in text
+    assert "Builds on" not in text and "### Chain of use cases" not in text
+    assert _opening(text).endswith("Start with the area [010-run](#010-run).")
     document = _check(project)
     (no_goal,) = _about(document, "warning", f"{USE_CASES}/020-report")
     assert no_goal.startswith("the area 020-report of the analysis has no goal")
     assert "the `areas` at the file's top" in no_goal
-    (orphan,) = _about(document, "error", f"{SETTINGS}:/areas/030-gone")
-    assert orphan.startswith("the goal of 030-gone names no area of the analysis")
+    assert _about(document, "error", SETTINGS) == []
     assert _about(document, "error", OVERVIEW_FILE) == []
 
     project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
@@ -281,17 +408,163 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
     assert stale.startswith("it is stale")
     assert run_script(project, OVERVIEW).returncode == 0
     assert "### 010-run\n\nSuites run.\n" in _read(project)
+    assert "030-share" not in _read(project)
+
+
+def _after(repo: AdopterRepo, rel: str, *entries: str) -> None:
+    """Write `after` into a stamped use case's front matter, one entry for each of
+    `entries`, as written: `[UC-001]` or `[UC-002, environment]`."""
+    text = _read(repo, rel)
+    after = "after:\n" + "".join(f"  - {entry}\n" for entry in entries)
+    repo.write({rel: text.replace("status: active\n", f"status: active\n{after}", 1)})
+
+
+def test_an_area_builds_on_the_areas_its_use_cases_producers_lie_in(project: AdopterRepo) -> None:
+    """What an area builds on is computed from its use cases' `after`: each other area that
+    holds a producer in force, in the order of their numbers. A producer of its own area,
+    one in a later area and the environment are no area it builds on. An area none of
+    whose use cases writes `after` shows no line, and a changed `after` makes the overview
+    stale."""
+    stamped(project, "actor", "tester", "--path", "src/**")
+    for slug, area in (("run", "010-run"), ("read", "020-read"), ("share", "030-share")):
+        stamped(project, "use-case", slug, "--actor", "ACT-tester", "--area", area)
+    stamped(project, "use-case", "keep", "--actor", "ACT-tester", "--area", "040-keep")
+    stamped(project, "use-case", "reread", "--actor", "ACT-tester", "--area", "020-read")
+    fill(project)
+    _after(project, f"{USE_CASES}/020-read/UC-002-read.md", "[UC-001]")
+    _after(project, f"{USE_CASES}/020-read/UC-005-reread.md", "[UC-002, environment]")
+    _after(project, f"{USE_CASES}/030-share/UC-003-share.md", "[UC-005, UC-004]", "[UC-001]")
+    assert run_script(project, OVERVIEW).returncode == 0
+    areas = _section(_read(project), "## Areas")
+    builds = re.findall(r"(?m)^### (\S+)$|^\*\*Builds on:\*\* (.*)$", areas)
+    assert [(a or b) for a, b in builds] == [
+        "010-run",
+        "020-read",
+        "[010-run](#010-run).",
+        "030-share",
+        "[010-run](#010-run) and [020-read](#020-read).",
+        "040-keep",
+    ]
+    _after(project, f"{USE_CASES}/040-keep/UC-004-keep.md", "[UC-004]")
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    assert run_script(project, OVERVIEW).returncode == 0
+    assert (
+        "### 040-keep\n\nNo goal is written for this area yet.\n\n**Builds on:** no other area."
+        in (_read(project))
+    )
+
+
+def test_an_area_s_requirements_are_read_from_their_folder(project: AdopterRepo) -> None:
+    """A requirement whose file lies in an area's folder of its kind's folder is that
+    area's, an area that holds only requirements is shown, not written yet, and the
+    requirements in no area's folder are listed apart."""
+    stamped(project, "actor", "tester", "--path", "src/**")
+    stamped(project, "use-case", "run", "--actor", "ACT-tester", "--area", "010-run")
+    for slug, area in (("quick", "010-run"), ("kept", "060-audit")):
+        stamped(project, "quality-requirement", slug, "--area", area, "--actor", "ACT-tester")
+    stamped(project, "constraint", "local", "--actor", "ACT-tester")
+    fill(project)
+    assert run_script(project, OVERVIEW).returncode == 0
+    text = _read(project)
+    req = "../requirements"
+    assert _section(text, "### 010-run") == (
+        "No goal is written for this area yet.\n\n**Its requirements:**\n\n"
+        f"- [REQ-001 · Quality · Quick]({req}/quality/010-run/REQ-001-quick.md)\n\n"
+        "**Its use cases:**\n\n"
+        "- [UC-001 — Run](../use-case-model/use-cases/010-run/UC-001-run.md)"
+    )
+    assert _section(text, "### 060-audit") == (
+        "No goal is written for this area yet.\n\n**Its requirements:**\n\n"
+        f"- [REQ-002 · Quality · Kept]({req}/quality/060-audit/REQ-002-kept.md)\n\n"
+        "Not written yet."
+    )
+    assert _section(text, "## Requirements in no area") == (
+        f"- [REQ-003 · Constraint · Local]({req}/constraints/REQ-003-local.md)"
+    )
+    assert "### Requirement map" in text
+    (no_goal,) = _about(_check(project), "warning", f"{QUALITY}/060-audit")
+    assert no_goal.startswith("the area 060-audit of the analysis has no goal")
+
+
+# --- who takes part ---------------------------------------------------------------------------
+
+
+def test_one_table_shows_who_takes_part_and_the_areas_each_acts_in(
+    project: AdopterRepo,
+) -> None:
+    """One row for each actor in force: the actor, linked, its summary, and the areas of
+    the use cases in force it is the main actor of or takes part in, in the order of their
+    numbers. An actor that gives no summary has an empty cell, and one no use case names
+    says so. A withdrawn use case is not read, and a changed `other-actors` or summary
+    makes the overview stale."""
+    for slug in ("auditor", "reviewer", "tester"):
+        stamped(project, "actor", slug, "--path", "src/**")
+    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--area", "020-run")
+    stamped(
+        project,
+        "use-case",
+        "review-run",
+        "--actor",
+        "ACT-reviewer",
+        "--other-actor",
+        "ACT-tester",
+        "--area",
+        "010-review",
+    )
+    stamped(project, "use-case", "read-report", "--actor", "ACT-tester")
+    fill(project)
+    auditor = actor_at("ACT-auditor")
+    project.write({auditor: re.sub(r"(?m)^summary: .*\n", "", _read(project, auditor), count=1)})
+    assert run_script(project, OVERVIEW).returncode == 0
+    actors = "../use-case-model/actors"
+    assert _section(_read(project), "## Who takes part") == (
+        "| Actor | Who they are | Areas they act in |\n| --- | --- | --- |\n"
+        f"| [ACT-auditor — Auditor]({actors}/ACT-auditor.md) |  | No use case names it yet. |\n"
+        f"| [ACT-reviewer — Reviewer]({actors}/ACT-reviewer.md) | {WHO} | "
+        "[010-review](#010-review) |\n"
+        f"| [ACT-tester — Tester]({actors}/ACT-tester.md) | {WHO} | [010-review](#010-review), "
+        "[020-run](#020-run), [outside any area](#outside-any-area) |"
+    )
+    assert "## Actors" not in _read(project)
+    assert _about(_check(project), "error", OVERVIEW_FILE) == []
+
+    review = f"{USE_CASES}/010-review/UC-002-review-run.md"
+    project.write(
+        {review: _read(project, review).replace("  - ACT-tester\n", "  - ACT-auditor\n", 1)}
+    )
+    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
+    assert stale.startswith("it is stale")
+    read = f"{USE_CASES}/UC-003-read-report.md"
+    project.write({read: _read(project, read).replace("status: active", "status: withdrawn", 1)})
+    tester = actor_at("ACT-tester")
+    project.write(
+        {
+            tester: re.sub(
+                r"(?m)^summary: .*$", "summary: A tester.", _read(project, tester), count=1
+            )
+        }
+    )
+    assert run_script(project, OVERVIEW).returncode == 0
+    rows = _section(_read(project), "## Who takes part").split("\n")
+    assert rows[2].endswith("|  | [010-review](#010-review) |")
+    assert (
+        rows[4]
+        == f"| [ACT-tester — Tester]({actors}/ACT-tester.md) | A tester. | [020-run](#020-run) |"
+    )
 
 
 def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     """Each listed analysis keeps its overview in its folder, named by its component, and
-    its goals in its entry; the file's own `areas` beside a list belongs to none."""
+    its goals and its purpose in its entry; the file's own `areas` and `purpose` beside a
+    list belong to none. The opening says what each analysis builds on."""
     project.write(
         {
-            SETTINGS: HEAD + "areas:\n  010-run: Belongs to none.\nanalyses:\n"
+            SETTINGS: HEAD + "areas:\n  010-run: Belongs to none.\npurpose: PRJ-001\nanalyses:\n"
             "  - {component: core, folder: core}\n"
             "  - component: billing\n    folder: billing\n    builds-on:\n"
-            "      - {analysis: core}\n    areas:\n      010-pay: Invoices are paid.\n"
+            "      - {analysis: core}\n    purpose: ledger:DEC-001\n    areas:\n"
+            "      010-pay: Invoices are paid.\n"
         }
     )
     stamped(project, "actor", "tester", "--analysis", "core", "--path", "src/**")
@@ -312,17 +585,32 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     assert _read(project, core).startswith("# Overview of the analysis of core\n")
     assert "[ACT-clerk" not in _read(project, core)
     assert "### 010-pay\n\nInvoices are paid.\n" in _read(project, billing)
+    assert _opening(_read(project, core)) == (
+        "No record states what core is for yet. Write one with `pkit new decision`, and "
+        f"name it as `purpose` in the entry of core under `analyses` in `{SETTINGS}`.\n\n"
+        "This analysis covers core, and builds on no other analysis."
+    )
+    assert "This analysis covers billing, and builds on the analysis of core.\n" in (
+        _read(project, billing)
+    )
     document = _check(project)
     (misplaced,) = _about(document, "error", f"{SETTINGS}:/areas")
     assert "belongs to no analysis" in misplaced
+    (also,) = _about(document, "error", f"{SETTINGS}:/purpose")
+    assert "belongs to no analysis" in also
+    (other,) = _about(document, "error", f"{SETTINGS}:/analyses/1/purpose")
+    assert other.startswith(
+        "ledger:DEC-001 is a decision of ledger, and the component of the analysis of billing "
+        "is billing"
+    )
     assert _about(document, "error", core) == _about(document, "error", billing) == []
     assert not (project.root / OVERVIEW_FILE).exists()
 
 
 def test_each_view_is_listed_by_its_number_and_title(project: AdopterRepo) -> None:
     """The concepts: the glossary, then each view by its number, as its file's name spells
-    it, and its title, in the order of its number. The overview reads no body, so writing
-    a view's opening leaves it fresh."""
+    it, and its title, in the order of its number. The first view is where a newcomer
+    starts. The overview reads no body, so writing a view's opening leaves it fresh."""
     for slug in ("order", "payment"):
         stamped(project, "term", slug, "--name", slug, "--path", "src/run.py")
     stamped(project, "view", "payments", "--number", "020", "--explains", "TERM-payment")
@@ -333,6 +621,9 @@ def test_each_view_is_listed_by_its_number_and_title(project: AdopterRepo) -> No
         "- [010 — Orders](../domain-model/010-orders.md)\n"
         "- [020 — Payments](../domain-model/020-payments.md)"
     )
+    assert _opening(_read(project)).endswith(
+        "Start with the domain-model view [010 — Orders](../domain-model/010-orders.md)."
+    )
     view = f"{DOMAIN_MODEL}/010-orders.md"
     text = _read(project, view)
     hint = re.search(r"(?m)^<!-- pkit:hint The problem.*-->\n", text)
@@ -341,58 +632,6 @@ def test_each_view_is_listed_by_its_number_and_title(project: AdopterRepo) -> No
     assert _about(_check(project), "error", OVERVIEW_FILE) == []
     again = run_script(project, OVERVIEW)
     assert (again.returncode, again.stdout) == (0, f"fresh already: {OVERVIEW_FILE}\n")
-
-
-# --- each actor's use cases -------------------------------------------------------------------
-
-
-def test_each_actor_lists_the_use_cases_it_is_main_actor_of_and_takes_part_in(
-    project: AdopterRepo,
-) -> None:
-    """Under each actor, the use cases in force whose `actor` it is, then those whose
-    `other-actors` name it, each linked, in the order of their numbers; an actor no use
-    case names says so. A withdrawn use case is not listed, and a changed `other-actors`
-    makes the overview stale."""
-    for slug in ("auditor", "reviewer", "tester"):
-        stamped(project, "actor", slug, "--path", "src/**")
-    stamped(project, "use-case", "run-suite", "--actor", "ACT-tester")
-    stamped(
-        project, "use-case", "review-run", "--actor", "ACT-reviewer", "--other-actor", "ACT-tester"
-    )
-    stamped(project, "use-case", "read-report", "--actor", "ACT-tester")
-    fill(project)
-    uc = "../use-case-model/use-cases"
-    assert _section(_read(project), "## Actors") == (
-        "### [ACT-auditor — Auditor](../use-case-model/actors/ACT-auditor.md)\n\n"
-        "No use case names it yet.\n\n"
-        "### [ACT-reviewer — Reviewer](../use-case-model/actors/ACT-reviewer.md)\n\n"
-        "The use cases it is the main actor of:\n\n"
-        f"- [UC-002 — Review run]({uc}/UC-002-review-run.md)\n\n"
-        "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
-        "The use cases it is the main actor of:\n\n"
-        f"- [UC-001 — Run suite]({uc}/UC-001-run-suite.md)\n"
-        f"- [UC-003 — Read report]({uc}/UC-003-read-report.md)\n\n"
-        "The use cases it takes part in:\n\n"
-        f"- [UC-002 — Review run]({uc}/UC-002-review-run.md)"
-    )
-    assert _about(_check(project), "error", OVERVIEW_FILE) == []
-
-    review = f"{USE_CASES}/UC-002-review-run.md"
-    project.write(
-        {review: _read(project, review).replace("  - ACT-tester\n", "  - ACT-auditor\n", 1)}
-    )
-    (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
-    assert stale.startswith("it is stale")
-    read = f"{USE_CASES}/UC-003-read-report.md"
-    project.write({read: _read(project, read).replace("status: active", "status: withdrawn", 1)})
-    assert run_script(project, OVERVIEW).returncode == 0
-    actors = _section(_read(project), "## Actors")
-    assert "UC-003" not in actors
-    assert (
-        "### [ACT-auditor — Auditor](../use-case-model/actors/ACT-auditor.md)\n\n"
-        "The use cases it takes part in:\n\n"
-        f"- [UC-002 — Review run]({uc}/UC-002-review-run.md)\n"
-    ) in actors + "\n"
 
 
 #: The head of billing's glossary: what it takes from the core's analysis, ACT-tester among
@@ -412,10 +651,11 @@ def test_an_actor_of_another_analysis_is_listed_as_the_glossarys_head_names_it(
     project: AdopterRepo,
 ) -> None:
     """In an analysis that builds on another, each actor the glossary's head lists from
-    it follows the analysis's own actors, by its id with that analysis and the name the
-    head gives it, with its use cases. One a use case names that the head lists not is
-    shown by that id alone. The head's names are data the overview reads, and its needs
-    are not; the other analysis's overview lists none of this one's use cases."""
+    it follows the analysis's own actors in the table, by its id with that analysis and
+    the name the head gives it, with the areas it acts in. One a use case names that the
+    head lists not is shown by that id alone. The head's names are data the overview
+    reads, and its needs are not; the other analysis's overview reads none of this one's
+    use cases."""
     project.write(
         {
             SETTINGS: HEAD + "analyses:\n  - {component: core, folder: core}\n"
@@ -426,6 +666,7 @@ def test_an_actor_of_another_analysis_is_listed_as_the_glossarys_head_names_it(
     stamped(project, "actor", "tester", "--analysis", "core", "--path", "src/**")
     stamped(project, "actor", "clerk", "--analysis", "billing", "--path", "src/**")
     stamped(project, "term", "bill", "--analysis", "billing", "--path", "src/**")
+    fill(project)
     glossary = f"{ANALYSIS}/billing/glossary.md"
     project.write({glossary: _read(project, glossary).replace("---\n", f"---\n{_HEAD}", 1)})
     audit = stamped(
@@ -443,19 +684,18 @@ def test_an_actor_of_another_analysis_is_listed_as_the_glossarys_head_names_it(
     )
     assert audit == "UC-001"
     billing = f"{ANALYSIS}/billing/overview/README.md"
-    link = "- [UC-001 — Audit](../use-case-model/use-cases/UC-001-audit.md)"
-    assert _section(_read(project, billing), "## Actors") == (
-        "### [ACT-clerk — Clerk](../use-case-model/actors/ACT-clerk.md)\n\n"
-        f"The use cases it takes part in:\n\n{link}\n\n"
-        "### core:ACT-tester — Tester\n\n"
-        "An actor of the analysis of core, which the head of the [glossary](../glossary.md) "
-        f"lists.\n\nThe use cases it is the main actor of:\n\n{link}"
-    )
+    listed = "which the head of the [glossary](../glossary.md) lists."
+    assert _section(_read(project, billing), "## Who takes part").split("\n")[2:] == [
+        f"| [ACT-clerk — Clerk](../use-case-model/actors/ACT-clerk.md) | {WHO} | "
+        "[the use cases](#use-cases) |",
+        f"| core:ACT-tester — Tester | An actor of the analysis of core, {listed} | "
+        "[the use cases](#use-cases) |",
+    ]
     core = f"{ANALYSIS}/core/overview/README.md"
-    assert _section(_read(project, core), "## Actors") == (
-        "### [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md)\n\n"
-        "No use case names it yet."
-    )
+    assert _section(_read(project, core), "## Who takes part").split("\n")[2:] == [
+        f"| [ACT-tester — Tester](../use-case-model/actors/ACT-tester.md) | {WHO} | "
+        "No use case names it yet. |"
+    ]
 
     head = _read(project, glossary)
     project.write({glossary: head.replace("Never lose a bill.", "Never pay twice.")})
@@ -469,11 +709,12 @@ def test_an_actor_of_another_analysis_is_listed_as_the_glossarys_head_names_it(
         {use_case: _read(project, use_case).replace("  - ACT-clerk\n", "  - core:ACT-pilot\n", 1)}
     )
     assert run_script(project, OVERVIEW).returncode == 0
-    actors = _section(_read(project, billing), "## Actors")
-    assert (
-        "### core:ACT-pilot\n\nAn actor of the analysis of core.\n\n"
-        f"The use cases it takes part in:\n\n{link}\n\n### core:ACT-tester — Test author\n"
-    ) in actors
+    rows = _section(_read(project, billing), "## Who takes part").split("\n")[2:]
+    assert rows[1:] == [
+        "| core:ACT-pilot | An actor of the analysis of core. | [the use cases](#use-cases) |",
+        f"| core:ACT-tester — Test author | An actor of the analysis of core, {listed} | "
+        "[the use cases](#use-cases) |",
+    ]
 
 
 # --- the fingerprint, read alone ---------------------------------------------------------------

@@ -519,10 +519,11 @@ class Analysis:
         return found
 
     def area(self, artefact: Artefact) -> str | None:
-        """The area a use case lies in: the folder of its place that holds it, one folder
-        below the use cases' folder, such as `010-develop`; `None` for one right in that
-        folder, or one no place of this state holds (DEC-001 point 2)."""
-        for place in (self.places.get(USE_CASE), self.nested.get(USE_CASE)):
+        """The area an artefact lies in: the folder of its kind's place that holds it, one
+        folder below the place's own, such as `010-develop` for a use case, or a
+        requirement in `requirements/quality/010-develop/`; `None` for one right in that
+        folder, or one no place of this state holds (DEC-001 point 2, DEC-002 point 3)."""
+        for place in (self.places.get(artefact.kind), self.nested.get(artefact.kind)):
             if not place or not under_place(artefact.path, place):
                 continue
             below = artefact.path.split("/")[len(_folder(place).split("/")) :]

@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-21T12:12:23Z
+          at: 2026-10-22T16:24:48Z
           outcome: unchanged
-          unchanged-because: "DEC-001 gains the Not built yet box and shortfalls, which no kind's structure declares: the check holds them whatever any rule's status. A kind's structure, and where the format rule binds, are untouched."
+          unchanged-because: DEC-001 gains an actor's optional `summary`, and the actor kind's structure a form that holds it equal to the opening. The rule asks an artefact to carry its kind's structure, forms included, so it holds.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-21T12:12:24Z
+          at: 2026-10-22T16:24:50Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1's box and shortfalls name no actor, so whose goal a use case is, and its other actors, are untouched.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-21T12:12:25Z
+          at: 2026-10-22T16:24:51Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 lets a step the system does not carry out yet stand with its box. A use case's goal and its actor's needs are untouched.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -90,9 +90,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-21T12:12:26Z
+          at: 2026-10-22T16:24:53Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 lets a step stand on an accepted record with its box, and a step is no item this rule judges. The sources of a goal, a minimal guarantee and a requirement are untouched.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -107,9 +107,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-21T12:12:28Z
+          at: 2026-10-22T16:24:59Z
           outcome: unchanged
-          unchanged-because: A Not built yet box is a statement of its use case, read as any other, and its label is a part's label. The concepts and the terms that define them are untouched.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, which repeats the first sentence of its opening. So it uses no concept the opening does not, and the rule holds.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -121,9 +121,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-21T12:12:29Z
+          at: 2026-10-22T16:24:55Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 adds shortfalls beside after. The producers a precondition names, after, and the order of the areas are untouched.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -157,9 +157,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T12:12:30Z
+          at: 2026-10-22T16:24:56Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1's boxes and shortfalls touch no term's names, so one name still means one concept.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-013:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -167,6 +167,10 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
+        revalidated:
+          at: 2026-10-22T16:24:58Z
+          outcome: unchanged
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -195,7 +199,8 @@ checks:
         terms. A shipped part or front-matter field that the structure gives a
         form holds that form, save on a withdrawn artefact. The forms are
         `sentence`, `numbered-steps`, `variants`, `steps-match-front-matter`,
-        `headings-match-front-matter` and `definition`, each as the schema of
+        `headings-match-front-matter`, `summary-matches-front-matter` and
+        `definition`, each as the schema of
         the kinds' declared structure describes it.
   RS-SAN-002:
     - check: "software-analysis:check-numbers"

@@ -280,7 +280,7 @@ VIEW = "domain-model-view"
 PARTS: dict[str, list[tuple[str, str, str | None, bool, str | None]]] = {
     "actor": [
         ("heading", "heading", None, False, None),
-        ("opening", "opening", None, False, None),
+        ("opening", "opening", None, False, "summary-matches-front-matter"),
         ("occasions", "label", "Occasions", True, None),
         ("context", "label", "Context", True, None),
     ],
@@ -367,7 +367,7 @@ REQUIREMENT_FIELDS: dict[str, str | None] = {
 
 #: Each kind's front-matter fields a writer fills, with the form of each (#1362).
 FIELDS: dict[str, dict[str, str | None]] = {
-    "actor": {"needs": "sentence"},
+    "actor": {"summary": "sentence", "needs": "sentence"},
     "use-case": {},
     "journey": {},
     "term": {
@@ -522,6 +522,7 @@ FORMS = (
     "outcomes-match-front-matter",
     "gaps-match-outcomes",
     "builds-on-matches-front-matter",
+    "summary-matches-front-matter",
     "headings-match-front-matter",
     "definition",
 )

@@ -10,8 +10,8 @@
 
 Writes the overview of each analysis the project keeps that holds an artefact,
 `overview/README.md` in the analysis's folder: the reader's entry point. It shows
-what the analysis holds, in the order it is built, each area with its goal, and
-the analysis's diagrams, each with its text alternative. It carries a
+what the component is for, the analysis's areas in their order, each with its
+goal, who takes part, and the analysis's diagrams, each with its text alternative. It carries a
 fingerprint of what it draws, which `pkit analysis validate` compares with the
 analysis. `_lib/overview.py` states the rules.
 
@@ -49,7 +49,7 @@ def main() -> int:
         description=(
             "Write the overview of each analysis the project keeps that holds an artefact, "
             "`overview/README.md` in its folder (software-analysis DEC-003 point 8): what "
-            "the analysis holds, in the order it is built, each area with its goal, and its "
+            "the component is for, its areas in their order, who takes part, and its "
             "diagrams. Writes only where an overview's bytes change; `pkit analysis "
             "validate` holds each fresh by its fingerprint."
         ),

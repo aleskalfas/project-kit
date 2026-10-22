@@ -655,6 +655,81 @@ def test_a_placeholder_left_in_a_field_is_the_placeholder_check_s(tmp_path: Path
     assert C._field_findings(term.location, term.fields, KINDS["term"], "a term") == []
 
 
+# --- an actor's summary ------------------------------------------------------------------------
+
+ACTOR = """\
+# ACT-analyst — Analyst
+
+Someone who builds reports from their team's figures. They export them each week.
+
+**Occasions:** At the end of each week.
+
+**Context:** None."""
+
+#: The first sentence of ACTOR's opening, as its summary gives it.
+WHO = "Someone who builds reports from their team's figures."
+
+
+@pytest.mark.parametrize(
+    ("text", "first"),
+    [
+        ("A role. Another sentence.", "A role."),
+        ("Whoever tests,\n  on  each run. Then more.", "Whoever tests, on each run."),
+        ("It runs e.g. nightly. Then more.", "It runs e.g. nightly."),
+        ("It runs `a. B` first. Then more.", "It runs `a. B` first."),
+        ("No full stop ends it\n\nA second paragraph.", "No full stop ends it"),
+        ("One sentence only.", "One sentence only."),
+    ],
+)
+def test_the_first_sentence_ends_where_the_sentence_form_ends_one(text: str, first: str) -> None:
+    assert F.first_sentence(text) == first
+
+
+@pytest.mark.parametrize(
+    ("summary", "found"),
+    [
+        (WHO, []),
+        ("Someone  who builds\nreports from their team's figures.", []),
+        ("They export them each week.", [("opening", "breaks-its-form", 3)]),
+        ("Someone who builds reports.", [("opening", "breaks-its-form", 3)]),
+        (None, []),
+        ("<!-- pkit:hint Who the actor is. Example: Someone. -->", []),
+    ],
+)
+def test_an_actor_s_summary_is_the_first_sentence_of_its_opening(
+    summary: str | None, found: list[tuple[str, str, int]]
+) -> None:
+    """The opening's form holds its first sentence equal to the front matter's `summary`,
+    white space aside (DEC-001 point 1). An actor that gives no summary, or one still
+    holding its hint, is asked nothing."""
+    fields: dict[str, Any] = {"id": "ACT-analyst", "name": "Analyst"}
+    if summary is not None:
+        fields["summary"] = summary
+    assert _found(ACTOR, "actor", fields=fields) == found
+
+
+def test_a_summary_that_differs_says_what_each_reads(tmp_path: Path) -> None:
+    """Through the check, where the format rule binds: the message quotes the first
+    sentence and the summary, and says the two are written alike."""
+    actor = _artefact(
+        tmp_path,
+        "docs/analysis/use-case-model/actors/ACT-analyst.md",
+        "actor",
+        ACTOR,
+        id="ACT-analyst",
+        name="Analyst",
+        summary="An analyst.",
+        needs=["Export my report as a file."],
+    )
+    (message,) = _messages(tmp_path, actor)
+    assert message.startswith(
+        "the opening text before `**Occasions:**`, at line 3, does not hold its form, "
+        "`summary-matches-front-matter`: its "
+        f"first sentence reads `{WHO}`, where the front matter's `summary` reads `An analyst.`: "
+        "the summary is the opening's first sentence, word for word"
+    )
+
+
 # --- end to end, in an adopter ---------------------------------------------------------------
 
 

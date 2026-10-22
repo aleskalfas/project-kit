@@ -36,6 +36,10 @@
       "description": "Each area's goal of the one analysis at the top of the analysis location, where the project lists no analyses (DEC-003 point 8). A listed analysis keeps its own in its entry's `areas`, and this key is refused beside a list. See `$defs/areas`.",
       "$ref": "#/$defs/areas"
     },
+    "purpose": {
+      "description": "The record that states what the component of the one analysis at the top of the analysis location is for, where the project lists no analyses (DEC-003 point 8). A listed analysis keeps its own in its entry's `purpose`, and this key is refused beside a list. See `$defs/purpose`.",
+      "$ref": "#/$defs/purpose"
+    },
     "overview": {
       "description": "Whether each analysis keeps its generated overview, `overview/README.md` in its folder, the reader's entry point (DEC-003 point 8). True unless set. Set to false, the stamp writes none, `pkit analysis overview` refuses, and `pkit analysis validate` asks for none.",
       "type": "boolean",
@@ -59,7 +63,7 @@
   },
   "$defs": {
     "analysis": {
-      "description": "One analysis: its component, the folder of the analysis location it lies in, and the analyses it builds on.",
+      "description": "One analysis: its component, the folder of the analysis location it lies in, the analyses it builds on, the record that states what its component is for, and its areas' goals.",
       "type": "object",
       "required": [
         "component",
@@ -97,6 +101,10 @@
             }
           }
         },
+        "purpose": {
+          "description": "The record that states what this analysis's component is for (DEC-003 point 8). See `$defs/purpose`.",
+          "$ref": "#/$defs/purpose"
+        },
         "areas": {
           "description": "Each area's goal of this analysis (DEC-003 point 8). See `$defs/areas`.",
           "$ref": "#/$defs/areas"
@@ -104,7 +112,7 @@
       }
     },
     "areas": {
-      "description": "Each area of the analysis's use cases with its goal: the area's folder name, a word that may open with a number and a hyphen, such as `010-develop`, and beside it one line that says what the area makes possible. The overview shows each goal beside its area, so a reader sees why the use cases are cut as they are. `pkit analysis validate` fails a goal that names no folder of the use cases and, where the overview is kept, warns of an area of the use cases in force without a goal. An analysis whose use cases lie in no area keeps none.",
+      "description": "Each area of the analysis's use cases with its goal: the area's folder name, a word that may open with a number and a hyphen, such as `010-develop`, and beside it one line that says what the area makes possible. The overview shows each goal beside its area, so a reader sees why the use cases are cut as they are. An area whose goal is given and which holds no use case in force shows as not written yet. Where the overview is kept, `pkit analysis validate` warns of an area of the use cases in force without a goal. An analysis whose use cases lie in no area keeps none.",
       "type": "object",
       "propertyNames": {
         "pattern": "^(?:[0-9]+-)?[a-z][a-z0-9-]*$"
@@ -113,6 +121,11 @@
         "type": "string",
         "pattern": "^[^\\n]*\\S[^\\n]*$"
       }
+    },
+    "purpose": {
+      "description": "The decision record that states what the analysis's component is for, by its id, whole, as a record anchor names it: a record the project owns. That is a project or an architecture record, such as `PRJ-011`, or, for a capability's analysis, a decision of that capability, such as `billing:DEC-001`. A core record is refused, since a release changes it in an adopting project. The overview opens with the record's title, linked to the record, and reads only its front matter. `pkit analysis validate` fails a pointer to no record, one to a record that is not accepted, and one to a decision of another capability than the analysis's component. Left out, the overview says that no record states what the component is for yet, and nothing fails.",
+      "type": "string",
+      "pattern": "^(?:(?:PRJ|ADR)-[0-9]+|[a-z][a-z0-9-]*[a-z0-9]:DEC-[0-9]+(?:-[a-z0-9]+)*)$"
     },
     "entry": {
       "description": "One commit and the ids it frees.",

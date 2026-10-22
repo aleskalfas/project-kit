@@ -2,44 +2,69 @@
 
 Each analysis keeps a generated overview, `overview/README.md` in its folder: a held
 document in a folder of held documents of its own (COR-050 point 1), which no place
-reads as an artefact. A reader on a repository host sees there, with no setup, what the
-analysis holds, in the order it is built (DEC-001 point 12):
+reads as an artefact. Its reader is a newcomer first: its top half tells the analysis as
+a story, its bottom half keeps the words, the lists and the diagrams. In this order:
 
-- **the concepts:** the glossary, linked, then the domain model: each view in force, in
-  the order of its number, linked, by its number and its title;
-- **the actors** in force, each linked, with the use cases in force it is the main actor
-  of, its `actor`, and those it takes part in, its `other-actors`, each linked. After
-  them, each actor of another analysis that the glossary's head lists, or that a use
-  case in force names, such as `core:ACT-developer`, by that id and the name the head
-  gives it, with its use cases the same way;
-- **the requirements** in force, linked, then their map, where any is in force;
-- **the areas** of the use cases in force, in the order of their numbers, each with its
-  goal and its use cases, linked, then the chain of use cases and the use-case diagram.
-  An analysis whose use cases lie in no area lists them under its use cases;
+- **the opening:** what the component is for, the title of the accepted record the
+  analysis's `purpose` names, linked. Where it names none, a line says so and names the
+  command that writes one and the setting that names it, and where the record named is
+  not accepted, or not held, a line says that. Then what the analysis covers,
+  its component and the analyses it builds on, and where to start: the first view by
+  its number, or the glossary, then the first area that holds a use case, or the use
+  cases;
+- **the areas,** in the order of their numbers: each area a use case or a requirement in
+  force lies in, and each the settings give a goal. Each shows its goal, what it builds
+  on, its requirements and its use cases, each linked and marked where an open shortfall
+  names one of its steps or variants. An area none of whose use cases writes `after`
+  shows no line of what it builds on, and one that holds no use case in force reads "Not
+  written yet." An analysis whose use cases lie in no area lists them under its use
+  cases;
+- **who takes part:** one table, a row for each actor in force, linked, with its
+  `summary` and the areas of the use cases in force it is the main actor of, its
+  `actor`, or takes part in, its `other-actors`. After them, each actor of another
+  analysis that the glossary's head lists, or that a use case in force names, such as
+  `core:ACT-developer`, by that id and the name the head gives it;
+- **the words:** the glossary, linked, then each view in force, in the order of its
+  number, by its number and its title;
+- **the requirements in no area:** those in force whose file lies in no area's folder;
 - **the journeys** in force, each linked, with its flow;
-- **not built yet,** last, where a use case in force lists any `shortfalls`: each entry,
-  with its use case, linked, its step or variant, its record and its issue, in the
-  use cases' order and then the entries' (DEC-001 point 1; `_lib/shortfalls.py`).
+- **not built yet,** where a use case in force lists any `shortfalls`: each entry, with
+  its use case, linked, its step or variant, its record and its issue, in the use
+  cases' order and then the entries' (DEC-001 point 1; `_lib/shortfalls.py`);
+- **the reference,** last: the requirement map, the chain of use cases and the use-case
+  diagram, each where it is drawn;
+- a closing line: the command writes the page, so a reader changes the analysis.
 
 Each diagram is the query's own output, `pkit analysis diagram` (`_lib/diagrams.py`), with
 its text alternative, in a section of its own, so two branches that each change what one
 diagram draws conflict on that section alone.
 
 **Front matter only.** The overview reads the front matter of the analysis it shows, and
-the paths of its files, never a body (DEC-001 point 1). It reads no file of another
-analysis: an actor of one is shown as this analysis's glossary's head names it.
+the paths of its files, never a body (DEC-001 point 1). A requirement's area is the folder
+of its kind's folder that holds it (`Analysis.area`). It reads no file of another
+analysis: an actor of one is shown as this analysis's glossary's head names it. Beyond
+the analysis, it reads only the front matter of the record its `purpose` names, where
+the backbone finds it (`pkit refs lookup`).
+
+**What an area builds on** is computed from `after` (`_lib/chain.py`): each other area
+that holds a producer in force its use cases name, save one in a later area, an
+alternative the area does not build on (DEC-003 point 5; DEC-001 point 12).
 
 **An area's goal** is one line kept in the capability's settings file beside the area's
 folder name (`_lib/analyses.py`): what the area makes possible. It is the one text the
-overview shows that no artefact holds. Where the project keeps its overview, the check
-warns of an area of use cases in force without a goal. It fails a goal that names no
-folder of the use cases, whatever the setting.
+overview shows that neither an artefact nor a record holds. Where the project keeps its
+overview, the check warns of an area of use cases in force without a goal. A goal whose
+area holds no use case shows that area as not written yet.
+
+**What it is for.** The record `purpose` names is checked whatever the setting: the
+check fails a pointer to no record, and one to a record that is not accepted. The page
+shows no title of such a record, and says what is wrong with the pointer instead.
 
 **Fresh by fingerprint.** The overview carries a fingerprint of what it draws: the data
 it reads, never its text (`fingerprint`), with the version of what it reads (`VERSION`).
 That is each artefact in force of the kinds it shows, with its id, its path and the
-fields it reads, each actor of another analysis it shows with its name, and the goal of
-each area it shows.
+fields it reads, each actor of another analysis it shows with its name, the goal of
+each area it shows, and the id, title, status and path of its purpose's record.
 Validation compares it with the analysis in the working tree, and fails a stale
 overview, naming the command. A release that only
 prints the overview differently changes no fingerprint, so it fails no project. One that
@@ -56,9 +81,9 @@ missing overview is a warning, so an upgrade fails no project.
 writes none, the command refuses, and the check asks for none. It warns of an overview
 left in place, since nothing keeps it fresh.
 
-**Complete, or no answer.** Where a diagram cannot be drawn in full, no overview is
-written, and the check does not judge whether the one in place is fresh. The check names
-what is wrong with the file.
+**Complete, or no answer.** Where a diagram cannot be drawn in full, or `pkit` cannot
+say where the purpose's record lies, no overview is written, and the check does not
+judge whether the one in place is fresh. The check names what is wrong with the file.
 """
 
 from __future__ import annotations
@@ -67,11 +92,13 @@ import hashlib
 import json
 import posixpath
 import re
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from _lib import analyses, backbone, chain, diagrams, shortfalls, stamp, structure
+from ruamel.yaml.error import YAMLError
+
+from _lib import analyses, backbone, chain, diagrams, markdown, shortfalls, stamp, structure
 from _lib.findings import ERROR, REPORT, WARNING, Finding
 from _lib.model import (
     ACTOR,
@@ -103,10 +130,17 @@ FILE = "README.md"
 #: The overview's command, which its findings name.
 COMMAND = "pkit analysis overview"
 
+#: The command that writes a decision record, which the opening names where the analysis
+#: names no record of what its component is for.
+NEW_RECORD = "pkit new decision"
+
 #: The version of what the fingerprint reads. A release that reads more of the analysis
 #: raises it. An overview written under another version is a warning, never a failure,
 #: until its command rewrites it, so such a release fails no project.
-VERSION = 3
+VERSION = 4
+
+#: The status a record's front matter gives once it decides (the acceptance gate).
+ACCEPTED = "accepted"
 
 #: The line that carries the fingerprint and the version it reads, an HTML comment a
 #: repository host does not show.
@@ -115,30 +149,67 @@ _MARKED = re.compile(
     r"^<!-- pkit:overview reads=(?P<reads>[0-9]+) fingerprint=(?P<value>\S+) -->$", re.M
 )
 
+#: An actor's front-matter field that says who it is, the first sentence of its opening
+#: (DEC-001 point 1).
+SUMMARY = "summary"
+
 #: The front-matter fields the overview reads of each kind: what it labels and links, and
 #: what its diagrams draw (DEC-003 points 4 and 5).
 _FIELDS: Mapping[str, tuple[str, ...]] = {
-    ACTOR: ("name",),
+    ACTOR: ("name", SUMMARY),
     USE_CASE: ("title", "actor", OTHER_ACTORS, AFTER, MUST_MEET, SHORTFALLS),
     JOURNEY: ("title", "actor", diagrams.STEPS, RELIES_ON, MUST_MEET),
     **dict.fromkeys(REQUIREMENTS, ("title", diagrams.REFINES, diagrams.ACTORS)),
     VIEW: ("title",),
 }
 
+#: The headings the opening's links and the actors' table point at, as a repository host
+#: makes their anchors.
+_USE_CASES, _OUTSIDE, _NOT_BUILT = "Use cases", "Outside any area", "Not built yet"
+
+
+@dataclass(frozen=True)
+class Record:
+    """A decision record as the overview and its check read it: its file,
+    repository-relative, and the title and the status its front matter gives, empty
+    where it gives none."""
+
+    path: str
+    title: str
+    status: str
+
+
+@dataclass(frozen=True)
+class Purpose:
+    """The record an analysis names as what its component is for: its id as the settings
+    give it, and, where the repository holds it, its file, repository-relative, and the
+    title and the status its front matter gives; `path` is `None` where it holds none."""
+
+    record: str
+    path: str | None = None
+    title: str = ""
+    status: str = ""
+
+    @property
+    def accepted(self) -> bool:
+        return self.path is not None and self.status == ACCEPTED
+
 
 @dataclass(frozen=True)
 class Read:
     """What the overview of one analysis reads: the artefacts in force of the kinds it
-    shows, the goal of each area it shows, `None` where the area has none, the analysis's
-    folder, its glossary's path, `None` where it keeps none, and each actor of another
-    analysis it shows, by its id with that analysis, such as `core:ACT-developer`, with
-    the name the glossary's head gives it, `None` where the head lists it not."""
+    shows, each area it shows with its goal, `None` where the area has none, the
+    analysis's folder, its glossary's path, `None` where it keeps none, each actor of
+    another analysis it shows, by its id with that analysis, such as
+    `core:ACT-developer`, with the name the glossary's head gives it, `None` where the
+    head lists it not, and the record its purpose names, `None` where it names none."""
 
     artefacts: tuple[Artefact, ...]
     areas: Mapping[str, str | None]
     location: str
     glossary: str | None = None
     foreign: Mapping[str, str | None] = field(default_factory=dict)
+    purpose: Purpose | None = None
 
     def of(self, *kinds: str) -> list[Artefact]:
         return [a for a in self.artefacts if a.kind in kinds]
@@ -156,9 +227,13 @@ def _top(analysis: Analysis, folder: str | None) -> str:
     return location if folder is None else posixpath.join(location, folder)
 
 
-def read(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> Read:
-    """What the overview of the analysis in `folder` reads: front matter and paths alone.
-    Raises diagrams.NoAnswer where a diagram it shows cannot be drawn in full."""
+def read(
+    analysis: Analysis, listing: analyses.Listing, folder: str | None, root: Path | None = None
+) -> Read:
+    """What the overview of the analysis in `folder` reads: front matter and paths alone,
+    and the front matter of its purpose's record, found from the repository at `root`.
+    Raises diagrams.NoAnswer where a diagram it shows cannot be drawn in full, or the
+    purpose's record cannot be read as an accepted record."""
     diagrams.diagrams(analysis, None, {}, folder)
     artefacts = tuple(
         sorted(
@@ -171,22 +246,71 @@ def read(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> R
         )
     )
     goals = listing.goals(folder)
-    shown = _areas(analysis, [a for a in artefacts if a.kind == USE_CASE])
+    lying = [a for a in artefacts if a.kind == USE_CASE or a.kind in REQUIREMENTS]
+    shown = chain.ordered_areas(
+        [*goals, *(area for a in lying if (area := analysis.area(a)) is not None)]
+    )
+    named = listing.purpose_of(folder)
     return Read(
         artefacts,
         {area: goals.get(area) for area in shown},
         _top(analysis, folder),
         analyses.glossary_of(analysis, folder),
         _foreign(analysis, folder, [a for a in artefacts if a.kind == USE_CASE]),
+        _purpose(root, named) if named is not None else None,
     )
+
+
+def record(root: Path, record_id: str) -> Record | None:
+    """The decision record `record_id` names, as `pkit refs lookup` finds it: its file and
+    what its front matter gives; `None` where it names no record the repository holds, or
+    one whose file cannot be read. Raises Unreadable where `pkit` cannot be run."""
+    rel = backbone.record_file(root, record_id)
+    if rel is None:
+        return None
+    try:
+        text = (root / rel).read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        return None
+    yaml_text = markdown.split(text)[0]
+    try:
+        front = markdown.load(yaml_text) if yaml_text is not None else None
+    except YAMLError:
+        front = None
+    front = front if isinstance(front, Mapping) else {}
+    title, status = front.get("title"), front.get("status")
+    return Record(
+        rel,
+        " ".join(title.split()) if isinstance(title, str) else "",
+        status if isinstance(status, str) else "",
+    )
+
+
+def _purpose(root: Path | None, record_id: str) -> Purpose:
+    """The record the analysis names as what its component is for, as the repository
+    holds it, or not. A record that is not accepted, or none, is said on the page, and
+    its check fails the pointer (`_purpose_findings`). Raises diagrams.NoAnswer where
+    whether the repository holds it cannot be read."""
+    said = f"its purpose, `{analyses.PURPOSE}: {record_id}` in {CONFIG}"
+    if root is None:
+        raise diagrams.NoAnswer(f"{said}, is not read here")
+    try:
+        found = record(root, record_id)
+    except Unreadable as exc:
+        raise diagrams.NoAnswer(f"{said}, cannot be read: {exc}") from exc
+    if found is None:
+        return Purpose(record_id)
+    return Purpose(record_id, found.path, found.title, found.status)
 
 
 def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
     """The fingerprint of what the overview draws: each artefact it reads, by its kind, its
     id, its path within the analysis and the fields it reads, each actor of another
-    analysis it shows, with its name, each area's goal, the glossary's path and the
-    analysis's component. Never the overview's text, so a release that only prints it
-    differently changes none."""
+    analysis it shows, with its name, each area's goal, the glossary's path, the
+    analysis's component, and its purpose's record, by its id, its title and its path.
+    Never the overview's text, so a release that only prints it differently changes
+    none."""
+    purpose = read_.purpose
     data = {
         "version": VERSION,
         "component": component,
@@ -203,6 +327,20 @@ def fingerprint(analysis: Analysis, read_: Read, component: str | None) -> str:
         "foreign": dict(read_.foreign),
         "areas": dict(read_.areas),
         "glossary": (posixpath.relpath(read_.glossary, read_.location) if read_.glossary else None),
+        "purpose": (
+            {
+                "record": purpose.record,
+                "title": purpose.title,
+                "status": purpose.status,
+                "path": (
+                    posixpath.relpath(purpose.path, read_.location)
+                    if purpose.path is not None
+                    else None
+                ),
+            }
+            if purpose is not None
+            else None
+        ),
     }
     text = json.dumps(data, sort_keys=True, ensure_ascii=False, separators=(",", ":"), default=str)
     return "sha256:" + hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -223,113 +361,311 @@ def written_fingerprint(text: str) -> tuple[int, str] | None:
 # --- the page ---------------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _Page:
+    """What the page's parts share: the analysis and what its overview reads, the folder
+    the page lies in, each use case's area, and each analysis's name in its words."""
+
+    analysis: Analysis
+    read: Read
+    here: str
+    shown_as: Mapping[str, str]
+    area: Mapping[str, str | None]
+
+    def link(self, artefact: Artefact) -> str:
+        label = _label(artefact, self.shown_as).replace("[", "\\[").replace("]", "\\]")
+        return f"[{label}]({posixpath.relpath(artefact.path, self.here)})"
+
+    def to(self, path: str) -> str:
+        return posixpath.relpath(path, self.here)
+
+
 def render(
     analysis: Analysis,
     listing: analyses.Listing,
     folder: str | None,
     shown_as: Mapping[str, str],
+    root: Path | None = None,
 ) -> str:
-    """The overview of the analysis in `folder`, as its command writes it. Raises
-    diagrams.NoAnswer where it cannot be drawn in full."""
-    read_ = read(analysis, listing, folder)
+    """The overview of the analysis in `folder`, as its command writes it, its purpose's
+    record found from the repository at `root`. Raises diagrams.NoAnswer where it cannot
+    be drawn in full."""
+    read_ = read(analysis, listing, folder, root)
     listed = listing.of_folder(folder) if listing.several else None
     component = listed.component if listed is not None else None
     drawn = {d.id: d for d in diagrams.diagrams(analysis, None, shown_as, folder)}
-    here = posixpath.dirname(path_of(analysis, folder))
-
-    def link(artefact: Artefact) -> str:
-        label = _label(artefact, shown_as).replace("[", "\\[").replace("]", "\\]")
-        return f"[{label}]({posixpath.relpath(artefact.path, here)})"
+    use_cases = read_.of(USE_CASE)
+    page = _Page(
+        analysis,
+        read_,
+        posixpath.dirname(path_of(analysis, folder)),
+        shown_as,
+        {u.path: analysis.area(u) for u in use_cases},
+    )
 
     named = f"the analysis of {component}" if component else "the analysis"
-    out = [
-        f"# Overview of {named}",
-        "",
-        mark(fingerprint(analysis, read_, component)),
-        "",
-        f"What {named} holds, in the order it is built: its concepts, its actors, its "
-        "requirements, its use cases area by area, and its journeys. The command `"
-        f"{COMMAND}` writes this page from the analysis. Change the analysis, never this "
-        "page (software-analysis DEC-003 point 8).",
-    ]
+    out = [f"# Overview of {named}", "", mark(fingerprint(analysis, read_, component))]
+    out += _opening(page, listing, folder, listed)
+    out += _areas_part(page)
+    out += _taking_part(page)
 
     views = read_.of(VIEW)
     if read_.glossary or views:
         out += ["", "## Concepts", ""]
         if read_.glossary:
-            out.append(
-                f"The [glossary]({posixpath.relpath(read_.glossary, here)}) defines each term."
-            )
+            out.append(f"The [glossary]({page.to(read_.glossary)}) defines each term.")
         if views:
             out += [""] if read_.glossary else []
             out += ["Each view of the domain model explains a group of related concepts:", ""]
-        out += [f"- {link(v)}" for v in views]
+        out += [f"- {page.link(v)}" for v in views]
 
-    actors = read_.of(ACTOR)
-    if actors or read_.foreign:
-        out += ["", "## Actors"]
-        for actor in actors:
-            out += ["", f"### {link(actor)}", "", *_use_cases_of(str(actor.id), read_, link)]
-        for reference, name in read_.foreign.items():
-            out += ["", f"### {reference}" + (f" — {name}" if name else ""), ""]
-            of = f"An actor of the analysis of {qualified(reference)[0]}"
-            if name is not None and read_.glossary:
-                glossary = posixpath.relpath(read_.glossary, here)
-                out.append(f"{of}, which the head of the [glossary]({glossary}) lists.")
-            else:
-                out.append(f"{of}.")
-            out += ["", *_use_cases_of(reference, read_, link)]
-
-    requirements = read_.of(*REQUIREMENTS)
-    if requirements:
-        out += ["", "## Requirements", ""]
-        out += [f"- {link(r)}" for r in requirements]
-        out += _fence(drawn.get(diagrams.REQUIREMENT_MAP))
-
-    use_cases = read_.of(USE_CASE)
-    if use_cases:
-        area = {u.path: analysis.area(u) for u in use_cases}
-        if read_.areas:
-            out += ["", "## Areas"]
-            for name, goal in read_.areas.items():
-                out += ["", f"### {name}", ""]
-                out.append(goal if goal else "No goal is written for this area yet.")
-                out.append("")
-                out += [f"- {link(u)}" for u in use_cases if area[u.path] == name]
-            outside = [u for u in use_cases if area[u.path] is None]
-            if outside:
-                out += ["", "### Outside any area", ""]
-                out += [f"- {link(u)}" for u in outside]
-        else:
-            out += ["", "## Use cases", ""]
-            out += [f"- {link(u)}" for u in use_cases]
-        chain = drawn.get(diagrams.CHAIN)
-        if chain is not None:
-            out += ["", "## Chain of use cases", *_fence(chain)]
-        out += ["", "## Use cases and their actors", *_fence(drawn.get(diagrams.USE_CASES))]
+    every = [r for r in read_.of(*REQUIREMENTS) if analysis.area(r) is None]
+    if every:
+        heading = "Requirements in no area" if read_.areas else "Requirements"
+        out += ["", f"## {heading}", "", *(f"- {page.link(r)}" for r in every)]
 
     journeys = read_.of(JOURNEY)
     if journeys:
         out += ["", "## Journeys"]
         for journey in journeys:
-            out += ["", f"### {link(journey)}", *_fence(drawn.get(f"journey-{journey.id}"))]
+            out += ["", f"### {page.link(journey)}", *_fence(drawn.get(f"journey-{journey.id}"))]
 
     open_ = [(u, entry) for u in use_cases for entry in shortfalls.entries(u) or ()]
     if open_:
         out += [
             "",
-            "## Not built yet",
+            f"## {_NOT_BUILT}",
             "",
             "What the use cases describe and the system does not do yet, each with the record "
             "that decides it and the issue that tracks it (software-analysis DEC-001 point 1):",
             "",
         ]
         out += [
-            f"- {link(u)}: {entry.place}, decided by `{entry.record}`, tracked in "
+            f"- {page.link(u)}: {entry.place}, decided by `{entry.record}`, tracked in "
             f"{_issue(entry.issue)}"
             for u, entry in open_
         ]
+
+    reference = [
+        (heading, diagram)
+        for heading, diagram in (
+            ("Requirement map", drawn.get(diagrams.REQUIREMENT_MAP)),
+            ("Chain of use cases", drawn.get(diagrams.CHAIN)),
+            ("Use cases and their actors", drawn.get(diagrams.USE_CASES)),
+        )
+        if diagram is not None
+    ]
+    if reference:
+        out += ["", "## Reference"]
+        for heading, diagram in reference:
+            out += ["", f"### {heading}", *_fence(diagram)]
+
+    out += [
+        "",
+        "---",
+        "",
+        f"The command `{COMMAND}` writes this page from the analysis. Change the analysis, "
+        "never this page (software-analysis DEC-003 point 8).",
+    ]
     return "\n".join(out) + "\n"
+
+
+def _opening(
+    page: _Page, listing: analyses.Listing, folder: str | None, listed: analyses.Listed | None
+) -> list[str]:
+    """What the component is for, what the analysis covers, and where to start."""
+    read_ = page.read
+    subject = listed.component if listed is not None else "the system"
+    out = [""]
+    purpose = read_.purpose
+    if purpose is not None and purpose.accepted and purpose.path is not None:
+        title = (purpose.title or purpose.record).replace("[", "\\[").replace("]", "\\]")
+        end = "" if title.endswith((".", "?", "!")) else "."
+        out.append(f"[{title}]({page.to(purpose.path)}){end}")
+    elif purpose is not None:
+        status = purpose.status or "of no status"
+        held = (
+            f"it is {status}, not accepted"
+            if purpose.path is not None
+            else "the repository holds no record of that id"
+        )
+        out.append(
+            f"`{purpose.record}` is named as the record of what {subject} is for, and {held}. "
+            f"Only an accepted record states it (software-analysis DEC-003 point 8)."
+        )
+    else:
+        where = (
+            f"in the entry of {listed.component} under `{analyses.KEY}` in `{CONFIG}`"
+            if listed is not None
+            else f"at the top of `{CONFIG}`"
+        )
+        out.append(
+            f"No record states what {subject} is for yet. Write one with `{NEW_RECORD}`, and "
+            f"name it as `{analyses.PURPOSE}` {where}."
+        )
+    out += ["", _covers(listed)]
+    start = _start(page)
+    return out + (["", start] if start else [])
+
+
+def _covers(listed: analyses.Listed | None) -> str:
+    """What the analysis covers: its component, and the analyses it builds on."""
+    if listed is None:
+        return "This analysis covers the system as one component, and builds on no other analysis."
+    built = [b.analysis + (" (optional)" if b.optional else "") for b in listed.builds_on]
+    if not built:
+        on = "no other analysis"
+    elif len(built) == 1:
+        on = f"the analysis of {built[0]}"
+    else:
+        on = f"the analyses of {', '.join(built[:-1])} and {built[-1]}"
+    return f"This analysis covers {listed.component}, and builds on {on}."
+
+
+def _start(page: _Page) -> str | None:
+    """Where a newcomer starts: the first view by its number, or the glossary, then the
+    first area that holds a use case, or the use cases. `None` where neither is held."""
+    read_ = page.read
+    views = read_.of(VIEW)
+    first: str | None = None
+    if views:
+        first = f"the domain-model view {page.link(views[0])}"
+    elif read_.glossary:
+        first = f"the [glossary]({page.to(read_.glossary)})"
+    then: str | None = None
+    holding = [area for area in read_.areas if area in page.area.values()]
+    if holding:
+        then = f"the area [{holding[0]}](#{_anchor(holding[0])})"
+    elif page.area:
+        heading = _OUTSIDE if read_.areas else _USE_CASES
+        then = f"the [use cases](#{_anchor(heading)})"
+    if first and then:
+        return f"Start with {first}, then {then}."
+    if first or then:
+        return f"Start with {first or then}."
+    return None
+
+
+def _areas_part(page: _Page) -> list[str]:
+    """The areas in the order of their numbers, each with its goal, what it builds on,
+    its requirements and its use cases, then the use cases outside any area; or, where no
+    area is shown, the use cases."""
+    read_ = page.read
+    use_cases = read_.of(USE_CASE)
+    if not read_.areas:
+        if not use_cases:
+            return []
+        return ["", f"## {_USE_CASES}", "", *(_use_case_line(page, u) for u in use_cases)]
+    out = ["", "## Areas"]
+    requirements = read_.of(*REQUIREMENTS)
+    for name, goal in read_.areas.items():
+        out += ["", f"### {name}", ""]
+        out.append(goal if goal else "No goal is written for this area yet.")
+        own = [u for u in use_cases if page.area[u.path] == name]
+        bound = [r for r in requirements if page.analysis.area(r) == name]
+        if any(chain.writes_after(u) for u in own):
+            built = _builds_on(page, own, name)
+            out += ["", f"**Builds on:** {_joined(built) if built else 'no other area'}."]
+        if bound or own:
+            out += ["", "**Its requirements:**" + ("" if bound else " none.")]
+            out += ["", *(f"- {page.link(r)}" for r in bound)] if bound else []
+        if own:
+            out += ["", "**Its use cases:**", "", *(_use_case_line(page, u) for u in own)]
+        else:
+            out += ["", "Not written yet."]
+    outside = [u for u in use_cases if page.area[u.path] is None]
+    if outside:
+        out += ["", f"### {_OUTSIDE}", "", *(_use_case_line(page, u) for u in outside)]
+    return out
+
+
+def _use_case_line(page: _Page, use_case: Artefact) -> str:
+    """A use case's item: its link, marked where an open shortfall names one of its steps
+    or variants."""
+    places = list(dict.fromkeys(e.place for e in shortfalls.entries(use_case) or ()))
+    if not places:
+        return f"- {page.link(use_case)}"
+    return f"- {page.link(use_case)} ([not built yet](#{_anchor(_NOT_BUILT)}): {', '.join(places)})"
+
+
+def _builds_on(page: _Page, own: Sequence[Artefact], area: str) -> list[str]:
+    """The other areas that hold a producer in force the use cases of `area` name in
+    `after`, in the order of their numbers, save one in a later area (DEC-003 point 5).
+    The environment is no area."""
+    in_force = {str(u.id): u for u in page.read.of(USE_CASE)}
+    found: list[str] = []
+    for use_case in own:
+        for entry in chain.producers(use_case) or ():
+            for named in entry:
+                producer = in_force.get(named)
+                theirs = page.area.get(producer.path) if producer is not None else None
+                if theirs is None or theirs == area or chain.later(theirs, area):
+                    continue
+                found.append(theirs)
+    return chain.ordered_areas(found)
+
+
+def _joined(areas: Sequence[str]) -> str:
+    """Areas as links to their headings, joined as a sentence lists them."""
+    links = [f"[{a}](#{_anchor(a)})" for a in areas]
+    return links[0] if len(links) == 1 else f"{', '.join(links[:-1])} and {links[-1]}"
+
+
+def _taking_part(page: _Page) -> list[str]:
+    """One table of who takes part: each actor in force, linked, who it is and the areas it
+    acts in, then each actor of another analysis, as the glossary's head names it."""
+    read_ = page.read
+    actors = read_.of(ACTOR)
+    if not actors and not read_.foreign:
+        return []
+    rows = [(page.link(a), _cell(a.fields.get(SUMMARY)), _acts_in(page, str(a.id))) for a in actors]
+    for reference, name in read_.foreign.items():
+        of = f"An actor of the analysis of {qualified(reference)[0]}"
+        if name is not None and read_.glossary:
+            who = f"{of}, which the head of the [glossary]({page.to(read_.glossary)}) lists."
+        else:
+            who = f"{of}."
+        shown = f"{reference} — {_cell(name)}" if name else reference
+        rows.append((shown, who, _acts_in(page, reference)))
+    return [
+        "",
+        "## Who takes part",
+        "",
+        "| Actor | Who they are | Areas they act in |",
+        "| --- | --- | --- |",
+        *(f"| {actor} | {who} | {areas} |" for actor, who, areas in rows),
+    ]
+
+
+def _cell(text: object) -> str:
+    """A text as a table's cell shows it: on one line, a `|` escaped; empty where there is
+    none."""
+    if not isinstance(text, str):
+        return ""
+    return " ".join(text.split()).replace("|", "\\|")
+
+
+def _acts_in(page: _Page, actor_id: str) -> str:
+    """The areas of the use cases in force `actor_id` is the main actor of or takes part
+    in, linked, in the order of their numbers; then the use cases outside any area."""
+    acting = [u for u in page.read.of(USE_CASE) if actor_id in _actors_of(u)]
+    if not acting:
+        return "No use case names it yet."
+    areas = chain.ordered_areas([a for u in acting if (a := page.area[u.path]) is not None])
+    shown = [f"[{a}](#{_anchor(a)})" for a in areas]
+    if any(page.area[u.path] is None for u in acting):
+        shown.append(
+            f"[outside any area](#{_anchor(_OUTSIDE)})"
+            if page.read.areas
+            else f"[the use cases](#{_anchor(_USE_CASES)})"
+        )
+    return ", ".join(shown)
+
+
+def _anchor(heading: str) -> str:
+    """A heading's anchor as a repository host makes it: lower case, each space a hyphen,
+    and every character but letters, digits, hyphens and underscores dropped."""
+    return re.sub(r"[^\w\- ]", "", heading.lower()).replace(" ", "-")
 
 
 def _issue(issue: str) -> str:
@@ -369,28 +705,13 @@ def _number(view: Artefact) -> str | None:
     return view.path.rsplit("/", 1)[-1].split("-", 1)[0]
 
 
-def _taking_part(use_case: Artefact) -> tuple[str | None, list[str]]:
-    """The actor whose goal a use case is, its `actor`, and the other actors who take
-    part, its `other-actors`, the main actor left out, each as written."""
+def _actors_of(use_case: Artefact) -> tuple[str, ...]:
+    """The actors who take part in a use case: its `actor`, then its `other-actors`, each
+    as written, once."""
     main = use_case.fields.get("actor")
-    main = main if isinstance(main, str) else None
     others = use_case.fields.get(OTHER_ACTORS)
-    listed = others if isinstance(others, list) else []
-    return main, list(dict.fromkeys(o for o in listed if isinstance(o, str) and o != main))
-
-
-def _use_cases_of(actor_id: str, read_: Read, link: Callable[[Artefact], str]) -> list[str]:
-    """The lines under an actor's heading: the use cases in force it is the main actor
-    of, then those it takes part in, each linked, or a line that says none names it."""
-    use_cases = [(u, *_taking_part(u)) for u in read_.of(USE_CASE)]
-    main = [f"- {link(u)}" for u, actor, _ in use_cases if actor == actor_id]
-    part = [f"- {link(u)}" for u, _, others in use_cases if actor_id in others]
-    if not main and not part:
-        return ["No use case names it yet."]
-    out = ["The use cases it is the main actor of:", "", *main] if main else []
-    if part:
-        out += [*([""] if out else []), "The use cases it takes part in:", "", *part]
-    return out
+    listed = [main, *(others if isinstance(others, list) else [])]
+    return tuple(dict.fromkeys(a for a in listed if isinstance(a, str)))
 
 
 def _foreign(
@@ -405,9 +726,8 @@ def _foreign(
         for actor in taken.actors:
             named.setdefault(f"{taken.analysis}{QUALIFIER}{actor.id}", actor.name)
     for use_case in use_cases:
-        main, others = _taking_part(use_case)
-        for reference in (main, *others):
-            if reference is not None and qualified(reference)[0] is not None:
+        for reference in _actors_of(use_case):
+            if qualified(reference)[0] is not None:
                 named.setdefault(reference, None)
     return dict(sorted(named.items()))
 
@@ -419,11 +739,6 @@ def _order(artefact: Artefact) -> tuple[int, int, str, str]:
         return 0, named[0] if named else 0, str(artefact.id), artefact.path
     spelt = number_in(str(artefact.id))
     return 1, int(spelt.split("-", 1)[1]) if spelt else 0, str(artefact.id), artefact.path
-
-
-def _areas(analysis: Analysis, use_cases: Sequence[Artefact]) -> list[str]:
-    """The areas `use_cases` lie in, in the order of their numbers, then by name."""
-    return chain.ordered_areas([a for u in use_cases if (a := analysis.area(u)) is not None])
 
 
 # --- writing it --------------------------------------------------------------------------------
@@ -451,7 +766,7 @@ def write(
     at all, recording the analysis location through `record` where it is not recorded yet
     (COR-049 point 5). Raises diagrams.NoAnswer where it cannot be drawn in full, and
     stamp.Refused where it cannot be written."""
-    text = render(analysis, listing, folder, shown_as)
+    text = render(analysis, listing, folder, shown_as, root)
     rel = path_of(analysis, folder)
     target = root / rel
     if target.is_file() and target.read_bytes() == text.encode("utf-8"):
@@ -505,30 +820,40 @@ def refresh(root: Path, named: str | None) -> tuple[str | None, str | None]:
 
 
 def findings(root: Path, analysis: Analysis, listing: analyses.Listing) -> list[Finding]:
-    """What the check reports of the overviews and the areas' goals: for each analysis the
-    project keeps, an area without a goal, a goal no area takes, and an overview missing,
-    stale, or left in place where the project keeps none (DEC-003 point 8)."""
+    """What the check reports of the overviews, the areas' goals and the purposes: for
+    each analysis the project keeps, an area without a goal, a purpose that names no
+    accepted record, and an overview missing, stale, or left in place where the project
+    keeps none (DEC-003 point 8)."""
     found: list[Finding] = []
     for folder in listing.kept():
         found += _goals(analysis, listing, folder)
+        found += _purpose_findings(root, listing, folder)
         found += _freshness(root, analysis, listing, folder)
     return found
 
 
 def _goals(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> list[Finding]:
-    """An area of the use cases in force without a goal, a warning, and a goal that names
-    no folder of the use cases, an error."""
-    use_cases = [u for u in analysis.of_kind(USE_CASE) if u.folder == folder]
-    lying = {area: u for u in use_cases if (area := analysis.area(u)) is not None}
-    in_force = {area for u in use_cases if not u.withdrawn and (area := analysis.area(u))}
-    goals = listing.goals(folder)
+    """An area of the use cases or the requirements in force without a goal, a warning,
+    where the project keeps its overview. A goal whose area holds no use case shows that
+    area as not written yet, so no goal fails."""
+    if not listing.keeps_overview:
+        return []
+    lying = {
+        area: a
+        for a in analysis.artefacts
+        if a.folder == folder
+        and (a.kind == USE_CASE or a.kind in REQUIREMENTS)
+        and not a.withdrawn
+        and (area := analysis.area(a)) is not None
+    }
+    in_force = set(lying)
     named = listing.named(folder)
     where = (
         f"the `{analyses.AREAS}` of its entry under `{analyses.KEY}`"
         if listing.several
         else f"the `{analyses.AREAS}` at the file's top"
     ) + f" in {CONFIG}"
-    found = [
+    return [
         Finding(
             WARNING,
             _area_folder(analysis, lying[area], area),
@@ -536,29 +861,68 @@ def _goals(analysis: Analysis, listing: analyses.Listing, folder: str | None) ->
             f"in {where}, that says what the area makes possible. The overview shows it, so a "
             f"reader sees why the use cases are cut as they are (DEC-003 point 8)",
         )
-        for area in sorted(in_force - goals.keys())
-        if listing.keeps_overview
+        for area in sorted(in_force - listing.goals(folder).keys())
     ]
-    found += [
-        Finding(
-            ERROR,
-            f"{listing.goals_at(folder)}/{area}",
-            f"the goal of {area} names no area of {named}: no use case lies in a folder {area} "
-            f"of its use cases. A goal sits beside the folder name of an area (DEC-003 point 8) "
-            f"— write the area's folder name, or remove the goal",
-        )
-        for area in sorted(goals.keys() - lying.keys())
-    ]
-    return found
 
 
-def _area_folder(analysis: Analysis, use_case: Artefact, area: str) -> str:
-    """The folder of `area`, one below the use cases' folder that holds `use_case`."""
-    for place in (analysis.places.get(USE_CASE), analysis.nested.get(USE_CASE)):
-        if place and under_place(use_case.path, place):
+def _purpose_findings(root: Path, listing: analyses.Listing, folder: str | None) -> list[Finding]:
+    """A purpose that names no record the repository holds, or a record that is not
+    accepted, an error, whatever the setting `overview` (DEC-003 point 8)."""
+    named = listing.purpose_of(folder)
+    if named is None:
+        return []
+    where = listing.purpose_at(folder)
+    listed = listing.of_folder(folder)
+    capability = named.partition(":")[0] if ":" in named else None
+    if listed is not None and capability is not None and capability != listed.component:
+        return [
+            Finding(
+                ERROR,
+                where,
+                f"{named} is a decision of {capability}, and the component of "
+                f"{listing.named(folder)} is {listed.component}: `{analyses.PURPOSE}` names a "
+                f"record the project owns, a project or an architecture record, or a decision "
+                f"of the analysis's own component (DEC-003 point 8)",
+            )
+        ]
+    try:
+        found = record(root, named)
+    except Unreadable as exc:
+        return [
+            Finding(ERROR, where, f"whether {named} is an accepted record cannot be read: {exc}")
+        ]
+    if found is None:
+        return [
+            Finding(
+                ERROR,
+                where,
+                f"`{named}` names no record the repository holds: `{analyses.PURPOSE}` names "
+                f"the accepted decision record that states what the component of "
+                f"{listing.named(folder)} is for (DEC-003 point 8). Name one, or remove the "
+                f"setting",
+            )
+        ]
+    if found.status != ACCEPTED:
+        return [
+            Finding(
+                ERROR,
+                where,
+                f"{named} is {found.status or 'of no status'}, not accepted: only an accepted "
+                f"record states what a component is for, as the acceptance gate asks. Accept "
+                f"it, or name an accepted one (DEC-003 point 8)",
+            )
+        ]
+    return []
+
+
+def _area_folder(analysis: Analysis, artefact: Artefact, area: str) -> str:
+    """The folder of `area`, one below the folder of the place of its kind that holds
+    `artefact`: a use case, or a requirement."""
+    for place in (analysis.places.get(artefact.kind), analysis.nested.get(artefact.kind)):
+        if place and under_place(artefact.path, place):
             depth = len(place.removesuffix("/**").split("/"))
-            return "/".join([*use_case.path.split("/")[:depth], area])
-    return use_case.path
+            return "/".join([*artefact.path.split("/")[:depth], area])
+    return artefact.path
 
 
 def _freshness(
@@ -610,7 +974,7 @@ def _freshness(
     try:
         now = fingerprint(
             analysis,
-            read(analysis, listing, folder),
+            read(analysis, listing, folder, root),
             listed.component if listed is not None else None,
         )
     except diagrams.NoAnswer as exc:

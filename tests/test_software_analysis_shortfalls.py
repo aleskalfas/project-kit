@@ -454,15 +454,15 @@ def _section(text: str, heading: str) -> str:
 
 
 def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> None:
-    """Under "Not built yet", the last section, each entry of a use case in force: its use
-    case, linked, its step or variant, its record and its issue. The fingerprint reads
-    the entries, so a changed entry leaves the overview stale until it is rewritten
-    (DEC-003 point 8)."""
+    """Under "Not built yet", the last section before the reference, each entry of a use
+    case in force: its use case, linked, its step or variant, its record and its issue.
+    The fingerprint reads the entries, so a changed entry leaves the overview stale until
+    it is rewritten (DEC-003 point 8)."""
     project.write({SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"})
     project.write({EXPORT: _use_case()})
     assert run_script(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
-    assert re.findall(r"^## .*$", text, re.M)[-1] == "## Not built yet"
+    assert re.findall(r"^## .*$", text, re.M)[-2:] == ["## Not built yet", "## Reference"]
     link = "[UC-001 — Export the report](../use-case-model/use-cases/UC-001-export.md)"
     assert _section(text, "## Not built yet") == (
         "What the use cases describe and the system does not do yet, each with the record "
@@ -470,7 +470,7 @@ def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> No
         f"- {link}: step 2, decided by `PRJ-001`, tracked in `#12`\n"
         f"- {link}: variant 2a, decided by `software-analysis:DEC-001#1`, tracked in `#13`"
     )
-    assert f"reads={overview.VERSION} " in text and overview.VERSION == 3
+    assert f"reads={overview.VERSION} " in text and overview.VERSION == 4
 
     entries = [ENTRIES[0], {**ENTRIES[1], "issue": "https://example.com/issues/13"}]
     project.write(
@@ -484,7 +484,9 @@ def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> No
     assert [f["severity"] for f in stale] == ["error"]
     assert run_script(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
-    assert text.rstrip("\n").endswith("tracked in <https://example.com/issues/13>")
+    assert _section(text, "## Not built yet").endswith(
+        "tracked in <https://example.com/issues/13>"
+    )
 
     plain = _use_case(main_path="1. The analyst chooses `Export`.", variants="None.", entries=None)
     project.write({EXPORT: plain})

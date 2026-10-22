@@ -8,13 +8,17 @@
 # and name, as the front matter gives them. Its body is rendered from the
 # actor's declared structure (`schemas/artefact-kinds.yaml`). Each part, and
 # each of its needs, holds its hint until you write in its place what it asks
-# for. An actor anchors to where the software or a decision embodies it. One
-# that nothing embodies carries `unanchored-because:` in its friction block
-# instead of anchors (--unanchored-because). Its own fields' shape is
+# for. Its summary is the opening's first sentence, word for word, for a tool
+# such as the overview to read (DEC-001 point 1, DEC-003 point 8). It is
+# optional: delete the line to give none. An actor anchors to where the
+# software or a decision embodies it. One that nothing embodies carries
+# `unanchored-because:` in its friction block instead of anchors
+# (--unanchored-because). Its own fields' shape is
 # `schemas/actor.schema.json`, and the friction block is the core's.
 id: ACT-actor                     # stamped from the slug, and never reused
 name: <Display name>              # --name. The heading below repeats it after the id.
 status: active                    # or withdrawn: the file stays and its id is never reused
+summary: "<!-- pkit:hint Who the actor is, in one sentence that a table of the actors shows. Write the first sentence of the opening below, word for word. Example: Someone who builds reports from their team's figures. -->"
 needs:                            # each need's hint is its placeholder, as a part's is
   - "<!-- pkit:hint What the actor needs from the system, each in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves. Example: Export my report as a file. -->"
 pkit:
