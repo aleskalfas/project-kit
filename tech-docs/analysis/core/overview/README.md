@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:01b7425239a40084da5c5c62c746e2eadd400106f00de170218acd8a9051fbd0 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:a1a9c038b228846641cff5a4c6919df3bb0c5bfe2253898a6f6bba47d17d4db9 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -10,7 +10,7 @@ This analysis describes what core does: who uses it, what they do with it, and w
 
 ### 010-develop
 
-The methodology exists and can be extended, in its own source repository: capabilities, adapters, and a project's own skills and agent definitions.
+Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions.
 
 **Builds on:** no other area.
 
@@ -30,13 +30,13 @@ The methodology exists and can be extended, in its own source repository: capabi
 
 ### 020-set-up
 
-A project that runs the system declares its backbone configuration, chooses its capabilities, and gives its AI agents their operational rules, agent definitions, workspace and limits.
+Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits.
 
 Not written yet.
 
 ### 030-change
 
-A change to a project is checked, answered and landed, so what the project states stays true as it changes.
+Check, answer and land each change to a project, so what the project states stays true as it changes.
 
 **Builds on:** [010-develop](#010-develop).
 
@@ -57,7 +57,7 @@ A change to a project is checked, answered and landed, so what the project state
 
 ### 040-release
 
-The backbone and each component are released on their own versions, so projects can move to them and pin them.
+Release the backbone and each component on its own version, so projects can move to it and pin it.
 
 **Builds on:** [010-develop](#010-develop).
 
@@ -70,7 +70,7 @@ The backbone and each component are released on their own versions, so projects 
 
 ### 050-adopt
 
-Another project takes the system in, keeps it current, and reports what goes wrong with it.
+Take the system into another project, keep it current, and report what goes wrong with it.
 
 **Builds on:** no other area.
 
