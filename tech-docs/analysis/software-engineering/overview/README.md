@@ -23,20 +23,9 @@ This analysis covers software-engineering, and builds on the analysis of core.
 
 The [glossary](../glossary.md) defines each term.
 
-### Use cases and their actors
+### Diagrams
 
-```mermaid
-flowchart LR
-  accTitle: The use cases and their actors
-  accDescr: The system's boundary holds 1 use case, and 2 actors stand around it. An arrow joins each use case to the actor whose goal it is, and a line joins it to each other actor who takes part.
-  core_ACT_ai_agent["core:ACT-ai-agent"]
-  core_ACT_developer["core:ACT-developer"]
-  subgraph boundary["The system"]
-    UC_001(["UC-001 — Build my change under my project's conventions"])
-  end
-  core_ACT_ai_agent --- UC_001
-  core_ACT_developer --> UC_001
-```
+`pkit analysis diagram --analysis software-engineering` prints this analysis's diagrams from the working tree. Its subjects are `use-cases`, `journeys`, `requirements` and `chain`, or a journey's or a requirement's id.
 
 ---
 
