@@ -13,7 +13,7 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 - **A writer** writes only into an answer file that is not yet committed. Once committed, a file is never rewritten. The next answer goes into a new file, which names it.
 - **`pkit friction prune`** removes, from the working tree, each answer file in which no answer is live. project-kit runs it by hand, as a pull request of its own.
 - **The landing command** reads answer files for the cover of a later head and for its firm stop. It prints the revalidations a merge would leave answered apart, and stops on none of them.
-- **Continuous integration** gives the change check the pull request's own head, through `--head` or `PKIT_CHECK_HEAD`, beside the merge GitHub builds, so an answer is judged against what it could read.
+- **Continuous integration** names the pull request's own head to the change check in `PKIT_CHECK_HEAD`, beside the merge GitHub builds, so an answer is judged against what it could read. `--head` keeps its meaning, and the commit it names is its own head.
 
 ## Context
 
@@ -65,9 +65,10 @@ project-management's landing command reads the answer files through the backbone
 
 ### 6. Continuous integration
 
-- **The flag.** `pkit friction check` takes the change's own head as `--head <rev>`, else `PKIT_CHECK_HEAD`, in the form `--base` and `PKIT_CHECK_BASE` take ([COR-054](../../../.pkit/decisions/core/COR-054-default-branch.md) point 3). The change check reads which answer files each answer had to name from that commit's tree, and everything else from the checkout, as before (COR-062 point 4). The CLI reference documents it.
-- **What it accepts.** The own head must be HEAD or a parent of HEAD. Anything else makes the check refuse to run and say why, failing closed. Unset, the change's own head is HEAD, as on a contributor's clone. Where it is unset and HEAD is a merge, a finding that an answer leaves out a file names the flag. A checkout of a host's merge is the likely cause.
-- **The pull request's own head.** On a `pull_request` event, `checks.yml` checks out the merge GitHub builds. The workflow sets `PKIT_CHECK_HEAD` to the pull request's head commit, beside `PKIT_CHECK_BASE`.
+- **The own head.** `pkit friction check --head <rev>` keeps its meaning: it reads commit `<rev>` whole, from git objects, and `<rev>` is the change's own head. It does not read the variable, even where a pipeline set it, so a `<rev>` that is a host's merge is its own head. A run that reads the working tree takes its own head from `PKIT_CHECK_HEAD`, which a pipeline sets beside `PKIT_CHECK_BASE` ([COR-054](../../../.pkit/decisions/core/COR-054-default-branch.md) point 3). The change check reads which answer files each answer had to name from the own head's tree, and everything else from the checkout, as before (COR-062 point 4). The CLI reference documents it.
+- **Read by the change check alone.** `pkit friction since --head` and `pkit rule-sets altered --head` keep their meaning, and neither reads the variable. No query the backbone runs inherits it, as none inherits `PKIT_CHECK_BASE`.
+- **What it accepts.** The own head must be the commit checked, HEAD for a run that reads the working tree, or a parent of it. Anything else makes the check refuse to run and say why, failing closed. An empty variable is unset, as the workflow leaves it on a merge queue and on a push. Unset, the change's own head is HEAD, and the working tree is read as it, uncommitted work included, as on a contributor's clone. Where it is unset and HEAD is a merge, a finding that an answer leaves out a file names the variable. A checkout of a host's merge is the likely cause.
+- **The pull request's own head.** On a `pull_request` event, `checks.yml` checks out the merge GitHub builds. The workflow sets `PKIT_CHECK_HEAD` to the pull request's head commit, beside `PKIT_CHECK_BASE`, for the full run and the short check alike.
 - **A merge queue.** `main` merges through none today ([ADR-055](ADR-055-first-adopter-analysis-and-living-docs.md) point 5). A queue's merge holds the answers of changes queued ahead, so the check needs each change's own head there too. A queue that cannot give it fails a pull request answering on an artefact that a change queued ahead answers on. So turning a queue on first needs a way for it to give the check each change's own head (refinement of ADR-055 point 5).
 - **The short check** ([ADR-067](ADR-067-answers-only-short-check.md)) asks `pkit friction since`, whose predicate moves with the answers (its point 4).
 - **The whole-repository report** lists each artefact answered apart in the tracking issue's body. Like a deferral, it does not hold the issue open (ADR-055 point 5). The next revalidation on the artefact clears it, and a much-answered document would otherwise keep the issue open most of the time.
@@ -110,12 +111,12 @@ The pull request that builds this runs the backbone's migration on project-kit's
 ## Implications
 
 The build is #1779.
-- **The backbone** gains the answer reader (ADR-057 point 2), the schema, the writers that add answer files, `pkit friction prune`, the migration, the change check's `--head`, and the new predicate of `pkit friction since`. It retires `pkit friction resolve`. The CLI reference's "Friction checks" says each.
+- **The backbone** gains the answer reader (ADR-057 point 2), the schema, the writers that add answer files, `pkit friction prune`, the migration, the change check's own head in `PKIT_CHECK_HEAD`, and the new predicate of `pkit friction since`. It retires `pkit friction resolve`. The CLI reference's "Friction checks" says each.
 - **project-management** reads answer files in the landing command's cover and firm stop, and prints the answered-apart report. Its not-code floor leaves the folder out (project-management DEC-032).
 - **Software-analysis** reads `at` through the backbone's machine-readable output, not from a file, and declares the backbone it needs.
 - **The backbone's readers,** run over a project whose answers have not moved, say so once and name the move (COR-062 point 11).
 - **living-docs** gives no doc-check obligation for a page answered apart, as for a deferred page (COR-062 point 7, project-management DEC-053 point 4).
 - **Agent bodies and READMEs** that tell a writer to answer in the block are rewritten. Such are software-engineering's, living-docs', demo-recording's and evidence's, and software-analysis's `analysis-resolver`. So are the agents README's "Friction writers" and core rule 20's answer owed for a combined state after a conflict.
-- **`checks.yml`** sets `PKIT_CHECK_HEAD` on a pull request. `friction-report.yml` renders the answered-apart findings and the count the prune would remove.
+- **`checks.yml`** sets `PKIT_CHECK_HEAD` on a pull request, and the backbone drops it from what a query inherits. `friction-report.yml` renders the answered-apart findings and the count the prune would remove.
 - **The short check** ([ADR-067](ADR-067-answers-only-short-check.md)) is revisited once the build lands. Its summary's predicate is reworded, and whether it still saves enough to keep is decided from the rounds left.
 - **Changesets.** The backbone, project-management, software-analysis and living-docs each declare their surface change (PRJ-002). The three capabilities set `requires_backbone: release`, since they read what the build adds to the backbone.
