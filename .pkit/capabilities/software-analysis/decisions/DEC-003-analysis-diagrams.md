@@ -111,11 +111,15 @@ A query prints each diagram as Mermaid text, computed from the analysis in the w
 
 Each analysis keeps a generated overview, the reader's entry point. A reader on a repository host, such as GitHub, sees there with no setup what the component is for and how the analysis describes it. The reader also sees why its areas are cut as they are.
 - **What it is:** a held document, `overview/README.md`, in a folder of held documents of its own in the analysis (COR-050 point 1). A held folder never equals or encloses a documentation root or another declaration's place.
-- **Its reader** is a newcomer first, who reads the page from top to bottom. So the page's order is the reading path, in two parts:
+- **Its reader** is a newcomer first: someone new to the analysis, joining work on the component, a person or an agent. Such a reader reads the page from top to bottom, so the page's order is the reading path, in two parts:
   - **the story,** read in order: the opening, then the areas, and the use cases in no area last
   - **reference,** read when needed: everything else but the closing line, under the heading "Reference"
 - **What it shows,** in this order, each artefact in force and linked:
-  - **the opening:** what the component is for, from its purpose record (below). Then one line on what the analysis covers: its component and the analyses it builds on. The one analysis at the location's top names no component, so it covers the system as one.
+  - **the opening:** what the component is for, from its purpose record (below). Then two sentences say what the analysis is and what it builds on. For a component named billing that builds on no other analysis, they read:
+
+    > This analysis describes what billing does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
+
+    An analysis that builds on others names them in the second sentence, as the configuration lists them. The one analysis at the location's top names no component, so its first sentence reads "the system" where a component's name would stand.
   - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements and its use cases (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases.
   - **reference,** each part below a section heading of its own under "Reference":
     - **who takes part:** one table of the actors (below)
@@ -221,7 +225,9 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why the overview carries no anchors.** A held document carries no friction block, and validation fails one that does (COR-050 point 12). The overview is generated from what it draws, and checked fresh, so it cannot drift from it. An anchor would add a flag on every drawn change, which the freshness check already fails until the overview is rewritten.
 
-**Why a newcomer first.** The overview is the reader's entry point, and the reader who needs it most is new to the component. Such a reader asks what the component is for, and how its parts follow from each other, before any list. A returning reader looks things up, so the lists follow the story. The capability's maintainer chose this order on 22 October, reading the core's overview point by point ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+**Why a newcomer first.** The overview is the reader's entry point, and the reader who needs it most is new to the analysis. Such a reader asks what the component is for, and how its parts follow from each other, before any list. A returning reader looks things up, so the lists follow the story. The capability's maintainer chose this order on 22 October, reading the core's overview point by point ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+- **Which newcomer.** The analysis serves whoever works on the component, since it never ships with the component (DEC-001 point 2). So its newcomer is someone joining work on the component, a person or an agent. A project's own documents, such as its README, serve whoever decides whether to use the component. The areas' numbered order follows what builds on what (DEC-001 point 12), the order in which whoever works on the component builds it. The capability's maintainer settled this on 23 October.
+- **What the analysis is.** A page that does not say what an analysis is reads as one meant for whoever decides whether to use the component. So the first of the two sentences after the purpose says what an analysis is. It names, in words a newcomer knows, who uses the component, what they do with it and what it must meet. The maintainer chose its words on 23 October.
 
 **Why two parts, with the page's order as the reading path.** A newcomer reads the page from top to bottom, so the page's order is the reading path. A line that names two places to start gives no single path. The heading of reference marks where the story ends. So a newcomer knows where to stop, and a returning reader knows where to look things up. The capability's maintainer chose the two parts on 22 October, on the same issue.
 - **The words in reference.** A term is looked up where the story uses it, so the glossary and the views lie in reference.
@@ -276,6 +282,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **A check of the overview's text, not a fingerprint.** Rejected. See Rationale.
 - **The first paragraph of each view's opening, beside its title.** Rejected. It made the list of concepts long and uneven, and it reads a body, which DEC-001 point 1 keeps from a tool.
 - **The problem in a field of the view's front matter.** Rejected. It would be a third home for a reason whose home is a record (DEC-004 point 3).
+- **A page for whoever decides whether to use the component,** with its areas in the order of what such a reader would do first. Rejected. See Rationale, "Why a newcomer first".
 - **A line in the opening that says where to start,** naming the first domain-model view and the first area. Rejected. It names two places to start, and the page's own order is the path (see Rationale).
 - **Each actor's use cases listed under the actor in the overview.** Not taken. A reader asks where each actor acts, which one row of areas answers. Each use case's page and the query's use-case diagram show the longer list, of each use case.
 - **A pointer to a record that is not accepted stopping the overview from being written.** Rejected. Each later change to the analysis would leave the overview stale too, for a reason outside the analysis.
