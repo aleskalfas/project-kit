@@ -6,8 +6,6 @@
 
 This analysis covers core, and builds on no other analysis.
 
-Start with the domain-model view [010 — The system and its methodology](../domain-model/010-the-system-and-its-methodology.md), then the area [010-develop](#010-develop).
-
 ## Areas
 
 ### 010-develop
@@ -83,7 +81,9 @@ Another project takes the system in, keeps it current, and reports what goes wro
 - [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
 - [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
 
-## Who takes part
+## Reference
+
+### Who takes part
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
@@ -97,7 +97,7 @@ Another project takes the system in, keeps it current, and reports what goes wro
 | [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | No use case names it yet. |
 | [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md) | The person who plans a project's work at the level of its outcomes. | No use case names it yet. |
 
-## Concepts
+### Concepts
 
 The [glossary](../glossary.md) defines each term.
 
@@ -111,7 +111,7 @@ Each view of the domain model explains a group of related concepts:
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
 
-## Requirements in no area
+### Requirements in no area
 
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 - [REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later](../requirements/constraints/REQ-003-python-floor.md)
@@ -120,8 +120,6 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
-
-## Reference
 
 ### Requirement map
 
