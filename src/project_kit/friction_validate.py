@@ -1384,9 +1384,11 @@ def _gone(
                 f"the deferral names {deferral.anchor.kind} anchor {deferral.anchor.value!r}, "
                 f"which {artefact.location} no longer declares",
             )
-    links = discovery.links(artefact)
-    if not entry.revisits or not links:
+    if not entry.revisits:
         return
+    # An artefact no link reads takes no target: each revisit entry on it answers nothing,
+    # as the reading of a state judges it (`StateAnswers.liveness`).
+    links = discovery.links(artefact)
     targets = {anchor for link in links for anchor in link_targets(artefact, link)}
     for revisit in entry.revisits:
         if revisit.anchor not in targets:

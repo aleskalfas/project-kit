@@ -771,7 +771,10 @@ class StateAnswers:
         return not self.files
 
     def entries(self, artefact: Artefact) -> tuple[Entry, ...]:
-        """Every entry of the state's answer files naming `artefact`."""
+        """Every entry of the state's answer files naming `artefact`: none, its locations
+        unread, where the state holds no entry."""
+        if not self._by_location:
+            return ()
         found: list[Entry] = []
         for location in dict.fromkeys(self._locations(artefact)):
             found.extend(self._by_location.get(location, ()))
@@ -783,6 +786,9 @@ class StateAnswers:
         for a target no link takes answer nothing."""
         key = (artefact.location, artefact.path)
         found = self._liveness.get(key)
+        if found is None and not self.entries(artefact):
+            # No entry names it: nothing to judge, and no link of it to read.
+            found = self._liveness[key] = liveness((), self.files, self._honoured)
         if found is None:
             declared = frozenset(
                 Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values
