@@ -7,7 +7,9 @@ other-actors:
   - ACT-ai-agent
 after:
   - [UC-014]
-requirements: []
+requirements:
+  - REQ-008
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -32,6 +34,11 @@ pkit:
       artefact:
         - ACT-component-author
         - ACT-ai-agent
+        - REQ-008
+        - REQ-009
+    revalidated:
+      at: 2026-10-21T22:00:56Z
+      outcome: updated
 ---
 
 # UC-019 — Adapt the system to another harness
@@ -75,6 +82,7 @@ pkit:
   - an adapter of that name exists
 
   The system refuses with the reason, such as `adapter '<name>' already exists at .pkit/adapters/<name>.`, and writes nothing. The path rejoins at step 1.
+- **3a.** Until #1600 is done, a test fails on the new adapter, since no release may add one yet (REQ-008). The author can try the adapter in the checkout, and the path goes on at step 4. No change that holds the adapter lands until then.
 - **5a.** The adapter has no `undeploy-capability.sh`. Where a capability is unregistered and its subtree stays, the system warns that the adapter `ships no undeploy-capability.sh`, and that the capability stays deployed in its harness.
 - **7a.** The declaration leaves a need out, or answers it for no harness version. The report gives that need `indeterminate`, with no grade, so a missing answer never reads as a met one (COR-047 point 3).
 - **9a.** A script exits with an error. The system stops with `adapter primitive <script> exited with status <n>. See the output above for details.` The author mends the script, and the path rejoins at step 8.

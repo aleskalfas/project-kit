@@ -5,6 +5,11 @@ status: active
 actor: ACT-developer
 other-actors:
   - ACT-ci-pipeline
+requirements:
+  - REQ-004
+  - REQ-005
+  - REQ-006
+  - REQ-007
 after:
   - [UC-014]
 pkit:
@@ -32,10 +37,13 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
+        - REQ-004
+        - REQ-005
+        - REQ-006
+        - REQ-007
     revalidated:
-      at: 2026-10-21T14:26:08Z
-      outcome: unchanged
-      unchanged-because: COR-050 point 6 adds that the check judges what an answer read against the change's own head. On the developer's clone that is HEAD, so checking before a push runs as the use case says.
+      at: 2026-10-21T15:14:38Z
+      outcome: updated
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

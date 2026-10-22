@@ -6,6 +6,8 @@ actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+requirements:
+  - REQ-001
 after:
   - [UC-015, UC-019]
 pkit:
@@ -26,10 +28,10 @@ pkit:
         - ACT-component-author
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - REQ-001
     revalidated:
-      at: 2026-10-21T13:59:16Z
-      outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      at: 2026-10-21T18:38:53Z
+      outcome: updated
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

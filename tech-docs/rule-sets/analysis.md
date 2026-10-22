@@ -1,9 +1,17 @@
 ---
 rule-set: ANA
-version: 4.0.0
+version: 4.1.0
 inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
-  types: [software-analysis:actor, software-analysis:term, software-analysis:domain-model-view, software-analysis:use-case, software-analysis:journey]
+  types:
+    - software-analysis:actor
+    - software-analysis:term
+    - software-analysis:domain-model-view
+    - software-analysis:use-case
+    - software-analysis:journey
+    - software-analysis:quality-requirement
+    - software-analysis:functional-requirement
+    - software-analysis:constraint
 rules:
   RS-ANA-001:
     status: proposed
@@ -85,7 +93,7 @@ rules:
 
 These are the rules project-kit's analysis follows: seven rules of its own, and the rules of the two sets it inherits.
 
-- **What it selects:** every actor, glossary term, domain-model view, use case and journey, by the five types software-analysis declares (software-analysis DEC-001 point 2, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
+- **What it selects:** every actor, glossary term, domain-model view, use case, journey and requirement, by the eight types software-analysis declares (software-analysis DEC-001 point 2, DEC-002 point 3, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.

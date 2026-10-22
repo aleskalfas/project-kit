@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=3 fingerprint=sha256:5890fc62ded6a8c72964bbd3de9096657a185256cc759a54db7f9ea78dfde899 -->
+<!-- pkit:overview reads=3 fingerprint=sha256:c2165c72191ba8f10911338f1f7205ef18d08700a6cac4f02e511cba06be186a -->
 
 What the analysis of core holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
@@ -109,6 +109,95 @@ No use case names it yet.
 ### [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md)
 
 No use case names it yet.
+
+## Requirements
+
+- [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/REQ-001-migration-runs-again.md)
+- [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
+- [REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later](../requirements/constraints/REQ-003-python-floor.md)
+- [REQ-004 · Quality · A check never reads a missing answer as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
+- [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
+- [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
+- [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
+- [REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships](../requirements/constraints/010-develop/REQ-008-areas-held.md)
+- [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
+
+```mermaid
+flowchart LR
+  accTitle: The requirements and what must meet them
+  accDescr: 9 requirements in force. An arrow runs to each requirement from each use case or journey that must meet it, from each requirement to each requirement it refines, and from each requirement to each actor whose need it meets.
+  ACT_adopter["ACT-adopter — Adopter"]
+  ACT_ci_pipeline["ACT-ci-pipeline — CI pipeline"]
+  ACT_developer["ACT-developer — Developer"]
+  REQ_001{{"REQ-001 · Quality · A migration run again changes nothing"}}
+  REQ_002{{"REQ-002 · Functional · Project-owned content is written only by the writers records name"}}
+  REQ_003{{"REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later"}}
+  REQ_004{{"REQ-004 · Quality · A check never reads a missing answer as one that found nothing"}}
+  REQ_005{{"REQ-005 · Quality · A command that only reads or validates changes nothing in the project"}}
+  REQ_006{{"REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds"}}
+  REQ_007{{"REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic"}}
+  REQ_008{{"REQ-008 · Constraint · Until #35;1600 is done, no change adds or removes an area or an adapter a release ships"}}
+  REQ_009{{"REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`"}}
+  UC_002(["UC-002 — Answer what my change made stale"])
+  UC_004(["UC-004 — Know before I push that my change passes my project's checks"])
+  UC_006(["UC-006 — Make my merges wait on the system's checks"])
+  UC_007(["UC-007 — Resolve what the default branch left out of date"])
+  UC_008(["UC-008 — Release the backbone so adopters can upgrade and pin to it"])
+  UC_009(["UC-009 — Release my component on its own version"])
+  UC_010(["UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across"])
+  UC_011(["UC-011 — Carry the projects that installed my component across a breaking change of it"])
+  UC_014(["UC-014 — Develop the methodology in its source repository"])
+  UC_015(["UC-015 — Package a recurring discipline as a capability"])
+  UC_016(["UC-016 — Keep a capability I wrote in my own repository"])
+  UC_017(["UC-017 — Give my capability roles, data points and processes others connect to"])
+  UC_018(["UC-018 — Know my capability is ready to share"])
+  UC_019(["UC-019 — Adapt the system to another harness"])
+  UC_020(["UC-020 — Turn recurring work into my project's own skill or agent definition"])
+  REQ_001 -->|meets a need of| ACT_adopter
+  REQ_002 -->|meets a need of| ACT_adopter
+  REQ_004 -->|meets a need of| ACT_adopter
+  REQ_004 -->|meets a need of| ACT_ci_pipeline
+  REQ_006 -->|meets a need of| ACT_ci_pipeline
+  REQ_007 -->|meets a need of| ACT_ci_pipeline
+  REQ_007 -->|meets a need of| ACT_developer
+  REQ_008 -->|meets a need of| ACT_adopter
+  REQ_009 -->|meets a need of| ACT_adopter
+  UC_002 -->|must meet| REQ_002
+  UC_002 -->|must meet| REQ_004
+  UC_002 -->|must meet| REQ_005
+  UC_002 -->|must meet| REQ_006
+  UC_002 -->|must meet| REQ_007
+  UC_002 -->|must meet| REQ_009
+  UC_004 -->|must meet| REQ_004
+  UC_004 -->|must meet| REQ_005
+  UC_004 -->|must meet| REQ_006
+  UC_004 -->|must meet| REQ_007
+  UC_006 -->|must meet| REQ_002
+  UC_006 -->|must meet| REQ_004
+  UC_006 -->|must meet| REQ_006
+  UC_006 -->|must meet| REQ_007
+  UC_006 -->|must meet| REQ_009
+  UC_007 -->|must meet| REQ_004
+  UC_007 -->|must meet| REQ_005
+  UC_007 -->|must meet| REQ_006
+  UC_007 -->|must meet| REQ_007
+  UC_008 -->|must meet| REQ_009
+  UC_009 -->|must meet| REQ_009
+  UC_010 -->|must meet| REQ_001
+  UC_011 -->|must meet| REQ_001
+  UC_014 -->|must meet| REQ_008
+  UC_014 -->|must meet| REQ_009
+  UC_015 -->|must meet| REQ_009
+  UC_016 -->|must meet| REQ_002
+  UC_016 -->|must meet| REQ_009
+  UC_017 -->|must meet| REQ_006
+  UC_017 -->|must meet| REQ_009
+  UC_018 -->|must meet| REQ_005
+  UC_019 -->|must meet| REQ_008
+  UC_019 -->|must meet| REQ_009
+  UC_020 -->|must meet| REQ_002
+  UC_020 -->|must meet| REQ_009
+```
 
 ## Areas
 

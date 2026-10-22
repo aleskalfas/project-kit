@@ -6,7 +6,8 @@ actor: ACT-component-author
 other-actors: []
 after:
   - [UC-015]
-requirements: []
+requirements:
+  - REQ-005
 pkit:
   friction:
     anchors:
@@ -21,6 +22,10 @@ pkit:
         - ADR-040#5
       artefact:
         - ACT-component-author
+        - REQ-005
+    revalidated:
+      at: 2026-10-21T21:30:42Z
+      outcome: updated
 ---
 
 # UC-018 — Know my capability is ready to share

@@ -5,7 +5,9 @@ status: active
 actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ai-agent
-requirements: []
+requirements:
+  - REQ-008
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -26,6 +28,11 @@ pkit:
       artefact:
         - ACT-methodology-maintainer
         - ACT-ai-agent
+        - REQ-008
+        - REQ-009
+    revalidated:
+      at: 2026-10-21T22:00:51Z
+      outcome: updated
 ---
 
 # UC-014 — Develop the methodology in its source repository
