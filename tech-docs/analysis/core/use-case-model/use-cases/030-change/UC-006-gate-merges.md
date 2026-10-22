@@ -5,6 +5,12 @@ status: active
 actor: ACT-adopter
 other-actors:
   - ACT-ci-pipeline
+requirements:
+  - REQ-002
+  - REQ-004
+  - REQ-006
+  - REQ-007
+  - REQ-009
 after:
   - [UC-014]
 pkit:
@@ -28,10 +34,14 @@ pkit:
       artefact:
         - ACT-adopter
         - ACT-ci-pipeline
+        - REQ-002
+        - REQ-004
+        - REQ-006
+        - REQ-007
+        - REQ-009
     revalidated:
-      at: 2026-10-21T13:59:07Z
-      outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      at: 2026-10-21T22:00:59Z
+      outcome: updated
       deferred:
         - anchor:
             kind: path

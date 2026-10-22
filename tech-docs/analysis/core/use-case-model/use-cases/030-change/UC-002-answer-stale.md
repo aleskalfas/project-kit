@@ -7,6 +7,13 @@ other-actors:
   - ACT-ai-agent
   - ACT-ci-pipeline
   - ACT-merge-authoriser
+requirements:
+  - REQ-002
+  - REQ-004
+  - REQ-005
+  - REQ-006
+  - REQ-007
+  - REQ-009
 after:
   - [UC-014]
 pkit:
@@ -35,8 +42,14 @@ pkit:
         - ACT-ai-agent
         - ACT-ci-pipeline
         - ACT-merge-authoriser
+        - REQ-002
+        - REQ-004
+        - REQ-005
+        - REQ-006
+        - REQ-007
+        - REQ-009
     revalidated:
-      at: 2026-10-20T01:38:21Z
+      at: 2026-10-21T22:00:58Z
       outcome: updated
       deferred:
         - anchor:

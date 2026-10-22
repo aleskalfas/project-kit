@@ -25,9 +25,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-21T13:00:57Z
+      at: 2026-10-21T21:57:58Z
       outcome: unchanged
-      unchanged-because: The decisions README's Citing section gains how pkit refs lookup prints the file a record's id names. How a maintainer authors and cites a record is untouched.
+      unchanged-because: CONTRIBUTING cites COR-004 for its design rules and for keeping the command list out of the record. The refinement states the dry-run class by effect and lists no command, so both hold.
       deferred:
         - anchor:
             kind: record

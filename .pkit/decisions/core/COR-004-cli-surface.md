@@ -38,9 +38,13 @@ Both are mutating operations a project may want to invoke independently. They ha
 
 The first-install command runs propagation, then seed, then merge, in that order. Once a project is initialised, that command refuses to run again. Recovery from a broken state flows through `validate` plus targeted `sync` / `merge` instead. A first install that stops before it records its completion is finished by the next version transition of the backbone (COR-059 point 6). Re-running first-install would either resurface seeded content (violating COR-001's seed contract) or silently skip already-seeded paths (confusing). Keeping the contract sharp is worth the small upfront refusal.
 
-### `--dry-run` is universal on every mutating command
+### `--dry-run` previews every effect that reaches past what the person named
 
-Any operation a project might want to preview before committing should be previewable through one consistent flag. A single convention reduces surprise about which commands support it and what the flag means.
+A command whose effect a project would want to see before it happens offers a preview through one consistent flag, `--dry-run`. The preview shows what the command would change, and changes nothing.
+
+Such a command changes or removes content that already exists, beyond the one value or entry the person named. A command belongs to this class by the widest effect it can have. Sync, merge, install, uninstall and a version transition are examples. A command that only creates new files, such as one that writes a new record from its template, or only replaces or adds the one value or entry the person named, needs no preview. Any command may offer the flag, and it means the same wherever it appears.
+
+One flag that means the same everywhere, and is on every command of this class, reduces surprise about where to find a preview and what it shows.
 
 ### Failure mode is forward-only
 
@@ -56,17 +60,20 @@ A failed run leaves the project at a known partial state, with `validate` as the
 
 **Why first-install is sharp rather than smart.** The temptation is to make first-install "smart" — re-runnable, recovery-aware, repair-mode-on-broken-state. The cost is conceptual: it then has to know which paths it can resurface (none, per the seed contract) and which it cannot. Pushing recovery into `validate` plus targeted commands keeps the first-install contract one sentence long.
 
+**Why a preview where the effect reaches past what was named.** The CLI undoes no run. A failed run stops where it failed (failure is forward-only, above), and a complete run stays. A change to content that already exists, beyond what the person named, costs far more to undo than to read first. New files, or the one value or entry named, can be seen and undone in one step afterwards. The class is stated by effect, so whoever adds a command can tell whether it takes the flag.
+
 ### Alternatives considered
 
 - **Spec the command list inside this record.** Rejected — inventory pinned in a decision forces amendments per addition. The reference doc owns the list.
 - **Skip the CLI COR entirely; let the spec doc carry both spec and rationale.** Rejected — design rationale tends to get lost inside spec docs. Decision records are where "why we did it this way" stays visible.
 - **One smart `update` verb that picks sync / merge / migration as needed.** Rejected — see anchoring rationale; conflates consent profiles.
 - **Transactional rollback on failure.** Rejected — heavy infrastructure for small mutations; forward-only with diagnostic is enough at this scale.
+- **`--dry-run` on every command that writes.** Rejected — on a command that only creates new files or writes the one value or entry named, undoing the change costs no more than reading a preview.
 
 ## Implications
 
 - The current command list lives in `.pkit/cli/README.md` (propagation; synced). Each command's documentation references back to whichever principle here justifies its shape, where the link is non-obvious.
-- Adding a new command means identifying the operation it represents (anchored to one operation on the list above), naming it accordingly, and documenting it in `.pkit/cli/README.md`. No COR amendment unless a principle itself changes.
+- Adding a new command means identifying the operation it represents (anchored to one operation on the list above), naming it accordingly, telling by its effect whether it offers `--dry-run`, and documenting it in `.pkit/cli/README.md`. No COR amendment unless a principle itself changes.
 - New mechanisms or operations introduced by future CORs may surface as new top-level commands; the principles here govern that surfacing.
 - Subcommand groupings are a spec-doc concern unless a grouping touches a principle (e.g., a sub-verb that combined sync + merge would hit the anchoring rule).
 - The CLI's binary name is the natural follow-on PRJ decision in the implementing project's corpus.

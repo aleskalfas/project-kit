@@ -8,6 +8,8 @@ other-actors:
 after:
   - [UC-014]
   - [UC-008, environment]
+requirements:
+  - REQ-009
 pkit:
   friction:
     anchors:
@@ -31,10 +33,10 @@ pkit:
       artefact:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
+        - REQ-009
     revalidated:
-      at: 2026-10-21T13:59:09Z
-      outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      at: 2026-10-21T22:00:49Z
+      outcome: updated
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
