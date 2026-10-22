@@ -40,8 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-21T22:00:55Z
-      outcome: updated
+      at: 2026-10-22T22:13:32Z
+      outcome: unchanged
+      unchanged-because: No validator or filler inherits the change's own head a pipeline names, as none inherits the base. The CLI changes only the friction check's help, so the steps hold.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

@@ -72,6 +72,15 @@ def test_the_aggregator_compares_with_the_base_the_queued_merge_is_built_on(work
     assert "'main'" in base
 
 
+@pytest.mark.parametrize("step", ["Run the check aggregator", "Run the short check"])
+def test_the_change_check_reads_the_pull_requests_own_head(workflow, step: str) -> None:
+    """Both forms name the pull request's head beside its base, so the change check
+    judges what each answer read against the change's own head (ADR-068 point 6)."""
+    env = _step(workflow["jobs"]["checks"], step)["env"]
+    assert env["PKIT_CHECK_HEAD"] == "${{ github.event.pull_request.head.sha }}"
+    assert "PKIT_CHECK_BASE" in env
+
+
 def test_the_changeset_guard_keeps_to_pull_requests(workflow) -> None:
     guard = _step(workflow["jobs"]["checks"], "Changeset guard")
     assert guard["if"] == "github.event_name == 'pull_request'"

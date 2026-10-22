@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from click.testing import CliRunner
@@ -701,6 +701,44 @@ def test_an_answer_on_what_is_gone_is_reported_never_failed(timeline: Timeline) 
         (answer_path("gone"), "answer-on-what-is-gone", "report"),
         (answer_path("undeclared"), "answer-on-what-is-gone", "report"),
     ]
+
+
+def test_a_revisit_entry_on_an_artefact_no_link_reads_is_reported_gone(
+    timeline: Timeline,
+) -> None:
+    """The guide declares no link, so a revisit entry on it takes no target: the reading
+    of a state holds it not live, and validation reports it, as the prune counts it."""
+    timeline.start({GUIDE: bare_guide()})
+    timeline.adopter.write(
+        {answer_path("revisit"): answers(entry(revisited=((CLI, "unchanged", "holds"),)))}
+    )
+    assert _validate(timeline) == [(answer_path("revisit"), "answer-on-what-is-gone", "report")]
+
+
+class _NoLinks:
+    """A discovery that is never asked for an artefact's links."""
+
+    def links(self, artefact: object) -> tuple[()]:
+        raise AssertionError(f"asked for the links of {artefact}")
+
+
+def test_an_artefact_no_entry_names_is_judged_without_its_links() -> None:
+    """An artefact no answer names has nothing to judge, so its links are not read: the
+    reading costs nothing where no answer file names it (#1871)."""
+    one = af.read_answer_file("one.yaml", answers(entry("docs/other.md", at=T1)).encode())
+    state = af.StateAnswers(
+        {"one.yaml": one},
+        lambda _reader, _named: True,
+        lambda artefact: (artefact.location,),
+    )
+
+    class _Guide:
+        location = GUIDE
+        path = GUIDE
+        anchors: Mapping[str, tuple[str, ...]] = {"path": ("src/cli/**",)}
+
+    judged = state.liveness(cast(Any, _Guide()), cast(Any, _NoLinks()))
+    assert judged.entries == () and judged.revisits == ()
 
 
 def test_validation_follows_a_location_through_a_rename(timeline: Timeline) -> None:

@@ -30,8 +30,9 @@ pkit:
         - ACT-ai-agent
         - REQ-001
     revalidated:
-      at: 2026-10-21T18:38:55Z
-      outcome: updated
+      at: 2026-10-22T22:13:28Z
+      outcome: unchanged
+      unchanged-because: The CLI's help for pkit friction check names the change's own head, and the workflow names it to that check. The migration check and the steps around it are unchanged.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

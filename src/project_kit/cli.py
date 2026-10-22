@@ -2076,6 +2076,7 @@ def friction_resolve_command(
     default=None,
     help="Check commit REV instead of the working tree: its files read from git objects, "
     "nothing checked out, the merge-base taken against REV. Uncommitted work is not read. "
+    f"REV is the change's own head too, and ${friction_check.HEAD_ENV} is not read. "
     "Not with --all.",
 )
 @click.option(
@@ -2100,6 +2101,15 @@ def friction_check_command(
     resolver's missing answer (no-answer) or a bump; an outdated base never
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed),
     nor an anchor on an id two artefacts share (shared-id).
+
+    Answers in answer files (.pkit/project/friction/answers/) are read too,
+    and what each one read is judged against the change's own head: the
+    working tree's HEAD, or $PKIT_CHECK_HEAD, a parent of HEAD such as the
+    change's head where a host checks out its merge with the base. Exit 1 in
+    enforcing mode on an answer file the change rewrites, a prune mixed with
+    answers, an answer leaving out a file it had to read, or an answer on
+    what its artefact does not hold; a revalidation on the base's tip the
+    change's answer did not read is reported (answered-apart), never failed.
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against its revalidation point — the commit where it first carried the

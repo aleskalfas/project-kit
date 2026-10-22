@@ -107,6 +107,11 @@ jobs:
           # alone and the base is never outdated. Push to main: against main
           # (no-op diff).
           PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
+          # PR: the pull request's own head, a parent of the merge GitHub checks
+          # out, so the change check judges what each answer read against the
+          # tree it was written in (ADR-068 point 6). Empty on a merge queue and
+          # on a push, which the check reads as unset: HEAD.
+          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
           # The deciding step's answer, and how that step ended. With no answer,
           # as when it failed before the decider started, nothing has said in
           # the job's summary which form ran, so this step says it (ADR-067).
@@ -125,6 +130,7 @@ jobs:
         if: github.event_name == 'pull_request' && steps.form.outputs.mode == 'short'
         env:
           PKIT_CHECK_BASE: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.event.pull_request.base.ref || 'main') }}
+          PKIT_CHECK_HEAD: ${{ github.event.pull_request.head.sha }}
         run: ./scripts/check.sh --short
 
       # Changeset guard (PRJ-002). PR-scoped: it needs the PR base ref and the

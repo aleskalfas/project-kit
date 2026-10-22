@@ -49,8 +49,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-21T22:00:58Z
-      outcome: updated
+      at: 2026-10-22T22:13:44Z
+      outcome: unchanged
+      unchanged-because: "The change check reads the answer files a change adds against its own head, dormant while nothing writes one. The steps answer in blocks until #1779 rewrites them, as the kept deferrals say."
       deferred:
         - anchor:
             kind: path

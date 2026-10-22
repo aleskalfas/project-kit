@@ -37,8 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-21T22:00:56Z
-      outcome: updated
+      at: 2026-10-22T22:13:08Z
+      outcome: unchanged
+      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-019 — Adapt the system to another harness
