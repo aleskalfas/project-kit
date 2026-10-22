@@ -4,7 +4,7 @@
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
-This analysis covers core, and builds on no other analysis.
+This analysis describes what core does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
 
 ## Areas
 
