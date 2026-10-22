@@ -1008,23 +1008,24 @@ It is a query: read-only and offline. It reads the working tree through the core
 
 ## The overview: `pkit analysis overview`
 
-Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). It is written for a newcomer first. A reader who opens the folder on GitHub learns from its top half what the component is for, where to start, the path through its areas, and who takes part. Its bottom half keeps the words, the lists and the diagrams.
+Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). It is written for a newcomer first, who reads it from top to bottom, so its order is the path. It has two parts. The story, read in order, holds what the component is for, what the analysis covers and the path through its areas. Reference, read when needed, holds everything else under the heading *Reference*: who takes part, the words, the lists and the diagrams.
 
 - **What it shows,** each artefact in force, linked, in this order:
-  - **The opening:** what the component is for, from the record your settings name (`purpose`, below). Then one line on what the analysis covers: its component and the analyses it builds on. Then where to start: the first domain-model view, or the glossary where you keep no view, then the first area that holds a use case.
+  - **The opening:** what the component is for, from the record your settings name (`purpose`, below). Then one line on what the analysis covers: its component and the analyses it builds on.
   - **Areas,** in the order of their numbers. Each shows its goal, then:
     - **Builds on:** the other areas that hold a producer its use cases name in `after`, save one in a later area. The environment is no area. An area none of whose use cases writes `after` shows no such line.
     - **Its requirements:** each requirement whose file lies in a folder named for the area, inside its kind's folder, such as `requirements/quality/010-run/`.
     - **Its use cases,** each marked *not built yet* where an open shortfall names one of its steps or variants.
     - **Not written yet:** an area whose goal you give and which holds no use case in force shows its goal and this line.
 
-    Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead.
-  - **Who takes part:** one table, a row for each actor: the actor, who it is (its `summary`, an empty cell where it gives none), and the areas it acts in. In an analysis that builds on another, each actor of that analysis your glossary's head lists, or a use case names, follows your own. It shows by its id with that analysis, such as `core:ACT-developer`, and the name the head gives it.
-  - **Concepts:** the glossary, then each domain-model view in the order of its number, by its number and its title, such as *010 — Orders*.
-  - **Requirements in no area:** those whose file lies in no area's folder, such as those that bind the whole system.
-  - **Journeys,** each with its flow, where there are any.
-  - **Not built yet,** where a use case in force lists any `shortfalls`: each entry with its use case, its step or variant, its record and its issue. So every step the system does not carry out yet shows in one place.
-  - **Reference:** the requirement map, the chain of use cases and the use-case diagram, each where it is drawn.
+    Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead, and they tell its story.
+  - **Reference,** each part in a section of its own below it:
+    - **Who takes part:** one table, a row for each actor: the actor, who it is (its `summary`, an empty cell where it gives none), and the areas it acts in. In an analysis that builds on another, each actor of that analysis your glossary's head lists, or a use case names, follows your own. It shows by its id with that analysis, such as `core:ACT-developer`, and the name the head gives it.
+    - **Concepts:** the glossary, then each domain-model view in the order of its number, by its number and its title, such as *010 — Orders*.
+    - **Requirements in no area:** those whose file lies in no area's folder, such as those that bind the whole system.
+    - **Journeys,** each with its flow, where there are any.
+    - **Not built yet,** where a use case in force lists any `shortfalls`: each entry with its use case, its step or variant, its record and its issue. So every step the system does not carry out yet shows in one place.
+    - **Requirement map,** **Chain of use cases** and **Use cases and their actors:** the three diagrams, each where it is drawn.
 
   Each diagram is `pkit analysis diagram`'s own output, with its text alternative, in a section of its own. A closing line says the command writes the page.
 - **Front matter only.** The overview reads your analysis's front matter and the paths of its files, never a body, and no file of another analysis. Beyond the analysis, it reads the settings file and the front matter of the record `purpose` names.
@@ -1079,8 +1080,6 @@ Here is the start of the overview of the analysis the examples above come from:
 
 This analysis covers the system as one component, and builds on no other analysis.
 
-Start with the domain-model view [010 — Runs and sandboxes](../domain-model/010-runs-and-sandboxes.md), then the area [010-run](#010-run).
-
 ## Areas
 
 ### 010-run
@@ -1108,7 +1107,9 @@ A failure's cause can be found and shared.
 
 - [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
 
-## Who takes part
+## Reference
+
+### Who takes part
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
@@ -1116,10 +1117,10 @@ A failure's cause can be found and shared.
 | [ACT-tester — Test author](../use-case-model/actors/ACT-tester.md) | Whoever writes and runs the project's tests. | [010-run](#010-run), [020-report](#020-report) |
 ```
 
-Where a use case lists `shortfalls`, the overview lists them after the story:
+Where a use case lists `shortfalls`, the overview lists them under *Reference*:
 
 ```markdown
-## Not built yet
+### Not built yet
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 

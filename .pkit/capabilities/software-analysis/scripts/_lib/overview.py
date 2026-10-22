@@ -2,37 +2,37 @@
 
 Each analysis keeps a generated overview, `overview/README.md` in its folder: a held
 document in a folder of held documents of its own (COR-050 point 1), which no place
-reads as an artefact. Its reader is a newcomer first: its top half tells the analysis as
-a story, its bottom half keeps the words, the lists and the diagrams. In this order:
+reads as an artefact. Its reader is a newcomer first, who reads it from top to bottom, so
+its order is the reader's path, in two parts: the story, read in order, and reference,
+read when needed. In this order:
 
 - **the opening:** what the component is for, the title of the accepted record the
   analysis's `purpose` names, linked. Where it names none, a line says so and names the
   command that writes one and the setting that names it, and where the record named is
-  not accepted, or not held, a line says that. Then what the analysis covers,
-  its component and the analyses it builds on, and where to start: the first view by
-  its number, or the glossary, then the first area that holds a use case, or the use
-  cases;
+  not accepted, or not held, a line says that. Then what the analysis covers, its
+  component and the analyses it builds on;
 - **the areas,** in the order of their numbers: each area a use case or a requirement in
   force lies in, and each the settings give a goal. Each shows its goal, what it builds
   on, its requirements and its use cases, each linked and marked where an open shortfall
   names one of its steps or variants. An area none of whose use cases writes `after`
   shows no line of what it builds on, and one that holds no use case in force reads "Not
   written yet." An analysis whose use cases lie in no area lists them under its use
-  cases;
-- **who takes part:** one table, a row for each actor in force, linked, with its
-  `summary` and the areas of the use cases in force it is the main actor of, its
-  `actor`, or takes part in, its `other-actors`. After them, each actor of another
-  analysis that the glossary's head lists, or that a use case in force names, such as
-  `core:ACT-developer`, by that id and the name the head gives it;
-- **the words:** the glossary, linked, then each view in force, in the order of its
-  number, by its number and its title;
-- **the requirements in no area:** those in force whose file lies in no area's folder;
-- **the journeys** in force, each linked, with its flow;
-- **not built yet,** where a use case in force lists any `shortfalls`: each entry, with
-  its use case, linked, its step or variant, its record and its issue, in the use
-  cases' order and then the entries' (DEC-001 point 1; `_lib/shortfalls.py`);
-- **the reference,** last: the requirement map, the chain of use cases and the use-case
-  diagram, each where it is drawn;
+  cases, which tell its story;
+- **reference,** under a heading of its own, each part a section below it:
+  - **who takes part:** one table, a row for each actor in force, linked, with its
+    `summary` and the areas of the use cases in force it is the main actor of, its
+    `actor`, or takes part in, its `other-actors`. After them, each actor of another
+    analysis that the glossary's head lists, or that a use case in force names, such as
+    `core:ACT-developer`, by that id and the name the head gives it;
+  - **the words:** the glossary, linked, then each view in force, in the order of its
+    number, by its number and its title;
+  - **the requirements in no area:** those in force whose file lies in no area's folder;
+  - **the journeys** in force, each linked, with its flow;
+  - **not built yet,** where a use case in force lists any `shortfalls`: each entry, with
+    its use case, linked, its step or variant, its record and its issue, in the use
+    cases' order and then the entries' (DEC-001 point 1; `_lib/shortfalls.py`);
+  - **the diagrams:** the requirement map, the chain of use cases and the use-case
+    diagram, each where it is drawn;
 - a closing line: the command writes the page, so a reader changes the analysis.
 
 Each diagram is the query's own output, `pkit analysis diagram` (`_lib/diagrams.py`), with
@@ -163,9 +163,10 @@ _FIELDS: Mapping[str, tuple[str, ...]] = {
     VIEW: ("title",),
 }
 
-#: The headings the opening's links and the actors' table point at, as a repository host
-#: makes their anchors.
+#: The headings the page's own links point at, as a repository host makes their anchors,
+#: and the heading of reference, the page's second part.
 _USE_CASES, _OUTSIDE, _NOT_BUILT = "Use cases", "Outside any area", "Not built yet"
+_REFERENCE = "Reference"
 
 
 @dataclass(frozen=True)
@@ -407,59 +408,8 @@ def render(
     out = [f"# Overview of {named}", "", mark(fingerprint(analysis, read_, component))]
     out += _opening(page, listing, folder, listed)
     out += _areas_part(page)
-    out += _taking_part(page)
-
-    views = read_.of(VIEW)
-    if read_.glossary or views:
-        out += ["", "## Concepts", ""]
-        if read_.glossary:
-            out.append(f"The [glossary]({page.to(read_.glossary)}) defines each term.")
-        if views:
-            out += [""] if read_.glossary else []
-            out += ["Each view of the domain model explains a group of related concepts:", ""]
-        out += [f"- {page.link(v)}" for v in views]
-
-    every = [r for r in read_.of(*REQUIREMENTS) if analysis.area(r) is None]
-    if every:
-        heading = "Requirements in no area" if read_.areas else "Requirements"
-        out += ["", f"## {heading}", "", *(f"- {page.link(r)}" for r in every)]
-
-    journeys = read_.of(JOURNEY)
-    if journeys:
-        out += ["", "## Journeys"]
-        for journey in journeys:
-            out += ["", f"### {page.link(journey)}", *_fence(drawn.get(f"journey-{journey.id}"))]
-
-    open_ = [(u, entry) for u in use_cases for entry in shortfalls.entries(u) or ()]
-    if open_:
-        out += [
-            "",
-            f"## {_NOT_BUILT}",
-            "",
-            "What the use cases describe and the system does not do yet, each with the record "
-            "that decides it and the issue that tracks it (software-analysis DEC-001 point 1):",
-            "",
-        ]
-        out += [
-            f"- {page.link(u)}: {entry.place}, decided by `{entry.record}`, tracked in "
-            f"{_issue(entry.issue)}"
-            for u, entry in open_
-        ]
-
-    reference = [
-        (heading, diagram)
-        for heading, diagram in (
-            ("Requirement map", drawn.get(diagrams.REQUIREMENT_MAP)),
-            ("Chain of use cases", drawn.get(diagrams.CHAIN)),
-            ("Use cases and their actors", drawn.get(diagrams.USE_CASES)),
-        )
-        if diagram is not None
-    ]
-    if reference:
-        out += ["", "## Reference"]
-        for heading, diagram in reference:
-            out += ["", f"### {heading}", *_fence(diagram)]
-
+    reference = _reference(page, drawn)
+    out += ["", f"## {_REFERENCE}", *reference] if reference else []
     out += [
         "",
         "---",
@@ -473,7 +423,7 @@ def render(
 def _opening(
     page: _Page, listing: analyses.Listing, folder: str | None, listed: analyses.Listed | None
 ) -> list[str]:
-    """What the component is for, what the analysis covers, and where to start."""
+    """What the component is for, and what the analysis covers."""
     read_ = page.read
     subject = listed.component if listed is not None else "the system"
     out = [""]
@@ -503,9 +453,7 @@ def _opening(
             f"No record states what {subject} is for yet. Write one with `{NEW_RECORD}`, and "
             f"name it as `{analyses.PURPOSE}` {where}."
         )
-    out += ["", _covers(listed)]
-    start = _start(page)
-    return out + (["", start] if start else [])
+    return [*out, "", _covers(listed)]
 
 
 def _covers(listed: analyses.Listed | None) -> str:
@@ -520,30 +468,6 @@ def _covers(listed: analyses.Listed | None) -> str:
     else:
         on = f"the analyses of {', '.join(built[:-1])} and {built[-1]}"
     return f"This analysis covers {listed.component}, and builds on {on}."
-
-
-def _start(page: _Page) -> str | None:
-    """Where a newcomer starts: the first view by its number, or the glossary, then the
-    first area that holds a use case, or the use cases. `None` where neither is held."""
-    read_ = page.read
-    views = read_.of(VIEW)
-    first: str | None = None
-    if views:
-        first = f"the domain-model view {page.link(views[0])}"
-    elif read_.glossary:
-        first = f"the [glossary]({page.to(read_.glossary)})"
-    then: str | None = None
-    holding = [area for area in read_.areas if area in page.area.values()]
-    if holding:
-        then = f"the area [{holding[0]}](#{_anchor(holding[0])})"
-    elif page.area:
-        heading = _OUTSIDE if read_.areas else _USE_CASES
-        then = f"the [use cases](#{_anchor(heading)})"
-    if first and then:
-        return f"Start with {first}, then {then}."
-    if first or then:
-        return f"Start with {first or then}."
-    return None
 
 
 def _areas_part(page: _Page) -> list[str]:
@@ -611,6 +535,60 @@ def _joined(areas: Sequence[str]) -> str:
     return links[0] if len(links) == 1 else f"{', '.join(links[:-1])} and {links[-1]}"
 
 
+def _reference(page: _Page, drawn: Mapping[str, diagrams.Diagram]) -> list[str]:
+    """Reference, read when needed, each part a section below its heading: who takes part,
+    the concepts, the requirements in no area, the journeys, what is not built yet, then
+    the diagrams. Empty where the analysis holds none of them."""
+    read_ = page.read
+    out = _taking_part(page)
+
+    views = read_.of(VIEW)
+    if read_.glossary or views:
+        out += ["", "### Concepts", ""]
+        if read_.glossary:
+            out.append(f"The [glossary]({page.to(read_.glossary)}) defines each term.")
+        if views:
+            out += [""] if read_.glossary else []
+            out += ["Each view of the domain model explains a group of related concepts:", ""]
+        out += [f"- {page.link(v)}" for v in views]
+
+    every = [r for r in read_.of(*REQUIREMENTS) if page.analysis.area(r) is None]
+    if every:
+        heading = "Requirements in no area" if read_.areas else "Requirements"
+        out += ["", f"### {heading}", "", *(f"- {page.link(r)}" for r in every)]
+
+    journeys = read_.of(JOURNEY)
+    if journeys:
+        out += ["", "### Journeys"]
+        for journey in journeys:
+            out += ["", f"#### {page.link(journey)}", *_fence(drawn.get(f"journey-{journey.id}"))]
+
+    open_ = [(u, entry) for u in read_.of(USE_CASE) for entry in shortfalls.entries(u) or ()]
+    if open_:
+        out += [
+            "",
+            f"### {_NOT_BUILT}",
+            "",
+            "What the use cases describe and the system does not do yet, each with the record "
+            "that decides it and the issue that tracks it (software-analysis DEC-001 point 1):",
+            "",
+        ]
+        out += [
+            f"- {page.link(u)}: {entry.place}, decided by `{entry.record}`, tracked in "
+            f"{_issue(entry.issue)}"
+            for u, entry in open_
+        ]
+
+    for heading, diagram in (
+        ("Requirement map", drawn.get(diagrams.REQUIREMENT_MAP)),
+        ("Chain of use cases", drawn.get(diagrams.CHAIN)),
+        ("Use cases and their actors", drawn.get(diagrams.USE_CASES)),
+    ):
+        if diagram is not None:
+            out += ["", f"### {heading}", *_fence(diagram)]
+    return out
+
+
 def _taking_part(page: _Page) -> list[str]:
     """One table of who takes part: each actor in force, linked, who it is and the areas it
     acts in, then each actor of another analysis, as the glossary's head names it."""
@@ -629,7 +607,7 @@ def _taking_part(page: _Page) -> list[str]:
         rows.append((shown, who, _acts_in(page, reference)))
     return [
         "",
-        "## Who takes part",
+        "### Who takes part",
         "",
         "| Actor | Who they are | Areas they act in |",
         "| --- | --- | --- |",
