@@ -3,7 +3,7 @@
 Held to software-analysis DEC-003 point 8:
 
 - **what it shows** — for a newcomer first, in two parts. The story: the opening, with
-  what the component is for from its purpose record and what the analysis covers, then
+  what the component is for from its purpose record and what the analysis is, then
   the areas, each with its goal, what it builds on, its requirements and its use cases,
   or "Not written yet", or the use cases where there are no areas. Then reference: one
   table of who takes part, an actor of another analysis as the glossary's head names
@@ -408,12 +408,12 @@ def _record(status: str = "accepted", title: str = PURPOSE_TITLE) -> str:
     )
 
 
-def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_covers(
+def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_is(
     project: AdopterRepo,
 ) -> None:
     """Without a purpose, the opening says no record states what the system is for, and
     names the command and the setting; nothing fails. With one, it shows the accepted
-    record's title as a sentence, linked, then what the analysis covers, and nothing
+    record's title as a sentence, linked, then what the analysis is, and nothing
     more: the story goes on with the areas. The record's title is drawn, so a changed one
     makes the overview stale."""
     project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
@@ -421,11 +421,14 @@ def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_cover
     stamped(project, "actor", "tester", "--path", "src/**")
     stamped(project, "use-case", "run-suite", "--actor", "ACT-tester", "--area", "010-run")
     fill(project)
-    covers = "This analysis covers the system as one component, and builds on no other analysis."
+    what_it_is = (
+        "This analysis describes what the system does: who uses it, what they do with it, "
+        "and what it must meet. It builds on no other analysis."
+    )
     assert _opening(_read(project)) == (
         "No record states what the system is for yet. Write one with `pkit new decision`, "
         "and name it as `purpose` at the top of "
-        f"`{SETTINGS}`.\n\n{covers}"
+        f"`{SETTINGS}`.\n\n{what_it_is}"
     )
     assert _about(_check(project), "error", SETTINGS) == []
 
@@ -438,7 +441,7 @@ def test_the_opening_shows_what_the_component_is_for_and_what_the_analysis_cover
     (stale,) = _about(_check(project), "error", OVERVIEW_FILE)
     assert stale.startswith("it is stale")
     assert run_script(project, OVERVIEW).returncode == 0
-    assert _opening(_read(project)) == f"[{PURPOSE_TITLE}](../../../{PURPOSE_REL}).\n\n{covers}"
+    assert _opening(_read(project)) == f"[{PURPOSE_TITLE}](../../../{PURPOSE_REL}).\n\n{what_it_is}"
     document = _check(project)
     assert _about(document, "error", SETTINGS) == _about(document, "error", OVERVIEW_FILE) == []
 
@@ -710,11 +713,13 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     assert _opening(_read(project, core)) == (
         "No record states what core is for yet. Write one with `pkit new decision`, and "
         f"name it as `purpose` in the entry of core under `analyses` in `{SETTINGS}`.\n\n"
-        "This analysis covers core, and builds on no other analysis."
+        "This analysis describes what core does: who uses it, what they do with it, and "
+        "what it must meet. It builds on no other analysis."
     )
-    assert "This analysis covers billing, and builds on the analysis of core.\n" in (
-        _read(project, billing)
-    )
+    assert (
+        "This analysis describes what billing does: who uses it, what they do with it, and "
+        "what it must meet. It builds on the analysis of core.\n"
+    ) in _read(project, billing)
     document = _check(project)
     (misplaced,) = _about(document, "error", f"{SETTINGS}:/areas")
     assert "belongs to no analysis" in misplaced

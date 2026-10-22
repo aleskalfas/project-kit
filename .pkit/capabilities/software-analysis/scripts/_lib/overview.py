@@ -9,8 +9,9 @@ read when needed. In this order:
 - **the opening:** what the component is for, the title of the accepted record the
   analysis's `purpose` names, linked. Where it names none, a line says so and names the
   command that writes one and the setting that names it, and where the record named is
-  not accepted, or not held, a line says that. Then what the analysis covers, its
-  component and the analyses it builds on;
+  not accepted, or not held, a line says that. Then what the analysis is, what its
+  component does, who uses it, what they do with it and what it must meet, and the
+  analyses it builds on;
 - **the areas,** in the order of their numbers: each area a use case or a requirement in
   force lies in, and each the settings give a goal. Each shows its goal, what it builds
   on, its requirements and its use cases, each linked and marked where an open shortfall
@@ -135,8 +136,8 @@ COMMAND = "pkit analysis overview"
 NEW_RECORD = "pkit new decision"
 
 #: The version of what the fingerprint reads. A release that changes what it reads, or how
-#: it is computed, raises it. An overview written under another version is a warning, never a failure,
-#: until its command rewrites it, so such a release fails no project.
+#: it is computed, raises it. An overview written under another version is a warning,
+#: never a failure, until its command rewrites it, so such a release fails no project.
 VERSION = 4
 
 #: The status a record's front matter gives once it decides (the acceptance gate).
@@ -427,7 +428,7 @@ def render(
 def _opening(
     page: _Page, listing: analyses.Listing, folder: str | None, listed: analyses.Listed | None
 ) -> list[str]:
-    """What the component is for, and what the analysis covers."""
+    """What the component is for, then what the analysis is and what it builds on."""
     read_ = page.read
     subject = listed.component if listed is not None else "the system"
     out = [""]
@@ -457,21 +458,24 @@ def _opening(
             f"No record states what {subject} is for yet. Write one with `{NEW_RECORD}`, and "
             f"name it as `{analyses.PURPOSE}` {where}."
         )
-    return [*out, "", _covers(listed)]
+    return [*out, "", _what_it_is(listed)]
 
 
-def _covers(listed: analyses.Listed | None) -> str:
-    """What the analysis covers: its component, and the analyses it builds on."""
-    if listed is None:
-        return "This analysis covers the system as one component, and builds on no other analysis."
-    built = [b.analysis + (" (optional)" if b.optional else "") for b in listed.builds_on]
+def _what_it_is(listed: analyses.Listed | None) -> str:
+    """What the analysis is, what its component does, and the analyses it builds on."""
+    subject = listed.component if listed is not None else "the system"
+    builds_on = listed.builds_on if listed is not None else ()
+    built = [b.analysis + (" (optional)" if b.optional else "") for b in builds_on]
     if not built:
         on = "no other analysis"
     elif len(built) == 1:
         on = f"the analysis of {built[0]}"
     else:
         on = f"the analyses of {', '.join(built[:-1])} and {built[-1]}"
-    return f"This analysis covers {listed.component}, and builds on {on}."
+    return (
+        f"This analysis describes what {subject} does: who uses it, what they do with it, "
+        f"and what it must meet. It builds on {on}."
+    )
 
 
 def _areas_part(page: _Page) -> list[str]:

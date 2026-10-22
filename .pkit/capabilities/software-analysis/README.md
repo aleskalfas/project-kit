@@ -1008,10 +1008,14 @@ It is a query: read-only and offline. It reads the working tree through the core
 
 ## The overview: `pkit analysis overview`
 
-Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). It is written for a newcomer first, who reads it from top to bottom, so its order is the path. It has two parts. The story, read in order, holds what the component is for, what the analysis covers and the path through its areas. Reference, read when needed, holds everything else under the heading *Reference*: who takes part, the words, the lists, and the command that prints the diagrams.
+Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). It is written for a newcomer first: someone new to the analysis, joining work on the component, a person or an agent. Such a reader reads it from top to bottom, so its order is the path. Whoever decides whether to use the component reads your project's own documents, such as its README. The overview has two parts. The story, read in order, holds what the component is for, what the analysis is and the path through its areas. Reference, read when needed, holds everything else under the heading *Reference*: who takes part, the words, the lists, and the command that prints the diagrams.
 
 - **What it shows,** each artefact in force, linked, in this order:
-  - **The opening:** what the component is for, from the record your settings name (`purpose`, below). Then one line on what the analysis covers: its component and the analyses it builds on.
+  - **The opening:** what the component is for, from the record your settings name (`purpose`, below). Then two sentences say what the analysis is and what it builds on, such as:
+
+    > This analysis describes what core does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
+
+    An analysis that builds on others names them in the second sentence. In a project that lists no analyses, the first sentence names the system where a component's name would stand.
   - **Areas,** in the order of their numbers. Each shows its goal, then:
     - **Builds on:** the other areas that hold a producer its use cases name in `after`, save one in a later area. The environment is no area. An area none of whose use cases writes `after` shows no such line.
     - **Its requirements:** each requirement whose file lies in a folder named for the area, inside its kind's folder, such as `requirements/quality/010-run/`.
@@ -1078,7 +1082,7 @@ Here is the start of the overview of the analysis the examples above come from:
 
 [The test runner exists so a team's suites run the same way on every machine](../../../.pkit/decisions/project/PRJ-004-runner-purpose.md).
 
-This analysis covers the system as one component, and builds on no other analysis.
+This analysis describes what the system does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
 
 ## Areas
 
