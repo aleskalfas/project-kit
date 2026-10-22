@@ -111,16 +111,19 @@ A query prints each diagram as Mermaid text, computed from the analysis in the w
 
 Each analysis keeps a generated overview, the reader's entry point. A reader on a repository host, such as GitHub, sees there with no setup what the component is for and how the analysis describes it. The reader also sees why its areas are cut as they are.
 - **What it is:** a held document, `overview/README.md`, in a folder of held documents of its own in the analysis (COR-050 point 1). A held folder never equals or encloses a documentation root or another declaration's place.
-- **Its reader** is a newcomer first. The page's top half tells the analysis as a story, from what the component is for to who takes part. Its bottom half keeps the words, the lists and the diagrams a returning reader looks up.
+- **Its reader** is a newcomer first, who reads the page from top to bottom. So the page's order is the reading path, in two parts:
+  - **the story,** read in order: the opening, then the areas, and the use cases in no area last
+  - **reference,** read when needed: everything else but the closing line, under the heading "Reference"
 - **What it shows,** in this order, each artefact in force and linked:
-  - **the opening:** what the component is for, from its purpose record (below). Then one line on what the analysis covers: its component and the analyses it builds on. The one analysis at the location's top names no component, so it covers the system as one. Then where to start (below).
-  - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements and its use cases (below). An analysis whose use cases lie in no area lists them under its use cases.
-  - **who takes part:** one table of the actors (below)
-  - **the words:** the glossary, then each domain-model view in its numbered order, by its number and its title
-  - **the requirements in no area:** those whose file lies in no area's folder, such as those that bind the whole system (DEC-001 point 12)
-  - **the journeys,** each with its flow, where journeys exist
-  - **"Not built yet":** each open shortfall a use case in force lists, with its use case, its step or variant, its record and its issue (DEC-001 point 1)
-  - **the reference:** the requirement map, the chain of use cases and the use-case diagram
+  - **the opening:** what the component is for, from its purpose record (below). Then one line on what the analysis covers: its component and the analyses it builds on. The one analysis at the location's top names no component, so it covers the system as one.
+  - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements and its use cases (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases.
+  - **reference,** each part below a section heading of its own under "Reference". The page has no "Reference" heading where it shows no such part.
+    - **who takes part:** one table of the actors (below)
+    - **the words:** the glossary, then each domain-model view in its numbered order, by its number and its title
+    - **the requirements in no area:** those whose file lies in no area's folder, such as those that bind the whole system (DEC-001 point 12)
+    - **the journeys,** each with its flow, where journeys exist
+    - **"Not built yet":** each open shortfall a use case in force lists, with its use case, its step or variant, its record and its issue (DEC-001 point 1). It is shown where there is one.
+    - **the diagrams:** the requirement map, the chain of use cases and the use-case diagram
   - **a closing line:** the command writes the page from the analysis, so a reader changes the analysis, never the page
 
   Each diagram is the query's own output, with its text alternative (point 7), in a section of its own.
@@ -134,8 +137,6 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
   - **The check** fails a pointer to no record, and one to a record that is not accepted, as the acceptance gate asks. It checks the pointer whatever the setting that keeps the overview, since a pointer left in the configuration still names a record.
   - **Such a pointer on the page.** The overview shows no title of a record that is not accepted. It says instead that the record named is not accepted, or that no record has that id. The rest of the page is written as usual.
   - **No record named:** the overview says that no record states what the component is for yet. It names the command that writes one, and the setting that names it. Nothing fails.
-- **Where to start:** the first domain-model view by its number, or the glossary where the analysis keeps no view. Then the first area that holds a use case in force, or the use cases where none lies in an area. The line leaves out what the analysis does not hold.
-  - **A view before the glossary.** A view explains a group of concepts together, in words and a drawing. The glossary is where a reader looks a single term up.
 - **Each area** shows, below its goal:
   - **Builds on:** the other areas that hold a producer its use cases name in `after`. A producer in a later area is left out, as an alternative the area does not build on (point 5, DEC-001 point 12). The environment is no area. Where none of the area's use cases writes `after`, the line is left out, since nothing says what the area builds on.
   - **Its requirements:** each requirement in force whose file lies in a folder named for the area, inside its kind's folder (DEC-002 point 3). A requirement's area folder takes the name of the use cases' area, so the two read as one area.
@@ -214,7 +215,11 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why the overview carries no anchors.** A held document carries no friction block, and validation fails one that does (COR-050 point 12). The overview is generated from what it draws, and checked fresh, so it cannot drift from it. An anchor would add a flag on every drawn change, which the freshness check already fails until the overview is rewritten.
 
-**Why a newcomer first.** The overview is the reader's entry point, and the reader who needs it most is new to the component. Such a reader asks what the component is for, where to start, and how its parts follow from each other, before any list. A returning reader looks things up, so the lists and diagrams follow the story. The capability's maintainer chose this order on 22 October, reading the core's overview point by point ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+**Why a newcomer first.** The overview is the reader's entry point, and the reader who needs it most is new to the component. Such a reader asks what the component is for, and how its parts follow from each other, before any list. A returning reader looks things up, so the lists and diagrams follow the story. The capability's maintainer chose this order on 22 October, reading the core's overview point by point ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+
+**Why two parts, with the page's order as the reading path.** A newcomer reads the page from top to bottom, so the page's order is the reading path. A line that names two places to start gives no single path. The heading of reference marks where the story ends. So a newcomer knows where to stop, and a returning reader knows where to look things up. The capability's maintainer chose the two parts on 22 October, on the same issue.
+- **The words in reference.** A term is looked up where the story uses it, so the glossary and the views lie in reference.
+- **The journeys in reference.** No analysis the maintainer has reviewed holds a journey yet, so none has shown how one reads. The first that does is the trigger to weigh whether journeys belong to the story (COR-007).
 
 **Why the purpose lives in a record, and the configuration points to it.**
 - **A reason belongs in a record.** What a component is for is the reason behind every area of its analysis. A decision holds a choice and why it was made (DEC-001 point 11, "Where a statement belongs"). A record is also reviewed and accepted. An artefact that rests on it, such as a view of the component's concepts, can anchor it.
@@ -235,10 +240,10 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why each view by its number and title.** The concepts are listed by their labels alone, so a reader scans them as a list. The capability's maintainer chose it on 21 October, on reading the core's overview. A view's opening states the problem its concepts solve on the view's own page, one link away. Quoted beside each title, it made the list of concepts long and uneven. A view's problem is a reason, whose home is a record (DEC-004 point 3). Who an actor is lies in the actor's own front matter, so the table of who takes part shows it.
 
-**Why one table of who takes part.** A newcomer asks who each actor is, and where in the path it acts. One row for each actor answers both at a glance. Which use cases each actor takes part in is a longer list, which the use-case diagram shows. The capability's maintainer chose the table on 22 October.
+**Why one table of who takes part.** A reader who meets an actor asks who it is, and where in the path it acts. One row for each actor answers both at a glance. Which use cases each actor takes part in is a longer list, which the use-case diagram shows. The capability's maintainer chose the table on 22 October.
 
 **Why the open shortfalls, after the journeys.** Each marks a step where the system falls short of an accepted record. Listed in one place, they show a reader every such step at once. The capability's maintainer decided to list them on 21 October ([project-kit#1855](https://github.com/aleskalfas/project-kit/issues/1855)).
-- **Where.** A newcomer first needs the path, then what it still lacks, so the list follows the story. Each area's use cases are marked too, so a newcomer meets each gap on the path. The maintainer placed the list on 22 October ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+- **Where.** A newcomer first reads the story, and looks up what the system still lacks, so the list lies in reference. Each area's use cases are marked too, so a newcomer meets each gap on the path. The maintainer placed the list on 22 October ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
 
 **Why the goals and the purpose's pointer sit in the configuration.** DEC-001 rejects a project's additions to a structure in the configuration, since settings and data would then share a file. The goals and the pointer sit beside the list of analyses. That list is data of the same kind: each analysis's folder and what it builds on.
 
@@ -261,7 +266,8 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **A check of the overview's text, not a fingerprint.** Rejected. See Rationale.
 - **The first paragraph of each view's opening, beside its title.** Rejected. It made the list of concepts long and uneven, and it reads a body, which DEC-001 point 1 keeps from a tool.
 - **The problem in a field of the view's front matter.** Rejected. It would be a third home for a reason whose home is a record (DEC-004 point 3).
-- **Each actor's use cases listed under the actor in the overview.** Not taken. A newcomer asks where each actor acts, which one row of areas answers. The longer list, of each use case, the use-case diagram shows.
+- **A line in the opening that says where to start,** naming the first domain-model view and the first area. Rejected. It names two places to start, and the page's own order is the path (see Rationale).
+- **Each actor's use cases listed under the actor in the overview.** Not taken. A reader asks where each actor acts, which one row of areas answers. The longer list, of each use case, the use-case diagram shows.
 - **A pointer to a record that is not accepted stopping the overview from being written.** Rejected. Each later change to the analysis would leave the overview stale too, for a reason outside the analysis.
 - **A purpose written as text in the configuration, with a rule that traces each area's goal to it.** Rejected. A rule cannot judge a setting, and a reason belongs in a record (see Rationale).
 - **A kind of artefact for the component's purpose, inside the analysis.** Rejected. A new kind needs a decision of its own (DEC-001 point 11), and a record already answers the need.
