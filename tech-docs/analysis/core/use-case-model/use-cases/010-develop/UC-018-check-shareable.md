@@ -24,9 +24,9 @@ pkit:
         - ACT-component-author
         - REQ-005
     revalidated:
-      at: 2026-10-22T22:13:06Z
+      at: 2026-10-22T23:47:04Z
       outcome: unchanged
-      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
+      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-018 — Know my capability is ready to share

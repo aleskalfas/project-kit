@@ -29,9 +29,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-adopter
     revalidated:
-      at: 2026-10-22T22:12:49Z
+      at: 2026-10-22T23:47:20Z
       outcome: unchanged
-      unchanged-because: The new test finds that a filler never sees the change's own head a pipeline names. No test of a missing answer changed, so the requirement holds.
+      unchanged-because: The actors whose needs it meets each gain a summary, the first sentence of their opening, and nothing else of theirs changes. What it asks still holds.
 ---
 
 # REQ-004 · Quality · A check never reads a missing answer as one that found nothing
