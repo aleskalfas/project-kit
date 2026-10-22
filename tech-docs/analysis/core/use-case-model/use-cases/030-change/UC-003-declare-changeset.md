@@ -24,9 +24,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-21T13:59:04Z
+      at: 2026-10-22T22:13:25Z
       outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      unchanged-because: The CLI's help for pkit friction check names the change's own head, and the workflow names it to that check. The changeset guard and the steps around it are unchanged.
 ---
 
 # UC-003 — Declare what my change means for the next release

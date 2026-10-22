@@ -24,8 +24,9 @@ pkit:
         - ACT-component-author
         - REQ-005
     revalidated:
-      at: 2026-10-21T21:30:42Z
-      outcome: updated
+      at: 2026-10-22T22:13:06Z
+      outcome: unchanged
+      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-018 — Know my capability is ready to share

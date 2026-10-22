@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-21T13:59:18Z
+      at: 2026-10-22T22:13:21Z
       outcome: unchanged
-      unchanged-because: The CLI gains the command group pkit harness, with its report on harness requirements. No command this use case runs changes, so its steps hold.
+      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

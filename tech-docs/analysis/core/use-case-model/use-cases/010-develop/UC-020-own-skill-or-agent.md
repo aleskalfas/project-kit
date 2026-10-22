@@ -37,8 +37,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-21T22:00:57Z
-      outcome: updated
+      at: 2026-10-22T22:13:10Z
+      outcome: unchanged
+      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

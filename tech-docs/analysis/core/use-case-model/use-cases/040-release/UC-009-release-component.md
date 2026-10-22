@@ -28,8 +28,9 @@ pkit:
         - ACT-ci-pipeline
         - REQ-009
     revalidated:
-      at: 2026-10-21T22:00:50Z
-      outcome: updated
+      at: 2026-10-22T22:13:19Z
+      outcome: unchanged
+      unchanged-because: The CLI's help for pkit friction check now names answer files and the change's own head. No command this use case runs changes, so its steps hold.
 ---
 
 # UC-009 — Release my component on its own version

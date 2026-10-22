@@ -28,6 +28,10 @@ pkit:
       artefact:
         - ACT-ci-pipeline
         - ACT-adopter
+    revalidated:
+      at: 2026-10-22T22:12:49Z
+      outcome: unchanged
+      unchanged-because: The new test finds that a filler never sees the change's own head a pipeline names. No test of a missing answer changed, so the requirement holds.
 ---
 
 # REQ-004 · Quality · A check never reads a missing answer as one that found nothing
