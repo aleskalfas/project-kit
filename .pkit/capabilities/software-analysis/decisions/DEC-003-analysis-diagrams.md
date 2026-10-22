@@ -29,11 +29,11 @@ A design note weighed the options against established practice. That practice in
 - **This record holds software-analysis's share of them.** A page's diagrams are the documentation component's to decide.
 - **Its share includes the overview and the rules.** The note makes this capability's record the origin of its new rules, and the overview's held folder refines DEC-001 point 2.
 
-On 22 October the capability's maintainer asked that the overview read first as a story for a newcomer ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)). It opens with what the component is for, which a decision record states.
+On 22 October the capability's maintainer asked that the overview read first as a story for a newcomer ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)). It opens with what the component is for, which a decision record states. Drawn for the core's analysis, the requirement map, the chain and the use-case diagram are too big to read on a page.
 
 ## Decision
 
-**The capability draws four diagrams from an analysis's front matter: a use-case diagram, a journey's flow, a requirement map and the chain of use cases. A query prints them on demand. Each analysis's generated overview shows them to readers, beside what the analysis holds. It is written for a newcomer first, and opens with what the component is for, from a decision record the configuration names. No diagram is a fact's home. A diagram written in an artefact shows only what that artefact, or an analysis artefact it anchors, states.**
+**The capability draws four diagrams from an analysis's front matter: a use-case diagram, a journey's flow, a requirement map and the chain of use cases. A query prints them on demand, from the working tree. Each analysis's generated overview shows what the analysis holds, and names that query. Of the diagrams, it shows only each journey's flow, beside its journey. It is written for a newcomer first, and opens with what the component is for, from a decision record the configuration names. No diagram is a fact's home. A diagram written in an artefact shows only what that artefact, or an analysis artefact it anchors, states.**
 
 ### 1. A diagram is never a fact's home
 
@@ -88,7 +88,7 @@ A fourth diagram draws which use case follows from which, from each use case's `
   - an arrow within a loop
 - **What is not in force** draws nothing, as in point 4.
 - **One reading.** `after` may hold loops, a use case that names itself, and alternatives. So the picture shows one reading of the chain, and does not tell a precondition's alternatives from several preconditions. The use cases are what the rule of logical consequence judges, never the picture.
-- **When.** Its query comes with the build that adds `after` and its check. Until then no part of the capability reads `after`.
+- **Its query** is point 7's, with the chain as its subject. It draws the chain where a use case in force writes `after`.
 
 ### 6. Each diagram is drawn for one analysis
 
@@ -107,7 +107,7 @@ A query prints each diagram as Mermaid text, computed from the analysis in the w
 - **Complete, or no answer.** The query prints no diagram where a file of a place it reads cannot be read as its kind. A smaller diagram would read as a true one.
 - **Its own Mermaid writer,** beside the backbone's graph of the process wiring. The two overlap only in making node ids and labels safe, which each does its own way. What each draws differs, and only this one carries a text alternative. A third component that prints Mermaid is the trigger to weigh a shared writer (COR-007).
 
-### 8. A generated overview shows them by default
+### 8. A generated overview is the reader's entry point
 
 Each analysis keeps a generated overview, the reader's entry point. A reader on a repository host, such as GitHub, sees there with no setup what the component is for and how the analysis describes it. The reader also sees why its areas are cut as they are.
 - **What it is:** a held document, `overview/README.md`, in a folder of held documents of its own in the analysis (COR-050 point 1). A held folder never equals or encloses a documentation root or another declaration's place.
@@ -117,16 +117,15 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
 - **What it shows,** in this order, each artefact in force and linked:
   - **the opening:** what the component is for, from its purpose record (below). Then one line on what the analysis covers: its component and the analyses it builds on. The one analysis at the location's top names no component, so it covers the system as one.
   - **the areas,** in their numbered order, each with its goal, the areas it builds on, its requirements and its use cases (below). Then the use cases in no area, in a section of their own. An analysis whose use cases lie in no area lists them under its use cases.
-  - **reference,** each part below a section heading of its own under "Reference". The page has no "Reference" heading where it shows no such part.
+  - **reference,** each part below a section heading of its own under "Reference":
     - **who takes part:** one table of the actors (below)
     - **the words:** the glossary, then each domain-model view in its numbered order, by its number and its title
     - **the requirements in no area:** those whose file lies in no area's folder, such as those that bind the whole system (DEC-001 point 12)
-    - **the journeys,** each with its flow, where journeys exist
+    - **the journeys,** each with its flow, where journeys exist. A journey's flow is the query's own output, with its text alternative (point 7).
     - **"Not built yet":** each open shortfall a use case in force lists, with its use case, its step or variant, its record and its issue (DEC-001 point 1). It is shown where there is one.
-    - **the diagrams:** the requirement map, the chain of use cases and the use-case diagram
+    - **the diagrams:** one line that names the query, as it is run for this analysis, and its subjects. It ends reference on every page, so every page has the heading "Reference".
   - **a closing line:** the command writes the page from the analysis, so a reader changes the analysis, never the page
-
-  Each diagram is the query's own output, with its text alternative (point 7), in a section of its own.
+- **Complete, or no answer.** The command writes no overview where the query could not draw each of its diagrams in full (point 7). The two share one test, so the page is written only where the query it names answers. Validation fails such a file in any case.
 - **Front matter only.** The overview reads the analysis's front matter and the paths of its files, never a body, as DEC-001 point 1 allows a tool. A requirement's area is read from its path. Beyond the analysis's files, it reads the capability's configuration and the front matter of the record its purpose names.
 - **Its purpose.** What a component is for is a decision, so a decision record states it. The analysis's entry in the capability's configuration points to that record, `purpose: <record id>`, as the entry names the analyses it builds on.
   - **Which record:** a decision record the project owns, named as a record anchor names one, such as `PRJ-004` or `billing:DEC-001`. That is a project or an architecture record, or, for a capability's analysis, a decision of that capability.
@@ -157,17 +156,17 @@ Each analysis keeps a generated overview, the reader's entry point. A reader on 
 - **Who writes it:** its own command, which writes the overview of each analysis that holds an artefact, and the stamp, after it writes an artefact. Each writes a file only where its bytes change. The query writes nothing. Install writes none, since install runs no command of a capability (COR-017). So a project gets its overview from its first stamp, or from the command.
 - **How it stays fresh:** the overview carries a fingerprint of what it draws, the data it reads, never its text. Validation compares it with the analysis, and fails a stale overview. Its finding names the command.
   - **A release that only prints it differently** changes no fingerprint, so it fails no project. The next rewrite prints it anew.
-  - **A release that reads more of the analysis** raises the version the fingerprint carries. An overview written under another version is a warning until the command rewrites it, so such a release fails no project either.
+  - **A release that changes what the fingerprint reads, or how it is computed,** raises the version the fingerprint carries. An overview written under another version is a warning until the command rewrites it, so such a release fails no project either.
   - **A missing overview** is a warning that names the command. So a project that installed the capability before fails nothing, and needs no migration.
 - **Keeping none:** a setting in the capability's configuration turns the overview off. The stamp then writes none, the command refuses, and validation asks for no overview and no goal. It still checks a purpose's pointer. It warns of an overview left in place, which nothing keeps fresh.
 - **What it anchors:** nothing, since a held document carries no friction block (COR-050 point 12). Generation and the check that it is fresh keep it true to what it draws. The capability's maintainer took this as meeting "it anchors what it shows".
 - **What it costs each adopter:** a change to anything it draws owes a rewrite of the overview in the adopter's own analysis. A title, a status, a use case's actors and shortfalls, an actor's summary and a goal are included. So are the title and the status of the purpose record, though the record lies outside the analysis. A change that supersedes that record also fails validation, until the pointer names its successor. Two branches that each make such a change conflict on the overview, as on a lock file.
-  - **Where they conflict:** always on its fingerprint's line, and on each section both change. One section per diagram keeps the rest apart.
+  - **Where they conflict:** always on its fingerprint's line, and on each section both change. A section for each part keeps the rest apart.
   - **Resolving it** is running the command.
 
 ### 9. Where a generated diagram never shows
 
-A generated diagram shows on demand and in the overview. A copy pasted by hand follows the same limits. It never shows in two places:
+A generated diagram shows on demand, and a journey's flow in the overview too. A copy pasted by hand follows the same limits. It never shows in two places:
 - **Inside an analysis artefact.** Each relation has one home, the front-matter field that lists it. A copy in another artefact's body would change with every edit elsewhere, and flag that artefact's dependants. What meets a requirement is never stored on it for the same reason (DEC-002 point 7).
 - **In a view of the solution,** such as an architecture page or a record. A view states none of an analysis artefact's facts (DEC-001 point 11), and a generated diagram states them.
 
@@ -208,18 +207,25 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why one analysis per diagram.** Each analysis describes one component, and its journeys and chains stop at its edge (DEC-001 point 2). Of the fields a diagram reads, only an actor's may name another analysis's artefact. So that actor is the one node drawn from beyond the edge.
 
-**Why the overview, beside the query.**
-- **A reader on a repository host** sees the overview with no setup, which "supports diagrams by default" asks.
-- **The query alone** shows nothing until someone runs it.
-- **Regions on another component's pages** need a data point and a rule on grounding that no page needs yet (COR-007).
+**Why an overview of its own.** A reader on a repository host sees the overview with no setup. Regions on another component's pages would need a data point, and a rule on grounding that no page needs yet (COR-007).
+
+**Why the query prints the diagrams, and the overview names it.** The capability's maintainer chose this on 22 October, reading the core's overview ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+- **Too big to read.** The core's analysis held 19 use cases and 9 actors when the maintainer read it. Drawn for it, the requirement map and the use-case diagram each drew more than 40 arrows. With the chain, the three would take more than half the page.
+- **The page says the same in text.** Each area lists its use cases and its requirements, and the table of who takes part says where each actor acts. Each use case's page names its actors, what comes before it and the requirements it must meet. Each requirement's page names the requirements it refines and the actors whose need it meets.
+- **A query prints them.** The query draws them from the working tree each time it runs. So it shows a change in progress, hand edits included, while the page changes only when it is rewritten. It also prints one requirement's map, or one journey's flow, by its id, which stays small. Its form for a program serves an agent or a tool.
+- **An agent works from checks and queries.** It keeps the analysis consistent through them, never through a picture. A diagram is never a fact's home (point 1), and the rule of logical consequence judges the use cases, never the picture (point 5). On the page, the three would cost an agent some 200 lines each time it reads the overview to find its way.
+- **Diagrams by default.** Every project with the capability prints them with no setup, as "supports diagrams by default" asks. The overview names the query, so a reader finds it.
+- **What it costs.** A reader on a repository host, with no checkout, sees none of the three. The artefacts' own pages hold what they draw: each use case's and each requirement's page names its relations.
+- **A section of its own for the line.** A reader who looks for the diagrams finds them by the heading. Below the last list of reference, the line would read as part of that list.
+- **A journey's flow on the page.** A journey's flow draws one path, its steps in a line, so it does not grow into a tangle as the analysis grows. Where the journeys stand on the page is said under the two parts, below.
 
 **Why the overview carries no anchors.** A held document carries no friction block, and validation fails one that does (COR-050 point 12). The overview is generated from what it draws, and checked fresh, so it cannot drift from it. An anchor would add a flag on every drawn change, which the freshness check already fails until the overview is rewritten.
 
-**Why a newcomer first.** The overview is the reader's entry point, and the reader who needs it most is new to the component. Such a reader asks what the component is for, and how its parts follow from each other, before any list. A returning reader looks things up, so the lists and diagrams follow the story. The capability's maintainer chose this order on 22 October, reading the core's overview point by point ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
+**Why a newcomer first.** The overview is the reader's entry point, and the reader who needs it most is new to the component. Such a reader asks what the component is for, and how its parts follow from each other, before any list. A returning reader looks things up, so the lists follow the story. The capability's maintainer chose this order on 22 October, reading the core's overview point by point ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
 
 **Why two parts, with the page's order as the reading path.** A newcomer reads the page from top to bottom, so the page's order is the reading path. A line that names two places to start gives no single path. The heading of reference marks where the story ends. So a newcomer knows where to stop, and a returning reader knows where to look things up. The capability's maintainer chose the two parts on 22 October, on the same issue.
 - **The words in reference.** A term is looked up where the story uses it, so the glossary and the views lie in reference.
-- **The journeys in reference.** No analysis the maintainer has reviewed holds a journey yet, so none has shown how one reads. The first that does is the trigger to weigh whether journeys belong to the story (COR-007).
+- **The journeys in reference.** No analysis the maintainer has reviewed holds a journey yet, so none has shown how one reads. The first that does is the trigger to weigh whether journeys belong to the story, and whether their flows stay on the page as journeys grow in number (COR-007).
 
 **Why the purpose lives in a record, and the configuration points to it.**
 - **A reason belongs in a record.** What a component is for is the reason behind every area of its analysis. A decision holds a choice and why it was made (DEC-001 point 11, "Where a statement belongs"). A record is also reviewed and accepted. An artefact that rests on it, such as a view of the component's concepts, can anchor it.
@@ -240,7 +246,7 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 
 **Why each view by its number and title.** The concepts are listed by their labels alone, so a reader scans them as a list. The capability's maintainer chose it on 21 October, on reading the core's overview. A view's opening states the problem its concepts solve on the view's own page, one link away. Quoted beside each title, it made the list of concepts long and uneven. A view's problem is a reason, whose home is a record (DEC-004 point 3). Who an actor is lies in the actor's own front matter, so the table of who takes part shows it.
 
-**Why one table of who takes part.** A reader who meets an actor asks who it is, and where in the path it acts. One row for each actor answers both at a glance. Which use cases each actor takes part in is a longer list, which the use-case diagram shows. The capability's maintainer chose the table on 22 October.
+**Why one table of who takes part.** A reader who meets an actor asks who it is, and where in the path it acts. One row for each actor answers both at a glance. Which use cases each actor takes part in is a longer list. Each use case's page names its actors, and the query's use-case diagram draws them all. The capability's maintainer chose the table on 22 October.
 
 **Why the open shortfalls, after the journeys.** Each marks a step where the system falls short of an accepted record. Listed in one place, they show a reader every such step at once. The capability's maintainer decided to list them on 21 October ([project-kit#1855](https://github.com/aleskalfas/project-kit/issues/1855)).
 - **Where.** A newcomer first reads the story, and looks up what the system still lacks, so the list lies in reference. Each area's use cases are marked too, so a newcomer meets each gap on the path. The maintainer placed the list on 22 October ([project-kit#1887](https://github.com/aleskalfas/project-kit/issues/1887)).
@@ -262,12 +268,16 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **A diagram in an artefact that shows more than its anchors carry,** such as the journeys a use case takes part in. Rejected. A use case anchors none of them, so a change to one would flag nothing. A use case that anchored a journey to mend that would close a cycle (COR-050 point 5).
 - **A rule against styling, with a check of Mermaid's directives.** Not taken yet. The authoring skill is to carry point 2 (Implications), and a rule comes when a project finds styling the skill did not prevent (COR-007).
 - **A generated diagram stored inside an artefact.** Rejected. See point 9.
-- **Diagrams on demand only, with no overview.** Rejected. It meets "it anchors what it shows" word for word, but shows nothing on a repository host.
+- **No overview, the diagrams on demand only.** Rejected. A reader on a repository host would find no entry point, and no page that says what the component is for.
+- **The requirement map, the chain and the use-case diagram on the page.** Not taken. See Rationale.
+- **The three folded in a collapsed block on the page.** Not taken. Folding hides their size, but keeps pictures too large to read.
+- **The three on a second generated page, linked from reference.** Not taken. Its pictures would be as large, and a second page is a second file for branches to conflict on.
+- **A use-case diagram for each area, in the story.** Not taken. Each area lists its use cases, and the table of who takes part says where each actor acts, so the picture would restate both.
 - **A check of the overview's text, not a fingerprint.** Rejected. See Rationale.
 - **The first paragraph of each view's opening, beside its title.** Rejected. It made the list of concepts long and uneven, and it reads a body, which DEC-001 point 1 keeps from a tool.
 - **The problem in a field of the view's front matter.** Rejected. It would be a third home for a reason whose home is a record (DEC-004 point 3).
 - **A line in the opening that says where to start,** naming the first domain-model view and the first area. Rejected. It names two places to start, and the page's own order is the path (see Rationale).
-- **Each actor's use cases listed under the actor in the overview.** Not taken. A reader asks where each actor acts, which one row of areas answers. The longer list, of each use case, the use-case diagram shows.
+- **Each actor's use cases listed under the actor in the overview.** Not taken. A reader asks where each actor acts, which one row of areas answers. Each use case's page and the query's use-case diagram show the longer list, of each use case.
 - **A pointer to a record that is not accepted stopping the overview from being written.** Rejected. Each later change to the analysis would leave the overview stale too, for a reason outside the analysis.
 - **A purpose written as text in the configuration, with a rule that traces each area's goal to it.** Rejected. A rule cannot judge a setting, and a reason belongs in a record (see Rationale).
 - **A kind of artefact for the component's purpose, inside the analysis.** Rejected. A new kind needs a decision of its own (DEC-001 point 11), and a record already answers the need.
@@ -283,14 +293,12 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
 - **Regions on another component's pages, filled through a data point now.** Not taken yet. A page that must show an analysis diagram is the trigger. The capability would then contribute to that point, as it contributes to the readers point, refining DEC-001 point 8.
 - **Every producer drawn solid, implied arrows included.** Rejected. An early use case would draw an arrow to each use case after it, and the picture would show little else.
 - **The chain at two levels:** the areas' order between areas, and every arrow within an area. Not taken. Between areas, it would lose which use case leads to which.
-- **The chain's query built now.** Not taken. The capability reads no `after` yet, and the query comes with the build that adds it.
 - **A backbone command that turns a graph into Mermaid.** Not taken yet. See Rationale.
 - **The rules accepted now, in a major of their own.** Rejected. Each major is a review for every adopter.
 
 ## Implications
 
-- **A query** prints the use-case diagram, each journey's flow and the requirement map of the analysis, or the one its subject names (points 4 and 7). It is read-only and offline.
-- **The chain's query** comes with the build that adds `after` and its check (point 5).
+- **A query** prints the use-case diagram, each journey's flow, the requirement map and the chain of use cases of the analysis, or the one its subject names (points 4, 5 and 7). It is read-only and offline.
 - **The overview** (point 8) adds:
   - its folder of held documents
   - its command, and the stamp's rewrite of it
@@ -301,7 +309,8 @@ Until a major accepts the two rules, they bind nothing (COR-051 point 4). They j
   - the fingerprint and its version, and the check that the overview is fresh
   - the setting that keeps none
   - the list of open shortfalls, read from each use case's `shortfalls`
+  - the line that names the query and its subjects
 - **`SAN`** gains the two proposed rules of point 10, and the validator their checkable part. Its judgement rules read a Mermaid fence's labels as statements. The forms check reads a fence as part of the text or the item it follows (point 2).
 - **DEC-001** points 1, 2 and 11, and **DEC-002** point 3, name what this record adds to them. Point 8 is not refined, since the capability contributes no diagram to another component's point.
-- **The authoring skill** tells a writer where a fence may sit, what it may show, and that it holds no styling (point 2).
-- **Projects** see their analysis's diagrams with no setup once the overview is built. A project that adopts the rules at `SAN`'s next major reviews the diagrams in its artefacts for their text alternatives.
+- **The authoring skill** tells a writer where a fence may sit, what it may show, and that it holds no styling (point 2). It also tells a writer to print the chain before adding a use case, or changing what one names in `after`.
+- **Projects** print their analysis's diagrams with no setup, through the query their overview names. A project that adopts the rules at `SAN`'s next major reviews the diagrams in its artefacts for their text alternatives.
