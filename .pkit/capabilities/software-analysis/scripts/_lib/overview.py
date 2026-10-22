@@ -27,17 +27,17 @@ read when needed. In this order:
   - **the words:** the glossary, linked, then each view in force, in the order of its
     number, by its number and its title;
   - **the requirements in no area:** those in force whose file lies in no area's folder;
-  - **the journeys** in force, each linked, with its flow;
+  - **the journeys** in force, each linked, with its flow, the query's own output,
+    `pkit analysis diagram` (`_lib/diagrams.py`), with its text alternative;
   - **not built yet,** where a use case in force lists any `shortfalls`: each entry, with
     its use case, linked, its step or variant, its record and its issue, in the use
     cases' order and then the entries' (DEC-001 point 1; `_lib/shortfalls.py`);
-  - **the diagrams:** the requirement map, the chain of use cases and the use-case
-    diagram, each where it is drawn;
+  - **the diagrams:** one line that names the query, as it is run for this analysis, and
+    its subjects. It ends reference on every page, so every page has its heading;
 - a closing line: the command writes the page, so a reader changes the analysis.
 
-Each diagram is the query's own output, `pkit analysis diagram` (`_lib/diagrams.py`), with
-its text alternative, in a section of its own, so two branches that each change what one
-diagram draws conflict on that section alone.
+Each part lies in a section of its own, so two branches that each change what one part
+shows conflict on that section alone.
 
 **Front matter only.** The overview reads the front matter of the analysis it shows, and
 the paths of its files, never a body (DEC-001 point 1). A requirement's area is the folder
@@ -68,8 +68,8 @@ each area it shows, and the id, title, status and path of its purpose's record.
 Validation compares it with the analysis in the working tree, and fails a stale
 overview, naming the command. A release that only
 prints the overview differently changes no fingerprint, so it fails no project. One that
-reads more of the analysis raises the version, and an overview written under another one
-is a warning until its command rewrites it.
+changes what the fingerprint reads, or how it is computed, raises the version, and an
+overview written under another one is a warning until its command rewrites it.
 
 **Who writes it.** Its command, `pkit analysis overview`, writes the overview of each
 analysis that holds an artefact, and the stamp rewrites the overview of the analysis it
@@ -81,9 +81,10 @@ missing overview is a warning, so an upgrade fails no project.
 writes none, the command refuses, and the check asks for none. It warns of an overview
 left in place, since nothing keeps it fresh.
 
-**Complete, or no answer.** Where a diagram cannot be drawn in full, or `pkit` cannot
-say where the purpose's record lies, no overview is written, and the check does not
-judge whether the one in place is fresh. The check names what is wrong with the file.
+**Complete, or no answer.** Where a file of the kinds it reads cannot be read in full, as
+the query would find it for any of its diagrams, or `pkit` cannot say where the purpose's
+record lies, no overview is written, and the check does not judge whether the one in
+place is fresh. The check names what is wrong with the file.
 """
 
 from __future__ import annotations
@@ -104,7 +105,6 @@ from _lib.model import (
     ACTOR,
     AFTER,
     JOURNEY,
-    MUST_MEET,
     OTHER_ACTORS,
     QUALIFIER,
     RELIES_ON,
@@ -134,8 +134,8 @@ COMMAND = "pkit analysis overview"
 #: names no record of what its component is for.
 NEW_RECORD = "pkit new decision"
 
-#: The version of what the fingerprint reads. A release that reads more of the analysis
-#: raises it. An overview written under another version is a warning, never a failure,
+#: The version of what the fingerprint reads. A release that changes what it reads, or how
+#: it is computed, raises it. An overview written under another version is a warning, never a failure,
 #: until its command rewrites it, so such a release fails no project.
 VERSION = 4
 
@@ -153,20 +153,24 @@ _MARKED = re.compile(
 #: (DEC-001 point 1).
 SUMMARY = "summary"
 
-#: The front-matter fields the overview reads of each kind: what it labels and links, and
-#: what its diagrams draw (DEC-003 points 4 and 5).
+#: The front-matter fields the overview reads of each kind: what it labels and links,
+#: what each area builds on, who takes part and what is not built yet, and what a
+#: journey's flow draws (DEC-003 points 4 and 8).
 _FIELDS: Mapping[str, tuple[str, ...]] = {
     ACTOR: ("name", SUMMARY),
-    USE_CASE: ("title", "actor", OTHER_ACTORS, AFTER, MUST_MEET, SHORTFALLS),
-    JOURNEY: ("title", "actor", diagrams.STEPS, RELIES_ON, MUST_MEET),
-    **dict.fromkeys(REQUIREMENTS, ("title", diagrams.REFINES, diagrams.ACTORS)),
+    USE_CASE: ("title", "actor", OTHER_ACTORS, AFTER, SHORTFALLS),
+    JOURNEY: ("title", "actor", diagrams.STEPS, RELIES_ON),
+    **dict.fromkeys(REQUIREMENTS, ("title",)),
     VIEW: ("title",),
 }
+
+#: The query the page names, which prints the analysis's diagrams (DEC-003 point 7).
+DIAGRAM_COMMAND = "pkit analysis diagram"
 
 #: The headings the page's own links point at, as a repository host makes their anchors,
 #: and the heading of reference, the page's second part.
 _USE_CASES, _OUTSIDE, _NOT_BUILT = "Use cases", "Outside any area", "Not built yet"
-_REFERENCE = "Reference"
+_REFERENCE, _DIAGRAMS = "Reference", "Diagrams"
 
 
 @dataclass(frozen=True)
@@ -233,8 +237,9 @@ def read(
 ) -> Read:
     """What the overview of the analysis in `folder` reads: front matter and paths alone,
     and the front matter of its purpose's record, found from the repository at `root`.
-    Raises diagrams.NoAnswer where a diagram it shows cannot be drawn in full, or the
-    purpose's record cannot be read as an accepted record."""
+    Raises diagrams.NoAnswer where a file of the kinds it reads cannot be read in full, as
+    the query would find it for any of its diagrams, or where whether the repository
+    holds the purpose's record cannot be read."""
     diagrams.diagrams(analysis, None, {}, folder)
     artefacts = tuple(
         sorted(
@@ -394,7 +399,7 @@ def render(
     read_ = read(analysis, listing, folder, root)
     listed = listing.of_folder(folder) if listing.several else None
     component = listed.component if listed is not None else None
-    drawn = {d.id: d for d in diagrams.diagrams(analysis, None, shown_as, folder)}
+    flows = {d.id: d for d in diagrams.diagrams(analysis, diagrams.JOURNEYS, shown_as, folder)}
     use_cases = read_.of(USE_CASE)
     page = _Page(
         analysis,
@@ -408,8 +413,7 @@ def render(
     out = [f"# Overview of {named}", "", mark(fingerprint(analysis, read_, component))]
     out += _opening(page, listing, folder, listed)
     out += _areas_part(page)
-    reference = _reference(page, drawn)
-    out += ["", f"## {_REFERENCE}", *reference] if reference else []
+    out += ["", f"## {_REFERENCE}", *_reference(page, flows, component)]
     out += [
         "",
         "---",
@@ -535,10 +539,14 @@ def _joined(areas: Sequence[str]) -> str:
     return links[0] if len(links) == 1 else f"{', '.join(links[:-1])} and {links[-1]}"
 
 
-def _reference(page: _Page, drawn: Mapping[str, diagrams.Diagram]) -> list[str]:
+def _reference(
+    page: _Page, flows: Mapping[str, diagrams.Diagram], component: str | None
+) -> list[str]:
     """Reference, read when needed, each part a section below its heading: who takes part,
-    the concepts, the requirements in no area, the journeys, what is not built yet, then
-    the diagrams. Empty where the analysis holds none of them."""
+    the concepts, the requirements in no area, the journeys, each with its flow, and what
+    is not built yet, each where the analysis holds it. Then, on every page, the line that
+    names the query of the diagrams, as it is run for the analysis of `component`, `None`
+    the one analysis the project keeps where it lists none."""
     read_ = page.read
     out = _taking_part(page)
 
@@ -561,7 +569,7 @@ def _reference(page: _Page, drawn: Mapping[str, diagrams.Diagram]) -> list[str]:
     if journeys:
         out += ["", "### Journeys"]
         for journey in journeys:
-            out += ["", f"#### {page.link(journey)}", *_fence(drawn.get(f"journey-{journey.id}"))]
+            out += ["", f"#### {page.link(journey)}", *_fence(flows.get(f"journey-{journey.id}"))]
 
     open_ = [(u, entry) for u in read_.of(USE_CASE) for entry in shortfalls.entries(u) or ()]
     if open_:
@@ -579,14 +587,18 @@ def _reference(page: _Page, drawn: Mapping[str, diagrams.Diagram]) -> list[str]:
             for u, entry in open_
         ]
 
-    for heading, diagram in (
-        ("Requirement map", drawn.get(diagrams.REQUIREMENT_MAP)),
-        ("Chain of use cases", drawn.get(diagrams.CHAIN)),
-        ("Use cases and their actors", drawn.get(diagrams.USE_CASES)),
-    ):
-        if diagram is not None:
-            out += ["", f"### {heading}", *_fence(diagram)]
-    return out
+    return [*out, "", f"### {_DIAGRAMS}", "", _diagrams_line(component)]
+
+
+def _diagrams_line(component: str | None) -> str:
+    """The line that names the query of the analysis's diagrams, as it is run for the
+    analysis of `component`, and its subjects (DEC-003 points 7 and 8)."""
+    command = DIAGRAM_COMMAND + (f" --analysis {component}" if component else "")
+    named = [f"`{s}`" for s in diagrams.SUBJECTS]
+    return (
+        f"`{command}` prints this analysis's diagrams from the working tree. Its subjects "
+        f"are {', '.join(named[:-1])} and {named[-1]}, or a journey's or a requirement's id."
+    )
 
 
 def _taking_part(page: _Page) -> list[str]:

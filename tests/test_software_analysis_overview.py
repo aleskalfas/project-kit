@@ -8,8 +8,9 @@ Held to software-analysis DEC-003 point 8:
   or "Not written yet", or the use cases where there are no areas. Then reference: one
   table of who takes part, an actor of another analysis as the glossary's head names
   it; the concepts, each view by its number and title; the requirements in no area; the
-  journeys; what is not built yet; then the diagrams. Each artefact in force is linked,
-  each diagram the query's own output;
+  journeys, each with its flow; what is not built yet; then the line that names the query
+  of the diagrams, on every page. Each artefact in force is linked, and each journey's
+  flow is the query's own output. No other diagram is on the page;
 - **its purpose** — `purpose` names an accepted record, whose title it shows; a pointer
   to no record, or to one not accepted, fails the check and is said on the page;
 - **front matter only** — a view's body is never read (DEC-001 point 1);
@@ -161,13 +162,41 @@ def _fence(repo: AdopterRepo, subject: str) -> str:
     return completed.stdout.strip("\n")
 
 
+def _shows_no_other_diagram(repo: AdopterRepo, text: str, *drawn: str) -> None:
+    """The page holds no Mermaid fence but a journey's flow. The query draws each diagram
+    of `drawn`, such as the use-case diagram, the requirement map or the chain of use
+    cases, and the page shows none of them."""
+    printed = run_script(repo, DIAGRAM, "--json")
+    assert printed.returncode == 0, printed.stderr
+    others = {d["id"]: d for d in json.loads(printed.stdout)["diagrams"]}
+    assert set(drawn) <= set(others), sorted(others)
+    for diagram in drawn:
+        assert f"accTitle: {others[diagram]['title']}" not in text
+    fences = re.findall(r"(?ms)^```mermaid\n(.*?)^```$", text)
+    assert all(re.search(r"(?m)^  accTitle: JRN-", f) for f in fences), fences
+    for heading in ("### Requirement map", "### Chain of use cases", "### Use cases and their"):
+        assert heading not in text
+
+
+def _ends_reference(text: str, command: str = "pkit analysis diagram") -> None:
+    """Reference ends with its section on the diagrams: one line that names the query, as
+    it is run for the analysis, and its subjects."""
+    assert _section(text, "### Diagrams") == (
+        f"`{command}` prints this analysis's diagrams from the working tree. Its subjects are "
+        "`use-cases`, `journeys`, `requirements` and `chain`, or a journey's or a requirement's "
+        "id."
+    )
+    assert _headings(text)[-1] == "### Diagrams"
+
+
 # --- what it shows, and who writes it ----------------------------------------------------------
 
 
 def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: AdopterRepo) -> None:
-    """The seed's stamps wrote the overview: each artefact linked, each diagram the query's
-    own output, and its fingerprint fresh. A change of its text alone fails nothing, a
-    drawn field changed by hand makes it stale, and the command writes it anew."""
+    """The seed's stamps wrote the overview: each artefact linked, a journey's flow the
+    query's own output, the other diagrams left to the query, and its fingerprint fresh.
+    A change of its text alone fails nothing, a drawn field changed by hand makes it
+    stale, and the command writes it anew."""
     text = _read(seeded)
     assert text.startswith(
         "# Overview of the analysis\n\n<!-- pkit:overview reads=4 fingerprint=sha256:"
@@ -181,10 +210,11 @@ def test_the_stamp_writes_the_overview_and_the_check_holds_it_fresh(seeded: Adop
         "- [UC-001 — Run suite](../use-case-model/use-cases/UC-001-run-suite.md)\n"
         "- [UC-002 — Read report](../use-case-model/use-cases/UC-002-read-report.md)"
     )
-    assert _section(text, "### Use cases and their actors") == _fence(seeded, "use-cases")
     journey = "#### [JRN-001 — First run](../use-case-model/journeys/JRN-001-first-run.md)"
     assert _section(text, journey) == _fence(seeded, "JRN-001")
-    for absent in ("### Concepts", "Requirement", "## Areas", "### Chain of use cases"):
+    _shows_no_other_diagram(seeded, text, "use-cases")
+    _ends_reference(text)
+    for absent in ("### Concepts", "Requirement", "## Areas"):
         assert absent not in text
     assert text.endswith(
         "\n\n---\n\nThe command `pkit analysis overview` writes this page from the "
@@ -285,8 +315,9 @@ def _links_resolve(text: str) -> None:
 def test_an_analysis_with_areas_reads_as_its_story_then_reference(project: AdopterRepo) -> None:
     """The story: the opening, then the areas. Then reference, under a heading of its own:
     who takes part, the concepts, the requirements in no area, the journeys, what is not
-    built yet, then the diagrams, each a section below it. No line says where to start,
-    and each link inside the page leads to a heading."""
+    built yet, then the line that names the query of the diagrams, each a section below
+    it. No line says where to start, no diagram but a journey's flow is on the page, and
+    each link inside the page leads to a heading."""
     project.write({SETTINGS: HEAD + "areas:\n  010-run: Suites run.\n"})
     stamped(project, "term", "suite", "--name", "suite", "--path", "src/run.py")
     stamped(project, "view", "runs", "--number", "010", "--explains", "TERM-suite")
@@ -316,11 +347,11 @@ def test_an_analysis_with_areas_reads_as_its_story_then_reference(project: Adopt
         "### Journeys",
         "#### [JRN-001 — First run](../use-case-model/journeys/JRN-001-first-run.md)",
         "### Not built yet",
-        "### Requirement map",
-        "### Chain of use cases",
-        "### Use cases and their actors",
+        "### Diagrams",
     ]
     assert "Start with" not in text
+    _shows_no_other_diagram(project, text, "use-cases", "requirements", "chain")
+    _ends_reference(text)
     _links_resolve(text)
 
 
@@ -337,10 +368,28 @@ def test_an_analysis_without_areas_reads_as_its_use_cases_then_reference(
         "### Who takes part",
         "### Journeys",
         "#### [JRN-001 — First run](../use-case-model/journeys/JRN-001-first-run.md)",
-        "### Use cases and their actors",
+        "### Diagrams",
     ]
     assert "Start with" not in text
     _links_resolve(text)
+
+
+def test_reference_ends_with_the_query_of_the_diagrams_on_every_page(
+    project: AdopterRepo,
+) -> None:
+    """Where the analysis holds no part of reference, such as one requirement in an area,
+    reference holds the line that names the query alone, under its heading."""
+    stamped(project, "constraint", "local", "--area", "010-run", "--path", "src/**")
+    text = _read(project)
+    assert _headings(text) == [
+        "# Overview of the analysis",
+        "## Areas",
+        "### 010-run",
+        "## Reference",
+        "### Diagrams",
+    ]
+    _ends_reference(text)
+    assert "```mermaid" not in text
 
 
 # --- the opening, and what the component is for ------------------------------------------------
@@ -469,7 +518,7 @@ def test_each_area_shows_its_goal_and_the_check_holds_the_goals(project: Adopter
         "### 030-share\n\nA failure's cause can be shared.\n\nNot written yet.\n\n"
         f"### Outside any area\n\n- [UC-003 — Set up]({uc}/UC-003-set-up.md)"
     )
-    assert "Builds on" not in text and "### Chain of use cases" not in text
+    assert "Builds on" not in text
     document = _check(project)
     (no_goal,) = _about(document, "warning", f"{USE_CASES}/020-report")
     assert no_goal.startswith("the area 020-report of the analysis has no goal")
@@ -556,7 +605,6 @@ def test_an_area_s_requirements_are_read_from_their_folder(project: AdopterRepo)
     assert _section(text, "### Requirements in no area") == (
         f"- [REQ-003 · Constraint · Local]({req}/constraints/REQ-003-local.md)"
     )
-    assert "### Requirement map" in text
     (no_goal,) = _about(_check(project), "warning", f"{QUALITY}/060-audit")
     assert no_goal.startswith("the area 060-audit of the analysis has no goal")
 
@@ -679,6 +727,11 @@ def test_several_analyses_each_keep_their_own(project: AdopterRepo) -> None:
     )
     assert _about(document, "error", core) == _about(document, "error", billing) == []
     assert not (project.root / OVERVIEW_FILE).exists()
+    # The line names the query as it is run for each analysis, and it runs.
+    for component, page in (("core", core), ("billing", billing)):
+        _ends_reference(_read(project, page), f"pkit analysis diagram --analysis {component}")
+        drawn = run_script(project, DIAGRAM, "--analysis", component)
+        assert drawn.returncode == 0, drawn.stderr
 
 
 def test_each_view_is_listed_by_its_number_and_title(project: AdopterRepo) -> None:
@@ -846,6 +899,29 @@ def test_the_fingerprint_reads_what_it_draws_and_nothing_else() -> None:
     )
     assert _fingerprint(_analysis(gone, use_case)) != first
     assert _fingerprint(_analysis(actor, use_case), "Runs.") != first
+    # What only the query's diagrams draw is not read: a use case's `requirements`, and a
+    # requirement's `refines` and `actors`.
+    listing = _artefact(
+        "use-case",
+        "UC-001",
+        "use-case-model/use-cases/010-run",
+        title="Run",
+        actor="ACT-tester",
+        requirements=["REQ-001"],
+    )
+    assert _fingerprint(_analysis(actor, listing)) == first
+    bare = _artefact("constraint", "REQ-001", "requirements/constraints", title="Local")
+    tied = _artefact(
+        "constraint",
+        "REQ-001",
+        "requirements/constraints",
+        title="Local",
+        refines=["REQ-002"],
+        actors=["ACT-tester"],
+    )
+    assert _fingerprint(_analysis(actor, use_case, bare)) == _fingerprint(
+        _analysis(actor, use_case, tied)
+    )
     # An actor of another analysis: the name the head gives it is read, its needs are not.
     headed = _fingerprint(_headed(actor, use_case))
     assert headed not in (first, _fingerprint(_headed(actor, use_case, name="Dev")))

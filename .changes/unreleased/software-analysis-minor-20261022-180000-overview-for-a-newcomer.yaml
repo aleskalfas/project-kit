@@ -15,10 +15,14 @@ body: >
   heading. One table there shows who takes part, with each actor's new
   optional `summary`, the first sentence of its opening, which the check holds
   equal to it where the format rule binds. The concepts, the requirements in
-  no area, the journeys, the open shortfalls and the diagrams follow it.
+  no area, the journeys, each with its flow, and the open shortfalls follow
+  it. The overview no longer shows the requirement map, the chain of use
+  cases or the use-case diagram. Reference ends with one line that names
+  `pkit analysis diagram`, which prints them, with its subjects.
   `pkit analysis validate` fails a
   `purpose` that names no record, one that is not accepted, or another
   capability's decision, and warns of an area of requirements without a goal.
-  The overview's fingerprint reads more, and its version is 4, so an overview
-  written before is a warning until `pkit analysis overview` writes it anew.
-  DEC-001 point 1, DEC-002 point 3 and DEC-003 point 8 are refined in place.
+  The overview's fingerprint reads other data of the analysis, and its
+  version is 4, so an overview written before is a warning until
+  `pkit analysis overview` writes it anew. DEC-001 point 1, DEC-002 point 3
+  and DEC-003 are refined in place.

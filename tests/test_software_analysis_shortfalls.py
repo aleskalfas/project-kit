@@ -464,10 +464,10 @@ def _section(text: str, heading: str) -> str:
 
 
 def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: AdopterRepo) -> None:
-    """Under "Not built yet", the last section of reference before its diagrams, each
-    entry of a use case in force: its use case, linked, its step or variant, its record
-    and its issue. The fingerprint reads the entries, so a changed entry leaves the
-    overview stale until it is rewritten (DEC-003 point 8)."""
+    """Under "Not built yet", the last section of reference before the line that names
+    the query of its diagrams, each entry of a use case in force: its use case, linked,
+    its step or variant, its record and its issue. The fingerprint reads the entries, so
+    a changed entry leaves the overview stale until it is rewritten (DEC-003 point 8)."""
     project.write({SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"})
     project.write({EXPORT: _use_case()})
     assert run_script(project, OVERVIEW).returncode == 0
@@ -475,7 +475,7 @@ def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: Ado
     assert "## Reference" in text.split("\n")
     assert re.findall(r"^### .*$", text, re.M)[-2:] == [
         "### Not built yet",
-        "### Use cases and their actors",
+        "### Diagrams",
     ]
     link = "[UC-001 — Export the report](../use-case-model/use-cases/UC-001-export.md)"
     assert _section(text, "### Not built yet") == (
