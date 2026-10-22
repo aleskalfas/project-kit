@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=3 fingerprint=sha256:d6cc75d0926e48d80fa044a993ab51f2370345a024c29f2d5ca9a1cc7e2cec94 -->
+<!-- pkit:overview reads=3 fingerprint=sha256:c2165c72191ba8f10911338f1f7205ef18d08700a6cac4f02e511cba06be186a -->
 
 What the analysis of core holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
 
@@ -119,7 +119,7 @@ No use case names it yet.
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
-- [REQ-008 · Constraint · Until a change closes #1600, no change adds or removes an area or an adapter a release ships](../requirements/constraints/010-develop/REQ-008-areas-held.md)
+- [REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships](../requirements/constraints/010-develop/REQ-008-areas-held.md)
 - [REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`](../requirements/quality/REQ-009-preview-before-change.md)
 
 ```mermaid
@@ -136,7 +136,7 @@ flowchart LR
   REQ_005{{"REQ-005 · Quality · A command that only reads or validates changes nothing in the project"}}
   REQ_006{{"REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds"}}
   REQ_007{{"REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic"}}
-  REQ_008{{"REQ-008 · Constraint · Until a change closes #35;1600, no change adds or removes an area or an adapter a release ships"}}
+  REQ_008{{"REQ-008 · Constraint · Until #35;1600 is done, no change adds or removes an area or an adapter a release ships"}}
   REQ_009{{"REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`"}}
   UC_002(["UC-002 — Answer what my change made stale"])
   UC_004(["UC-004 — Know before I push that my change passes my project's checks"])
