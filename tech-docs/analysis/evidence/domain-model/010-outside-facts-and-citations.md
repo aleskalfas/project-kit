@@ -23,7 +23,7 @@ pkit:
 
 # VIEW-outside-facts-and-citations — Outside facts and citations
 
-The text of a [project](../../core/glossary.md#term-project--project) often states facts that hold beyond it, such as an API's rate limit or a licence's terms. Restated from memory, such a fact may be subtly wrong or out of date. The text gives no sign that its source needs checking (DEC-001).
+The text of a [project](../../core/glossary.md#term-project--project) often states facts that hold beyond it, such as an API's rate limit or a licence's terms. Restated from memory, such a fact may be subtly wrong or out of date. The text gives no sign that the fact's source needs checking (DEC-001).
 
 Each such fact is an [outside fact](../glossary.md#term-outside-fact--outside-fact). An [evidence record](../glossary.md#term-evidence-record--evidence-record) keeps the words of its source, and a [citation](../glossary.md#term-citation--citation) right after the claim names that record. An [evidence scope](../glossary.md#term-evidence-scope--evidence-scope) holds evidence records, and the documents whose citations name them (DEC-001, DEC-002).
 
@@ -50,8 +50,8 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a claim comes to be grounded
-  accDescr: The words of the source of an outside fact are captured as an evidence record of a scope, which no citation names yet. A claim is written with a citation of that record. A check of the scope reads each citation. A citation that names a record of its scope is resolved, and one that names none fails the check.
-  F[Outside fact] -->|its source's words captured| R[Evidence record, named by no citation yet]
+  accDescr: The words of the source of an outside fact are fetched into an evidence record of a scope, which no citation names yet. A claim is written with a citation of that record. A check of the scope reads each citation. A citation that names a record of its scope is resolved, and one that names none fails the check.
+  F[Outside fact] -->|its source's words fetched| R[Evidence record, named by no citation yet]
   R -->|a claim is written with| C[Citation]
   C -->|a check of the scope reads it| K{Its scope holds the record it names?}
   K -->|yes| OK[Citation resolved]
@@ -62,7 +62,7 @@ flowchart LR
 
 Defined in [TERM-outside-fact](../glossary.md#term-outside-fact--outside-fact).
 
-**Why:** The text of a [project](../../core/glossary.md#term-project--project) often states what holds beyond the project, such as the rate limit of an API. Restated from memory, such a fact may be subtly wrong or out of date. Nothing in the text says that its source needs checking (DEC-001).
+**Why:** The text of a [project](../../core/glossary.md#term-project--project) often states what holds beyond the project, such as the rate limit of an API. Restated from memory, such a fact may be subtly wrong or out of date. Nothing in the text says that the fact's source needs checking (DEC-001).
 
 An outside fact is a state of affairs beyond the project, which only a source elsewhere can confirm. The rate limit an API's documentation states is one, and so is a regulatory threshold or a vendor's terms.
 
@@ -83,15 +83,17 @@ Defined in [TERM-evidence-record](../glossary.md#term-evidence-record--evidence-
 
 **Why:** A claim needs the words that bear it out, kept where a person or a check can find them. A record keeps the source's words verbatim and where they came from, so a claim can be followed to its source (DEC-001).
 
-An evidence record is one entry of an `evidence.yaml`. It keeps the words of a source that bear out one [outside fact](../glossary.md#term-outside-fact--outside-fact), where that source lies, and when the words were captured. The record `api-rate-limit` keeps a passage of an API's documentation on its rate limit.
+An evidence record is one entry of an `evidence.yaml`. It keeps the words of a source that bear out one [outside fact](../glossary.md#term-outside-fact--outside-fact), with where that source lies and when the words were fetched. The record `api-rate-limit` keeps a passage of an API's documentation on its rate limit.
 
 **Attributes:**
 
 - its `id`, the slug by which a [citation](../glossary.md#term-citation--citation) names it (DEC-001, DEC-002)
 - its `source_url`, where the source lies, a URL or another pointer such as a path (DEC-002)
-- its `fetched_at`, the date or the time its excerpt was captured, never when the fact was true (DEC-002)
+- its `fetched_at`, the date or the time its excerpt was fetched, never when the fact was true (DEC-002)
 - its `excerpt`, the source's words, verbatim, often over several lines (DEC-002)
-- where it helps, a `title`, a `note` on what the fact is about, and a `snapshot`, where a durable copy of the source lies (DEC-002)
+- where it helps, a `title` (DEC-002)
+- where it helps, a `note` on what the fact is about (DEC-002)
+- where it helps, a `snapshot`, where a durable copy of the source lies (DEC-002)
 
 **Relations:**
 
@@ -105,7 +107,7 @@ An evidence record is one entry of an `evidence.yaml`. It keeps the words of a s
 **Always true:**
 
 - Its `id` is a slug of lower-case letters, digits and hyphens (DEC-001).
-- Its excerpt stands as captured. Nothing fetches the source again to compare it (DEC-002, DEC-003).
+- Its excerpt stands as fetched. Nothing fetches the source again to compare it (DEC-002, DEC-003).
 
 ## Evidence scope
 
