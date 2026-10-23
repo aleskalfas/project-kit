@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-23T14:50:28Z
+      at: 2026-10-23T18:42:08Z
       outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
+      unchanged-because: "Variant 1c still holds wherever vcs is granted: the leading cd is stripped, and the one segment left is the granted commit. The change narrows only a chain with a segment no grant covers."
 ---
 
 # UC-032 — Be asked before an agent changes another repository
