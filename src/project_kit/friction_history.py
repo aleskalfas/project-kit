@@ -90,7 +90,7 @@ import heapq
 import re
 from collections import Counter, OrderedDict
 from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TypeVar
@@ -99,6 +99,7 @@ from project_kit.friction_discovery import (
     Anchor,
     Artefact,
     ArtefactKind,
+    SetAside,
     entry_reason,
     parse_artefacts,
     parsed_at,
@@ -856,7 +857,7 @@ class Walker:
     def __init__(self, history: History, blobs: BlobReader) -> None:
         self.history = history
         self._blobs = blobs
-        self._parsed: dict[tuple[str, str], _Parsed] = {}
+        self._parsed: dict[tuple[str, str, SetAside], _Parsed] = {}
         self._bytes: dict[str, _Bytes] = {}
         self._recent: OrderedDict[str, bytes | None] = OrderedDict()
 
@@ -904,10 +905,12 @@ class Walker:
 
     def artefact_in(self, state: TreeEntry | None, path: str, like: Artefact) -> Artefact | None:
         """`like` as the blob of `state` holds it at `path`: the document, or the entry under
-        the same id — read by the same rule as the present (`parse_artefacts`)."""
+        the same id — read by the same rule as the present (`parse_artefacts`). It carries
+        `like`'s derived links (`Artefact.aside`), so an earlier version is read under the
+        later state's, as every comparison reads both (COR-050 point 5)."""
         if state is None or state[0] in (LINK_MODE, _GITLINK_MODE):
             return None
-        key = (state[1], path)
+        key = (state[1], path, like.aside)
         found = self._parsed.get(key)
         if found is None:
             raw = self._read(state[1])
@@ -921,6 +924,7 @@ class Walker:
                     artefacts, _reason = parse_artefacts(
                         path, like.place, text, rule_set=like.rule_set
                     )
+                    artefacts = [replace(a, aside=like.aside) for a in artefacts]
             document = next((a for a in artefacts if a.kind is ArtefactKind.DOCUMENT), None)
             entries: dict[str, Artefact] = {}
             for artefact in artefacts:

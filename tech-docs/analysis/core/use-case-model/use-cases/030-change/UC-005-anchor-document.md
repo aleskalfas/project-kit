@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-22T23:47:10Z
+      at: 2026-10-23T08:14:08Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: A component may declare derived links on its place, which friction reads as their words alone. Saying what a document rests on is as the steps say.
 ---
 
 # UC-005 — Say what my document rests on

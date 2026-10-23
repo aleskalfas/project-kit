@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-22T16:24:48Z
+          at: 2026-10-23T09:50:52Z
           outcome: unchanged
-          unchanged-because: DEC-001 gains an actor's optional `summary`, and the actor kind's structure a form that holds it equal to the opening. The rule asks an artefact to carry its kind's structure, forms included, so it holds.
+          unchanged-because: DEC-001's rationale now says a renamed term's moved links flag nothing, since friction reads them as their words alone. The rule asks each artefact to carry its kind's structure, which this leaves as it was.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -62,9 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-21T14:26:13Z
+          at: 2026-10-23T08:13:39Z
           outcome: unchanged
-          unchanged-because: COR-062 moves answers, not anchors. What an analysis artefact's anchors must name is unchanged, so the rule holds.
+          unchanged-because: COR-050 point 5 reads derived links as their words alone when it compares a body. What an artefact's anchors must name is unchanged, so the rule holds.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}

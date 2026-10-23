@@ -170,6 +170,7 @@ from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
     DOCUMENT_SUFFIX,
     HEAD_STATE,
+    NOTHING_SET_ASIDE,
     Anchor,
     AnchorKinds,
     Artefact,
@@ -177,6 +178,7 @@ from project_kit.friction_discovery import (
     FrictionSettings,
     RecordContent,
     ResolverCommand,
+    SetAside,
     content,
     deferral_reason,
     discover_artefacts,
@@ -186,6 +188,7 @@ from project_kit.friction_discovery import (
     read_friction_settings,
     record_content,
     registered_anchor_kinds,
+    standing_aside,
 )
 from project_kit.friction_git import (
     SHORT,
@@ -580,9 +583,9 @@ class _Judge:
         self._flips: dict[int, tuple[FrictionSettings, list[Callable[[str], bool]]] | None] = {}
         self._lines: dict[tuple[Any, ...], dict[int, Any]] = {}
         self._records: dict[str, RecordPoints | None] = {}  # by blob: a record's points
-        self._contents: dict[str, RecordContent | None] = {}  # by blob: a record's content
+        self._contents: dict[tuple[str, SetAside], RecordContent | None] = {}  # by blob
         self._placed: dict[str, frozenset[str]] = {}  # by commit: the files a place holds
-        self._placed_contents: dict[str, RecordContent | None] = {}  # by blob: a placed file's
+        self._placed_contents: dict[tuple[str, SetAside], RecordContent | None] = {}  # by blob
         self.taken: dict[tuple[int, int], set[str]] = {}
         """By merge and answering state, the files a merge took whole from one side that
         `line` read as changes measured from that state: git's combined diff lists none of
@@ -1150,7 +1153,7 @@ class _Judge:
             value = self.standing_in(record)
         elif placed:
             key = ("placed", state, start, rel, renames)
-            value = self.placed_in
+            value = self.placed_as(rel)
         found = self._lines.get(key)
         if found is None:
             found = self._lines[key] = line_changes(
@@ -1189,17 +1192,29 @@ class _Judge:
         then = rel if name is None else name
         return then.endswith(DOCUMENT_SUFFIX) and then in self.placed_at(state)
 
-    def placed_in(self, _path: str, entry: TreeEntry | None) -> Any:
+    def placed_in(self, path: str, entry: TreeEntry | None) -> Any:
         """A file's part as a path anchor reads a file a place holds (COR-050 point 5): its
         mode and its content (`friction_discovery.placed_content`), each blob read once
         for the run; nothing where there is no file; a link or a submodule as its entry,
-        which holds no text to read."""
+        which holds no text to read. `path` is the file's at HEAD, the later state: the
+        derived links HEAD sets aside in it are read as their words alone, whichever
+        version `entry` is."""
         if entry is None or not entry[0].startswith(_FILE_MODE):
             return entry
-        if entry[1] not in self._placed_contents:
+        key = (entry[1], self.head.aside_of(path))
+        if key not in self._placed_contents:
             raw = self.blobs.read_object(entry[1])
-            self._placed_contents[entry[1]] = None if raw is None else placed_content(raw)
-        return (entry[0], self._placed_contents[entry[1]])
+            self._placed_contents[key] = None if raw is None else placed_content(raw, key[1])
+        return (entry[0], self._placed_contents[key])
+
+    def placed_as(self, rel: str) -> Callable[[str, TreeEntry | None], Any]:
+        """`placed_in` for every version of the file now at `rel`, whatever its name there:
+        each read under the derived links HEAD sets aside in `rel` (COR-050 point 5)."""
+
+        def placed(_path: str, entry: TreeEntry | None) -> Any:
+            return self.placed_in(rel, entry)
+
+        return placed
 
     def file_part(self, content: bool) -> Callable[[str, TreeEntry | None], Any]:
         """How a file a path anchor or an anchor of a registered kind stands on is read:
@@ -1499,7 +1514,7 @@ class _Judge:
         if not self.history.merged(state, 0) and all(v.index in reached for v in versions):
             return None  # one line, and no commit since the state touched the record's file
         then = self.standing_at(anchor, state)
-        if self.head.record_standing(anchor, rel) == then:
+        if self.head.record_standing(anchor, rel, self.head.aside_of(rel)) == then:
             return None
         changes = self.line(state, 0, rel, then, renames=True, record=anchor)
         found = origin(self.history, changes, then)
@@ -1524,29 +1539,37 @@ class _Judge:
         """What a record anchor stands on in the record's file at a path, with an entry,
         each blob read once for the run, and nothing where there is no file: for an
         anchor on the whole record, its content (`friction_discovery.record_content`);
-        for one on a point, the point cut from the blob (`record_points.read_points`)."""
+        for one on a point, the point cut from the blob (`record_points.read_points`).
+        Every version is read under the derived links HEAD sets aside in the record's
+        file (COR-050 point 5)."""
         point = split_anchor(anchor.value)[1]
+        rel = self.head.record_path(anchor.value)
+        aside = NOTHING_SET_ASIDE if rel is None else self.head.aside_of(rel)
 
         def standing(_path: str, entry: TreeEntry | None) -> Standing | RecordContent | None:
             if entry is None or not entry[0].startswith(_FILE_MODE):
                 return None  # no file there, or a link or a submodule, which holds no record
             if point is None:
-                return self._record_content(entry[1])
+                return self._record_content(entry[1], aside)
             if entry[1] not in self._records:
                 raw = self.blobs.read_object(entry[1])
                 self._records[entry[1]] = None if raw is None else read_points_bytes(raw)
             points = self._records[entry[1]]
-            return None if points is None else points.anchored(point).standing
+            if points is None:
+                return None
+            return standing_aside(points.anchored(point).standing, aside)
 
         return standing
 
-    def _record_content(self, blob: str) -> RecordContent | None:
-        """The content of the record the blob `blob` holds, read once for the run; `None`
-        where the blob does not read."""
-        if blob not in self._contents:
+    def _record_content(self, blob: str, aside: SetAside) -> RecordContent | None:
+        """The content of the record the blob `blob` holds, the derived links of `aside`
+        read as their words alone, read once for the run; `None` where the blob does not
+        read."""
+        key = (blob, aside)
+        if key not in self._contents:
             raw = self.blobs.read_object(blob)
-            self._contents[blob] = None if raw is None else record_content(raw)
-        return self._contents[blob]
+            self._contents[key] = None if raw is None else record_content(raw, aside)
+        return self._contents[key]
 
 
 # --- the check ---------------------------------------------------------------------
@@ -2197,7 +2220,9 @@ def _part_diffs(
             continue
         if anchor.kind == "record" and split_anchor(anchor.value)[1] is not None:
             then = _point_standing(judge.standing_at(anchor, point))
-            now = judge.head.standing(anchor, judge.head.record_path(anchor.value))
+            record = judge.head.record_path(anchor.value)
+            aside = NOTHING_SET_ASIDE if record is None else judge.head.aside_of(record)
+            now = judge.head.standing(anchor, record, aside)
         elif anchor.kind == "artefact" and judge.head.part_of(anchor.value).names_part:
             then = judge.part_standing_at(anchor, point)
             now = judge.head.part_of(anchor.value).standing
