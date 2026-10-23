@@ -80,7 +80,7 @@ pkit:
 > **Not built yet:** none of those five commands runs such a check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 5. The system checks that the subject is `all`, `operator` or `agent:<name>`, and finds the privilege in the catalog (COR-028 point 1).
-6. The system writes the grant to the project's own grants, `.pkit/permissions/project/grants.yaml`, and prints `granted: <subject> allow <privilege>`. The permission model decides each call with it beside the methodology's grants, and a deny wins over an allow (REQ-013).
+6. The system writes the grant to the project's own grants, `.pkit/permissions/project/grants.yaml`, and prints `granted: <subject> allow <privilege>`. The permission model decides each call with the project's grants beside the methodology's, and a deny wins over an allow (REQ-013).
 7. The adopter names, in the agents' overlay `.pkit/agents/project/overlay.yaml`, the paths each placeholder of an agent definition stands for, such as `<adr-records>` (COR-013).
 8. The adopter runs `pkit agents reconcile`. The system lists each category an agent definition refers to that the overlay does not define, with what it would write, and writes nothing.
 9. The adopter runs `pkit agents reconcile --write`, which is the consent. The system adds each missing category, and never writes over a value the adopter set. It fills a category whose conventional folder exists with that folder.
