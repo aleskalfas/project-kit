@@ -1,6 +1,6 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=4 fingerprint=sha256:15c82d2de05131e1186c531f2bf91d9b4f518ae1a67767e1b9617a71ca6f0c59 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:16c8d9d91fde22ec95591d884beead54541aaf32f83b20ba0c8a5704d7a9c169 -->
 
 No record states what living-docs is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of living-docs under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -10,7 +10,7 @@ This analysis describes what living-docs does: who uses it, what they do with it
 
 - [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md) ([not built yet](#not-built-yet): step 2, step 6)
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md) ([not built yet](#not-built-yet): step 5, variant 10a)
-- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md) ([not built yet](#not-built-yet): variant 4c)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md) ([not built yet](#not-built-yet): variant 4c, variant 4e)
 - [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md) ([not built yet](#not-built-yet): step 3, variant 4a)
 - [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
 
@@ -37,7 +37,9 @@ Each view of the domain model explains a group of related concepts:
 ### Requirements
 
 - [REQ-022 · Functional · The living-docs agent proposes each change, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
-- [REQ-023 · Quality · A refused stamp leaves every file as it was](../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)
+- [REQ-023 · Quality · A refused stamp puts back what it wrote, or names what it could not](../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)
+- [REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds](../requirements/functional/REQ-024-checks-where-rule-binds.md)
+- [REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names](../requirements/constraints/REQ-025-never-fetch-source.md)
 
 ### Not built yet
 
@@ -47,9 +49,10 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md): step 6, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md): variant 10a, decided by `living-docs:DEC-002`, tracked in `#1803`
-- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md): variant 4c, decided by `living-docs:DEC-002`, tracked in `#1812`
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md): variant 4c, decided by `living-docs:DEC-002#5`, tracked in `#1812`
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md): variant 4e, decided by `living-docs:DEC-002#6`, tracked in `#1812`
 - [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): step 3, decided by `living-docs:DEC-001#7`, tracked in `#1921`
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): variant 4a, decided by `living-docs:DEC-002`, tracked in `#1812`
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): variant 4a, decided by `living-docs:DEC-002#8`, tracked in `#1812`
 
 ### Diagrams
 

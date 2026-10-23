@@ -63,8 +63,8 @@ classDiagram
   CapturedSource : version
   class UnclassifiedDocument["Unclassified document"]
   DocumentationSpace "1" --> "0..1" SpaceDefinition : has
-  DocumentationSpace "1" o-- "*" Page : holds
-  DocumentationSpace "1" o-- "*" UnclassifiedDocument : holds in its places
+  DocumentationSpace "0..1" o-- "*" Page : holds
+  DocumentationSpace "0..1" o-- "*" UnclassifiedDocument : holds in its places
   SpaceDefinition "1" --> "*" Page : selects by its scope
   Page "*" --> "1" PageKind : names
   Page "*" --> "1" Reader : names
@@ -108,7 +108,7 @@ A documentation space is the collection of pages written for one audience. Every
 **Always true:**
 
 - Two roots that are one folder give no space until onboarding separates them (DEC-001 point 1).
-- A place outside every root that holds a document nothing else claims belongs to exactly one space, the one assigned to it (DEC-001 point 1).
+- A place outside every root that holds a document nothing else claims belongs to exactly one space, the one assigned to it. An untyped place of [rule sets](../../core/glossary.md#term-rule-set--rule-set) owes no assignment, and is passed over until it has one (DEC-001 point 1).
 - A synced tree is never a place of a space (DEC-001 point 1).
 
 ## Space definition
@@ -144,7 +144,7 @@ Defined in [TERM-page](../glossary.md#term-page--page).
 
 **Why:** A statement nothing grounds cannot be judged true or false, which is what makes fluent, unfounded text look reliable. Anchoring the page, not each sentence, keeps the cost bearable. Anchors turn "is this still true?" into a question a tool can raise and a reviewer can [answer](../../core/glossary.md#term-answer--answer) (DEC-001).
 
-A page is a document of a [documentation space](../glossary.md#term-documentation-space--documentation-space), written for one [reader](../glossary.md#term-reader--reader). It names its [page kind](../glossary.md#term-page-kind--page-kind) and its reader in its front matter, and its anchors name what makes its statements true. A document is a page where its [place](../../core/glossary.md#term-place--place) gives the page type and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every root, with no type, is a page too.
+A page is a document in a [documentation space](../glossary.md#term-documentation-space--documentation-space)'s places that names its [page kind](../glossary.md#term-page-kind--page-kind) in its front matter. It is written for the [reader](../glossary.md#term-reader--reader) it names there, and its anchors name what makes its statements true. A document is a page where its [place](../../core/glossary.md#term-place--place) gives the page type and it names its page kind. One that names its page kind in a place the [project](../../core/glossary.md#term-project--project) declares outside every root, with no type, is a page too.
 
 **Attributes:**
 
@@ -155,7 +155,7 @@ A page is a document of a [documentation space](../glossary.md#term-documentatio
 
 **Relations:**
 
-- It belongs to one documentation space, the one its place gives it (DEC-001 point 1).
+- It belongs to the documentation space its place gives it. While the two roots are one folder, a page under them belongs to none (DEC-001 point 1).
 - It names one page kind and one reader (DEC-001 point 4).
 - It may anchor captured sources (DEC-001 point 4).
 - `LDOC`'s rules and its space's own bind on it where a [space definition](../glossary.md#term-space-definition--space-definition)'s scope selects it (DEC-001 points 2 and 3).
@@ -173,13 +173,13 @@ Defined in [TERM-page-kind](../glossary.md#term-page-kind--page-kind).
 
 **Why:** None.
 
-A page kind is a category of pages that share one format. Each kind has a template, the starting shape a writer fills in, and a structure, the sections every [page](../glossary.md#term-page--page) of the kind carries. A signpost, which says what a folder holds and where to go, is one such kind.
+A page kind is a category of pages that share one format. Each kind has a template, the starting shape a writer fills in. Each kind living-docs ships declares a structure too, the sections every [page](../glossary.md#term-page--page) of the kind carries. A signpost, which says what a folder holds and where to go, is one such kind.
 
 **Attributes:**
 
 - its name, one word, which a page writes in its `kind` field (DEC-001 point 4)
 - its template (DEC-001 point 3)
-- its structure: the sections every page of the kind carries, in order where order matters (DEC-001 point 3)
+- its structure, where it declares one: the sections every page of the kind carries, in order where order matters (DEC-001 point 3)
 
 **Relations:** Many pages name one page kind (DEC-001 point 4).
 
@@ -197,7 +197,7 @@ Defined in [TERM-reader](../glossary.md#term-reader--reader).
 
 **Why:** Users need to know what the [system](../../core/glossary.md#term-system--system) does and how to use it. Maintainers need to know why, from where and by which rules. Documentation earns trust only where it is written for a reader it actually serves (DEC-001).
 
-A reader is a class of people or agents who read the [project](../../core/glossary.md#term-project--project)'s documentation, declared with what they need from it. A [page](../glossary.md#term-page--page) names one reader, and says only what that reader needs. The readers point, a [data point](../../core/glossary.md#term-data-point--data-point) living-docs provides, gathers the readers: `user` and `maintainer` always, and those a project or another [capability](../../core/glossary.md#term-capability--capability) adds.
+A reader is a class of people or agents who read the [project](../../core/glossary.md#term-project--project)'s documentation, declared with what they need from it. A [page](../glossary.md#term-page--page) names one reader, and says only what that reader needs. The readers [data point](../../core/glossary.md#term-data-point--data-point), which living-docs provides, gathers the readers: `user` and `maintainer` by default, and those a project or another [capability](../../core/glossary.md#term-capability--capability) adds.
 
 **Attributes:**
 
@@ -214,8 +214,8 @@ A reader is a class of people or agents who read the [project](../../core/glossa
 
 **Always true:**
 
-- `user` and `maintainer` are always readers, one for each space every project has (DEC-001 point 7).
-- Where `RS-LDOC-003` binds on a page, the page's reader is one the readers point holds (DEC-001 points 3 and 6).
+- `user` and `maintainer` are readers by default, one for each space every project has, unless the project's file removes one (DEC-001 point 7).
+- Where `RS-LDOC-003` binds on a page, the page's reader is one the readers data point holds (DEC-001 points 3 and 6).
 
 ## Captured source
 

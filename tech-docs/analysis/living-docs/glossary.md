@@ -3,9 +3,12 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
+      - {id: TERM-agent-definition, name: agent definition}
       - {id: TERM-agent-workspace, name: agent workspace}
       - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
+      - {id: TERM-artefact, name: artefact}
       - {id: TERM-artefact-type, name: artefact type}
       - {id: TERM-backbone, name: backbone}
       - {id: TERM-backbone-configuration, name: backbone configuration}
@@ -15,10 +18,12 @@ builds-on:
       - {id: TERM-data-point, name: data point}
       - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
+      - {id: TERM-default-branch, name: default branch}
       - {id: TERM-documentation-root, name: documentation root}
       - {id: TERM-finding, name: finding}
       - {id: TERM-friction, name: friction}
       - {id: TERM-install, name: install}
+      - {id: TERM-package-metadata, name: package metadata}
       - {id: TERM-place, name: place}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
@@ -88,7 +93,7 @@ TERM-onboarding-plan:
 TERM-page:
   name: page
   status: active
-  definition: "document of a documentation space, written for the reader it declares and anchored to what makes it true"
+  definition: "document in the places of a documentation space that names, in its front matter, the template it follows"
   pkit:
     friction:
       anchors:
@@ -101,7 +106,7 @@ TERM-page-kind:
   name: page kind
   noun-forms: [page kinds]
   status: active
-  definition: "category of documents, named by one word in each one's front matter, whose members follow one template and one declared structure"
+  definition: "category of documents, named by one word in each one's front matter, whose members follow one template"
   pkit:
     friction:
       anchors:
@@ -116,7 +121,7 @@ TERM-proposal:
   name: proposal
   noun-forms: [proposals]
   status: active
-  definition: "edit the living-docs agent drafts in the agent workspace with the evidence it rests on, which nothing applies until a person accepts it"
+  definition: "edit the living-docs agent drafts with the evidence it rests on, which nothing applies until a person accepts it"
   pkit:
     friction:
       anchors:
@@ -153,7 +158,7 @@ TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]
   status: active
-  definition: "rule set of the project's own that inherits `LDOC`, and whose scope selects the pages for one audience, so its rules bind on them"
+  definition: "rule set of the project's own that inherits `LDOC`, holding the rules for the pages of one audience, which bind where its scope selects them"
   pkit:
     friction:
       anchors:
@@ -182,9 +187,12 @@ TERM-unclassified-document:
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 - **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than living-docs's floor, 1.149.0.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
+  - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [agent workspace](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-workspace--agent-workspace)
   - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
+  - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
   - **Term:** [artefact type](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact-type--artefact-type)
   - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [backbone configuration](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone-configuration--backbone-configuration)
@@ -194,10 +202,12 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [data point](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-data-point--data-point)
   - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
+  - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [friction](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-friction--friction)
   - **Term:** [install](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-install--install)
+  - **Term:** [package metadata](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-package-metadata--package-metadata)
   - **Term:** [place](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-place--place)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
@@ -291,7 +301,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#reader).
 
-**Example:** a [page](#term-page--page) for `user` says what the [system](../core/glossary.md#term-system--system) does and how to use it, never its internals. A [project](../core/glossary.md#term-project--project) adds `operator` in its file for the readers point, for whoever runs its service in production.
+**Example:** a [page](#term-page--page) for `user` says what the [system](../core/glossary.md#term-system--system) does and how to use it, never its internals. A [project](../core/glossary.md#term-project--project) adds `operator` in its file for the readers [data point](../core/glossary.md#term-data-point--data-point), for whoever runs its service in production.
 
 **Distinctions:**
 
@@ -330,5 +340,5 @@ Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#unclas
 **Distinctions:**
 
 - **Page:** a document of the [page](#term-page--page) type, or one that names its page kind in an untyped [place](../core/glossary.md#term-place--place) of the project's outside every root. An unclassified document is neither (DEC-001 point 4).
-- **A document another owner claims:** such as an analysis artefact, a [decision record](../core/glossary.md#term-decision-record--decision-record) or a rule-set file. It is its owner's, and never counts as unclassified (DEC-001 points 1 and 4).
+- **A document another owner claims:** such as an analysis [artefact](../core/glossary.md#term-artefact--artefact), a [decision record](../core/glossary.md#term-decision-record--decision-record) or a rule-set file. It is its owner's, and never counts as unclassified (DEC-001 points 1 and 4).
 - **A document passed over:** one that lies only in an unassigned place of [rule sets](../core/glossary.md#term-rule-set--rule-set) outside every root, such as that place's `README.md`. It is neither a page nor unclassified (DEC-001 point 1).

@@ -26,7 +26,7 @@ A proposal drafts one edit with its evidence, and nothing applies it until a per
 ```mermaid
 classDiagram
   accTitle: Proposals and reviews
-  accDescr: A proposal edits one page, with its diff and its evidence. A reader-review judges one page as one reader, with its findings. An approved onboarding plan leads to the proposals it names.
+  accDescr: A proposal edits one page or more, with its diff and its evidence. A reader-review judges one page as one reader, with its findings. An approved onboarding plan leads to the proposals it names.
   class Proposal
   Proposal : diff
   Proposal : evidence
@@ -39,7 +39,7 @@ classDiagram
   OnboardingPlan : mapping
   class Page
   class Reader
-  Proposal "*" --> "1" Page : edits
+  Proposal "*" --> "1..*" Page : edits
   ReaderReview "*" --> "1" Page : judges
   ReaderReview "*" --> "1" Reader : reads as
   OnboardingPlan "1" --> "*" Proposal : leads to, once approved
@@ -70,7 +70,7 @@ A proposal is an edit the living-docs agent drafts, and leaves for a person to a
 
 **Relations:**
 
-- It edits one page, or carries one step of an [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan) (DEC-001 points 5 and 8).
+- It edits one page, or the pages and declarations of one step of an [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan) (DEC-001 points 5 and 8).
 - An approved onboarding plan leads to the proposals it names (DEC-001 point 8).
 
 **States:** A proposal is drafted, then a person accepts it, or refuses it. Nothing applies it before a person accepts it (DEC-001 point 5).
@@ -96,7 +96,7 @@ A reader-review reads one [page](../glossary.md#term-page--page) as its reader w
 **Relations:**
 
 - It judges one page, against the rules that bind on it (DEC-001 point 6).
-- It reads the page as the reader the page names, taken from the readers point (DEC-001 point 6).
+- It reads the page as the reader the page names, taken from the readers [data point](../../core/glossary.md#term-data-point--data-point) (DEC-001 point 6).
 
 **States:** None.
 
@@ -111,7 +111,7 @@ Defined in [TERM-onboarding-plan](../glossary.md#term-onboarding-plan--onboardin
 
 **Why:** An agent that moves a [project](../../core/glossary.md#term-project--project)'s documents itself will misjudge an ambiguous file's audience. A plan that cites its evidence, reviewed by a person, keeps the agent's speed without giving up judgement (DEC-001).
 
-An onboarding plan says how a project's existing documents come into its [documentation spaces](../glossary.md#term-documentation-space--documentation-space), before anything moves. On such a project nothing is anchored yet, so onboarding is [friction](../../core/glossary.md#term-friction--friction) work on that starting point. A person reviews the plan before any [proposal](../glossary.md#term-proposal--proposal) is drafted.
+An onboarding plan says how a project's existing documents come into its [documentation spaces](../glossary.md#term-documentation-space--documentation-space). On such a project nothing is anchored yet, so onboarding is [friction](../../core/glossary.md#term-friction--friction) work on that starting point. A person reviews the plan before anything moves.
 
 **Attributes:**
 
@@ -122,13 +122,13 @@ An onboarding plan says how a project's existing documents come into its [docume
 
 **Relations:**
 
-- Once approved, it leads to the proposals it names (DEC-001 point 8).
+- Once approved, it leads to the [proposals](../glossary.md#term-proposal--proposal) it names (DEC-001 point 8).
 - It classifies the [unclassified documents](../glossary.md#term-unclassified-document--unclassified-document) of the spaces' places (DEC-001 points 4 and 8).
 
 **States:** A plan waits for a person's review. Once it is approved, its moves land as ordinary reviewable changes (DEC-001 point 8).
 
 **Always true:**
 
-- Every line of it cites its evidence (DEC-001 point 8).
+- It cites its evidence for each thing it proposes (DEC-001 point 8).
 - Retiring a mapping from code to documentation is a separate change, for whoever owns the mapping (DEC-001 point 8).
 - Onboarding is complete when the declared surface is covered, and no page is left unanchored without an accepted reason (DEC-001 point 8).

@@ -47,7 +47,9 @@ pkit:
 - The project has living-docs installed, or registered in place where living-docs is developed, and the adapter deploys its `living-docs` agent definition (COR-013, COR-017 and COR-031).
 - The backbone configuration names the documentation roots, and declares the places that hold the project's documents, as `core:UC-021` describes (COR-050 point 1).
 - The project declares the surface its documentation ought to cover, so the whole-repository check measures what no page anchors (COR-050 points 8 and 14).
-- Where a work-tracking capability keeps a mapping from code to documents, it gives the mapping through its documentation-check point (project-management DEC-053). Without one, the agent has no mapping to read.
+- Where a work-tracking capability keeps a mapping from code to documents, it gives the mapping through its documentation-check data point (project-management DEC-053). Without one, the agent has no mapping to read.
+- A page new in a change counts as revalidated there. A change that alters the anchors of a document with front matter asks it for an answer in the same change (COR-050 point 6).
+- Nothing at run time confines the agent to the agent workspace. Its definition grants no tool that edits a file in place and owns no path, but its Write and its Bash reach any file (COR-013).
 
 **Trigger:** The adopter installs living-docs on a project that has documentation already.
 
@@ -66,7 +68,7 @@ pkit:
 7. The agent shows the plan's summary, and waits at its one gate: approve, revise or reject.
 8. The adopter approves the plan.
 9. The agent drafts one proposal for each step the plan names, under `.agent-workspace/living-docs/onboarding/`, each a diff and a pull-request body that cites the plan's evidence. It applies none, and stops (DEC-001 point 8 and REQ-022).
-10. The adopter reviews each proposal, applies it, and opens its pull request. A page new in its change counts as revalidated there, so it owes no answer (COR-050 point 6).
+10. The adopter reviews each proposal, applies it, and opens its pull request.
 11. The adopter runs `pkit living-docs validate` again. The system counts no unclassified document, and no page left unanchored without an accepted reason (DEC-001 point 8).
 
 **Variants:**
@@ -82,7 +84,8 @@ pkit:
 - **8a.** The adopter rejects the plan with feedback. The agent revises the plan, writes its file again and shows what changed, and the path rejoins at step 7.
 - **8b.** The adopter rejects the plan outright. The agent drafts nothing, the plan stays in the agent workspace, and the use case ends.
 - **9a.** The plan turns rules of a mapping into page anchors. Retiring the mapping is a separate change for whoever owns it, so the agent drafts no proposal for it (DEC-001 point 8).
-- **11a.** Unclassified documents or pages left unanchored remain, or the declared surface stays uncovered. The path rejoins at step 4.
+- **10a.** A proposal adds anchors to a document that has front matter already. The adopter answers for it in the same pull request, as `core:UC-002` describes, and the path goes on at step 11.
+- **11a.** Unclassified documents or pages left unanchored remain, or the whole-repository check still measures surface that no page anchors. The path rejoins at step 4.
 
 **Postconditions:** Each document in the spaces' places is a page of a space, or left out of the spaces' rules on purpose. Each page carries anchors, or a reason for none that a person accepted, and the declared surface is covered (DEC-001 point 8).
 

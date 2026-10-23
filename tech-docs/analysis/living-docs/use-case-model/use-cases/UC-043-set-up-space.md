@@ -8,6 +8,7 @@ other-actors:
   - core:ACT-ai-agent
 requirements:
   - REQ-023
+  - REQ-024
 shortfalls:
   - at: 2
     issue: "#1922"
@@ -42,9 +43,11 @@ pkit:
         - COR-050#1
         - COR-051#4
         - COR-051#7
+        - COR-056#2
         - COR-056#6
       artefact:
         - REQ-023
+        - REQ-024
 ---
 
 # UC-043 — Set up a documentation space for one audience
@@ -61,7 +64,7 @@ pkit:
 **Assumptions:**
 
 - The project has living-docs installed, or registered in place where living-docs is developed (COR-017 and COR-031). The CLI registers `pkit living-docs new` and `validate` from its package metadata (COR-021). The adapter deploys the `docs-author` skill (COR-005 and COR-013).
-- The backbone configuration names the two documentation roots, and declares in `friction.places` each place outside them that holds the space's pages (COR-050 point 1).
+- The backbone configuration names the two documentation roots, and declares in `friction.places` each place outside them that holds the space's pages (COR-050 point 1). Such a place gives the page type where a space definition selects by type (COR-056 point 2).
 - The backbone answers which documents each place holds, with their types and the scopes over them (COR-056 point 6). It answers where each rule binds (COR-051 point 7). living-docs reads those answers, and ranks no place itself.
 - The backbone records a documentation location when a component first uses it, and a later change of root moves nothing it recorded (COR-049 point 5).
 - The review of the change that carries a space definition accepts each rule the definition writes as accepted (COR-051 point 4).
@@ -77,7 +80,7 @@ pkit:
 > **Not built yet:** the configuration holds no audience, and `pkit validate` refuses one as an unknown key. DEC-001 point 1 decides that the configuration holds each space's audience, and #1922 tracks it.
 
 3. The adopter runs `pkit living-docs new space <space> --dry-run`.
-4. The system makes the checks it makes before the write, prints the space definition and the configuration as it would write them, and writes nothing.
+4. The system makes the checks it makes before the write, prints the space definition and the configuration as it would write them, and writes nothing. So the adopter previews each edit, as core:REQ-009 asks.
 5. The adopter reads the scope it would write, and runs `pkit living-docs new space <space>`.
 6. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
 
@@ -92,13 +95,13 @@ pkit:
 12. The system says what it wrote, and lists as a warning each page of the space that the space's rules now fail. The definition stands (DEC-001 point 2).
 13. The adopter names the page its readers start from as the space's `entry-point` in the configuration (DEC-001 point 1).
 14. The adopter runs `pkit living-docs validate`.
-15. The system checks the space's places and their assignment, its definition's scope against them, its entry point and its definition (DEC-001 points 1 and 2). It prints a summary that names the spaces whose definitions carry a scope, and exits 0.
+15. The system checks the space's places and their assignment, its definition's scope against them, its entry point and its definition (DEC-001 points 1 and 2). It checks a part of an `LDOC` rule only on the pages where that rule binds (REQ-024). It prints a summary that names the spaces whose definitions carry a scope, and exits 0.
 
 **Variants:**
 
 - **1a.** Every page of the space lies under its documentation root, so no place needs assigning. The path goes on at step 2.
-- **1b.** The space is one the project adds. It has no root of its own, so each of its places is assigned to it (DEC-001 point 1).
-- **1c.** A place outside every root that the adopter assigns gives no type. The adopter gives it the page type in `friction.places`, as `{path: <place>, type: living-docs:page}`, since the space definition selects by type (DEC-001 point 1).
+- **1b.** The space is one the project adds. It has no root of its own, so each of its places is assigned to it. DEC-001 point 1 has them lie under the root that serves its audience, which validation does not check.
+- **1c.** A place outside every root that the adopter assigns gives no type in `friction.places`, and the space definition selects by type. The write then fails validation, as variant 10a says (DEC-001 point 1).
 - **3a.** The adopter has an AI agent run steps 3 and 5 through the `docs-author` skill's space operation. The agent asks the adopter first, where the space needs a configuration file edited (the skill's space operation).
 - **5a.** The adopter writes the space definition by hand instead, from the template `templates/space-definition.md` (DEC-001 point 2). They record the definitions location with `pkit docs record-location living-docs definitions`, and the path goes on at step 13.
 - **7a.** No scope can select the space's pages yet. The two roots are one folder, as they are by default, or the space is one the project adds with no place assigned. The system refuses, naming the fix, and writes nothing. The use case ends (DEC-001 point 1).
@@ -108,8 +111,10 @@ pkit:
 - **9a.** The capability's configuration does not exist yet. The system creates it, holding the space's entry.
 - **9b.** The configuration's `spaces` is not written as a block mapping, or its lines end in more than one way. The system refuses before it writes anything, and names the line to add by hand. The use case ends.
 - **10a.** The write brings a validation error the project did not have, such as an assigned place outside every root that gives no page type. The system puts back every file it wrote, refuses and quotes the error (REQ-023). The use case ends.
+- **10b.** The check after the write cannot read what it judges once the rules bind. An example is a readers data point that does not resolve, where the space's pages name readers. The system puts back every file it wrote, and refuses (REQ-023). The use case ends.
 - **11a.** The definitions location cannot be recorded. The system puts back every file it wrote, and refuses (REQ-023). The use case ends.
 - **12a.** The space's rules fail some of its pages once they bind. The adopter mends those pages next, as `UC-044` describes, and the path goes on at step 13.
+- **13a.** The page the space's readers start from does not exist yet. The adopter writes it first, as `UC-044` describes, and the path rejoins at step 13.
 - **15a.** Validation finds a fault in the space, names it, and exits 1. The adopter mends it, and the path rejoins at step 14. The faults it fails on are these:
   - a place outside every root that holds a document nothing else claims, with no assignment
   - an assignment of a place `friction.places` does not declare, to a space nobody declares, or of one place twice
@@ -122,7 +127,8 @@ pkit:
 
 **Minimal guarantees:**
 
-- A refused stamp leaves every file and folder as it was (REQ-023).
+- A refused stamp puts back every file it wrote, or names each it could not (REQ-023).
 - The stamp writes no space definition that exists, nothing of the backbone configuration, and no other space's definition (DEC-001 point 2).
+- The stamp writes only what DEC-001 point 2 names it the writer of, so it meets core:REQ-002.
 - Validation changes no file, needs no network and answers the same for the same state, meeting core:REQ-005 and core:REQ-007 (`validate.py`).
 - A later change of root moves no space definition, since the definitions location is recorded on first use (COR-049 point 5 and core:REQ-014).
