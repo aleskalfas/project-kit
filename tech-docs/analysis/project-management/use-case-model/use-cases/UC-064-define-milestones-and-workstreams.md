@@ -96,7 +96,7 @@ pkit:
 
 5. The system creates the Milestone, its description opening with `Close trigger: <trigger>`, and prints `[ok] created: <url>` (DEC-016).
 6. The planner adds a workstream: `pkit pm add-workstream <slug> --name "<name>" --description "<text>"`. The system runs the checks of step 3.
-7. The system checks the slug and each attribute against the rules for their form, and writes the workstream into the project's workstreams file. It creates the label `workstream:<slug>`, or adds the workstream to the board's field where a board carries the axis (DEC-018).
+7. The system checks the slug and each attribute against what DEC-018 decides of their form, and writes the workstream into the project's workstreams file. It creates the label `workstream:<slug>`, or adds the workstream to the board's field where a board carries the axis (DEC-018).
 
 > [!WARNING]
 > **Not built yet:** `add-workstream` checks the slug's form alone, and writes no board's field. DEC-018 decides that it checks each attribute and keeps the board in step, and #1940 tracks it.
@@ -107,7 +107,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** nothing reads `pre_close_triage_lead_days`, and nothing lists the open issues. DEC-016 decides that the triage is offered before the due date, and #1939 tracks it.
 
-10. The planner closes the Milestone: `pkit pm close-milestone <M>`. The system runs the checks of step 3.
+10. Once the due date has passed, the planner closes the Milestone: `pkit pm close-milestone <M>`. The system runs the checks of step 3.
 11. The system reads the close trigger, and finds the Milestone's issues. A date-based Milestone closes whether issues are still open or not (DEC-016).
 12. The system finds where the open issues roll forward to. That is the Milestone the description names as `Rollforward target:`, or else the next open one of its category (DEC-016).
 13. The system closes the Milestone, with a line that records its trigger and what rolled forward. It moves each open issue to the target, each with an audit comment, and keeps each issue's state. It prints `[ok] rolled <n> open child issue(s) forward to <target>` (DEC-016).

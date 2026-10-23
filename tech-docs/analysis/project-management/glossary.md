@@ -41,11 +41,24 @@ builds-on:
         name: Merge authoriser
       - id: ACT-operator
         name: Operator
+TERM-audit-comment:
+  name: audit comment
+  noun-forms: [audit comments]
+  status: active
+  definition: "message project-management posts to record why a person set a check aside, or, at the project's fullest setting, each write it governs"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/audit.py
+        record:
+          - project-management:DEC-049
+          - project-management:DEC-014
 TERM-authorisation:
   name: authorisation
   noun-forms: [authorisations]
   status: active
-  definition: "person's go-ahead for one move the issue lifecycle leaves to a person, given for that one issue and never standing for a later move"
+  definition: "person's decision that one issue may make a move the issue lifecycle leaves to a person, given in the session and for that issue alone"
   pkit:
     friction:
       anchors:
@@ -55,6 +68,32 @@ TERM-authorisation:
           - project-management:DEC-006
           - project-management:DEC-014
           - project-management:DEC-055#3
+TERM-batch-plan:
+  name: batch plan
+  noun-forms: [batch plans]
+  status: active
+  definition: "outline of issues the project-manager agent files for an intent once a person approves it, each with its parent and use-case entries"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/skills/pm/batch-plan.md
+          - .pkit/capabilities/project-management/agents/project-manager/project-manager.md
+        record:
+          - project-management:DEC-029
+          - project-management:DEC-054#3
+TERM-bypass:
+  name: bypass
+  status: active
+  definition: "override of a check that refuses by default, made by a person with an explicit reason, which an audit comment records before the write"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/schemas/validation-severity.yaml
+        record:
+          - project-management:DEC-014
+          - project-management:DEC-046#1
 TERM-cascade:
   name: cascade
   status: active
@@ -94,6 +133,19 @@ TERM-classification-axis:
           - .pkit/capabilities/project-management/schemas/classification.yaml
         record:
           - project-management:DEC-012
+TERM-close-trigger:
+  name: close trigger
+  noun-forms: [close triggers]
+  status: active
+  definition: "line opening a Milestone's description that names when it ends: at its due date, once its issues are done, or at whichever comes first"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/schemas/time-containers.yaml
+          - .pkit/capabilities/project-management/scripts/_lib/milestone.py
+        record:
+          - project-management:DEC-016
 TERM-epic:
   name: EPIC
   noun-forms: [EPICs]
@@ -117,24 +169,10 @@ TERM-feature:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
-TERM-batch-plan:
-  name: batch plan
-  noun-forms: [batch plans]
-  status: active
-  definition: "outline of issues the project-manager agent files for an intent once a person approves it, each with its parent and use-case entries"
-  pkit:
-    friction:
-      anchors:
-        path:
-          - .pkit/capabilities/project-management/skills/pm/batch-plan.md
-          - .pkit/capabilities/project-management/agents/project-manager/project-manager.md
-        record:
-          - project-management:DEC-029
-          - project-management:DEC-054#3
 TERM-issue:
   name: issue
   status: active
-  definition: "item of work a GitHub repository tracks, with a title, a body and labels, of one of four types that nest under each other"
+  definition: "item of work a GitHub repository tracks, with a title, a body and labels, which project-management files as one of four types"
   pkit:
     friction:
       anchors:
@@ -184,6 +222,18 @@ TERM-milestone:
         record:
           - project-management:DEC-016
           - project-management:DEC-004
+TERM-milestone-category:
+  name: Milestone category
+  noun-forms: [Milestone categories]
+  status: active
+  definition: "class of GitHub's containers of issues that a project declares, with the title format, default close trigger and meaning its members share"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/create-milestone.py
+        record:
+          - project-management:DEC-016
 TERM-parent-reference:
   name: parent reference
   status: active
@@ -225,7 +275,7 @@ TERM-task:
 TERM-umbrella:
   name: Umbrella
   status: active
-  definition: "issue that groups related Tasks by a theme they share, and claims no functionality of its own"
+  definition: "issue that groups related work by a theme it shares, and claims no functionality of its own"
   pkit:
     friction:
       anchors:
@@ -250,7 +300,7 @@ TERM-verdict:
   name: verdict
   noun-forms: [verdicts]
   status: active
-  definition: "comment a reviewer agent posts on a pull request, opening with a line that approves the change or requests changes to it"
+  definition: "comment a reviewer agent posts on a pull request, carrying a marker, whose first line approves the change or requests changes to it"
   pkit:
     friction:
       anchors:
@@ -312,6 +362,17 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
   - **Actor:** [Operator](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-operator.md)
 
+## TERM-audit-comment — audit comment
+
+Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#audit-comment).
+
+**Example:** `promote-issue 1712 --reason "scheduled this week"` posts an audit comment on #1712 that names who bypassed the check, and why, before it moves #1712 to Backlog.
+
+**Distinctions:**
+
+- **The timeline:** GitHub's own record of each [change](../core/glossary.md#term-change--change) of a label, with who made it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the change (DEC-049).
+- **The journal:** the core's record of each move of a [process](../core/glossary.md#term-process--process), kept where the [project](../core/glossary.md#term-project--project) turns it on. Where it is kept, it is the canonical record, and the comments project it (DEC-049 point 1).
+
 ## TERM-authorisation — authorisation
 
 Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#authorisation).
@@ -320,9 +381,31 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 **Distinctions:**
 
-- **Consent:** the core's word for a person's agreement to a write. An authorisation decides that an [issue](#term-issue--issue) may make a move the team is bound by. Where a command carries one, the person's confirmation gives both (DEC-006).
+- **Consent:** the core's word for a person's agreement to a write. An authorisation decides that an [issue](#term-issue--issue) may make a move the team is bound by, whatever the command writes (DEC-006).
 - **Approval:** a [verdict](#term-verdict--verdict) that a [pull request](../core/glossary.md#term-pull-request--pull-request)'s [change](../core/glossary.md#term-change--change) may merge. It is no authorisation to merge, which stays the person's (DEC-055 point 3).
-- **Bypass:** setting aside, with a reason, a [rule](../core/glossary.md#term-rule--rule) that refuses a move unless a person overrides it. The reason goes into an audit comment before the move. A bypass is how a person authorises such a move (DEC-014 and DEC-046 point 1).
+- **Bypass:** the override, with a reason, of a check that refuses by default. It is how a person authorises a move the [issue lifecycle](#term-issue-lifecycle--issue-lifecycle) refuses unless a person overrides it (DEC-014 and DEC-046 point 1).
+
+## TERM-batch-plan — batch plan
+
+Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#batch-plan).
+
+**Example:** for the intent "let a [project](../core/glossary.md#term-project--project) rename a [workstream](#term-workstream--workstream)", the batch plan holds a [Feature](#term-feature--feature) under an [EPIC](#term-epic--epic) and three Tasks under the Feature. Each row gives its type, title, parent, workstream, [Milestone](#term-milestone--milestone), priority and [use-case entries](#term-use-case-entry--use-case-entry).
+
+**Distinctions:**
+
+- **The `batch-plan` procedure:** the sub-procedure of the `pm` [skill](../core/glossary.md#term-skill--skill) that the agent follows to draft a batch plan, ask for its approval and file it (DEC-029).
+- **Filing:** what the agent does once the person approves the batch plan. It files each [issue](#term-issue--issue) through the [capability](../core/glossary.md#term-capability--capability)'s own commands, which check it as they file it (DEC-029).
+
+## TERM-bypass — bypass
+
+Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#bypass).
+
+**Example:** `promote-issue 1712 --reason "scheduled this week"` moves #1712 to Backlog as a bypass, with that reason.
+
+**Distinctions:**
+
+- **`--force`:** the operator's override of a check that guards what must never happen. That check takes no bypass (DEC-046 points 1 and 2).
+- **Authorisation:** a person's decision that an [issue](#term-issue--issue) may make a move they hold. A bypass is how a person authorises a move that is refused unless a person overrides it (DEC-006 and DEC-014).
 
 ## TERM-cascade — cascade
 
@@ -358,6 +441,17 @@ Explained in [VIEW-classification-of-issues](domain-model/020-classification-of-
 - **Type of an issue:** [EPIC](#term-epic--epic), [Feature](#term-feature--feature), [Umbrella](#term-umbrella--umbrella) or [Task](#term-task--task), which places the [issue](#term-issue--issue) in the hierarchy. The `type` axis gives its kind of work instead, such as `bug` or `docs` (DEC-004 and DEC-012).
 - **Label:** GitHub's tag on an issue. It always carries the `type` axis, and carries the other two where no board field does (DEC-012).
 
+## TERM-close-trigger — close trigger
+
+Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#close-trigger).
+
+**Example:** `Close trigger: date-based` opens the description of a [Milestone](#term-milestone--milestone) of project-kit's category `housekeeping`. The Milestone closes at its due date, and its open issues roll forward to the next.
+
+**Distinctions:**
+
+- **Due date:** the date GitHub keeps on the Milestone. It ends the Milestone only where the close trigger is `date-based` or `either` (DEC-016).
+- **The cascade's close of a parent:** the close of an [issue](#term-issue--issue) whose children are all done. A Milestone is no issue, and closes by its own trigger (DEC-016).
+
 ## TERM-epic — EPIC
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#epic).
@@ -367,8 +461,8 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 **Distinctions:**
 
 - **Milestone:** a container of issues that GitHub keeps apart from them. An EPIC sits directly under one, and never deeper (DEC-004).
-- **Feature:** an [issue](#term-issue--issue) that claims one coherent piece of functionality, with [checkboxes](#term-checkbox--checkbox) that verify it. It sits under an EPIC, or straight under a [Milestone](#term-milestone--milestone) where the [project](../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
-- **Umbrella:** an issue that groups related Tasks by a theme, and claims nothing (DEC-004).
+- **Feature:** an [issue](#term-issue--issue) that claims one coherent piece of functionality, with [checkboxes](#term-checkbox--checkbox) that verify it. It sits under an EPIC or an [Umbrella](#term-umbrella--umbrella), or straight under a [Milestone](#term-milestone--milestone) where the [project](../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
+- **Umbrella:** an issue that groups related work by a theme, and claims nothing (DEC-004).
 
 ## TERM-feature — Feature
 
@@ -378,20 +472,9 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 **Distinctions:**
 
-- **Umbrella:** an [issue](#term-issue--issue) that groups Tasks by a theme, and claims nothing. A Feature never holds another Feature or an [Umbrella](#term-umbrella--umbrella) (DEC-004 and DEC-005).
-- **EPIC:** an issue that states an outcome spanning several quarters. A Feature sits under one, or straight under a [Milestone](#term-milestone--milestone) where the project skips the [EPIC](#term-epic--epic) (DEC-004).
+- **Umbrella:** an [issue](#term-issue--issue) that groups related work by a theme, and claims nothing. It may hold Features, and a Feature never holds an [Umbrella](#term-umbrella--umbrella) (DEC-004 and DEC-005).
+- **EPIC:** an issue that states an outcome spanning several quarters. A Feature sits under one or under an Umbrella, or straight under a [Milestone](#term-milestone--milestone) where the project skips the [EPIC](#term-epic--epic) (DEC-004).
 - **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to install. project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
-
-## TERM-batch-plan — batch plan
-
-Explained in [VIEW-batch-planning](domain-model/050-batch-planning.md#batch-plan).
-
-**Example:** for the intent "let a [project](../core/glossary.md#term-project--project) rename a [workstream](#term-workstream--workstream)", the batch plan holds a [Feature](#term-feature--feature) under an [EPIC](#term-epic--epic) and three Tasks under the Feature. Each row gives its type, title, parent, workstream, [Milestone](#term-milestone--milestone), priority and [use-case entries](#term-use-case-entry--use-case-entry).
-
-**Distinctions:**
-
-- **The `batch-plan` procedure:** the sub-procedure of the `pm` [skill](../core/glossary.md#term-skill--skill) that the agent follows to draft a batch plan, ask for its approval and file it (DEC-029).
-- **Filing:** what the agent does once the person approves the batch plan. It files each [issue](#term-issue--issue) through the [capability](../core/glossary.md#term-capability--capability)'s own commands, which check it as they file it (DEC-029).
 
 ## TERM-issue — issue
 
@@ -403,7 +486,7 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 - **Pull request:** a proposal to land one [change](../core/glossary.md#term-change--change), which closes the Task it names. It takes none of the four types (DEC-005).
 - **Milestone:** a container that GitHub keeps apart from issues. It holds issues, and is none itself (DEC-004).
-- **Report:** an issue an adopter files on the repository of the [distribution](../core/glossary.md#term-distribution--distribution) they use. A [project](../core/glossary.md#term-project--project) files its own Tasks to fix one (DEC-048).
+- **Report:** an issue an adopter files on the repository of the [distribution](../core/glossary.md#term-distribution--distribution) they use, through the core's command. It takes none of the four types, and a [project](../core/glossary.md#term-project--project) files Tasks of its own to fix one (DEC-048).
 
 ## TERM-issue-lifecycle — issue lifecycle
 
@@ -414,8 +497,8 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 **Distinctions:**
 
 - **Process:** the core's word for any declared course of a subject through states. The issue lifecycle is the [process](../core/glossary.md#term-process--process) project-management defines for issues, which the core's engine checks (DEC-033).
-- **Review:** the state of a [Task](#term-task--task) whose pull request is open. A container never enters it, and goes from In Progress to Done by its own close (DEC-006).
-- **A board's Status column:** a projection of the state, where a [project](../core/glossary.md#term-project--project) keeps a Projects v2 board. Where the two disagree, the state the [issue](#term-issue--issue) itself carries wins (DEC-006).
+- **Review:** the state of a [Task](#term-task--task) whose pull request is open. A parent [issue](#term-issue--issue) never enters it, and goes from In Progress to Done by its own close (DEC-006).
+- **A board's Status column:** a projection of the state, where a [project](../core/glossary.md#term-project--project) keeps a Projects v2 board. Where the two disagree, the state the issue itself carries wins (DEC-006).
 
 ## TERM-merge-gate — merge gate
 
@@ -425,7 +508,7 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 
 **Distinctions:**
 
-- **Branch protection:** GitHub's own [rule](../core/glossary.md#term-rule--rule) on a branch, which the hosting service holds. The merge gate is project-management's, and it runs before the merge is asked for (DEC-003 and DEC-028).
+- **Branch protection:** GitHub's own protection of a branch, which the hosting service holds. The merge gate is project-management's, and it runs before the merge is asked for (DEC-003 and DEC-028).
 - **Authorisation to merge:** the person's go-ahead for the pull request at its head. A gate that passes gives no [authorisation](#term-authorisation--authorisation), and an authorisation passes no gate (DEC-055 point 3).
 - **Change check:** the core's comparison of a head with its [base](../core/glossary.md#term-base--base). The landing command runs it to list the answers a [change](../core/glossary.md#term-change--change) wrote, and the merge gate judges none of them (DEC-055 point 3).
 
@@ -441,11 +524,22 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **Workstream:** a long-lived area that classifies issues and never holds them. A theme that never closes is a [workstream](#term-workstream--workstream), never a Milestone (DEC-016).
 - **Iteration:** an optional field of a Projects v2 board for a shorter window, which nothing requires (DEC-016).
 
+## TERM-milestone-category — Milestone category
+
+Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#milestone-category).
+
+**Example:** project-kit declares two categories: `milestone`, an outcome bundle titled `Milestone {n}: {name}`, and `housekeeping`, a rolling period titled `Housekeeping {n}: {name}`.
+
+**Distinctions:**
+
+- **Close trigger:** the line on one [Milestone](#term-milestone--milestone) that says when it closes. The category gives a default, and the Milestone's own line overrides it (DEC-016).
+- **Workstream:** a long-lived area that classifies issues. A category classifies Milestones, by their titles (DEC-016).
+
 ## TERM-parent-reference — parent reference
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#parent-reference).
 
-**Example:** #1712's body opens with `EPIC: #1643`, its parent reference. A [Task](#term-task--task) straight under a [Milestone](#term-milestone--milestone) opens with `Milestone: #<N>` instead.
+**Example:** #1712's body opens with `EPIC: #1643`, its parent reference. A [Task](#term-task--task) straight under a [Milestone](#term-milestone--milestone) opens with `Milestone: [#7](../milestone/7)` instead.
 
 **Distinctions:**
 
@@ -479,11 +573,11 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#umbrella).
 
-**Example:** an Umbrella groups the Tasks that tidy the CLI's messages. Its body needs only a `## Purpose` section, which says what holds them together.
+**Example:** an Umbrella groups the work that tidies the CLI's messages. Its body needs only a `## Purpose` section, which says what holds them together.
 
 **Distinctions:**
 
-- **Feature:** an [issue](#term-issue--issue) that claims functionality, with [checkboxes](#term-checkbox--checkbox) that verify it. An Umbrella may hold another Umbrella, and a [Feature](#term-feature--feature) holds none (DEC-004 and DEC-005).
+- **Feature:** an [issue](#term-issue--issue) that claims functionality, with [checkboxes](#term-checkbox--checkbox) that verify it. An Umbrella may hold Features and other Umbrellas, and a [Feature](#term-feature--feature) holds neither (DEC-004 and DEC-005).
 - **Workstream:** a long-lived area that classifies issues across many outcomes, and holds none. An Umbrella holds its Tasks, and closes (DEC-004 and DEC-018).
 
 ## TERM-use-case-entry — use-case entry

@@ -11,6 +11,7 @@ requirements:
   - REQ-041
 after:
   - [UC-064]
+  - [UC-063, UC-064]
 shortfalls:
   - at: 6
     issue: "#1313"
@@ -26,6 +27,9 @@ shortfalls:
     record: project-management:DEC-010
   - at: "6c"
     issue: "#1313"
+    record: project-management:DEC-005
+  - at: "6e"
+    issue: "#1314"
     record: project-management:DEC-005
   - at: "9a"
     issue: "#1932"
@@ -48,6 +52,7 @@ pkit:
         - .pkit/capabilities/project-management/templates/Task.md
         - .pkit/capabilities/project-management/skills/pm/create-issue.md
       record:
+        - project-management:DEC-036
         - project-management:DEC-004
         - project-management:DEC-005
         - project-management:DEC-010
@@ -80,7 +85,10 @@ pkit:
 - **AI agent** (`core:ACT-ai-agent`): files the Task for the developer, through the `pm` skill's `create-issue.md`, which runs the same command.
 - **Operator** (`core:ACT-operator`): is asked before `pkit pm create-issue` writes in a repository other than the session's own, so no such write happens silently (core:REQ-012).
 
-**Preconditions:** **From UC-064:** The project declares the workstreams its work falls into (DEC-018).
+**Preconditions:**
+
+- **From UC-064:** The project declares the workstreams its work falls into (DEC-018).
+- **From UC-063, or UC-064:** The issue the Task goes under is filed, or the Milestone it goes straight under is created (DEC-004).
 
 **Assumptions:**
 
@@ -95,7 +103,7 @@ pkit:
 2. The developer writes the body in a file, opening with the parent reference, or leaves the body to the Task's template (DEC-010).
 3. The developer runs `pkit pm create-issue --type task --title "<title>" --parent <N>`, with `--kind`, `--priority`, `--workstream` and, where they wrote one, `--body-file`.
 4. At its entry, the system checks the project's setup, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
-5. The system composes the title from the kind's prefix and `<title>`, such as `[Bug] <title>`, and checks it against the title rules (DEC-011).
+5. The system composes the title from the kind's prefix and `<title>`, such as `[Bug] <title>`, and checks it against the title formats the capability declares (DEC-011).
 6. The system reads the parent's type, and checks that a Task may sit under it: a Feature, an Umbrella or an EPIC (DEC-005).
 
 > [!WARNING]
@@ -111,10 +119,10 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the template opens with a comment, and the composed body puts the parent reference below it. So the body's first line names no parent. DEC-005 decides that every body opens with its parent reference, and #1314 tracks it.
 
-9. The system checks that the body holds each section a Task requires: `## What`, `## Acceptance criteria` and `## Doc impact` (DEC-010).
+9. The system checks that the body holds each section a Task requires: `## What`, `## Acceptance criteria` and `## Doc impact`. It checks too that the body holds no heading of the first level, since the title is that heading. It warns of what a body should not hold, such as a reference to a line of a file (DEC-010).
 
 > [!WARNING]
-> **Not built yet:** `create-issue` checks no required section, so a Task with no `## Doc impact` is filed. DEC-010 decides that such a filing is refused, and #1932 tracks it.
+> **Not built yet:** `create-issue` checks none of these, so a Task with no `## Doc impact` is filed. DEC-010 decides that such a filing is refused, and #1932 tracks it.
 
 10. The system reports each placeholder of the template left in the body, and each use-case entry the body cites that the data point lacks. Neither stops the filing (DEC-031 and DEC-054 point 4).
 11. The system prints the Task it is about to file, with its title, type, kind, priority, workstream, parent and labels. At a terminal, without `--yes`, it asks before it writes.
@@ -127,17 +135,23 @@ pkit:
 - **3a.** The developer passes `--dry-run`. The system makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
 - **4a.** The project was never set up, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing (REQ-041). The use case ends.
 - **4b.** The repository is another, and the operator declines, or nobody can answer and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
-- **5a.** The composed title breaks a rule that blocks, such as a conventional-commits prefix. The system refuses, naming the rule, and writes nothing (DEC-011). A rule that only warns, such as one on a short title, is printed, and the path goes on.
+- **5a.** The composed title fails a check that blocks, such as one on a conventional-commits prefix. The system refuses, naming the check, and writes nothing (DEC-011). A check that only warns, such as one on a short title, is printed, and the path goes on.
 - **6a.** No parent is given. The system refuses, naming the types a Task may sit under, and writes nothing (DEC-004). The use case ends.
-- **6b.** The developer passes `--milestone <M>` in place of a parent, since the project skips the EPIC for that Milestone (DEC-004). The parent reference names the Milestone, and the Task is filed in it. The path goes on at step 7.
+- **6b.** The developer passes `--milestone <M>` in place of a parent, since the project skips the EPIC for that Milestone (DEC-004). The parent reference names the Milestone, as `Milestone: [#<M>](../milestone/<M>)`, and the Task is filed in it. The path goes on at step 7.
 - **6c.** The parent is of a type a Task may not sit under, such as another Task. The system refuses, naming the types a Task may sit under, and writes nothing (DEC-005). The use case ends.
 
 > [!WARNING]
 > **Not built yet:** `create-issue` warns at most, and files the Task under that parent. DEC-005 decides that the filing is refused, and #1313 tracks it.
 
-- **7a.** No workstream is given, and the project's settings give no default. The system refuses, and writes nothing (DEC-012). The use case ends.
+- **6d.** The project declares its hierarchy advisory, since its tracker cannot carry one (DEC-036). With no parent, the system warns, and files the Task. The path goes on at step 7.
+- **6e.** The developer passes both `--parent <N>` and `--milestone <M>`. The parent reference names `<N>`, and the Task is filed in the Milestone as well (DEC-005).
+
+> [!WARNING]
+> **Not built yet:** `create-issue` writes the Milestone into the body's first line, while it links the Task under `<N>`. DEC-005 decides that the first line names the parent, and #1314 tracks it.
+
+- **7a.** A label carries the workstream, none is given, and the project's settings give no default. The system refuses, and writes nothing (DEC-012). The use case ends.
 - **8a.** The file's first line is no parent reference of a Task's forms, or it names a parent other than `--parent`. The system refuses, quoting the forms, and writes nothing (DEC-005). The use case ends.
-- **9a.** The body lacks a section a Task requires. The system refuses, naming the section, and writes nothing (DEC-010). The use case ends.
+- **9a.** The body lacks a section a Task requires, or holds a heading of the first level. The system refuses, naming what is wrong, and writes nothing (DEC-010). The use case ends.
 
 > [!WARNING]
 > **Not built yet:** `create-issue` files the Task without the section. DEC-010 decides that the filing is refused, and #1932 tracks it.
@@ -148,7 +162,7 @@ pkit:
 - **13a.** The link to the parent fails. The system warns that the Task is filed under its parent by its body alone, and names `pkit pm link-parent <n>`, which makes the link (DEC-005). The use case ends with the Task filed.
 - **13b.** The project keeps containment as text, where its GitHub has no sub-issues. The system makes no link, and rewrites the comment on the parent that lists its children (DEC-039).
 
-**Postconditions:** The Task is open under its parent, as a GitHub sub-issue and in its body's first line. Its title carries its kind's prefix, it takes a value on each classification axis, and its body holds each section a Task requires.
+**Postconditions:** The Task is open, under its parent as a GitHub sub-issue and in its body's first line, wherever the project's hierarchy is not advisory. Its title carries its kind's prefix, it takes a value on each classification axis, and its body holds each section a Task requires.
 
 **Minimal guarantees:**
 

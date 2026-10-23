@@ -16,8 +16,11 @@ after:
   - [UC-061]
 shortfalls:
   - at: 9
-    issue: "#1779"
+    issue: "#1872"
     record: project-management:DEC-055#3
+  - at: "1b"
+    issue: "#1938"
+    record: COR-004
   - at: "5b"
     issue: "#1934"
     record: project-management:DEC-032#D4
@@ -50,6 +53,7 @@ pkit:
         - .pkit/capabilities/project-management/agents/pm-reviewer.md
         - .pkit/capabilities/project-management/schemas/review-contributions.yaml
       record:
+        - COR-004
         - project-management:DEC-007
         - project-management:DEC-026
         - project-management:DEC-027
@@ -114,7 +118,7 @@ pkit:
 9. The system lists the answers the change wrote, from the change check, and writes the list into the pull request's description (DEC-055 point 1). It prints, beside the list, each revalidation of a document on the base's tip that the change's answer did not read (DEC-055 point 3).
 
 > [!WARNING]
-> **Not built yet:** the system prints no revalidation that was answered apart. DEC-055 point 3 decides that it prints each one beside the list, and #1779 tracks it.
+> **Not built yet:** the system prints no revalidation that was answered apart. DEC-055 point 3 decides that it prints each one beside the list, and #1872 tracks it.
 
 10. With no authorisation yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and the list, and authorises the merge of the pull request at that head (DEC-055 point 3).
@@ -125,7 +129,11 @@ pkit:
 **Variants:**
 
 - **1a.** The developer runs `pkit pm review-pr <N>` alone, to have the change reviewed before landing it. The system runs steps 2 and 5 to 7, and the use case ends.
-- **1b.** The developer passes `--dry-run`. The system makes its checks, says what it would run and merge, and writes nothing. The use case ends.
+- **1b.** The developer passes `--dry-run`. The system makes its checks, says what it would run and merge, and writes nothing (COR-004). The use case ends.
+
+> [!WARNING]
+> **Not built yet:** the dry run names no move of the cascade that the merge would bring about. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.
+
 - **2a.** The project was never set up, the developer is no member, or the operator declines a change in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
 - **4a.** A check fails at the head. The system names it, and starts no review and no merge. The use case ends.
 - **4b.** The checks still run when the wait ends. The system says so and exits `5`, and the developer runs the command again later. The path rejoins at step 1.
@@ -157,7 +165,7 @@ pkit:
 
 - **13b.** A checkbox of an issue the pull request closes is unticked. The system refuses the merge, listing each one (DEC-007). The use case ends.
 - **13c.** The developer sets aside one required reviewer's approval: `pkit pm done-work <N> --yes --bypass-reviewer <name> --bypass-reviewer-reason "<R>"`. The system posts the reason in an audit comment before the merge, and counts that reviewer as satisfied (DEC-050).
-- **13d.** The project reviews in the `human` mode. A person's approving review counts in place of the verdicts, and `land-work` runs no reviewer (DEC-027).
+- **13d.** The project's settings set `review.mode` to `human`. A person's approving review counts in place of the verdicts, and `land-work` runs no reviewer (DEC-027).
 - **14a.** The base merges through a merge queue. The backbone queues the pull request pinned to the head, and the system exits `4` while it waits in the queue (ADR-061).
 
 **Postconditions:** The pull request merged at the head the gate judged, with a standing approval from each required reviewer. Each issue it closed is in Done.
@@ -169,4 +177,4 @@ pkit:
 - An approval stands only while the author changes nothing its reviewer checks. A commit the system cannot read makes it stale (DEC-028).
 - Where the required reviewers cannot be worked out, nothing merges on part of them (DEC-032 point D5).
 - The merge is pinned to the head the gate judged, so a push after the gate fails it (DEC-028).
-- Nothing merges without an authorisation for that head, given at a terminal or by `--yes` with `--expect-head` (DEC-055 point 3 and REQ-042).
+- Nothing merges through `land-work` without an authorisation for that head, given at a terminal or by `--yes` with `--expect-head` (DEC-055 point 3 and REQ-042). `done-work`, as in variant 13c, merges the head its gate reads (DEC-055 point 5).

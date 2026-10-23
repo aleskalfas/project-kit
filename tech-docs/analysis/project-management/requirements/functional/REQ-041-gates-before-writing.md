@@ -2,8 +2,8 @@
 id: REQ-041
 title: A command that writes checks the project's prerequisites and the person's membership first
 status: active
-statement: "Before a command of project-management writes, it checks that the project was set up for the capability, and that its user is a team member."
-measure: "In a project never set up, or for a person a non-empty list of members lacks, the command refuses before its first write. It names the cause, and changes nothing."
+statement: "Before a command of project-management writes, it checks the project's setup for the capability, and that whoever runs it is a team member."
+measure: "Where the project was never set up, or a list of members leaves out the person, the command refuses before its first write. It names the cause, and changes nothing."
 applies-to: "Every command of project-management that writes, whether a person runs it or an agent runs it for them. Where the project keeps no list of members, or an empty one, every person passes the second check."
 actors:
   - core:ACT-developer

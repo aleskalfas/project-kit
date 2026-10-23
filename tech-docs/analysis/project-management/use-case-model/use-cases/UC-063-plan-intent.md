@@ -85,12 +85,12 @@ pkit:
 5. Where the plan holds three issues or more, the agent has the critic review it. Where its work crosses three components or more, or brings in a new abstraction, the architect reviews it too (DEC-029).
 6. The agent shows the batch plan: its rows, the order of the work, the reviewers' findings and the use-case entries each issue serves. It names the active entries the intent touches that no issue names, and the work that no entry describes (DEC-054 point 5).
 7. The planner approves the plan (DEC-029).
-8. The agent files the issues, parents before children, each with `pkit pm create-issue` and its body with `pkit pm edit-issue`, so each filing is checked as `UC-060` describes (DEC-029).
+8. The agent files the issues, parents before children, each with `pkit pm create-issue`. It then writes each body with `pkit pm edit-issue`, which checks the body (DEC-029).
 
 > [!WARNING]
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. DEC-014 decides that no issue is left half filed, and #1761 tracks it.
 
-9. The agent attaches each issue the plan schedules to its Milestone through the capability's commands, the planner's approval its reason (DEC-006 and DEC-029).
+9. The agent attaches each issue the plan schedules to its Milestone with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval its reason (DEC-006 and DEC-029).
 
 > [!WARNING]
 > **Not built yet:** the `batch-plan` procedure attaches the Milestone with a raw `gh issue edit`. That leaves no audit comment and no journal entry, and checks no repository. DEC-029 decides that the agent files through the capability's own commands, and #1761 tracks it.

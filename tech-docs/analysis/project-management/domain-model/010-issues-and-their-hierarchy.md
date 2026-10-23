@@ -5,6 +5,8 @@ status: active
 explains:
   - TERM-issue
   - TERM-milestone
+  - TERM-close-trigger
+  - TERM-milestone-category
   - TERM-epic
   - TERM-feature
   - TERM-umbrella
@@ -24,6 +26,8 @@ pkit:
       artefact:
         - TERM-issue
         - TERM-milestone
+        - TERM-close-trigger
+        - TERM-milestone-category
         - TERM-epic
         - TERM-feature
         - TERM-umbrella
@@ -36,20 +40,26 @@ pkit:
 
 A team's work needs grouping between long-term outcomes and the changes that each land on their own. Too flat, and the work becomes a wall of undifferentiated items. Too deep, and filing becomes a structural debate (DEC-004).
 
-An [issue](../glossary.md#term-issue--issue) is the item of work, and its type sets its level: [EPIC](../glossary.md#term-epic--epic), [Feature](../glossary.md#term-feature--feature), [Umbrella](../glossary.md#term-umbrella--umbrella) or [Task](../glossary.md#term-task--task). A [Milestone](../glossary.md#term-milestone--milestone) holds the issues of one window or one bundle of outcomes. A [parent reference](../glossary.md#term-parent-reference--parent-reference) names each issue's parent in its body, and [checkboxes](../glossary.md#term-checkbox--checkbox) say what must hold before it closes.
+An [issue](../glossary.md#term-issue--issue) is the item of work, and its type sets its level: [EPIC](../glossary.md#term-epic--epic), [Feature](../glossary.md#term-feature--feature), [Umbrella](../glossary.md#term-umbrella--umbrella) or [Task](../glossary.md#term-task--task).
+
+A [Milestone](../glossary.md#term-milestone--milestone) holds the issues of one window or one bundle of outcomes. Its [Milestone category](../glossary.md#term-milestone-category--milestone-category) is one the [project](../../core/glossary.md#term-project--project) declares, and its [close trigger](../glossary.md#term-close-trigger--close-trigger) says when it ends. A [parent reference](../glossary.md#term-parent-reference--parent-reference) names each issue's parent in its body, and [checkboxes](../glossary.md#term-checkbox--checkbox) say what must hold before it closes.
 
 ```mermaid
 classDiagram
   accTitle: Issues and their hierarchy
-  accDescr: An issue is an EPIC, a Feature, an Umbrella or a Task, and holds checkboxes and at most one parent reference. A Milestone holds issues. An EPIC holds Features, Umbrellas and Tasks. A Feature holds Tasks. An Umbrella holds Tasks and Umbrellas.
+  accDescr: An issue is an EPIC, a Feature, an Umbrella or a Task, and holds checkboxes and at most one parent reference. A Milestone of one Milestone category opens with its close trigger, and holds issues. An EPIC holds Features, Umbrellas and Tasks. A Feature holds Tasks. An Umbrella holds Features, Tasks and Umbrellas.
   class Issue {
     title
     body
     labels
   }
   class Milestone {
+    title
     due date
-    close trigger
+  }
+  class CloseTrigger["Close trigger"]
+  class MilestoneCategory["Milestone category"] {
+    title format
   }
   class EPIC
   class Feature
@@ -65,10 +75,13 @@ classDiagram
   Issue <|-- Umbrella
   Issue <|-- Task
   Milestone "0..1" o-- "*" Issue : holds
+  Milestone "1" *-- "1" CloseTrigger : opens with
+  MilestoneCategory "1" o-- "*" Milestone : classes
   EPIC "1" o-- "*" Feature : holds
   EPIC "1" o-- "*" Umbrella : holds
   EPIC "1" o-- "*" Task : holds
   Feature "1" o-- "*" Task : holds
+  Umbrella "1" o-- "*" Feature : holds
   Umbrella "1" o-- "*" Task : holds
   Umbrella "1" o-- "*" Umbrella : holds
   Issue "1" *-- "0..1" ParentReference : opens with
@@ -122,22 +135,71 @@ A Milestone is GitHub's own container, kept apart from issues. It holds the issu
 
 **Attributes:**
 
-- its title, in the format of a category the project declares (DEC-016)
+- its title, in the format of its [Milestone category](../glossary.md#term-milestone-category--milestone-category) (DEC-016)
 - its due date, which it may lack (DEC-016)
-- its close trigger, `date-based`, `content-based` or `either`, on the first line of its description (DEC-016)
+- its [close trigger](../glossary.md#term-close-trigger--close-trigger), `date-based`, `content-based` or `either`, on the first line of its description (DEC-016)
 
 **Relations:**
 
 - It holds issues, each in at most one Milestone at a time (DEC-016).
 - It holds [EPICs](../glossary.md#term-epic--epic) directly. Where the project skips the EPIC, it holds Features, Umbrellas and Tasks directly too (DEC-004).
 - It holds no other Milestone (DEC-016).
+- It belongs to one Milestone category (DEC-016).
 
 **States:** A Milestone is open until it closes. A date-based one closes at its due date, and its open issues roll forward to the next Milestone. A content-based one closes once every [issue](../glossary.md#term-issue--issue) under it has closed, and one marked `either` at whichever comes first (DEC-016).
 
 **Always true:**
 
 - Every Milestone can close, so a theme that never ends is no Milestone (DEC-016).
-- Its title follows a category the project declared before its first Milestone (DEC-016).
+
+## Close trigger
+
+Defined in [TERM-close-trigger](../glossary.md#term-close-trigger--close-trigger).
+
+**Why:** When a [Milestone](../glossary.md#term-milestone--milestone) closes must be declared and readable by a machine, so nothing is inferred while the line is there. The line mirrors the [parent reference](../glossary.md#term-parent-reference--parent-reference) on an [issue](../glossary.md#term-issue--issue)'s first line, and people see it where they read the Milestone (DEC-016).
+
+A close trigger is the first line of a Milestone's description, such as `Close trigger: date-based`. A `date-based` Milestone closes at its due date, and its open issues roll forward. A `content-based` one closes once its issues have closed, and one marked `either` at whichever comes first.
+
+**Attributes:**
+
+- its value: `date-based`, `content-based` or `either` (DEC-016)
+
+**Relations:**
+
+- It opens the description of one Milestone (DEC-016).
+- It overrides the default of the Milestone's category (DEC-016).
+
+**States:** None.
+
+**Always true:**
+
+- Open issues roll forward only where a date closed the Milestone (DEC-016).
+
+## Milestone category
+
+Defined in [TERM-milestone-category](../glossary.md#term-milestone-category--milestone-category).
+
+**Why:** Teams plan in different cadences, and the [methodology](../../core/glossary.md#term-methodology--methodology) prescribes none of them. So a [project](../../core/glossary.md#term-project--project) declares what its [Milestones](../glossary.md#term-milestone--milestone) mean before it creates the first one. Readers then see which kinds it supports, without reading the record (DEC-016).
+
+A Milestone category is one kind of Milestone a project uses, such as a sprint or a bundle of outcomes. Its title format, with an optional number, shows which category a Milestone belongs to.
+
+**Attributes:**
+
+- its title format, which may hold a number (DEC-016)
+- its default [close trigger](../glossary.md#term-close-trigger--close-trigger) (DEC-016)
+- a sentence that says what its Milestones mean (DEC-016)
+
+**Relations:**
+
+- Each Milestone's title follows the format of one category (DEC-016).
+- A Milestone's own close trigger overrides its category's default (DEC-016).
+
+**States:** None.
+
+**Always true:**
+
+- A project that uses Milestones declares one category at least, before its first Milestone (DEC-016).
+- Each category numbers its Milestones apart from the others (DEC-016).
 
 ## EPIC
 
@@ -178,8 +240,8 @@ A Feature is an [issue](../glossary.md#term-issue--issue) for one coherent piece
 
 **Relations:**
 
-- It sits under an [EPIC](../glossary.md#term-epic--epic), or straight under a [Milestone](../glossary.md#term-milestone--milestone) where the [project](../../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
-- It holds Tasks, and no Feature or [Umbrella](../glossary.md#term-umbrella--umbrella) (DEC-005).
+- It sits under an [EPIC](../glossary.md#term-epic--epic) or an [Umbrella](../glossary.md#term-umbrella--umbrella), or straight under a [Milestone](../glossary.md#term-milestone--milestone) where the [project](../../core/glossary.md#term-project--project) skips the EPIC (DEC-004).
+- It holds Tasks, and no Feature or Umbrella (DEC-005).
 
 **States:** None.
 
@@ -191,9 +253,9 @@ A Feature is an [issue](../glossary.md#term-issue--issue) for one coherent piece
 
 Defined in [TERM-umbrella](../glossary.md#term-umbrella--umbrella).
 
-**Why:** Some related Tasks share a theme and claim no functionality. An Umbrella groups them without that claim, so the claim a [Feature](../glossary.md#term-feature--feature) makes keeps its meaning (DEC-004 and DEC-005).
+**Why:** Some related work shares a theme and claims no functionality. An Umbrella groups it without that claim, so the claim a [Feature](../glossary.md#term-feature--feature) makes keeps its meaning (DEC-004 and DEC-005).
 
-An Umbrella is a bucket of related Tasks. Its body says what holds them together, and it carries no acceptance criteria.
+An Umbrella is a bucket of related work. Its body says what holds that work together, and it carries no acceptance criteria.
 
 **Attributes:**
 
@@ -201,8 +263,8 @@ An Umbrella is a bucket of related Tasks. Its body says what holds them together
 
 **Relations:**
 
-- It sits under an [EPIC](../glossary.md#term-epic--epic) or under another Umbrella (DEC-010).
-- It holds Tasks and Umbrellas (DEC-004).
+- It sits under an [EPIC](../glossary.md#term-epic--epic), another Umbrella or a [Milestone](../glossary.md#term-milestone--milestone) (DEC-004).
+- It holds Features, Umbrellas and Tasks (DEC-004).
 
 **States:** None.
 
