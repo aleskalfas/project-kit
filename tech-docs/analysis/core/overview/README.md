@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:df22fda07d2926f21daef46bf76c52859f797aa4e538fb5bfe8009020debdadf -->
+<!-- pkit:overview reads=4 fingerprint=sha256:942cbae872e6be11765c2d1cfc90d0a82489839160f451c18760dbf4845fa0b1 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -85,7 +85,7 @@ Record a project's decisions and rules, and check, answer and land each change t
 - [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md) ([not built yet](#not-built-yet): step 5)
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md) ([not built yet](#not-built-yet): step 3, variant 2d)
 - [UC-038 — Author and extend my project's own rule sets](../use-case-model/use-cases/030-change/UC-038-author-rule-sets.md)
-- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md) ([not built yet](#not-built-yet): step 2)
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md) ([not built yet](#not-built-yet): step 2, step 7, variant 5b, variant 6a)
 - [UC-040 — Have a drafted record or rule become binding only through my own review](../use-case-model/use-cases/030-change/UC-040-accept-through-review.md)
 - [UC-041 — Keep each core record true for any project that adopts it](../use-case-model/use-cases/030-change/UC-041-keep-core-records-true.md)
 - [UC-042 — Have my draft challenged and my diff checked against the conventions](../use-case-model/use-cases/030-change/UC-042-challenge-and-check.md)
@@ -201,6 +201,9 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md): step 3, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-037 — Record my decision beside the methodology's](../use-case-model/use-cases/030-change/UC-037-record-decision.md): variant 2d, decided by `COR-004`, tracked in `#1884`
 - [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): variant 5b, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): variant 6a, decided by `ADR-034#1`, tracked in `#1765`
 
 ### Diagrams
 

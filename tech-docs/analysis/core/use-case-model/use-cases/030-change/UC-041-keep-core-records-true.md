@@ -23,9 +23,11 @@ pkit:
       record:
         - COR-014
         - COR-001
+        - COR-006
         - COR-046
         - COR-055#1
         - COR-058#3
+        - COR-024
       artefact:
         - ACT-methodology-maintainer
         - ACT-ai-agent
@@ -53,6 +55,7 @@ pkit:
 **Assumptions:**
 
 - A project that holds a core record wrong proposes a change to the methodology, and edits no copy of it. Nothing stops such an edit, and the next sync writes over it (COR-001).
+- The `methodology-reviewer` changes nothing in the record it judges, as its agent definition says. Nothing at run time checks what it changed (COR-024).
 
 **Trigger:** The maintainer's change, which adds or refines a core record, is ready for review.
 
@@ -63,6 +66,7 @@ pkit:
    - its terms, each defined in an earlier record, plain words, or an outside tool's name
    - its fit for any project that adopts it, by the test of universal applicability (COR-014)
    - its principles among alternatives, never an inventory of current state
+   - its content placed in the kind of artefact that carries it, such as a procedure in a skill rather than in a record (COR-006)
    - each thing it names by its role, where the role is what the record means (COR-046)
    - its title and its opening, which state the decision before the detail
    - the present, stated with no amendment log or dated correction
@@ -74,7 +78,7 @@ pkit:
 **Variants:**
 
 - **1a.** The change refines a core record in place. Its points keep their ids, and a new point takes the next unused number (COR-058 point 3). So a project's citation of a point stays true across the refinement.
-- **2a.** The record cites a later record. That holds only where the record is refined in place, the citation states what the refinement adds, and the record's decision still reads without it.
+- **2a.** The record cites a later record. The reviewer flags it, unless the record is refined in place and the citation states what the refinement adds. The record's own decision must still read without the later one.
 - **3a.** The reviewer finds no violation. The path goes on at step 5.
 - **4a.** The maintainer holds a finding wrong. The maintainer keeps the text, says why in the change, and the path goes on at step 5.
 - **4b.** The decision fits only the source repository, such as the name of its tool's binary. The maintainer records it as a PRJ record of the source repository instead, and the use case ends.
@@ -83,10 +87,9 @@ pkit:
 **Postconditions:**
 
 - The core record is accepted on the default branch, and holds nothing that fits only one project.
-- Each project that syncs to a release holding the record receives it as a synced copy, which its validation leaves alone (COR-055 point 1).
+- Each point of the record stands under an id it keeps for good, so a project's citation of it stays true (COR-058 point 3).
 
 **Minimal guarantees:**
 
-- The reviewer changes nothing in the record it judges (REQ-021).
 - A project's validation never fails on a core record it receives, which it cannot mend (COR-055 point 1).
 - `pkit decisions validate` writes nothing, whatever it finds (REQ-005).

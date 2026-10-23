@@ -26,6 +26,7 @@ pkit:
         - COR-001
         - COR-008
         - COR-047#2
+        - COR-051#7
         - COR-057#1
         - COR-057#2
         - COR-057#3
@@ -49,26 +50,27 @@ pkit:
 **Preconditions:**
 
 - **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
-- **From UC-027:** The core's reviewers' agent definitions are deployed where the harness reads them. They are the critic, the architect, the `methodology-reviewer`, the `convention-compliance-reviewer` and the `rule-set-reviewer`.
+- **From UC-027:** The agent definitions of the critic, the `convention-compliance-reviewer` and the `rule-set-reviewer` are deployed where the harness reads them.
 
 **Assumptions:**
 
-- The harness hands each reviewer's whole result back to the session that dispatched it, at the cost the adapter's support declaration names (COR-047 point 2).
-- A reviewer that can run commands keeps to its read-only remit, as its agent definition says. Nothing at run time checks what it changed (COR-057 point 1).
+- The harness hands each reviewer's whole result back to the session that dispatched it, as UC-029 describes. It does so at the cost the adapter's support declaration names (COR-047 point 2).
+- A reviewer keeps to the remit its agent definition gives it, read-only included. Nothing at run time checks what a reviewer changed, beyond the tools the harness grants it (COR-024 and COR-057 point 1).
+- The rule-set reviewer judges under no rule but those the backbone's one answer gives. It approves no change it could not judge, nor one in which it found a settled break. Nothing checks its verdict against the rules (COR-057 points 1 and 3).
 
 **Trigger:** The developer, or the agent making the change, has a substantive draft to adopt, or a diff to commit.
 
 **Main path:**
 
-1. Before the developer adopts a substantive draft, the developer or the agent making the change dispatches the critic on it. Such a draft is a new or much revised decision record, or a design or a plan across components (COR-024).
+1. Before the developer adopts a substantive draft, the developer or the agent making the change dispatches the critic on it. Such a draft is a decision record, a plan across components or an architectural rework (COR-024).
 2. The critic reads the draft and its context. It returns its critique as red flags, gaps, weak reasoning, overlooked alternatives and agreements worth stating (COR-024).
 3. The critic edits nothing and runs nothing, since its agent definition grants it only tools that read (COR-024 and REQ-021).
 4. The developer revises the draft, or answers each critique held wrong, and adopts the draft.
-5. Before committing, the developer dispatches the `convention-compliance-reviewer` on the diff.
-6. The reviewer checks the diff against the conventions every project shares (COR-008 and COR-001):
-   - each commit message's form, `<type>(<scope>): <description>`, and one logical unit for each commit
+5. Before committing, the developer dispatches the `convention-compliance-reviewer` on the diff, and on the commits the branch holds already.
+6. The reviewer checks them against the conventions every project shares (COR-008 and COR-001):
+   - the form of each commit message the branch holds, `<type>(<scope>): <description>`, and one logical unit for each commit
    - the branch's name, `<type>/<issue-number>-<slug>`
-   - no edit of a file the methodology owns
+   - no edit of a synced copy, in a project that receives the methodology by sync
    - each surface change declared as the project's own policy asks
    - each cited record accepted
 7. The reviewer reports each violation, with the record it breaks and what to do, and changes nothing (REQ-021).
@@ -80,10 +82,11 @@ pkit:
 
 **Variants:**
 
-- **1a.** The draft is trivia, such as an answer to a question or a wording edit in one file. Nobody dispatches the critic (COR-024), and the path goes on at step 5.
+- **1a.** The draft is trivia, such as an answer to a question, an edit of one file or a decision of one line. Nobody dispatches the critic (COR-024), and the path goes on at step 5.
 - **1b.** The developer asks for a contrary view of an answer that feels settled, or sweeps an open question. The critic runs on it as steps 2 and 3 say (COR-024).
-- **4a.** The draft touches the big picture, such as a new abstraction, a change to a foundational record or a concern across components. The developer dispatches the architect after the critic, and the architect flags where an authorisation is needed. It advises, refuses nothing, and edits only the architecture documents and records the overlay gives it (COR-024).
+- **4a.** The draft touches the big picture, such as a new abstraction, a change to a foundational record or a concern across components. Where the architect's agent definition is deployed, the developer dispatches it after the critic, and it flags where an authorisation is needed. It advises, refuses nothing, and edits only the architecture documents and records the overlay gives it (COR-024).
 - **4b.** The draft is an artefact once written, such as a decision record, a skill or an agent definition. The developer dispatches the `methodology-reviewer` on it, as UC-041 does for a core record.
+- **5a.** The developer has committed the change already, and dispatches the reviewer before pushing it. The reviewer walks the branch's commits as step 6 says.
 - **7a.** The reviewer finds a violation. The developer mends it, and the path rejoins at step 5.
 - **8a.** Nobody names the form. The reviewer states its verdict, and each finding's kind, in plain words (COR-057 point 3).
 - **9a.** The command cannot answer, such as where the base resolves to no commit. The reviewer cannot judge the change, so it does not approve, and says why (COR-057 point 3).
@@ -96,7 +99,5 @@ pkit:
 
 **Minimal guarantees:**
 
-- The critic changes nothing, since its agent definition grants it only tools that read (COR-024 and `critic.md`).
-- The rule-set reviewer never approves a change it could not judge, nor one in which it found a settled break (COR-057 point 3).
-- The rule-set reviewer judges under no rule but those the backbone's one answer gives (COR-057 point 1).
+- `pkit rule-sets altered` lists only accepted rules that bind, and names each rule a pin behind its set holds back (COR-051 point 7).
 - `pkit rule-sets altered` writes nothing (REQ-005).

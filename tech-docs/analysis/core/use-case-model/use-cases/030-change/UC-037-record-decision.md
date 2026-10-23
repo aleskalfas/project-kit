@@ -9,6 +9,7 @@ other-actors:
   - ACT-merge-authoriser
   - ACT-operator
 requirements:
+  - REQ-002
   - REQ-004
   - REQ-005
   - REQ-009
@@ -35,6 +36,7 @@ pkit:
         - .pkit/decisions/README.md
         - .pkit/rules/core.md
       record:
+        - COR-024
         - COR-025
         - COR-051#5
         - COR-058#1
@@ -54,6 +56,7 @@ pkit:
         - ACT-ci-pipeline
         - ACT-merge-authoriser
         - ACT-operator
+        - REQ-002
         - REQ-004
         - REQ-005
         - REQ-009
@@ -66,7 +69,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): drafts the decision record through the `decision-author` skill, which pairs with the stamp. It leaves the record `proposed`, so that a person accepts it before any work builds on it (UC-040).
+- **AI agent** (`ACT-ai-agent`): drafts the decision record through the `decision-author` skill, which pairs with the stamp. It leaves the record `proposed`, so that a person accepts it before any work builds on it (UC-040). The architect, as custodian of the architecture records, may draft an ADR (COR-024).
 - **CI pipeline** (`ACT-ci-pipeline`): runs the numbering check on each pull request where the project makes it a line of its check gate. It names the pull request's target as the base.
 - **Merge authoriser** (`ACT-merge-authoriser`): accepts the record by their own review, before any work builds on it (UC-040).
 - **Operator** (`ACT-operator`): is asked before the stamp writes in another repository than the session's own. So no such write happens silently (REQ-012).
@@ -76,19 +79,20 @@ pkit:
 **Assumptions:**
 
 - Work that builds on a decision record cites only an accepted one, as the acceptance gate asks. No check of the system reads what a change builds on, save a rule's origin (core rule 2 and COR-051 point 5).
+- The developer writes records only where the project authors them, never in a folder of synced copies. Nothing stops a stamp or an edit there, and sync owns that folder (core rule 1).
 
 **Trigger:** The developer makes a choice that the project's records do not hold yet, such as a technology or a way of working.
 
 **Main path:**
 
-1. The developer picks the record's namespace by its scope (COR-025). It is `project` for how the project works, and `adr` for what the project builds and why. It is a capability's name for a decision inside that capability.
+1. The developer picks the record's namespace by its scope (COR-025). It is `project` for how the project works, and `adr` for what the project builds and why. It is a capability's name for a decision inside a capability the project authors.
 2. The developer runs `pkit new decision <namespace> <slug>`, or an AI agent runs it through the `decision-author` skill.
 3. At its entry, before it reads anything, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit new decision` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-4. The system numbers the record one past the highest its namespace's folder holds, in the working tree or on the default branch (COR-054 point 3).
+4. The system checks the slug and the namespace. It numbers the record one past the highest its namespace's folder holds, in the working tree or on the default branch (COR-054 point 3).
 5. The system stamps `<PREFIX>-<NNN>-<slug>.md` with `status: proposed`, today's date and the author git names. It writes the four sections, with a first point heading under the Decision, `### 1. Point title` (COR-058 point 1). It prints `Stamped: <path>`.
 6. The developer writes the title, the context, each point under a heading of its own, the rationale and the implications. Each point keeps its id for good (COR-058 point 3).
 7. The developer runs `pkit decisions validate`. The system checks that no two records of one namespace share an id, and that each record's id matches its file name. It checks each record's points, retired ids and stubs too (COR-058 point 7).
@@ -97,21 +101,22 @@ pkit:
 
 **Variants:**
 
-- **1a.** In the methodology's source repository, the maintainer picks `core` for a principle that fits any project. The system stamps a core record in `.pkit/decisions/core/`, which UC-041 keeps fit for any project.
+- **1a.** In the methodology's source repository, the namespace may be `core`, for a principle that fits any project. The system stamps a core record in `.pkit/decisions/core/`, which UC-041 keeps fit for any project.
 - **1b.** The decision refines an accepted record, and overturns nothing it decides. The developer edits the record in place, with no revision marker, and stamps nothing. A new point takes the next unused number, and no point is renumbered (COR-058 point 3). The path goes on at step 7.
 - **1c.** On the path of 1b, a point is dropped, split or merged so that no point continues its claim. Its id goes into `retired-points`, with the points that took its text, and a one-line stub stays where it stood (COR-058 point 4).
-- **1d.** The decision overturns an accepted record. The new record sets `supersedes:` to the old record's id. The old record turns `superseded`, and its body opens with a *Superseded by* line. A record overturned only in part stays accepted, and its top line reads *Partially superseded by …*.
+- **1d.** The decision overturns an accepted record. The new record sets `supersedes:` to the old record's id, and the path goes on at step 2. Once the new record is accepted, an edit of its own marks the old one `superseded`, as the decision-record specification says. A record overturned only in part stays accepted, its top line reading *Partially superseded by …*.
 - **2a.** The namespace is `adr`, and the overlay names a folder in `adr-records`. The system stamps the record there. It refuses a folder that does not exist, naming `mkdir -p <folder>`, and a folder inside `.pkit/` (COR-025).
 - **2b.** The namespace is `adr`, and the overlay names no folder in `adr-records`. The system derives the folder from the internal documentation root, as `architecture/decisions/` under it. It records the folder in the overlay before it stamps, and says so (COR-049 point 5). It names `pkit sync`, which deploys the agent definitions that read the folder.
-- **2c.** On the path of 2b, the folder already holds documents, which the recording puts within reach of every agent that reads it. A terminal is asked once, and `--yes` consents without a prompt. With nobody to ask and no `--yes`, the system records nothing and stamps nothing, and the use case ends.
+- **2c.** On the path of 2b, the folder already holds documents, which the recording puts within reach of every agent that reads it. A terminal is asked once, and `--yes` consents without a prompt. Declined, or with nobody to ask and no `--yes`, the system records nothing and stamps nothing. The use case ends.
 - **2d.** The developer passes `--dry-run`, as to each command whose edit reaches past what the person named. The system names the record it would stamp and the folder it would record, and writes nothing (REQ-009).
 
 > [!WARNING]
 > **Not built yet:** `pkit new decision` takes no `--dry-run`, and refuses the flag. COR-004 decides that a command whose widest effect reaches past what the person named offers one, and #1884 tracks it.
 
-- **2e.** The namespace names no capability the project holds. The system refuses and writes nothing, and the use case ends.
+- **2e.** The namespace is `adr`, and the project holds no overlay. The system refuses, naming the overlay that ADR support needs, and writes nothing. The use case ends.
 - **4a.** The default branch cannot be read in this clone. The system says so on standard error, and numbers past the working tree alone (COR-054 point 4). A record on the default branch may then hold the number already, which step 8 finds.
-- **5a.** The slug is not kebab-case, or a record of the namespace holds it already. The system refuses and writes nothing, and the path rejoins at step 2.
+- **4b.** The slug is not kebab-case, or a record of the namespace holds it already. The system refuses and writes nothing, and the path rejoins at step 2.
+- **4c.** The namespace names no capability the project holds. The system refuses and writes nothing, and the use case ends.
 - **7a.** Two records of one namespace share an id, or a record's id differs from its file name's number. The system fails, naming each, and the path rejoins at step 6.
 - **7b.** A record's points break what COR-058 point 7 holds, such as a stub whose sentence differs from its entry. The system fails, naming `<file>#<id>`, and the path rejoins at step 6. A duplicate point id, a gap in the ids or a misspelt point heading draws only a warning.
 - **7c.** A line of a record narrates its own revision, such as an amendment heading or a correction stamped with a date. The system warns of it, naming the file and the line, and never fails on it. The developer states the fact plainly instead.
@@ -121,12 +126,14 @@ pkit:
 - **8c.** The change renumbers a point, or drops one without retiring it. The check fails, naming `<file>#<id>`, and the path rejoins at step 6.
 - **8d.** The project makes the numbering check a line of its check gate. The CI pipeline runs `pkit decisions check-diff` on each pull request, with `PKIT_CHECK_BASE` naming its target, and the check passes.
 - **9a.** The merge authoriser approved the record's addition and its acceptance together. The developer commits it as `accepted`, as the `decision-author` skill allows.
+- **9b.** On the path of 1b or 1c, the developer commits the edit, and the record stays accepted.
 
-**Postconditions:** The record lies in its namespace's folder, numbered past every record the default branch holds there. Each of its points stands under an id it keeps for good. It stays `proposed` until the merge authoriser accepts it.
+**Postconditions:** A new record lies in its namespace's folder, numbered past every record the default branch holds there. Each of its points stands under an id it keeps for good. It stays `proposed` until the merge authoriser accepts it, and a refined record stays accepted.
 
 **Minimal guarantees:**
 
 - A stamp that refuses writes no record, and records no folder in the overlay (`decisions.py`).
+- The stamp writes in the overlay only the folder it derived, and only where the project set none (COR-049 point 5 and REQ-002).
 - A default branch the stamp cannot read is said, and its number is taken from the working tree alone, never guessed (COR-054 point 4).
 - `pkit decisions validate` and `pkit decisions check-diff` write nothing, whatever they find (REQ-005).
 - Validation never fails a project on a synced copy, which the project cannot mend (COR-055 point 1).

@@ -40,7 +40,7 @@ pkit:
 **Other actors:**
 
 - **Developer** (`ACT-developer`): holds the draft in their change, and builds nothing on it until it is accepted.
-- **AI agent** (`ACT-ai-agent`): drafts a decision record or a rule, and may propose its acceptance. It never accepts the draft on its own (COR-051 point 4).
+- **AI agent** (`ACT-ai-agent`): drafts a decision record or a rule, and may propose its acceptance. Where the path involves a person, that person's review accepts the draft, never the agent (COR-051 point 4).
 
 **Preconditions:** **From UC-037 or UC-038:** A change holds a decision record drafted as `proposed`, or a rule with no status, so the draft binds nothing.
 
@@ -48,30 +48,31 @@ pkit:
 
 - An agent writes `accepted` on a record or a rule only on the merge authoriser's word. Nothing at run time stops it writing the status unasked (COR-051 point 4 and core rule 2).
 - Who accepts a decision record is open. The acceptance gate asks only for a reviewed status flip (core rule 2). COR-051 point 4 gives a rule's acceptance to a person's review, and #1674 tracks a record that says the same of a decision record.
+- Whoever accepts a rule gives its set the new major COR-051 point 7 asks for. No check compares a set's version with the rules it accepts.
 
-**Trigger:** A change that holds a drafted record or rule comes to the merge authoriser for review.
+**Trigger:** A drafted decision record or rule waits for acceptance.
 
 **Main path:**
 
-1. The merge authoriser reads the draft in the change, with the records it cites and the work the change builds on it.
+1. The merge authoriser reads the draft, with the records it cites.
 2. For a rule, the merge authoriser runs `pkit rule-sets reach --preview`. The system answers where each proposed rule would bind if it were accepted, and marks what holds only under the preview (COR-051 point 7).
-3. The merge authoriser accepts the draft. Its status moves from `proposed` to `accepted` in a commit of the change, made by the merge authoriser or for them on their word.
+3. The merge authoriser accepts the draft. Its status becomes `accepted` in a commit of its own, made by the merge authoriser or for them on their word. That commit comes before any work that builds on the draft (core rule 2).
 4. An accepted rule's entry carries its origin: the date, who decided and why, in the decider's words. Or its origin cites the decision record that holds the reasoning (COR-051 point 5).
 5. The developer runs `pkit validate`. Its `rule-sets` pass fails on an accepted rule whose origin is incomplete, or cites a record that is not accepted (COR-051 point 5).
-6. The merge authoriser authorises the merge of the change at its head (UC-034).
-7. Once the change lands, the accepted rule binds on each artefact that a set of the project's own reaches, as `pkit rule-sets reach` answers. Work may build on the accepted record from then on.
+6. From the commit that accepts it, the rule binds on each artefact that a set of the project's own reaches, as `pkit rule-sets reach` answers there. From that commit, work may build on the accepted record (core rule 2).
+7. The merge authoriser authorises the merge of the change that holds the acceptance (UC-034).
 
 **Variants:**
 
-- **1a.** The merge authoriser holds the draft wrong. The change revises it, and the path rejoins at step 1. A draft the merge authoriser rejects is deleted before it lands, since no status marks a record rejected.
-- **2a.** The draft is a decision record. No command shows where a record binds, so the merge authoriser reads what the change builds on it. The path goes on at step 3.
+- **1a.** The merge authoriser holds the draft wrong. The change revises it, and the path rejoins at step 1. A draft rejected before it lands is deleted, since no status marks a record rejected. A rule that already landed proposed is withdrawn instead, and keeps its id (COR-051 point 4).
+- **2a.** The draft is a decision record. No command shows where a record binds, so the merge authoriser reads its decision and its rationale. The path goes on at step 3.
 - **3a.** Accepting the rule brings each artefact its sets reach under it. The change owns each break of the rule there, and the rule-set reviewer withholds its approval for each settled one (COR-060 point 1). The change mends the text, or narrows a scope to leave a file out until it is mended (COR-060 point 2).
-- **3b.** A set of the project's own inherits the rule's set. A rule newly accepted needs a new major of its set (COR-051 point 7). So the same change raises the set's version, and re-pins each set that inherits it. Otherwise validation fails on each pin left behind its set.
+- **3b.** A set of the project's own inherits the rule's set. Accepting the rule needs a new major of that set, and each pin on the old major then holds the rule back (COR-051 point 7). Validation fails on each such pin until the project reviews the new major and updates the pin.
 - **3c.** The merge authoriser approved the record's addition and its acceptance together, as UC-037 variant 9a says. The record lands `accepted` in the commit that adds it.
 - **5a.** The rule's origin cites a decision record that is still proposed. Validation fails, naming the rule. The cited record is accepted first, through this same use case, and the path rejoins at step 5.
-- **6a.** The merge authoriser works alone, and the change is committed straight to the default branch, as UC-034 variant 1a says. That commit carries the acceptance.
+- **7a.** The merge authoriser works alone, and commits the acceptance straight to the default branch, as UC-034 variant 1a says. No pull request carries it.
 
-**Postconditions:** The record or the rule is accepted on the default branch, through the merge authoriser's review. An accepted rule carries a complete origin, and binds where a set of the project's own reaches it.
+**Postconditions:** The record or the rule is accepted, through the merge authoriser's review. An accepted rule carries a complete origin, and binds where a set of the project's own reaches it.
 
 **Minimal guarantees:**
 
