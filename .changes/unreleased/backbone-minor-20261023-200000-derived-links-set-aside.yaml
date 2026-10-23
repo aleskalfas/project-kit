@@ -1,0 +1,22 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  A capability may declare the links its own command writes, so that friction
+  reads each as its words alone (#1844, COR-050 point 5). It names, under
+  `derived-links` on one of its friction places, each form as a regular
+  expression that an inline link's target matches whole. Wherever the change
+  check, `check --all` and `debt` compare the body of a file a place holds,
+  each link of a declared form in running text is set aside: an artefact's
+  content, a section or the lead, a record's content or point, and a placed
+  file's content. So a change that only adds, removes or retargets such links
+  asks nothing of what rests on the file, and a revalidation marked `updated`
+  on it alone is a bump, in a block and in an answer file alike. A word beside
+  a link, and a link of any other form, still count. A comparison reads the
+  forms of its later state at both states, so the change that brings a
+  declaration flags nothing. `pkit rule-sets altered` still lists an artefact
+  changed only in such links, and `pkit friction resolve` advises the outcome
+  the change check bears out. The `packages` check fails a target that does
+  not compile. The key is additive, so no migration is due. A capability that
+  declares it needs a backbone that knows it.

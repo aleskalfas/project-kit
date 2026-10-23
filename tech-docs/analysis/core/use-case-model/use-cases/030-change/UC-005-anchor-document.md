@@ -25,7 +25,7 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-23T08:54:03Z
+      at: 2026-10-23T10:28:57Z
       outcome: unchanged
       unchanged-because: The developer's needs that only a capability meets moved to its analysis, with the records behind them. Its goal is still one of the developer's needs, and its steps hold.
 ---
