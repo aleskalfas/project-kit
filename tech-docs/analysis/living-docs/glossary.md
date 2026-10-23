@@ -31,6 +31,10 @@ TERM-page:
         record:
           - living-docs:DEC-001#1
           - living-docs:DEC-001#4
+      revalidated:
+        at: 2026-10-23T20:56:32Z
+        outcome: unchanged
+        unchanged-because: DEC-001 point 1 changes only where a new page may go, under its space's root or into a place assigned to that space. What a page is, which this term defines, does not change.
 ---
 
 # Glossary
