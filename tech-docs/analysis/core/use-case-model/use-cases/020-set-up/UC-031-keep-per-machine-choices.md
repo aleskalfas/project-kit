@@ -65,7 +65,7 @@ pkit:
 
 **Assumptions:**
 
-- The harness reads a per-machine settings file beside its committed one, and its values win there, as Claude Code's `.claude/settings.local.json` does (ADR-029 point 1).
+- The harness reads a per-machine settings file beside its committed one, and the per-machine file's values win over the committed one's. Claude Code's `.claude/settings.local.json` is such a file (ADR-029 point 1).
 - Git ignores that per-machine file, through the project's `.gitignore`. The backbone never writes the project's `.gitignore`, and `pkit init` only recommends the line (ADR-009). Where git does not ignore the file, nothing in the system stops a commit carrying it.
 
 **Trigger:** The operator makes a choice that holds on this machine alone, such as letting the sandbox reach the SSH agent's socket.
@@ -90,7 +90,7 @@ pkit:
 - **1c.** The operator turns the sandbox on with `--dangerously-allow-unconfined`. The system writes `sandbox.failIfUnavailable: false` to the per-machine settings alone, and the committed settings keep `true` (ADR-005 point 6). It warns where git does not ignore the per-machine file.
 - **1d.** The operator activates a profile with `pkit permissions profile activate <name>`. The system writes the profile's name to `.pkit/permissions/project/active-profile.yaml`, which `.pkit/.gitignore` ignores (ADR-032). It writes the allows only that profile justifies to the per-machine settings (ADR-046 point 1). ADR-032 calls the posture shared policy, so the system writes it to the committed `.pkit/permissions/project/config.yaml`, though ADR-032's Rule A reads it as per-machine (#1765).
 - **1e.** The operator arms a diagnostic session with `pkit permissions diagnose on`. Its marker and its log lie under `.pkit/permissions/project/`, where `.pkit/.gitignore` ignores them (PRJ-006 point 5).
-- **1f.** The operator runs `pkit permissions setup autonomy` (UC-030). The system writes the per-machine parts of the setup to the per-machine settings, and the shared parts to the committed ones. It moves to its per-machine home each entry an earlier version left in a committed file, and leaves the operator's own entries in place (ADR-007).
+- **1f.** The operator runs `pkit permissions setup autonomy` (UC-030). The system writes the per-machine parts of the setup to the per-machine settings, and the shared parts to the committed ones. It moves each entry an earlier version left in a committed file to that entry's per-machine home (ADR-007). It leaves the operator's own entries in place.
 - **1g.** The operator passes `--dry-run` to a command of this use case whose edit reaches past what the person named, such as `sandbox enable`. The system names each edit it would make, and writes nothing (REQ-009).
 
 > [!WARNING]

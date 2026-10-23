@@ -114,7 +114,7 @@ pkit:
 7. The system stops before it verifies the setup, since the sandbox starts only with a new session. It ends `Result: configured. Restart the session and re-run to enable the box and prove the goal.` (ADR-007).
 8. The operator restarts the session, and runs `pkit permissions setup autonomy` again from inside it. The system skips each step already done.
 9. The system verifies the setup. Its probes find that the permission code's verdicts match the model, and that the operating system refuses each read of the credential floor. It ends `Result: goal reached — autonomous agents: configured, confined, and proven.`
-10. The agents work. The adapter's permission hook runs the backbone's permission code under the system `python3`, which needs nothing outside its standard library (REQ-016). A command a grant allows runs with nobody asked, and so does a single command inside the sandbox. A deny wins over an allow (REQ-013).
+10. The agents work. The adapter's permission hook runs the backbone's permission code under the system `python3`, and the code needs nothing outside that interpreter's standard library (REQ-016). A command a grant allows runs with nobody asked, and so does a single command inside the sandbox. A deny wins over an allow (REQ-013).
 11. The operator learns where the confinement does not hold, from commands that write nothing (REQ-005):
     - `pkit permissions sandbox` says whether the sandbox really confines, and names each command that runs outside it
     - `pkit permissions diff` counts the grants that only the permission hook enforces, and those that no native layer expresses
@@ -144,7 +144,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** on macOS the system leaves the sandbox off, and says `OS sandbox NOT enabled — unsupported on macOS (Seatbelt)`. So no command is confined there. The run ends `Result: intent + enforcement armed and proven. OS confinement is skipped on macOS (see above).` ADR-014 point 3 decides that every other shell command stays confined, and #1765 tracks it.
 
-- **5b.** An attribute of the per-machine settings fights what step 5 sets, such as `sandbox.allowUnsandboxedCommands: true`. The system warns, naming each such attribute, and step 5 turns the sandbox on and seals it all the same. It never removes such an attribute without a yes at a terminal, or `--remove-overrides`.
+- **5b.** An attribute of the per-machine settings fights what step 5 sets, such as `sandbox.allowUnsandboxedCommands: true`. The system warns, naming each such attribute, and step 5 turns the sandbox on and seals it all the same. The system never removes such an attribute without a yes at a terminal, or `--remove-overrides`.
 - **6a.** `$SSH_AUTH_SOCK` names a socket under the credential floor, or one that does not answer. The system allows nothing for it, and names the command that allows it: `pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent` (ADR-010 points 5 and 7).
 - **9a.** A probe finds a verdict that differs from what the model declares. Or it finds a guardrail's native deny missing while the permission hook is registered. The system ends `Result: BROKEN — fix the decision layer before relying on autonomy.`, and exits non-zero.
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
