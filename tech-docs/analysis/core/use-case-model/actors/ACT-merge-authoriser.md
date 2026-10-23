@@ -13,7 +13,6 @@ pkit:
     anchors:
       record:
         - COR-050#3
-        - project-management:DEC-028
     revalidated:
       at: 2026-10-21T14:26:04Z
       outcome: unchanged
@@ -28,4 +27,3 @@ The person who authorises a change's merge into the default branch. Where work i
 - **Occasions:** at the end of each change, and whenever a drafted record or rule waits for acceptance.
 - **Context:** the authority to land the change.
 - **Core:** two core rules make this role, and neither needs a work tracker. COR-050 point 3 covers being told what a change updated before its merge or direct commit. The acceptance gate covers accepting a record or rule.
-- **Note:** the name is not "approver", because project-management uses that word for a reviewer agent (DEC-028).

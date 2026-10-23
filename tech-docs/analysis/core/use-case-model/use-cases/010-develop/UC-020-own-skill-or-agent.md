@@ -20,11 +20,12 @@ pkit:
         - src/project_kit/refs.py
         - src/project_kit/cli.py
         - src/project_kit/install.py
-        - .pkit/adapters/claude-code/deploy-skills.sh
-        - .pkit/adapters/claude-code/deploy-agents.sh
+        - src/project_kit/agents_overlay.py
+        - .pkit/adapters/README.md
         - .pkit/skills/README.md
       record:
         - COR-001
+        - COR-005
         - COR-006
         - COR-007
         - COR-013
@@ -76,17 +77,17 @@ pkit:
    - what it reads
    - which paths it owns
 8. The developer runs `pkit sync`.
-9. The adapter deploys the agent definition. The `claude-code` adapter's `deploy-agents.sh`, for one, writes a copy where its harness reads it, `.claude/agents/<name>.md`, with each placeholder filled from `.pkit/agents/project/overlay.yaml` (COR-013 point 5). It prints `created .claude/agents/<name>.md`.
+9. Each adapter's `deploy-agents.sh` deploys the agent definition where its harness reads it, with each placeholder filled from `.pkit/agents/project/overlay.yaml` (COR-013 point 5). The `claude-code` adapter, for one, writes `.claude/agents/<name>.md`.
 10. The developer runs `pkit validate`. Its `refs` member checks that the agent definition's body cites what its front matter declares (COR-013 point 3). It also checks that the agent definition and its storyboard declare each other (COR-016).
 
 **Variants:**
 
-- **1a.** A skill carries the work. No stamp writes one: the developer writes `.pkit/skills/project/<name>.md`, with the front matter `name` and `description` and the procedure (`.pkit/skills/README.md`). At step 9, `deploy-skills.sh` links `.claude/skills/<name>/SKILL.md` to it, and prints `created .claude/skills/<name>/SKILL.md -> …`. The path goes on at step 10.
+- **1a.** A skill carries the work. No stamp writes one: the developer writes `.pkit/skills/project/<name>.md`, with the front matter `name` and `description` and the procedure (`.pkit/skills/README.md`). At step 9, each adapter's `deploy-skills.sh` deploys it where its harness reads skills, such as `.claude/skills/<name>/SKILL.md` for the `claude-code` adapter. The path goes on at step 10.
 - **1b.** The agent definition's work rests on judgement, with no scripted dialogue. The developer runs `pkit new agent project <name>`, and the system writes `.pkit/agents/project/<name>.md` alone, with no storyboard (COR-016). The path goes on at step 7.
 - **3a.** The name is no kebab-case word. The system refuses with ``agent name must be kebab-case …``, and writes nothing. The path rejoins at step 2.
 - **3b.** An agent definition of that name exists. The system refuses with `agent '<name>' already exists at <path>.`, and writes nothing. The path rejoins at step 2.
 - **6a.** The developer adds the storyboard later, with `pkit new storyboard agent <name>`. The system writes it beside the agent definition, but adds nothing to the agent definition's `storyboards:`. So at step 10 `pkit validate` fails until the developer lists it there, since `Mutual declaration is required (per COR-016).`
-- **9a.** The agent definition names a placeholder that `.pkit/agents/project/overlay.yaml` leaves unset. The adapter skips it with `skipped <name> — <reason>.`, names `pkit agents adopt <name>`, and deploys the rest (ADR-052).
+- **9a.** The agent definition names a placeholder that `.pkit/agents/project/overlay.yaml` leaves unset. The adapter skips it and deploys the rest, and the system names `pkit agents adopt <agent>` to deploy it (ADR-052).
 
 **Postconditions:** The project's own skill or agent definition lies in the project's own folder, `.pkit/skills/project/` or `.pkit/agents/project/`. An agent definition whose dialogue follows a script has its storyboard beside it. The skill or agent definition is deployed where the harness reads it, and no sync writes over it.
 
@@ -94,4 +95,4 @@ pkit:
 
 - A refused name leaves nothing written (`agents.py`).
 - Sync writes the methodology's skills and agent definitions only into their `core/` folders, never over the project's own (COR-001 and `install.py`).
-- The adapter never writes over a file in `.claude/agents/` that it did not deploy, one without the mark `managed-by: project-kit` (`deploy-agents.sh`).
+- An adapter's scripts drop only what they deployed themselves, recognised by the adapter's own deploy mark, and never the project's own content (`.pkit/adapters/README.md`).

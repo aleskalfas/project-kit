@@ -39,7 +39,8 @@ TERM-agent-definition:
     friction:
       anchors:
         path:
-          - .pkit/adapters/claude-code/deploy-agents.sh
+          - src/project_kit/agents.py
+          - .pkit/adapters/README.md
         record:
           - COR-006
           - COR-013#1
@@ -656,7 +657,7 @@ TERM-migration:
       anchors:
         path:
           - src/project_kit/migrations.py
-          - .pkit/capabilities/project-management/migrations/0.55.0/001-pm-reviewer-agent-rename.sh
+          - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
         record:
           - COR-010
       revalidated:
@@ -672,7 +673,8 @@ TERM-operational-rule:
     friction:
       anchors:
         path:
-          - .pkit/adapters/claude-code/merge-claude-md.sh
+          - .pkit/rules/core.md
+          - .pkit/adapters/README.md
         record:
           - COR-014
           - COR-051#1
@@ -1097,7 +1099,8 @@ TERM-skill:
     friction:
       anchors:
         path:
-          - .pkit/adapters/claude-code/deploy-skills.sh
+          - .pkit/skills/README.md
+          - .pkit/adapters/README.md
         record:
           - COR-005
           - COR-006
@@ -1771,7 +1774,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#migration).
 
-**Example:** project-management renamed its [reviewer](#term-reviewer--reviewer)'s [agent definition](#term-agent-definition--agent-definition) from `reviewer` to `pm-reviewer`. So the [capability](#term-capability--capability)'s migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each [project](#term-project--project)'s own settings, which [sync](#term-sync--sync) never touches.
+**Example:** from the [backbone](#term-backbone--backbone)'s 1.150.0, its engine keeps the journal of a [process](#term-process--process) only where a [project](#term-project--project) turns it on. So the migration `1.150.0/001-keep-process-journal-logging.sh` turns it on where a project kept journals, in its [backbone configuration](#term-backbone-configuration--backbone-configuration), which [sync](#term-sync--sync) never touches.
 
 **Distinctions:**
 
