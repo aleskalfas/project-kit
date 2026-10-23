@@ -1,0 +1,16 @@
+component: backbone
+kind: patch
+custom:
+  category: Security
+body: >
+  The permission decision core no longer allows a compound Bash command by a
+  grant on one of its segments (ADR-025 point 2). Each segment it splits a
+  command into now needs an allow of its own. A segment that matches no
+  privilege, or only privileges no allow grant reaches, makes the core defer
+  the call to the harness, and a strict posture denies it. So where `gh` is
+  granted, `gh pr list | sh` and `gh pr list ; python3 x.py` are no longer
+  allowed unasked. **A pipe into a filter is deferred too,** such as
+  `gh pr list | jq .` or `git log | head`, since no shipped profile grants a
+  filter, so the harness may ask about it. A compound whose every segment is
+  granted, such as `git status && gh pr list`, is allowed as before. The
+  reason the core gives names the program of each segment no grant covers.

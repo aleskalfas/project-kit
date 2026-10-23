@@ -49,6 +49,10 @@ pkit:
         - REQ-010
         - REQ-012
         - REQ-013
+    revalidated:
+      at: 2026-10-23T18:41:58Z
+      outcome: unchanged
+      unchanged-because: The project grants still sit beside the methodology ones, and a deny still wins over an allow. The change narrows only how a grant allows a chained command, which this use case does not describe.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's
