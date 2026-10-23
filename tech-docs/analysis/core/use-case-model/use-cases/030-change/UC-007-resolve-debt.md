@@ -6,11 +6,33 @@ actor: ACT-developer
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+  - ACT-operator
 requirements:
+  - REQ-002
   - REQ-004
   - REQ-005
   - REQ-006
   - REQ-007
+  - REQ-009
+  - REQ-012
+  - REQ-018
+  - REQ-019
+  - REQ-020
+after:
+  - [UC-034]
+shortfalls:
+  - at: 7
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 7
+    issue: "#1873"
+    record: COR-062#1
+  - at: "3b"
+    issue: "#1765"
+    record: ADR-034#1
+  - at: "4c"
+    issue: "#1873"
+    record: COR-062#5
 pkit:
   friction:
     anchors:
@@ -18,9 +40,8 @@ pkit:
         - src/project_kit/friction_repository.py
         - src/project_kit/friction_report.py
         - src/project_kit/friction_check.py
+        - src/project_kit/agent_runs.py
         - .github/workflows/friction-report.yml
-        - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
-        - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         - .pkit/rules/core.md
       record:
         - COR-050#2
@@ -28,67 +49,30 @@ pkit:
         - COR-050#6
         - COR-050#9
         - COR-050#12
+        - COR-062#1
+        - COR-062#5
+        - COR-062#7
+        - ADR-034#1
         - ADR-055#5
-        - software-analysis:DEC-001#5
-        - living-docs:DEC-001#5
-        - project-management:DEC-056#3
+        - ADR-066#1
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - ACT-operator
+        - REQ-002
         - REQ-004
         - REQ-005
         - REQ-006
         - REQ-007
+        - REQ-009
+        - REQ-012
+        - REQ-018
+        - REQ-019
+        - REQ-020
     revalidated:
-      at: 2026-10-23T08:54:13Z
-      outcome: unchanged
-      unchanged-because: The developer's capability needs moved to their analyses, and the AI agent's need says agent definition. Neither reaches its goal or its steps.
-      deferred:
-        - anchor:
-            kind: path
-            value: .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
-          reason: "The resolver's commands gain the boxed regression, revalidated as updated. Variant 4a names only the unchanged case until #1856 revises it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_check.py
-          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_report.py
-          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_repository.py
-          reason: "The checks, the debt listing and explain now read answer files and list debt answered apart, dormant until the answers move, which the use case does not say. #1779 builds the move and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-055#5
-          reason: "ADR-055 point 5 gains only that a merge queue gives the check each change's own head. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."
-        - anchor:
-            kind: record
-            value: COR-050#12
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#2
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#3
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#6
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#9
-          reason: "Debt gains debt answered apart (COR-050 point 9) and answers move to answer files (COR-062), neither of which the use case says. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: software-analysis:DEC-001#5
-          reason: "DEC-001 point 5 now boxes a regressed step that an accepted record decides, and that revalidation ends in updated. Variant 4a names only the unchanged case until #1856 revises it."
+      at: 2026-10-23T09:50:26Z
+      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date
@@ -98,9 +82,10 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the whole-repository check after each push to the default branch and on a schedule. The check reports its findings and never fails on them (COR-050 point 12).
-- **AI agent** (`ACT-ai-agent`): the `analysis-resolver` and the `living-docs` agent propose each answer with its evidence and the commands that write it. Neither runs those commands itself (living-docs DEC-001 point 5 and `analysis-resolver.md`).
+- **AI agent** (`ACT-ai-agent`): an agent an installed capability ships for an artefact's type proposes each answer. It gives its evidence and the commands that write it. It runs none of those commands, since each answer is a person's decision (COR-050 point 3).
+- **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently (REQ-012).
 
-**Preconditions:** The default branch holds debt: a change that landed there left an artefact stale, or deferred its answer.
+**Preconditions:** **From UC-034:** The default branch holds debt: a change that landed there left an artefact stale, or deferred its answer.
 
 **Assumptions:**
 
@@ -112,7 +97,7 @@ pkit:
 **Main path:**
 
 1. The CI pipeline runs `pkit friction check --all --json` on the default branch, and publishes its findings where people look. In project-kit, that is one tracking issue, kept by `.github/workflows/friction-report.yml` (ADR-055 point 5).
-2. The developer lists the debt with `pkit friction debt`: each stale and deferred finding, oldest first, with its origin's commit, author, date and change.
+2. The developer lists the debt with `pkit friction debt`: each stale, deferred and answered-apart finding, oldest first. Each comes with its origin's commit, author, date and change (COR-050 point 9 and COR-062 point 7).
 3. The developer runs `pkit friction explain <artefact>` on a debt. It shows these:
    - what changed under each anchor since the revalidation point
    - the commits behind each finding
@@ -121,6 +106,14 @@ pkit:
    - updating the artefact and revalidating it `updated`
    - revalidating it `unchanged`, with why it still holds
    - deferring it to an open follow-up issue
+7. At its entry, each command that writes an answer checks that the repository it would change is the session's own. Where it is another, the command asks the operator (REQ-012). It writes the answer to an answer file of the change's own, as UC-002 does (COR-062 point 1).
+
+> [!WARNING]
+> **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+> [!WARNING]
+> **Not built yet:** each answer is written in the artefact's own `friction` block. COR-062 point 1 decides that a change writes its answers in answer files of its own, and #1873 tracks it.
+
 5. The developer lands the answers in a change of their own. Its change check flags each answer the change was not asked for as `not asked for by this change`.
 6. The next whole-repository check finds each answered artefact `current`, or `deferred` where the developer deferred it.
 
@@ -128,10 +121,24 @@ pkit:
 
 - **1a.** The clone is shallow, and an artefact's revalidation point lies beyond the cut. The check reports the artefact `unreachable`, and does not judge it until `git fetch --unshallow` brings the history. The path goes on at step 2 for the other debts.
 - **1b.** An anchor's resolver gives no answer, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
-- **3a.** The artefact is an analysis artefact or a page. The developer dispatches the `analysis-resolver` or the `living-docs` agent. It proposes the outcome with its evidence and the commands to run, and runs none. The path goes on at step 4.
-- **3b.** The project granted the fixer of the artefact's type. The drift command, `pkit pm fix-drift`, starts the fixer on the default branch's stale artefact, confined and with nobody watching. Its proposal waits as a file, and the landing command counts it (project-management DEC-056 point 3). The developer reads the proposal, and the path goes on at step 4.
-- **4a.** The analysis artefact still describes what is wanted, and the code regressed. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect. Where stale versus regressed is unclear, a person decides first (software-analysis DEC-001 point 5).
+- **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors (REQ-020). The path goes on at step 2.
+- **3a.** An installed capability ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none (COR-050 point 3). The path goes on at step 4.
+- **3b.** An agent that an installed capability ships for the artefact's type proposed the answer before the developer reached the debt. The agent ran with nobody watching, through the backbone's run command, `pkit agents run`:
+  - The command starts the runner the adapter registers, confined to a clone at a pinned commit (ADR-066 point 1).
+  - At its entry, the command checks that the repository it would change is the session's own. With nobody to ask, the command refuses another (REQ-012).
+
+  The developer reads the agent's proposal, a file the run handed back, and the path goes on at step 4.
+
+> [!WARNING]
+> **Not built yet:** `pkit agents run` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
+- **4a.** The artefact still describes what is wanted, and a change broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The change check asks for that revalidation, so it is not flagged at step 5.
+- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. The revalidation reads both, and replaces them (COR-062 points 5 and 7).
+
+> [!WARNING]
+> **Not built yet:** the writers write no answer file, so no revalidation reads another and replaces it. COR-062 point 5 decides that a revalidation replaces the revalidations it read, and #1873 tracks it.
+
 - **5a.** An answer the developer gives is `updated`, so the artefact's content changed. Each artefact anchored to it owes an answer in the same change (COR-050 point 6), and the path rejoins at step 4 for each one.
 
 **Postconditions:** Each artefact whose debt the developer resolved carries a new answer on the default branch. The whole-repository check reports it `current`, or `deferred` with its follow-up.
