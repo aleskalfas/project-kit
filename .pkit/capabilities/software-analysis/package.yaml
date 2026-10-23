@@ -102,6 +102,12 @@ docs:
 # `project-places`): the capability checks only the artefacts in its own
 # places. The held records take no type.
 #
+# COR-050 point 5 — the places of the glossary and of the views declare the links
+# `pkit analysis link` writes there, so friction reads each as its words alone and a
+# change that only moves links asks nothing (DEC-004 point 7). The glossary's form is the
+# link command's own target, `_lib/links.py`'s `_ENTRY`, and a view's its branch by a path,
+# since only the glossary links an entry by its anchor alone. A test holds both to it.
+#
 # COR-050 point 16 — each kind of requirement's place declares the core's
 # signal (DEC-002 point 4): a change to its statement, measure or applies-to
 # asks for a revisit of every anchor but those its actors and refines list,
@@ -129,10 +135,16 @@ friction:
       path: glossary.md
       type: term
       description: The glossary, one entry per term.
+      derived-links:
+        - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*'
+          description: A link to a glossary entry, by a path to a glossary or by its anchor alone, which `pkit analysis link` writes on a term's first mention and the check holds (DEC-004 point 7).
     - location: analysis
       path: domain-model
       type: domain-model-view
       description: The domain model, one file per view of a group of related concepts.
+      derived-links:
+        - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
+          description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention and on a section's line to its term, and the check holds (DEC-004 point 7).
     - location: analysis
       path: use-case-model/actors
       type: actor
@@ -176,10 +188,16 @@ friction:
       path: "*/glossary.md"
       type: term
       description: The glossary of each analysis kept in a component's folder.
+      derived-links:
+        - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*|#term-[^()\s]*'
+          description: A link to a glossary entry, by a path to a glossary or by its anchor alone, which `pkit analysis link` writes on a term's first mention and the check holds (DEC-004 point 7).
     - location: analysis
       path: "*/domain-model/**"
       type: domain-model-view
       description: The domain-model views of each analysis kept in a component's folder.
+      derived-links:
+        - target: '(?:[^()\s:#]*/)?glossary\.md#term-[^()\s]*'
+          description: A link to a glossary entry, by a path to a glossary, which `pkit analysis link` writes on a term's first mention and on a section's line to its term, and the check holds (DEC-004 point 7).
     - location: analysis
       path: "*/use-case-model/actors/**"
       type: actor

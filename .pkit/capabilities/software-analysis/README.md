@@ -220,7 +220,9 @@ Where an analysis keeps a domain model, `pkit analysis link` links its terms whe
 - **A name two terms share** links neither. Two terms never share one: see one name, one concept, under the glossary in [The artefacts](#the-artefacts), below.
 - **Written, never by hand.** It writes a file only where a link changes, whole or not at all, with the file's own line endings, and names each file it wrote. A link to a glossary entry written by hand is rewritten as the command's.
 - **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. So run it after you add or rename a term, or reword a view or an entry.
-- **What a moved link costs.** A link is part of the content that holds it. So a moved link flags whatever anchors that entry's term, such as the view that explains it, or that section of a view. Answer each with a revalidation.
+- **A moved link asks nothing.** The places of the glossary and of the views declare these links' form, a link to a glossary entry (DEC-004 point 7). The core's friction checks read each such link as its words alone (COR-050 point 5). So a change that only adds, removes or retargets links asks nothing of what anchors that entry's term or that section of a view. A word you change beside a link still does.
+- **A revalidation of links alone is `unchanged`.** Friction reads a moved link as no change to content, so `outcome: updated` on such a change alone is a bump. Mark it `unchanged`, with why the entry or the view still holds.
+- **A link of that form you write by hand** is set aside too, as in the glossary of an analysis that keeps no domain model. Its words still count.
 
 A section of the example view below, linked:
 

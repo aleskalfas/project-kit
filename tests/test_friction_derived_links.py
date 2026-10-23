@@ -20,7 +20,10 @@ makes real commits before running a check. They cover:
   the cost the record states: a declaration withdrawn sets nothing aside;
 - **what is not friction's** — `pkit rule-sets altered` still lists an artefact
   changed only in such links, and `pkit friction resolve` advises the outcome the
-  change check bears out.
+  change check bears out;
+- **software-analysis** — the forms its places declare are the link command's own,
+  and what `pkit analysis link` writes asks nothing of what rests on the linked
+  documents.
 """
 
 from __future__ import annotations
@@ -44,6 +47,7 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
+from tests.analysis_repo import CAPABILITY, GLOSSARY, installed, link, load_lib
 from tests.friction_documents import (
     CONFIG,
     POINTS,
@@ -56,6 +60,7 @@ from tests.friction_documents import (
     pointed_record,
 )
 from tests.test_answer_files import answer_path, answers, entry
+from tests.test_software_analysis_term_links import VIEW, _domain
 
 DERIVER = "deriver"
 NOTE = "notes/source.md"
@@ -436,3 +441,58 @@ def test_the_resolver_advises_unchanged_where_only_links_differ(repo: AdopterRep
     assert owe(resolved, base).outcome == fres.UNCHANGED
     (reworded,), _ = parse(NOTE, found, note(body=note_body(lead="An order awaits.")))
     assert owe(reworded, base).outcome == fres.UPDATED
+
+
+# --- software-analysis --------------------------------------------------------------------
+
+
+def _declared(place: str) -> list[str]:
+    from ruamel.yaml import YAML
+
+    package = YAML(typ="safe").load((CAPABILITY / "package.yaml").read_text(encoding="utf-8"))
+    (found,) = [p for p in package["friction"]["places"] if p["path"] == place]
+    return [form["target"] for form in found.get("derived-links", ())]
+
+
+def test_software_analysis_declares_the_link_commands_own_form() -> None:
+    """The glossary's form is the command's target; a view's, its branch by a path, since
+    only the glossary links an entry by its anchor alone."""
+    (links,) = load_lib("links")
+    entry_form: str = links._ENTRY
+    for place in ("glossary.md", "*/glossary.md"):
+        assert _declared(place) == [entry_form]
+    by_path = entry_form.split("|", 1)[0]
+    for place in ("domain-model", "*/domain-model/**"):
+        assert _declared(place) == [by_path]
+    for place in ("use-case-model/actors", "requirements/quality"):
+        assert _declared(place) == []
+
+
+@pytest.fixture
+def project(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    repo = installed(make_adopter_repo, monkeypatch, then=_domain)
+    repo.commit("the analysis, unlinked")
+    repo.checkout("feature", create=True)
+    return repo
+
+
+def test_what_the_link_command_writes_asks_nothing_of_what_rests_on_it(
+    project: AdopterRepo,
+) -> None:
+    """`pkit analysis link` adds links in the glossary's entries and in the view: the view
+    rests on the terms it explains, and nothing asks it an answer."""
+    before = {rel: (project.root / rel).read_text(encoding="utf-8") for rel in (GLOSSARY, VIEW)}
+    link(project)
+    assert all((project.root / rel).read_text(encoding="utf-8") != before[rel] for rel in before)
+    assert _friction(fc.run_change_check(project.root, "main")) == []
+
+
+def test_a_word_changed_in_a_linked_entry_still_asks_the_view(project: AdopterRepo) -> None:
+    link(project)
+    text = (project.root / GLOSSARY).read_text(encoding="utf-8")
+    reworded = text.replace("places an order, and pays", "places an order, then pays", 1)
+    assert reworded != text
+    project.write({GLOSSARY: reworded})
+    assert _friction(fc.run_change_check(project.root, "main")) == [VIEW]
