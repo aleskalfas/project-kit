@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:e3f2971bfc2f83830a3a64adcc9a509fd76031774e5f39a5588332e4531586a9 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:5b64ff976b3ca2771578159227a7c5007f572bc0caf2e0fe6626915339e86714 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -105,16 +105,30 @@ Release the backbone and each component on its own version, so projects can move
 
 ### 050-adopt
 
-Take the system into another project, keep it current, and report what goes wrong with it.
+Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix.
 
-**Builds on:** no other area.
+**Builds on:** [010-develop](#010-develop), [020-set-up](#020-set-up), [030-change](#030-change) and [040-release](#040-release).
 
-**Its requirements:** none.
+**Its requirements:**
+
+- [REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it](../requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md)
+- [REQ-027 · Quality · The version pin holds the old pin or the new one, never part, and an upgrade writes it last](../requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md)
+- [REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve](../requirements/quality/050-adopt/REQ-028-unresolved-pin-runs-installed.md)
+- [REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything](../requirements/functional/050-adopt/REQ-029-compatibility-before-write.md)
+- [REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently](../requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md)
+- [REQ-031 · Constraint · The CLI is installed with uv from the distribution's git URL](../requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md)
 
 **Its use cases:**
 
 - [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
 - [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+- [UC-048 — Put the system's tool on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md) ([not built yet](#not-built-yet): step 2, variant 12f)
+- [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md) ([not built yet](#not-built-yet): step 2)
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md) ([not built yet](#not-built-yet): step 2)
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md) ([not built yet](#not-built-yet): step 2, variant 1d, step 10)
+- [UC-053 — Re-pin an inherited rule set once I have reviewed its new major](../use-case-model/use-cases/050-adopt/UC-053-repin-rule-set.md)
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md) ([not built yet](#not-built-yet): step 2)
 
 ## Reference
 
@@ -129,7 +143,7 @@ Take the system into another project, keep it current, and report what goes wron
 | [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |
 | [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md) | Whoever maintains a distribution of the methodology. | [010-develop](#010-develop), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
-| [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release) |
+| [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
 
 ### Concepts
 
@@ -208,6 +222,14 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): variant 5b, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-039 — Think a question through in a scratchpad note, and retire it](../use-case-model/use-cases/030-change/UC-039-think-in-scratchpad.md): variant 6a, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md): variant 12f, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md): variant 1d, decided by `COR-004`, tracked in `#1884`
+- [UC-052 — Run each project at the version it pins](../use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md): step 10, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-054 — Upgrade one capability on its own](../use-case-model/use-cases/050-adopt/UC-054-upgrade-capability.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
 
 ### Diagrams
 

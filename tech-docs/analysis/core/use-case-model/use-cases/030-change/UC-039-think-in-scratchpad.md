@@ -11,7 +11,7 @@ requirements:
   - REQ-005
   - REQ-012
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 shortfalls:
   - at: 2
     issue: "#1765"
@@ -59,7 +59,7 @@ pkit:
 - **AI agent** (`ACT-ai-agent`): starts the note through the `scratchpad-author` skill, which pairs with the stamp.
 - **Operator** (`ACT-operator`): is asked before a command of this use case writes in another repository than the session's own. So no such write happens silently (REQ-012).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

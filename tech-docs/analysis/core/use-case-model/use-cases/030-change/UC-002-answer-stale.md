@@ -21,7 +21,7 @@ requirements:
   - REQ-020
   - REQ-021
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 shortfalls:
   - at: 11
     issue: "#1765"
@@ -96,7 +96,7 @@ pkit:
 - **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated artefact, the sentence the change's author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up (COR-050 point 3). It is told too of each revalidation on the base's tip that an answer of the change did not read (COR-062 point 7).
 - **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently (REQ-012).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 
