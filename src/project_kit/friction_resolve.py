@@ -76,7 +76,7 @@ import re
 import secrets
 import tempfile
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from enum import Enum
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
@@ -104,6 +104,7 @@ from project_kit.friction_discovery import (
     ArtefactKind,
     DiscoveredFile,
     Discovery,
+    aside_of_places,
     discover_artefacts,
     held_message,
     line_break,
@@ -578,7 +579,7 @@ def read_version(rel: str, found: DiscoveredFile, text: str) -> Version | str:
     Each is found under the keys discovery reads it by (`key_span`). Where those keys
     cannot be told, as where `1` and `"1"` are both read as `1`, the text found could be
     another entry's, so the version cannot be read."""
-    artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
+    artefacts, reason = _parsed(rel, found, text)
     if reason is not None:
         return f"its front matter does not parse ({reason})"
     front_matter, _body = split_front_matter(text)
@@ -928,7 +929,7 @@ def _read_back(
 ) -> Mapping[_Key, Artefact] | None:
     """The resolution's artefacts — `None` unless it parses and every decided block and
     list reads back as decided."""
-    artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
+    artefacts, reason = _parsed(rel, found, text)
     if reason is not None:
         return None
     by_key = {_key(a): a for a in artefacts}
@@ -937,6 +938,16 @@ def _read_back(
         if artefact is None or _written(artefact, which) != (True, value):
             return None
     return by_key
+
+
+def _parsed(rel: str, found: DiscoveredFile, text: str) -> tuple[list[Artefact], str | None]:
+    """The artefacts one version of a file a place holds reads as (`parse_artefacts`), each
+    carrying the derived links the places matching the file declare in the working tree
+    (`aside_of_places`), so both sides are compared as the change check compares them
+    (COR-050 point 5)."""
+    artefacts, reason = parse_artefacts(rel, found.places[0], text, rule_set=found.rule_set)
+    aside = aside_of_places(found.places)
+    return [replace(a, aside=aside) for a in artefacts], reason
 
 
 def _owed(resolved: Artefact, base: Artefact) -> Owed:
