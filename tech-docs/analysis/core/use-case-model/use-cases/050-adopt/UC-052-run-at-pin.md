@@ -102,7 +102,7 @@ pkit:
 
 - **1a.** `pkit upgrade` pinned the project already, as it does by default (UC-051). The path goes on at step 4.
 - **1b.** The operator names the release the content is at, `pkit pin <version>`. The system writes the version pin at it, as step 3 does.
-- **1c.** The operator names a newer release. The system runs that release's own `pkit upgrade` through `uvx`, with routing bypassed, which brings the content to that release (REQ-026, REQ-029 and REQ-030). Only then does it write the version pin, last (ADR-049 point 5 and REQ-027).
+- **1c.** The operator names a newer release. The system runs that release's own `pkit upgrade` through `uvx`, with routing bypassed, which brings the content to that release (REQ-026, REQ-029 and REQ-030). Only then does `pkit pin` write the version pin, last (ADR-049 point 5 and REQ-027).
 - **1d.** On the path of 1c, the operator first passes `--dry-run` to `pkit pin`, to see each edit the raise would make. The system names each edit, and writes nothing (REQ-009).
 
 > [!WARNING]
@@ -125,8 +125,8 @@ pkit:
 
 **Minimal guarantees:**
 
-- The version pin holds the old pin or the new one, never part of either (REQ-027).
-- A raise writes the version pin only once the content reached it, so a failed raise leaves the old version pin (ADR-049 point 1).
+- The version pin holds the old one or the new one, never part of either (REQ-027).
+- A raise writes the version pin only once the content reached the new release. A failed raise leaves the old version pin (ADR-049 point 1).
 - A version pin that cannot be fetched never fails a command in the router (REQ-028).
 - `pkit pin` never moves a project to an older release (ADR-049 point 3).
 - `pkit pin`, `pkit unpin` and `pkit upgrade` are the version pin's only writers (ADR-065 point 11 and REQ-002).

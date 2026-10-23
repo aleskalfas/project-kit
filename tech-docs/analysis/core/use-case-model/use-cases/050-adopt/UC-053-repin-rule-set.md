@@ -54,13 +54,13 @@ pkit:
 
 - **2a.** No pin is behind its set. The system shows `<n> checked, all current`, and the use case ends.
 - **4a.** The adopter finds a rule of the new major that the project will not follow. The adopter keeps the old pin, or stops inheriting the set, and proposes the change to the set's owner (COR-051 point 7). While the pin is behind, validation keeps failing, and the use case ends.
-- **6a.** Another set of the project's own inherits this set. Its pin now falls behind in turn, and the path repeats for that set from step 1.
+- **6a.** Another set of the project's own inherits this set. The other set's pin now falls behind in turn, and the path repeats for the other set from step 1.
 - **7a.** Two routes to one artefact pin the set at different majors. Validation fails on the artefact, naming both routes, and the path rejoins at step 5 (COR-051 point 7).
 
 **Postconditions:** The project's rule set pins the inherited set's current major, and validation passes it. The inherited set's accepted rules bind through it again, as the adopter reviewed them.
 
 **Minimal guarantees:**
 
-- While a pin is behind its set, no rule binds through it, and validation fails, so the gap is never silent (COR-051 point 7).
+- While a pin is behind its set, no rule binds through that pin, and validation fails, so the gap is never silent (COR-051 point 7).
 - `pkit status`, `pkit validate` and `pkit rule-sets reach` write nothing (REQ-005).
 - The system moves no pin of its own accord. The adopter moves it, once the new major is reviewed (COR-051 point 7).

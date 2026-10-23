@@ -113,10 +113,13 @@ pkit:
 - **3b.** The project pins a version. The system runs the upgrade under the version pin's code, and never updates the CLI. Where a newer release resolves, it hands over to that release's upgrade, then raises the version pin last (ADR-065 point 9).
 - **3c.** The router could not fetch the project's version pin, and runs the installed CLI instead. The system refuses, writes nothing, and names reconnecting, the version pin run through `uvx`, or `pkit unpin` then `pkit upgrade` (ADR-065 point 9).
 - **4a.** The CLI is older than the project's content or its version pin. The system refuses, writes nothing, and names the remedies (REQ-010). The use case ends.
-- **4b.** The project is at the target already. The system prints `Already at backbone v<version>; nothing to upgrade.`, writes the version pin at that version unless `--no-pin` declines it, and the use case ends (ADR-064 point 1).
+- **4b.** The project is at the target already. The system prints `Already at backbone v<version>; nothing to upgrade.`. It writes the version pin at that version unless `--no-pin` declines it, and the use case ends (ADR-064 point 1).
 - **4c.** The last transition is incomplete. The system says `The last transition is incomplete`, and runs the backbone's migrations from the recorded completion, so this upgrade finishes that transition (REQ-026).
 - **4d.** No completion is recorded, or no manifest. The system says the project's migration history is unknown, and runs every backbone migration up to the target once (ADR-065 point 5 and REQ-026).
-- **5a.** A component's range excludes the target, its distribution ships it older than recorded, or a folder of the project's own takes a core area's name. The system refuses, names each conflict, and writes nothing (REQ-029). The use case ends.
+- **5a.** The system finds one of these conflicts, and refuses before it writes anything, naming each (REQ-029). The use case ends.
+  - a component whose range excludes the target
+  - a component its distribution ships older than the project records
+  - a folder of the project's own that takes a core area's name
 - **5b.** A dependency gate fails for a capability that does not move. The system warns, naming each dependent, and refuses unless the adopter passes `--force` (ADR-065 point 6).
 - **5c.** A capability's new version brings a new name collision. For each, the system asks override, skip or inspect, and records each skip before the copy, so it never asks again (ADR-065 point 6).
 - **5d.** On the path of 5c, nobody can answer. The system refuses before it writes anything, naming a run at a terminal or a rename of the project's artefact (REQ-030). The use case ends.

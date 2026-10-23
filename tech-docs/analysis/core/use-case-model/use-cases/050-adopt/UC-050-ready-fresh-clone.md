@@ -95,7 +95,11 @@ pkit:
 - **4a.** A capability the project records is shipped newer, older or not at all, or has no recorded version. The system copies none of these, and reports each (ADR-065 point 1).
 - **4b.** A folder of the project's own sits at `.pkit/lifecycle/`, where the core area of that name would be copied. The system stops before it writes, and names how to move the project's area (ADR-065 point 13).
 
-**Postconditions:** The clone holds the system at the release the project records. Its skills and agent definitions are deployed where the harness reads them, its agent workspace exists, and its query commands answer offline. No recorded version moved.
+**Postconditions:** The clone holds the system at the release the project records, and no recorded version moved. In the clone:
+
+- the skills and agent definitions are deployed where the harness reads them
+- the agent workspace exists
+- each query command answers offline
 
 **Minimal guarantees:**
 

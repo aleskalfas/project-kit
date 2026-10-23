@@ -95,8 +95,8 @@ pkit:
 - **1d.** The adopter passes `--root <path>`, as in a pipeline. The system installs at that path without asking, after the checks of step 4.
 - **1e.** Git refuses to verify the repository, or cannot open its `.git`. The system refuses, naming the fix, or `pkit init --root <target>` to install there anyway.
 - **1f.** An install lies between the working directory and the target. The system refuses to create a second one, and names `pkit init --root <target>`.
-- **4a.** The target holds a `.pkit/` that is an install. The system refuses with `<target> is already a project-kit project.`, and names `pkit sync`, since first install runs once (COR-004). The use case ends.
-- **4b.** The target holds a `.pkit/` that is no install. The system refuses, and names moving it aside. The use case ends.
+- **4a.** The target holds a `.pkit/` that an earlier install wrote. The system refuses with `<target> is already a project-kit project.`, and names `pkit sync`, since first install runs once (COR-004). The use case ends.
+- **4b.** The target holds a `.pkit/` that no install wrote. The system refuses, and names moving it aside. The use case ends.
 - **4c.** The target is the methodology's source repository, or the CLI ships an adapter and a capability of one name. The system refuses and writes nothing. The use case ends.
 - **8a.** The project already holds `.claude/settings.json`. Before the merge, the system backs it up to `.claude/settings.json.pre-pkit` (ADR-065 point 11).
 - **10a.** The install stops before step 10, such as on a failing script. The manifest records the target and no completion, so the project reads as incomplete, and `pkit upgrade` finishes the install (UC-051 and REQ-026).
@@ -110,7 +110,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit visibility` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-**Postconditions:** The project holds the system at the CLI's release. Its `.pkit/` holds the methodology's content, and its manifest's target and completion name that release. Its adapters are registered, with their skills and agent definitions deployed. The system is committed for the team, or it is hidden from the shared repository in this clone.
+**Postconditions:** The project holds the system at the CLI's release. The project's `.pkit/` holds the methodology's content, and its manifest's target and completion name that release. Its adapters are registered, with their skills and agent definitions deployed. The system is committed for the team, or it is hidden from the shared repository in this clone.
 
 **Minimal guarantees:**
 
