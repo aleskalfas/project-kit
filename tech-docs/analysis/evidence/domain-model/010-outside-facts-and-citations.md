@@ -102,7 +102,7 @@ An evidence record is one entry of an `evidence.yaml`. It keeps the words of a s
 - Its [evidence scope](../glossary.md#term-evidence-scope--evidence-scope) holds it (DEC-002).
 - Citations name it, by its `id` (DEC-001).
 
-**States:** A record that no citation names is an orphan. A record may be captured before the claim that cites it, so an orphan is allowed (DEC-003). It is cited once a citation names it.
+**States:** A record that no citation names is an orphan. A record may be written before the claim that cites it, so an orphan is allowed (DEC-003). It is cited once a citation names it.
 
 **Always true:**
 

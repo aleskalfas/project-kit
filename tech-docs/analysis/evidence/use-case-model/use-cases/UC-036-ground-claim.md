@@ -50,7 +50,7 @@ pkit:
 
 - The project has the evidence capability installed, or registered in place where the capability is developed (COR-017 and COR-031). The adapter of the project's harness deploys the `evidence` skill where the harness reads it (COR-005). The CLI registers `pkit evidence validate` from the capability's package metadata (COR-021).
 - `uv` is on the developer's `PATH`. It runs the check, a script that declares what it needs, and installs that on the first run (evidence DEC-003).
-- Each excerpt holds the source's words as the source gave them. Nothing checks it, since its fidelity is the discipline of whoever captured it, and the system never fetches a source (evidence DEC-002 and DEC-003).
+- Each excerpt holds the source's words as the source gave them. Nothing checks it, since its fidelity is the discipline of whoever fetched it, and the system never fetches a source (evidence DEC-002 and DEC-003).
 - Each claim about an outside fact carries a citation. Nothing finds a claim without one, since text with no citation states no outside fact by convention alone (evidence DEC-001).
 
 **Trigger:** The developer, or an AI agent writing for them, is about to state an outside fact in a document of the project (evidence DEC-001).
