@@ -59,17 +59,14 @@ _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # the decision ABSTAIN — never auto-allow — because a per-segment matcher is
 # structurally blind to what these compose into.
 #
-# `|` is DELIBERATELY EXCLUDED from this set (it does not force an abstain).
-# Pipe-composition porosity (e.g. `gh … | sh`) is inherited UNCHANGED from the
-# existing bare-command path: `segments()` already splits on `|` and the
-# decision matches on the granted first segment, so `gh … | sh` decides the
-# same with or without a leading `cd`. The cd-strip neither creates nor worsens
-# it — `cd /x && gh … | sh` resolves to exactly the bare `gh … | sh` verdict.
-# Adding `|` here would (a) re-introduce prompts on legitimate pipes like
-# `gh … | jq` and (b) only HALF-fix pipe-to-shell — the bare form `gh … | sh`
-# would stay porous — an inconsistent asymmetry for no real gain. The honest
-# boundary for `| sh` is the OS sandbox (ADR-004: this layer is a speed-bump,
-# not a boundary). Pipe handling is out of scope for ADR-025 Phase 1.
+# `|`, like `&&`, `||` and `;`, is not in this set because the splitter
+# separates on it: each side of a pipe is a segment of its own, and `decide()`
+# allows a compound only when an allow grant covers EVERY segment (ADR-025
+# point 2: an unrecognized command in any segment abstains, never auto-allows).
+# So `gh … | sh` abstains, since nothing grants `sh`, with or without a leading
+# `cd`, and `gh … | jq` abstains too unless a grant covers `jq`. A pipe whose
+# every side is granted, such as `git diff | git apply`, still allows: that is
+# no new widening, since each segment carries its own grant (ADR-025 point 6).
 _UNTRUSTED = re.compile(r"""['"`<>]|\$\(""")
 # A bare `cd <path>` first segment: literally `cd` then exactly one path token
 # with no shell metacharacter and not a flag. The token is intentionally
@@ -140,6 +137,17 @@ def _matches_bash(rule: dict[str, Any], toks: list[str]) -> bool:
                 return False
         return True
     return False
+
+
+def _segment_privileges(privileges: dict[str, Any], toks: list[str]) -> set[str]:
+    """Which privilege ids does one segment of a Bash command match? A request's
+    privileges are the union over its segments, and `decide()` reads them one
+    segment at a time to check that a grant covers each (ADR-025 point 2)."""
+    return {
+        name
+        for name, spec in privileges.items()
+        if any(_matches_bash(rule, toks) for rule in spec.get("recognize", {}).get("bash", []))
+    }
 # fmt: on
 
 
@@ -158,12 +166,8 @@ def recognized_privileges(catalog: dict[str, Any], request: dict[str, Any]) -> s
                 hits.add(name)
         hits |= _path_scoped_privileges(privileges, request)
     elif request.get("type") == "bash":
-        segs = segments(request.get("command", ""))
-        for name, spec in privileges.items():
-            for rule in spec.get("recognize", {}).get("bash", []):
-                if any(_matches_bash(rule, toks) for toks in segs):
-                    hits.add(name)
-                    break
+        for toks in segments(request.get("command", "")):
+            hits |= _segment_privileges(privileges, toks)
     return hits
 
 
@@ -447,6 +451,23 @@ def _effective_grants(model: dict[str, Any], subject: str) -> list[dict[str, Any
     return [g for g in model.get("grants", []) if g.get("subject") in keep]
 
 
+def _uncovered_segments(
+    catalog: dict[str, Any], request: dict[str, Any], allowed: set[str]
+) -> list[list[str]]:
+    """The segments of a Bash request that none of the `allowed` privileges
+    covers: a segment that matches no privilege, or only privileges no allow
+    grant of the subject reaches (ADR-025 point 2). Empty for a tool request,
+    and for a Bash request whose every segment is covered."""
+    if request.get("type") != "bash":
+        return []
+    privileges = catalog.get("privileges", {})
+    return [
+        toks
+        for toks in segments(request.get("command", ""))
+        if not _segment_privileges(privileges, toks) & allowed
+    ]
+
+
 def decide(
     model: dict[str, Any],
     catalog: dict[str, Any],
@@ -461,7 +482,8 @@ def decide(
     The optional `url` field carries the request URL for ``domain``-scoped
     privilege checks (web-fetch).  Effective grants = baseline (`all`) ∪ the
     subject's own grants; deny wins; a scoped allow denies the privilege
-    outside its scope.
+    outside its scope.  A compound Bash command is allowed only when an allow
+    covers every segment of it (ADR-025 point 2).
 
     Scope semantics by privilege ``scope_type`` (from the catalog):
       - ``directory`` (default): grant scope globs are matched against ``cwd``.
@@ -496,7 +518,7 @@ def decide(
 
     hits = recognized_privileges(catalog, request)
     privileges_catalog = catalog.get("privileges", {})
-    matched_allow = False
+    allowed: set[str] = set()
     for g in _effective_grants(model, subject):
         privs = _privilege_ids(g.get("privilege"))
         overlap = hits & privs
@@ -524,15 +546,32 @@ def decide(
             url=request.get("url"),
         )
         if ok:
-            matched_allow = True
+            allowed |= overlap
         else:
             deny_msg = reason or (
                 f"{sorted(overlap)} allowed for {subject} only in "
                 f"{g.get('scope')}, not {request.get('cwd')!r}"
             )
             return "deny", deny_msg
-    if matched_allow:
-        return "allow", f"allow grant for {subject} on {sorted(hits)}"
+    if allowed:
+        # A grant on one segment of a compound never carries another (#1908):
+        # every segment the splitter yields must match a privilege an allow
+        # covers, or the core does not allow (ADR-025 point 2). The reason
+        # names only each uncovered segment's program, never its arguments,
+        # which may hold a path or a secret the diagnostic log redacts.
+        uncovered = _uncovered_segments(catalog, request, allowed)
+        if not uncovered:
+            return "allow", f"allow grant for {subject} on {sorted(hits)}"
+        programs = sorted({toks[0] for toks in uncovered})
+        if posture == "strict":
+            return "deny", (
+                f"strict posture: no grant covers the {programs} segment(s) "
+                f"of this compound"
+            )
+        return "abstain", (
+            f"no grant covers the {programs} segment(s) of this compound — "
+            f"fail closed, defer to the harness's normal flow"
+        )
     if posture == "strict":
         return "deny", "strict posture: nothing grants this request"
     return "abstain", "lenient posture: defer to the harness's normal flow"

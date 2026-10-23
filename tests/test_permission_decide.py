@@ -2441,24 +2441,33 @@ def test_chained_cd_strips_to_final_granted_command(decide_mod, catalog):
     assert d == "allow", why
 
 
-# ---- pipe-in-remainder: inherited porosity, unchanged by the cd-strip -------
+# ---- pipe-in-remainder: each segment must be covered (#1908) ---------------
 #
-# `|` is NOT in `_UNTRUSTED` (it does not force an abstain). Pipe handling is
-# inherited UNCHANGED from the bare-command path — `segments()` already splits
-# on `|` and matches the granted first segment. These tests pin that behavior so
-# a future `_UNTRUSTED` edit can't silently flip it (the rationale lives at the
-# `_UNTRUSTED` definition in decide.py). The cd-strip neither creates nor worsens
-# pipe porosity; the real boundary for `| sh` is the OS sandbox (ADR-004).
+# `|` is NOT in `_UNTRUSTED`: the splitter splits on it, so each side of a pipe
+# is a segment of its own, and an allow needs a grant on every segment
+# (ADR-025 point 2). A pipe whose every segment is granted allows, with or
+# without a leading `cd`. A pipe into a command no grant covers, such as
+# `| jq` or `| sh`, abstains. The cd-strip leaves the pipe untouched, so the
+# cd-prefixed form decides exactly as the bare form does.
 
 
-def test_cd_prefix_then_legitimate_pipe_allows(decide_mod, catalog):
-    """`cd /x && gh pr list | jq .` ALLOWS — the legitimate-pipe win is preserved.
-    `gh` is granted (issue-tracker); the `jq` segment matches no grant but a
-    non-match is not a deny, so the granted first segment carries the allow. A
-    quote-free `jq .` is used so the win, not the `_UNTRUSTED` abstain, is what's
-    pinned. The cd-strip leaves the pipe untouched."""
-    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list | jq .", "operator"))
+def test_cd_prefix_then_granted_pipe_allows(decide_mod, catalog):
+    """`cd /x && git diff | git apply --check` ALLOWS: both sides of the pipe
+    are `git`, which the operator's `vcs` grant covers, so the leading-cd strip
+    reveals a compound whose every segment is granted."""
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && git diff | git apply --check", "operator")
+    )
     assert d == "allow", why
+
+
+def test_cd_prefix_then_pipe_to_ungranted_filter_abstains(decide_mod, catalog):
+    """`cd /x && gh pr list | jq .` ABSTAINS: `gh` is granted, but no grant
+    covers the `jq` segment, and a grant on one segment no longer carries
+    another (#1908)."""
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x && gh pr list | jq .", "operator"))
+    assert d == "abstain", why
+    assert "'jq'" in why
 
 
 def test_cd_prefix_then_pipe_to_destructive_denies(decide_mod, catalog):
@@ -2472,16 +2481,14 @@ def test_cd_prefix_then_pipe_to_destructive_denies(decide_mod, catalog):
 
 def test_cd_prefix_then_pipe_to_shell_matches_bare_form(decide_mod, catalog):
     """`cd /x && gh pr list | sh` resolves to EXACTLY the bare `gh pr list | sh`
-    verdict — proving the cd-strip is verdict-preserving over a pipe-to-shell. The
-    `| sh` porosity (whatever it is today) is INHERITED from the bare-command path,
-    not a cd-strip artifact; `|` is deliberately absent from `_UNTRUSTED`. The real
-    boundary for `| sh` is the OS sandbox (ADR-004)."""
+    verdict, and both abstain: the cd-strip is verdict-preserving over a
+    pipe-to-shell, and no grant covers the `sh` segment (#1908)."""
     cd_decision, cd_why = decide_mod.decide(
         MODEL, catalog, _bash("cd /x && gh pr list | sh", "operator")
     )
     bare_decision, _ = decide_mod.decide(MODEL, catalog, _bash("gh pr list | sh", "operator"))
-    assert cd_decision == bare_decision, (
-        f"cd-prefixed pipe-to-shell must match the bare form's verdict; "
+    assert cd_decision == bare_decision == "abstain", (
+        f"cd-prefixed pipe-to-shell must match the bare form's abstain; "
         f"got cd={cd_decision!r}, bare={bare_decision!r}: {cd_why}"
     )
 
@@ -2494,3 +2501,126 @@ def test_cd_strip_hook_and_decide_parity(decide_mod, catalog):
     payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
     d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
     assert d_decide == d_hook == "allow"
+
+
+# ---- a compound allows only when a grant covers every segment (#1908) -------
+#
+# ADR-025 point 2, inherited from ADR-004 decision point 4: an unrecognized
+# command in any segment makes the core abstain, never auto-allow. A grant on
+# one segment of a compound used to carry the whole command, so where `gh` is
+# granted, `gh pr list | sh` and `gh pr list ; python3 x.py` were allowed. Now
+# each segment the splitter yields needs an allow of its own. A segment that
+# matches no privilege, or matches only privileges the subject is not granted,
+# leaves the compound unallowed: lenient abstains (the harness asks), strict
+# denies. Deny-wins is unchanged: a deny on any segment still binds.
+#
+# MODEL grants `operator` vcs (git) + issue-tracker (gh) + kit (pkit) +
+# repo-read. `docker` is recognized but granted only to `agent:devops`.
+
+_UNCOVERED_COMPOUNDS = [
+    # a segment no privilege recognizes
+    "gh pr list | sh",
+    "gh pr list ; python3 x.py",
+    "gh pr list && frobnicate",
+    "git status || curl -s example.com",
+    "frobnicate | gh pr list",
+    # a segment whose privilege is recognized but not granted to the operator
+    "gh pr list && docker ps",
+    "docker ps | git status",
+]
+
+
+@pytest.mark.parametrize("command", _UNCOVERED_COMPOUNDS)
+def test_compound_with_an_uncovered_segment_abstains(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r} must not be allowed by a grant on another segment: {why}"
+
+
+@pytest.mark.parametrize("command", _UNCOVERED_COMPOUNDS)
+def test_compound_with_an_uncovered_segment_denies_under_strict(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", f"{command!r} must deny under a strict posture: {why}"
+
+
+def test_the_reason_names_only_the_uncovered_segments_program(decide_mod, catalog):
+    # The program, never its arguments: the diagnostic log records the reason
+    # beside a redacted command, so an argument here would undo the redaction.
+    for posture in ("lenient", "strict"):
+        _, why = decide_mod.decide(
+            MODEL, catalog, _bash("gh pr list ; python3 x.py --token s3cret", "operator"), posture
+        )
+        assert "'python3'" in why, why
+        assert "x.py" not in why and "s3cret" not in why, why
+        assert "'gh'" not in why, why
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git status && gh pr list",
+        "gh pr list ; git status",
+        "git diff | git apply --check",
+        "git fetch && git status || pkit status",
+        "export GH_HOST=x && gh pr list | git hash-object --stdin",
+    ],
+)
+def test_compound_whose_every_segment_is_granted_allows(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "allow", f"{command!r}: every segment is granted, so it stays allowed: {why}"
+
+
+def test_leading_cd_then_a_granted_compound_allows(decide_mod, catalog):
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && git status && gh pr list", "operator")
+    )
+    assert d == "allow", why
+
+
+@pytest.mark.parametrize(
+    "command", ["cd /x && gh pr list ; python3 x.py", "cd /x; gh pr list | sh"]
+)
+def test_leading_cd_then_an_uncovered_segment_abstains(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", why
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", why
+
+
+def test_a_scoped_grant_covers_only_its_own_segment(decide_mod, catalog):
+    # devops may run docker inside services/, and nothing grants it gh.
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("docker ps && gh pr list", "agent:devops", cwd="services/api")
+    )
+    assert d == "abstain", why
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("frobnicate && sudo whoami", "privilege-escalation"),
+        ("gh pr list | rm -rf ~", "destructive-fs"),
+        ("python3 x.py ; git push --force", "vcs-history-rewrite"),
+    ],
+)
+def test_a_deny_on_any_segment_still_wins(decide_mod, catalog, command, privilege):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture=posture)
+        assert d == "deny", why
+        assert privilege in why
+
+
+def test_a_single_command_is_decided_as_before(decide_mod, catalog):
+    # One segment: its own grant decides it, exactly as before #1908.
+    assert decide_mod.decide(MODEL, catalog, _bash("gh pr list", "operator"))[0] == "allow"
+    assert decide_mod.decide(MODEL, catalog, _bash("frobnicate", "operator"))[0] == "abstain"
+    assert decide_mod.decide(MODEL, catalog, _bash("docker ps", "operator"))[0] == "abstain"
+
+
+def test_uncovered_compound_hook_and_decide_parity(decide_mod, catalog):
+    """The coverage check lives in the shared core, so hook_decide and decide
+    agree on a compound with an uncovered segment (ADR-002 / ADR-003)."""
+    cmd = "gh pr list | sh"
+    d_decide, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+    d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
+    assert d_decide == d_hook == "abstain"
