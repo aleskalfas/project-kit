@@ -42,7 +42,7 @@ pkit:
 
 **Main path:**
 
-1. The agent dispatches a delegated agent for that role through the harness's delegation tool. It does so at the cost the adapter's support declaration names. Claude Code's declaration, for one, grades it `at-cost`. It holds while the harness's agent teams are off, or for a delegated agent given no `name`.
+1. The agent dispatches a delegated agent for that role through the harness's delegation tool, at the cost the adapter's support declaration names. Claude Code's declaration, for one, grades `delegated-result-complete` as `at-cost`. The result arrives whole while the harness's agent teams are off, or for a delegated agent given no `name`.
 2. The harness runs the delegated agent, which does its work and ends with its result.
 3. The harness hands the whole result to the agent that delegated, uncut.
 4. The agent acts on the whole result, such as fixing each finding that a review marked blocking.
