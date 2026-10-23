@@ -20,7 +20,7 @@ analyses:
     areas:
       010-develop: "Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions."
       020-set-up: "Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits."
-      030-change: "Check, answer and land each change to a project, so what the project states stays true as it changes."
+      030-change: "Record a project's decisions and rules, and check, answer and land each change to it, so what the project states stays true as it changes."
       040-release: "Release the backbone and each component on its own version, so projects can move to it and pin it."
       050-adopt: "Take the system into another project, keep it current, and report what goes wrong with it."
   - component: project-management
