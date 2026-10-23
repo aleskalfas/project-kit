@@ -49,9 +49,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:54:12Z
+      at: 2026-10-23T08:14:06Z
       outcome: unchanged
-      unchanged-because: The developer's capability needs moved to their analyses, the AI agent's need says agent definition, and the merge authoriser lost a capability anchor. None of it reaches the goal or the steps.
+      unchanged-because: A change that only moves derived links asks no answer, and resolve advises the outcome the check bears out. Answering what a change made stale runs as the steps say.
       deferred:
         - anchor:
             kind: path

@@ -1,0 +1,3 @@
+component: living-docs
+kind: none
+body: The README's answer is revalidated for the derived links that friction now reads as their words alone (#1844). Its text is unchanged, so no adopter-facing surface moves.

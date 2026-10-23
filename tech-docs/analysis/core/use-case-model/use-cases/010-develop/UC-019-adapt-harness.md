@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:54:10Z
+      at: 2026-10-23T08:14:05Z
       outcome: unchanged
-      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
+      unchanged-because: The package check gains a check of derived links' targets. Adapting to another harness uses none of it, so the steps hold.
 ---
 
 # UC-019 — Adapt the system to another harness
