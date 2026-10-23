@@ -1092,19 +1092,19 @@ analyses:
 Here is the start of the overview of the analysis the examples above come from:
 
 ```markdown
-# Overview of the analysis
+# Overview of the analysis of core
 
 <!-- pkit:overview reads=4 fingerprint=sha256:… -->
 
-[The test runner exists so a team's suites run the same way on every machine](../../../.pkit/decisions/project/PRJ-004-runner-purpose.md).
+[The test runner exists so a team's suites run the same way on every machine](../../../../.pkit/decisions/project/PRJ-004-runner-purpose.md).
 
-This analysis describes what the system does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
+This analysis describes what core does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
 
 ## Areas
 
 ### 010-run
 
-A suite runs against a sandbox, and its result can be read.
+Run a suite against a sandbox, and read its result.
 
 **Its requirements:**
 
@@ -1117,7 +1117,7 @@ A suite runs against a sandbox, and its result can be read.
 
 ### 020-report
 
-A failure's cause can be found and shared.
+Find a failure's cause and share it.
 
 **Builds on:** [010-run](#010-run).
 
