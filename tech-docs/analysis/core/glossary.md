@@ -65,6 +65,10 @@ TERM-agent-workspace:
           - ADR-060#1
           - ADR-060#3
           - ADR-060#9
+      revalidated:
+        at: 2026-10-23T14:50:21Z
+        outcome: unchanged
+        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
 TERM-anchor:
   name: anchor
   status: active
@@ -678,9 +682,9 @@ TERM-operational-rule:
           - COR-014
           - COR-051#1
       revalidated:
-        at: 2026-10-23T08:53:47Z
+        at: 2026-10-23T14:50:23Z
         outcome: unchanged
-        unchanged-because: It anchors the core's own operational rules and its contract with adapters in place of the Claude Code adapter's merge script. Its definition and its section hold.
+        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
 TERM-overlay:
   name: overlay
   status: active

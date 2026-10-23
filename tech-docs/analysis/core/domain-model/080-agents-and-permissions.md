@@ -39,6 +39,10 @@ pkit:
         - TERM-sandbox
         - TERM-agent-workspace
         - TERM-session-anchor
+    revalidated:
+      at: 2026-10-23T14:50:20Z
+      outcome: unchanged
+      unchanged-because: ADR-060 now names the permission model's records and code without calling them a capability. The view already calls the code backbone code, and its account of the workspace and its grant holds.
 ---
 
 # VIEW-agents-and-permissions — Agents and permissions

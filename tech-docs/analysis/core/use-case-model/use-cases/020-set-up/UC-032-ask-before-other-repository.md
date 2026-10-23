@@ -37,6 +37,10 @@ pkit:
         - ACT-operator
         - ACT-ai-agent
         - REQ-012
+    revalidated:
+      at: 2026-10-23T14:50:28Z
+      outcome: unchanged
+      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

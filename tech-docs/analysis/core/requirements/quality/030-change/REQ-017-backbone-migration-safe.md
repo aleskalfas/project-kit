@@ -21,6 +21,10 @@ pkit:
       artefact:
         - ACT-adopter
         - REQ-001
+    revalidated:
+      at: 2026-10-23T14:50:24Z
+      outcome: unchanged
+      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this requirement rests on in the rules holds.
 ---
 
 # REQ-017 · Quality · A backbone migration is safe over any state
