@@ -1,6 +1,6 @@
 # Overview of the analysis of demo-recording
 
-<!-- pkit:overview reads=4 fingerprint=sha256:fa6805c5cb826a7e8f064c926cdc9b5fe82562c5ab099cac86c4de43eefc6c42 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:58d43677fd1a7887161f2809be20dab0ac6df6874dd693157b3977b5a0091dac -->
 
 No record states what demo-recording is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of demo-recording under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -8,7 +8,7 @@ This analysis describes what demo-recording does: who uses it, what they do with
 
 ## Use cases
 
-- [UC-026 — Record a demo of my command line](../use-case-model/use-cases/UC-026-record-demo.md) ([not built yet](#not-built-yet): variant 3b)
+- [UC-035 — Record a demo of my command line](../use-case-model/use-cases/UC-035-record-demo.md) ([not built yet](#not-built-yet): variant 3b)
 
 ## Reference
 
@@ -27,7 +27,7 @@ The [glossary](../glossary.md) defines each term.
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
-- [UC-026 — Record a demo of my command line](../use-case-model/use-cases/UC-026-record-demo.md): variant 3b, decided by `demo-recording:DEC-001`, tracked in `#1904`
+- [UC-035 — Record a demo of my command line](../use-case-model/use-cases/UC-035-record-demo.md): variant 3b, decided by `demo-recording:DEC-001`, tracked in `#1904`
 
 ### Diagrams
 

@@ -1,5 +1,5 @@
 ---
-id: UC-026
+id: UC-035
 title: Record a demo of my command line
 status: active
 actor: core:ACT-developer
@@ -39,7 +39,7 @@ pkit:
         - COR-055#3
 ---
 
-# UC-026 — Record a demo of my command line
+# UC-035 — Record a demo of my command line
 
 **Goal:** Record a demo of my command line by running an executable storyboard, a document people read as it stands.
 
