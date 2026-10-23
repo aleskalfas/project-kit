@@ -40,6 +40,9 @@ pkit:
         - REQ-005
         - REQ-012
         - REQ-016
+    revalidated:
+      at: 2026-10-23T18:42:11Z
+      outcome: updated
 ---
 
 # UC-033 — Find out why a command prompted me or was blocked
@@ -84,7 +87,7 @@ pkit:
 **Variants:**
 
 - **1a.** The permission hook denied the agent's command, so the diagnostic session logs nothing of it. The hook's reason reaches the agent's session, such as `deny grant for agent:<name> on ['issue-tracker-write']`. The operator runs `pkit permissions explain`, which writes nothing and lists each subject's grants, marking guardrails and grants from capabilities (REQ-005 and ADR-016). The use case ends.
-- **1b.** The `strict` posture denied the command, since no grant allows it. The hook's reason is `strict posture: nothing grants this request`. A grant of the privilege would let the command run, and a `lenient` posture would have the hook defer it to the harness instead. The use case ends.
+- **1b.** The `strict` posture denied the command, since no grant allows it. The hook's reason is `strict posture: nothing grants this request`, or, for a chained command, it names the program of each segment no grant covers. A grant of the privilege would let the command run, and a `lenient` posture would have the hook defer it to the harness instead. The use case ends.
 - **1c.** A native deny of the harness's settings blocks the command, such as `Bash(sudo:*)` in Claude Code's. The harness gives its own message, and nothing is logged. The use case ends.
 - **1d.** The sandbox stopped the command from reaching a file or a host. The command fails with the operating system's error, and the hook gives no reason. Nothing is logged. The use case ends.
 - **1e.** The operator sets the diagnostic session's length with `--ttl <seconds>`, or logs whole commands with `--no-redact`. The path goes on at step 2.

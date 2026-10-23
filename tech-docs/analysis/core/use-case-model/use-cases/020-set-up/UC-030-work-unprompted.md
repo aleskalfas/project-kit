@@ -31,9 +31,6 @@ shortfalls:
   - at: "5a"
     issue: "#1765"
     record: ADR-014#3
-  - at: "10a"
-    issue: "#1908"
-    record: ADR-025#2
 pkit:
   friction:
     anchors:
@@ -73,6 +70,9 @@ pkit:
         - REQ-012
         - REQ-013
         - REQ-016
+    revalidated:
+      at: 2026-10-23T18:42:10Z
+      outcome: updated
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
@@ -149,11 +149,7 @@ pkit:
 - **9a.** A probe finds a verdict that differs from what the model declares. Or it finds a guardrail's native deny missing while the permission hook is registered. The system ends `Result: BROKEN — fix the decision layer before relying on autonomy.`, and exits non-zero.
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`
-- **10a.** A command chains segments, and the permission code strips a bare leading `cd <path>` before deciding the rest in the same working directory. After such a strip, a quote, `$(`, a backtick or a redirection in the rest makes it defer the call (ADR-025 points 1 and 2). A segment in which it recognises no privilege makes it defer the call too, such as `sh` in `gh pr list | sh` (ADR-025 point 2). Otherwise the code allows the chain where a grant allows a privilege it recognises, and no grant denies one.
-
-> [!WARNING]
-> **Not built yet:** the permission code weighs only the segments in which it recognises a privilege. So a grant on one segment allows the whole command. Where `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` run with nobody asked. ADR-025 point 2 decides that a segment no privilege recognises makes the code defer the call, and #1908 tracks it.
-
+- **10a.** A command chains segments, and the permission code strips a bare leading `cd <path>` before deciding the rest in the same working directory. After such a strip, a quote, `$(`, a backtick or a redirection in the rest makes it defer the call (ADR-025 points 1 and 2). A segment in which it recognises no privilege makes it defer the call too, such as `sh` in `gh pr list | sh` (ADR-025 point 2). Otherwise the code allows the chain only where a grant allows a privilege it recognises in each segment, and no grant denies one.
 - **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (COR-028 point 2).
 
 **Postconditions:** The agents run each granted command, and each single command inside the sandbox, with nobody asked. The system has verified the permission code's verdicts and the credential floor. The operator knows where the confinement does not hold.
