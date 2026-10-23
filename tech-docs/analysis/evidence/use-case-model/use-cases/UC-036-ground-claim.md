@@ -1,5 +1,5 @@
 ---
-id: UC-021
+id: UC-036
 title: Ground a claim in its source
 status: active
 actor: core:ACT-developer
@@ -36,7 +36,7 @@ pkit:
         - COR-031
 ---
 
-# UC-021 — Ground a claim in its source
+# UC-036 — Ground a claim in its source
 
 **Goal:** Ground each claim about an outside fact in a recorded excerpt of its source, with each citation checked against the evidence records.
 
