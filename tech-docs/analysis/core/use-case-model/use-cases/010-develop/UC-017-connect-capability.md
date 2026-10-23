@@ -6,7 +6,7 @@ actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
 after:
-  - [UC-016]
+  - [UC-016, UC-023]
 requirements:
   - REQ-006
   - REQ-009
@@ -55,7 +55,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-016:** The capability is recorded in the project's manifest, so the backbone reads its package metadata and its processes.
+- **From UC-016 or UC-023:** The capability is recorded in the project's manifest, so the backbone reads its package metadata and its processes.
 
 **Assumptions:** None.
 
