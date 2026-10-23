@@ -2640,3 +2640,140 @@ def test_uncovered_compound_hook_and_decide_parity(decide_mod, catalog):
     payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
     d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
     assert d_decide == d_hook == "abstain"
+
+
+# ---- a construct the splitter cannot trust, anywhere in the command (#1917) --
+#
+# ADR-025 point 2, inherited from ADR-004 decision point 4: a quote, a command
+# substitution, a backtick or a `<` / `>` redirection is a construct the dumb
+# splitter cannot be trusted on, so a grant never allows a command holding one,
+# with or without a leading `cd`. A lenient posture abstains, a strict one
+# denies, and a deny on any segment still wins. A newline and a background `&`
+# separate segments as `;` does, and an assignment whose value holds such a
+# construct stays a segment of its own. Each command below was allowed before:
+# MODEL grants the operator `gh` and `git`, as the `autonomous` profile does.
+
+_UNTRUSTED_COMMANDS = [
+    "gh pr list $(python3 x.py)",
+    "gh pr list `python3 x.py`",
+    "gh pr list > ~/.bashrc",
+    "gh pr list < /etc/passwd",
+    "gh pr list\npython3 x.py",
+    "gh pr list & python3 x.py",
+    "gh pr list && X=$(python3 x.py)",
+    "gh pr list && X=$(./x.sh)",
+    "gh pr list =(python3 x.py)",  # zsh process substitution
+    'git commit -m "fix: x"',
+]
+
+
+@pytest.mark.parametrize("command", _UNTRUSTED_COMMANDS)
+def test_an_untrusted_construct_anywhere_abstains(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r} must not be allowed by the grant: {why}"
+
+
+@pytest.mark.parametrize("command", _UNTRUSTED_COMMANDS)
+def test_an_untrusted_construct_anywhere_denies_under_strict(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", f"{command!r} must deny under a strict posture: {why}"
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["gh pr list $(python3 x.py)", "gh pr list > ~/.bashrc", "cd /x && gh pr list > out.txt"],
+)
+def test_the_reason_names_the_untrusted_construct_not_the_command(decide_mod, catalog, command):
+    for posture in ("lenient", "strict"):
+        _, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert "untrusted construct" in why, why
+        assert "python3" not in why and "bashrc" not in why and "out.txt" not in why, why
+
+
+def test_a_newline_and_a_background_amp_separate_segments(decide_mod):
+    assert decide_mod.segments("gh pr list\npython3 x.py") == [
+        ["gh", "pr", "list"],
+        ["python3", "x.py"],
+    ]
+    assert decide_mod.segments("gh pr list & python3 x.py") == [
+        ["gh", "pr", "list"],
+        ["python3", "x.py"],
+    ]
+    assert decide_mod.segments("gh pr list&python3 x.py") == [
+        ["gh", "pr", "list"],
+        ["python3", "x.py"],
+    ]
+    # `&&` stays one separator, and a trailing `&` leaves no empty segment.
+    assert decide_mod.segments("git status && gh pr list &") == [
+        ["git", "status"],
+        ["gh", "pr", "list"],
+    ]
+
+
+def test_an_assignment_holding_a_substitution_stays_a_segment(decide_mod):
+    assert decide_mod.segments("gh pr list && X=$(./x.sh)") == [
+        ["gh", "pr", "list"],
+        ["X=$(./x.sh)"],
+    ]
+    assert decide_mod.segments("export X=`./x.sh` && gh pr list") == [
+        ["export", "X=`./x.sh`"],
+        ["gh", "pr", "list"],
+    ]
+    # A plain assignment is still stripped, as before, and so is one in front
+    # of a command, so the command's own privileges are recognised.
+    assert decide_mod.segments("export GH_HOST=x && gh pr list") == [["gh", "pr", "list"]]
+    assert decide_mod.segments("X=$(true) gh pr list") == [["gh", "pr", "list"]]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "gh pr list",
+        "git status\ngh pr list",
+        "git fetch & git status",
+        "cd /x && gh pr list",
+        "cd /x; git status\ngh pr list",
+    ],
+)
+def test_a_granted_command_without_an_untrusted_construct_still_allows(
+    decide_mod, catalog, command
+):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "allow", f"{command!r}: {why}"
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("gh pr list > x ; rm -rf ~", "destructive-fs"),
+        ("cd /x && rm -rf ~ > log", "destructive-fs"),
+        ("gh pr list $(id)\nsudo whoami", "privilege-escalation"),
+        # behind an assignment holding a quote or a substitution
+        ("FOO='' git push --force", "vcs-history-rewrite"),
+        ('FOO="x" sudo id', "privilege-escalation"),
+        ("X=$(true) rm -rf ~", "destructive-fs"),
+    ],
+)
+def test_a_deny_still_wins_over_an_untrusted_construct(decide_mod, catalog, command, privilege):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", why
+        assert privilege in why
+
+
+def test_a_leading_cd_then_an_untrusted_construct_denies_under_strict(decide_mod, catalog):
+    d, why = decide_mod.decide(
+        MODEL, catalog, _bash("cd /x && gh pr list > out.txt", "operator"), posture="strict"
+    )
+    assert d == "deny", why
+
+
+def test_untrusted_construct_hook_and_decide_parity(decide_mod, catalog):
+    """The check lives in the shared core, so hook_decide and decide agree on a
+    command holding an untrusted construct (ADR-002 / ADR-003)."""
+    cmd = "gh pr list > ~/.bashrc"
+    d_decide, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+    payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+    d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
+    assert d_decide == d_hook == "abstain"
