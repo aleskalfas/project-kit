@@ -27,9 +27,8 @@ pkit:
         - COR-050#6
         - COR-050#9
     revalidated:
-      at: 2026-10-21T14:26:05Z
-      outcome: unchanged
-      unchanged-because: The developer's role, occasions and context name no answer's home, and every change still passes the friction check. So the actor holds against COR-062 and DEC-032 D1's answer folder.
+      at: 2026-10-23T08:53:41Z
+      outcome: updated
 ---
 
 # ACT-developer — Developer

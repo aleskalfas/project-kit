@@ -38,9 +38,8 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:47:06Z
-      outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      at: 2026-10-23T08:53:44Z
+      outcome: updated
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

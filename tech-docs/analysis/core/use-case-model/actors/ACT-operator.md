@@ -22,9 +22,8 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-20T10:10:49Z
-      outcome: unchanged
-      unchanged-because: Running checks gains when CI runs the short check and what it runs. The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
+      at: 2026-10-23T08:53:43Z
+      outcome: updated
 ---
 
 # ACT-operator — Operator

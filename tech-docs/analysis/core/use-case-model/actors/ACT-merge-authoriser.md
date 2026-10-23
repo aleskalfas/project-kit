@@ -14,9 +14,8 @@ pkit:
       record:
         - COR-050#3
     revalidated:
-      at: 2026-10-21T14:26:04Z
-      outcome: unchanged
-      unchanged-because: COR-062 keeps COR-050 point 3's telling of what a change updated and what it leaves out of date before its merge. That is what this actor is told, so it holds.
+      at: 2026-10-23T08:53:40Z
+      outcome: updated
 ---
 
 # ACT-merge-authoriser — Merge authoriser

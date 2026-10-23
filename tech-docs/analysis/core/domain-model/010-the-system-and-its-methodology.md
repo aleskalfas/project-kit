@@ -36,9 +36,8 @@ pkit:
         - TERM-operational-rule
         - TERM-methodology
     revalidated:
-      at: 2026-10-22T16:24:45Z
-      outcome: unchanged
-      unchanged-because: It anchors PRJ-011, the record that states what the system it explains is for. Its account of the system and its methodology holds.
+      at: 2026-10-23T08:53:38Z
+      outcome: updated
 ---
 
 # VIEW-the-system-and-its-methodology — The system and its methodology

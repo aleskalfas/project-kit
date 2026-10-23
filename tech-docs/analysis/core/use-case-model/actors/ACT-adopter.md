@@ -24,7 +24,7 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-22T16:24:42Z
+      at: 2026-10-23T08:53:39Z
       outcome: updated
 ---
 

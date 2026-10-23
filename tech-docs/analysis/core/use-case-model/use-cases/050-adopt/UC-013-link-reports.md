@@ -21,9 +21,9 @@ pkit:
         - ACT-methodology-maintainer
         - ACT-adopter
     revalidated:
-      at: 2026-10-22T23:47:17Z
+      at: 2026-10-23T08:53:59Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. No step of linking a report to its fix rests on a need that moved or was reworded.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix

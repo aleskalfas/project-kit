@@ -41,9 +41,9 @@ pkit:
         - TERM-changeset
         - TERM-release-step
     revalidated:
-      at: 2026-10-21T14:26:01Z
+      at: 2026-10-23T08:54:16Z
       outcome: unchanged
-      unchanged-because: The view rests on COR-050 for checking a change from its base to its head before it lands, against an up-to-date base. COR-062 changes where answers are written, which the view does not describe.
+      unchanged-because: TERM-report's entry only gains a link to the new term scratchpad note. Its section in the view holds.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

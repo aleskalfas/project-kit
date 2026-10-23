@@ -24,9 +24,9 @@ pkit:
         - ACT-developer
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-22T23:47:08Z
+      at: 2026-10-23T08:54:01Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The developer's needs that only a capability meets moved to its analysis, with the records behind them. Its goal is still one of the developer's needs, and its steps hold.
 ---
 
 # UC-003 — Declare what my change means for the next release

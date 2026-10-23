@@ -47,9 +47,9 @@ TERM-agent-definition:
           - COR-013#2
           - COR-013#5
       revalidated:
-        at: 2026-10-20T01:37:02Z
+        at: 2026-10-23T08:53:45Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: It anchors the core's agents code and its contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.
 TERM-agent-workspace:
   name: agent workspace
   noun-forms: [agent workspaces]
@@ -661,9 +661,8 @@ TERM-migration:
         record:
           - COR-010
       revalidated:
-        at: 2026-10-20T01:37:41Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        at: 2026-10-23T08:53:37Z
+        outcome: updated
 TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
@@ -679,9 +678,9 @@ TERM-operational-rule:
           - COR-014
           - COR-051#1
       revalidated:
-        at: 2026-10-20T01:37:42Z
+        at: 2026-10-23T08:53:47Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: It anchors the core's own operational rules and its contract with adapters in place of the Claude Code adapter's merge script. Its definition and its section hold.
 TERM-overlay:
   name: overlay
   status: active
@@ -1106,9 +1105,9 @@ TERM-skill:
           - COR-006
           - COR-020
       revalidated:
-        at: 2026-10-21T17:40:51Z
+        at: 2026-10-23T08:53:48Z
         outcome: unchanged
-        unchanged-because: COR-005 says what the adapter stamp writes and keeps its pairing table without a status column. A skill is still a procedure an AI agent loads, paired with a stamp, so the definition holds.
+        unchanged-because: It anchors the skills area and the core's contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.
 TERM-source-repository:
   name: source repository
   noun-forms: [source repositories]
