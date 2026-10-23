@@ -27,6 +27,9 @@ shortfalls:
   - at: 7
     issue: "#1873"
     record: COR-062#1
+  - at: "3b"
+    issue: "#1765"
+    record: ADR-034#1
   - at: "4c"
     issue: "#1873"
     record: COR-062#5
@@ -120,7 +123,11 @@ pkit:
 - **1b.** An anchor's resolver gives no answer, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
 - **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors (REQ-020). The path goes on at step 2.
 - **3a.** An installed capability ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none (COR-050 point 3). The path goes on at step 4.
-- **3b.** An agent that an installed capability ships for the artefact's type proposed the answer before the developer reached the debt. A command started it with nobody watching, through the backbone's run command, `pkit agents run`. That command starts the runner the adapter registers, confined to a clone at a pinned commit (ADR-066 point 1). Its proposal waits as a file the run handed back. The developer reads the proposal, and the path goes on at step 4.
+- **3b.** An agent that an installed capability ships for the artefact's type proposed the answer before the developer reached the debt. A command started it with nobody watching, through the backbone's run command, `pkit agents run`. That command starts the runner the adapter registers, confined to a clone at a pinned commit (ADR-066 point 1). At its entry, that command checks that the repository it would change is the session's own. With nobody to ask, it refuses another (REQ-012). Its proposal waits as a file the run handed back. The developer reads the proposal, and the path goes on at step 4.
+
+> [!WARNING]
+> **Not built yet:** `pkit agents run` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 - **4a.** The artefact still describes what is wanted, and a change broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The change check asks for that revalidation, so it is not flagged at step 5.
 - **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. The revalidation reads both, and replaces them (COR-062 points 5 and 7).
