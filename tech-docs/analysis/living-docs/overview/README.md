@@ -1,8 +1,8 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=4 fingerprint=sha256:a65125e8c19a314ae5b197b61c43ba14189682e07c8a18a3ef5773eff05b5de9 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:ef69cc04ce4e82f964b6e5cf77ba94f9c309a167cf842b0adb52d1767dbe07bb -->
 
-No record states what living-docs is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of living-docs under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
+[Living documentation keeps each documentation space true for its readers](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md).
 
 This analysis describes what living-docs does: who uses it, what they do with it, and what it must meet. It builds on the analyses of core and project-management (optional).
 
