@@ -34,7 +34,7 @@ TERM-after-record-hook:
 TERM-demo-bundle:
   name: demo bundle
   status: active
-  definition: "folder of project-owned content that holds a recording configuration with the executable storyboards, after-record hooks and videos recorded under it"
+  definition: "folder of project-owned content that holds a recording configuration with the executable storyboards, after-record hooks and videos recorded under that configuration"
   pkit:
     friction:
       anchors:
@@ -77,7 +77,7 @@ TERM-recording-configuration:
   name: recording configuration
   noun-forms: [recording configurations]
   status: active
-  definition: "YAML file, `record.yaml` by default, setting the working directory and bounds of the two terminal windows a demo runs in, and its videos' folder"
+  definition: "YAML file, `record.yaml` by default, setting the working directory and bounds of the two terminal windows a demo runs in, and the folder for videos"
   pkit:
     friction:
       anchors:
@@ -118,7 +118,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **demo-recording's own files:** the format, the commands and the skill, which demo-recording ships. It never holds a demo bundle, which stays in the project's tree (DEC-001).
+- **demo-recording's own files:** the format, the commands and the skill, which demo-recording ships. demo-recording never holds a demo bundle, which stays in the project's tree (DEC-001).
 
 ## TERM-directive — directive
 
