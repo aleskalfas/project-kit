@@ -11,7 +11,7 @@ TERM-evidence-record:
   name: evidence record
   noun-forms: [evidence records]
   status: active
-  definition: "entry of a scope's YAML file that keeps a verbatim excerpt of an outside source, with where the excerpt came from and when it was fetched"
+  definition: "entry of a scope's YAML file that keeps a verbatim excerpt of an outside source, its origin and when it was fetched"
   pkit:
     friction:
       anchors:

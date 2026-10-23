@@ -23,7 +23,7 @@ TERM-use-case:
   name: use case
   noun-forms: [use cases]
   status: active
-  definition: "description of how the system fulfils one actor's goal, from what starts it, through a main path and its variants, to the state that meets the goal"
+  definition: "description of how the system fulfils one actor's goal, in a main path of steps and the variants that branch from it"
   pkit:
     friction:
       anchors:
