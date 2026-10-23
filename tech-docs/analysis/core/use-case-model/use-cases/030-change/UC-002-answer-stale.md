@@ -49,9 +49,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:46:41Z
+      at: 2026-10-23T09:46:29Z
       outcome: unchanged
-      unchanged-because: "The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, steps and actors hold, and the kept deferrals still name what #1779 and #1856 rewrite."
+      unchanged-because: Rules 14, 16 and 19 stop calling the permission model a capability, and only their wording changes. The use case relies on rule 20, which is as it was.
       deferred:
         - anchor:
             kind: path

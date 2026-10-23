@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-18T18:34:19Z
+      at: 2026-10-23T09:46:25Z
       outcome: unchanged
-      unchanged-because: Rule 20 keeps its number, its title and its section, Answers on artefacts, which this page's summary quotes. The change names revisit entries inside the rule's text only, which this page does not describe.
+      unchanged-because: Rules 14, 16 and 19 stop calling the permission model a capability, and only their wording changes. This page's account of the rules' numbers, titles and sections is as it was.
 ---
 
 # Rules
