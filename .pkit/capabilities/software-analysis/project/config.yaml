@@ -15,8 +15,7 @@ analyses:
     # DEC-003 point 8).
     purpose: PRJ-011
     # Each area's goal, in the order the areas build on each other
-    # (software-analysis DEC-003 point 8; RS-ANA-005 in ANA). 020-set-up has
-    # no use case yet, so the overview shows it as not written yet.
+    # (software-analysis DEC-003 point 8; RS-ANA-005 in ANA).
     areas:
       010-develop: "Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions."
       020-set-up: "Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits."
