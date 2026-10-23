@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:fc9381a872f5fa1cd363b0d53e168839305c6d9bc9974d9f4169b9abd0c0e4c5 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:9f0f6c74e6216107d60d69c00afa5a7ff3d568ffab2a801a58a96e47448f7a6f -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -121,7 +121,7 @@ Put the system on a machine and into another project, run each project at the ve
 **Its use cases:**
 
 - [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
-- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md)
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md) ([not built yet](#not-built-yet): step 5, step 7)
 - [UC-048 — Put the system's tool on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md) ([not built yet](#not-built-yet): step 2, variant 12f)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md) ([not built yet](#not-built-yet): step 2)
@@ -194,6 +194,8 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md): variant 3h, decided by `COR-004`, tracked in `#1884`
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md): step 9, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md): step 9, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md): variant 1a, decided by `COR-004`, tracked in `#1884`
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md): step 4, decided by `ADR-034#1`, tracked in `#1765`

@@ -5,10 +5,19 @@ status: active
 actor: ACT-methodology-maintainer
 other-actors:
   - ACT-adopter
+  - ACT-operator
 after:
   - [UC-012]
 requirements:
   - REQ-005
+  - REQ-012
+shortfalls:
+  - at: 5
+    issue: "#1765"
+    record: ADR-034#1
+  - at: 7
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -19,10 +28,13 @@ pkit:
         - PRJ-008
         - ADR-047#4
         - ADR-050#3
+        - ADR-034#1
       artefact:
         - ACT-methodology-maintainer
         - ACT-adopter
+        - ACT-operator
         - REQ-005
+        - REQ-012
     revalidated:
       at: 2026-10-23T22:22:54Z
       outcome: updated
@@ -35,6 +47,7 @@ pkit:
 **Other actors:**
 
 - **Adopter** (`ACT-adopter`): filed the report, and sees each tracked fix with that fix's state, from their own project (UC-012).
+- **Operator** (`ACT-operator`): is asked before a command changes the hosting service for a repository other than the session's own. So no such change happens silently (REQ-012).
 
 **Preconditions:** **From UC-012:** Adopters' reports arrive as issues on the report target, project-kit's own repository, each with its versions attached.
 
@@ -51,8 +64,16 @@ pkit:
 3. The maintainer reads a report on the hosting service, with the versions its environment block gives.
 4. The maintainer files the issue that will fix the report, or finds one that exists.
 5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's tracked fixes. The system prints `Linked #<fix> into #<report>'s Tracked by.`
+
+> [!WARNING]
+> **Not built yet:** `pkit report link` checks only that the repository of the working directory is the report target, never that it is the session's own. ADR-034 point 1 decides that every `pkit` command that writes checks the session's own repository first, and #1765 tracks it.
+
 6. Once the tracked fixes close, the maintainer runs `pkit report inbox --resolved`. The system lists each open feedback and change request whose tracked fixes are all closed.
 7. For each listed report, the system asks `Post a closing comment on #<n> and close it?`. On a yes, the system comments that all the report's tracked fixes are closed, and closes the report.
+
+> [!WARNING]
+> **Not built yet:** `pkit report inbox --resolved` checks only that the repository of the working directory is the report target, never that it is the session's own. ADR-034 point 1 decides that every `pkit` command that writes checks the session's own repository first, and #1765 tracks it.
+
 
 **Variants:**
 
