@@ -14,9 +14,8 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-23T14:50:15Z
-      outcome: unchanged
-      unchanged-because: project-management DEC-056 now names the permission model's code as backbone code, not a capability, and decides nothing new. What the README says it rests on holds.
+      at: 2026-10-23T20:56:31Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -38,7 +37,11 @@ Keep your documentation **true for the people who read it**, even when an agent 
 
 ## How it works
 
-- **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. New pages go under each space's root. A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. A place whose path has a `rule-sets` segment is declared to hold rule sets, as is the old folder that `pkit config set docs.internal` declares to keep your sets found (the schemas reference, [Rule-set files](../../schemas/README.md#rule-set-files)). Outside every root, such a place that gives no type owes no assignment. Until you assign it, it is passed over, and gives its `README.md` no space. Where places nest, the backbone's order of places decides which one gives a page its space. A page is a document of this capability's page type ([Pages](#pages)). Decision records, rule sets, templates and anything another owner claims — by its type, by its place, or by a folder of documents it holds, such as an analysis capability's revalidation records — are anchor targets or their owner's, never pages. Each space's *definition* (its rules) lives in the technical space.
+- **Spaces.** A user space and a technical space, kept separate: neither root lies inside the other. You can add others. Each space's *definition* (its rules) lives in the technical space.
+  - **Places.** A space can also include places the project declares — inside a root, where they inherit that root's space, or outside every root, such as the repo's top-level README, where the capability's project configuration assigns them to a space. A new page of the user or technical space goes under that space's root by default. A new page of any space may go into a place assigned to that space.
+  - **Places of rule sets.** A place whose path has a `rule-sets` segment is declared to hold rule sets, as is the old folder that `pkit config set docs.internal` declares to keep your sets found (the schemas reference, [Rule-set files](../../schemas/README.md#rule-set-files)). Outside every root, such a place that gives no type owes no assignment. Until you assign it, it is passed over, and gives its `README.md` no space.
+  - **Nested places.** Where places nest, the backbone's order of places decides which one gives a page its space.
+  - **Pages.** A page is a document of this capability's page type ([Pages](#pages)). Decision records, rule sets, templates and anything another owner claims — by its type, by its place, or by a folder of documents it holds, such as an analysis capability's revalidation records — are anchor targets or their owner's, never pages.
 - **Rules.** The shared method rule set, `LDOC`, ships with this capability. Each space's definition inherits it, adds its own rules, and carries a scope that selects the space's pages. `LDOC`'s rules bind on a page only through such a scope (core rule sets, COR-051).
 - **Anchors and friction.** Each page's anchors (code, decisions, [sources](#sources), analysis artefacts, the home of each fact it summarises) must ground everything it says. The core friction check (COR-050) flags a page when any of those changed and nobody revalidated it. When two branches revalidate the same page, its block conflicts on merge, and whoever resolves the conflict revalidates the page as merged: when you merge the check's base into your branch and the conflict lies only in the block, `pkit friction resolve` takes the base side's answer, keeps both sides' deferrals, and names the revalidation still owed (the CLI README, "friction resolve").
 - **Proposals, never blind edits.** The agent, `living-docs` ("The agent" below), proposes each fix with its evidence, and a person reviews it.
