@@ -117,7 +117,7 @@ Defined in [TERM-space-definition](../glossary.md#term-space-definition--space-d
 
 **Why:** A method written once, and inherited, can be reused across projects and changed in one [place](../../core/glossary.md#term-place--place), while one mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A space's definition already names the rules its pages follow, so its scope says where they bind (DEC-001).
 
-A space definition is the rule set that says which rules a space's pages follow. It inherits `LDOC`, the shared rules living-docs ships, and adds the space's own. Its scope selects the space's pages, so those rules bind on them as soon as it exists.
+A space definition is the rule set that says which rules a space's pages follow. It inherits `LDOC`, the shared rules living-docs ships, and adds the space's own. Its scope selects the space's pages, so those rules bind on them as soon as the definition exists.
 
 **Attributes:**
 
@@ -223,7 +223,11 @@ Defined in [TERM-captured-source](../glossary.md#term-captured-source--captured-
 
 **Why:** A check that gives the same [answer](../../core/glossary.md#term-answer--answer) wherever it runs cannot ask a text outside the repository whether it changed. It can read the [project](../../core/glossary.md#term-project--project)'s own record of that text, which changes exactly when someone reads a new version. That is when the pages resting on the text should be read again (DEC-001).
 
-A captured source is a file the project keeps for one text outside the repository, such as a standard. It says what the text is called, where it is found, and which version of it the pages were last checked against. A [page](../glossary.md#term-page--page) anchors the text by the file's name, and any change to the file asks that page whether it still holds.
+A captured source is a file the project keeps for one text outside the repository, such as a standard. A [page](../glossary.md#term-page--page) anchors the text by the file's name, and any change to the file asks that page whether it still holds. The file says, of the text:
+
+- what it is called
+- where it is found
+- which version of it the pages were last checked against
 
 **Attributes:**
 

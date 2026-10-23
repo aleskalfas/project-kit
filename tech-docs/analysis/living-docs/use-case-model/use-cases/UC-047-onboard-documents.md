@@ -59,7 +59,11 @@ pkit:
 2. The adopter runs `pkit living-docs validate`.
 3. The system lists the unclassified documents, and the pages left unanchored apart from those accepted with a reason (DEC-001 points 4 and 8). It exits 0.
 4. The adopter asks the `living-docs` agent to onboard the documentation.
-5. The agent gathers its evidence: validation's findings, the whole-repository check's measures, the mapping where the project keeps one, both configuration files and the documents.
+5. The agent gathers its evidence:
+   - validation's findings
+   - the whole-repository check's measures
+   - the mapping, where the project keeps one
+   - both configuration files, and the documents
 6. The agent writes one onboarding plan, `.agent-workspace/living-docs/onboarding/plan.md`, in four parts, each line citing its evidence (DEC-001 point 8):
    - **Spaces:** the space each unclassified document becomes a page of, with its `reader` and its `kind`, or why the spaces' rules do not govern it
    - **Splits and rewrites:** the pages that split, merge or are rewritten for their readers

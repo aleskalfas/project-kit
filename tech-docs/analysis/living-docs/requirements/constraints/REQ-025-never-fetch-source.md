@@ -25,4 +25,4 @@ pkit:
 
 **Verified by:** A test runs the resolver offline, from an empty cache and apart from the project, and finds its answer. Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
 
-**Imposed by:** The friction checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same answer wherever it runs cannot ask a source whether it changed. A fetched page also changes with every timestamp on it (living-docs DEC-001).
+**Imposed by:** The friction checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same answer wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).
