@@ -22,6 +22,9 @@ shortfalls:
   - at: "1b"
     issue: "#1884"
     record: COR-004
+  - at: "10a"
+    issue: "#1917"
+    record: ADR-025#2
   - at: "4a"
     issue: "#1909"
     record: COR-028#2
@@ -150,6 +153,10 @@ pkit:
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`
 - **10a.** A command chains segments, and the permission code strips a bare leading `cd <path>` before deciding the rest in the same working directory. After such a strip, a quote, `$(`, a backtick or a redirection in the rest makes it defer the call (ADR-025 points 1 and 2). A segment in which it recognises no privilege makes it defer the call too, such as `sh` in `gh pr list | sh` (ADR-025 point 2). Otherwise the code allows the chain only where a grant allows a privilege it recognises in each segment, and no grant denies one.
+
+> [!WARNING]
+> **Not built yet:** with no leading `cd` to strip, the permission code does not look for `$(`, a backtick or a redirection. Nor does it split segments at a newline or a background `&`. So `gh pr list > ~/.bashrc` runs with nobody asked where `gh` is granted. ADR-025 point 2 decides that such a construct makes the code defer the call, and #1917 tracks it.
+
 - **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (COR-028 point 2).
 
 **Postconditions:** The agents run each granted command, and each single command inside the sandbox, with nobody asked. The system has verified the permission code's verdicts and the credential floor. The operator knows where the confinement does not hold.
