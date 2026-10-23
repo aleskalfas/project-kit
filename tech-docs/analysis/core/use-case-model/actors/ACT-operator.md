@@ -8,6 +8,7 @@ needs:
   - Be asked before an agent changes a repository other than the session's own, so it never happens silently.
   - Find out why a command prompted me or was blocked, and what would stop it happening again.
   - Keep my per-machine choices (sandbox allowances, sockets, local settings) out of what the project commits.
+  - Put the system's tool on my machine at a release, and update it.
   - Run each project at the version it pins, and be told plainly when the system falls back to my installed tool.
   - Get a fresh clone ready to work with one sync.
 pkit:
@@ -16,12 +17,13 @@ pkit:
       record:
         - COR-028
         - COR-039
+        - PRJ-004
+        - ADR-063
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-20T10:10:49Z
-      outcome: unchanged
-      unchanged-because: Running checks gains when CI runs the short check and what it runs. The section still calls whoever applies the repository's settings, its required status and its merge queue, the operator, so the Note holds.
+      at: 2026-10-23T08:53:43Z
+      outcome: updated
 ---
 
 # ACT-operator — Operator

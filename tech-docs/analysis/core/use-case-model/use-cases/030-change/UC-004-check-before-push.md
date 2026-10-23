@@ -10,6 +10,9 @@ requirements:
   - REQ-005
   - REQ-006
   - REQ-007
+  - REQ-015
+  - REQ-018
+  - REQ-019
 after:
   - [UC-014]
 pkit:
@@ -34,6 +37,7 @@ pkit:
         - COR-055#6
         - ADR-019#2
         - ADR-058#7
+        - ADR-068#6
       artefact:
         - ACT-developer
         - ACT-ci-pipeline
@@ -41,10 +45,12 @@ pkit:
         - REQ-005
         - REQ-006
         - REQ-007
+        - REQ-015
+        - REQ-018
+        - REQ-019
     revalidated:
-      at: 2026-10-22T23:47:09Z
-      outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      at: 2026-10-23T09:50:15Z
+      outcome: updated
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks
@@ -71,7 +77,7 @@ pkit:
 3. `pkit validate` checks the working tree's state through every registered validator, the backbone's and each installed component's (COR-055 point 3). It fails only on an `error` finding (COR-055 point 5).
 4. The checks that compare a change, such as `pkit friction check`, `pkit migrations check-diff` and `pkit decisions check-diff`, compare it with where the branch left the base.
 5. Every check passes. In project-kit, the aggregator runs them all without stopping at the first failure, and ends with `✓ all checks passed`.
-6. The developer pushes, and the CI pipeline runs the same checks on the pull request, with `PKIT_CHECK_BASE` naming its target.
+6. The developer pushes, and the CI pipeline runs the same checks on the pull request, with `PKIT_CHECK_BASE` naming its target and `PKIT_CHECK_HEAD` naming its head.
 
 **Variants:**
 
@@ -81,6 +87,7 @@ pkit:
 - **2a.** The repository has no remote. The default branch is read from the local branch, and a `warning:` line says so (COR-054 point 2).
 - **2b.** The base resolves to no commit. Each check that has something to compare refuses (COR-054 point 4). It names its fixes: fetching the base, declaring the right default branch, or naming another base.
 - **3a.** A registered validator cannot run, ends abnormally or overruns its time. It yields an `error` finding, never a clean pass. Where `pkit sync` has not provisioned its environment in this clone, it says "environment not provisioned — run `pkit sync`".
+- **3b.** A documentation root the backbone configuration declares does not exist yet. Validation warns of it, and does not fail on it (REQ-015).
 - **4a.** The base moved on after the branch left it. The change check reports an `outdated-base` and passes. The developer merges the base and runs the checks again.
 - **6a.** The developer pushes with `git push --no-verify`, so the hook does not run. The CI pipeline still runs the checks on the pull request.
 - **6b.** In project-kit, the push changes only answers since the pull request's most recent full run in CI, which passed. The CI pipeline runs every check but the test suite on it (project rule 2). Where the hook ran, it ran the whole aggregator before the push.

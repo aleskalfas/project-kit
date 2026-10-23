@@ -18,9 +18,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-22T16:24:37Z
+      at: 2026-10-23T08:53:54Z
       outcome: unchanged
-      unchanged-because: The actors whose need it meets each gain a `summary`, the first sentence of their opening, and their needs are untouched. Its obligation and its measure hold.
+      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. The hold on adding or removing an area or an adapter a release ships stands as written.
 ---
 
 # REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships

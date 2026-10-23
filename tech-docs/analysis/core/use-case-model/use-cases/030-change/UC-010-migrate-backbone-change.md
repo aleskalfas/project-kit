@@ -6,10 +6,19 @@ actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+  - ACT-operator
 requirements:
   - REQ-001
+  - REQ-004
+  - REQ-005
+  - REQ-012
+  - REQ-017
 after:
   - [UC-014]
+shortfalls:
+  - at: 9
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -23,16 +32,22 @@ pkit:
         - .pkit/skills/core/migration-author.md
       record:
         - COR-010
+        - COR-054#4
         - PRJ-002#D3
+        - ADR-034#1
       artefact:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - ACT-operator
         - REQ-001
+        - REQ-004
+        - REQ-005
+        - REQ-012
+        - REQ-017
     revalidated:
-      at: 2026-10-22T23:47:11Z
-      outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      at: 2026-10-23T09:50:34Z
+      outcome: updated
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across
@@ -43,6 +58,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the migration check on every pull request, with no person to answer. The check fails while a rename or a removal it finds has no migration.
 - **AI agent** (`ACT-ai-agent`): writes the migration for the maintainer through the `migration-author` skill, which pairs with the stamp of step 2.
+- **Operator** (`ACT-operator`): is asked before the stamp writes in a repository other than the session's own. So no such write happens silently (REQ-012).
 
 **Preconditions:** **From UC-014:** The maintainer develops the backbone in the methodology's source repository.
 
@@ -56,8 +72,13 @@ pkit:
 **Main path:**
 
 1. The maintainer runs `pkit new migration --tier backbone --name <slug>` without `--version`, or has an AI agent run the command through the `migration-author` skill.
+9. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit new migration` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 2. The system takes the next minor past the backbone version that the default branch records in `.pkit/VERSION`. The system prints `Version: <X.Y.0>, the next minor past backbone <version>, which the default branch 'main' records.` and stamps `<NNN>-<slug>.sh` in `.pkit/migrations/backbone/<X.Y.0>/`.
-3. The maintainer writes the script to carry installed projects across. The script is safe to run twice, and acts only on a positive sign that its change is needed (COR-010).
+3. The maintainer writes the script to carry installed projects across. The script is safe to run twice, and acts only on a positive sign that its change is needed (COR-010, REQ-001 and REQ-017).
 4. The maintainer runs `pkit migrations check-diff --include-working-tree` before committing.
 5. The system lists each rename and removal the change makes in the trees the check reads, with each one's tier. It also lists each migration script the change adds, and ends with `Verdict: COVERED (every tier:component with triggers has a matching migration).`
 6. The maintainer commits the change with its migration and its changeset (UC-003).
@@ -74,6 +95,7 @@ pkit:
 - **2c.** On the path of 1c, the version given is at or below the backbone version that the default branch records. The system refuses with `--version <X.Y.0> is already released`, and names the version the system picks without `--version`. The path rejoins at step 1.
 - **2d.** On the path of 1c, the version given is not of the form `X.Y.0`, such as `1.150.3`. The system refuses with `version '1.150.3' must be X.Y.0 (patch segment must be 0 per COR-010 — patches have no migrations).`, and the path rejoins at step 1.
 - **3a.** The script adds a default that a project lacks. A later run over a project whose history is unknown may restore a default the project removed. The maintainer names that default in the changeset, so the release's notes carry the sentence (COR-010).
+- **4a.** The base resolves to no commit. The check refuses, naming the references it tried and the fixes, and never guesses a base (COR-054 point 4 and REQ-004). The path rejoins at step 4.
 - **5a.** A rename or a removal has no migration of its tier and component. The system ends with `Verdict: UNCOVERED. Author migrations for the following tiers before merging:`, lists `backbone`, and exits 1. The path rejoins at step 1.
 - **5b.** The change breaks installed projects in a way the check cannot see. Examples are a flag whose meaning inverts, and a rename in a tree the check does not read, such as `.pkit/permissions/`. The check finds no trigger and passes, whether or not the change holds a migration. The path goes on at step 6.
 - **5c.** The change moves a file out of the backbone's trees, such as from `.pkit/skills/core/` to `.pkit/skills/project/`. The check reads a rename by its new path alone, so the check finds no trigger and passes. The path goes on at step 6.

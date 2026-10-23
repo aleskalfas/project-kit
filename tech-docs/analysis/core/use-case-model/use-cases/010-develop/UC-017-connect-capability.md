@@ -6,7 +6,7 @@ actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
 after:
-  - [UC-016]
+  - [UC-016, UC-023]
 requirements:
   - REQ-006
   - REQ-009
@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:47:03Z
-      outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      at: 2026-10-23T09:13:48Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
@@ -55,7 +54,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-016:** The capability is recorded in the project's manifest, so the backbone reads its package metadata and its processes.
+- **From UC-016 or UC-023:** The capability is recorded in the project's manifest, so the backbone reads its package metadata and its processes.
 
 **Assumptions:** None.
 

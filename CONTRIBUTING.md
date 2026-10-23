@@ -25,9 +25,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-22T22:13:58Z
+      at: 2026-10-23T08:13:45Z
       outcome: unchanged
-      unchanged-because: The workflow now names the pull request's own head to the change check, beside its base. CI still runs the aggregator, and the short check as described.
+      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. The friction gate and its escape hatch work as the guide says.
       deferred:
         - anchor:
             kind: record

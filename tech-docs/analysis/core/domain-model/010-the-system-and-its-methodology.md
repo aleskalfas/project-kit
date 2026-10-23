@@ -7,6 +7,7 @@ explains:
   - TERM-harness
   - TERM-decision-record
   - TERM-point
+  - TERM-scratchpad-note
   - TERM-rule
   - TERM-acceptance-gate
   - TERM-operational-rule
@@ -17,6 +18,7 @@ pkit:
       record:
         - COR-006
         - COR-007
+        - COR-012
         - COR-014
         - COR-025
         - COR-047
@@ -28,14 +30,14 @@ pkit:
         - TERM-harness
         - TERM-decision-record
         - TERM-point
+        - TERM-scratchpad-note
         - TERM-rule
         - TERM-acceptance-gate
         - TERM-operational-rule
         - TERM-methodology
     revalidated:
-      at: 2026-10-22T16:24:45Z
-      outcome: unchanged
-      unchanged-because: It anchors PRJ-011, the record that states what the system it explains is for. Its account of the system and its methodology holds.
+      at: 2026-10-23T08:53:38Z
+      outcome: updated
 ---
 
 # VIEW-the-system-and-its-methodology — The system and its methodology
@@ -46,10 +48,12 @@ The methodology is that way of working, written down as [decision records](../gl
 
 The [system](../glossary.md#term-system--system) is the software that ships the methodology and enforces it. A [harness](../glossary.md#term-harness--harness) hosts the sessions where the methodology is used.
 
+Some questions are too large for a decision record at first, and the work that maps them needs a home of its own (COR-012). A [scratchpad note](../glossary.md#term-scratchpad-note--scratchpad-note) holds that work, binding nothing, until it produces decision records or other documents, or is dropped.
+
 ```mermaid
 classDiagram
   accTitle: The system and its methodology
-  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
+  accDescr: The system ships and enforces the methodology. The methodology is made of decision records, rules, operational rules and conventions. A decision record holds points. A scratchpad note may produce decision records. Work builds only on accepted decision records and rules, as the acceptance gate says. A harness loads the operational rules through its include.
   class System["System"]
   class Harness["Harness"]
   class Methodology["Methodology"]
@@ -58,6 +62,8 @@ classDiagram
   DecisionRecord : status
   class Point["Point"]
   Point : id
+  class ScratchpadNote["Scratchpad note"]
+  ScratchpadNote : start date
   class Rule["Rule"]
   Rule : id
   Rule : origin
@@ -70,6 +76,7 @@ classDiagram
   Methodology o-- Rule
   Methodology o-- OperationalRule
   DecisionRecord "1" *-- "*" Point : holds
+  ScratchpadNote ..> DecisionRecord : may produce
   AcceptanceGate ..> DecisionRecord : admits only accepted
   AcceptanceGate ..> Rule : admits only accepted
   Harness ..> OperationalRule : loads
@@ -78,7 +85,11 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a choice comes to bind work
-  accDescr: A choice among alternatives is written as a proposed decision record. Once accepted in review, it passes the acceptance gate, so work may build on it, and a rule's origin may cite it. A rule passes the gate once it is accepted too. Decision records keep the reasons for operational rules, which the harness's include loads into each session, where work is held to them.
+  accDescr: A question too large to decide at once is explored in an active scratchpad note. The note may produce a proposed decision record, and retires as done, or is dropped. A choice among alternatives is written as a proposed decision record. Once accepted in review, it passes the acceptance gate, so work may build on it, and a rule's origin may cite it. A rule passes the gate once it is accepted too. Decision records keep the reasons for operational rules, which the harness's include loads into each session, where work is held to them.
+  Q([A question too large to decide at once]) --> N[Scratchpad note: active]
+  N -->|produces| P
+  N -->|other documents hold its content| ND[Scratchpad note: done]
+  N -->|its line of thought fails| NX[Scratchpad note: dropped]
   C([A choice among alternatives]) --> P[Decision record: proposed]
   P -->|accepted in review| A[Decision record: accepted]
   A --> G{Acceptance gate}
@@ -202,6 +213,39 @@ stateDiagram-v2
 
 - In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included (COR-058 point 3).
 - In such a record, a new point takes the next unused number (COR-058 point 3).
+
+## Scratchpad note
+
+Defined in [TERM-scratchpad-note](../glossary.md#term-scratchpad-note--scratchpad-note).
+
+**Why:** Some questions are too large to settle in a [decision record](../glossary.md#term-decision-record--decision-record) on a first pass, since their alternatives are not mapped yet (COR-012). With no home, that exploration scatters, or is skipped, and a record comes too early (COR-012).
+
+A scratchpad note is a working draft that explores one such question, and binds nothing. Once decision records or other documents hold its content, it retires. When its line of thought fails, it is dropped. Either way, it is kept.
+
+**Attributes:**
+
+- its file's name: the day it started and a short slug, such as `2026-05-04-inventory.md` (COR-012)
+- who works on it and since when, and once it retires, when and what it produced, in its front matter (COR-012)
+
+**Relations:**
+
+- It may produce decision records, which it names once it retires (COR-012).
+
+**States:** A note is active while it is filled or referenced. It retires as done once other documents hold its content, or as dropped when its line of thought fails. The folder it lies in is its state (COR-012).
+
+```mermaid
+stateDiagram-v2
+  accTitle: The states of a scratchpad note
+  accDescr: A scratchpad note is active, then done once other documents hold its content, or dropped when its line of thought fails.
+  [*] --> active
+  active --> done : other documents hold its content
+  active --> dropped : its line of thought fails
+```
+
+**Always true:**
+
+- A scratchpad note binds nothing (COR-012).
+- Its state is the folder it lies in, never a field of its own (COR-012).
 
 ## Rule
 

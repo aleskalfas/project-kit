@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  Internal. A comment in project-kit's own settings for the capability no
+  longer says that the core's area 020-set-up has no use case, now that it
+  holds five (#1718). Only the project-owned settings file changes, and
+  nothing the capability ships changes.

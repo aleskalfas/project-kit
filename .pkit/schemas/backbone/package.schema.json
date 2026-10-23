@@ -659,6 +659,14 @@
             "$ref": "#/$defs/friction-link"
           }
         },
+        "derived-links": {
+          "description": "The forms of the derived links a command of this component writes in the files this place holds, from data its check holds them equal to (COR-050 point 5). Wherever friction compares the body of such a file, each link of a declared form in running text is read as its words alone. Never on by default: a place without the key declares none.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/friction-derived-link"
+          }
+        },
         "description": {
           "$ref": "#/$defs/non-empty-string"
         }
@@ -709,6 +717,25 @@
         },
         "description": {
           "description": "What the link is, and why a change to its trigger fields asks after its targets.",
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "friction-derived-link": {
+      "title": "One form of derived link (COR-050 point 5)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target"
+      ],
+      "properties": {
+        "target": {
+          "description": "A regular expression, in Python's dialect, that the target of an inline link `[words](target)` matches whole. It must compile (checked in Python).",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "description": "Which links the form takes, and the command that writes them.",
           "$ref": "#/$defs/non-empty-string"
         }
       }
