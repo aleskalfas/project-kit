@@ -109,9 +109,9 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
 **Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
-So where only `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` abstain. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed as before. A deny on any segment still wins over every allow.
+So where only `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` abstain. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed as before. That is no new widening: main allowed it already, and each segment needs a grant of its own, never a judgement that it is safe.
 
-The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments. The diagnostic log records the reason beside a redacted command.
+A deny on any segment still wins over every allow. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction.
 
 ## Default-agent subject resolution
 
