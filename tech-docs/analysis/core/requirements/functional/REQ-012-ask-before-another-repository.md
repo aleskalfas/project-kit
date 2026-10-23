@@ -14,7 +14,9 @@ pkit:
       path:
         - src/project_kit/session_guard.py
         - tests/test_session_guard.py
+        - tests/test_pull_request_land.py
         - tests/test_pull_request_landing.py
+        - tests/test_versioning.py
         - tests/test_release.py
         - tests/test_release_merge.py
         - tests/test_release_publish_notes.py
@@ -30,7 +32,7 @@ pkit:
 
 **Verified by:** Tests of the check find that the session's own repository passes silently. Another repository, with no terminal and no confirmation, is refused unasked. At a terminal the check asks on standard error, and only a yes passes. A dry run never asks.
 
-Tests run a pull request's landing, its deletion of a branch, `pkit release apply`, `release merge` and `release publish-notes` from another repository. Each refuses before its first request. No test covers any other command that writes, since none of them runs the check yet (#1765).
+Tests run a pull request's landing and its deletion of a branch from another repository. Tests run `pkit version tag --push`, `pkit release apply`, `release merge` and `release publish-notes` there too. Each refuses before its first change, and a confirmation passed with the call lets it go on. No test covers any other command that writes, since none of them runs the check yet (#1765).
 
 **Rationale:** A session carries the governance of the repository it is rooted in. So a change it makes in another repository runs under the wrong project's rules (COR-039). The operator confirms each such change, and none happens silently (COR-039 point 1).
 

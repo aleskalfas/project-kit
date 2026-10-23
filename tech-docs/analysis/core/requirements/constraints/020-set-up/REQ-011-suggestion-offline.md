@@ -23,4 +23,6 @@ pkit:
 
 **Verified by:** A test runs the status report with every network connection made to fail. It finds the suggestion of a capability the local catalogue holds for a data point nothing fills, and finds the manifest unchanged.
 
-**Imposed by:** COR-053 point 8 lets the status report suggest an available capability where a data point is unfilled. The suggestion reads "only local catalogues and manifests already fetched, never the network", and it is never an action. So the adopter learns what could fill a data point from what is on the machine, and nothing is installed for them.
+**Imposed by:** COR-053 point 8 lets the status report suggest an available capability where a data point is unfilled. The suggestion reads "only local catalogues and manifests already fetched, never the network", and it is never an action.
+
+The record imposes the limit on a suggestion for a data point. This requirement holds the suggestion for a role nobody provides, or an upstream not installed, to the same limit.

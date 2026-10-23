@@ -3,7 +3,7 @@ id: REQ-010
 title: A command that propagates content under another version than the project records stops
 status: active
 statement: A command that propagates content stops before it writes, under a CLI at another version than the project records, or over an incomplete version transition.
-measure: Run in either state, the command exits non-zero, with `--dry-run` too, and every file of the project holds what it held before. No flag lets it run, and its message names the remedy for the state it finds.
+measure: In each state that stops it, the command exits non-zero, with `--dry-run` too, and every file of the project holds what it held before. No flag lets it run, and its message names the remedy for the state it finds.
 applies-to: "Every command that propagates content into a project at the backbone version it records: sync, a capability's install and a capability's upgrade. A version transition of the backbone propagates its target's content, so it stops only under a CLI older than the version the project records. A command that copies nothing, such as registering an incubated capability, is outside it, and so is the methodology's source repository (ADR-059)."
 actors:
   - ACT-adopter
