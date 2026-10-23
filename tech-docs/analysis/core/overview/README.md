@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:baaebab0a425ef62225ae19586ee16882210f0253d2491e9f294829b1d1db298 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:80cddfe8d4301afbc7ad31c270e612e3cae00ba4b7fcc5202282f9377b22f82f -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -48,6 +48,14 @@ Set up a project once, so its people and AI agents work with the same backbone c
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md) ([not built yet](#not-built-yet): step 2, variant 3d, step 13)
 - [UC-024 — See what a capability would connect to before I install it](../use-case-model/use-cases/020-set-up/UC-024-see-capability-connections.md)
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md) ([not built yet](#not-built-yet): step 3)
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md) ([not built yet](#not-built-yet): step 2)
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md) ([not built yet](#not-built-yet): step 2)
+- [UC-028 — Keep my intermediate files in a workspace no commit carries](../use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md)
+- [UC-029 — Get a delegated agent's result back whole](../use-case-model/use-cases/020-set-up/UC-029-get-result-whole.md)
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md) ([not built yet](#not-built-yet): step 2, variant 1b, variant 4c, variant 5a)
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md) ([not built yet](#not-built-yet): step 2, variant 1g)
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md) ([not built yet](#not-built-yet): variant 1d)
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md) ([not built yet](#not-built-yet): step 2)
 
 ### 030-change
 
@@ -151,6 +159,16 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): variant 3d, decided by `COR-041`, tracked in `#131`
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md): step 3, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-026 — Start every session with the project's rules loaded](../use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-027 — Find my agent definition deployed, with the project's paths and my grants](../use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md): variant 1b, decided by `COR-004`, tracked in `#1884`
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md): variant 4c, decided by `ADR-002#4`, tracked in `#1764`
+- [UC-030 — Let agents work on their own without a stream of confirmations](../use-case-model/use-cases/020-set-up/UC-030-work-unprompted.md): variant 5a, decided by `ADR-014#3`, tracked in `#1765`
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md): variant 1g, decided by `COR-004`, tracked in `#1884`
+- [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md): variant 1d, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
 
 ### Diagrams
 
