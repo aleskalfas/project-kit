@@ -220,7 +220,8 @@ def test_a_place_ending_in_double_star_means_every_markdown_file_beneath(
     assert result.errors == ()
 
 
-# --- capability places (the package schema's `{path, location?, type?, revisits?, description?}`)
+# --- capability places (the package schema's
+#     `{path, location?, type?, revisits?, derived-links?, description?}`)
 
 EVIDENCE_PACKAGE = ".pkit/capabilities/evidence/package.yaml"
 
@@ -311,7 +312,7 @@ def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
     assert reasons == {
         "/friction/places/0": (
             "the place is text ('**/*.md'), not an object "
-            "`{path, location?, type?, revisits?, description?}`"
+            "`{path, location?, type?, revisits?, derived-links?, description?}`"
         ),
         "/friction/places/1": "the place has no `path`",
         "/friction/places/2": "the place's `path` is a list, not a path or glob",
@@ -331,8 +332,8 @@ def test_a_capability_place_in_another_shape_is_a_finding_and_is_not_walked(
     }
     assert result.errors[0].message.endswith(
         "so friction discovery walks nothing under it; a capability place is "
-        "`{path, location?, type?, revisits?, description?}`, its `location` naming a "
-        "`docs.locations` entry written `{path, root?}` (COR-050 point 7)."
+        "`{path, location?, type?, revisits?, derived-links?, description?}`, "
+        "its `location` naming a `docs.locations` entry written `{path, root?}` (COR-050 point 7)."
     )
 
 

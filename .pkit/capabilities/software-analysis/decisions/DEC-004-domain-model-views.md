@@ -140,6 +140,7 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
   - a view withdrawn
 
   A view renumbered or renamed is a moved file, which is revalidated in that change anyway (COR-050 point 3).
+- **Read as content.** The places declare a form only for the links the command writes, so friction reads this link whole. Of its changes, only a view renumbered or renamed moves its target alone.
 - **A heading that drifts.** Where the format rule does not bind on a view, its headings are not held to its `explains`. A heading can then drift from its term's name, and the term's link leads nowhere in the view.
 
 **The section's link to its term.** Each section of a view opens with an unlabelled line that links to its term's entry in the glossary, such as `Defined in [TERM-order](../glossary.md#term-order--order).`.
@@ -175,9 +176,9 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **The command,** `pkit analysis link`, writes each section's link to its term and the mentions' links, in every analysis that keeps a domain model. It reads a body only to place its links, as the stamp reads the glossary to place a term's link. Its data comes from front matter alone: each term's name, noun forms and other senses, and each view's `explains` (DEC-001 point 1).
 - **The check** reports a link missing, one extra and one whose target is stale, and names the command. It holds them whatever any rule's status, as it holds the term's link. A link to a glossary entry written by hand is held as the command's, so it is extra where the command writes none.
 - **A copy for navigation.** Each link is such a copy, which the check holds equal to the data, so it never drifts. Both its ends lie in the analysis, and it draws no anchor.
-- **Its cost.** A link is part of the content of the entry or the view that holds it. So a change that adds or renames a term, or rewords a section, may move links, and it runs the command before validation passes.
-  - **What a moved link flags:** whatever anchors that entry's term, or that section, as the term's link does. A term added moves a link in each section whose first mention of it it becomes. So it flags each view that explains a term whose entry mentions it, and each page that anchors such a section.
-  - **What answers it:** a revalidation of each, which the link leaves true, so its answer is short.
+- **Set aside by friction.** The places of the glossary and of the views declare these links' form, a link to a glossary entry (COR-050 point 5). Friction reads each such link as its words alone. So a change that only moves links asks nothing of what rests on the entry or the section. A word changed beside a link still does.
+  - **A link written by hand** in that form is set aside too, where the check holds none. Such is the glossary of an analysis that keeps no domain model. Adding, removing or retargeting such a link goes unseen there. Its words still count.
+- **Its cost.** A change that adds or renames a term, or rewords a section, may move links. It runs the command before validation passes.
   - **Across analyses:** a term renamed in an analysis another builds on moves the links in that other analysis too. In one repository, the change that renames it runs the command there.
 - **A project without a domain model** sees no link written or held in its glossary.
 
@@ -258,6 +259,7 @@ A documentation page that is no architecture view may rest on a view's section (
 **Why the terms are linked where they are mentioned.** A reader meets a concept in the prose before its definition. A link on its first mention leads to the definition in one click, and the term's link leads on to its explanation. The maintainer chose this on reading the core's first views ([project-kit#1838](https://github.com/aleskalfas/project-kit/pull/1838), [project-kit#1841](https://github.com/aleskalfas/project-kit/issues/1841)).
 - **Why the first mention alone.** A link on every mention clutters the text, and adds nothing the first one does not give.
 - **Why a command writes them, and the check holds them.** Links written by hand go missing and go stale, unseen. A command writes them from the data, and the check holds them equal to it, as it holds the term's link.
+- **Why friction sets them aside.** A moved link states nothing new, so the revalidation it would ask could only say that. A term added would ask it of every view and page resting on a section that mentions the term. Only this capability knows which links its command writes, so it declares their form (COR-050 point 5).
 - **Why noun forms only, and declared.** A form made by a rule can read as a verb, such as "orders". Only the writer of a term knows which forms read as a noun alone, so the term declares them. A list serves a language that inflects its nouns too, whose cases a single plural would leave unlinked.
 - **Why the phrases in another sense are data.** The distinctions tell such a phrase apart for a reader. A tool reads front matter alone (DEC-001 point 1), so `other-senses` tells it to the command.
 - **Why an escape, and why last.** A word in a quotation cannot be reworded, so an escape keeps a link off it. In a view, every other wrong link shows a statement the rule on domain concepts asks a writer to reword.
@@ -309,7 +311,7 @@ A documentation page that is no architecture view may rest on a view's section (
 - **The links held at the status of a rule of their own.** Rejected. Each link is a copy the data fixes, as the term's link is, and no rule's status gates that link.
 - **A listed term's mention linked to its line in the head.** Not taken. A list item has no anchor, so the link would lead to the glossary's top, a click further from the definition.
 - **A listed term's mention linked at the version the head names.** Not taken. The head's link is written by hand, and its target is no data a tool may read (DEC-001 point 1).
-- **A friction check that leaves out the links the command writes.** Not taken here. It would spare the revalidations a moved link asks for, but how friction reads a change is the core's to decide.
+- **Each moved link answered by a revalidation.** Rejected. A term added would ask an answer of every view and page resting on a section that mentions it. Each answer could only say that a link moved.
 - **A check of the views' order read from the links.** Not taken. A link is the command's reading of a word, which a reader may find wrong, so such a check would fail on prose a reader finds right.
 - **A view anchoring every term it uses.** Rejected. Each edit to any term it names would flag it, an anchor broader than what makes the view true (COR-050 point 7).
 - **A view anchoring the code behind its attributes and states.** Rejected. A view describes the domain, and the term anchors the code that embodies it.
@@ -327,6 +329,7 @@ A documentation page that is no architecture view may rest on a view's section (
     - each term's link to its section
     - each section's link to its term, and the mentions' links, in an analysis that keeps a domain model
   - **The links command,** `pkit analysis link`, writes the section's link and the mentions' links (point 7).
+  - **The links' form,** declared on the places of the glossary and of the views (point 7). Friction sets aside each link of that form. The declaration needs a backbone that reads it.
   - **Who runs the command.** The authoring skill runs it after a term or a view is written. Whoever applies a revalidation that rewords a section runs it too.
   - **The structure holds** a view's headings to the names of the terms its `explains` lists, in sentence case, where the format rule binds. The stamp writes them so. Each heading gives a slug of its own (point 2).
   - **The structure holds each section's *Why*** where the format rule binds, as it holds the section's other parts: present, before the explanation and the section's labels, and filled or `None.`. The stamp writes it with its hint. The structure reads it as its paragraph alone, and the explanation below it (point 2).

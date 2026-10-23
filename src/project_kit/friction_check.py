@@ -263,6 +263,7 @@ from project_kit.artefact_parts import AnchoredPart, PartState, anchored_part, w
 from project_kit.backbone_schemas import CONTAINER_KEY
 from project_kit.friction_discovery import (
     CORE_ANCHOR_KINDS,
+    NOTHING_SET_ASIDE,
     Anchor,
     AnchorKinds,
     AnchorResolution,
@@ -276,6 +277,7 @@ from project_kit.friction_discovery import (
     ResolverCommand,
     Revisit,
     RevisitLink,
+    SetAside,
     content,
     deferral_reason,
     discover_artefacts,
@@ -290,6 +292,7 @@ from project_kit.friction_discovery import (
     refuse_resolver_without_query_contract,  # noqa: F401 — re-exported: the check's public surface
     registered_anchor_kinds,
     revalidated_field,
+    standing_aside,
     unresolved_kind_reason,
 )
 from project_kit.friction_git import (
@@ -927,8 +930,8 @@ class Side(Listing):
         self.tree = tree
         self.discovery = discovery
         self._records: dict[str, RecordPoints | None] = {}
-        self._contents: dict[str, RecordContent | None] = {}
-        self._placed: dict[str, RecordContent | None] = {}
+        self._contents: dict[tuple[str, SetAside], RecordContent | None] = {}
+        self._placed: dict[tuple[str, SetAside], RecordContent | None] = {}
         self._modes: dict[str, dict[str, str]] = {}
         self._paths: dict[str, str | None] = {}
         self._parts: dict[str, AnchoredPart] = {}
@@ -1025,13 +1028,15 @@ class Side(Listing):
             self._records[rel] = None if raw is None else read_points_bytes(raw)
         return self._records[rel]
 
-    def record_content(self, rel: str) -> RecordContent | None:
+    def record_content(self, rel: str, aside: SetAside = NOTHING_SET_ASIDE) -> RecordContent | None:
         """The record at `rel` here, its content read once (`friction_discovery.
-        record_content`, COR-050 point 5), or `None` when this state holds no such file."""
-        if rel not in self._contents:
+        record_content`, COR-050 point 5), the derived links of `aside` read as their
+        words alone, or `None` when this state holds no such file."""
+        key = (rel, aside)
+        if key not in self._contents:
             raw = self.tree.read_bytes([rel]).get(rel) if rel in self.files else None
-            self._contents[rel] = None if raw is None else record_content(raw)
-        return self._contents[rel]
+            self._contents[key] = None if raw is None else record_content(raw, aside)
+        return self._contents[key]
 
     @property
     def placed(self) -> frozenset[str]:
@@ -1065,14 +1070,21 @@ class Side(Listing):
             }
         return found
 
-    def placed_content(self, rel: str) -> RecordContent | None:
+    def placed_content(self, rel: str, aside: SetAside = NOTHING_SET_ASIDE) -> RecordContent | None:
         """The file at `rel` here, read once as a path anchor reads a file a place holds
-        (`friction_discovery.placed_content`), or `None` when this state holds no such
-        file."""
-        if rel not in self._placed:
+        (`friction_discovery.placed_content`), the derived links of `aside` read as their
+        words alone, or `None` when this state holds no such file."""
+        key = (rel, aside)
+        if key not in self._placed:
             raw = self.tree.read_bytes([rel]).get(rel) if rel in self.files else None
-            self._placed[rel] = None if raw is None else placed_content(raw)
-        return self._placed[rel]
+            self._placed[key] = None if raw is None else placed_content(raw, aside)
+        return self._placed[key]
+
+    def aside_of(self, rel: str) -> SetAside:
+        """The derived links set aside in the file at `rel` here (COR-050 point 5): those
+        the capability places matching it declare (`Discovery.aside_of`). A comparison
+        reads both its states under the later one's."""
+        return self.discovery.aside_of(rel)
 
     def point_of(self, anchor: Anchor, rel: str) -> AnchoredPoint | None:
         """What an anchor on a point of the record at `rel` finds there (COR-050 point 7),
@@ -1086,20 +1098,26 @@ class Side(Listing):
             return AnchoredPoint(point, PointState.MISSING)
         return points.anchored(point)
 
-    def standing(self, anchor: Anchor, rel: str | None) -> Standing | None:
+    def standing(
+        self, anchor: Anchor, rel: str | None, aside: SetAside = NOTHING_SET_ASIDE
+    ) -> Standing | None:
         """What an anchor on a record's point stands on here, the record at `rel`
-        (COR-050 point 5): `None` where it stands on nothing — no such file, a retired
-        id, or no point with the id."""
+        (COR-050 point 5), the derived links of `aside` read as their words alone:
+        `None` where it stands on nothing — no such file, a retired id, or no point
+        with the id."""
         found = None if rel is None else self.point_of(anchor, rel)
-        return None if found is None else found.standing
+        return None if found is None else standing_aside(found.standing, aside)
 
-    def record_standing(self, anchor: Anchor, rel: str | None) -> Standing | RecordContent | None:
+    def record_standing(
+        self, anchor: Anchor, rel: str | None, aside: SetAside = NOTHING_SET_ASIDE
+    ) -> Standing | RecordContent | None:
         """What a record anchor stands on here, the record at `rel` (COR-050 point 5): the
         record's content for an anchor on the whole record (`record_content`), what the
-        point stands on for one on a point (`standing`); `None` where there is no file."""
+        point stands on for one on a point (`standing`), the derived links of `aside`
+        read as their words alone; `None` where there is no file."""
         if split_anchor(anchor.value)[1] is not None:
-            return self.standing(anchor, rel)
-        return None if rel is None else self.record_content(rel)
+            return self.standing(anchor, rel, aside)
+        return None if rel is None else self.record_content(rel, aside)
 
 
 def record_file(root: Path, files: Collection[str], record: str) -> str | None:
@@ -1298,9 +1316,14 @@ def record_standings(
 ) -> tuple[Standing | RecordContent | None, Standing | RecordContent | None]:
     """What a record anchor stood on at the base and stands on at head (COR-050 point 5),
     the record's file being `entry` of the diff: read at the base under its name there,
-    and as nothing where the diff added the file (`Side.record_standing`)."""
+    and as nothing where the diff added the file (`Side.record_standing`). Both sides read
+    the derived links head sets aside in the record's file (COR-050 point 5)."""
     before = None if entry.status == "A" else (entry.old_path or entry.path)
-    return base.record_standing(anchor, before), head.record_standing(anchor, entry.path)
+    aside = head.aside_of(entry.path)
+    return (
+        base.record_standing(anchor, before, aside),
+        head.record_standing(anchor, entry.path, aside),
+    )
 
 
 def record_changed(anchor: Anchor, head: Side, base: Side, entry: DiffEntry) -> bool:
@@ -1317,8 +1340,10 @@ def part_changed(anchor: Anchor, head: Side, base: Side) -> bool:
     """Whether what an anchor on a document's section or its lead stands on differs
     between the base and head (COR-050 points 5 and 6): the part's text, or the
     document's own fields. A section with no heading of its slug at a side, or a part
-    refused there, stands on nothing (`AnchoredPart.standing`)."""
-    return head.part_of(anchor.value).standing != base.part_of(anchor.value).standing
+    refused there, stands on nothing (`AnchoredPart.standing`). Both sides read the
+    derived links head's target sets aside (`AnchoredPart.aside`)."""
+    now = head.part_of(anchor.value)
+    return now.standing != base.part_of(anchor.value).standing_with(now.aside)
 
 
 def retired_note(anchor: Anchor, side: Side) -> str | None:
@@ -1345,7 +1370,9 @@ def file_changed(rel: str, later: Side, earlier: Side, earlier_rel: str | None =
 
     A file a place holds at either state is compared by its content
     (`Side.placed_content`) and its mode, so a write to its containers alone, a
-    revalidation say, changes nothing. One added or removed changed. Any other file the
+    revalidation say, changes nothing. The derived links the later state sets aside in
+    it are read as their words alone at both states (COR-050 point 5), so a change to
+    them alone changes nothing either. One added or removed changed. Any other file the
     diff names changed: it is compared as stored, and the diff names it because it
     differs.
     """
@@ -1354,7 +1381,8 @@ def file_changed(rel: str, later: Side, earlier: Side, earlier_rel: str | None =
         return True
     if rel not in later.files or before not in earlier.files:
         return True
-    if later.placed_content(rel) != earlier.placed_content(before):
+    aside = later.aside_of(rel)
+    if later.placed_content(rel, aside) != earlier.placed_content(before, aside):
         return True
     return _mode_changed(later, earlier, rel, before)
 
@@ -1377,8 +1405,19 @@ def _mode_changed(later: Side, earlier: Side, rel: str, before: str) -> bool:
 def content_differs(artefact: Artefact, other: Artefact) -> bool:
     """Whether two artefacts differ in content (COR-050 point 5): the body compared as
     text, the own fields compared parsed, never the methodology's container — so a
-    change that only writes a revalidation changes no content."""
-    return content(artefact) != content(other)
+    change that only writes a revalidation changes no content. `artefact` is the later
+    state's: both are read under the derived links it sets aside (`Artefact.aside`), so
+    friction reads a change to those links alone as none (COR-050 point 5)."""
+    return content(artefact) != content(other, artefact.aside)
+
+
+def alters(artefact: Artefact, other: Artefact) -> bool:
+    """Whether a change alters an artefact, `other` its earlier state and `artefact` its
+    later: their content differs as COR-050's content is defined, the container never
+    counted and nothing set aside. So a change to derived links alone alters it, and the
+    rule-set reviewer judges it, as before derived links were set aside for friction
+    (COR-057 point 1)."""
+    return content(artefact, NOTHING_SET_ASIDE) != content(other, NOTHING_SET_ASIDE)
 
 
 @dataclass(frozen=True)
@@ -1404,10 +1443,12 @@ class Pairing:
     `counterparts` maps each head artefact's walk index to its base
     counterpart; a head artefact that is no key is new. `altered` lists what
     the change altered: each head artefact that is new or whose content
-    differs from its counterpart's, in the head's walk order, then each base
-    artefact no head artefact pairs with, removed, in the base's walk order.
-    So a move the pairing follows, keeping the content, alters nothing.
-    `unaltered` lists the rest of the head, each with its counterpart.
+    differs from its counterpart's (`alters`), in the head's walk order, then
+    each base artefact no head artefact pairs with, removed, in the base's walk
+    order. So a move the pairing follows, keeping the content, alters nothing,
+    while a change to derived links alone alters an artefact, as friction does
+    not read it (COR-050 point 5). `unaltered` lists the rest of the head, each
+    with its counterpart.
     """
 
     base: tuple[Artefact, ...]
@@ -1419,7 +1460,7 @@ class Pairing:
         found: list[Alteration] = []
         for index, artefact in enumerate(self.head):
             before = self.counterparts.get(index)
-            if before is None or content_differs(artefact, before):
+            if before is None or alters(artefact, before):
                 found.append(Alteration(before, artefact))
         paired = {id(before) for before in self.counterparts.values()}
         found.extend(Alteration(b, None) for b in self.base if id(b) not in paired)
@@ -1433,7 +1474,7 @@ class Pairing:
         found: list[tuple[Artefact, Artefact]] = []
         for index, artefact in enumerate(self.head):
             before = self.counterparts.get(index)
-            if before is not None and not content_differs(artefact, before):
+            if before is not None and not alters(artefact, before):
                 found.append((before, artefact))
         return tuple(found)
 
