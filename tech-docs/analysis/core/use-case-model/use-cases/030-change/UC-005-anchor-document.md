@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-23T08:14:08Z
+      at: 2026-10-23T10:28:57Z
       outcome: unchanged
-      unchanged-because: A component may declare derived links on its place, which friction reads as their words alone. Saying what a document rests on is as the steps say.
+      unchanged-because: The developer's needs that only a capability meets moved to its analysis, with the records behind them. Its goal is still one of the developer's needs, and its steps hold.
 ---
 
 # UC-005 — Say what my document rests on

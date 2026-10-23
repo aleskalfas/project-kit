@@ -41,9 +41,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-23T08:14:10Z
+      at: 2026-10-23T10:29:00Z
       outcome: unchanged
-      unchanged-because: "Both checks read derived links as their words alone, so a moved link leaves no debt. Resolving debt runs as the steps say, and the kept deferrals name what #1779 and #1856 rewrite."
+      unchanged-because: The developer's capability needs moved to their analyses, and the AI agent's need says agent definition. Neither reaches its goal or its steps.
       deferred:
         - anchor:
             kind: path

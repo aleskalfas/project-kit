@@ -40,9 +40,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:14:09Z
+      at: 2026-10-23T10:28:59Z
       outcome: unchanged
-      unchanged-because: "The change check reads derived links as their words alone. The workflow that gates merges runs as the steps say, and the kept deferrals name #1779."
+      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. Its goal is still the adopter's need to make merges wait on the system's checks, and nothing that changed reaches its steps.
       deferred:
         - anchor:
             kind: path
