@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-23T18:41:58Z
+      at: 2026-10-23T22:29:24Z
       outcome: unchanged
-      unchanged-because: The project grants still sit beside the methodology ones, and a deny still wins over an allow. The change narrows only how a grant allows a chained command, which this use case does not describe.
+      unchanged-because: The project's grants still sit beside the methodology's, and a deny still wins over an allow. The change only keeps a grant from allowing a command with a construct the splitter cannot trust, which this use case does not describe.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's
