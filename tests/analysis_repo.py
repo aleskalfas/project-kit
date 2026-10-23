@@ -43,6 +43,8 @@ NEW = SA / "scripts" / "new.py"
 VALIDATE = SA / "scripts" / "validate.py"
 #: The command that writes the links between terms and views (DEC-004 point 7).
 LINK = SA / "scripts" / "link.py"
+#: The command that writes each analysis's overview (DEC-003 point 8).
+OVERVIEW_SCRIPT = SA / "scripts" / "overview.py"
 NUMBERS = SA / "scripts" / "check-numbers.py"
 CONFIG = ".pkit/project/config.yaml"
 RECORDED = f"{SA.as_posix()}/project/docs-locations.yaml"
@@ -312,12 +314,19 @@ def fill(repo: AdopterRepo) -> None:
     """Every placeholder the stamp left in the analysis written over with its own words,
     as a person fills each — the check fails an artefact still holding one. Each part's
     hint is written over with its example. The overview is generated, and holds nothing a
-    person fills (DEC-003 point 8)."""
+    person fills (DEC-003 point 8). An actor's `summary` is drawn there, so where an
+    overview is kept, it is written anew after, as a person runs its command."""
+    overviews = [
+        p for p in (repo.root / ANALYSIS).rglob("README.md") if p.parent.name == "overview"
+    ]
     for path in sorted((repo.root / ANALYSIS).rglob("*.md")):
-        if (repo.root / RECORDS) in path.parents or (repo.root / OVERVIEW) in path.parents:
+        if (repo.root / RECORDS) in path.parents or path in overviews:
             continue
         text = HINT.sub(r"\g<example>", path.read_text(encoding="utf-8"))
         path.write_text(_PLACEHOLDER.sub(r"\1", text), encoding="utf-8")
+    if overviews:
+        written = run_script(repo, OVERVIEW_SCRIPT)
+        assert written.returncode == 0, written.stderr
 
 
 def seed(repo: AdopterRepo, *, filled: bool = True) -> None:

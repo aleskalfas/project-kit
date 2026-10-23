@@ -2,6 +2,7 @@
 id: ACT-ai-agent
 name: AI agent
 status: active
+summary: "An AI agent working under the methodology, acting on the system from outside."
 needs:
   - Start every session with the project's rules and conventions loaded.
   - Find my role definition deployed, with the project's own paths filled in and my own permission grants applied.

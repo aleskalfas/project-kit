@@ -89,7 +89,7 @@ The stamp does what a copied template gets wrong:
 - it writes each term's link to the view that explains it
 - it records the analysis location the first time
 
-Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. So does each front-matter field you fill: an actor's `needs`, as its one item, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`.
+Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. So does each front-matter field you fill: an actor's `summary`, and its `needs` as its one item, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`.
 
 ### Several analyses
 
@@ -148,7 +148,7 @@ An actor, a term or a requirement with nothing to anchor is stamped with `--unan
 
 ### After stamping
 
-1. **Fill each part as its hint says.** Write in each hint's place what it asks for, and delete the hint. A part with nothing to say reads `None.`, where its hint says so. Fill an actor's `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to` the same way. This skill lists no kind's parts: a part's hint is its one description, in the kind's declared structure (DEC-001 point 1).
+1. **Fill each part as its hint says.** Write in each hint's place what it asks for, and delete the hint. A part with nothing to say reads `None.`, where its hint says so. Fill an actor's `summary` and `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to` the same way. This skill lists no kind's parts: a part's hint is its one description, in the kind's declared structure (DEC-001 point 1).
 2. **Check what you wrote** with `pkit analysis validate --preview`, and read its findings on your artefact. Then run `pkit friction check`, the core's change check. An artefact new in a change counts as revalidated, and an anchor that resolves to nothing fails.
    - **Why `--preview`.** It runs the capability's check, with its findings and its exit status. It adds what a proposed rule would report where it would bind, as reports that open `preview:` and never fail. So it shows what you wrote against its kind's structure even while the format rule is proposed. `pkit validate` runs the same check with no preview.
    - **Its structure.** The check holds the body to its kind's structure: each part present, in order, not empty, and of its form. Each message gives the part's hint and example.

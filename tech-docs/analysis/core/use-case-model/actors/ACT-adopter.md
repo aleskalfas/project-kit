@@ -2,6 +2,7 @@
 id: ACT-adopter
 name: Adopter
 status: active
+summary: "The person who adopts the methodology for a project and keeps its setup."
 needs:
   - Install the system with one command, committed for the team or kept out of the shared repository, and see its wiring into my project.
   - Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
@@ -30,9 +31,8 @@ pkit:
         - COR-053#8
         - COR-059#3
     revalidated:
-      at: 2026-10-21T12:12:19Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 gains a use case's Not built yet boxes and its shortfalls, which a use case's writer keeps. The adopter's needs, such as choosing each kind's parts as it adopts the analysis, are untouched.
+      at: 2026-10-22T16:24:42Z
+      outcome: updated
 ---
 
 # ACT-adopter — Adopter

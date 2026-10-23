@@ -22,6 +22,7 @@ pkit:
         - COR-047
         - COR-051
         - COR-058
+        - PRJ-011
       artefact:
         - TERM-system
         - TERM-harness
@@ -32,9 +33,9 @@ pkit:
         - TERM-operational-rule
         - TERM-methodology
     revalidated:
-      at: 2026-10-21T14:26:00Z
+      at: 2026-10-22T16:24:45Z
       outcome: unchanged
-      unchanged-because: COR-051 changes only in point 2, on where a rule's answers sit and that a synced rule owes none. The view's account of the system and its methodology names neither, so it holds.
+      unchanged-because: It anchors PRJ-011, the record that states what the system it explains is for. Its account of the system and its methodology holds.
 ---
 
 # VIEW-the-system-and-its-methodology — The system and its methodology

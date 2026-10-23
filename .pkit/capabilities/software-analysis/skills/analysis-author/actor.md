@@ -25,11 +25,13 @@ pkit analysis new actor <slug> --name "<Display name>" [--path <glob>]... [--rec
 pkit analysis new actor <slug> --name "<Display name>" --unanchored-because "<why nothing embodies it>"
 ```
 
-The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> — <name>`. Its front matter holds the id, the name and the needs, so the needs read just above the description. `needs` holds one item, its hint, as each part of the body does: `<!-- pkit:hint … -->`, which says what goes there and gives an example.
+The stamp writes `ACT-<slug>.md` in the actors' folder, headed `# ACT-<slug> — <name>`. Its front matter holds the id, the name, the summary and the needs, so the needs read just above the description. `needs` holds one item, its hint, as each part of the body does: `<!-- pkit:hint … -->`, which says what goes there and gives an example.
 
 ## 5. Fill it
 
 Fill each part as its hint says, and delete the hint: each part of the body, and `needs` in the front matter. The needs stay in the front matter, where a tool reads them, and never go in the body. Write each concept by its term (the shared framing's "Use the glossary's terms").
+
+Then write `summary`: the first sentence of the opening, word for word. The overview shows it in its table of who takes part (DEC-001 point 1). Keep that sentence plain, with no link, since the overview lies in another folder. Delete the line to give none.
 
 Then run the checks in the shared framing's "After stamping", `pkit analysis validate --preview` first.
 

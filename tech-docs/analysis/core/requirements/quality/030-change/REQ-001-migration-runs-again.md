@@ -24,6 +24,10 @@ pkit:
         - COR-059#6
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-22T16:24:40Z
+      outcome: unchanged
+      unchanged-because: It moves into the folder of 030-change, the one area whose use cases must meet it. ACT-adopter only gains a `summary`, so its obligation and its measure hold.
 ---
 
 # REQ-001 · Quality · A migration run again changes nothing

@@ -10,8 +10,8 @@ Held to software-analysis DEC-001 point 1 and DEC-003 point 8:
 - **the check** — whatever any rule's status, each box is matched to an entry and each
   entry to a box, each entry's step or variant is one the body numbers, and each entry's
   record is one of the use case's record anchors, and accepted;
-- **the overview** — a last section, "Not built yet", lists each entry of a use case in
-  force, and the fingerprint reads them.
+- **the overview** — a section of its reference, "Not built yet", before the diagrams,
+  lists each entry of a use case in force, and the fingerprint reads them.
 """
 
 from __future__ import annotations
@@ -447,30 +447,44 @@ def test_a_withdrawn_use_case_is_history(project: AdopterRepo) -> None:
 
 
 def _section(text: str, heading: str) -> str:
+    """The lines under `heading` up to the next heading of its level or above, or the
+    break above the page's closing line."""
+    level = len(heading.split(" ", 1)[0])
     lines = text.split("\n")
     start = lines.index(heading) + 1
-    stop = next((i for i in range(start, len(lines)) if lines[i].startswith("## ")), len(lines))
+    stop = next(
+        (
+            i
+            for i in range(start, len(lines))
+            if re.match(rf"^#{{1,{level}}} ", lines[i]) or lines[i] == "---"
+        ),
+        len(lines),
+    )
     return "\n".join(lines[start:stop]).strip("\n")
 
 
-def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> None:
-    """Under "Not built yet", the last section, each entry of a use case in force: its use
-    case, linked, its step or variant, its record and its issue. The fingerprint reads
-    the entries, so a changed entry leaves the overview stale until it is rewritten
-    (DEC-003 point 8)."""
+def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: AdopterRepo) -> None:
+    """Under "Not built yet", the last section of reference before the line that names
+    the query of its diagrams, each entry of a use case in force: its use case, linked,
+    its step or variant, its record and its issue. The fingerprint reads the entries, so
+    a changed entry leaves the overview stale until it is rewritten (DEC-003 point 8)."""
     project.write({SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"})
     project.write({EXPORT: _use_case()})
     assert run_script(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
-    assert re.findall(r"^## .*$", text, re.M)[-1] == "## Not built yet"
+    assert "## Reference" in text.split("\n")
+    assert re.findall(r"^### .*$", text, re.M)[-2:] == [
+        "### Not built yet",
+        "### Diagrams",
+    ]
     link = "[UC-001 — Export the report](../use-case-model/use-cases/UC-001-export.md)"
-    assert _section(text, "## Not built yet") == (
+    assert _section(text, "### Not built yet") == (
         "What the use cases describe and the system does not do yet, each with the record "
         "that decides it and the issue that tracks it (software-analysis DEC-001 point 1):\n\n"
         f"- {link}: step 2, decided by `PRJ-001`, tracked in `#12`\n"
         f"- {link}: variant 2a, decided by `software-analysis:DEC-001#1`, tracked in `#13`"
     )
-    assert f"reads={overview.VERSION} " in text and overview.VERSION == 3
+    assert f"reads={overview.VERSION} " in text and overview.VERSION == 4
 
     entries = [ENTRIES[0], {**ENTRIES[1], "issue": "https://example.com/issues/13"}]
     project.write(
@@ -484,9 +498,11 @@ def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> No
     assert [f["severity"] for f in stale] == ["error"]
     assert run_script(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
-    assert text.rstrip("\n").endswith("tracked in <https://example.com/issues/13>")
+    assert _section(text, "### Not built yet").endswith(
+        "tracked in <https://example.com/issues/13>"
+    )
 
     plain = _use_case(main_path="1. The analyst chooses `Export`.", variants="None.", entries=None)
     project.write({EXPORT: plain})
     assert run_script(project, OVERVIEW).returncode == 0
-    assert "## Not built yet" not in (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
+    assert "### Not built yet" not in (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")

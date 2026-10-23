@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-21T12:12:32Z
+      at: 2026-10-22T16:24:43Z
       outcome: updated
       deferred:
         - anchor:
@@ -196,7 +196,7 @@ Every artefact form also takes `--path <glob>` and `--record <id>`, each repeata
 
 - **Ids.** A slug is a word: a lowercase letter, then lowercase letters, digits and hyphens. An actor is `ACT-<slug>` and a term `TERM-<slug>`; the stamp refuses an id already held, withdrawn or not, since an id is never used again. A use case, a journey or a requirement takes the **next free number**: one past the highest the working tree and the default branch hold, and past every number the default branch's history ever gave a file of its place — one deleted since included; when the history's number is the one it follows, the stamp says which file it was given to. Only your numbering setting frees a number ("Configuration" below): an id it frees is not counted, and the stamp says so, naming the commit, when it is the number it would have followed. A requirement's number is one numbering across the three kinds, so the stamp reads their three places as one: a number any of the three folders holds, or their history gave, is taken for all three, and a requirement moved to another kind keeps its number (DEC-002 point 2). A file's number is read from its front matter and from its name (`UC-007-<slug>.md`, as the stamp names it), so a file whose id can't be read still holds its number. The history counts the files the tree reading counts: one `git log` lists the paths ever added under the kind's place, and a path past the tree's highest number counts unless the core's reading at the commit that added it, the place then where it is now, held it as no file of the place — not a Markdown file there, or left out by `friction.exclude` — so a diagram named `UC-800-flow.svg`, or an excluded example, raises nothing, while a Markdown note named `UC-2026-notes.md` held its number while it was there and still does. A file never named after its number, and deleted since, is the one it can't count. In a shallow clone the history stops where the clone does, and the stamp says so; `git fetch --unshallow` reads it all. An actor's, term's or view's id is a slug a person chooses, not a number the stamp gives, and point 3 keeps a withdrawn one in its file or its glossary entry, where the stamp refuses it — so no history is read for one, and a slug deleted against the rule is not caught. A number has one spelling — three digits below 1000 (`UC-007`), no leading zero from 1000 on (`UC-1000`); the check refuses another (`UC-0007`), and both the stamp and the duplicate check read it as the number it spells, so it is never a second id. What the stamp numbers past is the default branch — `repository.default-branch` in the backbone configuration, `main` when undeclared, read as its upstream or `origin/<name>`, and as the local branch only in a clone with no remote (COR-054) — and, when you name one, the base `--base <ref>` names too; the stamp never reads `$PKIT_CHECK_BASE`, the base a pipeline sets for its checks, so a pipeline's base never moves where it numbers from (COR-054 point 3). When the default branch or the base names no commit here, the stamp refuses with the core's reason and fix — fetch it, declare the right one — rather than number from the working tree alone. A number another branch takes after yours is `pkit analysis check-numbers`' to report (below).
 - **What it writes.** The artefact's own fields from its template, its title or name (the slug, capitalised, by default) — a use case's, journey's or requirement's title, and an actor's name, in its front matter and in its heading after the id — and the friction block with the anchors the decision asks for (DEC-001 point 4). A use case anchors to its actor and to each other actor who takes part, which `--other-actor` names and the stamp writes in its `other-actors`. A journey anchors to its actor, and to the use cases of its steps and of its `relies-on`: those outside the journey that a step relies on, which `--relies-on` names. A use case and a journey also anchor each requirement they must meet, which `--requirement` names and the stamp writes in their `requirements` (DEC-002 point 7). A requirement anchors to each actor whose need it meets and each requirement it refines, which `--actor` and `--refines` name and the stamp writes in its `actors` and `refines` (DEC-002 point 6). A view's `--explains` names the terms of its `explains`, and the stamp writes the anchors and the sections they ask for (a view's anchors and sections, in [The artefacts](#the-artefacts), below). Its heading shows its kind between its id and its title, `# REQ-004 · Quality · <title>`. Its body is rendered from its kind's structure, every part in its order, each holding its hint ("Templates and hints" below). Under a journey's *Steps* it writes one line for each of its `steps`, the use case's id and title, as the part's form asks.
-- **What it leaves for you.** Each field you fill in the front matter holds its hint: an actor's needs, a term's definition, and a requirement's `statement`, `measure` and `applies-to`. So does each part of the body: a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. Write in its place what it asks for, and delete the hint. `pkit analysis validate` fails until you have deleted each hint, and written each `<…>` placeholder an artefact stamped earlier still holds.
+- **What it leaves for you.** Each field you fill in the front matter holds its hint: an actor's summary and needs, a term's definition, and a requirement's `statement`, `measure` and `applies-to`. So does each part of the body: a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. Write in its place what it asks for, and delete the hint. `pkit analysis validate` fails until you have deleted each hint, and written each `<…>` placeholder an artefact stamped earlier still holds.
 - **The glossary, a collection file.** A new term is added to the file's front matter, and its section to the body, each where its id sorts among those already there; every other byte stays as it was — the file's last line ending and blank lines included, when the section goes last — and the stamp checks the result reads back as the file plus the new entry before writing. Kept sorted, two branches adding different entries touch different places of the file and merge without a conflict unless their ids are neighbours. The file is created the first time, with the heading and the opening the glossary's structure gives its head: its first sentence says what the file holds. Its line endings are kept too: a file whose every line ends CRLF — as a checkout with `core.autocrlf` writes it — is edited as LF and written back CRLF, the entry's and the section's lines included; a file with mixed line endings is refused, saying so, since which ending the new lines take cannot be told.
 - **Written whole, or not at all.** Every file the stamp writes — the glossary included — goes to a temporary file beside it and is then moved over it, keeping its mode, so a failure halfway never leaves it half-written. The location is recorded only once the file is written, and only while it is not recorded yet: a write that fails leaves `docs-locations.yaml` untouched, a recording that fails puts the file back as it was, so a refused stamp writes nothing, and a stamp that needs no recording never runs it. A file or folder reached through a link is refused and the link left as it is: the core's discovery reads no link as a document, nor anything beneath a linked folder, so what the stamp wrote there would be no part of the analysis — and a file written whole would replace the link.
 - **What it refuses**, writing nothing: an actor, an other actor, a step or a use case a journey relies on that is not in the analysis or is withdrawn — the check holds every use case and journey in force to the same; an other actor that is the use case's own actor, and a use case a journey relies on that is one of its steps; a journey with fewer than two steps; a journey with a step that is a use case of another actor, since a journey is one actor's path across use cases — the check holds every journey in force to the same; an actor a requirement names, or a requirement it refines, that is not in the analysis or is withdrawn — a refined one may be of any of the three kinds — and a requirement that refines itself (DEC-002 points 6 and 7); a requirement a use case or a journey lists that is not in the analysis or is withdrawn (DEC-002 point 7); a view with no `--explains`, or one naming a term twice, a term not in force in its own analysis, or a term a view in force explains already, and a `--number` that is not digits (DEC-004 points 4 and 5); a slug that is not a word, or an area that is not one after an optional number and a hyphen, such as `010-develop`; an id already held; a use case, journey or requirement while your numbering setting has an entry the stamp cannot honour ("Configuration" below); a file or folder reached through a link; a `--title`, `--name` or `--unanchored-because` still holding a placeholder the templates or the skill's commands shipped (`<Title>`, `<why>`), matched exactly — words of your own in angle brackets are yours to write.
@@ -376,6 +376,7 @@ It has a use case's `id`, `title`, `status`, `actor` and `requirements`, and its
 id: ACT-tester
 name: Test author               # may change; the id does not
 status: active
+summary: Whoever writes and runs the project's tests.
 needs:
   - Run the suite against a clean sandbox
 pkit:
@@ -395,6 +396,8 @@ Whoever writes and runs the project's tests.
 ```
 
 The heading is the id and the `name`, `# <id> — <name>`, and the check requires the two to agree, as it does a use case's title. The id is the slug the file is named by, and never changes.
+
+**Its `summary`** (optional) says who the actor is, in one sentence: the first sentence of its opening, word for word (DEC-001 point 1). The overview shows it in its table of who takes part, since a tool reads front matter only. Where the format rule binds, the check holds the two equal (the form `summary-matches-front-matter`). The stamp writes the field holding its hint: write the sentence, or delete the line to give none. Keep the sentence plain, since a link in it would not resolve from the overview's folder.
 
 **Glossary** (`schemas/term.schema.json`, `templates/glossary.md`) — one collection file, serving everything (DEC-001 point 2):
 
@@ -1012,106 +1015,142 @@ flowchart LR
 - **Where a copy may go.** Never into an analysis artefact, and never into a view of the solution, such as an architecture page or a record (DEC-003 point 9). A copy on any other page is that page's diagram, and the page anchors each artefact it draws.
 - **Complete, or no answer.** A file of a place a diagram reads that holds no artefact of its kind gives no answer. So does an artefact there with no id of its kind's shape, or one in force whose list a diagram reads that is no list of ids, or, for the chain, a use case in force whose `after` is no list of lists. The command exits 1 and names the file, and `pkit analysis validate` says what is wrong with it. A subject that names no diagram, and a journey or a requirement not in force, give no answer too.
 - **`--json`** prints `{schema_version, diagrams}`. Each diagram is `{id, title, description, mermaid}`, its `mermaid` text without the fence.
-- **Where readers see them:** in each analysis's overview, which the stamp keeps fresh ("The overview", below).
+- **Where readers find it:** each analysis's overview names this command, as you run it for that analysis, and shows each journey's flow beside its journey ("The overview", below). The other diagrams are left to the command: drawn for a large analysis, they are too big to read on a page.
 
 It is a query: read-only and offline. It reads the working tree through the core's reading command, `pkit friction artefacts`, as the check does.
 
 ## The overview: `pkit analysis overview`
 
-Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). A reader who opens the folder on GitHub sees what the analysis holds, in the order it is built, and why its areas are cut as they are.
+Each analysis keeps a generated overview, `overview/README.md` in its folder: the reader's entry point (DEC-003 point 8). It is written for a newcomer first: someone new to the analysis, joining work on the component, a person or an agent. Such a reader reads it from top to bottom, so its order is the path. Whoever decides whether to use the component reads your project's own documents, such as its README. The overview has two parts. The story, read in order, holds what the component is for, what the analysis is and the path through its areas. Reference, read when needed, holds everything else under the heading *Reference*: who takes part, the words, the lists, and the command that prints the diagrams.
 
-- **What it shows,** each artefact in force, linked, in the order an analysis is built (DEC-001 point 12):
-  - **Concepts:** the glossary, then each domain-model view in the order of its number, by its number and its title, such as *010 — Orders*.
-  - **Actors,** each with the use cases it is the main actor of, its `actor`, and those it takes part in, its `other-actors`. In an analysis that builds on another, each actor of that analysis your glossary's head lists, or a use case names, follows your own actors. It shows by its id with that analysis, such as `core:ACT-developer`, and the name the head gives it.
-  - **Requirements,** then their map, where there are any.
-  - **Areas,** in the order of their numbers, each with its goal and its use cases. Then the chain of use cases and the use-case diagram. Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead.
-  - **Journeys,** each with its flow, where there are any.
-  - **Not built yet,** last, where a use case in force lists any `shortfalls`: each entry with its use case, its step or variant, its record and its issue. So every step the system does not carry out yet shows in one place.
+- **What it shows,** each artefact in force, linked, in this order:
+  - **The opening:** what the component is for, from the record your settings name (`purpose`, below). Then two sentences say what the analysis is and what it builds on, such as:
 
-  Each diagram is `pkit analysis diagram`'s own output, with its text alternative, in a section of its own.
-- **Front matter only.** The overview reads your analysis's front matter and the paths of its files, never a body, and no file of another analysis.
-- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a use case's `other-actors` or `shortfalls`, a name in the glossary's head or a goal. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
-- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=3 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that reads more of the analysis raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
+    > This analysis describes what core does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
+
+    An analysis that builds on others names them in the second sentence. In a project that lists no analyses, the first sentence names the system where a component's name would stand.
+  - **Areas,** in the order of their numbers. Each shows its goal, then:
+    - **Builds on:** the other areas that hold a producer its use cases name in `after`, save one in a later area. The environment is no area. An area none of whose use cases writes `after` shows no such line.
+    - **Its requirements:** each requirement whose file lies in a folder named for the area, inside its kind's folder, such as `requirements/quality/010-run/`.
+    - **Its use cases,** each marked *not built yet* where an open shortfall names one of its steps or variants.
+    - **Not written yet:** an area whose goal you give and which holds no use case in force shows its goal and this line.
+
+    Use cases that lie in no area are listed under *Outside any area*, at the end of *Areas*. An analysis whose use cases have no areas lists them all under *Use cases* instead, and they tell its story.
+  - **Reference,** each part in a section of its own below it:
+    - **Who takes part:** one table, a row for each actor: the actor, who it is (its `summary`, an empty cell where it gives none), and the areas it acts in. In an analysis that builds on another, each actor of that analysis your glossary's head lists, or a use case names, follows your own. It shows by its id with that analysis, such as `core:ACT-developer`, and the name the head gives it.
+    - **Concepts:** the glossary, then each domain-model view in the order of its number, by its number and its title, such as *010 — Orders*.
+    - **Requirements in no area:** those whose file lies in no area's folder, such as those that bind the whole system.
+    - **Journeys,** each with its flow, where there are any.
+    - **Not built yet,** where a use case in force lists any `shortfalls`: each entry with its use case, its step or variant, its record and its issue. So every step the system does not carry out yet shows in one place.
+    - **Diagrams,** on every page: one line that names `pkit analysis diagram`, as you run it for this analysis, and its subjects. The page shows no use-case diagram, requirement map or chain of use cases.
+
+  A journey's flow is `pkit analysis diagram`'s own output, with its text alternative. A closing line says the command writes the page.
+- **Front matter only.** The overview reads your analysis's front matter and the paths of its files, never a body, and no file of another analysis. Beyond the analysis, it reads the settings file and the front matter of the record `purpose` names.
+- **Who writes it.** The stamp rewrites the overview of the analysis it writes in, after each artefact. Run `pkit analysis overview` after you change by hand what it shows, such as a title, a status, an `after`, a use case's `other-actors` or `shortfalls`, an actor's `summary`, a name in the glossary's head, a goal, or the purpose record's title or status. The command writes the overview of each analysis that holds an artefact, and only where its bytes change. Install writes none, so a project gets its overview from its first stamp, or from the command.
+- **Fresh by fingerprint.** The page carries a line `<!-- pkit:overview reads=4 fingerprint=sha256:… -->`, which GitHub does not show. It is a fingerprint of the data the overview reads, never of its text. `pkit analysis validate` fails an overview whose fingerprint no longer matches the analysis, and names the command. So a release that only prints the overview differently fails nothing, and the next rewrite prints it anew. A release that changes what the fingerprint reads, or how it is computed, raises the line's `reads=` version, and an overview written under another one is a warning until the command rewrites it.
 - **A missing overview** is a warning that names the command, so an upgrade fails nothing.
 - **Two branches** that each change what it shows conflict on it, as on a lock file: always on the fingerprint's line, and on each section both change. Resolve the conflict by running the command.
 - **Never edit it by hand.** It is a held document, listed as this capability's, and carries no anchors. Edit the analysis, then rewrite it.
 
-**Each area's goal.** One line for each area of your use cases, beside the area's folder name in the settings file ("Configuration", below), says what the area makes possible. The overview shows it under the area's heading, so a reader sees why the use cases are split as they are:
+**What the component is for.** A decision record states it, and your settings point to it with `purpose`, beside the analysis's `builds-on`. The overview opens with the record's title, linked, so title the record as a statement of what the component is for:
+
+```yaml
+analyses:
+  - component: core
+    folder: core
+    purpose: PRJ-004
+```
+
+- **Which record.** One you own: a project record, an architecture record, or, for a capability's analysis, a decision of that capability, such as `billing:DEC-001`. Name it whole, as a record anchor names it. A core record is refused, since a release changes it in your project.
+- **One analysis.** A project that lists no analyses writes `purpose` at the file's top.
+- **The check.** `pkit analysis validate` fails a pointer to no record, to a record that is not accepted, or to another capability's decision, whatever the setting `overview`. The overview then shows no title, and says what is wrong instead.
+- **None named.** The overview says that no record states what the component is for yet, and names `pkit new decision` and the setting. Nothing fails.
+
+**Each area's goal.** One line for each area of your use cases, beside the area's folder name in the settings file ("Configuration", below), gives the area's goal. The overview shows it under the area's heading, so a reader sees why the use cases are split as they are:
 
 ```yaml
 analyses:
   - component: core
     folder: core
     areas:
-      010-run: A suite runs against a sandbox, and its result can be read.
-      020-report: A failure's cause can be found and shared.
+      010-run: Run a suite against a sandbox, and read its result.
+      020-report: Find a failure's cause and share it.
 ```
 
+- **Its form.** Write one phrase that starts with its verb, as the shipped hints ask of a use case's goal. So it reads after "The goal is to …". It is a summary goal over the area's use cases, which are the steps toward it. It may end with "so" and its reason.
+- **No actor's voice.** Write no *I* or *my*, since an area has several actors.
+- **No rule judges it.** The goal is a setting, and no rule of `SAN` judges a setting. DEC-003 point 8 and the authoring skill give its form.
 - **One analysis.** A project that lists no analyses writes `areas` at the file's top.
 - **Each analysis its own.** Each analysis numbers its own areas, so it keeps the goals of its own.
-- **The check.** `pkit analysis validate` fails a goal that names no folder of the use cases, such as one left behind when an area was renamed. Where you keep the overview, it also warns of an area of use cases in force without a goal.
+- **An area planned and not written yet.** Give its goal before its first use case, and the overview shows it in its place, marked *Not written yet*. So a goal left behind when you rename an area shows the same way: rename its goal with it.
+- **One name for an area.** The overview matches an area by its folder's name, among the use cases, the requirements and the goals. Name a requirement's area folder as the use cases' area it belongs to.
+- **The check.** Where you keep the overview, `pkit analysis validate` warns of an area of use cases or requirements in force without a goal. No goal fails.
 - **No areas.** A project whose use cases lie in no area keeps no goal.
 
-**Keeping none.** Set `overview: false` in the settings file. The stamp then writes none, `pkit analysis overview` refuses, and `pkit analysis validate` asks for no overview and no goal. It warns of an overview you leave in place, since nothing keeps it fresh.
+**Keeping none.** Set `overview: false` in the settings file. The stamp then writes none, `pkit analysis overview` refuses, and `pkit analysis validate` asks for no overview and no goal. It still checks `purpose`. It warns of an overview you leave in place, since nothing keeps it fresh.
 
 Here is the start of the overview of the analysis the examples above come from:
 
 ```markdown
-# Overview of the analysis
+# Overview of the analysis of core
 
-<!-- pkit:overview reads=3 fingerprint=sha256:… -->
+<!-- pkit:overview reads=4 fingerprint=sha256:… -->
 
-What the analysis holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
+[The test runner exists so a team's suites run the same way on every machine](../../../../.pkit/decisions/project/PRJ-004-runner-purpose.md).
 
-## Concepts
+This analysis describes what core does: who uses it, what they do with it, and what it must meet. It builds on no other analysis.
 
-The [glossary](../glossary.md) defines each term.
+## Areas
 
-Each view of the domain model explains a group of related concepts:
+### 010-run
 
-- [010 — Runs and sandboxes](../domain-model/010-runs-and-sandboxes.md)
-- [020 — Reports and failures](../domain-model/020-reports-and-failures.md)
+Run a suite against a sandbox, and read its result.
 
-## Actors
+**Its requirements:**
 
-### [ACT-reviewer — Reviewer](../use-case-model/actors/ACT-reviewer.md)
+- [REQ-001 · Constraint · Run suites on the client's machines](../requirements/constraints/010-run/REQ-001-client-machines.md)
 
-The use cases it is the main actor of:
+**Its use cases:**
 
-- [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
-
-### [ACT-tester — Test author](../use-case-model/actors/ACT-tester.md)
-
-The use cases it is the main actor of:
-
-- [UC-001 — Run suite](../use-case-model/use-cases/010-run/UC-001-run-suite.md)
+- [UC-001 — Run suite](../use-case-model/use-cases/010-run/UC-001-run-suite.md) ([not built yet](#not-built-yet): step 2)
 - [UC-002 — Read report](../use-case-model/use-cases/010-run/UC-002-read-report.md)
 
-The use cases it takes part in:
+### 020-report
+
+Find a failure's cause and share it.
+
+**Builds on:** [010-run](#010-run).
+
+**Its requirements:** none.
+
+**Its use cases:**
 
 - [UC-003 — Share a failure](../use-case-model/use-cases/020-report/UC-003-share-a-failure.md)
+
+## Reference
+
+### Who takes part
+
+| Actor | Who they are | Areas they act in |
+| --- | --- | --- |
+| [ACT-reviewer — Reviewer](../use-case-model/actors/ACT-reviewer.md) | Whoever reviews a failure a test author shares. | [020-report](#020-report) |
+| [ACT-tester — Test author](../use-case-model/actors/ACT-tester.md) | Whoever writes and runs the project's tests. | [010-run](#010-run), [020-report](#020-report) |
 ```
 
-Where a use case lists `shortfalls`, the overview ends with them:
+Where a use case lists `shortfalls`, the overview lists them under *Reference*:
 
 ```markdown
-## Not built yet
+### Not built yet
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
 - [UC-001 — Run suite](../use-case-model/use-cases/010-run/UC-001-run-suite.md): step 2, decided by `ADR-006`, tracked in `#12`
 ```
 
-In an analysis that builds on another, an actor of that analysis follows your own:
+In an analysis that builds on another, an actor of that analysis follows your own in the table:
 
 ```markdown
-### core:ACT-developer — Developer
-
-An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists.
-
-The use cases it is the main actor of:
-
-- [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
 ```
 
 ## The method rule set: `SAN`
@@ -1300,7 +1339,7 @@ It is a query: read-only, offline, and `pkit sync` provisions its dependencies.
 
 The capability's project tier, `.pkit/capabilities/software-analysis/project/`, holds three files of yours, which sync never touches: the settings file, `config.yaml`, the recorded location, `docs-locations.yaml`, and your own structures, `structures.yaml` ("A project's own structures", above).
 
-The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off, but for the overview, which is kept. There are two settings here, and two more the overview reads, `areas` and `overview` ("The overview", above):
+The settings of this capability you choose live in its settings file, `.pkit/capabilities/software-analysis/project/config.yaml`, beside the recorded location, `docs-locations.yaml`. The file is yours — sync never touches it — and has one shape, `schemas/config.schema.json`, which `pkit validate` checks it against with your other data (`pkit_schema: software-analysis:config`). Without the file, every setting is off, but for the overview, which is kept. There are two settings here, and three more the overview reads, `purpose`, `areas` and `overview` ("The overview", above):
 
 ```yaml
 pkit_schema: software-analysis:config

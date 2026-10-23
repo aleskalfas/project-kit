@@ -40,9 +40,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-22T22:13:47Z
+      at: 2026-10-22T23:46:42Z
       outcome: unchanged
-      unchanged-because: "The workflow names the pull request's own head to the change check, which reads answer files that nothing writes yet. No step changes before #1779 rewrites them, as the kept deferrals say."
+      unchanged-because: "The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, steps and actors hold, and the kept deferrals still name what #1779 and #1856 rewrite."
       deferred:
         - anchor:
             kind: path

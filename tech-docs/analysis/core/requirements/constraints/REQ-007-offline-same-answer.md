@@ -28,9 +28,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-developer
     revalidated:
-      at: 2026-10-22T22:12:54Z
+      at: 2026-10-22T23:47:18Z
       outcome: unchanged
-      unchanged-because: A new test finds that the change's own head a pipeline names never reaches a filler, as the base does not. The obligations and what verifies them hold.
+      unchanged-because: The actors whose needs it meets each gain a summary, the first sentence of their opening, and nothing else of theirs changes. What it asks still holds.
 ---
 
 # REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic

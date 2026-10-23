@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-developer
     revalidated:
-      at: 2026-10-22T22:13:37Z
+      at: 2026-10-22T23:47:10Z
       outcome: unchanged
-      unchanged-because: Validation now reports a revisit entry in an answer file on an artefact with no link, and the change check reads answer files. Anchoring a document is as the steps say.
+      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
 ---
 
 # UC-005 — Say what my document rests on

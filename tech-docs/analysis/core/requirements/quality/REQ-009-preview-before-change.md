@@ -26,6 +26,10 @@ pkit:
         - COR-004
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-22T16:24:38Z
+      outcome: unchanged
+      unchanged-because: The actors whose need it meets each gain a `summary`, the first sentence of their opening, and their needs are untouched. Its obligation and its measure hold.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

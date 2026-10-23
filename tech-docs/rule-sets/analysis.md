@@ -21,9 +21,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T12:12:22Z
+          at: 2026-10-22T16:24:46Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains the Not built yet box and a use case's shortfalls. Needs and goals, and the voice they speak in, are untouched.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, a sentence that says who the actor is. The actor's voice in needs and goals, which this rule asks for, is untouched.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}
