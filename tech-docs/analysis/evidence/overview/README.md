@@ -1,6 +1,6 @@
 # Overview of the analysis of evidence
 
-<!-- pkit:overview reads=4 fingerprint=sha256:987e0f0ae57bd41d4c61cf425db8a413a7b81d615b02026334b60bc091df8183 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:89d6ba9f5d987f7ddb13ab48e72b3e24715bd02b6634280e833a27c13018b0c8 -->
 
 No record states what evidence is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of evidence under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -8,7 +8,7 @@ This analysis describes what evidence does: who uses it, what they do with it, a
 
 ## Use cases
 
-- [UC-021 — Ground a claim in its source](../use-case-model/use-cases/UC-021-ground-claim.md)
+- [UC-021 — Ground a claim in its source](../use-case-model/use-cases/UC-021-ground-claim.md) ([not built yet](#not-built-yet): step 7, variant 6b, variant 7a)
 
 ## Reference
 
@@ -26,6 +26,14 @@ The [glossary](../glossary.md) defines each term.
 Each view of the domain model explains a group of related concepts:
 
 - [010 — Outside facts and citations](../domain-model/010-outside-facts-and-citations.md)
+
+### Not built yet
+
+What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
+
+- [UC-021 — Ground a claim in its source](../use-case-model/use-cases/UC-021-ground-claim.md): step 7, decided by `evidence:DEC-003`, tracked in `#1910`
+- [UC-021 — Ground a claim in its source](../use-case-model/use-cases/UC-021-ground-claim.md): variant 6b, decided by `evidence:DEC-003`, tracked in `#1910`
+- [UC-021 — Ground a claim in its source](../use-case-model/use-cases/UC-021-ground-claim.md): variant 7a, decided by `evidence:DEC-002`, tracked in `#1910`
 
 ### Diagrams
 

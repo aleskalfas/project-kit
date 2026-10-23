@@ -6,6 +6,16 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
+shortfalls:
+  - at: 7
+    issue: "#1910"
+    record: evidence:DEC-003
+  - at: "6b"
+    issue: "#1910"
+    record: evidence:DEC-003
+  - at: "7a"
+    issue: "#1910"
+    record: evidence:DEC-002
 pkit:
   friction:
     anchors:
@@ -54,6 +64,10 @@ pkit:
 5. The developer runs `pkit evidence validate <scope>`.
 6. The system reads the scope's `evidence.yaml`. It checks that each evidence record holds an `id`, a `source_url`, a `fetched_at` and an `excerpt` (evidence DEC-002). It checks too that each `id` is of the slug's form, `^[a-z0-9][a-z0-9-]*$` (evidence DEC-001, `validate.py`).
 7. The system finds each citation in the `.md`, `.yaml` and `.yml` files under the scope. It leaves out the scope's `evidence.yaml`, and the fenced code blocks and HTML comments of each Markdown file (evidence DEC-003).
+
+> [!WARNING]
+> **Not built yet:** `validate.py` skips a fence only where it opens at the start of its line. So a fence indented in a list item is read, and a citation in it counts. Evidence DEC-003 decides that fenced code is skipped, and #1910 tracks it.
+
 8. The system checks that each citation names an evidence record of the scope (evidence DEC-003).
 9. The system prints `evidence: <n> citation(s) validated against <file> — all resolved.`, and exits 0. Where evidence records stand that no citation names, it adds `(<n> orphan(s) — pass --strict to elevate to errors)` (evidence DEC-003).
 
@@ -70,7 +84,15 @@ pkit:
 - **5d.** The project holds several evidence scopes. The developer runs the command once for each, such as in a loop over each `evidence.yaml` the project holds (evidence DEC-003).
 - **6a.** The `evidence.yaml` does not parse as YAML, its top level is no mapping, its `schema_version` is not 1, or its `records` is no list. The system names the fault, checks no citation, and exits 1 (evidence DEC-002 and DEC-003, `validate.py`).
 - **6b.** An evidence record lacks a field that step 6 asks for, or its `id` is not of the slug's form. The system keeps a finding for each, and the path goes on at step 7. Instead of step 9, the system prints the findings as variant 8a does (evidence DEC-003).
+
+> [!WARNING]
+> **Not built yet:** an evidence record with no `id` crashes the check with a `KeyError`. Evidence DEC-003 decides that a missing required field is a finding, and #1910 tracks it.
+
 - **7a.** A directory under the scope holds an `evidence.yaml` of its own. Its files belong to that evidence scope, which is checked on its own. So the system leaves them out, that `evidence.yaml` among them (evidence DEC-002 and DEC-003).
+
+> [!WARNING]
+> **Not built yet:** run on an outer scope, `validate.py` checks the citations of a nested scope against the outer scope's records. It reads the nested `evidence.yaml` as citing text too. Evidence DEC-002 decides that each scope is checked on its own, and #1910 tracks it.
+
 - **8a.** A citation names no evidence record of the scope. For each, the system prints `<file>:<line> — cited slug '<slug>' has no record.`. It ends with `evidence: <n> violation(s); see above.`, and exits 1 instead of step 9 (evidence DEC-003). The developer adds the record, mends the citation's slug or removes the citation (the `evidence` skill's validate operation). The path rejoins at step 5.
 
 **Postconditions:** The claim stands in its document with a citation. The citation names an evidence record of its scope, which keeps the source's words, where the source lies and when the words were fetched. So whoever reads the claim can follow it to its source (evidence DEC-001).
