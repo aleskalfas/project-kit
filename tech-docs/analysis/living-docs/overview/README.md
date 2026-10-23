@@ -1,6 +1,6 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=4 fingerprint=sha256:16c8d9d91fde22ec95591d884beead54541aaf32f83b20ba0c8a5704d7a9c169 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:a65125e8c19a314ae5b197b61c43ba14189682e07c8a18a3ef5773eff05b5de9 -->
 
 No record states what living-docs is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of living-docs under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
@@ -8,7 +8,7 @@ This analysis describes what living-docs does: who uses it, what they do with it
 
 ## Use cases
 
-- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md) ([not built yet](#not-built-yet): step 2, step 6)
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md) ([not built yet](#not-built-yet): variant 1b, step 2, step 6)
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md) ([not built yet](#not-built-yet): step 5, variant 10a)
 - [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md) ([not built yet](#not-built-yet): variant 4c, variant 4e)
 - [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md) ([not built yet](#not-built-yet): step 3, variant 4a)
@@ -45,6 +45,7 @@ Each view of the domain model explains a group of related concepts:
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md): variant 1b, decided by `living-docs:DEC-001#1`, tracked in `#1922`
 - [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md): step 2, decided by `living-docs:DEC-001#1`, tracked in `#1922`
 - [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md): step 6, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md): step 5, decided by `ADR-034#1`, tracked in `#1765`

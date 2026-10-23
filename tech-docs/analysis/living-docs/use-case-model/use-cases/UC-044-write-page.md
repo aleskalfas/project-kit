@@ -87,7 +87,7 @@ pkit:
 **Main path:**
 
 1. The developer chooses the page's documentation space, its page kind, `signpost` or `reference`, and its reader (the `docs-author` skill's page operation).
-2. The developer chooses where the file goes, under the documentation root that serves the space's audience (DEC-001 point 1).
+2. The developer chooses where the file goes: under the space's root by default, or in a place assigned to the space (DEC-001 point 1).
 3. The developer chooses what the page rests on, each by its option (DEC-001 point 4):
    - code by `--path`
    - decisions, or their points, by `--record`
@@ -111,7 +111,7 @@ pkit:
 **Variants:**
 
 - **1a.** The page kind is one the project adds, with a template of its own. The stamp takes only a page kind living-docs declares, so the developer writes the page by hand from that template (`stamp.py`). The path goes on at step 10.
-- **2a.** The developer puts the page in a place assigned to the space outside every root, as the `docs-author` skill's page operation offers. The stamp writes it there, as it writes one under the root.
+- **2a.** The developer puts the page in a place assigned to the space outside every root, as DEC-001 point 1 allows. The `docs-author` skill's page operation offers that place. The stamp writes the page there, as it writes one under the root.
 - **3a.** The page rests on a text outside the repository, such as a standard. The developer captures it in `.pkit/capabilities/living-docs/project/sources/<name>.yaml`, holding its `title`, its `version` and, where it has one, its `url`. The page anchors it with `--source <name>`, and nothing fetches the text (DEC-001 point 4 and REQ-025).
 - **3b.** The page has nothing to anchor yet. The stamp writes an empty friction block, and validation counts the page as unanchored for onboarding, never failing it (DEC-001 point 8). A reason for having no anchors is a person's decision, accepted word for word before it is written (COR-050 point 1).
 - **4a.** The developer passes `--dry-run`. The system makes the checks before the write, prints the page it would write, and writes nothing. Whether the file would be a page of the space shows only once it is written, and the use case ends.

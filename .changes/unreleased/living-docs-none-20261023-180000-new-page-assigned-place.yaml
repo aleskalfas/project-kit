@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  The record living-docs DEC-001 and the README let a new page go into a place
+  the project assigned to its space, as well as under its space's root. No
+  behaviour changes: `pkit living-docs new page` and validation already place
+  and accept such a page.

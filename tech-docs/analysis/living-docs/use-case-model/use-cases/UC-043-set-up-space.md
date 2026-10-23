@@ -10,6 +10,9 @@ requirements:
   - REQ-023
   - REQ-024
 shortfalls:
+  - at: "1b"
+    issue: "#1922"
+    record: living-docs:DEC-001#1
   - at: 2
     issue: "#1922"
     record: living-docs:DEC-001#1
@@ -100,7 +103,11 @@ pkit:
 **Variants:**
 
 - **1a.** Every page of the space lies under its documentation root, so no place needs assigning. The path goes on at step 2.
-- **1b.** The space is one the project adds. It has no root of its own, so each of its places is assigned to it. DEC-001 point 1 has them lie under the root that serves its audience, which validation does not check.
+- **1b.** The space is one the project adds, and records its own location, one that serves its audience (DEC-001 point 1). The configuration gives it no root of its own, so each of its places is assigned to it. Its new pages go into those places.
+
+> [!WARNING]
+> **Not built yet:** the configuration holds no root for a space the project adds. DEC-001 point 1 decides that such a space may record a root as its location, and #1922 tracks it.
+
 - **1c.** A place outside every root that the adopter assigns gives no type in `friction.places`, and the space definition selects by type. The write then fails validation, as variant 10a says (DEC-001 point 1).
 - **3a.** The adopter has an AI agent run steps 3 and 5 through the `docs-author` skill's space operation. The agent asks the adopter first, where the space needs a configuration file edited (the skill's space operation).
 - **5a.** The adopter writes the space definition by hand instead, from the template `templates/space-definition.md` (DEC-001 point 2). They record the definitions location with `pkit docs record-location living-docs definitions`, and the path goes on at step 13.
