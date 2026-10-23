@@ -21,10 +21,16 @@ actor of another analysis is named with that analysis, `core:ACT-developer`, and
 resolves against the actors the head lists from it.
 
 **Areas' goals.** Each analysis may give each area of its use cases a goal: one line,
-kept as data beside the area's folder name, that says what the area makes possible
+kept as data beside the area's folder name, one phrase that starts with its verb
 (DEC-003 point 8). A listed analysis keeps them in its entry's `areas`, and the one
 analysis at the location's top in the file's own `areas`. The overview shows each beside
 its area (`_lib/overview.py`).
+
+**What it is for.** Each analysis may name the decision record that states what its
+component is for, `purpose`, by the record's id, such as `PRJ-011`: a listed analysis in
+its entry, and the one analysis at the location's top at the file's top (DEC-003 point
+8). The overview opens with the record's title, and the check fails a pointer to no
+record, or to one not accepted (`_lib/overview.py`).
 
 **The overview.** The file's `overview` keeps the overview of each analysis, or, set to
 `false`, keeps none (DEC-003 point 8). Left out, it keeps one.
@@ -58,6 +64,16 @@ KEY = "analyses"
 #: The key that gives each area of an analysis's use cases its goal: in a listed
 #: analysis's entry, and at the file's top for the one analysis at the location's top.
 AREAS = "areas"
+
+#: The key that names the record that states what an analysis's component is for: in a
+#: listed analysis's entry, and at the file's top for the one analysis at the location's
+#: top (DEC-003 point 8).
+PURPOSE = "purpose"
+
+#: A record's id as the key names it, whole, as a record anchor names one: a record the
+#: project owns, a project or architecture record or a capability's decision, and never
+#: a core record, which a release changes in an adopting project (`config.schema.json`).
+_RECORD = re.compile(r"^(?:(?:PRJ|ADR)-[0-9]+|[a-z][a-z0-9-]*[a-z0-9]:DEC-[0-9]+(?:-[a-z0-9]+)*)$")
 
 #: The key that keeps the overview of each analysis, or, `false`, keeps none (DEC-003
 #: point 8).
@@ -93,14 +109,15 @@ class BuildsOn:
 
 @dataclass(frozen=True)
 class Listed:
-    """One analysis the settings file lists: its index, its component, its folder and
-    what it builds on."""
+    """One analysis the settings file lists: its index, its component, its folder, what
+    it builds on, its areas' goals and the record that states what it is for."""
 
     index: int
     component: str
     folder: str
     builds_on: tuple[BuildsOn, ...]
     areas: tuple[tuple[str, str], ...] = ()
+    purpose: str | None = None
 
     @property
     def where(self) -> str:
@@ -125,6 +142,7 @@ class Listing:
     problems: tuple[Finding, ...] = ()
     areas: tuple[tuple[str, str], ...] = ()
     keeps_overview: bool = True
+    purpose: str | None = None
 
     @property
     def several(self) -> bool:
@@ -165,6 +183,19 @@ class Listing:
         """Where the goals of the analysis in `folder` are written in the settings file."""
         listed = self.of_folder(folder)
         return at(CONFIG, f"/{KEY}/{listed.index}/{AREAS}" if listed else f"/{AREAS}")
+
+    def purpose_of(self, folder: str | None) -> str | None:
+        """The record the analysis in `folder`, `None` the top, names as what its component
+        is for, by its id; `None` where it names none (DEC-003 point 8)."""
+        if not self.several:
+            return self.purpose if folder is None else None
+        listed = self.of_folder(folder)
+        return listed.purpose if listed is not None else None
+
+    def purpose_at(self, folder: str | None) -> str:
+        """Where the purpose of the analysis in `folder` is written in the settings file."""
+        listed = self.of_folder(folder)
+        return at(CONFIG, f"/{KEY}/{listed.index}/{PURPOSE}" if listed else f"/{PURPOSE}")
 
 
 class Unnamed(Exception):
@@ -222,18 +253,26 @@ def read(root: Path) -> Listing:
             analyses.append(entry)
     top = _goals(config.get(AREAS)) if isinstance(config, Mapping) else ()
     problems = _problems(analyses)
-    if analyses and isinstance(config, Mapping) and AREAS in config:
-        problems.append(
-            Finding(
-                ERROR,
-                at(CONFIG, f"/{AREAS}"),
-                f"the project lists its analyses in `{KEY}`, so the file's own `{AREAS}` belongs "
-                f"to no analysis: each analysis keeps its areas' goals in its entry's `{AREAS}` "
-                f"(DEC-003 point 8) — move them there",
+    for key, what in ((AREAS, "its areas' goals"), (PURPOSE, "the record of what it is for")):
+        if analyses and isinstance(config, Mapping) and key in config:
+            problems.append(
+                Finding(
+                    ERROR,
+                    at(CONFIG, f"/{key}"),
+                    f"the project lists its analyses in `{KEY}`, so the file's own `{key}` "
+                    f"belongs to no analysis: each analysis keeps {what} in its entry's "
+                    f"`{key}` (DEC-003 point 8) — move it there",
+                )
             )
-        )
     keeps = not (isinstance(config, Mapping) and config.get(OVERVIEW) is False)
-    return Listing(tuple(analyses), tuple(problems), top, keeps)
+    purpose = _purpose(config.get(PURPOSE)) if isinstance(config, Mapping) else None
+    return Listing(tuple(analyses), tuple(problems), top, keeps, purpose)
+
+
+def _purpose(value: object) -> str | None:
+    """A record's id as `purpose` names it; `None` for none, or one of another shape,
+    which the schema reports."""
+    return value if isinstance(value, str) and _RECORD.match(value) else None
 
 
 def _goals(value: object) -> tuple[tuple[str, str], ...]:
@@ -264,7 +303,14 @@ def _listed(index: int, item: object) -> Listed | None:
         optional = entry.get("optional", False) if isinstance(entry, Mapping) else None
         if isinstance(name, str) and word.match(name) and isinstance(optional, bool):
             builds_on.append(BuildsOn(name, optional, position))
-    return Listed(index, component, folder, tuple(builds_on), _goals(item.get(AREAS)))
+    return Listed(
+        index,
+        component,
+        folder,
+        tuple(builds_on),
+        _goals(item.get(AREAS)),
+        _purpose(item.get(PURPOSE)),
+    )
 
 
 def _problems(analyses: Sequence[Listed]) -> list[Finding]:

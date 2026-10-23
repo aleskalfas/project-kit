@@ -41,7 +41,9 @@ It takes the next free number on the default branch and in the working tree.
 
 Each part holds its hint, which says what goes there and gives an example. Fill each part as its hint says, and delete the hint. Where a step names a command, a flag, a function or a message, quote it in backticks (the shared framing's "Quote the code you describe"). The goal and each minimal guarantee name their source (the shared framing's "Name the source of what the system must do"). Write each concept by its term (the shared framing's "Use the glossary's terms").
 
-**Preconditions.** Open each line with its producers, the use cases in force that make it true, such as `**From UC-003:**` or `**From UC-059, or Environment:**`. What the environment gives alone is an assumption, written in *Assumptions* only. A use case that needs no other one reads `None.` there. You may also list the producers in the front matter as `after`, one entry for each line, in its order, such as `after: [[UC-003], [UC-059, environment]]` (DEC-001 point 1). `after` draws no anchor. Where `RS-SAN-009` binds, the check holds it to the analysis, the words and the areas' numbers. `pkit analysis diagram chain` draws it.
+**Preconditions.** Open each line with its producers, the use cases in force that make it true, such as `**From UC-003:**` or `**From UC-059, or Environment:**`. What the environment gives alone is an assumption, written in *Assumptions* only. A use case that needs no other one reads `None.` there. You may also list the producers in the front matter as `after`, one entry for each line, in its order, such as `after: [[UC-003], [UC-059, environment]]` (DEC-001 point 1). `after` draws no anchor. Where `RS-SAN-009` binds, the check holds it to the analysis, the words and the areas' numbers.
+
+Before you add a use case, or change what one names in `after`, print the chain with `pkit analysis diagram chain` to see where the use case stands in it.
 
 ## 7. Show what the system does not do yet
 

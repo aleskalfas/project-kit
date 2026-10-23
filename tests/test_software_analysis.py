@@ -408,7 +408,9 @@ def test_an_actor_is_a_file_of_its_own_its_needs_beside_its_description(
         "id": "ACT-tester",
         "name": "Tester",
         "status": "active",
-        # Its needs hold the field's declared hint as their placeholder (#1593).
+        # Its summary and its needs hold each field's declared hint as their placeholder
+        # (#1593, #1887).
+        "summary": field_hint("actor", "summary"),
         "needs": [field_hint("actor", "needs")],
         "pkit": {"friction": {"anchors": {"path": ["src/**"]}}},
     }

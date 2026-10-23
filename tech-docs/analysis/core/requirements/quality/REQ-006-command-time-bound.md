@@ -27,9 +27,9 @@ pkit:
       artefact:
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-22T22:12:51Z
+      at: 2026-10-22T23:47:21Z
       outcome: unchanged
-      unchanged-because: The new test finds that a filler never sees the change's own head a pipeline names. No test of the time bound changed, so the requirement holds.
+      unchanged-because: The actors whose needs it meets each gain a summary, the first sentence of their opening, and nothing else of theirs changes. What it asks still holds.
 ---
 
 # REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds

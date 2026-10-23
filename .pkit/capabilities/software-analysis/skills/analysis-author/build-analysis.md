@@ -47,6 +47,11 @@ You may not know every concept yet. A concept a later step finds is added then, 
 
 - **Two areas that build on each other** are written together, or the line between them is drawn again.
 - **A project that groups no use cases** writes them all as one area.
+- **Give each area its goal** in the capability's settings file, beside the area's folder name, before the area's first use case ([software-analysis:DEC-003-analysis-diagrams] point 8). The overview shows it under the area.
+  - **Its form:** one phrase that starts with its verb, as the shipped hints ask of a use case's goal. So it reads after "The goal is to …". It may end with "so" and its reason. An example is `010-ordering: Place an order and pay for it`.
+  - **One level above the use cases:** the area's use cases are the steps toward its goal.
+  - **No actor's voice:** no *I* or *my*, since an area has several actors.
+  - **No rule of `SAN` judges it,** since it is a setting. So check its form yourself.
 
 **For each area, in that order:**
 

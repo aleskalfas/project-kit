@@ -2,6 +2,7 @@
 id: ACT-operator
 name: Operator
 status: active
+summary: "The person at the controls of a machine."
 needs:
   - Let agents work on their own without a stream of confirmations, and know where their confinement does not hold.
   - Be asked before an agent changes a repository other than the session's own, so it never happens silently.

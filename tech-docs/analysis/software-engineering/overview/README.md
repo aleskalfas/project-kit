@@ -1,46 +1,32 @@
 # Overview of the analysis of software-engineering
 
-<!-- pkit:overview reads=3 fingerprint=sha256:44b50030f47cb330b4f611dd21bb33773b97276f51bcd0bc4b4b49342db8828f -->
+<!-- pkit:overview reads=4 fingerprint=sha256:2265cc3ec7b93ec13f5ee3d331b4850e34d02b18b6c787cf50a6b5a65be663e5 -->
 
-What the analysis of software-engineering holds, in the order it is built: its concepts, its actors, its requirements, its use cases area by area, and its journeys. The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).
+No record states what software-engineering is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of software-engineering under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
-## Concepts
-
-The [glossary](../glossary.md) defines each term.
-
-## Actors
-
-### core:ACT-ai-agent — AI agent
-
-An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists.
-
-The use cases it takes part in:
-
-- [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
-
-### core:ACT-developer — Developer
-
-An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists.
-
-The use cases it is the main actor of:
-
-- [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
+This analysis describes what software-engineering does: who uses it, what they do with it, and what it must meet. It builds on the analysis of core.
 
 ## Use cases
 
 - [UC-001 — Build my change under my project's conventions](../use-case-model/use-cases/UC-001-build-under-conventions.md)
 
-## Use cases and their actors
+## Reference
 
-```mermaid
-flowchart LR
-  accTitle: The use cases and their actors
-  accDescr: The system's boundary holds 1 use case, and 2 actors stand around it. An arrow joins each use case to the actor whose goal it is, and a line joins it to each other actor who takes part.
-  core_ACT_ai_agent["core:ACT-ai-agent"]
-  core_ACT_developer["core:ACT-developer"]
-  subgraph boundary["The system"]
-    UC_001(["UC-001 — Build my change under my project's conventions"])
-  end
-  core_ACT_ai_agent --- UC_001
-  core_ACT_developer --> UC_001
-```
+### Who takes part
+
+| Actor | Who they are | Areas they act in |
+| --- | --- | --- |
+| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+
+### Concepts
+
+The [glossary](../glossary.md) defines each term.
+
+### Diagrams
+
+`pkit analysis diagram --analysis software-engineering` prints this analysis's diagrams from the working tree. Its subjects are `use-cases`, `journeys`, `requirements` and `chain`, or a journey's or a requirement's id.
+
+---
+
+The command `pkit analysis overview` writes this page from the analysis. Change the analysis, never this page (software-analysis DEC-003 point 8).

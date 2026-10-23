@@ -379,6 +379,10 @@
           "description": "A glossary's opening, where its front matter's `builds-on` lists what its analysis takes from the analyses it builds on (DEC-001 point 2): one top-level item for each entry, in the same order, opening `**From <analysis> at <version>:**`. Nested in it, one item for each of its terms, `**Term:** [<name>](<link>)`, then for each of its actors, `**Actor:** [<name>](<link>)`, each name exactly its entry's, and nested in an actor's item, one item for each need its entry gives, exactly. Only an item opening `**From ` stands for an entry. Where `builds-on` lists nothing, the form asks nothing."
         },
         {
+          "const": "summary-matches-front-matter",
+          "description": "An actor's opening, where its front matter gives a `summary` (DEC-001 point 1): the opening's first sentence is the summary, exactly, white space aside. The first sentence ends where the `sentence` form ends one, or at the end of the opening's first paragraph. Where the front matter gives no summary, or one that still holds its hint, the form asks nothing."
+        },
+        {
           "const": "headings-match-front-matter",
           "description": "A repeated section's headings: one section for each entry of the front matter's `explains`, in the same order, each headed by the name of the term the entry names in sentence case, exactly, white space aside: its first letter capitalized and the rest as the name writes it, or the name as it stands where its first word holds a capital already. Where the analysis holds no such term, any heading will do. No two of its headings give one slug, the heading's text in lower case with every character but letters, digits, spaces and hyphens dropped, and each space made a hyphen (COR-050 point 2), so a page anchor on one names one section (software-analysis DEC-004 point 2)."
         },

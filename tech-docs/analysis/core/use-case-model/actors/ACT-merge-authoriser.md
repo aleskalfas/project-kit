@@ -2,6 +2,7 @@
 id: ACT-merge-authoriser
 name: Merge authoriser
 status: active
+summary: "The person who authorises a change's merge into the default branch."
 needs:
   - Be told, before I authorise a merge, what changed in each document the change updated, and which documents wait for which follow-up.
   - Leave the check of an agent's answers to a reviewer other than that agent, and authorise the merge as I authorise any other.

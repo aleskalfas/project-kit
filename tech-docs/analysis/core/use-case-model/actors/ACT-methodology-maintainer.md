@@ -2,6 +2,7 @@
 id: ACT-methodology-maintainer
 name: Methodology maintainer
 status: active
+summary: "Whoever maintains a distribution of the methodology."
 needs:
   - Develop the methodology in its source repository, where no sync copies over my work, and run what I ship there before any adopter does.
   - Keep each core record true for any project that adopts it.
