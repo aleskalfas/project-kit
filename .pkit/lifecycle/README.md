@@ -37,8 +37,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#12", "COR-050#14", COR-052, COR-053, "COR-054#3", COR-055, "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-23T08:13:43Z
-      outcome: updated
+      at: 2026-10-23T14:50:18Z
+      outcome: unchanged
+      unchanged-because: The package schema's description names the permission model's code as backbone code, not a capability. No key, type or check of the schema changes, so what the README says of it holds.
 ---
 
 # Lifecycle

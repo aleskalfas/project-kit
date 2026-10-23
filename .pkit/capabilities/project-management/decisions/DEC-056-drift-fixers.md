@@ -265,5 +265,5 @@ Asking wherever a type has no recorded answer covers them all, and still asks on
 - **A record on which agent may start which** is expected to cover this route too, once one is accepted. It would adopt or absorb the grant list, so that a project keeps one such list.
 - **[project-management:DEC-029-project-manager-agent-shape]**, "Invocation pattern", covers the agents the project manager dispatches through the harness's tool. An agent the drift command starts is no such dispatch. DEC-029 is refined to say so in the change that ships the drift command.
 - **"Friction writers" in the agents README** needs no change. Its condition that an agent can ask the person already lets a fixer run no writer, and point 5 denies it every writer.
-- **The agent workspace** is described as holding intermediate files, by core rule 16 and by the permission capability's account of it. This capability's queue is a further use. Those accounts are asked to name such a use, so that an agent removing what it no longer needs leaves a queue alone.
+- **The agent workspace** is described as holding intermediate files, by core rule 16 and by the README of the backbone's permission code. This capability's queue is a further use. Those accounts are asked to name such a use, so that an agent removing what it no longer needs leaves a queue alone.
 - **No migration.** Every change adds.
