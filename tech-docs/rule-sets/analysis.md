@@ -1,6 +1,6 @@
 ---
 rule-set: ANA
-version: 4.1.0
+version: 4.1.1
 inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
   types:
@@ -124,8 +124,8 @@ Write each need and each goal as an imperative that starts with its verb, in its
   - A need is an item of an actor's `needs`. A goal is the *Goal* of a use case or a journey, and its actor is the use case's or the journey's `actor`.
   - A need is also one that a glossary's head states beside an actor it lists from another analysis. This holds wherever this rule binds on a term of that glossary.
   - *Never* may come before the verb.
-- **Breaks the rule:** "Find the agent's role definition deployed, …" (the first ASD-STE100 run, where the AI agent names itself)
-- **Keeps the rule:** "Find my role definition deployed, …" (the original)
+- **Breaks the rule:** "Find the AI agent's agent definition deployed, …" (the AI agent's need in the third person, as the first ASD-STE100 run wrote it, where the AI agent names itself)
+- **Keeps the rule:** "Find my agent definition deployed, …" (the AI agent's need)
 
 ## Labels
 

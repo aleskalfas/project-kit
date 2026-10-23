@@ -4,7 +4,7 @@
 
 No record states what software-engineering is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of software-engineering under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
-This analysis describes what software-engineering does: who uses it, what they do with it, and what it must meet. It builds on the analysis of core.
+This analysis describes what software-engineering does: who uses it, what they do with it, and what it must meet. It builds on the analyses of core and project-management.
 
 ## Use cases
 

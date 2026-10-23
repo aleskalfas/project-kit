@@ -40,9 +40,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:46:42Z
+      at: 2026-10-23T08:53:58Z
       outcome: unchanged
-      unchanged-because: "The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, steps and actors hold, and the kept deferrals still name what #1779 and #1856 rewrite."
+      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. Its goal is still the adopter's need to make merges wait on the system's checks, and nothing that changed reaches its steps.
       deferred:
         - anchor:
             kind: path

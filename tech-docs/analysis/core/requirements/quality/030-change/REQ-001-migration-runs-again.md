@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-22T16:24:40Z
+      at: 2026-10-23T08:53:51Z
       outcome: unchanged
-      unchanged-because: It moves into the folder of 030-change, the one area whose use cases must meet it. ACT-adopter only gains a `summary`, so its obligation and its measure hold.
+      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A migration run again still changes nothing in the adopter's project.
 ---
 
 # REQ-001 · Quality · A migration run again changes nothing

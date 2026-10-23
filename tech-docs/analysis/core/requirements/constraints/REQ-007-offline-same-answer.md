@@ -28,9 +28,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-developer
     revalidated:
-      at: 2026-10-22T23:47:18Z
+      at: 2026-10-23T08:53:56Z
       outcome: unchanged
-      unchanged-because: The actors whose needs it meets each gain a summary, the first sentence of their opening, and nothing else of theirs changes. What it asks still holds.
+      unchanged-because: The developer's needs that only a capability meets moved to its analysis, with the records behind them. A command that resolves an anchor or joins validation still needs no network and changes nothing.
 ---
 
 # REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic

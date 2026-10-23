@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - ACT-methodology-maintainer
     revalidated:
-      at: 2026-10-22T23:47:16Z
+      at: 2026-10-23T08:54:00Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The adopter's needs that only a capability meets moved, and the AI agent's need says agent definition. Reporting a problem and following it holds as written.
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

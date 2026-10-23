@@ -49,9 +49,9 @@ pkit:
         - REQ-007
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:46:41Z
+      at: 2026-10-23T08:54:12Z
       outcome: unchanged
-      unchanged-because: "The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, steps and actors hold, and the kept deferrals still name what #1779 and #1856 rewrite."
+      unchanged-because: The developer's capability needs moved to their analyses, the AI agent's need says agent definition, and the merge authoriser lost a capability anchor. None of it reaches the goal or the steps.
       deferred:
         - anchor:
             kind: path

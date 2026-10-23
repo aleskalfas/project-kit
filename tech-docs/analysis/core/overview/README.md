@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:8be50128abfc9f6d76402ea0d8eeec18e2b012406723df765b8099dfb09162c1 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:baaebab0a425ef62225ae19586ee16882210f0253d2491e9f294829b1d1db298 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -110,7 +110,6 @@ Take the system into another project, keep it current, and report what goes wron
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |
 | [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md) | Whoever maintains a distribution of the methodology. | [010-develop](#010-develop), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
 | [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up) |
-| [ACT-planner — Planner](../use-case-model/actors/ACT-planner.md) | The person who plans a project's work at the level of its outcomes. | No use case names it yet. |
 
 ### Concepts
 
@@ -125,6 +124,7 @@ Each view of the domain model explains a group of related concepts:
 - [050 — A project's own files](../domain-model/050-a-projects-own-files.md)
 - [060 — Changes, review and releases](../domain-model/060-changes-review-and-releases.md)
 - [070 — Artefacts and friction](../domain-model/070-artefacts-and-friction.md)
+- [080 — Agents and permissions](../domain-model/080-agents-and-permissions.md)
 
 ### Requirements in no area
 
