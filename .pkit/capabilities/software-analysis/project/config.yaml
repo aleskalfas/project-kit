@@ -6,8 +6,9 @@ schema_version: 1
 
 # The analyses project-kit keeps, one for each component that keeps one
 # (software-analysis DEC-001 point 2; RS-ANA-004 in ANA,
-# tech-docs/rule-sets/analysis.md). The core's, and software-engineering's,
-# which builds on the core's. The other capabilities keep none yet.
+# tech-docs/rule-sets/analysis.md). The core's, and one for each capability.
+# Each capability's builds on the analyses of the components its package.yaml
+# depends on, required or optional.
 analyses:
   - component: core
     folder: core
@@ -23,10 +24,35 @@ analyses:
       030-change: "Check, answer and land each change to a project, so what the project states stays true as it changes."
       040-release: "Release the backbone and each component on its own version, so projects can move to it and pin it."
       050-adopt: "Take the system into another project, keep it current, and report what goes wrong with it."
+  - component: project-management
+    folder: project-management
+    builds-on:
+      - analysis: core
+  - component: evidence
+    folder: evidence
+    builds-on:
+      - analysis: core
+  - component: demo-recording
+    folder: demo-recording
+    builds-on:
+      - analysis: core
   - component: software-engineering
     folder: software-engineering
     builds-on:
       - analysis: core
+      - analysis: project-management
+  - component: software-analysis
+    folder: software-analysis
+    builds-on:
+      - analysis: core
+      - analysis: project-management
+        optional: true
+  - component: living-docs
+    folder: living-docs
+    builds-on:
+      - analysis: core
+      - analysis: project-management
+        optional: true
 
 numbering:
   # Ids declared free again. An entry may list only ids that nothing cites
