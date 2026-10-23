@@ -696,3 +696,45 @@ def test_hook_denies_a_compound_with_an_uncovered_segment_under_strict(tmp_path)
         assert _decision(parsed) == "deny", command
     _, parsed = _invoke(root, _bash_payload(root, "git status && gh pr list"))
     assert _decision(parsed) == "allow"
+
+
+# ---- a construct the splitter cannot trust, anywhere (#1917) ----------------
+#
+# The live hook, end to end: where the operator is granted git and gh, a command
+# holding a quote, a command substitution, a backtick or a `<` / `>`
+# redirection is not allowed, with or without a leading `cd`, and nor is a
+# command that runs a second one after a newline or a background `&`. A lenient
+# posture defers to the harness (no stdout), a strict one denies (ADR-025
+# point 2). A granted command with none of them is still allowed.
+
+_UNTRUSTED_HOOK_COMMANDS = (
+    "gh pr list $(python3 x.py)",
+    "gh pr list `python3 x.py`",
+    "gh pr list > ~/.bashrc",
+    "gh pr list\npython3 x.py",
+    "gh pr list & python3 x.py",
+    "gh pr list && X=$(python3 x.py)",
+    "gh pr list && X=$(./x.sh)",
+    'git commit -m "fix: x"',
+)
+
+
+def test_hook_defers_on_an_untrusted_construct(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in (*_UNTRUSTED_HOOK_COMMANDS, f"cd {root} && gh pr list > out.txt"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+
+
+def test_hook_denies_an_untrusted_construct_under_strict(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n")
+    for command in _UNTRUSTED_HOOK_COMMANDS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_allows_a_granted_command_with_no_untrusted_construct(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in ("gh pr list", "git status\ngh pr list", f"cd {root} && gh pr list"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "allow", command

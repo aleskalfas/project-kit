@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-23T18:41:56Z
+      at: 2026-10-23T22:29:22Z
       outcome: unchanged
-      unchanged-because: A deny on any segment still wins over every allow, and new tests check it for a chained command. The change only stops an allow on one segment from carrying the others.
+      unchanged-because: The code checks every deny grant before it looks for an untrusted construct, and new tests find a deny winning over one. The order of the grants still changes no decision.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins
