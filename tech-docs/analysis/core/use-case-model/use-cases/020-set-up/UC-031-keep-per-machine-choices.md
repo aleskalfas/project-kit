@@ -18,6 +18,9 @@ shortfalls:
   - at: "1g"
     issue: "#1884"
     record: COR-004
+  - at: "3a"
+    issue: "#1909"
+    record: COR-028#2
 pkit:
   friction:
     anchors:
@@ -41,6 +44,7 @@ pkit:
         - PRJ-006#5
         - COR-004
         - ADR-034#1
+        - COR-028#2
       artefact:
         - ACT-operator
         - REQ-002
@@ -92,7 +96,11 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `sandbox accommodate`, `sandbox enable`, `profile activate` and `setup autonomy` take no `--dry-run`. COR-004 decides that each such command offers the flag, and #1884 tracks it.
 
-- **3a.** No adapter that the system realises the permission model for is installed. Today the system realises it for Claude Code's adapter alone. It refuses with `the claude-code adapter is not installed; the sandbox is harness-specific.`, writes nothing, and the use case ends.
+- **3a.** The installed adapter is another harness's than Claude Code's. The system writes the allowance through that adapter, to its harness's per-machine settings (COR-028 point 2). The path goes on at step 4.
+
+> [!WARNING]
+> **Not built yet:** the system realises the model for Claude Code's adapter alone. Without that adapter, it refuses with `the claude-code adapter is not installed; the sandbox is harness-specific.`, and writes nothing. COR-028 point 2 decides that each adapter realises the model, and #1909 tracks it.
+
 - **3b.** The socket's path lies under a credential path that no command in the sandbox may read, such as `~/.ssh`. The system still writes the allowance, since the operator chose it, and warns that the sandbox may still block it (ADR-010 point 7).
 
 **Postconditions:** Each per-machine choice is in force on this machine, in a file no commit carries. What the system counts as shared policy, such as a profile's posture, goes to a committed file.

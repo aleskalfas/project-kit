@@ -22,12 +22,18 @@ shortfalls:
   - at: "1b"
     issue: "#1884"
     record: COR-004
+  - at: "4a"
+    issue: "#1909"
+    record: COR-028#2
   - at: "4c"
     issue: "#1764"
     record: ADR-002#4
   - at: "5a"
     issue: "#1765"
     record: ADR-014#3
+  - at: "10a"
+    issue: "#1908"
+    record: ADR-025#2
 pkit:
   friction:
     anchors:
@@ -122,7 +128,11 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit permissions setup autonomy` takes no `--dry-run`, and writes as it goes. COR-004 decides that each such command offers the flag, and #1884 tracks it.
 
-- **4a.** No adapter that the system realises the permission model for is installed. Today the system realises it for Claude Code's adapter alone. The profile's activation is written, then the system refuses with `the claude-code adapter is not installed in this project; live enforcement is harness-specific, so there is nothing to enable.` The use case ends.
+- **4a.** The installed adapter is another harness's than Claude Code's. The system realises the permission model through that adapter, as it does through Claude Code's (COR-028 point 2). The path goes on at step 5.
+
+> [!WARNING]
+> **Not built yet:** the system realises the model for Claude Code's adapter alone, and reads only its enforcement declaration. Without that adapter, it writes the profile's activation, then refuses with `the claude-code adapter is not installed in this project; live enforcement is harness-specific, so there is nothing to enable.`. COR-028 point 2 decides that each adapter realises the model, and #1909 tracks it.
+
 - **4b.** The permission hook is registered already, and the profile is active. The system skips steps 3 and 4, so it restores no native deny missing from the harness's settings. The probes then find the missing deny, and the path goes on at 9a.
 - **4c.** The permission hook cannot start, such as where its script is missing. The system reports that enforcement is not running, and never ends `goal reached` while the fault stands (ADR-002 point 4).
 
@@ -139,7 +149,11 @@ pkit:
 - **9a.** A probe finds a verdict that differs from what the model declares. Or it finds a guardrail's native deny missing while the permission hook is registered. The system ends `Result: BROKEN — fix the decision layer before relying on autonomy.`, and exits non-zero.
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`
-- **10a.** A command chains segments, such as with `&&`, `;` or `|`. The permission code strips a bare leading `cd <path>`, and decides the rest at the same working directory. After such a strip, a quote, `$(`, a backtick or a redirection in the rest makes it defer the call (ADR-025 points 1 and 2). Otherwise the code allows the chain where a grant allows a privilege it recognises in some segment, and no grant denies one. A segment in which it recognises no privilege is not weighed, such as `sh` in `gh pr list | sh` (`decide.py`).
+- **10a.** A command chains segments, such as with `&&`, `;` or `|`. The permission code strips a bare leading `cd <path>`, and decides the rest at the same working directory. After such a strip, a quote, `$(`, a backtick or a redirection in the rest makes it defer the call (ADR-025 points 1 and 2). A segment in which it recognises no privilege makes it defer the call too, such as `sh` in `gh pr list | sh` (ADR-025 point 2). Otherwise the code allows the chain where a grant allows a privilege it recognises, and no grant denies one.
+
+> [!WARNING]
+> **Not built yet:** the permission code weighs only the segments in which it recognises a privilege. So a grant on one segment allows the whole command. Where `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` run with nobody asked. ADR-025 point 2 decides that a segment no privilege recognises makes the code defer the call, and #1908 tracks it.
+
 - **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (COR-028 point 2).
 
 **Postconditions:** The agents run each granted command, and each single command inside the sandbox, with nobody asked. The system has verified the permission code's verdicts and the credential floor. The operator knows where the confinement does not hold.
