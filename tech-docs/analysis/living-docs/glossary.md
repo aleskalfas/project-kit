@@ -102,6 +102,9 @@ TERM-page:
         record:
           - living-docs:DEC-001#1
           - living-docs:DEC-001#4
+      revalidated:
+        at: 2026-10-23T21:35:27Z
+        outcome: updated
 TERM-page-kind:
   name: page kind
   noun-forms: [page kinds]
