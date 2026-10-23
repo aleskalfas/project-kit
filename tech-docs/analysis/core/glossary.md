@@ -547,9 +547,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-23T18:41:45Z
+        at: 2026-10-23T22:29:10Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change only stops a grant on one segment of a chained command from allowing its other segments.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change only keeps an allow from carrying a command that holds a construct the splitter cannot trust.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-23T18:41:47Z
+        at: 2026-10-23T22:29:12Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. A deny on any segment of a chained command still wins.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The code checks the denies before it looks for an untrusted construct, so a guardrail still wins.
 TERM-harness:
   name: harness
   status: active
@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-23T18:41:28Z
+        at: 2026-10-23T22:29:08Z
         outcome: unchanged
-        unchanged-because: The decision code now allows a chained command only when a grant covers each segment. The hook still has that code allow, deny or defer each call, as the term says.
+        unchanged-because: The decision code now defers a command holding a quote, a substitution, a backtick or a redirection, and splits at a newline and a background &. The hook still has that code allow, deny or defer each call.
 TERM-place:
   name: place
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-23T18:41:49Z
+        at: 2026-10-23T22:29:15Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, and the example command is still allowed by its grant. The code now reads privileges segment by segment, to check that a grant covers each.
+        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. The splitter now also splits at a newline and a background &, which leaves what a privilege is as it was.
 TERM-process:
   name: process
   noun-forms: [processes]

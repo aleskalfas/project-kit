@@ -17,7 +17,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-23T18:42:12Z
+      at: 2026-10-23T22:29:36Z
       outcome: updated
 ---
 
@@ -91,17 +91,17 @@ A scope *confines* a privilege: a scoped allow denies the privilege outside its 
 
 ## Compound commands (segment splitting + leading-`cd` strip)
 
-A compound Bash command reaches `decide()` as one string. The decision core splits it on `&&` / `||` / `|` / `;` with a **dumb regex segmenter** (no shell parser — see ADR-025 for the altitude rationale: the hook runs bare `python3` in-sandbox, where hosting an adversarial-input parser would trade an abstain-on-doubt splitter for parsing fragility) and decides on the per-segment matches. Two prefix-strips reduce false prompts over already-granted intent:
+A compound Bash command reaches `decide()` as one string. The decision core splits it on `&&` / `||` / `|` / `;`, a background `&` and a newline with a **dumb regex segmenter** (no shell parser — see ADR-025 for the altitude rationale: the hook runs bare `python3` in-sandbox, where hosting an adversarial-input parser would trade an abstain-on-doubt splitter for parsing fragility) and decides on the per-segment matches. Two prefix-strips reduce false prompts over already-granted intent:
 
-- **Env-prefix strip** (`segments()`): a leading `export` / `VAR=value` on a segment is dropped before matching, so `export GH_HOST=x && gh pr list` matches `gh pr list`.
+- **Env-prefix strip** (`segments()`): a leading `export` / `VAR=value` on a segment is dropped before matching, so `export GH_HOST=x && gh pr list` matches `gh pr list`. An assignment holding an untrusted construct (below), such as `X=$(./x.sh)`, is not dropped. Its value may run a command, so it stays in its segment, where no grant covers it.
 
 - **Leading-`cd` strip** (ADR-025 Phase 1): when the **first** segment is a bare `cd <path>` followed by `&&` / `;`, the core drops it and decides on the remainder against the unchanged grant model — `cd src && gh pr list` auto-approves exactly as `gh pr list` would. It is a prompt-reduction over already-granted intent, **never a new grant** (`cd` only changes the cwd, which the intent layer does not confine), and the remainder is decided at the **original** cwd (the strip can never grant a directory-scoped privilege the un-stripped command lacked).
 
-  The strip is deliberately conservative on two axes, both fail-closed (ADR-004 decision point 4):
+  The strip is deliberately conservative, and fails closed (ADR-004 decision point 4):
 
   - **Only a bare `cd`** is stripped — a single path arg, no quotes, no `$()`, no backtick, no redirection, no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
 
-  - **A remainder carrying an untrusted construct ABSTAINS** — if the remainder after the strip contains a quote, `$()`, a backtick, or a `<` / `>` redirection (anything the dumb splitter can't be trusted on), the decision is **abstain (prompt)**, never auto-allow. So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through — and so does a redirect into the agent workspace (`cd /x && cat > .agent-workspace/body.md <<'EOF'`): the workspace grant covers the file tools only.
+  - **The remainder is decided like any command.** An untrusted construct in it keeps every grant from allowing it, as it does anywhere in a command (below). So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through — and so does a redirect into the agent workspace (`cd /x && cat > .agent-workspace/body.md <<'EOF'`): the workspace grant covers the file tools only.
 
   - **A pipe is decided segment by segment.** The cd-strip does not touch pipes, and `|` is not a cd-separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
@@ -109,9 +109,13 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
 **Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
-So where only `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` abstain. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
+So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
 
-A deny on any segment still wins over every allow. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction.
+**An untrusted construct keeps every grant from allowing** (ADR-025 point 2). Where a Bash command holds a construct the dumb splitter cannot be trusted on, its segments may not be the commands the shell runs. These are a quote, a backtick, a `<` / `>` redirection and a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code. Such a command, with or without a leading `cd`, makes the core abstain, and a strict posture denies it instead.
+
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `git commit -m "fix: x"` abstain, and the harness's own flow decides each.
+
+A deny on any segment still wins over every allow, and over an untrusted construct. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
 
 ## Default-agent subject resolution
 

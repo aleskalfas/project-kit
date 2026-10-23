@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-23T18:42:00Z
+      at: 2026-10-23T22:29:26Z
       outcome: unchanged
-      unchanged-because: Each call of the agent is still decided under its own grants and those to all, and a deny still wins. The change narrows only how a grant allows a chained command.
+      unchanged-because: Each of the agent's calls is still decided under its own grants and those to all, and a deny still wins. The change only stops a grant from allowing a command that holds a quote, a substitution, a backtick or a redirection.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants
