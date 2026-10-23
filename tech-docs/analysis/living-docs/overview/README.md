@@ -1,10 +1,18 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=4 fingerprint=sha256:338beef6577578c78b970761783fd07591c61f42a969964971ed08079aaaca5d -->
+<!-- pkit:overview reads=4 fingerprint=sha256:15c82d2de05131e1186c531f2bf91d9b4f518ae1a67767e1b9617a71ca6f0c59 -->
 
 No record states what living-docs is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of living-docs under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
 This analysis describes what living-docs does: who uses it, what they do with it, and what it must meet. It builds on the analyses of core and project-management (optional).
+
+## Use cases
+
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md) ([not built yet](#not-built-yet): step 2, step 6)
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md) ([not built yet](#not-built-yet): step 5, variant 10a)
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md) ([not built yet](#not-built-yet): variant 4c)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md) ([not built yet](#not-built-yet): step 3, variant 4a)
+- [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
 
 ## Reference
 
@@ -12,12 +20,36 @@ This analysis describes what living-docs does: who uses it, what they do with it
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| core:ACT-adopter — Adopter | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | No use case names it yet. |
-| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | No use case names it yet. |
+| core:ACT-adopter — Adopter | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+| core:ACT-operator — Operator | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
 
 ### Concepts
 
 The [glossary](../glossary.md) defines each term.
+
+Each view of the domain model explains a group of related concepts:
+
+- [010 — Spaces and pages](../domain-model/010-spaces-and-pages.md)
+- [020 — Proposals and reviews](../domain-model/020-proposals-and-reviews.md)
+
+### Requirements
+
+- [REQ-022 · Functional · The living-docs agent proposes each change, and applies none](../requirements/functional/REQ-022-agent-proposes-only.md)
+- [REQ-023 · Quality · A refused stamp leaves every file as it was](../requirements/quality/REQ-023-refused-stamp-writes-nothing.md)
+
+### Not built yet
+
+What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
+
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md): step 2, decided by `living-docs:DEC-001#1`, tracked in `#1922`
+- [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md): step 6, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md): variant 10a, decided by `living-docs:DEC-002`, tracked in `#1803`
+- [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md): variant 4c, decided by `living-docs:DEC-002`, tracked in `#1812`
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): step 3, decided by `living-docs:DEC-001#7`, tracked in `#1921`
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): variant 4a, decided by `living-docs:DEC-002`, tracked in `#1812`
 
 ### Diagrams
 
