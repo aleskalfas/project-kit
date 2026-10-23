@@ -84,7 +84,7 @@ pkit:
 
 - **1a.** The draft is trivia, such as an answer to a question, an edit of one file or a decision of one line. Nobody dispatches the critic (COR-024), and the path goes on at step 5.
 - **1b.** The developer asks for a contrary view of an answer that feels settled, or sweeps an open question. The critic runs on it as steps 2 and 3 say (COR-024).
-- **4a.** The draft touches the big picture, such as a new abstraction, a change to a foundational record or a concern across components. Where the architect's agent definition is deployed, the developer dispatches it after the critic, and the architect flags where an authorisation is needed. It advises and refuses nothing. It edits only the architecture documents and decision records that the overlay gives it (COR-024).
+- **4a.** The draft touches the big picture, such as a new abstraction, a change to a foundational record or a concern across components. Where the architect's agent definition is deployed, the developer dispatches it after the critic, and the architect flags where an authorisation is needed. It advises, and refuses nothing. It edits only the architecture documents and decision records that the overlay gives it (COR-024).
 - **4b.** The draft is an artefact once written, such as a decision record, a skill or an agent definition. The developer dispatches the `methodology-reviewer` on it, as UC-041 does for a core record.
 - **5a.** The developer has committed the change already, and dispatches the reviewer before pushing it. The reviewer walks the branch's commits as step 6 says.
 - **7a.** The reviewer finds a violation. The developer mends it, and the path rejoins at step 5.
