@@ -29,9 +29,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-adopter
     revalidated:
-      at: 2026-10-22T23:47:20Z
+      at: 2026-10-23T08:53:53Z
       outcome: unchanged
-      unchanged-because: The actors whose needs it meets each gain a summary, the first sentence of their opening, and nothing else of theirs changes. What it asks still holds.
+      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A check still never reads a missing answer as one that found nothing.
 ---
 
 # REQ-004 · Quality · A check never reads a missing answer as one that found nothing

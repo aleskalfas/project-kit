@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:14:04Z
+      at: 2026-10-23T10:28:54Z
       outcome: unchanged
-      unchanged-because: The package check fails a derived link whose target does not compile. Connecting roles, data points and processes runs as the steps say.
+      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
