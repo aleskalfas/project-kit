@@ -22,7 +22,7 @@ pkit:
 
 # VIEW-analyses-and-use-cases — Analyses, use cases and their ids
 
-A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, or each newcomer and each agent rebuilds it from the code. Such an account decays silently as the code changes (DEC-001). An [analysis](../glossary.md#term-analysis--analysis) is that account for one [component](../../core/glossary.md#term-component--component), kept true by what it rests on. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it, and each id names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
+A [project](../../core/glossary.md#term-project--project) needs a written account of what its software must do, which decays silently as the code changes (DEC-001). An [analysis](../glossary.md#term-analysis--analysis) is that account for one [component](../../core/glossary.md#term-component--component), kept true by what it rests on. Its [use cases](../glossary.md#term-use-case--use-case) hold each goal and how the [system](../../core/glossary.md#term-system--system) meets it. Each id, once settled, names one [artefact](../../core/glossary.md#term-artefact--artefact) for good, save a [freed id](../glossary.md#term-freed-id--freed-id).
 
 ```mermaid
 classDiagram
@@ -45,8 +45,8 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an id is given, kept and freed
-  accDescr: The stamp gives a new use case its id. A use case in force may be withdrawn, and keeps its id. One that nothing cites may be removed, and once the project declares its id free, the stamp may give it again.
-  given([The stamp gives the id]) --> inForce[Use case in force]
+  accDescr: The stamp gives a new use case its id, which is settled once the use case reaches the default branch. A use case in force may be withdrawn, and keeps its id. One that nothing cites may be removed, and once the project declares its id free, the stamp may give it again.
+  given([The stamp gives the id]) -->|reaches the default branch| inForce[Use case in force, its id settled]
   inForce -->|withdrawn| withdrawn[Withdrawn, its id kept]
   inForce -->|removed while nothing cites it| removed[Removed]
   removed -->|the project declares it free| freed[Freed id]
@@ -90,14 +90,14 @@ A use case states one actor's goal and how the [system](../../core/glossary.md#t
 
 **Attributes:**
 
-- its id, `UC-` and a number from one numbering across the repository's [analyses](../glossary.md#term-analysis--analysis) (DEC-001 point 3)
+- its id, `UC-` and a number from one numbering across the repository's analyses (DEC-001 point 3)
 - its actor, its goal and its other actors (DEC-001 point 1)
 - its preconditions, each naming the use cases that make it true, in `after` where it writes one (DEC-001 point 1)
 - its main path of numbered steps, and its variants, each lettered after the step it branches from (DEC-001 point 3)
 
 **Relations:**
 
-- It belongs to one analysis, and anchors its actors and the decisions it rests on or is answered by (DEC-001 points 2 and 4).
+- It belongs to one [analysis](../glossary.md#term-analysis--analysis), and anchors its actors and the decisions it rests on or is answered by (DEC-001 points 2 and 4).
 - A precondition's producers are use cases of its own analysis. It may name itself, as a release starts from the last release (DEC-001 point 1).
 
 **States:** A use case is in force until it is withdrawn. A withdrawn one keeps its file and its id, and is never deleted (DEC-001 point 3).
@@ -105,7 +105,7 @@ A use case states one actor's goal and how the [system](../../core/glossary.md#t
 **Always true:**
 
 - Its steps and variants keep their numbers and letters. A new one goes past them, and one that no longer happens stays under its number (DEC-001 point 3).
-- Its id names it for good, unless the [project](../../core/glossary.md#term-project--project) frees the id once nothing cites it (DEC-001 point 3).
+- Once settled, its id names it for good, unless the [project](../../core/glossary.md#term-project--project) frees the id once nothing cites it (DEC-001 point 3).
 
 ## Freed id
 
@@ -124,7 +124,7 @@ A freed id is the id of a removed [use case](../glossary.md#term-use-case--use-c
 
 - It was the id of use cases, journeys or requirements of an analysis, removed from the [default branch](../../core/glossary.md#term-default-branch--default-branch) (DEC-001 point 3).
 
-**States:** An id is taken once the stamp gives it. Once its artefacts are removed and the project declares the id free, it is free until the stamp gives it again (DEC-001 point 3).
+**States:** An id is settled once its artefact reaches the default branch. Once its artefacts are removed and the project declares the id free, it is free until the stamp gives it again (DEC-001 point 3).
 
 **Always true:**
 

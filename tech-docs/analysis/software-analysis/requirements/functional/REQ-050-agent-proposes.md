@@ -2,8 +2,8 @@
 id: REQ-050
 title: An agent proposes what the analysis records, and a person decides it
 status: active
-statement: An agent proposes each revalidation outcome, candidate, freed id and change to a declared structure, and a person decides each before it is written.
-measure: The analysis-resolver's definition grants no tool that edits a file in place, and owns no path. Its proposal hands each writer's command to a person. The analysis-author skill has an agent stamp a candidate only once a person accepts it. The skill has the agent write a freed id, or a change to a declared structure, on the same terms.
+statement: An agent proposes each revalidation outcome, candidate, freed id and change to a declared structure, and a person decides each before it is committed.
+measure: The analysis-resolver's definition grants no tool that edits a file in place, and owns no path. Its proposal hands each writer's command to a person. The analysis-author skill asks a person to confirm each candidate, and to accept each entry that frees an id or changes a declared structure.
 applies-to: "The analysis-resolver agent, in a session or a run, and an agent onboarding a project, freeing ids or choosing parts with the analysis-author skill."
 actors:
   - core:ACT-developer

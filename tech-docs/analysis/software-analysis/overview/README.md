@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=4 fingerprint=sha256:b696cdc95af8f0d5da7472566ef3f25a7157395b819c32531b4bdcae8b7d0d89 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:19261849b9e01be9eeab4216c1b785e06855b31c941c86e07945793577193f46 -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -9,7 +9,7 @@ This analysis describes what software-analysis does: who uses it, what they do w
 ## Use cases
 
 - [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md) ([not built yet](#not-built-yet): step 5)
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md) ([not built yet](#not-built-yet): step 2, step 6, step 12, variant 3b, variant 3c, variant 5b)
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md) ([not built yet](#not-built-yet): step 2, step 5, step 11, variant 3b, variant 3c, variant 4b)
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md) ([not built yet](#not-built-yet): step 7)
 - [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md) ([not built yet](#not-built-yet): step 13, variant 7c)
 - [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/UC-074-free-uncited-ids.md)
@@ -38,9 +38,9 @@ Each view of the domain model explains a group of related concepts:
 ### Requirements
 
 - [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)
-- [REQ-051 · Quality · A refused stamp of the analysis leaves every file as it was](../requirements/quality/REQ-051-refused-stamp-writes-nothing.md)
-- [REQ-052 · Functional · An id, once given, names one artefact for good, save a freed id](../requirements/functional/REQ-052-id-names-one-artefact.md)
-- [REQ-053 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-053-record-only-with-something-to-say.md)
+- [REQ-051 · Functional · An id, once settled, names one artefact for good, save a freed id](../requirements/functional/REQ-051-id-names-one-artefact.md)
+- [REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-052-record-only-with-something-to-say.md)
+- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and a record's always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
 
 ### Not built yet
 
@@ -48,11 +48,11 @@ What the use cases describe and the system does not do yet, each with the record
 
 - [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): step 2, decided by `software-analysis:DEC-001#9`, tracked in `#1930`
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): step 6, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): step 12, decided by `software-analysis:DEC-001#9`, tracked in `#1930`
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): step 5, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): step 11, decided by `software-analysis:DEC-001#9`, tracked in `#1930`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): variant 3b, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): variant 3c, decided by `COR-004`, tracked in `#1884`
-- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): variant 5b, decided by `COR-004`, tracked in `#1884`
+- [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): variant 4b, decided by `COR-004`, tracked in `#1884`
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md): variant 7c, decided by `software-analysis:DEC-001#5`, tracked in `#1929`

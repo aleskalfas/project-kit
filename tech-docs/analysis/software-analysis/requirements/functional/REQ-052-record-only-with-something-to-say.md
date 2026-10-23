@@ -1,5 +1,5 @@
 ---
-id: REQ-053
+id: REQ-052
 title: A revalidation record is written only where its revalidation has something to say
 status: active
 statement: A revalidation record is written only for a planned revalidation, one that found a regression or a gap, or a stale artefact a person confirmed.
@@ -19,7 +19,7 @@ pkit:
         - software-analysis:DEC-001#6
 ---
 
-# REQ-053 · Functional · A revalidation record is written only where its revalidation has something to say
+# REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say
 
 **Verified by:** Tests find that the stamp refuses a record with nothing to say, and one whose regression or gap no gap names. They find that it records a stale artefact a person confirmed. Nothing checks a record written by hand for something to say.
 

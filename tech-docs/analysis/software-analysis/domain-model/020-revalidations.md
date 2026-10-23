@@ -29,15 +29,15 @@ pkit:
 
 # VIEW-revalidations — Revalidations and what they find
 
-When something an [analysis](../glossary.md#term-analysis--analysis) rests on changes, someone must judge whether each description still holds. A wrong judgement either rewrites the truth to match a bug, or reports a defect for an intended [change](../../core/glossary.md#term-change--change) (DEC-001). A [revalidation](../glossary.md#term-revalidation--revalidation) is that judgement, before code or after it, and it ends in a [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) for each [artefact](../../core/glossary.md#term-artefact--artefact) it covers. A [revalidation proposal](../glossary.md#term-revalidation-proposal--revalidation-proposal) drafts the outcomes, a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) logs a revalidation with something to say, and a [shortfall](../glossary.md#term-shortfall--shortfall) marks a step not built yet.
+When something an [analysis](../glossary.md#term-analysis--analysis) rests on changes, someone must judge whether each description still holds. A wrong judgement either rewrites the truth to match a bug, or reports a defect for an intended [change](../../core/glossary.md#term-change--change) (DEC-001). A [revalidation](../glossary.md#term-revalidation--revalidation) is that judgement, before code or after it, and it ends in a [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) for each [artefact](../../core/glossary.md#term-artefact--artefact) it covers. A [revalidation proposal](../glossary.md#term-revalidation-proposal--revalidation-proposal) drafts the outcomes, a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) logs a revalidation with something to say, and a [shortfall](../glossary.md#term-shortfall--shortfall) is a step not built yet.
 
 ```mermaid
 classDiagram
   accTitle: Revalidations and what they find
-  accDescr: A revalidation gives each artefact it covers one revalidation outcome. A revalidation proposal drafts those outcomes. A revalidation record logs a revalidation with something to say, and a planned one names its design sources. A shortfall marks a step of a use case.
+  accDescr: A revalidation gives each artefact it covers one revalidation outcome. A revalidation proposal drafts those outcomes. A revalidation record logs a revalidation with something to say, and a planned one names its design sources. A shortfall is a step of a use case.
   class Revalidation
   Revalidation : trigger
-  Revalidation : version reviewed
+  Revalidation : what it reviews against
   class RevalidationOutcome["Revalidation outcome"]
   RevalidationOutcome : value
   RevalidationOutcome : justification
@@ -47,7 +47,7 @@ classDiagram
   class DesignSource["Design source"]
   DesignSource : title
   DesignSource : link
-  DesignSource : version
+  DesignSource : pointer
   class RevalidationProposal["Revalidation proposal"]
   RevalidationProposal : evidence
   RevalidationProposal : commands or question
@@ -59,7 +59,7 @@ classDiagram
   RevalidationProposal "*" --> "1" Revalidation : drafts the outcomes of
   RevalidationRecord "0..1" --> "1" Revalidation : logs
   RevalidationRecord "1" --> "*" DesignSource : names, when planned
-  Shortfall "*" --> "1" UseCase : marks a step of
+  Shortfall "*" --> "1" UseCase : is a step of
 ```
 
 ```mermaid
@@ -71,7 +71,7 @@ flowchart LR
   waits --> outcome[Revalidation outcome for each artefact]
   review --> outcome
   outcome --> answered[Answer recorded on each artefact]
-  outcome -->|planned, or a regression or a gap found| logged[Revalidation record written]
+  outcome -->|planned, or a regression, a gap or a stale artefact a person decided| logged[Revalidation record written]
 ```
 
 ## Revalidation
@@ -80,12 +80,12 @@ Defined in [TERM-revalidation](../glossary.md#term-revalidation--revalidation).
 
 **Why:** Checking the [analysis](../glossary.md#term-analysis--analysis) before code and checking it after an unplanned [change](../../core/glossary.md#term-change--change) are the same act with different triggers. One set of outcomes, and one shape of record, serve both (DEC-001).
 
-A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-artefact--artefact) against one version of the [system](../../core/glossary.md#term-system--system): a proposed design before its code, or the code after a change. It asks whether each description is still true of the software, and usually mends the description. Whoever performs it, a person or an agent, records its result on each artefact it covered.
+A revalidation reviews some analysis [artefacts](../../core/glossary.md#term-artefact--artefact) against one state of the [system](../../core/glossary.md#term-system--system): a proposed design before its code, or the code after a change. It asks whether each description is still true of the software, and usually mends the description. Whoever performs it, a person or an agent, records its result on each artefact it covered.
 
 **Attributes:**
 
 - its trigger: planned, drift, scheduled, close or onboarding (DEC-001 point 5)
-- the version it reviews against: a proposed design, or the code (DEC-001 point 5)
+- what it reviews against: a proposed design, or the code (DEC-001 point 5)
 - the artefacts it covers, each with its [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) (DEC-001 point 5)
 
 **Relations:**
@@ -130,7 +130,7 @@ Defined in [TERM-revalidation-record](../glossary.md#term-revalidation-record--r
 
 **Why:** Most [revalidations](../glossary.md#term-revalidation--revalidation) find that everything holds, and a file for each would bury the few that matter. Git already records the routine ones, through the [answer](../../core/glossary.md#term-answer--answer) on each [artefact](../../core/glossary.md#term-artefact--artefact) (DEC-001).
 
-A revalidation record logs one revalidation that had something to say: one that was planned, or that found a regression or a gap. It names the [change](../../core/glossary.md#term-change--change) that carried it and its trigger. It names each artefact it covered with its [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) and why, and each gap with what resolved it. It is named by its day and its subject, never numbered.
+A revalidation record logs one revalidation that had something to say. It was planned, or found a regression, a gap or a stale artefact that a person confirmed. It names the [change](../../core/glossary.md#term-change--change) that carried it, its trigger, each artefact it covered with its [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) and why, and each gap with its resolution. It is named by its day and its subject, never numbered.
 
 **Attributes:**
 
@@ -159,13 +159,13 @@ Defined in [TERM-design-source](../glossary.md#term-design-source--design-source
 
 **Why:** A pointer returns the exact text reviewed, which no version number does. So a planned record points at the text itself, and the [analysis](../glossary.md#term-analysis--analysis)'s [artefacts](../../core/glossary.md#term-artefact--artefact) and records carry no declared versions (DEC-001).
 
-A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as an issue's body or a design note. Its [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) names it by what it is, its link where it lies outside the repository, and a pointer to the version read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
+A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as an issue's body or a design note. Its [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) names it by what it is, its link where it lies outside the repository, and a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
 
 **Attributes:**
 
 - its title, which says what it is (DEC-001 point 6)
 - its link, where it lies outside this repository (DEC-001 point 6)
-- its version: a commit the default branch holds, `this change`, or the time a tracker's text was read (DEC-001 point 6)
+- its pointer, in `version`: a commit the default branch holds, `this change`, or the time a tracker's text was read (DEC-001 point 6)
 
 **Relations:**
 
@@ -175,7 +175,7 @@ A design source is one text of a proposed [change](../../core/glossary.md#term-c
 
 **Always true:**
 
-- A [pull request](../../core/glossary.md#term-pull-request--pull-request)'s [head](../../core/glossary.md#term-head--head) is never its version, since a rebase loses a head reviewed mid-way. Nor is any commit the default branch does not hold (DEC-001 point 6).
+- A [pull request](../../core/glossary.md#term-pull-request--pull-request)'s [head](../../core/glossary.md#term-head--head) is never its pointer, since a rebase loses a head reviewed mid-way. Nor is any commit the default branch does not hold (DEC-001 point 6).
 - Its pointer is provenance, not a gate, so [validation](../../core/glossary.md#term-validation--validation) checks its form alone (DEC-001 point 6).
 
 ## Revalidation proposal
@@ -214,13 +214,13 @@ A shortfall is a step or a variant of a use case that the system does not carry 
 
 **Attributes:**
 
-- the step or the variant it marks (DEC-001 point 1)
+- its box, which says what the system lacks (DEC-001 point 1)
 - the accepted decision record that decides it, one of the use case's record anchors (DEC-001 point 1)
 - the issue that tracks building it (DEC-001 point 1)
 
 **Relations:**
 
-- It marks one step or variant of one use case (DEC-001 point 1).
+- It is one step or variant of one use case (DEC-001 point 1).
 - A [revalidation](../glossary.md#term-revalidation--revalidation) meets one in three ways: planned, a regressed step a record decides, or such a description found with no behaviour (DEC-001 point 5).
 
 **States:** A shortfall stays open until the [change](../../core/glossary.md#term-change--change) that builds its step removes the box and the entry. The [pull request](../../core/glossary.md#term-pull-request--pull-request) of that change closes the shortfall's issue (DEC-001 point 1).

@@ -3,17 +3,21 @@ builds-on:
   - analysis: core
     version: 2.0.0
     terms:
+      - {id: TERM-adapter, name: adapter}
       - {id: TERM-agent-definition, name: agent definition}
       - {id: TERM-agent-workspace, name: agent workspace}
       - {id: TERM-anchor, name: anchor}
       - {id: TERM-answer, name: answer}
       - {id: TERM-artefact, name: artefact}
       - {id: TERM-artefact-type, name: artefact type}
+      - {id: TERM-backbone, name: backbone}
       - {id: TERM-backbone-configuration, name: backbone configuration}
+      - {id: TERM-base, name: base}
       - {id: TERM-capability, name: capability}
       - {id: TERM-change, name: change}
       - {id: TERM-change-check, name: change check}
       - {id: TERM-component, name: component}
+      - {id: TERM-debt, name: debt}
       - {id: TERM-decision-record, name: decision record}
       - {id: TERM-default-branch, name: default branch}
       - {id: TERM-documentation-root, name: documentation root}
@@ -28,6 +32,7 @@ builds-on:
       - {id: TERM-rule-set, name: rule set}
       - {id: TERM-skill, name: skill}
       - {id: TERM-stamp, name: stamp}
+      - {id: TERM-storyboard, name: storyboard}
       - {id: TERM-system, name: system}
       - {id: TERM-validation, name: validation}
       - {id: TERM-whole-repository-check, name: whole-repository check}
@@ -49,7 +54,6 @@ builds-on:
         name: Operator
 TERM-analysis:
   name: analysis
-  noun-forms: [analyses]
   status: active
   definition: "account of what one component must do and for whom, kept as anchored artefacts under the project's internal documentation root"
   pkit:
@@ -64,7 +68,7 @@ TERM-artefact-kind:
   name: artefact kind
   noun-forms: [artefact kinds]
   status: active
-  definition: "category of the entries and files an analysis holds, such as its actors or use cases, sharing one schema and one layout of parts"
+  definition: "category of an analysis's anchored entries and files, such as its actors or use cases, sharing one schema, place and layout of parts"
   pkit:
     friction:
       anchors:
@@ -76,7 +80,7 @@ TERM-candidate:
   name: candidate
   noun-forms: [candidates]
   status: active
-  definition: "analysis artefact drafted and not yet committed, which a person confirms, keeps or discards"
+  definition: "artefact or revalidation record of an analysis, written but not yet committed, which a person confirms or discards"
   pkit:
     friction:
       anchors:
@@ -90,7 +94,7 @@ TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
   status: active
-  definition: "ordered list, written once as data, of the parts each member of one artefact kind carries, each part with its id, label, hint and example"
+  definition: "data listing in order the parts every member of an artefact kind, or every revalidation record, carries, each with its id, label and example"
   pkit:
     friction:
       anchors:
@@ -104,7 +108,7 @@ TERM-design-source:
   name: design source
   noun-forms: [design sources]
   status: active
-  definition: "text stating a proposed change that a planned revalidation read, named in its revalidation record with a pointer to the exact version read"
+  definition: "text stating a proposed change that a planned revalidation read, named in its revalidation record with a pointer to the exact text read"
   pkit:
     friction:
       anchors:
@@ -117,7 +121,7 @@ TERM-freed-id:
   name: freed id
   noun-forms: [freed ids]
   status: active
-  definition: "identifier of a removed use case, journey or requirement that nothing cites, which the project declares the stamp may give again"
+  definition: "number of a removed use case, journey or requirement that nothing cites, which the project declares the stamp may give again"
   pkit:
     friction:
       anchors:
@@ -127,7 +131,6 @@ TERM-freed-id:
           - software-analysis:DEC-001#3
 TERM-hint:
   name: hint
-  noun-forms: [hints]
   status: active
   definition: "one-line comment that the stamp leaves where a writer fills a part or a front-matter field, saying what goes there and giving an example"
   pkit:
@@ -142,7 +145,7 @@ TERM-revalidation:
   name: revalidation
   noun-forms: [revalidations]
   status: active
-  definition: "review of some analysis artefacts against one version of the system, a proposed design or the code, that judges whether each description still holds"
+  definition: "review of some analysis artefacts against one state of the system, a proposed design or the code, that judges whether each description still holds"
   pkit:
     friction:
       anchors:
@@ -166,7 +169,7 @@ TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
   status: active
-  definition: "draft by the analysis-resolver agent that gives each flagged analysis artefact the result its evidence supports, and the commands that record it, or a question"
+  definition: "draft by the analysis-resolver agent that gives each flagged analysis artefact the result its evidence supports, and how a person records it, or a question"
   pkit:
     friction:
       anchors:
@@ -176,9 +179,8 @@ TERM-revalidation-proposal:
           - software-analysis:DEC-001#5
 TERM-revalidation-record:
   name: revalidation record
-  noun-forms: [revalidation records]
   status: active
-  definition: "file of an analysis logging one planned review of its artefacts, or one that found a regression or a gap, and each artefact's result"
+  definition: "file of an analysis logging a planned review of its artefacts, or one finding a regression, a gap or a stale artefact a person confirmed"
   pkit:
     friction:
       anchors:
@@ -233,17 +235,21 @@ TERM-use-case:
 The words of the domain and what each means. A term's id is stable, and its name may change. The names it replaces are kept.
 
 - **From core at 2.0.0:** the areas up to `030-change`. No release holds the core's analysis yet, so the links name the next release, 2.0.0, rather than software-analysis's floor, 1.149.0.
+  - **Term:** [adapter](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-adapter--adapter)
   - **Term:** [agent definition](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-definition--agent-definition)
   - **Term:** [agent workspace](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-agent-workspace--agent-workspace)
   - **Term:** [anchor](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-anchor--anchor)
   - **Term:** [answer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-answer--answer)
   - **Term:** [artefact](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact--artefact)
   - **Term:** [artefact type](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-artefact-type--artefact-type)
+  - **Term:** [backbone](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone--backbone)
   - **Term:** [backbone configuration](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-backbone-configuration--backbone-configuration)
+  - **Term:** [base](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-base--base)
   - **Term:** [capability](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-capability--capability)
   - **Term:** [change](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change--change)
   - **Term:** [change check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-change-check--change-check)
   - **Term:** [component](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-component--component)
+  - **Term:** [debt](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-debt--debt)
   - **Term:** [decision record](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-decision-record--decision-record)
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [documentation root](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-documentation-root--documentation-root)
@@ -258,6 +264,7 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [rule set](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-rule-set--rule-set)
   - **Term:** [skill](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-skill--skill)
   - **Term:** [stamp](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-stamp--stamp)
+  - **Term:** [storyboard](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-storyboard--storyboard)
   - **Term:** [system](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-system--system)
   - **Term:** [validation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-validation--validation)
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
@@ -291,19 +298,19 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 **Distinctions:**
 
-- **Artefact type:** the name a place gives each [artefact](../core/glossary.md#term-artefact--artefact) in it, such as `software-analysis:use-case`, for a [rule set](../core/glossary.md#term-rule-set--rule-set)'s scope to select. Each artefact kind but the [revalidation record](#term-revalidation-record--revalidation-record)'s lies in a place of its own, which gives one type (DEC-001 point 2).
-- **The revalidation record's kind:** declared beside the others, though a revalidation record is no artefact. No [rule](../core/glossary.md#term-rule--rule) binds on one, so the [capability](../core/glossary.md#term-capability--capability) checks its structure always (DEC-001 point 1).
+- **Artefact type:** the name a place gives each [artefact](../core/glossary.md#term-artefact--artefact) in it, such as `software-analysis:use-case`, for a [rule set](../core/glossary.md#term-rule-set--rule-set)'s scope to select. Each artefact kind lies in a place of its own, which gives one type (DEC-001 point 2).
+- **The revalidation record's kind:** declared beside the artefact kinds, though a [revalidation record](#term-revalidation-record--revalidation-record) is no artefact. It has a [declared structure](#term-declared-structure--declared-structure), but no place, no type and no [tightening](#term-tightening--tightening), and the [capability](../core/glossary.md#term-capability--capability) checks its structure always (DEC-001 point 1).
 
 ## TERM-candidate — candidate
 
 Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.md#candidate).
 
-**Example:** on a brownfield [project](../core/glossary.md#term-project--project), an agent derives the term `invoice` from the billing code and a record, and stamps it once the developer confirms it. As a project adopts the [capability](../core/glossary.md#term-capability--capability), the adopter fills a [use case](#term-use-case--use-case) with a real case of the project, to judge its kind's parts.
+**Example:** on a brownfield [project](../core/glossary.md#term-project--project), an agent derives the term `invoice` from the billing code and a record, and stamps it. The developer confirms it before it is committed. On adoption, the adopter fills a [use case](#term-use-case--use-case) with a real case of the project, to judge the parts of that [artefact kind](#term-artefact-kind--artefact-kind).
 
 **Distinctions:**
 
 - **An artefact in force:** one committed to the [analysis](#term-analysis--analysis), whose id is taken for good. A candidate takes no id until it is committed (DEC-001 point 3).
-- **A proposed decision record:** a record whose status is `proposed`, which binds nothing yet. A candidate is an [artefact](../core/glossary.md#term-artefact--artefact) of the analysis, never a record.
+- **A proposed decision record:** a record whose status is `proposed`, which binds nothing yet. A candidate is an [artefact](../core/glossary.md#term-artefact--artefact) or a [revalidation record](#term-revalidation-record--revalidation-record) of the analysis, never a [decision record](../core/glossary.md#term-decision-record--decision-record).
 
 ## TERM-declared-structure — declared structure
 
@@ -377,7 +384,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation-proposal).
 
-**Example:** `.agent-workspace/analysis-resolver/1234/proposal.md` proposes `holds` for `UC-002` and `analysis-stale` for `UC-005`, with `UC-005.diff`. It asks whether removing `export_report` was meant.
+**Example:** `.agent-workspace/analysis-resolver/1234/proposal.md` proposes `holds` for a [use case](#term-use-case--use-case) that quotes nothing the [change](../core/glossary.md#term-change--change) touched. It proposes `analysis-stale`, with a diff, for one that quotes the renamed `--out`, and asks whether removing `export_report` was meant.
 
 **Distinctions:**
 
@@ -388,7 +395,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation-record).
 
-**Example:** `revalidations/2026-10-02-failure-cause.md` logs the review of `UC-003` and `JRN-001` that `#123` carried, with the [revalidation outcome](#term-revalidation-outcome--revalidation-outcome) of each and no gap.
+**Example:** `revalidations/2026-10-02-export-dropped.md` logs a drift review that `#231` carried. It gives each [artefact](../core/glossary.md#term-artefact--artefact) it covered its [revalidation outcome](#term-revalidation-outcome--revalidation-outcome), and names the gap a regression left.
 
 **Distinctions:**
 
@@ -400,7 +407,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#shortfall).
 
-**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs the file, as ADR-006 point 2 decides. The box below it says the file is written unsigned and names `#12`, as its entry in `shortfalls` does.
+**Example:** step 2 of an export's [use case](#term-use-case--use-case) signs each file, as an accepted architecture record decides. The box below it says the file is written unsigned, and names the issue that tracks the signing, as its entry in `shortfalls` does.
 
 **Distinctions:**
 

@@ -65,15 +65,15 @@ flowchart LR
 
 Defined in [TERM-artefact-kind](../glossary.md#term-artefact-kind--artefact-kind).
 
-**Why:** The [analysis](../glossary.md#term-analysis--analysis) keeps several kinds of product knowledge: who uses the [system](../../core/glossary.md#term-system--system), what each role wants and how, and what the words mean. Each kind's shape is declared once, as data, so a script can check every member against it (DEC-001).
+**Why:** The [analysis](../glossary.md#term-analysis--analysis) keeps several kinds of product knowledge: who uses the [system](../../core/glossary.md#term-system--system), what each user wants and how, and what the words mean. Each kind's shape is declared once, as data, so a script can check every member against it (DEC-001).
 
-An artefact kind is a category of what an analysis holds, such as its actors, its [use cases](../glossary.md#term-use-case--use-case) or its glossary terms. Every member of one kind has front matter of the same shape, which the kind's schema checks, and the same parts in its body. Each kind but the [revalidation record](../glossary.md#term-revalidation-record--revalidation-record)'s lies in a [place](../../core/glossary.md#term-place--place) of its own, which gives its members one [artefact type](../../core/glossary.md#term-artefact-type--artefact-type).
+An artefact kind is a category of what an analysis holds, such as its actors, its [use cases](../glossary.md#term-use-case--use-case) or its glossary terms. Every member of one kind has front matter of the same shape, which the kind's schema checks, and the same parts in its body. Each artefact kind lies in a [place](../../core/glossary.md#term-place--place) of its own, which gives its members one [artefact type](../../core/glossary.md#term-artefact-type--artefact-type).
 
 **Attributes:**
 
 - its schema, which checks a member's front matter whatever any [rule](../../core/glossary.md#term-rule--rule)'s status (DEC-001 point 1)
 - its [declared structure](../glossary.md#term-declared-structure--declared-structure) (DEC-001 point 1)
-- its place and its type, which the revalidation record's kind lacks (DEC-001 point 2)
+- its place, and the type the place gives its members (DEC-001 point 2)
 
 **Relations:**
 
@@ -93,17 +93,17 @@ Defined in [TERM-declared-structure](../glossary.md#term-declared-structure--dec
 
 **Why:** A script checks only a structure it can read, and a template that writers copy drifts from any other statement of it. Declared once as data, the structure gives the check one home, and a template rendered from it cannot disagree with the check (DEC-001).
 
-A declared structure lists, in order, the parts each member of one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) carries in its body. Each part has a permanent id, a label, a [hint](../glossary.md#term-hint--hint) and an example, and may take a form a script checks. The [stamp](../../core/glossary.md#term-stamp--stamp) writes each body from it, and the kind's template is the same rendering.
+A declared structure lists, in order, the parts that each member of one [artefact kind](../glossary.md#term-artefact-kind--artefact-kind) carries in its body, or that each [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) carries. Each part has a permanent id, a label and an example, and a [hint](../glossary.md#term-hint--hint) where a writer fills it. A part may take a form a script checks. The [stamp](../../core/glossary.md#term-stamp--stamp) writes each body from it, and the kind's template is the same rendering.
 
 **Attributes:**
 
-- its parts in their order, each with its id, its label, its hint and its example (DEC-001 point 1)
+- its parts in their order, each with its id, its label, its example, and its hint where a writer fills it (DEC-001 point 1)
 - the form of a part or of a front-matter field, such as one sentence for a goal (DEC-001 point 1)
 - the ids of the parts its kind retired, which are never given again (DEC-001 point 1)
 
 **Relations:**
 
-- It belongs to one artefact kind (DEC-001 point 1).
+- It belongs to one artefact kind, or to the revalidation record's kind (DEC-001 point 1).
 - It gives each part a writer fills its hint (DEC-001 point 1).
 - A [project](../../core/glossary.md#term-project--project)'s [tightenings](../glossary.md#term-tightening--tightening) add to it (DEC-001 point 1).
 
@@ -111,7 +111,7 @@ A declared structure lists, in order, the parts each member of one [artefact kin
 
 **Always true:**
 
-- An [artefact](../../core/glossary.md#term-artefact--artefact)'s body is held to it where the format [rule](../../core/glossary.md#term-rule--rule) binds, and a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record)'s body always (DEC-001 point 1).
+- An [artefact](../../core/glossary.md#term-artefact--artefact)'s body is held to it where the format [rule](../../core/glossary.md#term-rule--rule) binds, and a revalidation record's body always (DEC-001 point 1).
 - Artefacts in force move to the current declared structure, and a revalidation record stays as it was written (DEC-001 point 1).
 
 ## Hint
