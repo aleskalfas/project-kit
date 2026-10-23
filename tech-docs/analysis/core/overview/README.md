@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:a47715b3627e6f177b32c592391d00fd6d84084f111082449ea38801ad2e6582 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:4d87396f0f7541e48f5b816035b745d7e1c349b39009b901e229460dbbd18b23 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -62,7 +62,7 @@ Record a project's decisions and rules, and check, answer and land each change t
 - [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
 - [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
 - [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
-- [REQ-021 · Functional · A reviewer never changes the work it judges](../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)
+- [REQ-021 · Functional · A reviewer agent never changes the work it judges](../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)
 
 **Its use cases:**
 

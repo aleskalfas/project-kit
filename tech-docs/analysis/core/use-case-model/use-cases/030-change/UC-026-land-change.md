@@ -79,7 +79,7 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer works alone, and commits the change straight to the default branch, as COR-009 point 5 allows. It is one commit, its subject a conventional title (COR-008). An agent that commits for the developer first tells them what the change updated and what it leaves out of date (core rule 20). No command of the system carries this way, and the use case ends.
+- **1a.** The developer works alone, and commits the change straight to the default branch, as COR-009 point 5 allows. It is one commit, its subject a conventional title (COR-008). An agent that commits for the developer tells the person it works for first (core rule 20). It says what the change updated, and what it leaves out of date. No command of the system carries this way, and the use case ends.
 - **2a.** The developer passes `--dry-run`. The system checks the repository as step 3 does, but asks no one, so in another repository it refuses unless `--allow-foreign-repo` is passed. Otherwise it takes its one reading, says what the landing would do, and sends nothing. The use case ends.
 - **2b.** `<sha>` is no full commit id, such as an abbreviated one. The system refuses it as a usage error, reads nothing, and exits `2`, since an abbreviated head would read as another head.
 - **3a.** The repository is another, and the operator declines. Or nobody can answer, and the developer passed no `--allow-foreign-repo`. The system refuses, sends nothing, and the use case ends.

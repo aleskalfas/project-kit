@@ -1,6 +1,6 @@
 ---
 id: REQ-021
-title: A reviewer never changes the work it judges
+title: A reviewer agent never changes the work it judges
 status: active
 statement: A reviewer agent never changes the work it judges.
 measure: "After a review, the work under review holds what it held before, and nothing was staged, committed or pushed for the review. Each working file of the review lies in the agent workspace."
@@ -23,7 +23,7 @@ pkit:
         - ACT-merge-authoriser
 ---
 
-# REQ-021 · Functional · A reviewer never changes the work it judges
+# REQ-021 · Functional · A reviewer agent never changes the work it judges
 
 **Verified by:** Tests find that every reviewer agent that can run commands states the same section on what its read-only covers. Its source and its deployed copy both state it, and name the workspace for its working files. Nothing checks at run time what a reviewer changed.
 
