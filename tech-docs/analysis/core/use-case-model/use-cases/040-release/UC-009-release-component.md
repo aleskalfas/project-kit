@@ -5,8 +5,22 @@ status: active
 actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
+  - ACT-operator
+after:
+  - [UC-003]
+  - [UC-034]
+  - [UC-009, UC-015, UC-019]
 requirements:
+  - REQ-005
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: 10
+    issue: "#1765"
+    record: ADR-034#1
+  - at: "3h"
+    issue: "#1884"
+    record: COR-004
 pkit:
   friction:
     anchors:
@@ -23,14 +37,18 @@ pkit:
         - PRJ-004
         - COR-010
         - COR-041
+        - COR-004
+        - ADR-034#1
       artefact:
         - ACT-component-author
         - ACT-ci-pipeline
+        - ACT-operator
+        - REQ-005
         - REQ-009
+        - REQ-012
     revalidated:
-      at: 2026-10-22T23:47:15Z
-      outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      at: 2026-10-23T18:46:42Z
+      outcome: updated
 ---
 
 # UC-009 — Release my component on its own version
@@ -40,10 +58,12 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the release pull request that carries the component's new version. That pull request carries the new versions of the backbone and of other components too (UC-008).
+- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such change happens silently (REQ-012).
 
 **Preconditions:**
 
-- Changesets naming the component wait under `.changes/unreleased/` on the default branch, each declared as UC-003 describes and landed with its change.
+- **From UC-003:** Changes to the component declare, in changesets naming it, what each means for its release.
+- **From UC-034:** The component's changes landed on the default branch, so their changesets wait under `.changes/unreleased/`.
 - **From UC-009, UC-015 or UC-019:** The component's `package.yaml` gives its `version` and a `requires_backbone` range. The component's last release wrote them, or its author did when packaging it as a capability or writing it as an adapter.
 
 **Assumptions:**
@@ -58,6 +78,11 @@ pkit:
 1. The component author runs `pkit release plan`.
 2. The system groups the pending changesets by what each names, and takes the highest segment for each. It prints the component's move as `<component>: <old> -> <new> (<segment>)`, with each floor and upper bound a changeset declares for the component.
 3. The author runs `pkit release apply` on a release branch, and confirms `Write these versions and consume the changesets?`.
+10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 4. The system writes the component's new version in the `version:` line of its `package.yaml`.
 5. The system widens the upper bound of the component's `requires_backbone` to cover the backbone the repository carries, the one the author releases under. The system never narrows an upper bound, and moves no floor unless a changeset declares that floor (`versioning.py`).
 6. The system raises each floor a changeset declares for the component, on the backbone or on another capability. It also widens each upper bound on a capability that a changeset says the component runs on (PRJ-002 D4).
@@ -75,6 +100,11 @@ pkit:
 - **3e.** A declared floor would leave a range that admits no backbone, such as where `--no-broaden` keeps an upper bound at or below the floor. The system refuses the release step before writing anything, and the use case ends.
 - **3f.** The release step would leave another capability whose range excludes the component's new version. The system refuses before writing anything, naming that capability, its range and the version (PRJ-002 D4). The use case ends.
 - **3g.** The release step moves the backbone too. Step 5 instead widens every component's upper bound to cover the new backbone's minor, and the backbone is released as UC-008 says.
+- **3h.** The author first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The system names each edit, and writes nothing (REQ-009).
+
+> [!WARNING]
+> **Not built yet:** `pkit release apply` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.
+
 - **6a.** A floor already stands at or above the version a changeset declares. The floor stays as it is, and the plan says `requires_backbone floor stays`.
 
 **Postconditions:**

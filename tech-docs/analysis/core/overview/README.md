@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:35c2939c26cb4fffd9d010d367ad7bb58e60985ca043a13c26c46ec0c813d10e -->
+<!-- pkit:overview reads=4 fingerprint=sha256:35553ec590829c3f9f456a60862847b78cb23d6079c7dec2e53c352303f42ee8 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -88,14 +88,14 @@ Record a project's decisions and rules, and check, answer and land each change t
 
 Release the backbone and each component on its own version, so projects can move to it and pin it.
 
-**Builds on:** [010-develop](#010-develop).
+**Builds on:** [010-develop](#010-develop) and [030-change](#030-change).
 
 **Its requirements:** none.
 
 **Its use cases:**
 
-- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md)
-- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md)
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md) ([not built yet](#not-built-yet): variant 1a, variant 1c)
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md) ([not built yet](#not-built-yet): step 10, variant 3h)
 
 ### 050-adopt
 
@@ -123,7 +123,7 @@ Take the system into another project, keep it current, and report what goes wron
 | [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |
 | [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md) | Whoever maintains a distribution of the methodology. | [010-develop](#010-develop), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
-| [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up), [030-change](#030-change) |
+| [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up), [030-change](#030-change), [040-release](#040-release) |
 
 ### Concepts
 
@@ -168,6 +168,10 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): step 7, decided by `COR-062#1`, tracked in `#1873`
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): variant 3b, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): variant 4c, decided by `COR-062#5`, tracked in `#1873`
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md): variant 1a, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-008 — Release the backbone so adopters can upgrade and pin to it](../use-case-model/use-cases/040-release/UC-008-release-backbone.md): variant 1c, decided by `COR-004`, tracked in `#1884`
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md): step 10, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-009 — Release my component on its own version](../use-case-model/use-cases/040-release/UC-009-release-component.md): variant 3h, decided by `COR-004`, tracked in `#1884`
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md): step 9, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md): step 9, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md): variant 1a, decided by `COR-004`, tracked in `#1884`

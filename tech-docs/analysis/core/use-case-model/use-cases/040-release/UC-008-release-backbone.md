@@ -5,11 +5,23 @@ status: active
 actor: ACT-methodology-maintainer
 other-actors:
   - ACT-ci-pipeline
+  - ACT-operator
 after:
   - [UC-014]
   - [UC-008, environment]
+  - [UC-003]
+  - [UC-034]
 requirements:
+  - REQ-005
   - REQ-009
+  - REQ-012
+shortfalls:
+  - at: "1a"
+    issue: "#1765"
+    record: ADR-034#1
+  - at: "1c"
+    issue: "#1884"
+    record: COR-004
 pkit:
   friction:
     anchors:
@@ -29,15 +41,19 @@ pkit:
         - PRJ-004
         - PRJ-007
         - COR-010
+        - COR-004
+        - ADR-034#1
         - ADR-061#6
       artefact:
         - ACT-methodology-maintainer
         - ACT-ci-pipeline
+        - ACT-operator
+        - REQ-005
         - REQ-009
+        - REQ-012
     revalidated:
-      at: 2026-10-22T23:47:14Z
-      outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      at: 2026-10-23T18:46:41Z
+      outcome: updated
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
@@ -47,11 +63,14 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): opens the release pull request. Once the release pull request lands, the pipeline tags the release commit, with no person there to confirm the push. No step of the CI pipeline's workflows merges a release pull request, so someone decides that each release lands (`release-pr.yml`).
+- **Operator** (`ACT-operator`): is asked before `pkit release merge` or `pkit release apply` changes a repository other than the session's own. So no such change happens silently (REQ-012).
 
 **Preconditions:**
 
 - **From UC-014:** The methodology's source repository runs the system as written, so its release step runs the code it releases.
 - **From UC-008, or Environment:** The default branch records the backbone's current version in `.pkit/VERSION`. The last release wrote it there, or, before the first release, the source repository held it (PRJ-002 D3).
+- **From UC-003:** Each change the release carries declares, in changesets, what it means for the release of the backbone or of a component.
+- **From UC-034:** The changes the release carries landed on the default branch, so their changesets wait under `.changes/unreleased/`.
 
 **Assumptions:**
 
@@ -79,6 +98,7 @@ pkit:
 7. The CI pipeline runs the project's checks on the release pull request. The changeset guard reads the release pull request's diff as only what `pkit release apply` writes, and exempts that diff from the surface check (UC-003).
 8. The maintainer reviews the new versions and the changelog entry.
 9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` head branch under a `chore(release):` title.
+14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012 and ADR-061 point 6).
 10. The system also checks that the release pull request is open, mergeable and green in every check it shows. The system lands the release pull request as one squash commit whose subject is the pull request's title, and deletes the head branch.
 11. On the push to the default branch, the CI pipeline runs `release-tag.yml`. That workflow finds no tag for the version in `.pkit/VERSION`, and runs `pkit version tag --push`.
 12. The system tags the release commit `v<version>` with an annotated tag, and pushes the tag (PRJ-004). The CI pipeline runs in no harness session, so the cross-repository guard has nothing to compare with and does not fire. Nobody is asked to confirm the push (ADR-061 point 6).
@@ -86,8 +106,17 @@ pkit:
 
 **Variants:**
 
-- **1a.** The maintainer releases by hand. The maintainer runs `pkit release plan`, then runs `pkit release apply` on a release branch, and confirms `Write these versions and consume the changesets?`. The maintainer then commits the release step's writes and opens their release pull request, and the path goes on at step 7.
+- **1a.** The maintainer releases by hand. The maintainer runs `pkit release plan`, then runs `pkit release apply` on a release branch, and confirms `Write these versions and consume the changesets?`. At its entry, before it prints its plan, `pkit release apply` checks the repository as step 14 does. The maintainer then commits the release step's writes and opens their release pull request, and the path goes on at step 7.
+
+> [!WARNING]
+> **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 - **1b.** On the path of 1a, no pending changeset moves a version. `pkit release apply` asks nothing, writes no version and no changelog entry, and deletes the pending `none` changesets. The use case ends.
+- **1c.** On the path of 1a, the maintainer first passes `--dry-run` to `pkit release apply`, to see each edit it would make. The system names each edit, and writes nothing (REQ-009).
+
+> [!WARNING]
+> **Not built yet:** `pkit release apply` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.
+
 - **2a.** No pending changeset moves a version, as when only `none` changesets wait. `release-pr.yml` ends with `No pending changesets move a version — nothing to release.` The `none` changesets wait for the next release, and the use case ends.
 - **2b.** A changeset names a component the tree does not hold. The system refuses the release step, naming the changeset and the components it knows. `release-pr.yml` opens no pull request, and the use case ends.
 - **2c.** A changeset declares a floor or an upper bound the release step cannot write. The system refuses before writing anything, such as with `cannot raise a requires_backbone floor:` and the changeset's problem. The use case ends.
@@ -95,7 +124,7 @@ pkit:
 - **2e.** A backbone migration's folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
 - **7a.** The project gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
-- **9a.** The pull request is no release pull request. The system refuses it, and points to `pkit project-management merge-pr` for an issue's pull request. The use case ends.
+- **9a.** The pull request is no release pull request. The system refuses it, saying that it merges only release pull requests, and names another command for an issue's pull request. The use case ends.
 - **10a.** The release pull request has a conflict, or a check that is red or still running. The system refuses with the reason, and merges nothing. The path rejoins at step 8.
 - **10b.** Where merges into the default branch go through a queue, the system enqueues the release pull request at the head commit whose checks it read. The system then waits for the queue to merge the pull request. Where the wait ends with the release pull request still queued, the system exits 4 and deletes nothing. A later run deletes the head branch once the release pull request merges.
 - **10c.** The queue does not squash, or its squash defaults are not the pull request's title and body. The system refuses, enqueues nothing, and the use case ends.
@@ -103,6 +132,7 @@ pkit:
 - **11a.** The version in `.pkit/VERSION` already has its tag, as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes.
 - **11b.** The run of `release-tag.yml` for the release push fails. The next push to the default branch finds the version untagged, and tags that push's commit instead of the release commit.
 - **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
+- **14a.** The repository is another, and the operator declines. Or nobody can answer, and the maintainer passed no `--allow-foreign-repo`. The system refuses, merges nothing, and the use case ends.
 
 **Postconditions:** The release commit on the default branch carries the tag `v<version>`, which adopters install, upgrade to and pin (PRJ-004). That version's changelog section, and the notes of its GitHub release, say what each change the release carries means for adopters.
 
@@ -112,3 +142,4 @@ pkit:
 - No workflow merges a release pull request. A release pull request lands only when someone merges it (`release-pr.yml` and `release-tag.yml`).
 - A version is tagged once. `release-tag.yml` tags only a version with no tag, locally or on the remote, and `pkit version tag` refuses a tag the clone already holds (`versioning.py`).
 - A GitHub release carries notes only, never a file to install from (PRJ-004).
+- In a repository other than the session's own, `pkit release merge` changes nothing without the operator's yes or `--allow-foreign-repo` (REQ-012 and `session_guard.py`).
