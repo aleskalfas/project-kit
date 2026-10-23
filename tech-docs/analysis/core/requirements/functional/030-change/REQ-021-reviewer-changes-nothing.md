@@ -2,9 +2,9 @@
 id: REQ-021
 title: A reviewer never changes the work it judges
 status: active
-statement: A reviewer never changes the work it judges, nor the repository that work lives in.
-measure: "After a review, no file the repository tracks has changed, and nothing was staged, committed or pushed for it. Each working file of the review lies in the agent workspace."
-applies-to: Every reviewer that judges a draft or a change, an agent or a person, the core's reviewer agents and a component's included, whatever it judges.
+statement: A reviewer agent never changes the work it judges.
+measure: "After a review, the work under review holds what it held before, and nothing was staged, committed or pushed for the review. Each working file of the review lies in the agent workspace."
+applies-to: "Every reviewer agent that judges a draft or a change, the core's and a component's. The architect's edits of the architecture documents and decision records it keeps, which COR-024 grants it, fall outside it."
 actors:
   - ACT-developer
   - ACT-merge-authoriser

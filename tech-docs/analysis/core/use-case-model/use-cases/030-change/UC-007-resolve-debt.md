@@ -8,10 +8,12 @@ other-actors:
   - ACT-ai-agent
   - ACT-operator
 requirements:
+  - REQ-002
   - REQ-004
   - REQ-005
   - REQ-006
   - REQ-007
+  - REQ-009
   - REQ-012
   - REQ-018
   - REQ-019
@@ -55,10 +57,12 @@ pkit:
         - ACT-ci-pipeline
         - ACT-ai-agent
         - ACT-operator
+        - REQ-002
         - REQ-004
         - REQ-005
         - REQ-006
         - REQ-007
+        - REQ-009
         - REQ-012
         - REQ-018
         - REQ-019
@@ -116,7 +120,7 @@ pkit:
 - **1b.** An anchor's resolver gives no answer, or the anchor names a kind that nothing installed resolves. The artefact is `unresolved`, and the check never reports it `current`. The path goes on at step 2 for the other debts.
 - **1c.** An anchor resolves to nothing at the latest commit, such as a path whose files were removed. The check reports it as a `dead-anchor`, an error it reports and never fails on, and judges the artefact on its other anchors (REQ-020). The path goes on at step 2.
 - **3a.** An installed capability ships an agent for the artefact's type. The developer dispatches that agent, which proposes the outcome with its evidence and the commands to run, and runs none (COR-050 point 3). The path goes on at step 4.
-- **3b.** An agent that an installed capability ships for the artefact's type proposed the answer before the developer reached the debt. A command started it with nobody watching, through the runner the adapter registers, `pkit agents run`, confined to a clone at a pinned commit (ADR-066 point 1). Its proposal waits as a file the run handed back. The developer reads the proposal, and the path goes on at step 4.
+- **3b.** An agent that an installed capability ships for the artefact's type proposed the answer before the developer reached the debt. A command started it with nobody watching, through the backbone's run command, `pkit agents run`. That command starts the runner the adapter registers, confined to a clone at a pinned commit (ADR-066 point 1). Its proposal waits as a file the run handed back. The developer reads the proposal, and the path goes on at step 4.
 - **4a.** The artefact still describes what is wanted, and a change broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The change check asks for that revalidation, so it is not flagged at step 5.
 - **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. The revalidation reads both, and replaces them (COR-062 points 5 and 7).

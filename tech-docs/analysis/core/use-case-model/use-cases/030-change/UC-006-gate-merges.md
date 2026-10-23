@@ -119,10 +119,10 @@ pkit:
 - **3a.** The job does not run `pkit sync` first. A registered validator then says "environment not provisioned — run `pkit sync`", an `error` finding, so `pkit validate` fails.
 - **3b.** The job's checkout lacks the base. Each check that compares refuses with its fixes, such as fetching the base or naming another.
 - **3c.** The job's checkout is shallow. The change check names, in its header, each artefact whose history the cut hides (UC-002).
-- **3d.** The project's merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The job names to the change check each queued change's own head, so it judges what each answer read against that head (COR-062 point 4).
+- **3d.** The project's merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The change check judges what each answer read against its own change's head, never against the queue's merge (COR-062 point 4).
 
 > [!WARNING]
-> **Not built yet:** on a queue's merge, nothing names a queued change's own head, so the change check reads the queue's merge as it. COR-062 point 4 decides that the check judges against the change's own head wherever it runs, and #1867 tracks it.
+> **Not built yet:** on a queue's merge, the change check reads the queue's merge as each change's own head. COR-062 point 4 decides that the check judges against the change's own head wherever it runs, and #1867 tracks it.
 
 - **4a.** The adopter never makes the job required. The checks run and report, and nothing holds the merge (COR-050 point 12). The use case ends.
 - **6a.** The base moved on after the branch left it. The change check reports an `outdated-base` and never fails on it, since the fix is to update the branch.
