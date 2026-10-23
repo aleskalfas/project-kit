@@ -26,9 +26,9 @@ pkit:
         - COR-017
         - COR-031
     revalidated:
-      at: 2026-10-21T14:26:06Z
+      at: 2026-10-23T09:46:27Z
       outcome: unchanged
-      unchanged-because: DEC-032 D1 now leaves the answer folder out of the code floor, and COR-050 point 3 keeps who writes and checks an answer. The agent still writes its change's answers and its reviewers judge them.
+      unchanged-because: Rules 14, 16 and 19 stop calling the permission model a capability, and only their wording changes. The agent still works within the permission model, as the use case says.
 ---
 
 # UC-001 — Build my change under my project's conventions

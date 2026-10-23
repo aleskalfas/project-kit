@@ -1,0 +1,6 @@
+component: project-management
+kind: none
+body: >
+  The records DEC-037 and DEC-056 and a comment of the configuration schema no
+  longer call the backbone's permission model a capability. The README is
+  revalidated against them, and only the wording changes.

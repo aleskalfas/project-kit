@@ -80,8 +80,9 @@ pkit:
         - REQ-020
         - REQ-021
     revalidated:
-      at: 2026-10-23T09:43:09Z
-      outcome: updated
+      at: 2026-10-23T14:50:29Z
+      outcome: unchanged
+      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
 ---
 
 # UC-002 — Answer what my change made stale

@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-21T18:38:49Z
+      at: 2026-10-23T09:46:30Z
       outcome: unchanged
-      unchanged-because: COR-005 names a shipped adapter as the worked example of the scripts the lifecycle calls, and says pkit new adapter stamps none of them. This README lists and explains each script the adapter ships, so it holds.
+      unchanged-because: ADR-060 now says the backbone's permission code grants the agent workspace, where it named a permission capability. The adapter's translation of that grant is as it was.
 ---
 
 # Claude Code adapter

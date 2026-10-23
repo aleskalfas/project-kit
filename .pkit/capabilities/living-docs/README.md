@@ -14,9 +14,9 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-23T08:13:36Z
+      at: 2026-10-23T14:50:15Z
       outcome: unchanged
-      unchanged-because: COR-050 and the schemas reference add derived links, which a component declares and friction reads as their words alone. living-docs declares none, so its pages and anchors work as the README says.
+      unchanged-because: project-management DEC-056 now names the permission model's code as backbone code, not a capability, and decides nothing new. What the README says it rests on holds.
       deferred:
         - anchor:
             kind: record

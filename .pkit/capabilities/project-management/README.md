@@ -16,9 +16,9 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-21T13:58:53Z
+      at: 2026-10-23T09:46:33Z
       outcome: unchanged
-      unchanged-because: "ADR-066 changes one bullet of point 13: each adapter now answers the requirement in its support declaration, and the Claude Code adapter's answer holds for the runner's tested range. The page's account of the agent runs its commands start is as it was."
+      unchanged-because: DEC-037, DEC-056 and a comment of the configuration schema stop calling the permission model a capability, and only their wording changes. The README says nothing that rests on that name.
       deferred:
         - anchor:
             kind: path
