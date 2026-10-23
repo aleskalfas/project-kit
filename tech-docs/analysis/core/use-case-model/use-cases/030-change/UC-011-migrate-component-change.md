@@ -6,10 +6,18 @@ actor: ACT-component-author
 other-actors:
   - ACT-ci-pipeline
   - ACT-ai-agent
+  - ACT-operator
 requirements:
   - REQ-001
+  - REQ-004
+  - REQ-005
+  - REQ-012
 after:
   - [UC-015, UC-019]
+shortfalls:
+  - at: 9
+    issue: "#1765"
+    record: ADR-034#1
 pkit:
   friction:
     anchors:
@@ -23,16 +31,21 @@ pkit:
         - .pkit/skills/core/migration-author.md
       record:
         - COR-010
+        - COR-054#4
         - PRJ-002#D3
+        - ADR-034#1
       artefact:
         - ACT-component-author
         - ACT-ci-pipeline
         - ACT-ai-agent
+        - ACT-operator
         - REQ-001
+        - REQ-004
+        - REQ-005
+        - REQ-012
     revalidated:
-      at: 2026-10-23T08:54:06Z
-      outcome: unchanged
-      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
+      at: 2026-10-23T09:50:36Z
+      outcome: updated
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it
@@ -43,6 +56,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the migration check on every pull request, with no person to answer. It does so where the component's repository wires the check in, as project-kit's does (UC-006).
 - **AI agent** (`ACT-ai-agent`): writes the migration for the author through the `migration-author` skill, which pairs with the stamp of step 2.
+- **Operator** (`ACT-operator`): is asked before the stamp writes in a repository other than the session's own. So no such write happens silently (REQ-012).
 
 **Preconditions:** **From UC-015 or UC-019:** The author's component exists as a capability or an adapter, and its `package.yaml` holds its version.
 
@@ -56,8 +70,13 @@ pkit:
 **Main path:**
 
 1. The author runs `pkit new migration --tier capability --component <name> --name <slug>` without `--version`, or has an AI agent run the command through the `migration-author` skill.
+9. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit new migration` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 2. The system takes the next minor past the version that the component's `package.yaml` records on the default branch. The system prints `Version: <X.Y.0>, the next minor past capability <name> <version>, which the default branch 'main' records.` and stamps `<NNN>-<slug>.sh` in the component's `migrations/<X.Y.0>/` folder.
-3. The author writes the script to carry the projects across. The script is safe to run twice (COR-010).
+3. The author writes the script to carry the projects across. The script is safe to run twice (COR-010 and REQ-001).
 4. The author runs `pkit migrations check-diff --include-working-tree` before committing.
 5. The system matches each rename and removal in the component's folder with a migration of the same tier and component. It ends with `Verdict: COVERED (every tier:component with triggers has a matching migration).`
 6. The author commits the change with its migration and the component's changeset (UC-003).
@@ -72,6 +91,7 @@ pkit:
 - **2b.** The default branch has commits but resolves to none in this clone, or the default branch's tree cannot be read. The system warns that `The migration's version is judged against the working tree alone, so it may name a version the default branch has released`, and takes the next minor past the version in the working tree's `package.yaml`. The check of step 7 still reads the target's tip (7a).
 - **2c.** On the path of 1b, the version given is at or below the version that the component's `package.yaml` records on the default branch. The system refuses with `--version <X.Y.0> is already released`, and names the version the system picks without `--version`. The path rejoins at step 1.
 - **2d.** On the path of 1b, the version given is not of the form `X.Y.0`, such as `0.55.3`. The system refuses with `version '0.55.3' must be X.Y.0 (patch segment must be 0 per COR-010 — patches have no migrations).`, and the path rejoins at step 1.
+- **4a.** The base resolves to no commit. The check refuses, naming the references it tried and the fixes, and never guesses a base (COR-054 point 4 and REQ-004). The path rejoins at step 4.
 - **5a.** A rename or a removal in the component's folder has no migration of that component. A migration of the backbone or of another component does not cover it. The system ends with `Verdict: UNCOVERED. Author migrations for the following tiers before merging:`, lists the component by its tier and name, and exits 1. The path rejoins at step 1.
 - **5b.** The change renames or removes files only in the component's `project/` folder, or only a capability's decision records. The check finds no trigger there (`migrations.py`), and the use case ends.
 - **5c.** The change breaks the projects in a way the check cannot see, such as a key whose meaning changes. The check finds no trigger and passes, whether or not the change holds a migration. The path goes on at step 6.

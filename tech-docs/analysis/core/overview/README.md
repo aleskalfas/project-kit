@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:e5d54e7121d1c321de609b679ba9ac071bcb81824817903eaee3173921f926e2 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:35c2939c26cb4fffd9d010d367ad7bb58e60985ca043a13c26c46ec0c813d10e -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -59,24 +59,30 @@ Set up a project once, so its people and AI agents work with the same backbone c
 
 ### 030-change
 
-Check, answer and land each change to a project, so what the project states stays true as it changes.
+Record a project's decisions and rules, and check, answer and land each change to it, so what the project states stays true as it changes.
 
-**Builds on:** [010-develop](#010-develop).
+**Builds on:** [010-develop](#010-develop) and [020-set-up](#020-set-up).
 
 **Its requirements:**
 
 - [REQ-001 · Quality · A migration run again changes nothing](../requirements/quality/030-change/REQ-001-migration-runs-again.md)
+- [REQ-017 · Quality · A backbone migration is safe over any state](../requirements/quality/030-change/REQ-017-backbone-migration-safe.md)
+- [REQ-018 · Quality · A reading command of the friction group prints the same document for the same state](../requirements/quality/030-change/REQ-018-same-json-same-state.md)
+- [REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know](../requirements/functional/030-change/REQ-019-reading-document-versioned.md)
+- [REQ-020 · Functional · A dead anchor is an error, never silence](../requirements/functional/030-change/REQ-020-dead-anchor-error.md)
+- [REQ-021 · Functional · A reviewer agent never changes the work it judges](../requirements/functional/030-change/REQ-021-reviewer-changes-nothing.md)
 
 **Its use cases:**
 
-- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md)
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md) ([not built yet](#not-built-yet): step 11, step 6, variant 5e, variant 9b)
 - [UC-003 — Declare what my change means for the next release](../use-case-model/use-cases/030-change/UC-003-declare-changeset.md)
 - [UC-004 — Know before I push that my change passes my project's checks](../use-case-model/use-cases/030-change/UC-004-check-before-push.md)
 - [UC-005 — Say what my document rests on](../use-case-model/use-cases/030-change/UC-005-anchor-document.md)
-- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md)
-- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md)
-- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md)
-- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md)
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md) ([not built yet](#not-built-yet): step 8, variant 1d, variant 3d)
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md) ([not built yet](#not-built-yet): step 7, variant 3b, variant 4c)
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md) ([not built yet](#not-built-yet): step 9)
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md) ([not built yet](#not-built-yet): step 9)
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md) ([not built yet](#not-built-yet): step 5)
 
 ### 040-release
 
@@ -117,7 +123,7 @@ Take the system into another project, keep it current, and report what goes wron
 | [ACT-developer — Developer](../use-case-model/actors/ACT-developer.md) | The person who builds: decisions, rules, notes, code and its documentation, one change at a time. | [010-develop](#010-develop), [030-change](#030-change) |
 | [ACT-merge-authoriser — Merge authoriser](../use-case-model/actors/ACT-merge-authoriser.md) | The person who authorises a change's merge into the default branch. | [030-change](#030-change) |
 | [ACT-methodology-maintainer — Methodology maintainer](../use-case-model/actors/ACT-methodology-maintainer.md) | Whoever maintains a distribution of the methodology. | [010-develop](#010-develop), [030-change](#030-change), [040-release](#040-release), [050-adopt](#050-adopt) |
-| [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up) |
+| [ACT-operator — Operator](../use-case-model/actors/ACT-operator.md) | The person at the controls of a machine. | [020-set-up](#020-set-up), [030-change](#030-change) |
 
 ### Concepts
 
@@ -151,6 +157,19 @@ Each view of the domain model explains a group of related concepts:
 
 What the use cases describe and the system does not do yet, each with the record that decides it and the issue that tracks it (software-analysis DEC-001 point 1):
 
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): step 11, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): step 6, decided by `COR-062#1`, tracked in `#1873`
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): variant 5e, decided by `COR-062#5`, tracked in `#1873`
+- [UC-002 — Answer what my change made stale](../use-case-model/use-cases/030-change/UC-002-answer-stale.md): variant 9b, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md): step 8, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md): variant 1d, decided by `COR-004`, tracked in `#1884`
+- [UC-006 — Make my merges wait on the system's checks](../use-case-model/use-cases/030-change/UC-006-gate-merges.md): variant 3d, decided by `COR-062#4`, tracked in `#1867`
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): step 7, decided by `COR-062#1`, tracked in `#1873`
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): variant 3b, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md): variant 4c, decided by `COR-062#5`, tracked in `#1873`
+- [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md): step 9, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md): step 9, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md): variant 1a, decided by `COR-004`, tracked in `#1884`
 - [UC-021 — Declare my project's backbone configuration once, and have it validated](../use-case-model/use-cases/020-set-up/UC-021-declare-backbone-configuration.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's](../use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md): step 4, decided by `ADR-034#1`, tracked in `#1765`
@@ -172,6 +191,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-031 — Keep my per-machine choices out of what the project commits](../use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md): variant 3a, decided by `COR-028#2`, tracked in `#1909`
 - [UC-032 — Be asked before an agent changes another repository](../use-case-model/use-cases/020-set-up/UC-032-ask-before-other-repository.md): variant 1d, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-033 — Find out why a command prompted me or was blocked](../use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md): step 2, decided by `ADR-034#1`, tracked in `#1765`
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md): step 5, decided by `ADR-061#8`, tracked in `#1257`
 
 ### Diagrams
 

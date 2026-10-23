@@ -5,14 +5,31 @@ status: active
 actor: ACT-adopter
 other-actors:
   - ACT-ci-pipeline
+  - ACT-operator
 requirements:
   - REQ-002
   - REQ-004
+  - REQ-005
   - REQ-006
   - REQ-007
   - REQ-009
+  - REQ-012
+  - REQ-015
+  - REQ-018
+  - REQ-019
+  - REQ-020
 after:
   - [UC-014]
+shortfalls:
+  - at: 8
+    issue: "#1765"
+    record: ADR-034#1
+  - at: "1d"
+    issue: "#1884"
+    record: COR-004
+  - at: "3d"
+    issue: "#1867"
+    record: COR-062#4
 pkit:
   friction:
     anchors:
@@ -29,41 +46,31 @@ pkit:
         - COR-050#12
         - COR-054#3
         - COR-055#6
+        - COR-062#4
+        - COR-062#10
+        - COR-004
         - ADR-019#2
+        - ADR-034#1
         - ADR-055#5
+        - ADR-068#6
       artefact:
         - ACT-adopter
         - ACT-ci-pipeline
+        - ACT-operator
         - REQ-002
         - REQ-004
+        - REQ-005
         - REQ-006
         - REQ-007
         - REQ-009
+        - REQ-012
+        - REQ-015
+        - REQ-018
+        - REQ-019
+        - REQ-020
     revalidated:
-      at: 2026-10-23T10:28:59Z
-      outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. Its goal is still the adopter's need to make merges wait on the system's checks, and nothing that changed reaches its steps.
-      deferred:
-        - anchor:
-            kind: path
-            value: src/project_kit/friction_check.py
-          reason: "The change check keeps answer files out of what a path anchor stands on, beside the answers COR-062 moves out of the block, which the steps still put there. Deferred beside the COR-050 anchors, which #1779 rewrites, since a revalidation would claim the whole use case holds."
-        - anchor:
-            kind: record
-            value: ADR-055#5
-          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the queue's path here does not say. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: COR-050#12
-          reason: "Step 6 lists what the change check fails on, and COR-062 adds findings and a judgment against the change's own head. #1779 builds it and rewrites the list."
-        - anchor:
-            kind: record
-            value: COR-050#2
-          reason: "Step 6 lists what the change check fails on, and COR-062 adds findings and a judgment against the change's own head. #1779 builds it and rewrites the list."
-        - anchor:
-            kind: record
-            value: COR-050#6
-          reason: "Step 6 lists what the change check fails on, and COR-062 adds findings and a judgment against the change's own head. #1779 builds it and rewrites the list."
+      at: 2026-10-23T09:50:24Z
+      outcome: updated
 ---
 
 # UC-006 — Make my merges wait on the system's checks
@@ -73,6 +80,7 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to answer, and gates the merge on the exit status. It names the base once, for every check (COR-054 point 3).
+- **Operator** (`ACT-operator`): is asked before `pkit config set` writes in a repository other than the session's own. So no such write happens silently (REQ-012).
 
 **Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
@@ -86,11 +94,16 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit config set friction.mode enforcing --yes`.
+8. At its entry, before it reads anything, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+
+> [!WARNING]
+> **Not built yet:** `pkit config set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+
 2. The system validates the whole configuration file with the new value, and writes it. It prints `set friction.mode = enforcing  (.pkit/project/config.yaml)`.
-3. The adopter adds a job to the project's CI that runs `pkit sync`, then `pkit validate`, `pkit friction check` and the project's other checks. The job sets `PKIT_CHECK_BASE` to the pull request's target. In project-kit, that job is `.github/workflows/checks.yml`.
+3. The adopter adds a job to the project's CI that runs `pkit sync`, then `pkit validate`, `pkit friction check` and the project's other checks. The job sets `PKIT_CHECK_BASE` to the pull request's target, and sets `PKIT_CHECK_HEAD` to the pull request's head (COR-062 point 4). In project-kit, that job is `.github/workflows/checks.yml`.
 4. The adopter makes that job a required status of the default branch, on the hosting service.
 5. On each pull request, the CI pipeline runs the job with no terminal, and no check asks anything.
-6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` finding. The change check fails on unanswered friction, a `bump`, a dead anchor, an unresolved kind or a resolver's missing answer.
+6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` finding. The change check fails on unanswered friction, a `bump`, a dead anchor, an unresolved kind and a resolver's missing answer. It fails too on an answer file written as COR-062 point 10 forbids.
 7. The hosting service holds the merge until the job passes.
 
 **Variants:**
@@ -98,12 +111,23 @@ pkit:
 - **1a.** The value is not a mode, such as `loud`. The system refuses it with the schema's message, and writes nothing.
 - **1b.** The adopter keeps the default, `warning` mode. The change check reports what it finds and passes, so only validation's errors and the other checks fail the job.
 - **1c.** The adopter writes `friction.mode` by hand, with a value that is no mode. The change check reads it as `warning`, with a warning line, and `pkit validate` fails on it (COR-050 point 12).
+- **1d.** The adopter passes `--dry-run`, to see first each edit the command would make. The system names each edit, and writes nothing (REQ-009).
+
+> [!WARNING]
+> **Not built yet:** `pkit config set` takes no `--dry-run`, and refuses the flag. COR-004 decides that it offers one, and #1884 tracks it.
+
 - **3a.** The job does not run `pkit sync` first. A registered validator then says "environment not provisioned — run `pkit sync`", an `error` finding, so `pkit validate` fails.
 - **3b.** The job's checkout lacks the base. Each check that compares refuses with its fixes, such as fetching the base or naming another.
 - **3c.** The job's checkout is shallow. The change check names, in its header, each artefact whose history the cut hides (UC-002).
+- **3d.** The project's merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The change check judges what each answer read against the head of the answer's own change, never against the queue's merge (COR-062 point 4).
+
+> [!WARNING]
+> **Not built yet:** on a queue's merge, the change check reads the queue's merge as each change's own head. COR-062 point 4 decides that the check judges against the change's own head wherever it runs, and #1867 tracks it.
+
 - **4a.** The adopter never makes the job required. The checks run and report, and nothing holds the merge (COR-050 point 12). The use case ends.
 - **6a.** The base moved on after the branch left it. The change check reports an `outdated-base` and never fails on it, since the fix is to update the branch.
 - **6b.** No place is declared yet, or nothing in the places carries the `pkit` container. The change check is dormant and passes.
+- **6c.** A documentation root the backbone configuration declares does not exist yet. Validation warns of it, and does not fail the job on it (REQ-015).
 - **7a.** Someone with the right bypasses the required status, or commits straight to the default branch. The job does not hold that change.
 
 **Postconditions:** No pull request merges into the default branch through the hosting service's protection while a check of the required job fails on it.
