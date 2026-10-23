@@ -16,9 +16,9 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-23T09:46:33Z
+      at: 2026-10-23T23:02:39Z
       outcome: unchanged
-      unchanged-because: DEC-037, DEC-056 and a comment of the configuration schema stop calling the permission model a capability, and only their wording changes. The README says nothing that rests on that name.
+      unchanged-because: DEC-057 states what the capability is for, from what the README's opening already says, and decides no new behaviour. Nothing the README describes changes.
       deferred:
         - anchor:
             kind: path
