@@ -97,18 +97,20 @@ def segments(command: str) -> list[list[str]]:
     prefixes (and a leading `export`) stripped. Fixes the `export X=1 && gh …`
     false-prompt that the flat settings matcher couldn't catch.
 
-    An assignment holding an untrusted construct, such as `X=$(./x.sh)`, is not
-    stripped (#1917): its value may run a command, so it stays in its segment,
-    where no grant covers it."""
+    A segment that only assigns is not dropped where a token of it holds an
+    untrusted construct, such as `X=$(./x.sh)` (#1917): the value may run a
+    command, so the segment stays whole, and no grant covers it. Where a command
+    follows the assignments, they are stripped as before, so a deny on that
+    command still binds, as on `X=$(true) rm -rf ~`."""
     out: list[list[str]] = []
     for raw in _SEP.split(command.strip()):
         toks = raw.split()
-        while toks and (
-            toks[0] == "export"
-            or (_ENVVAR.match(toks[0]) and not _UNTRUSTED.search(toks[0]))
-        ):
-            toks = toks[1:]
-        if toks:
+        rest = toks
+        while rest and (rest[0] == "export" or _ENVVAR.match(rest[0])):
+            rest = rest[1:]
+        if rest:
+            out.append(rest)
+        elif any(_UNTRUSTED.search(tok) for tok in toks):
             out.append(toks)
     return out
 

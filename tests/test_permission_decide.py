@@ -2711,16 +2711,18 @@ def test_a_newline_and_a_background_amp_separate_segments(decide_mod):
 
 
 def test_an_assignment_holding_a_substitution_stays_a_segment(decide_mod):
-    assert decide_mod.segments("gh pr list && X=$(python3 x.py)") == [
+    assert decide_mod.segments("gh pr list && X=$(./x.sh)") == [
         ["gh", "pr", "list"],
-        ["X=$(python3", "x.py)"],
+        ["X=$(./x.sh)"],
     ]
-    assert decide_mod.segments("export X=`python3 x.py` && gh pr list") == [
-        ["X=`python3", "x.py`"],
+    assert decide_mod.segments("export X=`./x.sh` && gh pr list") == [
+        ["export", "X=`./x.sh`"],
         ["gh", "pr", "list"],
     ]
-    # A plain assignment is still stripped, as before.
+    # A plain assignment is still stripped, as before, and so is one in front
+    # of a command, so the command's own privileges are recognised.
     assert decide_mod.segments("export GH_HOST=x && gh pr list") == [["gh", "pr", "list"]]
+    assert decide_mod.segments("X=$(true) gh pr list") == [["gh", "pr", "list"]]
 
 
 @pytest.mark.parametrize(
@@ -2747,6 +2749,10 @@ def test_a_granted_command_without_an_untrusted_construct_still_allows(
         ("gh pr list > x ; rm -rf ~", "destructive-fs"),
         ("cd /x && rm -rf ~ > log", "destructive-fs"),
         ("gh pr list $(id)\nsudo whoami", "privilege-escalation"),
+        # behind an assignment holding a quote or a substitution
+        ("FOO='' git push --force", "vcs-history-rewrite"),
+        ('FOO="x" sudo id', "privilege-escalation"),
+        ("X=$(true) rm -rf ~", "destructive-fs"),
     ],
 )
 def test_a_deny_still_wins_over_an_untrusted_construct(decide_mod, catalog, command, privilege):

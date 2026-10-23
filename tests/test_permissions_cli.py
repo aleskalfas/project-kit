@@ -3029,16 +3029,24 @@ def test_decide_verdict_path_byte_identical_to_main():
                 '    false-prompt that the flat settings matcher couldn\'t catch."""\n',
                 "    false-prompt that the flat settings matcher couldn't catch.\n"
                 "\n"
-                "    An assignment holding an untrusted construct, such as `X=$(./x.sh)`, is not\n"
-                "    stripped (#1917): its value may run a command, so it stays in its segment,\n"
-                '    where no grant covers it."""\n',
+                "    A segment that only assigns is not dropped where a token of it holds an\n"
+                "    untrusted construct, such as `X=$(./x.sh)` (#1917): the value may run a\n"
+                "    command, so the segment stays whole, and no grant covers it. Where a command\n"
+                "    follows the assignments, they are stripped as before, so a deny on that\n"
+                '    command still binds, as on `X=$(true) rm -rf ~`."""\n',
             ),
             (
-                '        while toks and (toks[0] == "export" or _ENVVAR.match(toks[0])):\n',
-                "        while toks and (\n"
-                '            toks[0] == "export"\n'
-                "            or (_ENVVAR.match(toks[0]) and not _UNTRUSTED.search(toks[0]))\n"
-                "        ):\n",
+                '        while toks and (toks[0] == "export" or _ENVVAR.match(toks[0])):\n'
+                "            toks = toks[1:]\n"
+                "        if toks:\n"
+                "            out.append(toks)\n",
+                "        rest = toks\n"
+                '        while rest and (rest[0] == "export" or _ENVVAR.match(rest[0])):\n'
+                "            rest = rest[1:]\n"
+                "        if rest:\n"
+                "            out.append(rest)\n"
+                "        elif any(_UNTRUSTED.search(tok) for tok in toks):\n"
+                "            out.append(toks)\n",
             ),
         ),
         "decide": (

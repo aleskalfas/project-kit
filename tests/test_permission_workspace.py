@@ -270,10 +270,12 @@ def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, postur
     # construct the splitter cannot trust is never allowed by a grant, with or
     # without a leading `cd`, so a lenient posture abstains and a strict one
     # denies, with a reason naming the construct (ADR-025 point 2). Where main
-    # decides such a command otherwise, ours is that verdict. Once this is on
-    # main, ours equals main's again, and this branch may be deleted.
+    # decides such a command otherwise, ours is that verdict, and a deny of
+    # main's stays a deny: a deny still wins. Once this is on main, ours
+    # equals main's again, and this branch may be deleted.
     if ours != mains and dm._UNTRUSTED.search(command):
         assert ours[0] == ("deny" if posture == "strict" else "abstain"), ours
+        assert mains[0] != "deny" or ours[0] == "deny", (ours, mains)
         assert "untrusted construct" in ours[1], ours
         return
     assert ours == mains
