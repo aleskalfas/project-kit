@@ -33,13 +33,19 @@ lead by a bare `#` (COR-050 point 2). The one reading of such an anchor
 (`artefact_parts`) finds the section by `sections_by_slug` and the lead by
 `lead`, here, so the checks, validation and the artefacts document cut the same
 part (ADR-057 point 2).
+
+`links_set_aside` reads a body's inline links in running text — outside fenced
+code, code spans, comments and headings — and reads each whose target a
+predicate takes as its words alone. Artefact discovery calls it to set aside the
+derived links a component declares (COR-050 point 5), so the line breaks, the
+headings and every part's place in the body stay as they were.
 """
 
 from __future__ import annotations
 
 import io
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass
 from typing import Any, cast
 
@@ -61,6 +67,14 @@ _HEADING = re.compile(r"^(#{1,6})[ \t]+(.*?)[ \t]*#*[ \t]*$")
 # What continues an id past a heading's opening characters: a word character, or a hyphen or
 # a dot joined to one — so `uc-login` is not the id opening `uc-login-sso` or `uc-login.v2`.
 _ID_CONTINUES = re.compile(r"\w|[-.]\w")
+
+# An inline link, `[words](target)`, not an image: its words hold no bracket, and its target
+# no space and no parenthesis.
+_INLINE_LINK = re.compile(r"(?<!!)\[(?P<words>[^\[\]]+)\]\((?P<target>[^()\s]+)\)")
+
+# What hides a run of running text, a line break included: a comment, and a code span.
+_COMMENT = re.compile(r"<!--.*?-->", re.S)
+_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`).+?(?<!`)\1(?!`)", re.S)
 
 # ruamel.yaml is untyped; the loaded value is judged where it is read.
 _yaml: Any = YAML(typ="safe")
@@ -338,3 +352,42 @@ def entry_section(body: str, entry_id: str) -> str:
     read = Body.read(body)
     extent = read.section_by_id(entry_id)
     return "" if extent is None else read.text_of(extent)
+
+
+def links_set_aside(body: str, sets_aside: Callable[[str], bool]) -> str:
+    """`body` with each inline link in running text whose target `sets_aside` takes read
+    as its words alone (COR-050 point 5).
+
+    Running text is the body outside fenced code, as `_scan` reads it, code spans,
+    comments and headings. A link there is `[words](target)`, never an image, its
+    words holding no bracket and its target no space and no parenthesis. Every other
+    character stays as written, so a word beside a link still counts, as does a link
+    of any other form. A link that only begins in running text, inside a code span or
+    a comment say, is left as written.
+    """
+    if "](" not in body:
+        return body
+    hidden = [
+        (start, start + len(line))
+        for start, line, outside in _scan(body)
+        if not outside or _HEADING.match(line)
+    ]
+    chars = list(body)
+    for start, end in hidden:
+        chars[start:end] = " " * (end - start)
+    masked = "".join(chars)
+    hidden += [(m.start(), m.end()) for p in (_COMMENT, _CODE_SPAN) for m in p.finditer(masked)]
+    out: list[str] = []
+    at = 0
+    for match in _INLINE_LINK.finditer(body):
+        start, end = match.span()
+        if any(start < h_end and h_start < end for h_start, h_end in hidden):
+            continue
+        if not sets_aside(match["target"]):
+            continue
+        out += [body[at:start], match["words"]]
+        at = end
+    if not out:
+        return body
+    out.append(body[at:])
+    return "".join(out)
