@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=4 fingerprint=sha256:19261849b9e01be9eeab4216c1b785e06855b31c941c86e07945793577193f46 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:369b747db514d04b929496ab9392f6f77ae701bf3a2f3523c4451c6ef4a31647 -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -40,7 +40,7 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it](../requirements/functional/REQ-050-agent-proposes.md)
 - [REQ-051 · Functional · An id, once settled, names one artefact for good, save a freed id](../requirements/functional/REQ-051-id-names-one-artefact.md)
 - [REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say](../requirements/functional/REQ-052-record-only-with-something-to-say.md)
-- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and a record's always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
+- [REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always](../requirements/functional/REQ-053-structure-binds-where-the-rule-binds.md)
 
 ### Not built yet
 

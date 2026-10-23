@@ -92,7 +92,7 @@ pkit:
 - **9b.** The adopter finds a shipped part wrong. It is a change to the capability, so the adopter files a change request with `pkit report change-request`, through the `report-author` skill. The project keeps the part meanwhile (DEC-001 point 1).
 - **10a.** The adopter would drop, loosen or reorder a shipped part, or add a form or a kind. No entry can say so, and the agent proposes none (DEC-001 point 1).
 - **10b.** The tightening would add to the revalidation record's kind. The file's schema refuses it, since no rule binds on a record. The adopter may relabel the record's parts instead (DEC-001 point 1).
-- **11a.** The file breaks, such as by a key its schema does not take, or a part its kind does not hold. The system reports each fault as an error at its place, and applies none of the file. The stamp refuses while it stands. The adopter mends the file, and the path rejoins at step 11.
+- **11a.** The file breaks, such as by a key its schema does not take, or a part its kind does not hold. The system reports each fault as an error at its place, and applies none of the file. The stamp refuses while the fault stands. The adopter mends the file, and the path rejoins at step 11.
 - **11b.** A tightening names a rule that is no rule of the project's own, which is an error. One whose rule is superseded or withdrawn is reported with the rule that replaces it, and binds nothing. The rest of the file applies.
 - **12a.** The tightening's rule is proposed. The added part binds nothing yet, and the preview places it where the rule would bind (DEC-001 point 1).
 - **14a.** Neither candidate describes the project truly. The adopter deletes both before committing, so neither takes an id, and the path goes on at step 3 for the next kind.

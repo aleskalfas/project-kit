@@ -1,8 +1,8 @@
 ---
 id: REQ-053
-title: The check holds a body to its declared structure only where the format rule binds, and a record's always
+title: The check holds a body to its declared structure only where the format rule binds, and holds a record's body always
 status: active
-statement: The check holds an artefact's body to its declared structure only where the format rule binds and is accepted, and a revalidation record's body always.
+statement: The check holds an artefact's body to its declared structure only where the accepted format rule binds, and holds a revalidation record's body always.
 measure: Where the format rule does not bind on an artefact, the check fails nothing in its body, and its summary counts the artefact. A revalidation record's body is held to its declared structure in every project. A preview reports what a proposed rule would find as `preview:`, and never changes the exit status.
 applies-to: "`pkit analysis validate`, and `pkit validate`, which runs it, on every artefact and every revalidation record of each analysis."
 actors:
@@ -20,7 +20,7 @@ pkit:
         - COR-051#7
 ---
 
-# REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and a record's always
+# REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always
 
 **Verified by:** Tests find that an artefact outside every scope is not held to its structure, and that the check reports where no rule of `SAN` binds. They find that a record is held to its structure while the format rule is proposed, and that a preview never changes the exit status.
 

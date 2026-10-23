@@ -320,7 +320,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 
 **Distinctions:**
 
-- **Template:** the file a writer may read, rendered from the declared structure, which shows exactly it. Nothing reads a declared structure out of a template (DEC-001 point 1).
+- **Template:** the file a writer may read. It is rendered from the declared structure, and shows that structure exactly. Nothing reads a declared structure out of a template (DEC-001 point 1).
 - **Schema:** the check of a member's front matter, which holds whatever any [rule](../core/glossary.md#term-rule--rule)'s status. A declared structure binds an [artefact](../core/glossary.md#term-artefact--artefact)'s body only where the format rule binds (DEC-001 point 1).
 
 ## TERM-design-source — design source
@@ -376,7 +376,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **The core's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) to `updated` (DEC-001 point 5).
+- **The core's two answers:** `unchanged` and `updated`, which record a revalidation outcome on its [artefact](../core/glossary.md#term-artefact--artefact). `holds` and a regression map to `unchanged`, and a stale [analysis](#term-analysis--analysis) maps to `updated` (DEC-001 point 5).
 - **A regression whose step an accepted record decides:** the step takes a box, which changes the use case, so it maps to `updated` (DEC-001 point 5).
 - **Ambiguous:** no revalidation outcome yet. Only a person knows whether the [change](../core/glossary.md#term-change--change) was meant, so nothing is recorded until they say (DEC-001 point 5).
 
@@ -395,11 +395,11 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation-record).
 
-**Example:** `revalidations/2026-10-02-export-dropped.md` logs a drift review that `#231` carried. It gives each [artefact](../core/glossary.md#term-artefact--artefact) it covered its [revalidation outcome](#term-revalidation-outcome--revalidation-outcome), and names the gap a regression left.
+**Example:** `revalidations/2026-10-02-export-dropped.md` logs a [revalidation](#term-revalidation--revalidation) that drift triggered and `#231` carried. It gives each [artefact](../core/glossary.md#term-artefact--artefact) it covered its [revalidation outcome](#term-revalidation-outcome--revalidation-outcome), and names the gap a regression left.
 
 **Distinctions:**
 
-- **An artefact's own answer:** the only record of a routine [revalidation](#term-revalidation--revalidation) that finds everything still holds (DEC-001 point 6).
+- **An artefact's own answer:** the only record of a routine revalidation that finds everything still holds (DEC-001 point 6).
 - **Decision record:** a choice and why it was made. A revalidation record logs what one revalidation found, and decides nothing.
 - **Artefact:** a revalidation record is none. It carries no anchors and lies in no [place](../core/glossary.md#term-place--place), and no [rule](../core/glossary.md#term-rule--rule) binds on it (DEC-001 points 1 and 2).
 

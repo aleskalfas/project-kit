@@ -117,7 +117,7 @@ A revalidation outcome ends one [artefact](../../core/glossary.md#term-artefact-
 **Relations:**
 
 - A [revalidation](../glossary.md#term-revalidation--revalidation) gives it to one artefact (DEC-001 point 5).
-- It maps onto one of the core's two answers. `holds` and `code-regressed` map to `unchanged`, `analysis-stale` to `updated`, and `gap-found` to either (DEC-001 point 5).
+- It maps onto one of the core's two answers. `holds` and `code-regressed` map to `unchanged`, `analysis-stale` maps to `updated`, and `gap-found` maps to either (DEC-001 point 5).
 - A regression whose step an accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides takes a [shortfall](../glossary.md#term-shortfall--shortfall)'s box, so it maps to `updated` (DEC-001 point 5).
 
 **States:** None.
@@ -130,7 +130,13 @@ Defined in [TERM-revalidation-record](../glossary.md#term-revalidation-record--r
 
 **Why:** Most [revalidations](../glossary.md#term-revalidation--revalidation) find that everything holds, and a file for each would bury the few that matter. Git already records the routine ones, through the [answer](../../core/glossary.md#term-answer--answer) on each [artefact](../../core/glossary.md#term-artefact--artefact) (DEC-001).
 
-A revalidation record logs one revalidation that had something to say. It was planned, or found a regression, a gap or a stale artefact that a person confirmed. It names the [change](../../core/glossary.md#term-change--change) that carried it, its trigger, each artefact it covered with its [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) and why, and each gap with its resolution. It is named by its day and its subject, never numbered.
+A revalidation record logs one revalidation that had something to say. That revalidation was planned, or found a regression, a gap or a stale artefact that a person confirmed. The revalidation record names:
+
+- the [change](../../core/glossary.md#term-change--change) that carried the revalidation, and its trigger
+- each artefact the revalidation covered, with its [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) and why
+- each gap, with its resolution
+
+A revalidation record is named by its day and its subject, never numbered.
 
 **Attributes:**
 
@@ -159,7 +165,7 @@ Defined in [TERM-design-source](../glossary.md#term-design-source--design-source
 
 **Why:** A pointer returns the exact text reviewed, which no version number does. So a planned record points at the text itself, and the [analysis](../glossary.md#term-analysis--analysis)'s [artefacts](../../core/glossary.md#term-artefact--artefact) and records carry no declared versions (DEC-001).
 
-A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as an issue's body or a design note. Its [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) names it by what it is, its link where it lies outside the repository, and a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
+A design source is one text of a proposed [change](../../core/glossary.md#term-change--change) that a planned [revalidation](../glossary.md#term-revalidation--revalidation) read, such as an issue's body or a design note. Its [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) names it with a pointer to the text read. In this repository, the pointer is a commit the [default branch](../../core/glossary.md#term-default-branch--default-branch) holds, or the change the record lands in.
 
 **Attributes:**
 
@@ -184,7 +190,7 @@ Defined in [TERM-revalidation-proposal](../glossary.md#term-revalidation-proposa
 
 **Why:** Telling a stale [analysis](../glossary.md#term-analysis--analysis) from regressed code is a question of intent. An agent can propose the [answer](../../core/glossary.md#term-answer--answer) from the [change](../../core/glossary.md#term-change--change)'s context, but when intent is unclear, only a person knows (DEC-001).
 
-A revalidation proposal is what the analysis-resolver agent drafts for a person, in the [agent workspace](../../core/glossary.md#term-agent-workspace--agent-workspace). For each flagged [artefact](../../core/glossary.md#term-artefact--artefact), upstream first, it gives the [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) the evidence supports, with that evidence and the commands that record it. Where the agent cannot tell stale from regressed, the artefact carries a question instead.
+A revalidation proposal is what the analysis-resolver agent drafts for a person, in the [agent workspace](../../core/glossary.md#term-agent-workspace--agent-workspace). For each flagged [artefact](../../core/glossary.md#term-artefact--artefact), upstream first, the proposal gives the [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) the evidence supports, with that evidence and the commands that record it. Where the agent cannot tell stale from regressed, the artefact carries a question instead.
 
 **Attributes:**
 
@@ -202,15 +208,15 @@ A revalidation proposal is what the analysis-resolver agent drafts for a person,
 **Always true:**
 
 - The agent proposes, and a person records. The proposal changes no artefact (DEC-001 point 5).
-- It never proposes an edit that makes an artefact match code that regressed (DEC-001 point 5).
+- The agent never proposes an edit that makes an artefact match code that regressed (DEC-001 point 5).
 
 ## Shortfall
 
 Defined in [TERM-shortfall](../glossary.md#term-shortfall--shortfall).
 
-**Why:** An accepted record binds the [system](../../core/glossary.md#term-system--system) from its acceptance, and the code may follow later. A [use case](../glossary.md#term-use-case--use-case) written to the code alone would hide what the record asks. One written to the record alone would describe behaviour that is not there. With a box below the step, both stay true (DEC-001).
+**Why:** An accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) binds the [system](../../core/glossary.md#term-system--system) from its acceptance, and the code may follow later. A [use case](../glossary.md#term-use-case--use-case) written to the code alone would hide what the record asks. One written to the record alone would describe behaviour that is not there. With a box below the step, both stay true (DEC-001).
 
-A shortfall is a step or a variant of a use case that the system does not carry out yet. An accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides it, so the step keeps the words the record decides. A box below the step says what the system lacks, and names the record and the issue that tracks building it.
+A shortfall is a step or a variant of a use case that the system does not carry out yet. An accepted decision record decides it, so the step keeps the words the record decides. A box below the step says what the system lacks, and names the record and the issue that tracks building it.
 
 **Attributes:**
 
@@ -221,7 +227,10 @@ A shortfall is a step or a variant of a use case that the system does not carry 
 **Relations:**
 
 - It is one step or variant of one use case (DEC-001 point 1).
-- A [revalidation](../glossary.md#term-revalidation--revalidation) meets one in three ways: planned, a regressed step a record decides, or such a description found with no behaviour (DEC-001 point 5).
+- A [revalidation](../glossary.md#term-revalidation--revalidation) meets one in three ways (DEC-001 point 5):
+  - planned, before the code
+  - where the code regressed a step a decision record decides
+  - where it finds such a description with no behaviour
 
 **States:** A shortfall stays open until the [change](../../core/glossary.md#term-change--change) that builds its step removes the box and the entry. The [pull request](../../core/glossary.md#term-pull-request--pull-request) of that change closes the shortfall's issue (DEC-001 point 1).
 

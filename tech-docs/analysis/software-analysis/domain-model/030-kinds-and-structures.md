@@ -65,7 +65,7 @@ flowchart LR
 
 Defined in [TERM-artefact-kind](../glossary.md#term-artefact-kind--artefact-kind).
 
-**Why:** The [analysis](../glossary.md#term-analysis--analysis) keeps several kinds of product knowledge: who uses the [system](../../core/glossary.md#term-system--system), what each user wants and how, and what the words mean. Each kind's shape is declared once, as data, so a script can check every member against it (DEC-001).
+**Why:** The [analysis](../glossary.md#term-analysis--analysis) keeps several kinds of product knowledge, such as who uses the [system](../../core/glossary.md#term-system--system) and what the words mean. Each kind's shape is declared once, as data, so a script can check every member against it (DEC-001).
 
 An artefact kind is a category of what an analysis holds, such as its actors, its [use cases](../glossary.md#term-use-case--use-case) or its glossary terms. Every member of one kind has front matter of the same shape, which the kind's schema checks, and the same parts in its body. Each artefact kind lies in a [place](../../core/glossary.md#term-place--place) of its own, which gives its members one [artefact type](../../core/glossary.md#term-artefact-type--artefact-type).
 
@@ -111,7 +111,7 @@ A declared structure lists, in order, the parts that each member of one [artefac
 
 **Always true:**
 
-- An [artefact](../../core/glossary.md#term-artefact--artefact)'s body is held to it where the format [rule](../../core/glossary.md#term-rule--rule) binds, and a revalidation record's body always (DEC-001 point 1).
+- An [artefact](../../core/glossary.md#term-artefact--artefact)'s body is held to it where the format [rule](../../core/glossary.md#term-rule--rule) binds, and a revalidation record's body is held to it always (DEC-001 point 1).
 - Artefacts in force move to the current declared structure, and a revalidation record stays as it was written (DEC-001 point 1).
 
 ## Hint
@@ -120,7 +120,7 @@ Defined in [TERM-hint](../glossary.md#term-hint--hint).
 
 **Why:** The first writer of an [artefact](../../core/glossary.md#term-artefact--artefact), often an agent, should meet what a part asks for rather than a bare label. So the hint stands where the content goes (DEC-001).
 
-A hint is a marked comment on one line, `<!-- pkit:hint … -->`, which says what goes in a part or a field and gives an example. The [stamp](../../core/glossary.md#term-stamp--stamp) writes it as the placeholder of each part and each front-matter field a writer fills. The writer writes the content in its [place](../../core/glossary.md#term-place--place), and deletes the hint.
+A hint is a marked comment on one line, `<!-- pkit:hint … -->`, which says what goes in a part or a field and gives an example. The [stamp](../../core/glossary.md#term-stamp--stamp) writes it as the placeholder of each part and each front-matter field a writer fills. The writer writes the content where the hint stood, and deletes the hint.
 
 **Attributes:**
 

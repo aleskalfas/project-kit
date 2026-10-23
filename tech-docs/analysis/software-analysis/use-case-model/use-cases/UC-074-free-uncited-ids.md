@@ -57,8 +57,8 @@ pkit:
 4. The developer adds an entry under `numbering.freed-by` in `.pkit/capabilities/software-analysis/project/config.yaml`. The entry names that commit by its full id, and lists the ids (DEC-001 point 3).
 5. The developer runs `pkit analysis check-numbers`.
 6. The system checks that the entry can be honoured. The commit lies on the default branch's history, and the default branch lost each listed file by it last. Every file an id was ever given is freed. The system lists the ids each entry frees, one line for each entry, and writes nothing (core:REQ-005).
-7. The developer opens the pull request that adds the entry. It says where the developer looked and what they found, so a reviewer can judge the declaration.
-8. Once the entry lands, the stamp gives each freed id again, as though it was never given. Where a freed id is the number it would have followed, the stamp says so, naming the commit (REQ-051).
+7. The developer opens the pull request that adds the entry. The pull request says where the developer looked and what they found, so a reviewer can judge the declaration.
+8. Once the entry lands, the stamp gives each freed id again, as though it was never given. Where a freed id is the number the stamp would have followed, the stamp says so, naming the commit (REQ-051).
 
 **Variants:**
 

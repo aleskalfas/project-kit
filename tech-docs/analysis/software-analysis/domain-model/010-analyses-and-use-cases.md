@@ -86,7 +86,7 @@ Defined in [TERM-use-case](../glossary.md#term-use-case--use-case).
 
 **Why:** A use case is true of the product for as long as the product supports it. Kept apart from any one design, it persists after that design ships, and the design's review of it stays with the design (DEC-001).
 
-A use case states one actor's goal and how the [system](../../core/glossary.md#term-system--system) fulfils it. It names the other actors who take part, what holds before it starts and what starts it. Its main path of steps and the variants that branch from them say what the system must do, as the accepted [decision records](../../core/glossary.md#term-decision-record--decision-record) decide it.
+A use case states one actor's goal and how the [system](../../core/glossary.md#term-system--system) fulfils it, with the other actors who take part. Its main path of steps and the variants that branch from them say what the system must do, as the accepted [decision records](../../core/glossary.md#term-decision-record--decision-record) decide it.
 
 **Attributes:**
 
@@ -98,7 +98,7 @@ A use case states one actor's goal and how the [system](../../core/glossary.md#t
 **Relations:**
 
 - It belongs to one [analysis](../glossary.md#term-analysis--analysis), and anchors its actors and the decisions it rests on or is answered by (DEC-001 points 2 and 4).
-- A precondition's producers are use cases of its own analysis. It may name itself, as a release starts from the last release (DEC-001 point 1).
+- A precondition's producers are use cases of its own analysis. A use case may name itself there, as a release starts from the last release (DEC-001 point 1).
 
 **States:** A use case is in force until it is withdrawn. A withdrawn one keeps its file and its id, and is never deleted (DEC-001 point 3).
 
