@@ -64,7 +64,7 @@ pkit:
 2. In its front matter, the developer gives the set's name and its own version. Its scope selects the artefacts for its rules, by their paths or their types (COR-051 point 2).
 3. The developer writes each rule as a section headed by its id, `RS-<SET>-NNN`, and its title, holding the statement. Each rule has an entry in `rules` too (COR-051 points 2 and 3).
 4. A new rule takes no status, so it is proposed and binds nothing (COR-051 point 4).
-5. The developer names in `inherits` each method rule set the set extends, pinned to its major, as `<component>:<SET>@<major>` writes it. The developer never edits the method rule set itself, which its component owns (COR-051 points 6 and 7).
+5. The developer names in `inherits` each method rule set the set extends, pinned to its major, as `<component>:<SET>@<major>` writes it. The developer never edits the method rule set to extend it, since its component owns it (COR-051 points 6 and 7).
 6. The developer runs `pkit validate`. Its `rule-sets` pass checks each set's schema and the join between its data and its sections. It checks the ids, the origins, the successors and what each set inherits too (COR-051 points 2, 3, 5 and 7).
 7. The developer runs `pkit rule-sets reach`. The system answers which accepted rules bind on each artefact, and through which sets. It names each rule that a pin behind its set holds back (COR-051 point 7).
 8. The developer runs `pkit rule-sets reach --preview`, which answers as if every proposed rule were accepted. It marks what holds only under the preview, and validation never reads that answer.
@@ -78,10 +78,16 @@ pkit:
 - **2a.** A scope holds an empty list, names neither paths nor types, or names a type that no owner declares. Validation fails on it, and the path rejoins at step 2.
 - **5a.** The set would inherit a set that does not exist under the address written, or the inheriting would close a cycle. Validation fails, naming the set, and the path rejoins at step 5.
 - **5b.** An inherited rule offers an extension point, and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so a change there flags the fill (COR-051 point 7).
-- **6a.** A rule's id carries another set's name, or redefines an inherited id. Or a rule and its section do not match, or two rule sets share a name. Validation fails, naming each, and the path rejoins at step 3.
+- **6a.** Validation fails on a rule or a set's name, naming each, and the path rejoins at step 3. It fails on each of these:
+  - a rule's id that carries another set's name, or redefines an inherited id
+  - a rule and a section that do not match
+  - two rule sets that share a name
 - **6b.** An accepted rule has no complete origin, or its origin cites a decision record that is not accepted. Validation fails, naming the rule (COR-051 point 5).
 - **6c.** A rule's origin cites a source of a kind a capability registers. Validation resolves it through that kind's command, offline as REQ-007 asks, and stops the command after thirty seconds (REQ-006). A command that gives no answer fails validation as `unanswered-source`, and is never passed (REQ-004). A kind no installed component resolves is reported, without failing (COR-051 point 5).
-- **6d.** A fill names an extension point that no inherited rule offers, or fills one a second time along the chain. Or the filling rule anchors no rule it fills. Validation fails at the fill, and the path rejoins at step 5.
+- **6d.** Validation fails at a fill, and the path rejoins at step 5. It fails on each of these:
+  - a fill of an extension point that no inherited rule offers
+  - a second fill of one extension point along the chain
+  - a filling rule that anchors no rule it fills
 - **6e.** One artefact is reached through two routes that pin one set at different majors, or through sets that bring different fills for one extension point. Validation fails on the artefact, naming both routes, and never chooses between them (COR-051 point 7).
 - **6f.** A pin names a major that its inherited set has passed. Validation's `versions` member fails on the inheriting set, naming the new major, and `pkit status` shows the pin with its fix. No rule binds through the pin until the project reviews the new major and updates it.
 - **6g.** A file in a `rule-sets` folder reads as a set that no location rule finds, such as one a root changed by hand left behind. Validation fails on it as `unfound-rule-set`, naming how to mend it (COR-051 point 6).
