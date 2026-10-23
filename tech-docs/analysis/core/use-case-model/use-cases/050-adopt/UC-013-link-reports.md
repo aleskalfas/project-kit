@@ -7,6 +7,8 @@ other-actors:
   - ACT-adopter
 after:
   - [UC-012]
+requirements:
+  - REQ-005
 pkit:
   friction:
     anchors:
@@ -20,10 +22,10 @@ pkit:
       artefact:
         - ACT-methodology-maintainer
         - ACT-adopter
+        - REQ-005
     revalidated:
-      at: 2026-10-23T08:53:59Z
-      outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. No step of linking a report to its fix rests on a need that moved or was reworded.
+      at: 2026-10-23T22:22:54Z
+      outcome: updated
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix
@@ -45,7 +47,7 @@ pkit:
 **Main path:**
 
 1. The maintainer runs `pkit report inbox` in a clone of the report target.
-2. The system lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`).
+2. The system lists the reports on the report target, by any author, newest first, with each one's number, kind, state and title. It reads at most the latest 100 issues of each search it runs (`report.py`). It writes nothing (REQ-005).
 3. The maintainer reads a report on the hosting service, with the versions its environment block gives.
 4. The maintainer files the issue that will fix the report, or finds one that exists.
 5. The maintainer runs `pkit report link <report> <fix>`. The system adds `- [ ] #<fix>` under the report's `## Tracked by` heading, which makes that issue one of the report's tracked fixes. The system prints `Linked #<fix> into #<report>'s Tracked by.`
