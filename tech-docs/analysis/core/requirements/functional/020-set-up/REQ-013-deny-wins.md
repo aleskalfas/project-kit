@@ -20,6 +20,10 @@ pkit:
       artefact:
         - ACT-adopter
         - ACT-operator
+    revalidated:
+      at: 2026-10-23T18:41:56Z
+      outcome: unchanged
+      unchanged-because: A deny on any segment still wins over every allow, and new tests check it for a chained command. The change only stops an allow on one segment from carrying the others.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

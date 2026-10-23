@@ -17,9 +17,8 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-23T09:46:32Z
-      outcome: unchanged
-      unchanged-because: ADR-060 now says the backbone's permission code grants the agent workspace, where it named a permission capability. This page's account of the workspace grant is as it was.
+      at: 2026-10-23T18:42:12Z
+      outcome: updated
 ---
 
 # Permissions — decision core
@@ -104,9 +103,15 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   - **A remainder carrying an untrusted construct ABSTAINS** — if the remainder after the strip contains a quote, `$()`, a backtick, or a `<` / `>` redirection (anything the dumb splitter can't be trusted on), the decision is **abstain (prompt)**, never auto-allow. So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through — and so does a redirect into the agent workspace (`cd /x && cat > .agent-workspace/body.md <<'EOF'`): the workspace grant covers the file tools only.
 
-  - **Pipe handling is unchanged** — the cd-strip does not touch pipes. `|` is not a cd-separator and does not force an abstain, so pipe-composition porosity (e.g. `gh … | sh`) is **inherited unchanged** from the bare-command path: `cd /x && gh … | sh` decides exactly as bare `gh … | sh` does. The honest boundary for `| sh` is the OS sandbox (ADR-004: this layer is a speed-bump, not a boundary), and pipe handling is out of scope for ADR-025 Phase 1.
+  - **A pipe is decided segment by segment.** The cd-strip does not touch pipes, and `|` is not a cd-separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
   The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition) and deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
+
+**Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
+
+So where only `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` abstain. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
+
+A deny on any segment still wins over every allow. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction.
 
 ## Default-agent subject resolution
 

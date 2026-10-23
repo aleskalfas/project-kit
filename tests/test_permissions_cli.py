@@ -2867,6 +2867,7 @@ def test_decide_verdict_path_byte_identical_to_main():
     # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
     # the verdict logic, not the model-loader. Guard exactly that function (and
     # the pure helpers it composes) against `main`, not the whole file.
+    import re
     import subprocess
 
     root = Path(__file__).resolve().parent.parent
@@ -2932,9 +2933,13 @@ def test_decide_verdict_path_byte_identical_to_main():
     #
     # Transitive call graph (verified against decide.py):
     #   decide        → _strip_leading_cd, recognized_privileges,
-    #                   _effective_grants, _privilege_ids, _scope_ok  (+ _UNTRUSTED)
+    #                   _effective_grants, _privilege_ids, _scope_ok,
+    #                   _uncovered_segments, _shown_program  (+ _UNTRUSTED)
     #   hook_decide   → _read_default_agent, decide
-    #   recognized_privileges → segments (+ _SEP/_ENVVAR), _matches_bash
+    #   recognized_privileges → segments (+ _SEP/_ENVVAR), _segment_privileges
+    #   _uncovered_segments   → segments, _segment_privileges
+    #   _segment_privileges   → _matches_bash
+    #   _shown_program        → (+ _BARE_WORD)
     #   _privilege_ids        → (+ _TOKEN)
     #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
     #   _scope_ok             → _extract_host
@@ -2956,6 +2961,9 @@ def test_decide_verdict_path_byte_identical_to_main():
         "segments",
         "_strip_leading_cd",
         "_matches_bash",
+        "_segment_privileges",
+        "_uncovered_segments",
+        "_shown_program",
         "_privilege_ids",
         "_scope_ok",
         "_extract_host",
@@ -2968,6 +2976,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_CD_SEP",
         "_UNTRUSTED",
         "_BARE_CD",
+        "_BARE_WORD",
     )
     # Deliberate, reviewed wording change (#1421): `_scope_ok` cited
     # "ADR-004 §61", in its docstring and in the reason it gives for refusing a
@@ -2992,12 +3001,56 @@ def test_decide_verdict_path_byte_identical_to_main():
                 "            f'natively enforced…\"); use positive allow-list globs only'",
             ),
         ),
+        # Deliberate, reviewed verdict change (#1908): a compound Bash command
+        # is allowed only when an allow covers every segment (ADR-025 point 2).
+        # `decide` keeps the privileges its allow grants cover and, before
+        # allowing, asks `_uncovered_segments` for any segment none of them
+        # covers. These rewrites apply exactly that change to main's side, and
+        # the rest of `decide` is compared byte for byte. The two helpers it
+        # brings are new, so they are compared only once main defines them.
+        # Once this is on main, the rewrites find nothing to replace, and this
+        # entry may be deleted.
+        "decide": (
+            (
+                "    outside its scope.\n",
+                "    outside its scope.  A compound Bash command is allowed only when an allow\n"
+                "    covers every segment of it (ADR-025 point 2).\n",
+            ),
+            ("    matched_allow = False\n", "    allowed: set[str] = set()\n"),
+            ("            matched_allow = True\n", "            allowed |= overlap\n"),
+            (
+                "    if matched_allow:\n"
+                '        return "allow", f"allow grant for {subject} on {sorted(hits)}"\n',
+                "    if allowed:\n"
+                "        # A grant on one segment of a compound never carries another (#1908):\n"
+                "        # every segment the splitter yields must match a privilege an allow\n"
+                "        # covers, or the core does not allow (ADR-025 point 2). The reason\n"
+                "        # names only each uncovered segment's program, never its arguments,\n"
+                "        # which may hold a path or a secret the diagnostic log redacts.\n"
+                "        uncovered = _uncovered_segments(catalog, request, allowed)\n"
+                "        if not uncovered:\n"
+                '            return "allow", f"allow grant for {subject} on {sorted(hits)}"\n'
+                "        programs = sorted({_shown_program(toks) for toks in uncovered})\n"
+                '        if posture == "strict":\n'
+                '            return "deny", (\n'
+                '                f"strict posture: no grant covers the {programs} segment(s) "\n'
+                '                f"of this compound"\n'
+                "            )\n"
+                '        return "abstain", (\n'
+                '            f"no grant covers the {programs} segment(s) of this compound — "\n'
+                '            f"fail closed, defer to the harness\'s normal flow"\n'
+                "        )\n",
+            ),
+        ),
     }
+    introduced = ("_segment_privileges", "_uncovered_segments", "_shown_program", "_BARE_WORD")
     for fn in frozen:
+        if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
+            continue  # #1908: compared once main defines it
         base_source = _extract_func_source(base, fn)
         for old, new in sanctioned.get(fn, ()):
             base_source = base_source.replace(old, new)
-        rewritten = " (after the sanctioned rewrite of its citation)" if fn in sanctioned else ""
+        rewritten = " (after its sanctioned rewrite)" if fn in sanctioned else ""
         assert _extract_func_source(working, fn) == base_source, (
             f"the `{fn}` verdict path diverged from main{rewritten} — ADR-032 "
             f"requires it byte-identical (only `load_model` / `active_profile` / "
