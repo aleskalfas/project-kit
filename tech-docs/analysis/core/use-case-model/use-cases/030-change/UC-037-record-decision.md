@@ -69,7 +69,7 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): drafts the decision record through the `decision-author` skill, which pairs with the stamp. It leaves the record `proposed`, so that a person accepts it before any work builds on it (UC-040). The architect, as custodian of the architecture records, may draft an ADR (COR-024).
+- **AI agent** (`ACT-ai-agent`): drafts the decision record through the `decision-author` skill, which pairs with the stamp. The agent leaves the record `proposed`, so that a person accepts it before any work builds on it (UC-040). The architect, as custodian of the architecture records, may draft an ADR (COR-024).
 - **CI pipeline** (`ACT-ci-pipeline`): runs the numbering check on each pull request where the project makes it a line of its check gate. It names the pull request's target as the base.
 - **Merge authoriser** (`ACT-merge-authoriser`): accepts the record by their own review, before any work builds on it (UC-040).
 - **Operator** (`ACT-operator`): is asked before the stamp writes in another repository than the session's own. So no such write happens silently (REQ-012).
@@ -85,7 +85,7 @@ pkit:
 
 **Main path:**
 
-1. The developer picks the record's namespace by its scope (COR-025). It is `project` for how the project works, and `adr` for what the project builds and why. It is a capability's name for a decision inside a capability the project authors.
+1. The developer picks the record's namespace by its scope (COR-025). The namespace is `project` for how the project works, and it is `adr` for what the project builds and why. It is a capability's name for a decision inside a capability the project authors.
 2. The developer runs `pkit new decision <namespace> <slug>`, or an AI agent runs it through the `decision-author` skill.
 3. At its entry, before it reads anything, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
