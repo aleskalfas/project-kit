@@ -5,7 +5,7 @@ status: active
 summary: "An AI agent working under the methodology, acting on the system from outside."
 needs:
   - Start every session with the project's rules and conventions loaded.
-  - Find my role definition deployed, with the project's own paths filled in and my own permission grants applied.
+  - Find my agent definition deployed, with the project's own paths filled in and my own permission grants applied.
   - Create a methodology artefact through its paired skill and stamp, so its id, place and front matter come out right.
   - Keep my intermediate files in a workspace that no commit carries and no confirmation guards.
   - Get a delegated agent's result back whole, never cut short while still reading as complete.

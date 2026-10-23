@@ -8,8 +8,8 @@ needs:
   - Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
   - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
   - Choose which installed capability provides a role.
-  - Declare my project's settings once (name, default branch, documentation roots, friction mode, anchored places, declared surface, excluded paths) and have them validated.
-  - Add my own operational rules, settings, permission grants and agent paths beside the methodology's, never editing its files.
+  - Declare my project's backbone configuration once (name, default branch, documentation roots, friction mode, anchored places, declared surface, excluded paths) and have it validated.
+  - Add my own operational rules, the harness's settings, permission grants and agent paths beside the methodology's, never editing its files.
   - Make my merges wait on the system's checks, knowing they bind only once my CI requires them.
   - Re-pin an inherited rule set to its new major version once I have reviewed it.
   - Report a problem with the system, and follow what happens to it.
