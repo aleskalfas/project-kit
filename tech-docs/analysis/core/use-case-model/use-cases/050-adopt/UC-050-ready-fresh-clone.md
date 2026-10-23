@@ -72,7 +72,7 @@ pkit:
 > **Not built yet:** `pkit sync` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 3. The system checks that the running CLI is at the backbone version the project records. It also checks that the last version transition is complete (REQ-010).
-4. The system copies into `.pkit/` the methodology's content at the release the project records. It copies each installed capability that the CLI ships at the version the project records too (COR-059 point 2).
+4. The system copies into `.pkit/` the methodology's content at the release the project records. It also copies each installed capability that the CLI ships at the version the project records (COR-059 point 2).
 5. The system regenerates the state each clone derives from the project's own declarations (ADR-065 point 11):
    - merge delivery, in its tier that asks nothing, into the files each adapter's harness reads, such as `.claude/settings.json` and `CLAUDE.md`
    - the deployed skills and agent definitions
@@ -90,7 +90,7 @@ pkit:
 - **3a.** The project is the methodology's source repository, run by its own code. The system copies nothing, regenerates the derived state, and prints `Self-host sync complete (deploy primitives re-run).` (ADR-059).
 - **3b.** The running CLI is newer than the project's recorded version, and the project pins no version. The system stops and writes nothing (REQ-010). Its message names `pkit upgrade` to move, `pkit pin` to stay, and in a pipeline a committed version pin or the project's version installed.
 - **3c.** The running CLI is older than the project's content or its version pin. The system stops, writes nothing, and names the remedies for that state (REQ-010).
-- **3d.** The last version transition is incomplete. The system stops, writes nothing, and names `pkit upgrade`, which finishes it (REQ-010).
+- **3d.** The last version transition is incomplete. The system stops, writes nothing, and names `pkit upgrade`, which finishes the transition (REQ-010).
 - **3e.** The router could not fetch the project's version pin, and runs the installed CLI instead (UC-052). The system stops only where its check finds another version, naming the remedies of the fallback (ADR-065 point 8).
 - **4a.** A capability the project records is shipped newer, older or not at all, or has no recorded version. The system copies none of these, and reports each (ADR-065 point 1).
 - **4b.** A folder of the project's own sits at `.pkit/lifecycle/`, where the core area of that name would be copied. The system stops before it writes, and names how to move the project's area (ADR-065 point 13).

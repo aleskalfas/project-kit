@@ -94,7 +94,7 @@ pkit:
 > **Not built yet:** `pkit upgrade` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 3. The system asks the distribution's repository for its latest release, and finds the CLI current. It prints `pkit tool is current (v<version>).` (ADR-063 point 1).
-4. The system checks that the CLI is not older than the project's recorded versions or its version pin (REQ-010). It prints `Upgrading backbone: <recorded> -> <target>`, the target being the backbone version the CLI ships, and each component the transition moves.
+4. The system checks that the CLI is not older than the project's recorded versions or its version pin (REQ-010). It prints `Upgrading backbone: <recorded> -> <target>`, and each component the transition moves. The target is the backbone version the CLI ships.
 5. Before it writes anything, the system checks each component's range against the target, and the dependency gates over what the transition leaves. It also checks for a new name collision of a capability's skill or agent definition (REQ-029 and REQ-030).
 6. The system records the target as `backbone_version` in `.pkit/manifest.yaml`, before it writes anything else (REQ-026).
 7. The system copies the target's content into `.pkit/`, with every adapter and each shipped capability the project installed, and renders `.pkit/.gitignore` (ADR-065 point 4).
@@ -114,7 +114,7 @@ pkit:
 - **3c.** The router could not fetch the project's version pin, and runs the installed CLI instead. The system refuses, writes nothing, and names reconnecting, the version pin run through `uvx`, or `pkit unpin` then `pkit upgrade` (ADR-065 point 9).
 - **4a.** The CLI is older than the project's content or its version pin. The system refuses, writes nothing, and names the remedies (REQ-010). The use case ends.
 - **4b.** The project is at the target already. The system prints `Already at backbone v<version>; nothing to upgrade.`, writes the version pin at that version unless `--no-pin` declines it, and the use case ends (ADR-064 point 1).
-- **4c.** The last transition is incomplete. The system says `The last transition is incomplete`, and runs the backbone's migrations from the recorded completion, so this upgrade finishes it (REQ-026).
+- **4c.** The last transition is incomplete. The system says `The last transition is incomplete`, and runs the backbone's migrations from the recorded completion, so this upgrade finishes that transition (REQ-026).
 - **4d.** No completion is recorded, or no manifest. The system says the project's migration history is unknown, and runs every backbone migration up to the target once (ADR-065 point 5 and REQ-026).
 - **5a.** A component's range excludes the target, its distribution ships it older than recorded, or a folder of the project's own takes a core area's name. The system refuses, names each conflict, and writes nothing (REQ-029). The use case ends.
 - **5b.** A dependency gate fails for a capability that does not move. The system warns, naming each dependent, and refuses unless the adopter passes `--force` (ADR-065 point 6).

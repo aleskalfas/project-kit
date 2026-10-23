@@ -102,7 +102,7 @@ pkit:
 
 - **1a.** `pkit upgrade` pinned the project already, as it does by default (UC-051). The path goes on at step 4.
 - **1b.** The operator names the release the content is at, `pkit pin <version>`. The system writes the version pin at it, as step 3 does.
-- **1c.** The operator names a newer release. The system runs that release's own `pkit upgrade` through `uvx`, with routing bypassed, which brings the content to it (REQ-026, REQ-029 and REQ-030). Only then does it write the version pin, last (ADR-049 point 5 and REQ-027).
+- **1c.** The operator names a newer release. The system runs that release's own `pkit upgrade` through `uvx`, with routing bypassed, which brings the content to that release (REQ-026, REQ-029 and REQ-030). Only then does it write the version pin, last (ADR-049 point 5 and REQ-027).
 - **1d.** On the path of 1c, the operator first passes `--dry-run` to `pkit pin`, to see each edit the raise would make. The system names each edit, and writes nothing (REQ-009).
 
 > [!WARNING]
@@ -111,7 +111,7 @@ pkit:
 - **1e.** On the path of 1c, the newer release's upgrade fails. The system says so, and leaves the version pin where it was (ADR-049 point 1). The use case ends.
 - **1f.** The operator names an older release. The system refuses with `refusing to pin <version>: it is OLDER than this project's current content`, and writes nothing. It names `git checkout <ref> -- .pkit/` to roll the project back (ADR-049 point 3).
 - **1g.** The operator names a branch, a commit or a pre-release. The system refuses with `pkit pin takes a version like 1.145.0`, and writes nothing.
-- **1h.** The project has no manifest. The system refuses, naming `pkit upgrade`, which writes it (ADR-065 point 8).
+- **1h.** The project has no manifest. The system refuses, naming `pkit upgrade`, which writes the manifest (ADR-065 point 8).
 - **1i.** The project is the methodology's source repository. The system refuses, since there the router runs the checkout's own code before it reads any version pin (ADR-059).
 - **6a.** The project pins no version, or its version pin names the running CLI's release. The system runs the command itself (ADR-039 point 3).
 - **6b.** The working directory lies in the methodology's source repository. The system runs that checkout's own code, and reads no version pin (ADR-039 point 1).

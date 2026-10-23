@@ -81,7 +81,7 @@ pkit:
 5. The system writes `.pkit/manifest.yaml`, recording the CLI's backbone version as the target, before it copies anything (ADR-065 point 4 and REQ-026).
 6. The system copies the methodology's areas from the content the CLI carries into `.pkit/` (COR-001 and ADR-033).
 7. The system creates each seed path, such as each area's `project/` folder and the agents' overlay (COR-001 and ADR-065 point 11).
-8. The system registers each adapter it copied, at the version it ships. Each adapter's scripts then merge the methodology's entries into the files its harness reads, and deploy its skills and agent definitions. For Claude Code those are `.claude/settings.json` and `CLAUDE.md` (COR-002 and REQ-002).
+8. The system registers each adapter it copied, at the version the adapter ships. Each adapter's scripts then merge the methodology's entries into the files its harness reads, and deploy its skills and agent definitions. For Claude Code those are `.claude/settings.json` and `CLAUDE.md` (COR-002 and REQ-002).
 9. The system renders `.pkit/.gitignore`, creates the agent workspace, and provisions each registered query command (ADR-009 point 7).
 10. The system records `completed_version` last, and prints `Install complete. Recommended next steps:`. The steps name the CLI's install at its own version (REQ-031), the project's settings files, lines for `.gitignore`, and `pkit visibility private`.
 11. The adopter runs `pkit status`. The system shows how the methodology is wired into the project, and writes nothing (REQ-005). It shows the backbone's version, the agent workspace, the adapter, each capability, the rule sets and the connections.
@@ -99,7 +99,7 @@ pkit:
 - **4b.** The target holds a `.pkit/` that is no install. The system refuses, and names moving it aside. The use case ends.
 - **4c.** The target is the methodology's source repository, or the CLI ships an adapter and a capability of one name. The system refuses and writes nothing. The use case ends.
 - **8a.** The project already holds `.claude/settings.json`. Before the merge, the system backs it up to `.claude/settings.json.pre-pkit` (ADR-065 point 11).
-- **10a.** The install stops before step 10, such as on a failing script. The manifest records the target and no completion, so the project reads as incomplete, and `pkit upgrade` finishes it (UC-051 and REQ-026).
+- **10a.** The install stops before step 10, such as on a failing script. The manifest records the target and no completion, so the project reads as incomplete, and `pkit upgrade` finishes the install (UC-051 and REQ-026).
 - **12a.** The team has not adopted the system. The adopter runs `pkit visibility private`, and the system writes the footprint the installed components declare into `.git/info/exclude` (ADR-009 point 3).
 - **12b.** On the path of 12a, files of the footprint are tracked already. The system lists them and asks `Proceed?`. On a yes, it removes them from git's index with `git rm --cached`, and keeps each working copy (ADR-009 point 4).
 - **12c.** The adopter runs `pkit visibility`. The system shows the mode, `shared` or `private`, and the footprint, and writes nothing.
@@ -110,7 +110,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit visibility` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-**Postconditions:** The project holds the system at the CLI's release. Its `.pkit/` holds the methodology's content, and its manifest's target and completion name that release. Its adapters are registered, with their skills and agent definitions deployed. The system is committed for the team, or hidden from the shared repository in this clone.
+**Postconditions:** The project holds the system at the CLI's release. Its `.pkit/` holds the methodology's content, and its manifest's target and completion name that release. Its adapters are registered, with their skills and agent definitions deployed. The system is committed for the team, or it is hidden from the shared repository in this clone.
 
 **Minimal guarantees:**
 
