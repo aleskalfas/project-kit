@@ -2936,7 +2936,7 @@ def test_decide_verdict_path_byte_identical_to_main():
     #                   _effective_grants, _privilege_ids, _scope_ok,
     #                   _uncovered_segments, _shown_program  (+ _UNTRUSTED)
     #   hook_decide   → _read_default_agent, decide
-    #   recognized_privileges → segments (+ _SEP/_ENVVAR), _segment_privileges
+    #   recognized_privileges → segments (+ _SEP/_ENVVAR/_UNTRUSTED), _segment_privileges
     #   _uncovered_segments   → segments, _segment_privileges
     #   _segment_privileges   → _matches_bash
     #   _shown_program        → (+ _BARE_WORD)
@@ -3001,45 +3001,105 @@ def test_decide_verdict_path_byte_identical_to_main():
                 "            f'natively enforced…\"); use positive allow-list globs only'",
             ),
         ),
-        # Deliberate, reviewed verdict change (#1908): a compound Bash command
-        # is allowed only when an allow covers every segment (ADR-025 point 2).
-        # `decide` keeps the privileges its allow grants cover and, before
-        # allowing, asks `_uncovered_segments` for any segment none of them
-        # covers. These rewrites apply exactly that change to main's side, and
-        # the rest of `decide` is compared byte for byte. The two helpers it
-        # brings are new, so they are compared only once main defines them.
-        # Once this is on main, the rewrites find nothing to replace, and this
-        # entry may be deleted.
+        # Deliberate, reviewed verdict change (#1917): a Bash command holding a
+        # construct the splitter cannot trust is never allowed by a grant,
+        # anywhere in it, with or without a leading `cd` (ADR-025 point 2). The
+        # splitter also separates at a background `&` and a newline, and keeps
+        # an assignment holding such a construct in its segment. `_UNTRUSTED`
+        # gains `(`, which opens every substitution. `decide` checks the
+        # construct after the grants, so a deny still wins, where it used to
+        # check only the rest of a command after a leading `cd`. These rewrites
+        # apply exactly that change to main's side, and the rest of each is
+        # compared byte for byte. Once this is on main, the rewrites find
+        # nothing to replace, and these entries may be deleted.
+        "_SEP": (
+            (
+                r'_SEP = re.compile(r"\s*(?:&&|\|\||\||;)\s*")',
+                r'_SEP = re.compile(r"\s*(?:&&|\|\||\||;|&|\n)\s*")',
+            ),
+        ),
+        "_UNTRUSTED": (
+            (
+                '_UNTRUSTED = re.compile(r"""[\'"`<>]|\\$\\(""")',
+                '_UNTRUSTED = re.compile(r"""[\'"`<>(]""")',
+            ),
+        ),
+        "segments": (
+            (
+                '    false-prompt that the flat settings matcher couldn\'t catch."""\n',
+                "    false-prompt that the flat settings matcher couldn't catch.\n"
+                "\n"
+                "    An assignment holding an untrusted construct, such as `X=$(./x.sh)`, is not\n"
+                "    stripped (#1917): its value may run a command, so it stays in its segment,\n"
+                '    where no grant covers it."""\n',
+            ),
+            (
+                '        while toks and (toks[0] == "export" or _ENVVAR.match(toks[0])):\n',
+                "        while toks and (\n"
+                '            toks[0] == "export"\n'
+                "            or (_ENVVAR.match(toks[0]) and not _UNTRUSTED.search(toks[0]))\n"
+                "        ):\n",
+            ),
+        ),
         "decide": (
             (
-                "    outside its scope.\n",
-                "    outside its scope.  A compound Bash command is allowed only when an allow\n"
                 "    covers every segment of it (ADR-025 point 2).\n",
+                "    covers every segment of it, and a Bash command holding a construct the\n"
+                "    splitter cannot trust never is (ADR-025 point 2).\n",
             ),
-            ("    matched_allow = False\n", "    allowed: set[str] = set()\n"),
-            ("            matched_allow = True\n", "            allowed |= overlap\n"),
             (
-                "    if matched_allow:\n"
-                '        return "allow", f"allow grant for {subject} on {sorted(hits)}"\n',
-                "    if allowed:\n"
-                "        # A grant on one segment of a compound never carries another (#1908):\n"
-                "        # every segment the splitter yields must match a privilege an allow\n"
-                "        # covers, or the core does not allow (ADR-025 point 2). The reason\n"
-                "        # names only each uncovered segment's program, never its arguments,\n"
-                "        # which may hold a path or a secret the diagnostic log redacts.\n"
-                "        uncovered = _uncovered_segments(catalog, request, allowed)\n"
-                "        if not uncovered:\n"
-                '            return "allow", f"allow grant for {subject} on {sorted(hits)}"\n'
-                "        programs = sorted({_shown_program(toks) for toks in uncovered})\n"
+                "    # auto-approves exactly as `gh pr list` would. Conservative on two axes:\n"
+                "    #   - it strips ONLY a bare `cd` (`_strip_leading_cd` "
+                "returns None otherwise,\n"
+                '    #     so a tricky `cd "/x; rm -rf ~" && …` falls '
+                "through to the full-command\n"
+                "    #     path, where it is decided whole and at worst abstains — never silently\n"
+                "    #     allowed); and\n"
+                "    #   - if the remainder carries anything the dumb "
+                "splitter can't be trusted on\n"
+                "    #     (a quote, `$()`, a backtick, a `<` / `>` redirection), it ABSTAINS\n"
+                "    #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty).\n",
+                "    # auto-approves exactly as `gh pr list` would. It strips ONLY a bare `cd`\n"
+                "    # (`_strip_leading_cd` returns None otherwise, so a tricky\n"
+                '    # `cd "/x; rm -rf ~" && …` falls through to the '
+                "full-command path, where it\n"
+                "    # is decided whole and at worst abstains — never silently allowed). The\n"
+                "    # remainder is decided like any command, so the check for an untrusted\n"
+                "    # construct below covers it as it covers a command with no `cd` (#1917);\n"
+                "    # the bare `cd` it strips cannot hold one.\n",
+            ),
+            (
+                "            if _UNTRUSTED.search(remainder):\n"
+                '                return "abstain", (\n'
+                '                    "leading-cd strip: remainder carries an '
+                'untrusted construct "\n'
+                '                    "(quote / $() / backtick / redirection) — fail closed"\n'
+                "                )\n",
+                "",
+            ),
+            (
+                '            return "deny", deny_msg\n    if allowed:\n',
+                '            return "deny", deny_msg\n'
+                "    # A construct the dumb splitter cannot be trusted on, anywhere in a Bash\n"
+                "    # command, keeps every grant from allowing it (#1917, ADR-025 point 2 from\n"
+                "    # ADR-004 decision point 4): the segments the splitter yields may not be the\n"
+                "    # commands the shell runs. It is checked after the grants, so a deny still\n"
+                "    # wins. The reason lists the kinds of construct, never the command's text.\n"
+                '    if request.get("type") == "bash" and '
+                '_UNTRUSTED.search(request.get("command", "")):\n'
                 '        if posture == "strict":\n'
                 '            return "deny", (\n'
-                '                f"strict posture: no grant covers the {programs} segment(s) "\n'
-                '                f"of this compound"\n'
+                '                "strict posture: an untrusted construct '
+                '(quote / substitution / "\n'
+                '                "backtick / redirection) in the command"\n'
                 "            )\n"
                 '        return "abstain", (\n'
-                '            f"no grant covers the {programs} segment(s) of this compound — "\n'
-                '            f"fail closed, defer to the harness\'s normal flow"\n'
-                "        )\n",
+                '            "an untrusted construct (quote / substitution / backtick / "\n'
+                '            "redirection) in the command — fail closed, '
+                "defer to the harness's \"\n"
+                '            "normal flow"\n'
+                "        )\n"
+                "    if allowed:\n",
             ),
         ),
     }

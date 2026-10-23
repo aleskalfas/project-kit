@@ -166,17 +166,17 @@ def test_a_symlink_out_of_the_workspace_is_outside_it(dm, catalog, root, tmp_pat
 # Every command below writes or deletes only inside the workspace — or claims to.
 # None is granted by it: each is decided as main decides any shell command, so
 # under the widest shipped profile a lenient posture defers to the operator and a
-# strict one denies — except where a leading `cd` leaves a redirect behind it,
-# which ADR-025 abstains on in either posture. The first five are the security
-# review's proofs of concept (arbitrary execution through an emitter's
-# arguments); the `cd …/nope; …` pair is the code review's (a `;` runs the
-# remainder in the ORIGINAL directory when the `cd` fails, so "relative to the
-# `cd` directory" was never certain — `rm -f *` would empty the project root).
+# strict one denies, with or without a leading `cd` (ADR-025 point 2, #1917).
+# The first five are the security review's proofs of concept (arbitrary
+# execution through an emitter's arguments); the `cd …/nope; …` pair is the
+# code review's (a `;` runs the remainder in the ORIGINAL directory when the
+# `cd` fails, so "relative to the `cd` directory" was never certain — `rm -f *`
+# would empty the project root).
 
 _SHELL_WRITES = [  # (command, lenient verdict, strict verdict)
     # the security review's proofs of concept
     (f"echo =(touch PWNED) > {WS}/x", "abstain", "deny"),  # zsh process substitution
-    (f"cd src && echo =(touch PWNED) > ../{WS}/x", "abstain", "abstain"),  # behind a leading cd
+    (f"cd src && echo =(touch PWNED) > ../{WS}/x", "abstain", "deny"),  # behind a leading cd
     (rf"echo ${{(e)C:=\$\(touch PWNED\)}} > {WS}/x", "abstain", "deny"),  # zsh (e) flag
     (
         rf"echo ${{C:=\$\(touch PWNED\)}}${{C@P}} > {WS}/x",
@@ -186,7 +186,7 @@ _SHELL_WRITES = [  # (command, lenient verdict, strict verdict)
     (f"echo *(e:'touch PWNED':) > {WS}/x", "abstain", "deny"),  # zsh glob qualifier
     # the code review's: the `cd` fails, the remainder runs in the project root
     (f"cd {WS}/nope; rm -f *", "abstain", "deny"),
-    (f"cd {WS}/nope; echo x > f", "abstain", "abstain"),
+    (f"cd {WS}/nope; echo x > f", "abstain", "deny"),
     # the plain shapes the reverted recognizer read as the workspace's
     (f"echo hello > {WS}/note.txt", "abstain", "deny"),
     (f"printf '%s\\n' one two >> {WS}/note.txt", "abstain", "deny"),
@@ -206,9 +206,9 @@ def test_a_shell_write_into_the_workspace_is_not_granted_by_it(
 
 
 def test_a_redirect_behind_a_leading_cd_still_fails_closed(dm, catalog, root) -> None:
-    # ADR-025 unchanged: after a stripped `cd`, a redirect or a quote abstains
+    # ADR-025 point 2: after a stripped `cd`, a redirect or a quote abstains
     # even when the command in front of it is granted and the target is the
-    # workspace.
+    # workspace, as it does with no `cd` (#1917).
     model = _autonomous(dm, catalog)
     for command in (
         f"cd {root} && git diff > {WS}/change.patch",
@@ -264,9 +264,19 @@ def main_dm(tmp_path_factory):
 def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, posture) -> None:
     model = _autonomous(dm, catalog, posture=posture)
     payload = _bash(command, root)
-    assert dm.hook_decide(model, catalog, payload, project_root=str(root)) == main_dm.hook_decide(
-        model, catalog, payload, project_root=str(root)
-    )
+    ours = dm.hook_decide(model, catalog, payload, project_root=str(root))
+    mains = main_dm.hook_decide(model, catalog, payload, project_root=str(root))
+    # Deliberate, reviewed verdict change (#1917): a command holding a
+    # construct the splitter cannot trust is never allowed by a grant, with or
+    # without a leading `cd`, so a lenient posture abstains and a strict one
+    # denies, with a reason naming the construct (ADR-025 point 2). Where main
+    # decides such a command otherwise, ours is that verdict. Once this is on
+    # main, ours equals main's again, and this branch may be deleted.
+    if ours != mains and dm._UNTRUSTED.search(command):
+        assert ours[0] == ("deny" if posture == "strict" else "abstain"), ours
+        assert "untrusted construct" in ours[1], ours
+        return
+    assert ours == mains
 
 
 # --- a worktree has its own workspace ----------------------------------------------

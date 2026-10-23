@@ -41,7 +41,11 @@ from typing import Any
 # key exactly — a mis-resolved scoped token would empty the grant's privilege
 # match and the deny would silently not bind (a fail-open hazard).
 _TOKEN = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?)\]$")
-_SEP = re.compile(r"\s*(?:&&|\|\||\||;)\s*")
+# The segment separators: `&&`, `||`, `|`, `;`, a background `&` and a newline
+# (#1917). The shell runs the command after a newline or a lone `&` as it runs
+# the one after `;`, so each starts a segment that needs a grant of its own.
+# `&&` and `||` come before `&` and `|` so a double one is never read as two.
+_SEP = re.compile(r"\s*(?:&&|\|\||\||;|&|\n)\s*")
 _ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 # The leading-`cd` strip (ADR-025 Phase 1). A bare `cd <path>` prefix changes
@@ -54,10 +58,14 @@ _ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 # `cd src | gh …` makes no shell sense, so `|` / `||` are deliberately excluded).
 _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # Constructs the dumb splitter cannot be trusted on (ADR-004 dp-4 / ADR-025
-# decision 2): a quote, command substitution `$(`, a backtick, or a `<` / `>`
-# redirection. Their presence in the remainder of a cd-stripped compound makes
-# the decision ABSTAIN — never auto-allow — because a per-segment matcher is
-# structurally blind to what these compose into.
+# decision 2): a quote, a backtick, a `<` / `>` redirection, and a `(`. The `(`
+# opens every substitution the shells offer: `$(…)`, `<(…)` / `>(…)`, zsh's
+# `=(…)`, and zsh's glob qualifiers and parameter flags, such as `*(e:…:)` and
+# `${(e)…}`, which run code. A command holding any of them ANYWHERE, with or
+# without a leading `cd`, is never allowed by a grant (#1917): `decide()`
+# abstains, or denies under a strict posture, because a per-segment matcher is
+# structurally blind to what these compose into. A deny still wins. It stays a
+# plain scan of the command string, not a parse (ADR-025 point 3).
 #
 # `|`, like `&&`, `||` and `;`, is not in this set because the splitter
 # separates on it: each side of a pipe is a segment of its own, and `decide()`
@@ -67,7 +75,7 @@ _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # `cd`, and `gh … | jq` abstains too unless a grant covers `jq`. A pipe whose
 # every side is granted, such as `git diff | git apply`, still allows: that is
 # no new widening, since each segment carries its own grant (ADR-025 point 6).
-_UNTRUSTED = re.compile(r"""['"`<>]|\$\(""")
+_UNTRUSTED = re.compile(r"""['"`<>(]""")
 # A bare `cd <path>` first segment: literally `cd` then exactly one path token
 # with no shell metacharacter and not a flag. The token is intentionally
 # restrictive — the moment it carries anything the splitter can't trust, we do
@@ -87,11 +95,18 @@ _BARE_WORD = re.compile(r"^[A-Za-z0-9._+-]+$")
 def segments(command: str) -> list[list[str]]:
     """Split a compound command into segments, each tokenized, with env-var
     prefixes (and a leading `export`) stripped. Fixes the `export X=1 && gh …`
-    false-prompt that the flat settings matcher couldn't catch."""
+    false-prompt that the flat settings matcher couldn't catch.
+
+    An assignment holding an untrusted construct, such as `X=$(./x.sh)`, is not
+    stripped (#1917): its value may run a command, so it stays in its segment,
+    where no grant covers it."""
     out: list[list[str]] = []
     for raw in _SEP.split(command.strip()):
         toks = raw.split()
-        while toks and (toks[0] == "export" or _ENVVAR.match(toks[0])):
+        while toks and (
+            toks[0] == "export"
+            or (_ENVVAR.match(toks[0]) and not _UNTRUSTED.search(toks[0]))
+        ):
             toks = toks[1:]
         if toks:
             out.append(toks)
@@ -494,7 +509,8 @@ def decide(
     privilege checks (web-fetch).  Effective grants = baseline (`all`) ∪ the
     subject's own grants; deny wins; a scoped allow denies the privilege
     outside its scope.  A compound Bash command is allowed only when an allow
-    covers every segment of it (ADR-025 point 2).
+    covers every segment of it, and a Bash command holding a construct the
+    splitter cannot trust never is (ADR-025 point 2).
 
     Scope semantics by privilege ``scope_type`` (from the catalog):
       - ``directory`` (default): grant scope globs are matched against ``cwd``.
@@ -507,24 +523,18 @@ def decide(
     # Leading-`cd` strip (ADR-025 Phase 1). When a bash command's first segment
     # is a bare `cd <path> &&` / `cd <path> ;`, drop it and decide on the
     # remainder against the unchanged grant model — `cd src && gh pr list`
-    # auto-approves exactly as `gh pr list` would. Conservative on two axes:
-    #   - it strips ONLY a bare `cd` (`_strip_leading_cd` returns None otherwise,
-    #     so a tricky `cd "/x; rm -rf ~" && …` falls through to the full-command
-    #     path, where it is decided whole and at worst abstains — never silently
-    #     allowed); and
-    #   - if the remainder carries anything the dumb splitter can't be trusted on
-    #     (a quote, `$()`, a backtick, a `<` / `>` redirection), it ABSTAINS
-    #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty).
+    # auto-approves exactly as `gh pr list` would. It strips ONLY a bare `cd`
+    # (`_strip_leading_cd` returns None otherwise, so a tricky
+    # `cd "/x; rm -rf ~" && …` falls through to the full-command path, where it
+    # is decided whole and at worst abstains — never silently allowed). The
+    # remainder is decided like any command, so the check for an untrusted
+    # construct below covers it as it covers a command with no `cd` (#1917);
+    # the bare `cd` it strips cannot hold one.
     # The remainder is decided at the ORIGINAL cwd: stripping `cd` can never
     # grant a directory-scoped privilege the un-stripped command lacked.
     if request.get("type") == "bash":
         remainder = _strip_leading_cd(request.get("command", ""))
         if remainder is not None:
-            if _UNTRUSTED.search(remainder):
-                return "abstain", (
-                    "leading-cd strip: remainder carries an untrusted construct "
-                    "(quote / $() / backtick / redirection) — fail closed"
-                )
             return decide(model, catalog, {**request, "command": remainder}, posture)
 
     hits = recognized_privileges(catalog, request)
@@ -564,6 +574,22 @@ def decide(
                 f"{g.get('scope')}, not {request.get('cwd')!r}"
             )
             return "deny", deny_msg
+    # A construct the dumb splitter cannot be trusted on, anywhere in a Bash
+    # command, keeps every grant from allowing it (#1917, ADR-025 point 2 from
+    # ADR-004 decision point 4): the segments the splitter yields may not be the
+    # commands the shell runs. It is checked after the grants, so a deny still
+    # wins. The reason lists the kinds of construct, never the command's text.
+    if request.get("type") == "bash" and _UNTRUSTED.search(request.get("command", "")):
+        if posture == "strict":
+            return "deny", (
+                "strict posture: an untrusted construct (quote / substitution / "
+                "backtick / redirection) in the command"
+            )
+        return "abstain", (
+            "an untrusted construct (quote / substitution / backtick / "
+            "redirection) in the command — fail closed, defer to the harness's "
+            "normal flow"
+        )
     if allowed:
         # A grant on one segment of a compound never carries another (#1908):
         # every segment the splitter yields must match a privilege an allow
