@@ -19,7 +19,7 @@ is the one reader of those declarations and the one walker of the places:
   to validation — is done in `friction_validate`.
 - `declared_places` — the resolved places, project first (in declaration
   order) then capabilities by name. A capability's place is an object
-  `{path, location?, type?, revisits?, description?}` (the package schema's
+  `{path, location?, type?, revisits?, derived-links?, description?}` (the package schema's
   `friction-place`): with `location`, inside that entry of the document
   locations it declares — where
   `docs_roots.read_capability_locations`, the one reading of a capability's
@@ -127,6 +127,17 @@ is the one reader of those declarations and the one walker of the places:
   (COR-050 point 5); the parsed instant of `at`, so writing the same instant
   differently is no change (point 3); and a deferral's reason, whitespace
   folded (point 4).
+- `SetAside` — the derived links a component declares on its places (COR-050
+  point 5; `derived-links`, `DerivedLink`), each a regular expression an inline
+  link's target matches whole. Each artefact carries those of every capability
+  place matching its file at the state walked (`Artefact.aside`,
+  `Discovery.aside_of`), and its content, a part's text and a placed file's
+  content read each such link in running text as its words alone
+  (`document_parts.links_set_aside`). A comparison of two states reads both
+  under the later state's: `content(artefact, aside)`, `placed_content(raw,
+  aside)`, and the history walk gives an earlier version the aside of the
+  artefact it stands for (`friction_history.Walker.artefact_in`). A record's
+  content sets nothing aside.
 - `record_content` — what a whole record anchor stands on (COR-050 point 5):
   a record's content, read from its file's bytes by the one reading that
   gives an artefact's content (`document_content`), whether or not a place
@@ -164,6 +175,7 @@ from project_kit.document_parts import (
     Body,
     SectionSpan,
     body_first_line,
+    links_set_aside,
     parse_front_matter,
     split_front_matter,
     yaml_reason,
@@ -171,7 +183,13 @@ from project_kit.document_parts import (
 from project_kit.friction_git import LINK_MODE, CommitTree
 from project_kit.line_breaks import line_break, universal_newlines
 from project_kit.manifest import read_backbone_manifest
-from project_kit.record_points import PointState, RecordPoints, read_points_bytes, split_anchor
+from project_kit.record_points import (
+    PointState,
+    RecordPoints,
+    Standing,
+    read_points_bytes,
+    split_anchor,
+)
 from project_kit.report_context import project_config_path
 from project_kit.working_tree import WorkingTree, working_tree
 
@@ -185,9 +203,9 @@ FRICTION_KEY = "friction"
 UNANCHORED_BECAUSE_KEY = "unanchored-because"
 
 # The package schema's shape a capability place is read in:
-# `{path, location?, type?, revisits?, description?}`, `location` naming an entry of the
-# capability's `docs.locations`, which `docs_roots.read_capability_locations`
-# resolves.
+# `{path, location?, type?, revisits?, derived-links?, description?}`, `location` naming an
+# entry of the capability's `docs.locations`, which
+# `docs_roots.read_capability_locations` resolves.
 PATH_KEY = "path"
 LOCATION_KEY = "location"
 
@@ -201,7 +219,7 @@ _ENTRY_NOUN = {PLACES_KEY: "place", HELD_KEY: "held folder"}
 # The package schema's shape of one entry of each list, as a finding names it:
 # `friction-place` and `friction-held`.
 _ENTRY_SHAPE = {
-    PLACES_KEY: "{path, location?, type?, revisits?, description?}",
+    PLACES_KEY: "{path, location?, type?, revisits?, derived-links?, description?}",
     HELD_KEY: "{location, path, description?}",
 }
 
@@ -225,6 +243,12 @@ LINK_TARGETS_KEY = "targets"
 LINK_ALL_BUT_KEY = "all-but"
 LINK_WHEN_KEY = "when"
 REVISITED_KEY = "revisited"
+
+# The derived links a component's command writes on a place and its check holds (COR-050
+# point 5): the key of a component's place that declares their forms, and the key of one
+# form, a regular expression an inline link's target matches whole.
+DERIVED_LINKS_KEY = "derived-links"
+DERIVED_TARGET_KEY = "target"
 
 #: An artefact's own front-matter field, as a link names one: the package schema's
 #: `own-field`, never the methodology's container.
@@ -369,6 +393,65 @@ class RevisitLink:
 
 
 @dataclass(frozen=True)
+class DerivedLink:
+    """One form of derived link a component's place declares (COR-050 point 5): an
+    inline link in running text whose target `target`, a regular expression, matches
+    whole. `file` is the package metadata declaring it, relative to the project root,
+    and `pointer` a JSON Pointer to the form there."""
+
+    target: str
+    file: str
+    pointer: str
+
+
+@dataclass(frozen=True)
+class SetAside:
+    """The derived links read as their words alone in a body (COR-050 point 5): the
+    targets of every form the places matching a file declare, sorted, each once. Empty,
+    it sets nothing aside, and a body reads as written."""
+
+    targets: tuple[str, ...] = ()
+
+    def __bool__(self) -> bool:
+        return bool(self.targets)
+
+    def body(self, text: str) -> str:
+        """`text` with each link of a declared form in running text read as its words
+        alone (`document_parts.links_set_aside`)."""
+        return _set_aside(self.targets, text) if self.targets else text
+
+    @classmethod
+    def of(cls, links: Iterable[DerivedLink]) -> SetAside:
+        return cls(tuple(sorted({link.target for link in links})))
+
+
+#: The aside of a file no place declaring derived links holds: nothing is set aside.
+NOTHING_SET_ASIDE = SetAside()
+
+
+@functools.lru_cache(maxsize=4096)
+def _set_aside(targets: tuple[str, ...], text: str) -> str:
+    """`SetAside.body`, read once per targets and text for the run: the checks read one
+    body at many comparisons."""
+    pattern = _targets_pattern(targets)
+    return links_set_aside(text, lambda target: pattern.fullmatch(target) is not None)
+
+
+@functools.lru_cache(maxsize=64)
+def _targets_pattern(targets: tuple[str, ...]) -> re.Pattern[str]:
+    return re.compile("|".join(f"(?:{target})" for target in targets))
+
+
+def compiles(target: str) -> str | None:
+    """Why a derived link's target is no regular expression, or `None` where it compiles."""
+    try:
+        re.compile(target)
+    except re.error as exc:
+        return str(exc)
+    return None
+
+
+@dataclass(frozen=True)
 class SettingsPath:
     """One path or glob a setting declares, with where it was written.
 
@@ -383,6 +466,9 @@ class SettingsPath:
     place gives that type is the type resolution's to judge (`Types`).
     `revisits` are the links a capability's place declares (COR-050 point 16),
     in written order: a link the package schema refuses declares nothing, and a
+    project's place declares none. `derived_links` are the forms of the derived
+    links it declares (COR-050 point 5), in written order: a form the package
+    schema refuses, or whose target does not compile, declares nothing, and a
     project's place declares none.
     """
 
@@ -394,6 +480,7 @@ class SettingsPath:
     location: PlaceLocation | None = None
     type: str | None = None
     revisits: tuple[RevisitLink, ...] = ()
+    derived_links: tuple[DerivedLink, ...] = ()
 
     @property
     def is_capability(self) -> bool:
@@ -832,7 +919,8 @@ def _capability_places(
     """A capability's `friction.places` — or, with `key`, its `friction.held` —
     read in the package schema's shape (COR-050 point 1).
 
-    A place is an object `{path, location?, type?, revisits?, description?}`, and a held
+    A place is an object `{path, location?, type?, revisits?, derived-links?, description?}`,
+    and a held
     folder `{location, path, description?}`. With `location`, `path` lies
     inside that entry of the capability's `docs.locations`, where `locations`
     — the one reading, `docs_roots.read_capability_locations` — puts it: its
@@ -882,6 +970,13 @@ def _capability_places(
             if key == PLACES_KEY
             else ()
         )
+        derived = (
+            _derived_links(
+                _mapping_or_empty(entry).get(DERIVED_LINKS_KEY), package_file, entry_pointer
+            )
+            if key == PLACES_KEY
+            else ()
+        )
         places.append(
             SettingsPath(
                 value=path,
@@ -902,6 +997,7 @@ def _capability_places(
                     else None
                 ),
                 revisits=links,
+                derived_links=derived,
             )
         )
     return places, malformed
@@ -955,6 +1051,28 @@ def _revisit_links(value: Any, package_file: str, place_pointer: str) -> tuple[R
             )
         )
     return tuple(links)
+
+
+def _derived_links(value: Any, package_file: str, place_pointer: str) -> tuple[DerivedLink, ...]:
+    """A capability place's `derived-links` (COR-050 point 5), read forgivingly: each form
+    `{target, description?}` whose `target` is a regular expression that compiles. A form
+    in another shape declares nothing, and the package schema refuses it. One whose target
+    does not compile declares nothing either, and the `packages` check fails it."""
+    if not isinstance(value, list):
+        return ()
+    found: list[DerivedLink] = []
+    for index, raw in enumerate(cast(list[Any], value)):
+        target = _mapping_or_empty(raw).get(DERIVED_TARGET_KEY)
+        if not isinstance(target, str) or not target or compiles(target) is not None:
+            continue
+        found.append(
+            DerivedLink(
+                target=target,
+                file=package_file,
+                pointer=f"{place_pointer}/{DERIVED_LINKS_KEY}/{index}",
+            )
+        )
+    return tuple(found)
 
 
 def _resolve_capability_place(
@@ -2389,6 +2507,10 @@ class Artefact:
       walk decided it (`FrictionSettings.exclusion`), else `None`. Such an
       artefact is left out of the measures (COR-050 point 7); an artefact read
       from history, never walked, carries `None`.
+    - `aside`: the derived links its content sets aside (COR-050 point 5), those
+      every capability place matching its file declares at the state walked
+      (`Discovery.aside_of`). An artefact read from history carries the aside of
+      the artefact it stands for (`friction_history.Walker.artefact_in`).
     """
 
     id: str
@@ -2405,6 +2527,7 @@ class Artefact:
     excluded_by: SettingsPath | None = None
     span: SectionSpan | None = None
     body_line: int = 1
+    aside: SetAside = NOTHING_SET_ASIDE
 
     @property
     def excluded(self) -> bool:
@@ -2512,27 +2635,35 @@ class Artefact:
 RecordContent = tuple[str | bytes, dict[str, Any] | None]
 
 
-def document_content(carrier: Mapping[str, Any], body: str) -> tuple[str, dict[str, Any]]:
+def document_content(
+    carrier: Mapping[str, Any], body: str, aside: SetAside = NOTHING_SET_ASIDE
+) -> tuple[str, dict[str, Any]]:
     """The content of what carries a container, and its body (COR-050 point 5): the body
-    as text and the carrier's own fields, never the container."""
-    return body, {k: v for k, v in carrier.items() if k != CONTAINER_KEY}
+    as text, each derived link `aside` gives read as its words alone, and the carrier's
+    own fields, never the container."""
+    return aside.body(body), {k: v for k, v in carrier.items() if k != CONTAINER_KEY}
 
 
-def content(artefact: Artefact) -> tuple[str, dict[str, Any]]:
-    """An artefact's content (COR-050): its body text and its own fields, never the container."""
-    return document_content(artefact.carrier, artefact.body)
+def content(artefact: Artefact, aside: SetAside | None = None) -> tuple[str, dict[str, Any]]:
+    """An artefact's content (COR-050 point 5): its body text and its own fields, never the
+    container, and the derived links of `aside` read as their words alone — by default
+    those its own state declares (`Artefact.aside`). A comparison of two states hands
+    in the later state's, so both are read alike."""
+    sets_aside = artefact.aside if aside is None else aside
+    return document_content(artefact.carrier, artefact.body, sets_aside)
 
 
-def record_content(raw: bytes) -> RecordContent:
+def record_content(raw: bytes, aside: SetAside = NOTHING_SET_ASIDE) -> RecordContent:
     """A record's content (COR-050 point 5), from its file's bytes, whether or not a place
     holds the record.
 
     Where its front matter parses to a mapping, the record is read as a document
     artefact is (`parse_front_matter`, `document_content`): its body as text and its
     own fields, so nothing in the methodology's container counts, whichever block it
-    is. Otherwise its whole file, line endings read universally, with `None` for
-    the fields, so a record without such front matter is still compared, never
-    skipped, and never equals one with it.
+    is, and the derived links of `aside` — the later state's, for a comparison — are
+    read as their words alone. Otherwise its whole file, line endings read
+    universally, with `None` for the fields, so a record without such front matter is
+    still compared, never skipped, and never equals one with it.
     """
     try:
         text = raw.decode("utf-8")
@@ -2541,10 +2672,21 @@ def record_content(raw: bytes) -> RecordContent:
     front_matter, body, _reason = parse_front_matter(text)
     if front_matter is None:
         return universal_newlines(text), None
-    return document_content(front_matter, body)
+    return document_content(front_matter, body, aside)
 
 
-def placed_content(raw: bytes) -> RecordContent:
+def standing_aside(standing: Standing | None, aside: SetAside) -> Standing | None:
+    """What an anchor on a record's point stands on (`record_points.Standing`), the derived
+    links of `aside` read as their words alone in its section and its shared parts, as a
+    record's content reads them (COR-050 point 5)."""
+    if standing is None or not aside:
+        return standing
+    return replace(
+        standing, section=aside.body(standing.section), shared=aside.body(standing.shared)
+    )
+
+
+def placed_content(raw: bytes, aside: SetAside = NOTHING_SET_ASIDE) -> RecordContent:
     """The content of a file a place holds, as a path anchor or an anchor of a registered
     kind reads it (COR-050 point 5), from the file's bytes — the one reading both checks
     compare such a file by (ADR-057 point 2).
@@ -2557,7 +2699,9 @@ def placed_content(raw: bytes) -> RecordContent:
     endings read universally, and no fields — so adding a front matter that holds only
     a container is no change — and an entry's or a rule's container is left out too.
     Where front matter is there but does not parse to a mapping, its whole file, read
-    as a record's is; bytes that are no UTF-8 text, as they are.
+    as a record's is; bytes that are no UTF-8 text, as they are. The derived links
+    `aside` gives — the later state's, for a comparison — are read as their words alone
+    in the body, as in an artefact's content; a whole file sets nothing aside.
     """
     try:
         text = raw.decode("utf-8")
@@ -2565,9 +2709,9 @@ def placed_content(raw: bytes) -> RecordContent:
         return raw, None
     front_matter, body, _reason = parse_front_matter(text)
     if front_matter is not None:
-        return body, without_containers(front_matter)
+        return aside.body(body), without_containers(front_matter)
     if split_front_matter(text)[0] is None:
-        return body, {}
+        return aside.body(body), {}
     return universal_newlines(text), None
 
 
@@ -2836,6 +2980,12 @@ class Discovery:
         """Every place matching each file the walk read, by path, in walk order."""
         return {found.path: found.places for found in self.files}
 
+    def aside_of(self, path: str) -> SetAside:
+        """The derived links set aside in the file at `path` (COR-050 point 5): the forms
+        every capability place matching it declares, at the state walked. A file the walk
+        did not read sets nothing aside. A project's place declares none."""
+        return aside_of_places(self.places_of.get(path, ()))
+
     def links(self, artefact: Artefact) -> tuple[RevisitLink, ...]:
         """The links whose source's change revisits their targets that `artefact` takes
         (COR-050 point 16): those of every capability place matching its file, each once,
@@ -2850,6 +3000,17 @@ class Discovery:
                 for link in place.declaration.revisits
             )
         )
+
+
+def aside_of_places(places: Iterable[Place]) -> SetAside:
+    """The derived links the capability places among `places` declare, each target once
+    (COR-050 point 5)."""
+    return SetAside.of(
+        link
+        for place in places
+        if place.declaration.is_capability
+        for link in place.declaration.derived_links
+    )
 
 
 def discover_artefacts(
@@ -2910,7 +3071,8 @@ def discover_artefacts(
         else:
             mixed = line_break(text) is None
             front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
-            artefacts.extend(replace(a, excluded_by=excluded_by) for a in found)
+            aside = aside_of_places(matching[rel])
+            artefacts.extend(replace(a, excluded_by=excluded_by, aside=aside) for a in found)
         if reason is not None:
             unreadable.append(
                 UnreadableFile(path=rel, place=place, reason=reason, rule_set=rule_set)

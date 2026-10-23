@@ -37,7 +37,9 @@ Pointer:
    to check — a contribution names `command` or `value` but not both,
    documentation locations are
    relative sub-paths, friction places lie inside a declared location or the
-   project and held folders inside a declared location, an offered process
+   project and held folders inside a declared location, the target of each
+   derived link a place declares compiles as a regular expression (COR-050
+   point 5), an offered process
    point names a definition of the component whose
    `interface.version`, where it declares one, equals the point's
    `schema_version` (COR-053 point 5), and the generated `depends-on` list says
@@ -612,6 +614,8 @@ def _repository_findings(
                         f"held folder {path!r} ends in a glob: only the segments before the "
                         f"folder's own name may be globs (COR-050 point 1).",
                     )
+                if key == "places":
+                    _derived_link_findings(_error, index, place.get("derived-links"))
                 location = place.get("location")
                 if isinstance(location, str) and location not in location_names:
                     declared = f" (declared: {sorted(location_names)})." if location_names else "."
@@ -738,6 +742,28 @@ def _project_rule_set_findings(
                 f"(COR-056 point 2).",
             )
     return findings
+
+
+def _derived_link_findings(error: Callable[[str, str], None], index: int, forms: Any) -> None:
+    """Each derived link of the place at `index` whose `target` does not compile as a
+    regular expression (COR-050 point 5): it sets nothing aside, so the links it means
+    would count as content. The schema judges the shape."""
+    from project_kit import friction_discovery as fd  # discovery reads package metadata too
+
+    for number, form in enumerate(_items(forms)):
+        fields: Mapping[str, Any] = (
+            cast("Mapping[str, Any]", form) if isinstance(form, Mapping) else {}
+        )
+        target = fields.get("target")
+        if not isinstance(target, str) or not target:
+            continue
+        reason = fd.compiles(target)
+        if reason is not None:
+            error(
+                f"/friction/places/{index}/derived-links/{number}/target",
+                f"derived link target {target!r} is no regular expression ({reason}), so it "
+                f"sets nothing aside: write a pattern that compiles (COR-050 point 5).",
+            )
 
 
 def _anchor_kind_findings(

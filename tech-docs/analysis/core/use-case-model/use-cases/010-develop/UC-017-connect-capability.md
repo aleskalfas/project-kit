@@ -6,7 +6,7 @@ actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
 after:
-  - [UC-016]
+  - [UC-016, UC-023]
 requirements:
   - REQ-006
   - REQ-009
@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:54:09Z
-      outcome: unchanged
-      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
+      at: 2026-10-23T09:13:48Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
@@ -55,7 +54,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-016:** The capability is recorded in the project's manifest, so the backbone reads its package metadata and its processes.
+- **From UC-016 or UC-023:** The capability is recorded in the project's manifest, so the backbone reads its package metadata and its processes.
 
 **Assumptions:** None.
 

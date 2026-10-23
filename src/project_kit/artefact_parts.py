@@ -38,7 +38,10 @@ read an artefact anchor through it, so they agree on what it names:
   fields, outside the container. It is read in the shape a point's is
   (`record_points.Standing`), so the checks compare and diff the two alike. A
   change elsewhere in the body changes nothing it stands on, and a section
-  keeps its slug wherever it sits.
+  keeps its slug wherever it sits. The derived links a component declares are
+  read as their words alone in the part's text, as in the artefact's content:
+  the target's own, or, for a comparison, the later state's
+  (`AnchoredPart.standing_with`).
 - **The lines a part spans** (`AnchoredPart.span`), counted from its file's
   first line, as an entry's are: exactly the text `part_standing` compares.
 - **The artefact a part anchor counts as** (`whole_target`): for cycles and
@@ -60,7 +63,14 @@ from functools import cached_property
 from typing import cast
 
 from project_kit.document_parts import Body, Extent, SectionSpan, heading_slug
-from project_kit.friction_discovery import Anchor, Artefact, ArtefactKind, Discovery, content
+from project_kit.friction_discovery import (
+    Anchor,
+    Artefact,
+    ArtefactKind,
+    Discovery,
+    SetAside,
+    content,
+)
 from project_kit.record_points import Standing, read_points, split_anchor
 
 #: The part a bare `#` names: a document's lead (COR-050 point 2).
@@ -129,10 +139,23 @@ class AnchoredPart:
     @cached_property
     def standing(self) -> Standing | None:
         """What the part stands on here (`part_standing`): `None` for a whole anchor, a
-        dead or refused one. An ambiguous anchor reads its first section."""
+        dead or refused one. An ambiguous anchor reads its first section. The derived
+        links set aside are the target's own (`Artefact.aside`)."""
+        return self.standing_with(None)
+
+    def standing_with(self, aside: SetAside | None) -> Standing | None:
+        """`standing`, the derived links of `aside` read as their words alone: those of
+        the later state, where a check compares this state with it (COR-050 point 5).
+        `None` gives the target's own."""
         if self.state not in (PartState.LIVE, PartState.AMBIGUOUS) or self.part is None:
             return None
-        return part_standing(self.target, self.part)
+        return part_standing(self.target, self.part, aside)
+
+    @property
+    def aside(self) -> SetAside | None:
+        """The derived links the target's content sets aside, or `None` where it names no
+        artefact: what a comparison with an earlier state reads both states under."""
+        return None if self.target is None else self.target.aside
 
     @property
     def span(self) -> SectionSpan | None:
@@ -266,11 +289,14 @@ def _namesakes(named: Sequence[Artefact]) -> tuple[str, ...]:
     return tuple(artefact.location for artefact in named) if len(named) > 1 else ()
 
 
-def part_standing(artefact: Artefact | None, part: str) -> Standing | None:
+def part_standing(
+    artefact: Artefact | None, part: str, aside: SetAside | None = None
+) -> Standing | None:
     """What an anchor on `part` of `artefact` stands on (COR-050 point 5): the part's
     text, a section's heading and its text or the lead's text, and the artefact's own
     fields, outside the container, each as YAML reads it, written out as JSON with its
-    keys sorted.
+    keys sorted. The derived links of `aside`, by default the artefact's own
+    (`Artefact.aside`), are read as their words alone in the text.
 
     `None` where it stands on nothing: no artefact, an entry, whose parts are
     refused, or no section with the slug. A slug two headings share reads the
@@ -292,7 +318,8 @@ def part_standing(artefact: Artefact | None, part: str) -> Standing | None:
         (str(key), json.dumps(value, sort_keys=True, default=str, ensure_ascii=False))
         for key, value in sorted(own.items(), key=lambda item: str(item[0]))
     )
-    return Standing(fields, body.text_of(extent), "")
+    sets_aside = artefact.aside if aside is None else aside
+    return Standing(fields, sets_aside.body(body.text_of(extent)), "")
 
 
 def whole_target(discovery: Discovery, value: str) -> Artefact | None:
