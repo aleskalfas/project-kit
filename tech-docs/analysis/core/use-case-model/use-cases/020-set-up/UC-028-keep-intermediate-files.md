@@ -7,6 +7,8 @@ other-actors:
   - ACT-operator
 after:
   - [UC-014]
+requirements:
+  - REQ-016
 pkit:
   friction:
     anchors:
@@ -29,9 +31,11 @@ pkit:
         - ADR-060#5
         - ADR-060#7
         - ADR-060#9
+        - ADR-065#11
       artefact:
         - ACT-ai-agent
         - ACT-operator
+        - REQ-016
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries
@@ -53,10 +57,10 @@ pkit:
 **Main path:**
 
 1. The agent writes the file inside the agent workspace, `.agent-workspace/` at the root of its checkout, with one of the harness's file tools. An example is Claude Code's `Write` on `.agent-workspace/pr-body.md`.
-2. The adapter's permission hook hands the write to the backbone's permission code. The code recognises the `workspace` privilege, since the target lies inside the folder (ADR-060 point 1).
+2. The adapter's permission hook hands the write to the backbone's permission code, which needs only the system `python3` (REQ-016). The code recognises the `workspace` privilege, since the target lies inside the folder (ADR-060 point 1).
 3. Every profile the backbone ships grants that privilege to `all` (ADR-060 point 5 and ADR-005 point 5). So the code allows the write, and nobody is asked to confirm it.
 4. The agent passes the file to the command that needs it, such as `gh pr create --body-file .agent-workspace/pr-body.md`.
-5. The work is committed. Git leaves the folder out, since `pkit init`, `pkit sync` and `pkit upgrade` exclude it in the clone's local exclude file (ADR-060 point 9).
+5. The work is committed. Git leaves the folder out, since `pkit init`, `pkit sync` and `pkit upgrade` exclude it in the clone's local exclude file (ADR-060 point 9 and ADR-065 point 11).
 6. The agent removes the files it no longer needs (core rule 16).
 
 **Variants:**
@@ -68,10 +72,13 @@ pkit:
   - one in a repository nested in the folder
   - an existing file with more than one link
 - **1d.** A symlink named `.agent-workspace` sits where the folder belongs. It is never the agent workspace (ADR-060 point 2). `pkit init` and `pkit sync` refuse to adopt it, and `pkit status` reports `a symlink, never the workspace` (ADR-060 point 9).
-- **2a.** The permission hook is not registered, or no profile the backbone ships is active. The harness decides the write by its own settings. Claude Code's adapter, for one, allows its file tools for the whole session, so nobody is asked.
-- **3a.** The active profile's posture is `strict`, as in the `read-only` profile. The code denies a file tool's write anywhere else, and allows it in the agent workspace under the `workspace` privilege (ADR-060 point 5).
-- **3b.** The hook defers the write to the harness all the same. Where a diagnostic session is on, its report lists the deferral in its `workspace` group (UC-033). The group is a defect, never a gap to allow around (ADR-060 point 7).
+- **1e.** A file named `.agent-workspace` stands where the folder belongs. The file tool cannot write inside it, and `pkit sync` reports `.agent-workspace exists and is not a folder — move it aside` (`workspace.py`).
+- **2a.** The permission hook is not registered. The harness decides the write by its own settings. Claude Code's adapter, for one, allows its file tools for the whole session, so nobody is asked.
+- **3a.** No profile is active, or the active one is the project's own and grants no `workspace` privilege. The code decides the write as it would without the privilege. Under the `lenient` posture it defers the write to the harness, and under `strict` it denies it.
+- **3b.** The `read-only` profile is active, whose posture is `strict`. The code denies a file tool's write anywhere else, and allows it in the agent workspace under the `workspace` privilege (ADR-060 point 5).
+- **3c.** The hook defers the write to the harness all the same. Where a diagnostic session is on, its report lists the deferral in its `workspace` group (UC-033). The group is a defect, never a gap to allow around (ADR-060 point 7).
 - **5a.** The clone has run none of `pkit init`, `pkit sync` and `pkit upgrade`, and the project's committed `.gitignore` lacks `/.agent-workspace/`. Git does not ignore the folder, so `git add -A` would stage its files. `pkit status` reports the folder `NOT excluded from git`, and `pkit init` recommends the `.gitignore` line (ADR-060 point 9).
+- **5b.** The project lies in no git repository. No commit carries anything, and `pkit sync` reports that there is nothing to exclude the folder from (`workspace.py`).
 - **6a.** The agent removes the files with a shell command, such as `rm`. The `workspace` privilege covers no shell command, so the code decides it on the command's own grants, and the harness may ask (ADR-060 point 4).
 
 **Postconditions:** The agent's intermediate files lie in `.agent-workspace/`, written with nobody asked to confirm them, and no commit carries them.

@@ -35,8 +35,8 @@ pkit:
 
 **Assumptions:**
 
-- The harness delivers a delegated agent's whole result to the agent that delegated to it, with no further exchange needed to fetch the rest. The methodology states it as the harness requirement `delegated-result-complete`, whose truth only an agent inside a session can see (COR-047 point 4).
-- The agent meets the cost the adapter's support declaration names, where it grades the requirement `at-cost`. Nothing at run time holds an agent to it (COR-047 point 2).
+- Where the agent meets the cost the adapter's support declaration names, the harness delivers the delegated agent's whole result, with no further exchange needed. The methodology states this as the harness requirement `delegated-result-complete`, whose truth only an agent inside a session can see (COR-047 point 4).
+- No operational rule of the core tells the agent that cost, and nothing at run time holds the agent to it (COR-047 point 2).
 
 **Trigger:** The agent's work calls for another role's judgement, such as a review of its draft.
 

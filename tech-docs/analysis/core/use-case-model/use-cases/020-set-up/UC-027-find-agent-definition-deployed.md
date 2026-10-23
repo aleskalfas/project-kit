@@ -17,6 +17,7 @@ requirements:
   - REQ-010
   - REQ-012
   - REQ-013
+  - REQ-016
 shortfalls:
   - at: 2
     issue: "#1765"
@@ -54,6 +55,7 @@ pkit:
         - REQ-010
         - REQ-012
         - REQ-013
+        - REQ-016
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants
@@ -69,7 +71,7 @@ pkit:
 
 - **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 - **From UC-014 or UC-019:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
-- **From UC-022:** The overlay, `.pkit/agents/project/overlay.yaml`, names the project's own paths, and the project's own grants lie beside the methodology's.
+- **From UC-022:** The overlay, `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the categories it sets. The project's own grants lie beside the methodology's.
 
 **Assumptions:**
 
@@ -96,21 +98,21 @@ pkit:
 8. The adapter writes the deployed agent definition with its own deploy mark, so a later run tells its own files from the adopter's (`.pkit/adapters/README.md`).
 9. A session dispatches the agent for its role.
 10. The harness loads the deployed agent definition. The agent finds the project's own paths in its front matter, and only the tools its `tools:` list names (ADR-004 point 1).
-11. Where the adapter's permission hook is registered, it hands each of the agent's tool calls to the backbone's permission code, for the subject `agent:<name>`. The code applies the grants to `all` and the agent's own, and a deny wins over an allow (REQ-013).
+11. Where the adapter's permission hook is registered, it hands each of the agent's tool calls to the backbone's permission code, for the subject `agent:<name>`. That code needs only the system `python3` (REQ-016). It applies the grants to `all` and the agent's own, and a deny wins over an allow (REQ-013).
 
 **Variants:**
 
 - **1a.** The adopter first runs `pkit agents`, which writes nothing (REQ-005). It lists each agent definition as `deployable` or `SKIPPED`, with the categories the overlay leaves unset and the effective model and effort.
 - **1b.** The operator passes `--dry-run`. The system names each script it would run with `would run`, runs none of them, and deploys nothing (REQ-009). The use case ends.
 - **3a.** The project is not the methodology's source repository. The running CLI is at another version than the project records, or a version transition is incomplete. Sync stops before it writes, names the remedy, and the use case ends (REQ-010).
-- **6a.** The overlay leaves unset a category that the agent definition names under `owns`, `needs`, `answers`, `reads.paths` or `reads.records`. The adapter skips that agent definition and deploys the rest (ADR-052). The system's `pkit agents adopt <name>` sets the category and deploys it. A copy deployed earlier stays as it was, and the use case ends for that agent definition.
+- **6a.** The overlay leaves unset a category that the agent definition names under `owns`, `needs`, `answers`, `reads.paths` or `reads.records`. The adapter skips that agent definition and deploys the rest (ADR-052). It names the remedy, `pkit agents adopt <name>`, or `pkit agents reconcile --write` for a category that carries writes. A copy deployed earlier stays as it was, and the use case ends for that agent definition.
 - **6b.** The overlay leaves unset a category that the agent definition reads only through `reads.patterns`. The adapter drops that item, and deploys the agent definition without it (ADR-052).
 - **6c.** A category that carries writes names a path that sync manages. The adapter skips the agent definition, saying that the category names sync-managed paths, so no agent owns a path that sync writes over (`.pkit/lifecycle/ownership.py`).
 - **7a.** The model or the effort is a value the harness does not accept. The adapter carries no value for it, so the agent takes the harness's default, and it reports a `warning` line naming the value (`agent_policy.py`).
 - **8a.** A file without the deploy mark stands where the adapter would deploy, such as an agent definition the adopter wrote there. The adapter leaves the file untouched, and reports it `skipped`.
 - **8b.** A deployed agent definition carries the deploy mark, and no place ships its agent definition any more. The adapter removes it, and reports it `removed`.
 - **11a.** The permission hook is not registered. Only the `tools:` list and the harness's own settings apply. Those settings are one set for the whole session, never one for each agent (ADR-004 point 1).
-- **11b.** The harness names no agent in the call, as for the main session. The permission code takes the default agent that the harness's settings name, such as the `agent` key of Claude Code's `.claude/settings.json`. With none, the subject is `operator` (`decide.py`).
+- **11b.** The harness names no agent in the call, as for the main session. The permission code takes the default agent from the `agent` key of Claude Code's `.claude/settings.json`, the one harness's settings it reads. With none, the subject is `operator` (`decide.py`).
 - **11c.** An installed capability contributes a deny grant for the agent in a grants file of its own. The deny holds for that agent, whatever its other grants allow (ADR-016 and REQ-013).
 
 **Postconditions:** The agent definition is deployed where the harness reads it, with the project's paths in place of the placeholders of its front matter. Where the permission hook is registered, each of the agent's tool calls is decided under its own grants and those to `all`.

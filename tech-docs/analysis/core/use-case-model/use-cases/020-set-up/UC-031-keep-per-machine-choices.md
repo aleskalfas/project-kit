@@ -34,6 +34,7 @@ pkit:
         - ADR-010#4
         - ADR-010#7
         - ADR-029#1
+        - ADR-029#2
         - ADR-029#3
         - ADR-032
         - ADR-046#1
@@ -56,7 +57,7 @@ pkit:
 **Preconditions:**
 
 - **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
-- **From UC-014 or UC-019:** An adapter carries the permission model into the project's harness, and declares where the harness enforces each of its dimensions (COR-028 points 2 and 3).
+- **From UC-014 or UC-019:** An adapter for the project's harness declares where that harness enforces each dimension of the permission model (COR-028 point 3).
 
 **Assumptions:**
 
@@ -83,7 +84,7 @@ pkit:
 - **1a.** The operator excludes a command from the sandbox with `pkit permissions sandbox exclude <command>`. The system writes the exclusion to the per-machine settings, never to a committed file (ADR-008 point 4).
 - **1b.** The operator turns the sandbox on with `pkit permissions sandbox enable`, or off with `pkit permissions sandbox disable`. The system writes `sandbox.enabled`, and the seal where `--strict` asks for it, to the per-machine settings (ADR-029 point 1 and ADR-032). What every operator shares goes to the committed settings, such as the credential paths that no command in the sandbox may read.
 - **1c.** The operator turns the sandbox on with `--dangerously-allow-unconfined`. The system writes `sandbox.failIfUnavailable: false` to the per-machine settings alone, and the committed settings keep `true` (ADR-005 point 6). It warns where git does not ignore the per-machine file.
-- **1d.** The operator activates a profile with `pkit permissions profile activate <name>`. The system writes the profile's name to `.pkit/permissions/project/active-profile.yaml`, which `.pkit/.gitignore` ignores (ADR-032). It writes the allows only that profile justifies to the per-machine settings (ADR-046 point 1). The profile's posture counts as shared policy, so the system writes it to the committed `.pkit/permissions/project/config.yaml` (ADR-032).
+- **1d.** The operator activates a profile with `pkit permissions profile activate <name>`. The system writes the profile's name to `.pkit/permissions/project/active-profile.yaml`, which `.pkit/.gitignore` ignores (ADR-032). It writes the allows only that profile justifies to the per-machine settings (ADR-046 point 1). ADR-032 lists the profile's posture as shared policy, so the system writes it to the committed `.pkit/permissions/project/config.yaml`. That record's own rule on activations reads the posture as per-machine (#1765).
 - **1e.** The operator arms a diagnostic session with `pkit permissions diagnose on`. Its marker and its log lie under `.pkit/permissions/project/`, where `.pkit/.gitignore` ignores them (PRJ-006 point 5).
 - **1f.** The operator runs `pkit permissions setup autonomy` (UC-030). The system writes the per-machine parts of the setup to the per-machine settings, and the shared parts to the committed ones. It moves to its per-machine home each entry an earlier version left in a committed file, and leaves the operator's own entries in place (ADR-007).
 - **1g.** The operator passes `--dry-run` to a command of this use case whose edit reaches past what the person named, such as `sandbox enable`. The system names each edit it would make, and writes nothing (REQ-009).
@@ -101,4 +102,5 @@ pkit:
 - An exclusion from the sandbox is never written to a committed file (ADR-008 point 4 and ADR-029 point 3).
 - A value read from this machine, such as a socket's path, is never written to a committed file (ADR-010 point 3).
 - The fail-open that `--dangerously-allow-unconfined` asks for is never written to a committed file (ADR-005 point 6).
-- A move of a per-machine entry writes the per-machine file first, then strips the committed one. So no entry is lost between the two (REQ-002 and `permissions.py`).
+- The system writes the harness's settings only through the permission model's one writer, which routes each entry to its file (REQ-002 and ADR-029 point 2).
+- A move of a per-machine entry writes the per-machine file first, then strips the committed one. So no entry is lost between the two (`permissions.py`).

@@ -60,7 +60,7 @@ pkit:
 
 1. The agent runs the command, such as `pkit pull-request merge <number> --subject "<title>"`.
 2. Before the command reads or sends anything, the cross-repository guard compares two repositories, from git alone (ADR-034 point 1). They are the working directory's and the session anchor's.
-3. The two are different repositories, and no terminal can be asked. So the system refuses, changes nothing and exits with status `1` (COR-039 point 1). It names two ways on: `Run it from a session rooted in <target>, or pass --allow-foreign-repo to confirm the change there.`
+3. The two are different repositories, and no terminal can be asked. So the system refuses and changes nothing, as COR-039 point 1 asks. It exits with status `1` (`cli.py`). It names two ways on: `Run it from a session rooted in <target>, or pass --allow-foreign-repo to confirm the change there.`
 4. The agent stops, and asks the operator whether to make the change in that repository (core rule 19).
 5. The operator confirms the change.
 6. The agent runs the command again with `--allow-foreign-repo`.
@@ -69,7 +69,7 @@ pkit:
 **Variants:**
 
 - **1a.** The command is one that an installed capability ships. COR-039 point 2 puts the check in that capability's own code too, and the capability's analysis states it.
-- **1b.** The agent writes a file with a file tool at an absolute path outside the session anchor's directory. An adapter's permission hook may ask the operator to confirm such a write, naming both paths (ADR-034 point 2). Claude Code's asks it for `Edit` and `Write` where no grant decides the call. Without the hook, nothing asks.
+- **1b.** The agent writes a file with a file tool at an absolute path outside the session anchor's directory. An adapter's permission hook may ask the operator to confirm such a write, naming both paths (ADR-034 point 2). Claude Code's asks it for `Edit` and `Write` where no grant decides the call. It compares paths, not repositories, so it asks for a linked worktree there too. Without the hook, nothing asks.
 - **1c.** The agent changes the other repository around the system's commands, such as with `git -C <path> push` or `gh -R <repository>`. No guard sees the change (ADR-034 point 5). The permission code allows `cd <path> && git commit` wherever `vcs` is granted, since it strips the leading `cd` (ADR-025 point 1).
 - **1d.** The command changes files rather than the hosting service, such as `pkit new decision` or `pkit sync`. At its entry, before it reads anything, the command compares the two repositories as step 2 does (REQ-012). The path goes on at step 3.
 
@@ -78,7 +78,7 @@ pkit:
 
 - **1e.** The command is `pkit report`, which files a report on the repository of the distribution. That write lies outside the guard by its kind. It is confirmed at a terminal, and with nobody to ask it is only drafted (ADR-047 points 1 and 2).
 - **2a.** The working directory lies in a linked worktree of the session's repository, or in another clone whose `origin` matches the session's. The system counts it as the session's own repository. The change goes ahead with no question, and the use case ends.
-- **2b.** The harness gives no session anchor, or one side lies in no git repository. The guard has nothing to compare, so the change goes ahead. Its verdict says `undetermined`, never that the target is the session's own (ADR-061 point 6).
+- **2b.** The system finds no session anchor, or one side lies in no git repository. It reads only Claude Code's, so under another harness it finds none. The guard has nothing to compare, so the change goes ahead. Its verdict says `undetermined`, never that the target is the session's own (ADR-061 point 6).
 - **2c.** git cannot be asked, such as when it does not answer in time. The system warns that the guard `could not compare`, and the change goes ahead.
 - **2d.** `GH_REPO` is set in the environment, so `gh` acts on a repository the working directory does not hold. The guard compares directories alone, so it does not see the change (`session_guard.py`).
 - **3a.** A terminal is at hand on standard input and standard error, as when the operator runs the command. The system asks `Make the change there anyway? [y/N]` (ADR-034 point 4). A yes makes the change, and the use case ends. Any other answer refuses it.

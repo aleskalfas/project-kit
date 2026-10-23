@@ -9,7 +9,6 @@ other-actors:
 after:
   - [UC-014]
   - [UC-014, UC-019]
-  - [UC-022]
 requirements:
   - REQ-002
   - REQ-009
@@ -58,7 +57,6 @@ pkit:
 
 - **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 - **From UC-014 or UC-019:** An adapter for the project's harness runs merge delivery into the files that harness reads, its instruction file among them.
-- **From UC-022:** The project's own operational rules lie in `.pkit/rules/project.md`, beside the methodology's `.pkit/rules/core.md`.
 
 **Assumptions:**
 
@@ -91,8 +89,7 @@ pkit:
 - **5a.** An adapter's script exits with an error. The system stops with `adapter primitive <script> exited with status <n>. See the output above for details.`, and the use case ends (`.pkit/adapters/README.md`).
 - **6a.** The instruction file is missing. The adapter's script creates it with both includes. Claude Code's adapter writes a `CLAUDE.md` with a heading, an opening paragraph and both includes, and prints `created    CLAUDE.md (minimal host with @-includes)`. The path goes on at step 7.
 - **6b.** The instruction file does not include the methodology's operational rules. The adapter's script adds both includes, and removes nothing (COR-002). Claude Code's adapter puts them right after the first level-one heading of `CLAUDE.md`, and prints `insert`. Where `CLAUDE.md` has no such heading, it puts a heading and both includes above the text, and prints `prepend`. The path goes on at step 7.
-- **6c.** Claude Code's `CLAUDE.md` includes `.pkit/rules/core.md`, and not `.pkit/rules/project.md`. The adapter's script looks only for the first include, so it changes nothing. A session then starts without the project's own operational rules, until someone adds the second include.
-- **6d.** Claude Code's `CLAUDE.md` names `@.pkit/rules/core.md` in its text without including it, such as in a sentence about the file. The adapter's script reads the name as the include, and changes nothing.
+- **8a.** The project has written no operational rules of its own, as after a first install, so `.pkit/rules/project.md` does not exist. The adopter writes it as UC-022 says. Until then the include names a missing file, which Claude Code's harness skips without a word. So the session starts with the methodology's operational rules alone.
 
 **Postconditions:** Each session the harness starts in the project begins with both files of operational rules in its context. Those are the methodology's, with their conventions, and the project's own.
 

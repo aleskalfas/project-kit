@@ -10,6 +10,7 @@ after:
   - [UC-014, UC-019]
 requirements:
   - REQ-002
+  - REQ-005
   - REQ-009
   - REQ-012
   - REQ-013
@@ -39,9 +40,6 @@ pkit:
         - COR-028#1
         - COR-028#2
         - COR-028#3
-        - COR-028#4
-        - ADR-002#1
-        - ADR-002#3
         - ADR-002#4
         - ADR-004#2
         - ADR-004#4
@@ -51,15 +49,20 @@ pkit:
         - ADR-010#7
         - ADR-014#2
         - ADR-014#3
+        - ADR-014#4
+        - ADR-027
+        - ADR-030
         - ADR-025#1
         - ADR-025#2
         - ADR-028
+        - ADR-029#2
         - COR-004
         - ADR-034#1
       artefact:
         - ACT-operator
         - ACT-ai-agent
         - REQ-002
+        - REQ-005
         - REQ-009
         - REQ-012
         - REQ-013
@@ -72,12 +75,12 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): each agent that works under the permission model. A grant lets the agent's commands run with nobody asked. The permission code denies the agent each guardrail, and the harness's settings deny the guardrails' common forms too, such as `git push --force` (ADR-002 point 3).
+- **AI agent** (`ACT-ai-agent`): each agent that works under the permission model. A grant lets the agent's commands run with nobody asked. The permission code denies the agent each guardrail, and the harness's settings deny the guardrails' common forms too, such as `git push --force` (COR-028 point 2).
 
 **Preconditions:**
 
 - **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
-- **From UC-014 or UC-019:** An adapter carries the permission model into the project's harness, and declares where the harness enforces each of its dimensions (COR-028 points 2 and 3).
+- **From UC-014 or UC-019:** An adapter for the project's harness declares where that harness enforces each dimension of the permission model (COR-028 point 3).
 
 **Assumptions:**
 
@@ -95,9 +98,10 @@ pkit:
 > **Not built yet:** `pkit permissions setup autonomy` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 3. The system activates the `autonomous` profile, whose grants it layers beneath the project's own grants. It then realises the permission model in the harness's settings (ADR-005 point 2 and COR-028 point 2).
-4. The system registers the adapter's permission hook with the harness. It makes sure the harness's settings hold the native denies of the guardrails (ADR-002 point 3).
+4. The system registers the adapter's permission hook with the harness. It makes sure the harness's settings hold the native denies of the guardrails (COR-028 point 2).
 5. The system turns the sandbox on, fail-closed and sealed (ADR-004 point 4 and ADR-028). In Claude Code's settings, for one, these are:
    - `sandbox.failIfUnavailable: true`, so a session refuses to start without the sandbox
+   - `sandbox.autoAllowBashIfSandboxed: true`, so a single command inside the sandbox runs with nobody asked, which ADR-004 point 4 allows only beside the line above
    - `sandbox.allowUnsandboxedCommands: false`, the seal, so no agent can take one command out of the sandbox
    - the credential floor, four credential paths such as `~/.ssh` that no command in the sandbox may read
 6. The system adds the narrowing allowances the project's tools need, such as a package cache. It also allows the socket that `$SSH_AUTH_SOCK` names, in the per-machine settings (ADR-010 point 5).
@@ -105,7 +109,7 @@ pkit:
 8. The operator restarts the session, and runs `pkit permissions setup autonomy` again from inside it. The system skips each step already done.
 9. The system verifies the setup. Its probes find that the permission code's verdicts match the model, and that the operating system refuses each read of the credential floor. It ends `Result: goal reached — autonomous agents: configured, confined, and proven.`
 10. The agents work. The adapter's permission hook runs the backbone's permission code under the system `python3`, which needs nothing outside its standard library (REQ-016). A command a grant allows runs with nobody asked, and so does a single command inside the sandbox. A deny wins over an allow (REQ-013).
-11. The operator learns where the confinement does not hold:
+11. The operator learns where the confinement does not hold, from commands that write nothing (REQ-005):
     - `pkit permissions sandbox` says whether the sandbox really confines, and names each command that runs outside it
     - `pkit permissions diff` counts the grants that only the permission hook enforces, and those that no native layer expresses
     - `pkit permissions diff` also names each dimension that the adapter's enforcement declaration says no layer enforces, such as `network-egress` (COR-028 point 3)
@@ -123,27 +127,27 @@ pkit:
 - **4c.** The permission hook cannot start, such as where its script is missing. The system reports that enforcement is not running, and never ends `goal reached` while the fault stands (ADR-002 point 4).
 
 > [!WARNING]
-> **Not built yet:** `setup autonomy` does not report it. Its probes call the permission code directly, so it can end `goal reached` with a hook that cannot start, which only `pkit permissions overview` reports. ADR-002 point 4 decides that this fault fails loud, and #1764 tracks it.
+> **Not built yet:** `setup autonomy` does not report it. Its probes call the permission code directly, so it can end `goal reached` with a hook that cannot start. `pkit permissions overview` reports some of its causes. ADR-002 point 4 decides that this fault fails loud, and #1764 tracks it.
 
-- **5a.** The host runs macOS. The system turns the sandbox on, and excludes `pkit` and `uv` from it, since `uv` cannot run inside it. Every other shell command stays confined, and the system reports the commands that run outside the sandbox (ADR-014 points 2 and 3).
+- **5a.** The host runs macOS. The system turns the sandbox on, and excludes from it each command the platform requires outside it (ADR-014 point 2). Those are `uv` until a fixed release is installed, and `gh` where the project holds `.github/` (ADR-014 point 4, ADR-027 and ADR-030). Every other shell command stays confined, and the system reports the commands that run outside the sandbox (ADR-014 point 3).
 
 > [!WARNING]
-> **Not built yet:** on macOS the system leaves the sandbox off, and says `OS sandbox NOT enabled — unsupported on macOS (Seatbelt)`. So no command is confined there. The run ends `Result: intent + enforcement armed and proven. OS confinement is skipped on macOS (see above).` ADR-014 point 3 decides that every shell command but `pkit` and `uv` stays confined, and #1765 tracks it.
+> **Not built yet:** on macOS the system leaves the sandbox off, and says `OS sandbox NOT enabled — unsupported on macOS (Seatbelt)`. So no command is confined there. The run ends `Result: intent + enforcement armed and proven. OS confinement is skipped on macOS (see above).` ADR-014 point 3 decides that every other shell command stays confined, and #1765 tracks it.
 
-- **5b.** An attribute of the per-machine settings fights what step 5 sets, such as `sandbox.allowUnsandboxedCommands: true`. The system warns, naming each such attribute, and step 5 turns the sandbox on and seals it all the same.
+- **5b.** An attribute of the per-machine settings fights what step 5 sets, such as `sandbox.allowUnsandboxedCommands: true`. The system warns, naming each such attribute, and step 5 turns the sandbox on and seals it all the same. It never removes such an attribute without a yes at a terminal, or `--remove-overrides`.
 - **6a.** `$SSH_AUTH_SOCK` names a socket under the credential floor, or one that does not answer. The system allows nothing for it, and names the command that allows it: `pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent` (ADR-010 points 5 and 7).
 - **9a.** A probe finds a verdict that differs from what the model declares. Or it finds a guardrail's native deny missing while the permission hook is registered. The system ends `Result: BROKEN — fix the decision layer before relying on autonomy.`, and exits non-zero.
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`
-- **10a.** A command chains segments, such as with `&&` or `;`. The permission code strips a bare leading `cd <path>`, and decides the rest as if it were run alone (ADR-025 point 1). Where the rest holds a quote, `$(`, a backtick or a redirection, the code defers the call (ADR-025 point 2). The harness may then ask the operator.
-- **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (ADR-002 point 3).
+- **10a.** A command chains segments, such as with `&&`, `;` or `|`. The permission code strips a bare leading `cd <path>`, and decides the rest at the same working directory. After such a strip, a quote, `$(`, a backtick or a redirection in the rest makes it defer the call (ADR-025 points 1 and 2). Otherwise the code allows the chain where a grant allows a privilege it recognises in some segment, and no grant denies one. A segment in which it recognises no privilege is not weighed, such as `sh` in `gh pr list | sh` (`decide.py`).
+- **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (COR-028 point 2).
 
 **Postconditions:** The agents run each granted command, and each single command inside the sandbox, with nobody asked. The system has verified the permission code's verdicts and the credential floor. The operator knows where the confinement does not hold.
 
 **Minimal guarantees:**
 
-- The harness's settings deny the guardrails' common forms, such as `sudo`, even where the permission hook fails or is not registered (ADR-002 point 3).
+- The harness's settings deny the guardrails' common forms, such as `sudo`, even where the permission hook fails or is not registered (COR-028 point 2).
 - `setup autonomy` lets commands in the sandbox run unasked only together with the setting that stops a session without the sandbox. So a missing sandbox stops the session, rather than letting commands run unconfined and unasked (ADR-004 point 4).
 - `setup autonomy` declares the goal reached only once its probes pass (ADR-007).
-- In the default additive mode, the system only adds to the harness's committed settings. It never removes an entry the project wrote there (COR-028 point 4, ADR-002 point 1 and REQ-002).
+- The system writes the harness's settings only through the permission model's one writer, which routes each entry to its file (REQ-002 and ADR-029 point 2).
 - A dimension that the adapter's enforcement declaration says no layer enforces is reported, never dropped (COR-028 point 3 and `permissions.py`).
