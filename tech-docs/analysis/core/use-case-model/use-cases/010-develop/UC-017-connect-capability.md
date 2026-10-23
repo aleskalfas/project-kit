@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:47:03Z
+      at: 2026-10-23T08:14:04Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The package check fails a derived link whose target does not compile. Connecting roles, data points and processes runs as the steps say.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

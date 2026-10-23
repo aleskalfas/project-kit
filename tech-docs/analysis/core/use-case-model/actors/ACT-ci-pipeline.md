@@ -19,9 +19,9 @@ pkit:
         - COR-050
         - PRJ-002
     revalidated:
-      at: 2026-10-21T14:26:03Z
+      at: 2026-10-23T08:14:03Z
       outcome: unchanged
-      unchanged-because: COR-050 changes in its partial supersession and points 6 and 9. The pipeline still runs the checks unattended against one named base, and they bind once required, so the actor holds.
+      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. The pipeline still runs the checks unattended against one named base, so the actor holds.
 ---
 
 # ACT-ci-pipeline — CI pipeline

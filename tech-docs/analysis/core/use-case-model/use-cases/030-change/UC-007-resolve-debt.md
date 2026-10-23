@@ -41,9 +41,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-22T23:46:43Z
+      at: 2026-10-23T08:14:10Z
       outcome: unchanged
-      unchanged-because: "The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, steps and actors hold, and the kept deferrals still name what #1779 and #1856 rewrite."
+      unchanged-because: "Both checks read derived links as their words alone, so a moved link leaves no debt. Resolving debt runs as the steps say, and the kept deferrals name what #1779 and #1856 rewrite."
       deferred:
         - anchor:
             kind: path

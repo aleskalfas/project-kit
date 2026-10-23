@@ -24,9 +24,8 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-22T22:14:01Z
-      outcome: unchanged
-      unchanged-because: "Validation now reports a revisit entry in an answer file on an artefact with no link as answering nothing. Answer files stay out of the README until #1779, as the kept deferrals say."
+      at: 2026-10-23T08:13:44Z
+      outcome: updated
       deferred:
         - anchor:
             kind: path

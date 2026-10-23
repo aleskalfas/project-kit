@@ -62,9 +62,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-21T18:17:42Z
+        at: 2026-10-23T08:13:49Z
         outcome: unchanged
-        unchanged-because: This change makes no anchor stand on an answer file and calls one that matches only answer files dead, as COR-062 point 2 says. An anchor's kinds, and what makes one dead, are as the term defines them.
+        unchanged-because: Discovery gains the declaration of derived links and the reading that sets them aside. What an anchor is stays as the definition says.
 TERM-answer:
   name: answer
   status: active
@@ -118,9 +118,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-21T18:17:43Z
+        at: 2026-10-23T08:13:50Z
         outcome: unchanged
-        unchanged-because: This change keeps every file in the answer folder out of the places, so no answer file is an artefact. An artefact is still a document or a collection entry in a place, as defined.
+        unchanged-because: Discovery gives each artefact the derived links its places declare, read as their words alone. What an artefact is stays as defined.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -137,9 +137,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-21T18:17:44Z
+        at: 2026-10-23T08:13:52Z
         outcome: unchanged
-        unchanged-because: "This change adds no type and resolves none differently: discovery only leaves the answer folder out of the places, so the term's definition holds."
+        unchanged-because: Discovery gains the derived links a place declares, and resolves types as before. The definition holds.
 TERM-backbone:
   name: backbone
   status: active
@@ -238,9 +238,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-22T22:12:28Z
+        at: 2026-10-23T08:13:53Z
         outcome: unchanged
-        unchanged-because: The change check now reads the answer files a change adds, and judges what each read against the change's own head. It still compares a head with its base, finds friction and dead anchors, and lists every answer.
+        unchanged-because: The change check reads derived links as their words alone, under the head's declaration. It still compares a change's base with its head, as defined.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -363,9 +363,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-22T22:12:30Z
+        at: 2026-10-23T08:13:54Z
         outcome: unchanged
-        unchanged-because: "The explanation now pairs each live answer with its points strictly, which changes no debt. The kept deferrals name what #1779 still rewrites in the term."
+        unchanged-because: The whole-repository check reads derived links as their words alone, so a moved link dates no debt. What debt is stays as defined.
         deferred:
           - anchor:
               kind: path
@@ -484,9 +484,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-22T22:12:38Z
+        at: 2026-10-23T08:13:56Z
         outcome: unchanged
-        unchanged-because: "The change check now reads the answer files a change adds, dormant while nothing writes one. Friction is still a change with no answer standing for it, and the kept deferrals name the section's rewrite in #1779."
+        unchanged-because: COR-050 point 5 reads derived links as their words alone when a body is compared. Friction is still an anchor that changed with no answer, as defined.
         deferred:
           - anchor:
               kind: path
@@ -537,9 +537,9 @@ TERM-head:
           - COR-050#5
           - COR-050#6
       revalidated:
-        at: 2026-10-21T14:25:49Z
+        at: 2026-10-23T08:13:57Z
         outcome: unchanged
-        unchanged-because: COR-050 point 6 now names the change's own head beside a merge a host builds. That own head is this term's head, the branch's latest commit, so the definition holds.
+        unchanged-because: COR-050 point 5 reads derived links under the head's declaration in the change check. What the head is stays as defined.
 TERM-install:
   name: install
   status: active
@@ -652,9 +652,9 @@ TERM-package-metadata:
           - COR-053#3
           - COR-056#2
       revalidated:
-        at: 2026-10-20T01:37:44Z
+        at: 2026-10-23T08:13:59Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The package check fails a derived link whose target does not compile. What package metadata is stays as defined.
 TERM-place:
   name: place
   status: active
@@ -668,9 +668,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-21T18:18:08Z
+        at: 2026-10-23T08:14:00Z
         outcome: unchanged
-        unchanged-because: This change keeps every file in the answer folder out of the places. A place is still a declared path or glob within which the backbone looks for documents that carry anchors, as defined.
+        unchanged-because: A component's place may declare derived links too. A place still holds what its declaration matches, as defined.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -1163,9 +1163,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-22T22:12:41Z
+        at: 2026-10-23T08:14:01Z
         outcome: unchanged
-        unchanged-because: Only the explanation's pairing of answers with their points changed here. The whole-repository check still compares every artefact at the latest commit with its revalidation point, and never fails.
+        unchanged-because: The whole-repository check reads derived links under the latest commit's declaration. It still compares each artefact with its revalidation point, as defined.
 ---
 
 # Glossary

@@ -41,9 +41,9 @@ pkit:
         - TERM-changeset
         - TERM-release-step
     revalidated:
-      at: 2026-10-21T14:26:01Z
+      at: 2026-10-23T08:13:46Z
       outcome: unchanged
-      unchanged-because: The view rests on COR-050 for checking a change from its base to its head before it lands, against an up-to-date base. COR-062 changes where answers are written, which the view does not describe.
+      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. A check still compares a change from its base to its head, as the view says.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

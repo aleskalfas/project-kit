@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:47:05Z
+      at: 2026-10-23T08:14:05Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The package check gains a check of derived links' targets. Adapting to another harness uses none of it, so the steps hold.
 ---
 
 # UC-019 — Adapt the system to another harness
