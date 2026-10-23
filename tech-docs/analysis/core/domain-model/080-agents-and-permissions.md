@@ -296,7 +296,7 @@ The agent workspace is the folder `.agent-workspace/` at the root of a checkout,
 
 - The privilege `workspace` is path-scoped to it, for the file tools alone (ADR-060 point 1).
 - Every [profile](../glossary.md#term-profile--profile) the [backbone](../glossary.md#term-backbone--backbone) ships grants that privilege to `all` (ADR-060 point 5).
-- The [permission hook](../glossary.md#term-permission-hook--permission-hook) allows it, never an allow in the [harness](../glossary.md#term-harness--harness)'s settings for the whole session (ADR-060 point 6).
+- The [permission hook](../glossary.md#term-permission-hook--permission-hook) allows a file tool's call into the folder, never an allow in the [harness](../glossary.md#term-harness--harness)'s settings for the whole session (ADR-060 point 6).
 
 **States:** None.
 
