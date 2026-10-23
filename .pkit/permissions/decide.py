@@ -73,6 +73,9 @@ _UNTRUSTED = re.compile(r"""['"`<>]|\$\(""")
 # restrictive — the moment it carries anything the splitter can't trust, we do
 # not strip.
 _BARE_CD = re.compile(r"""^cd\s+([^\s'"`$<>|&;()]+)$""")
+# A program name a reason may show (#1908): letters, digits and `.`, `_`, `+`,
+# `-` only, so never a path, an assignment or a quoted fragment.
+_BARE_WORD = re.compile(r"^[A-Za-z0-9._+-]+$")
 # fmt: on
 
 
@@ -468,6 +471,14 @@ def _uncovered_segments(
     ]
 
 
+def _shown_program(toks: list[str]) -> str:
+    """How a reason names an uncovered segment: its program when that is a bare
+    word, such as `sh` or `python3`, and `<other>` otherwise. A path, an
+    assignment or any other token may carry data, and the diagnostic log
+    records the reason beside a command it redacts on spaces alone."""
+    return toks[0] if _BARE_WORD.match(toks[0]) else "<other>"
+
+
 def decide(
     model: dict[str, Any],
     catalog: dict[str, Any],
@@ -562,7 +573,7 @@ def decide(
         uncovered = _uncovered_segments(catalog, request, allowed)
         if not uncovered:
             return "allow", f"allow grant for {subject} on {sorted(hits)}"
-        programs = sorted({toks[0] for toks in uncovered})
+        programs = sorted({_shown_program(toks) for toks in uncovered})
         if posture == "strict":
             return "deny", (
                 f"strict posture: no grant covers the {programs} segment(s) "

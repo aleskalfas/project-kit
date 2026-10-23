@@ -111,7 +111,7 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list ; python3 x.py` abstain. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed as before. A deny on any segment still wins over every allow.
 
-The abstain's reason names each uncovered segment's program, never its arguments, since the diagnostic log records the reason beside a redacted command.
+The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments. The diagnostic log records the reason beside a redacted command.
 
 ## Default-agent subject resolution
 

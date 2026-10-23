@@ -2555,6 +2555,22 @@ def test_the_reason_names_only_the_uncovered_segments_program(decide_mod, catalo
 
 
 @pytest.mark.parametrize(
+    "command,hidden",
+    [
+        # no space around the separator: the log's redaction splits on spaces
+        # alone, so it keeps none of this, and the reason must not either
+        ("gh pr list;/Users/alice/secret-proj/bin/tool --x", "secret-proj"),
+        ("gh pr list ; my-key=s3cret curl x", "s3cret"),
+    ],
+)
+def test_the_reason_shows_no_path_or_assignment(decide_mod, catalog, command, hidden):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d in ("abstain", "deny"), why
+        assert hidden not in why and "'<other>'" in why, why
+
+
+@pytest.mark.parametrize(
     "command",
     [
         "git status && gh pr list",

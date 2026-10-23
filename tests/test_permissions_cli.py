@@ -2867,6 +2867,7 @@ def test_decide_verdict_path_byte_identical_to_main():
     # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
     # the verdict logic, not the model-loader. Guard exactly that function (and
     # the pure helpers it composes) against `main`, not the whole file.
+    import re
     import subprocess
 
     root = Path(__file__).resolve().parent.parent
@@ -2933,11 +2934,12 @@ def test_decide_verdict_path_byte_identical_to_main():
     # Transitive call graph (verified against decide.py):
     #   decide        → _strip_leading_cd, recognized_privileges,
     #                   _effective_grants, _privilege_ids, _scope_ok,
-    #                   _uncovered_segments  (+ _UNTRUSTED)
+    #                   _uncovered_segments, _shown_program  (+ _UNTRUSTED)
     #   hook_decide   → _read_default_agent, decide
     #   recognized_privileges → segments (+ _SEP/_ENVVAR), _segment_privileges
     #   _uncovered_segments   → segments, _segment_privileges
     #   _segment_privileges   → _matches_bash
+    #   _shown_program        → (+ _BARE_WORD)
     #   _privilege_ids        → (+ _TOKEN)
     #   _strip_leading_cd     → (+ _CD_SEP, _BARE_CD)
     #   _scope_ok             → _extract_host
@@ -2961,6 +2963,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_matches_bash",
         "_segment_privileges",
         "_uncovered_segments",
+        "_shown_program",
         "_privilege_ids",
         "_scope_ok",
         "_extract_host",
@@ -2973,6 +2976,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_CD_SEP",
         "_UNTRUSTED",
         "_BARE_CD",
+        "_BARE_WORD",
     )
     # Deliberate, reviewed wording change (#1421): `_scope_ok` cited
     # "ADR-004 §61", in its docstring and in the reason it gives for refusing a
@@ -3026,7 +3030,7 @@ def test_decide_verdict_path_byte_identical_to_main():
                 "        uncovered = _uncovered_segments(catalog, request, allowed)\n"
                 "        if not uncovered:\n"
                 '            return "allow", f"allow grant for {subject} on {sorted(hits)}"\n'
-                "        programs = sorted({toks[0] for toks in uncovered})\n"
+                "        programs = sorted({_shown_program(toks) for toks in uncovered})\n"
                 '        if posture == "strict":\n'
                 '            return "deny", (\n'
                 '                f"strict posture: no grant covers the {programs} segment(s) "\n'
@@ -3039,10 +3043,10 @@ def test_decide_verdict_path_byte_identical_to_main():
             ),
         ),
     }
-    introduced = ("_segment_privileges", "_uncovered_segments")  # #1908
+    introduced = ("_segment_privileges", "_uncovered_segments", "_shown_program", "_BARE_WORD")
     for fn in frozen:
-        if fn in introduced and f"\ndef {fn}(" not in base:
-            continue
+        if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
+            continue  # #1908: compared once main defines it
         base_source = _extract_func_source(base, fn)
         for old, new in sanctioned.get(fn, ()):
             base_source = base_source.replace(old, new)
