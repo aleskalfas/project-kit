@@ -1,10 +1,14 @@
 # Overview of the analysis of evidence
 
-<!-- pkit:overview reads=4 fingerprint=sha256:e235fadf60e364af2d4fa50685deb09e8d1eaeb7b33e6ecc484ad340c44a14e0 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:987e0f0ae57bd41d4c61cf425db8a413a7b81d615b02026334b60bc091df8183 -->
 
 No record states what evidence is for yet. Write one with `pkit new decision`, and name it as `purpose` in the entry of evidence under `analyses` in `.pkit/capabilities/software-analysis/project/config.yaml`.
 
 This analysis describes what evidence does: who uses it, what they do with it, and what it must meet. It builds on the analysis of core.
+
+## Use cases
+
+- [UC-021 — Ground a claim in its source](../use-case-model/use-cases/UC-021-ground-claim.md)
 
 ## Reference
 
@@ -12,11 +16,16 @@ This analysis describes what evidence does: who uses it, what they do with it, a
 
 | Actor | Who they are | Areas they act in |
 | --- | --- | --- |
-| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | No use case names it yet. |
+| core:ACT-ai-agent — AI agent | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
+| core:ACT-developer — Developer | An actor of the analysis of core, which the head of the [glossary](../glossary.md) lists. | [the use cases](#use-cases) |
 
 ### Concepts
 
 The [glossary](../glossary.md) defines each term.
+
+Each view of the domain model explains a group of related concepts:
+
+- [010 — Outside facts and citations](../domain-model/010-outside-facts-and-citations.md)
 
 ### Diagrams
 
