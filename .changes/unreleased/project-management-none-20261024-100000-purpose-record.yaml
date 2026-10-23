@@ -1,0 +1,3 @@
+component: project-management
+kind: none
+body: The new record DEC-057 states what project-management is for, from what its README and records already say, and decides no new behaviour. The README's answer to it is unchanged, so no adopter-facing surface moves.
