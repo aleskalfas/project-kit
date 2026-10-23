@@ -3,7 +3,7 @@ id: REQ-017
 title: A backbone migration is safe over any state
 status: active
 statement: A backbone migration acts only on a positive sign that its change is needed, and never deletes by a path's name or position alone.
-measure: Run over any state a project may hold, its migration history unknown included, the migration changes only what such a sign shows it needs. It leaves a project's own file at a path it names alone as it was.
+measure: Run over any state a project may hold, its migration history unknown included, the migration changes only what such a sign shows is needed. The migration leaves a project's own file as it was, where only a path the migration names marks the file for change.
 applies-to: Every backbone migration, whenever a version transition runs it, over a project whose migration history may be unknown.
 actors:
   - ACT-adopter

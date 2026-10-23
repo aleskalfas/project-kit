@@ -68,7 +68,10 @@ pkit:
 1. The merge authoriser reads the pull request's sentence on each updated artefact, and the change check's list of answers (UC-002). They authorise the merge of the pull request at its head (COR-050 point 3).
 2. The developer runs `pkit pull-request land <n> --head <sha> --subject "<title>"`, with the head that was authorised and the pull request's title.
 3. At its entry, before it reads anything, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012 and ADR-061 point 6).
-4. The system reads the pull request once: its state, its head, and whether its base merges through a merge queue.
+4. The system reads the pull request once, for these:
+   - its state
+   - its head
+   - whether its base merges through a merge queue
 5. On a base without a queue, the system squash-merges the pull request, pinned to `<sha>`. The commit's subject is `<title>`, and its body is the pull request's body (COR-009 points 1 and 2, and ADR-061 point 8).
 
 > [!WARNING]
@@ -79,21 +82,31 @@ pkit:
 
 **Variants:**
 
-- **1a.** The developer works alone, and commits the change straight to the default branch, as COR-009 point 5 allows. It is one commit, its subject a conventional title (COR-008). An agent that commits for the developer tells the person it works for first (core rule 20). It says what the change updated, and what it leaves out of date. No command of the system carries this way, and the use case ends.
+- **1a.** The developer works alone, and commits the change straight to the default branch, as COR-009 point 5 allows. It is one commit, its subject a conventional title (COR-008). Where an agent commits, it first tells the merge authoriser what the change updated, and what the change leaves out of date (core rule 20). No command of the system carries this way, and the use case ends.
 - **2a.** The developer passes `--dry-run`. The system checks the repository as step 3 does, but asks no one, so in another repository it refuses unless `--allow-foreign-repo` is passed. Otherwise it takes its one reading, says what the landing would do, and sends nothing. The use case ends.
 - **2b.** `<sha>` is no full commit id, such as an abbreviated one. The system refuses it as a usage error, reads nothing, and exits `2`, since an abbreviated head would read as another head.
 - **3a.** The repository is another, and the operator declines. Or nobody can answer, and the developer passed no `--allow-foreign-repo`. The system refuses, sends nothing, and the use case ends.
 - **4a.** The pull request merged already at `<sha>`. The system ends `merged`, sends nothing, and the path goes on at step 7.
-- **4b.** The reading shows another head than `<sha>`. Where the pull request is queued, the system takes it out of the queue, so no commit nobody checked merges. It ends `head-moved`, and the path rejoins at step 1 for the new head.
+- **4b.** The reading shows another head than `<sha>`. Where the pull request is queued, the system takes it out of the queue, so no commit nobody checked merges. The system ends `head-moved`, and the path rejoins at step 1 for the new head.
 - **4c.** The pull request is closed unmerged, or the reading cannot be taken. The system ends `closed` or `unreadable`, sends nothing, and the use case ends.
 - **5a.** The base merges through a merge queue. The system checks that the queue squashes, and that the repository's squash-commit defaults are `PR_TITLE` and `PR_BODY`, and refuses otherwise (ADR-061 point 8). It enqueues the pull request pinned to `<sha>`, and waits for the queue to merge it. The path goes on at step 6.
 - **5b.** The developer passed `--admin` on a base that merges through a queue. The system refuses, since no administrator merge passes a queue, and sends nothing (ADR-061 point 5).
-- **5c.** The request gets no usable answer. The system reads the pull request to settle it, and goes on where a reading sees it made. Where two readings do not see it made, the system ends `failed`, and where no reading can be taken, `unconfirmed`. It never says the request was not made (ADR-061 point 5). The developer reads the pull request with `pkit pull-request read <n>`, and the path rejoins at step 2.
+- **5c.** The request gets no usable answer. The system reads the pull request to settle whether the request was made, and never says the request was not made (ADR-061 point 5):
+  - Where a reading sees the request made, the system goes on.
+  - Where two readings do not see the request made, the system ends `failed`.
+  - Where no reading can be taken, the system ends `unconfirmed`.
+
+  The developer reads the pull request with `pkit pull-request read <n>`, and the path rejoins at step 2.
 - **6a.** The wait runs out with the pull request still queued. The system ends `queued`, and the developer runs the same command again later, which waits for it. The path rejoins at step 2.
 - **6b.** The queue drops the pull request. The system ends `dropped`. The developer mends what dropped it, or runs the command again with `--allow-dropped-head` to enqueue it again, and the path rejoins at step 2.
 - **7a.** The branch's tip moved after the merge, or another open pull request uses the branch as its head or its base. The system keeps the branch, and says why (ADR-061 point 5).
 
-**Postconditions:** The change is on the default branch, with every answer it wrote, its deferrals included. Through a pull request, it is one squash commit, its subject the pull request's title and its body the pull request's body. Its head branch is gone. Worked alone, it is one commit made straight there. What it left without an answer or deferred stays there as debt (COR-050 point 9). So does an artefact it revalidated apart from another change (COR-062 point 7).
+**Postconditions:**
+
+- The change is on the default branch, with every answer it wrote, its deferrals included.
+- Through a pull request, the change is one squash commit, whose subject is the pull request's title and whose body is the pull request's body. The pull request's head branch is gone.
+- Worked alone, the change is one commit made straight on the default branch.
+- What the change left without an answer or deferred stays on the default branch as debt (COR-050 point 9). So does an artefact the change revalidated apart from another change (COR-062 point 7).
 
 **Minimal guarantees:**
 

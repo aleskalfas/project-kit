@@ -28,4 +28,6 @@ pkit:
 
 **Rationale:** No record decides it. The requirement is its own home, and merging the change that adds it approves it (software-analysis DEC-002 point 8).
 
-A component reads these documents, never the human view, so a key whose meaning changed would be misread silently. A raised version tells such a reader to stop instead. A key added keeps the version, so a reader that knows the version still reads it. Four of these commands gained the key after they first shipped. So a document of theirs without it comes from an older backbone, and reads as version 1, as the CLI reference says.
+A component reads these documents, never the human view, so a key whose meaning changed would be misread silently. A raised version tells such a reader to stop instead. A key added keeps the version, so a reader that knows the version still reads the document.
+
+Four of these commands gained `schema_version` after they first shipped. So a document of theirs without it comes from an older backbone, and reads as version 1, as the CLI reference says.

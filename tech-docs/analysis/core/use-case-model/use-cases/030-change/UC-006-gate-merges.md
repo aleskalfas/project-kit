@@ -100,7 +100,7 @@ pkit:
 > **Not built yet:** `pkit config set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 2. The system validates the whole configuration file with the new value, and writes it. It prints `set friction.mode = enforcing  (.pkit/project/config.yaml)`.
-3. The adopter adds a job to the project's CI that runs `pkit sync`, then `pkit validate`, `pkit friction check` and the project's other checks. The job sets `PKIT_CHECK_BASE` to the pull request's target, and `PKIT_CHECK_HEAD` to its head (COR-062 point 4). In project-kit, that job is `.github/workflows/checks.yml`.
+3. The adopter adds a job to the project's CI that runs `pkit sync`, then `pkit validate`, `pkit friction check` and the project's other checks. The job sets `PKIT_CHECK_BASE` to the pull request's target, and sets `PKIT_CHECK_HEAD` to the pull request's head (COR-062 point 4). In project-kit, that job is `.github/workflows/checks.yml`.
 4. The adopter makes that job a required status of the default branch, on the hosting service.
 5. On each pull request, the CI pipeline runs the job with no terminal, and no check asks anything.
 6. Each check exits non-zero on what fails it. `pkit validate` fails on an `error` finding. The change check fails on unanswered friction, a `bump`, a dead anchor, an unresolved kind and a resolver's missing answer. It fails too on an answer file written as COR-062 point 10 forbids.
@@ -119,7 +119,7 @@ pkit:
 - **3a.** The job does not run `pkit sync` first. A registered validator then says "environment not provisioned — run `pkit sync`", an `error` finding, so `pkit validate` fails.
 - **3b.** The job's checkout lacks the base. Each check that compares refuses with its fixes, such as fetching the base or naming another.
 - **3c.** The job's checkout is shallow. The change check names, in its header, each artefact whose history the cut hides (UC-002).
-- **3d.** The project's merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The change check judges what each answer read against its own change's head, never against the queue's merge (COR-062 point 4).
+- **3d.** The project's merges go through a merge queue, so the job runs on each merge the queue builds too. That merge holds the answers of the changes queued ahead. The change check judges what each answer read against the head of the answer's own change, never against the queue's merge (COR-062 point 4).
 
 > [!WARNING]
 > **Not built yet:** on a queue's merge, the change check reads the queue's merge as each change's own head. COR-062 point 4 decides that the check judges against the change's own head wherever it runs, and #1867 tracks it.

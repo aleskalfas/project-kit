@@ -124,7 +124,7 @@ pkit:
 
 7. The developer runs `pkit friction check` again. It reports no friction, and lists every answer the change wrote, word for word, under "Answers written in this change".
 8. For each artefact revalidated as `updated`, whoever made the change says in one sentence what changed in it, in the pull request.
-9. The CI pipeline runs `pkit friction check` on the pull request, with `PKIT_CHECK_BASE` naming the pull request's target and `PKIT_CHECK_HEAD` its head, and the check passes.
+9. The CI pipeline runs `pkit friction check` on the pull request, with `PKIT_CHECK_BASE` naming the pull request's target and `PKIT_CHECK_HEAD` naming its head, and the check passes.
 10. A reviewer other than the agent that wrote the answers checks each `unchanged` and `deferred` reason against the change, and each sentence against the diff. It works from the check's own list, and does not judge again a deferral the change kept as it was.
 
 **Variants:**
@@ -142,7 +142,7 @@ pkit:
 - **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them (COR-062 point 5). The revalidation itself then answers what each replaced deferral had put off (COR-050 point 4).
 
 > [!WARNING]
-> **Not built yet:** the revalidation removes the rest from the artefact's block. COR-062 point 5 decides that it replaces each deferral it read and does not re-state, which stays in its answer file, and #1873 tracks it.
+> **Not built yet:** the revalidation removes the rest from the artefact's block. COR-062 point 5 decides that it replaces each deferral it read and does not re-state, which stays in the deferral's own answer file. #1873 tracks it.
 
 - **6a.** The run has no terminal, and neither `--yes` nor `--dry-run` is given. The system refuses and writes nothing. It names the command to run with `--dry-run`, and the path rejoins at step 5.
 - **6b.** The artefact's block would not pass validation once written. The system refuses and writes nothing. The developer mends the block that `pkit validate` names, and the path rejoins at step 5.
@@ -155,7 +155,7 @@ pkit:
 
   The developer mends the answer files, and the path rejoins at step 7.
 - **7c.** The change moved answers word for word out of the artefacts' blocks into answer files. The check lists them apart, under "Answers moved in this change", and nobody is asked to accept them (COR-062 point 3).
-- **7d.** An artefact the change revalidates in an answer file has a live revalidation on the base's tip that the change's answer did not read. The check reports it as `answered-apart`, and never fails on it. Once merged, the two are debt until a revalidation reads both (COR-062 point 7).
+- **7d.** An artefact the change revalidates in an answer file has a live revalidation on the base's tip that the change's answer did not read. The check reports that revalidation as `answered-apart`, and never fails on it. Once merged, the two are debt until a revalidation reads both (COR-062 point 7).
 - **9a.** The project runs the change check in `warning` mode. The check reports what it finds and passes, so nothing holds the merge on it.
 - **9b.** The pull request's target moved on, and merging the target into the branch conflicts inside a `revalidated` block. `pkit friction resolve` checks the repository as step 11 does. It resolves the block's text, and writes no answer of its own. It names the revalidation still owed, and the path rejoins at step 5.
 

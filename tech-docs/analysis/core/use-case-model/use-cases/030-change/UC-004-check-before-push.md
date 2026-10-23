@@ -77,7 +77,7 @@ pkit:
 3. `pkit validate` checks the working tree's state through every registered validator, the backbone's and each installed component's (COR-055 point 3). It fails only on an `error` finding (COR-055 point 5).
 4. The checks that compare a change, such as `pkit friction check`, `pkit migrations check-diff` and `pkit decisions check-diff`, compare it with where the branch left the base.
 5. Every check passes. In project-kit, the aggregator runs them all without stopping at the first failure, and ends with `✓ all checks passed`.
-6. The developer pushes, and the CI pipeline runs the same checks on the pull request, with `PKIT_CHECK_BASE` naming its target and `PKIT_CHECK_HEAD` its head.
+6. The developer pushes, and the CI pipeline runs the same checks on the pull request, with `PKIT_CHECK_BASE` naming its target and `PKIT_CHECK_HEAD` naming its head.
 
 **Variants:**
 
