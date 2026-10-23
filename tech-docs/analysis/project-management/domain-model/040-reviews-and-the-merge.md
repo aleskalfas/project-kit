@@ -123,7 +123,7 @@ Defined in [TERM-merge-gate](../glossary.md#term-merge-gate--merge-gate).
 
 **Why:** An approval counts only for what its [reviewer](../../core/glossary.md#term-reviewer--reviewer) saw. So the gate judges one [head](../../core/glossary.md#term-head--head), and the merge is pinned to it. A push between the two then fails the merge, rather than landing commits no [verdict](../glossary.md#term-verdict--verdict) covers (DEC-028). A [Task](../glossary.md#term-task--task)'s [checkboxes](../glossary.md#term-checkbox--checkbox) are checked before the merge, since closing the Task by the merge would otherwise pass them by (DEC-007).
 
-The merge gate is the set of conditions project-management holds a [pull request](../../core/glossary.md#term-pull-request--pull-request) to before it lands it. Each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict must be a standing approval, its checks must be green, and the checkboxes of each [issue](../glossary.md#term-issue--issue) it closes ticked.
+The merge gate is the set of conditions project-management holds a [pull request](../../core/glossary.md#term-pull-request--pull-request) to before it lands it. Each [required reviewer](../glossary.md#term-required-reviewer--required-reviewer)'s latest verdict must be a standing approval, and the pull request's checks must be green. The checkboxes of each [issue](../glossary.md#term-issue--issue) the pull request closes must be ticked.
 
 **Attributes:** None.
 
@@ -139,4 +139,4 @@ The merge gate is the set of conditions project-management holds a [pull request
 
 - The merge is pinned to the head the gate judged (DEC-028).
 - A gate that passes gives no [authorisation](../glossary.md#term-authorisation--authorisation) to merge, which stays the person's (DEC-055 point 3).
-- A person sets aside one required reviewer's approval only with a reason, which a comment records (DEC-050).
+- A person bypasses one required reviewer only with a reason, which an [audit comment](../glossary.md#term-audit-comment--audit-comment) records (DEC-050).

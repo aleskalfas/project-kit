@@ -74,7 +74,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): runs the commands for the planner, and lists a Milestone's open issues for the planner to triage before its due date (DEC-016).
-- **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such change happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently (core:REQ-012).
 
 **Preconditions:** None.
 
@@ -88,7 +88,7 @@ pkit:
 
 1. The planner declares the project's Milestone categories in the capability's settings. Each has its title format, its default close trigger and what it means (DEC-016).
 2. The planner creates a Milestone: `pkit pm create-milestone <category> --name "<name>" --due-on <date>`.
-3. At its entry, the system checks the project's setup, and the planner's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own, and asks the operator where it is another (core:REQ-012).
+3. At its entry, the system checks the project's prerequisites, and the planner's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own, and asks the operator where it is another (core:REQ-012).
 4. The system checks that the category is declared, and builds the title from its format. Where the format holds a number, the system numbers the Milestone after the last of its category (DEC-016).
 
 > [!WARNING]
@@ -115,7 +115,7 @@ pkit:
 **Variants:**
 
 - **2a.** The planner passes `--dry-run` to any of these commands. The system makes its checks, prints what it would create, change or move, and writes nothing. The use case ends.
-- **3a.** The project was never set up, the planner is no member, or the operator declines a change in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
+- **3a.** The project does not meet the prerequisites, the planner is no member, or the operator declines a write in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
 - **4a.** The category is not declared, or the project declares none. The system refuses, names the declared categories, and creates nothing (DEC-016). The use case ends.
 - **4b.** A Milestone of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.
 - **7a.** The slug is malformed, or a workstream of that slug exists. The system refuses, and writes nothing (DEC-018). The use case ends.

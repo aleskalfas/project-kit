@@ -91,7 +91,7 @@ pkit:
 - **Merge authoriser** (`core:ACT-merge-authoriser`): authorises the merge of one head, after reading each `[person]` finding and the answers the change wrote. No verdict stands in for that authorisation (DEC-055 point 3).
 - **AI agent** (`core:ACT-ai-agent`): each required reviewer, which posts its verdict and changes nothing it reviews (DEC-028). An agent may also land the change for the developer, through the `pm` skill.
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks the merge waits for, at the pull request's head.
-- **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such change happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently (core:REQ-012).
 
 **Preconditions:** **From UC-061:** The Task is in Review, its pull request open (DEC-026).
 
@@ -108,7 +108,7 @@ pkit:
 **Main path:**
 
 1. The developer runs `pkit pm land-work <N>`, with the Task's number.
-2. At its entry, the system checks the project's setup, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own, and asks the operator where it is another (core:REQ-012).
+2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own, and asks the operator where it is another (core:REQ-012).
 3. The system reads the pull request's head, prints it, and holds it as the head this run judges.
 4. The system waits for the checks at that head, and goes on once each has passed. A head with no check reported never counts as passed (`ci_checks.py`).
 5. The system works out the required reviewers: those the project's settings name, and each a capability contributes whose condition the change meets (DEC-032 point D1). It prints them, with each contributed reviewer the project declined and its reason (DEC-032 point D2).
@@ -123,8 +123,8 @@ pkit:
 10. With no authorisation yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and the list, and authorises the merge of the pull request at that head (DEC-055 point 3).
 12. The developer runs `pkit pm land-work <N> --yes --expect-head <sha>`, and the system runs steps 2 to 9 again at that head.
-13. The system holds the pull request to the merge gate. Each required reviewer's latest verdict must be a standing approval, and each checkbox of each issue it closes ticked. Its checks must have passed (DEC-007, DEC-028 and `done-work.py`).
-14. The system has the backbone merge the pull request, pinned to the head the gate judged. It moves each issue the pull request closes to Done, closes it, and has the branch deleted. It prints `[ok] merged + closed #<N>` (DEC-026 and DEC-028).
+13. The system holds the pull request to the merge gate. Each required reviewer's latest verdict must be a standing approval, and each checkbox of each issue the pull request closes must be ticked. The pull request's checks must have passed (DEC-007, DEC-028 and `done-work.py`).
+14. The system has the backbone merge the pull request, pinned to the head the gate judged. The system then moves to Done, and closes, each issue the pull request closes, and has the branch deleted. It prints `[ok] merged + closed #<N>` (DEC-026 and DEC-028).
 
 **Variants:**
 
@@ -134,7 +134,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the dry run names no move of the cascade that the merge would bring about. COR-004 decides that a dry run names each edit a run would make, and #1938 tracks it.
 
-- **2a.** The project was never set up, the developer is no member, or the operator declines a change in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
+- **2a.** The project does not meet the prerequisites, the developer is no member, or the operator declines a write in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
 - **4a.** A check fails at the head. The system names it, and starts no review and no merge. The use case ends.
 - **4b.** The checks still run when the wait ends. The system says so and exits `5`, and the developer runs the command again later. The path rejoins at step 1.
 - **4c.** The head moves while the system waits. The system stops, names both heads, and exits `3`. The path rejoins at step 1.
@@ -144,8 +144,8 @@ pkit:
 > [!WARNING]
 > **Not built yet:** with no local reviewer of the project's own, `review-pr` refuses before it works out the set, and `land-work` skips the review. DEC-032 point D4 decides that `review-pr` runs every required reviewer, a contributed one included, and #1934 tracks it.
 
-- **6a.** The author changed something a reviewer checks since its verdict's head, or the pull request no longer stands on the verdict's base. The verdict is stale, and the system runs that reviewer again (DEC-028).
-- **6b.** The author's only changes since an approving verdict are answer files the change adds. The verdict of a reviewer that only the condition `touches-code` requires stands, since an answer file is no code (DEC-032 point D1).
+- **6a.** The developer changed something a reviewer checks since its verdict's head, or the pull request no longer stands on the verdict's base. The verdict is stale, and the system runs that reviewer again (DEC-028).
+- **6b.** The developer's only edits since an approving verdict are answer files the change adds. The verdict of a reviewer that only the condition `touches-code` requires stands, since an answer file is no code (DEC-032 point D1).
 
 > [!WARNING]
 > **Not built yet:** an answer file counts as code, so such a change makes that verdict stale. DEC-032 point D1 decides that an answer file is no code, and #1872 tracks it.
@@ -153,10 +153,10 @@ pkit:
 - **6c.** A reviewer's output holds no line that reads as a verdict. The system counts no verdict for it, prints the reviewer's whole output, and stops, exiting `6` (DEC-028). The use case ends.
 - **7a.** A verdict requests changes. The system prints the first line of each `[block]` finding, and starts no merge (DEC-028). The developer changes the work, and the path rejoins at step 1.
 - **8a.** A `[person]` finding's verdict was posted while the run went on, or does not stand for the head. A run authorised up front stops ready, and merges nothing until the merge authoriser has seen the finding (DEC-055 point 3).
-- **12a.** The head is not the one the authorisation named. The system stops before it checks anything, unless each change since that head lies in answer files the change adds. Then the authorisation covers the later head (DEC-055 point 3).
+- **12a.** The head is not the one the authorisation named. The system stops before it checks anything, unless each edit since that head lies in answer files the change adds. Then the authorisation covers the later head (DEC-055 point 3).
 
 > [!WARNING]
-> **Not built yet:** the system reads the answers from the documents' own blocks, never from answer files. DEC-055 point 3 decides that a later head is covered where the author's changes lie in the change's answer files, and #1779 tracks it.
+> **Not built yet:** the system reads the answers from the documents' own blocks, never from answer files. DEC-055 point 3 decides that a later head is covered where the developer's edits lie in the change's answer files, and #1779 tracks it.
 
 - **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N> --force`, with the Task's number, to run them again (DEC-028).
 
@@ -164,7 +164,7 @@ pkit:
 > **Not built yet:** the refusal names `review-pr` with the pull request's number, which that command reads as an issue's. DEC-028 decides that it names the command with the issue's number, and #1935 tracks it.
 
 - **13b.** A checkbox of an issue the pull request closes is unticked. The system refuses the merge, listing each one (DEC-007). The use case ends.
-- **13c.** The developer sets aside one required reviewer's approval: `pkit pm done-work <N> --yes --bypass-reviewer <name> --bypass-reviewer-reason "<R>"`. The system posts the reason in an audit comment before the merge, and counts that reviewer as satisfied (DEC-050).
+- **13c.** The developer bypasses one required reviewer: `pkit pm done-work <N> --yes --bypass-reviewer <name> --bypass-reviewer-reason "<R>"`. The system posts the reason in an audit comment before the merge, and counts that reviewer as satisfied (DEC-050).
 - **13d.** The project's settings set `review.mode` to `human`. A person's approving review counts in place of the verdicts, and `land-work` runs no reviewer (DEC-027).
 - **14a.** The base merges through a merge queue. The backbone queues the pull request pinned to the head, and the system exits `4` while it waits in the queue (ADR-061).
 
@@ -174,7 +174,8 @@ pkit:
 
 - A verdict that is missing or cannot be read never satisfies the merge gate (DEC-028).
 - Only a comment that carries the verdict's marker counts as a verdict (DEC-028).
-- An approval stands only while the author changes nothing its reviewer checks. A commit the system cannot read makes it stale (DEC-028).
+- An approval stands only while the developer changes nothing its reviewer checks. A commit the system cannot read makes it stale (DEC-028).
 - Where the required reviewers cannot be worked out, nothing merges on part of them (DEC-032 point D5).
 - The merge is pinned to the head the gate judged, so a push after the gate fails it (DEC-028).
-- Nothing merges through `land-work` without an authorisation for that head, given at a terminal or by `--yes` with `--expect-head` (DEC-055 point 3 and REQ-042). `done-work`, as in variant 13c, merges the head its gate reads (DEC-055 point 5).
+- Nothing merges through `land-work` without an authorisation for that head, given at a terminal or by `--yes` with `--expect-head` (DEC-055 point 3 and REQ-042).
+- `done-work`, as in variant 13c, pins its merge to the head its gate read (DEC-028 and DEC-055 point 5).

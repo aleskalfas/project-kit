@@ -146,7 +146,7 @@ Defined in [TERM-cascade](../glossary.md#term-cascade--cascade).
 
 **Why:** A parent's progress follows from its children's, never the other way round. So a parent [issue](../glossary.md#term-issue--issue) behind the work under it is brought level, on nobody's say-so. Closing a parent is a commitment, so the cascade stops at each one for a person to authorise its close (DEC-006).
 
-The cascade is what one issue's move does to the issues above it. Moving forward, it brings each one that is behind up to the issue's state, as far as In Progress. When a child closes, it makes a parent whose children are all done eligible to close, and never closes it.
+The cascade is what one issue's move does to the issues above it. Moving forward, it brings each one that is behind up to the issue's state, as far as In Progress. When a child closes, the cascade makes a parent whose children are all done eligible to close, and never closes that parent.
 
 **Attributes:** None.
 
@@ -168,7 +168,7 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 
 Defined in [TERM-audit-comment](../glossary.md#term-audit-comment--audit-comment).
 
-**Why:** The timeline already records every [change](../../core/glossary.md#term-change--change) of a label, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made a change (DEC-049).
+**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made a [change](../../core/glossary.md#term-change--change) (DEC-049).
 
 An audit comment is one the system posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). At the default setting it records each [bypass](../glossary.md#term-bypass--bypass) with its reason. At the fullest setting it records each write the system governs too.
 
@@ -192,7 +192,7 @@ An audit comment is one the system posts on an [issue](../glossary.md#term-issue
 
 Defined in [TERM-bypass](../glossary.md#term-bypass--bypass).
 
-**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person skip such a check with a reason. The reason is posted before the write, so it survives a step that fails (DEC-014).
+**Why:** Some checks guard what may happen with an explicit justification, rather than what must never happen. A bypass lets a person override such a check with a reason. The reason is posted before the write, so it survives a step that fails (DEC-014).
 
 A bypass overrides one check that refuses by default, such as scheduling an [issue](../glossary.md#term-issue--issue) with no [Milestone](../glossary.md#term-milestone--milestone). The person gives the reason with the command, and the system records it before it goes on.
 

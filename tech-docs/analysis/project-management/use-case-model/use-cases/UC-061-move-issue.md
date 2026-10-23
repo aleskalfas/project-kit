@@ -97,12 +97,12 @@ pkit:
 **Main path:**
 
 1. The developer schedules the issue: `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the project uses Milestones (DEC-006 and DEC-026).
-2. At its entry, the system checks the project's setup, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own, and asks the operator where it is another (core:REQ-012).
+2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own, and asks the operator where it is another (core:REQ-012).
 3. The system checks that the issue lifecycle declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and DEC-031).
 4. Unless the project turns audit comments off, the system posts the reason in an audit comment that names the move, before the move (DEC-014). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a journal, the move goes into it with its reason (DEC-049).
 
 > [!WARNING]
-> **Not built yet:** the audit comment says who bypassed the rule and why, and names no move. DEC-052 decides that the comment of a move names the move it made, and #756 tracks it.
+> **Not built yet:** the audit comment says who bypassed the check and why, and names no move. DEC-052 decides that the comment of a move names the move it made, and #756 tracks it.
 
 5. The system runs the cascade. Each issue above that is behind is brought forward, one declared move at a time (DEC-006). Where a journal is kept, each move goes into it with its cause.
 6. The developer starts the work: `pkit pm start-work <N>`. The system cuts the issue's branch, assigns the developer, and moves the issue to In Progress, a move the issue lifecycle leaves to the agent. The cascade runs as in step 5 (DEC-006 and DEC-026).
@@ -120,8 +120,8 @@ pkit:
 
 - **1b.** The developer gives no reason. `promote-issue` refuses before it writes, and the use case ends (DEC-014).
 - **1c.** The issue is past Todo already. The system says so, and changes nothing (`promote-issue.py`).
-- **2a.** The project was never set up, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
-- **3a.** The issue lifecycle declares no such move for the issue's type, such as Review for an EPIC. The system refuses, naming the moves it declares, and writes nothing (DEC-006). The use case ends.
+- **2a.** The project does not meet the prerequisites, the developer is no member, or the operator declines a move in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
+- **3a.** The issue lifecycle declares no such move for the issue's type, such as Review for an EPIC. The system refuses, naming the moves the issue lifecycle declares, and writes nothing (DEC-006). The use case ends.
 - **3b.** The issue's body still holds a placeholder of its template. The system refuses the move until the body is written (DEC-031). The use case ends.
 - **5a.** A move of the cascade fails part-way. The system warns, and names the issues it did not move. Running the same move again finishes the cascade, since a move already made is not made twice (DEC-006).
 - **6a.** The issue is assigned to someone else. `start-work` refuses, and changes nothing (`start-work.py`).

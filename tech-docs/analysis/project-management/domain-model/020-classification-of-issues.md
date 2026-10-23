@@ -19,7 +19,7 @@ pkit:
 
 # VIEW-classification-of-issues — Classification of issues
 
-Issues need classification beyond their type. It keeps their filing the same each time, and lets a board filter and plan by it. It also aligns a [pull request](../../core/glossary.md#term-pull-request--pull-request)'s title with the work it closes (DEC-012).
+Issues need classification beyond their type. Classification keeps the filing of issues the same each time, and lets a board filter and plan by it. Classification also aligns a [pull request](../../core/glossary.md#term-pull-request--pull-request)'s title with the work the pull request closes (DEC-012).
 
 A [classification axis](../glossary.md#term-classification-axis--classification-axis) is one dimension of that classification, on which every [issue](../glossary.md#term-issue--issue) takes one value. A [workstream](../glossary.md#term-workstream--workstream) is one value of the `workstream` axis: a long-lived area of the work, which the [project](../../core/glossary.md#term-project--project) declares in a file of its own.
 
@@ -85,7 +85,7 @@ A classification axis is one dimension along which every issue is classified. Th
 
 Defined in [TERM-workstream](../glossary.md#term-workstream--workstream).
 
-**Why:** A team invests in long-lived areas over many outcomes. Where each [project](../../core/glossary.md#term-project--project) improvises their names and their lifecycle, the names drift. One definition, kept in one file with rules for its names, keeps every project's workstreams in one shape (DEC-018).
+**Why:** A team invests in long-lived areas over many outcomes. Where each [project](../../core/glossary.md#term-project--project) improvises their names and their lifecycle, the names drift. One definition, kept in one file with fixed forms for the names, keeps every project's workstreams in one shape (DEC-018).
 
 A workstream is a long-lived area of a project's work, such as `docs` or `cli`. It outlasts the [EPICs](../glossary.md#term-epic--epic) whose outcomes lie within it. The project declares its workstreams in a file of its own, and each one is a value of the `workstream` axis.
 

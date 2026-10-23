@@ -42,12 +42,12 @@ A team's work needs grouping between long-term outcomes and the changes that eac
 
 An [issue](../glossary.md#term-issue--issue) is the item of work, and its type sets its level: [EPIC](../glossary.md#term-epic--epic), [Feature](../glossary.md#term-feature--feature), [Umbrella](../glossary.md#term-umbrella--umbrella) or [Task](../glossary.md#term-task--task).
 
-A [Milestone](../glossary.md#term-milestone--milestone) holds the issues of one window or one bundle of outcomes. Its [Milestone category](../glossary.md#term-milestone-category--milestone-category) is one the [project](../../core/glossary.md#term-project--project) declares, and its [close trigger](../glossary.md#term-close-trigger--close-trigger) says when it ends. A [parent reference](../glossary.md#term-parent-reference--parent-reference) names each issue's parent in its body, and [checkboxes](../glossary.md#term-checkbox--checkbox) say what must hold before it closes.
+A [Milestone](../glossary.md#term-milestone--milestone) holds the issues of one window or one bundle of outcomes. Its [Milestone category](../glossary.md#term-milestone-category--milestone-category) is one the [project](../../core/glossary.md#term-project--project) declares, and its [close trigger](../glossary.md#term-close-trigger--close-trigger) says when it ends. A [parent reference](../glossary.md#term-parent-reference--parent-reference) names each issue's parent in that issue's body, and [checkboxes](../glossary.md#term-checkbox--checkbox) say what must hold before the issue closes.
 
 ```mermaid
 classDiagram
   accTitle: Issues and their hierarchy
-  accDescr: An issue is an EPIC, a Feature, an Umbrella or a Task, and holds checkboxes and at most one parent reference. A Milestone of one Milestone category opens with its close trigger, and holds issues. An EPIC holds Features, Umbrellas and Tasks. A Feature holds Tasks. An Umbrella holds Features, Tasks and Umbrellas.
+  accDescr: An issue is an EPIC, a Feature, an Umbrella or a Task, and holds checkboxes and at most one parent reference. A Milestone of one Milestone category opens with its close trigger, and holds issues. An EPIC holds Features, Umbrellas and Tasks. A Feature holds Tasks, and an Umbrella holds Features, Tasks and Umbrellas.
   class Issue {
     title
     body
@@ -146,7 +146,7 @@ A Milestone is GitHub's own container, kept apart from issues. It holds the issu
 - It holds no other Milestone (DEC-016).
 - It belongs to one Milestone category (DEC-016).
 
-**States:** A Milestone is open until it closes. A date-based one closes at its due date, and its open issues roll forward to the next Milestone. A content-based one closes once every [issue](../glossary.md#term-issue--issue) under it has closed, and one marked `either` at whichever comes first (DEC-016).
+**States:** A Milestone is open until it closes. A date-based one closes at its due date, and its open issues roll forward to the next Milestone. A content-based one closes once every [issue](../glossary.md#term-issue--issue) under it has closed, and one marked `either` closes at whichever comes first (DEC-016).
 
 **Always true:**
 
@@ -158,7 +158,7 @@ Defined in [TERM-close-trigger](../glossary.md#term-close-trigger--close-trigger
 
 **Why:** When a [Milestone](../glossary.md#term-milestone--milestone) closes must be declared and readable by a machine, so nothing is inferred while the line is there. The line mirrors the [parent reference](../glossary.md#term-parent-reference--parent-reference) on an [issue](../glossary.md#term-issue--issue)'s first line, and people see it where they read the Milestone (DEC-016).
 
-A close trigger is the first line of a Milestone's description, such as `Close trigger: date-based`. A `date-based` Milestone closes at its due date, and its open issues roll forward. A `content-based` one closes once its issues have closed, and one marked `either` at whichever comes first.
+A close trigger is the first line of a Milestone's description, such as `Close trigger: date-based`. A `date-based` Milestone closes at its due date, and its open issues roll forward. A `content-based` one closes once its issues have closed, and one marked `either` closes at whichever comes first.
 
 **Attributes:**
 
@@ -207,7 +207,7 @@ Defined in [TERM-epic](../glossary.md#term-epic--epic).
 
 **Why:** Planning needs a level for long-term outcomes, above the work that delivers them. The EPIC is that level, the first of the hierarchy's three structural levels (DEC-004).
 
-An EPIC states one outcome that spans several quarters. The work that delivers it is filed under it, and it closes once its success criteria are met.
+An EPIC states one outcome that spans several quarters. The work that delivers the outcome is filed under the EPIC. The EPIC closes once its success criteria are met.
 
 **Attributes:**
 

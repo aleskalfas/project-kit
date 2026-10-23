@@ -4,7 +4,7 @@ title: A move a person holds is made only on that person's authorisation
 status: active
 statement: "No command of project-management makes a move of the issue lifecycle that a person holds without that person's authorisation for that issue."
 measure: "With no terminal, no confirmation flag, and no reason where the move asks one, the command refuses the move and changes nothing."
-applies-to: "Every command of project-management that moves an issue through the issue lifecycle, or merges the pull request whose merge moves it. The moves of the cascade are outside it, since they ask for no authorisation."
+applies-to: "Every command of project-management that moves an issue through the issue lifecycle, or merges the pull request whose merge moves it. The moves of the cascade are outside this requirement, since they ask for no authorisation."
 actors:
   - core:ACT-developer
   - ACT-planner

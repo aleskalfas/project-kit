@@ -64,7 +64,7 @@ pkit:
 **Other actors:**
 
 - **AI agent** (`core:ACT-ai-agent`): the `project-manager` agent, which drafts the batch plan, has it reviewed and files it. It files nothing before the planner approves the plan (DEC-029).
-- **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such change happens silently (core:REQ-012).
+- **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such write happens silently (core:REQ-012).
 
 **Preconditions:** **From UC-064:** The project declares the workstreams its work falls into (DEC-012).
 
@@ -100,11 +100,11 @@ pkit:
 **Variants:**
 
 - **3a.** Nothing fills the data point. The agent skips the step, and the plan names no use-case entry (DEC-054 point 3).
-- **3b.** The data point cannot be read, such as in a clone that never fetched the default branch. The agent says why, and plans without the step. It never takes that answer for an empty set (DEC-054 point 3).
-- **3c.** Only part of the data point answered. The agent walks what it holds, and names the filler that did not answer. The gaps it finds are shown as possible ones (DEC-054 point 3).
+- **3b.** The data point cannot be read, such as in a clone that never fetched the default branch. The agent says why, and plans without the step. It never takes that outcome for an empty set (DEC-054 point 3).
+- **3c.** Only part of the data point resolved. The agent walks what the data point holds, and names the filler that gave nothing. The gaps it finds are shown as possible ones (DEC-054 point 3).
 - **4a.** The data point holds no entry, and the plan builds work that touches what users do. The plan opens with a Task to describe what users do with the software, and only that work depends on it (DEC-054 point 5).
 - **4b.** The planner declined that Task earlier the same day, in this checkout. The agent leaves it out, and says when it was declined (DEC-054 point 5).
-- **7a.** The planner asks for changes. The agent drafts the plan again, and runs the reviewers again where the change is not trivial. The path rejoins at step 6.
+- **7a.** The planner asks for changes. The agent drafts the plan again, and runs the reviewers again where the revision is not trivial. The path rejoins at step 6.
 - **7b.** The planner revises the Task of variant 4a away. Once the plan is approved, the agent keeps the decline with `pkit pm decline-use-case-task`, until the next day (DEC-054 point 5). The path goes on at step 8.
 - **7c.** The planner cancels the plan. The agent files nothing, and the use case ends (DEC-029).
 - **8a.** A filing is refused. The agent stops, says which issue failed and why, and proposes a fix to the planner. What it filed before stays filed (`batch-plan.md`).

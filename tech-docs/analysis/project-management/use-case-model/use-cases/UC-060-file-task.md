@@ -102,7 +102,7 @@ pkit:
 1. The developer chooses the Task's parent, its title, its kind of work, its priority and its workstream (DEC-004 and DEC-012).
 2. The developer writes the body in a file, opening with the parent reference, or leaves the body to the Task's template (DEC-010).
 3. The developer runs `pkit pm create-issue --type task --title "<title>" --parent <N>`, with `--kind`, `--priority`, `--workstream` and, where they wrote one, `--body-file`.
-4. At its entry, the system checks the project's setup, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+4. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
 5. The system composes the title from the kind's prefix and `<title>`, such as `[Bug] <title>`, and checks it against the title formats the capability declares (DEC-011).
 6. The system reads the parent's type, and checks that a Task may sit under it: a Feature, an Umbrella or an EPIC (DEC-005).
 
@@ -114,7 +114,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `create-issue` checks `--workstream` only against the legacy `workstreams:` key of the capability's settings. Where that key is empty, any value passes. DEC-012 decides that a value outside the project's allowed set is refused, and #1933 tracks it.
 
-8. The system composes the body: its first line the parent reference, such as `Feature: #12`, then the Task's sections (DEC-010). Where the developer gave a file, the system checks that its first line is a Task's parent reference, naming the parent of `--parent` (DEC-005).
+8. The system composes the body: its first line the parent reference, such as `Feature: #12`, then the Task's sections (DEC-010). Where the developer gave a file, the system checks that the file's first line is a Task's parent reference, naming the parent of `--parent` (DEC-005).
 
 > [!WARNING]
 > **Not built yet:** the template opens with a comment, and the composed body puts the parent reference below it. So the body's first line names no parent. DEC-005 decides that every body opens with its parent reference, and #1314 tracks it.
@@ -133,7 +133,7 @@ pkit:
 
 - **1a.** An AI agent files the Task for the developer, through the `pm` skill's `create-issue.md`. It infers the kind and the workstream from the request, and asks where it is unsure (DEC-012). The path goes on at step 3.
 - **3a.** The developer passes `--dry-run`. The system makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
-- **4a.** The project was never set up, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing (REQ-041). The use case ends.
+- **4a.** The project does not meet the prerequisites, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing (REQ-041). The use case ends.
 - **4b.** The repository is another, and the operator declines, or nobody can answer and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
 - **5a.** The composed title fails a check that blocks, such as one on a conventional-commits prefix. The system refuses, naming the check, and writes nothing (DEC-011). A check that only warns, such as one on a short title, is printed, and the path goes on.
 - **6a.** No parent is given. The system refuses, naming the types a Task may sit under, and writes nothing (DEC-004). The use case ends.

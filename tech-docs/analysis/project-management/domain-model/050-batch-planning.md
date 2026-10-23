@@ -18,9 +18,9 @@ pkit:
 
 # VIEW-batch-planning — Batch planning
 
-A planner's intent becomes many issues, and slicing it well needs the [project](../../core/glossary.md#term-project--project)'s own account of what its software must do. That account is another [component](../../core/glossary.md#term-component--component)'s, so it comes through a [data point](../../core/glossary.md#term-data-point--data-point). Slicing is a judgement, so a person approves the whole outline before anything is filed (DEC-029 and DEC-054).
+An intent becomes many issues, and slicing it well needs the [project](../../core/glossary.md#term-project--project)'s own account of what its software must do. That account is another [component](../../core/glossary.md#term-component--component)'s, so it comes through a [data point](../../core/glossary.md#term-data-point--data-point). Slicing is a judgement, so a person approves the whole outline before anything is filed (DEC-029 and DEC-054).
 
-A [use-case entry](../glossary.md#term-use-case-entry--use-case-entry) names one goal of that account. A [batch plan](../glossary.md#term-batch-plan--batch-plan) is the outline the agent drafts against the entries, which the person approves, revises or cancels.
+A [use-case entry](../glossary.md#term-use-case-entry--use-case-entry) names one goal of that account. A [batch plan](../glossary.md#term-batch-plan--batch-plan) is the outline the agent drafts against the entries. The person approves the outline, revises it or cancels it.
 
 ```mermaid
 classDiagram
@@ -56,7 +56,7 @@ flowchart LR
 
 Defined in [TERM-use-case-entry](../glossary.md#term-use-case-entry--use-case-entry).
 
-**Why:** [Components](../../core/glossary.md#term-component--component) exchange what they know through [data points](../../core/glossary.md#term-data-point--data-point), without depending on each other. So project-management reads the [project](../../core/glossary.md#term-project--project)'s account of its software through one, never through another component's files. Whatever keeps that account, or the project itself, answers for it (DEC-054).
+**Why:** [Components](../../core/glossary.md#term-component--component) exchange what they know through [data points](../../core/glossary.md#term-data-point--data-point), without depending on each other. So project-management reads the [project](../../core/glossary.md#term-project--project)'s account of its software through one, never through another component's files. Whatever keeps that account, or the project itself, fills the data point (DEC-054).
 
 A use-case entry is one item of that data point. It names one goal the project's software serves, by its id and its title, and says whether it is active or withdrawn. Where it can, it also gives the path of the document that describes the goal.
 
@@ -69,7 +69,7 @@ A use-case entry is one item of that data point. It names one goal the project's
 
 **Relations:**
 
-- One component fills the data point, and a file of the project's own replaces that [answer](../../core/glossary.md#term-answer--answer) whole (DEC-054 point 1).
+- One component fills the data point, and a file of the project's own replaces what that component gives, whole (DEC-054 point 1).
 - A [Feature](../glossary.md#term-feature--feature)'s or a [Task](../glossary.md#term-task--task)'s body may cite it in a `## Use cases` section (DEC-054 point 4).
 
 **States:** An entry is active or withdrawn (DEC-054 point 1).
@@ -83,7 +83,7 @@ A use-case entry is one item of that data point. It names one goal the project's
 
 Defined in [TERM-batch-plan](../glossary.md#term-batch-plan--batch-plan).
 
-**Why:** A planner's intent becomes many issues, and slicing it is a judgement a person must check. One approval of the whole outline keeps the agent's speed without filing work nobody agreed to. Adversarial review before that approval catches bad slicing where it costs least (DEC-029).
+**Why:** An intent becomes many issues, and slicing it is a judgement a person must check. One approval of the whole outline keeps the agent's speed without filing work nobody agreed to. Adversarial review before that approval catches bad slicing where it costs least (DEC-029).
 
 A batch plan is the outline the project-manager agent drafts for an intent. It holds an [EPIC](../glossary.md#term-epic--epic) and its work, each [issue](../glossary.md#term-issue--issue) with its parent, classification and [use-case entries](../glossary.md#term-use-case-entry--use-case-entry). The person approves it, revises it or cancels it, and nothing is filed before they approve it.
 

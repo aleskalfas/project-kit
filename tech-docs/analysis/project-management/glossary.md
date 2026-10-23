@@ -72,7 +72,7 @@ TERM-batch-plan:
   name: batch plan
   noun-forms: [batch plans]
   status: active
-  definition: "outline of issues the project-manager agent files for an intent once a person approves it, each with its parent and use-case entries"
+  definition: "outline of issues for one intent, each with its parent and use-case entries, approved whole by a person before the project-manager agent files any"
   pkit:
     friction:
       anchors:
@@ -370,7 +370,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 **Distinctions:**
 
-- **The timeline:** GitHub's own record of each [change](../core/glossary.md#term-change--change) of a label, with who made it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the change (DEC-049).
+- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the [change](../core/glossary.md#term-change--change) (DEC-049).
 - **The journal:** the core's record of each move of a [process](../core/glossary.md#term-process--process), kept where the [project](../core/glossary.md#term-project--project) turns it on. Where it is kept, it is the canonical record, and the comments project it (DEC-049 point 1).
 
 ## TERM-authorisation — authorisation
@@ -468,7 +468,7 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#feature).
 
-**Example:** a Feature claims that a [project](../core/glossary.md#term-project--project) can rename a [workstream](#term-workstream--workstream). Three Tasks under it deliver the command, its tests and its documentation, and its [checkboxes](#term-checkbox--checkbox) say how the claim is verified.
+**Example:** a Feature claims that a [project](../core/glossary.md#term-project--project) can rename a [workstream](#term-workstream--workstream). Three Tasks under the Feature deliver the command, its tests and its documentation. The Feature's [checkboxes](#term-checkbox--checkbox) say how the claim is verified.
 
 **Distinctions:**
 
@@ -550,7 +550,7 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge.md#required-reviewer).
 
-**Example:** software-engineering contributes `code-reviewer` under the condition `touches-code`. A [pull request](../core/glossary.md#term-pull-request--pull-request) that changes `x.py` needs its approving [verdict](#term-verdict--verdict), beside that of `pm-reviewer`, which project-kit's settings name.
+**Example:** software-engineering contributes `code-reviewer` under the condition `touches-code`. A [pull request](../core/glossary.md#term-pull-request--pull-request) that changes `x.py` needs an approving [verdict](#term-verdict--verdict) of `code-reviewer`, beside one of `pm-reviewer`, which project-kit's settings name.
 
 **Distinctions:**
 
@@ -573,7 +573,7 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#umbrella).
 
-**Example:** an Umbrella groups the work that tidies the CLI's messages. Its body needs only a `## Purpose` section, which says what holds them together.
+**Example:** an Umbrella groups the work that tidies the CLI's messages. Its body needs only a `## Purpose` section, which says what holds that work together.
 
 **Distinctions:**
 

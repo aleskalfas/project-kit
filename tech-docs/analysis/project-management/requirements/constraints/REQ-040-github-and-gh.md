@@ -24,4 +24,4 @@ pkit:
 
 **Verified by:** The prerequisite check, `pkit pm pre-check`, runs `gh auth status`, and fails where no host is authenticated. No test covers that check, and nothing checks that a command reaches no other tracker.
 
-**Imposed by:** Every project the capability served when it was written lived on GitHub, and GitHub's issues, sub-issues and Milestones carry much of what it decides. A tracker hidden behind an abstraction would cost a translation at every write, for a move nobody has asked for (DEC-003).
+**Imposed by:** Every project the capability served when its records were written lived on GitHub. GitHub's issues, sub-issues and Milestones carry much of what those records decide. A tracker hidden behind an abstraction would cost a translation at every write, for a switch of tracker nobody has asked for (DEC-003).
