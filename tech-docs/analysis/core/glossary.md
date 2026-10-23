@@ -546,6 +546,10 @@ TERM-grant:
           - COR-028#1
           - COR-028#2
           - ADR-005#2
+      revalidated:
+        at: 2026-10-23T18:41:45Z
+        outcome: unchanged
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change only stops a grant on one segment of a chained command from allowing its other segments.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -560,6 +564,10 @@ TERM-guardrail:
         record:
           - COR-028#2
           - ADR-021#3
+      revalidated:
+        at: 2026-10-23T18:41:47Z
+        outcome: unchanged
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. A deny on any segment of a chained command still wins.
 TERM-harness:
   name: harness
   status: active
@@ -731,6 +739,10 @@ TERM-permission-hook:
           - COR-028#3
           - ADR-002#4
           - ADR-003
+      revalidated:
+        at: 2026-10-23T18:41:28Z
+        outcome: unchanged
+        unchanged-because: The decision code now allows a chained command only when a grant covers each segment. The hook still has that code allow, deny or defer each call, as the term says.
 TERM-place:
   name: place
   status: active
@@ -779,6 +791,10 @@ TERM-privilege:
           - COR-028#1
           - ADR-021
           - ADR-060#1
+      revalidated:
+        at: 2026-10-23T18:41:49Z
+        outcome: unchanged
+        unchanged-because: A privilege is still recognised from a tool call or a command, and the example command is still allowed by its grant. The code now reads privileges segment by segment, to check that a grant covers each.
 TERM-process:
   name: process
   noun-forms: [processes]

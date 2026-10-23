@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-23T14:50:27Z
+      at: 2026-10-23T18:42:02Z
       outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
+      unchanged-because: The workspace grant still covers the file tools alone, and a shell command is still decided on its own grants. The change narrows only how a grant allows a chained command.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

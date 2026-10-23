@@ -641,3 +641,58 @@ def test_hook_capture_failure_is_inert(tmp_path):
         root, {"tool_name": "Bash", "tool_input": {"command": "gh pr list"}, "cwd": str(root)}
     )
     assert parsed is None, "broken capture must not break fail-open"
+
+
+# ---- a compound allows only when a grant covers every segment (#1908) -------
+#
+# The live hook, end to end: where the operator is granted git and gh, a
+# compound whose every segment is git or gh is allowed, with or without a
+# leading `cd` (ADR-025 point 1). A compound with a segment no grant covers is
+# not: a lenient posture defers to the harness (no stdout), a strict one denies
+# (ADR-025 point 2).
+
+_GIT_AND_GH = (
+    "schema_version: 1\n"
+    "grants:\n"
+    "  - subject: operator\n"
+    "    privilege:\n"
+    '      - "[privilege-catalog:vcs]"\n'
+    '      - "[privilege-catalog:issue-tracker]"\n'
+    "    effect: allow\n"
+)
+
+
+def _bash_payload(root: Path, command: str) -> dict:
+    return {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(root)}
+
+
+def test_hook_allows_a_compound_whose_every_segment_is_granted(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in (
+        "git status && gh pr list",
+        "git diff | git apply --check",
+        f"cd {root} && git status ; gh pr list",
+    ):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "allow", command
+
+
+def test_hook_defers_on_a_compound_with_an_uncovered_segment(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in (
+        "gh pr list | sh",
+        "gh pr list ; python3 x.py",
+        "git status && docker ps",
+        f"cd {root} && gh pr list | sh",
+    ):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+
+
+def test_hook_denies_a_compound_with_an_uncovered_segment_under_strict(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n")
+    for command in ("gh pr list | sh", "gh pr list ; python3 x.py"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+    _, parsed = _invoke(root, _bash_payload(root, "git status && gh pr list"))
+    assert _decision(parsed) == "allow"
