@@ -168,7 +168,7 @@ The cascade is what one issue's move does to the issues above it. Moving forward
 
 Defined in [TERM-audit-comment](../glossary.md#term-audit-comment--audit-comment).
 
-**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made a [change](../../core/glossary.md#term-change--change) (DEC-049).
+**Why:** The timeline already records each label added or removed, so a comment that only restates a move adds nothing. A comment carries what the timeline cannot: why a person overrode a check, and which version made an edit (DEC-049).
 
 An audit comment is one the system posts on an [issue](../glossary.md#term-issue--issue) or a [pull request](../../core/glossary.md#term-pull-request--pull-request). At the default setting it records each [bypass](../glossary.md#term-bypass--bypass) with its reason. At the fullest setting it records each write the system governs too.
 

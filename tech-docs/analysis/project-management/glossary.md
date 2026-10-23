@@ -370,7 +370,7 @@ Explained in [VIEW-the-issue-lifecycle](domain-model/030-the-issue-lifecycle.md#
 
 **Distinctions:**
 
-- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the [change](../core/glossary.md#term-change--change) (DEC-049).
+- **The timeline:** GitHub's own record of each label added or removed, with who did it and when. An audit comment adds what the timeline cannot: the reason, and the version that made the edit (DEC-049).
 - **The journal:** the core's record of each move of a [process](../core/glossary.md#term-process--process), kept where the [project](../core/glossary.md#term-project--project) turns it on. Where it is kept, it is the canonical record, and the comments project it (DEC-049 point 1).
 
 ## TERM-authorisation — authorisation
