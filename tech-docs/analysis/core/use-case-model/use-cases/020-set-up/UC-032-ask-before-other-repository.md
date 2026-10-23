@@ -69,7 +69,7 @@ pkit:
 **Variants:**
 
 - **1a.** The command is one that an installed capability ships. COR-039 point 2 puts the check in that capability's own code too, and the capability's analysis states it.
-- **1b.** The agent writes a file with a file tool at an absolute path outside the session anchor's directory. An adapter's permission hook may ask the operator to confirm such a write, naming both paths (ADR-034 point 2). Claude Code's asks it for `Edit` and `Write` where no grant decides the call. It compares paths, not repositories, so it asks for a linked worktree there too. Without the hook, nothing asks.
+- **1b.** The agent writes a file with a file tool at an absolute path outside the session anchor's directory. An adapter's permission hook may ask the operator to confirm such a write, naming both paths (ADR-034 point 2). Claude Code's hook asks for `Edit` and `Write` where no grant decides the call, and compares paths, so it asks for a linked worktree too. Without the hook, nothing asks.
 - **1c.** The agent changes the other repository around the system's commands, such as with `git -C <path> push` or `gh -R <repository>`. No guard sees the change (ADR-034 point 5). The permission code allows `cd <path> && git commit` wherever `vcs` is granted, since it strips the leading `cd` (ADR-025 point 1).
 - **1d.** The command changes files rather than the hosting service, such as `pkit new decision` or `pkit sync`. At its entry, before it reads anything, the command compares the two repositories as step 2 does (REQ-012). The path goes on at step 3.
 
