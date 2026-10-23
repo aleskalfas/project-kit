@@ -1,5 +1,5 @@
 ---
-id: UC-026
+id: UC-034
 title: Land my change on the default branch
 status: active
 actor: ACT-developer
@@ -42,7 +42,7 @@ pkit:
         - REQ-012
 ---
 
-# UC-026 — Land my change on the default branch
+# UC-034 — Land my change on the default branch
 
 **Goal:** Land my change on the default branch as one squash commit with a conventional title, through a pull request or directly when I work alone.
 

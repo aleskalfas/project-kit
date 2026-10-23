@@ -19,7 +19,7 @@ requirements:
   - REQ-019
   - REQ-020
 after:
-  - [UC-026]
+  - [UC-034]
 shortfalls:
   - at: 7
     issue: "#1765"
@@ -85,7 +85,7 @@ pkit:
 - **AI agent** (`ACT-ai-agent`): an agent an installed capability ships for an artefact's type proposes each answer. It gives its evidence and the commands that write it. It runs none of those commands, since each answer is a person's decision (COR-050 point 3).
 - **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently (REQ-012).
 
-**Preconditions:** **From UC-026:** The default branch holds debt: a change that landed there left an artefact stale, or deferred its answer.
+**Preconditions:** **From UC-034:** The default branch holds debt: a change that landed there left an artefact stale, or deferred its answer.
 
 **Assumptions:**
 

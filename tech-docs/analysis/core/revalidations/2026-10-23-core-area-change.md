@@ -36,7 +36,7 @@ outcomes:
 
 ## Gaps
 
-- **UC-007:** no use case landed a change, so its precondition that the default branch holds debt named no producer. **Resolution:** UC-026 writes the landing in 030-change, and the precondition names it.
+- **UC-007:** no use case landed a change, so its precondition that the default branch holds debt named no producer. **Resolution:** UC-034 writes the landing in 030-change, and the precondition names it.
 - **UC-002, UC-007:** their answers went in the artefact's block, which COR-062 moves to answer files. **Resolution:** each step says where answers go, boxed to #1873 where unbuilt.
 - **UC-002, UC-006:** the change check's reading of answer files, which #1871 built, went undescribed. **Resolution:** UC-002's variants 7b to 7d and UC-006's step 6 say what it finds.
 - **UC-006:** its merge queue's run did not judge each change's own head, as COR-062 point 4 asks, and its dry run had no variant. **Resolution:** variant 3d says the first, boxed to #1867, and variant 1d the second, boxed to #1884.

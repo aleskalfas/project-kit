@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:d90c7c7f5bcea04ab2ffd4343174b1053a8ff659a4b9067032bb0806535669c5 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:46ae5e0404a8f522ce8bae87853dbdb906307763439566cd96bd3d93fad7144d -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -74,7 +74,7 @@ Record a project's decisions and rules, and check, answer and land each change t
 - [UC-007 — Resolve what the default branch left out of date](../use-case-model/use-cases/030-change/UC-007-resolve-debt.md) ([not built yet](#not-built-yet): step 7, variant 3b, variant 4c)
 - [UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across](../use-case-model/use-cases/030-change/UC-010-migrate-backbone-change.md) ([not built yet](#not-built-yet): step 9)
 - [UC-011 — Carry the projects that installed my component across a breaking change of it](../use-case-model/use-cases/030-change/UC-011-migrate-component-change.md) ([not built yet](#not-built-yet): step 9)
-- [UC-026 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-026-land-change.md) ([not built yet](#not-built-yet): step 5)
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md) ([not built yet](#not-built-yet): step 5)
 
 ### 040-release
 
@@ -170,7 +170,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): variant 3d, decided by `COR-041`, tracked in `#131`
 - [UC-023 — Add or remove a capability, and be told of a name collision](../use-case-model/use-cases/020-set-up/UC-023-add-or-remove-capability.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-025 — Choose which installed capability provides a role](../use-case-model/use-cases/020-set-up/UC-025-choose-role-provider.md): step 3, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-026 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-026-land-change.md): step 5, decided by `ADR-061#8`, tracked in `#1257`
+- [UC-034 — Land my change on the default branch](../use-case-model/use-cases/030-change/UC-034-land-change.md): step 5, decided by `ADR-061#8`, tracked in `#1257`
 
 ### Diagrams
 
