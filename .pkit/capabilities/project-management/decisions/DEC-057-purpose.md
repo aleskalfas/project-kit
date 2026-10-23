@@ -1,7 +1,7 @@
 ---
 id: DEC-057
 title: project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority
-status: proposed
+status: accepted
 date: 2026-10-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
