@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:ece530009b3e338fcb9bcb8d3db1aa72c8fd1b1d3e2eb548f5d8795c46d7e0ef -->
+<!-- pkit:overview reads=4 fingerprint=sha256:01ab837a0e29e2c931f8001043b046ea38ddd2db668d560c1139b0e19b128bd2 -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -172,6 +172,70 @@ Each view of the domain model explains a group of related concepts:
 - [REQ-010 · Functional · A command that propagates content under another version than the project records stops](../requirements/functional/REQ-010-stop-under-another-version.md)
 - [REQ-012 · Functional · The system asks the operator before its command changes another repository](../requirements/functional/REQ-012-ask-before-another-repository.md)
 - [REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails](../requirements/functional/REQ-015-missing-root-warns.md)
+
+### Journeys
+
+#### [JRN-001 — Adopt the system](../use-case-model/journeys/JRN-001-adopt-system.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-001 — Adopt the system
+  accDescr: The flow of JRN-001: ACT-adopter takes 4 steps in order, UC-049, UC-021, UC-023, UC-006. It relies on 1 use case outside the journey, drawn apart with no arrow.
+  ACT_adopter["ACT-adopter — Adopter"]
+  step_1(["1. UC-049 — Install the system into my project with one command"])
+  step_2(["2. UC-021 — Declare my project's backbone configuration once, and have it validated"])
+  step_3(["3. UC-023 — Add or remove a capability, and be told of a name collision"])
+  step_4(["4. UC-006 — Make my merges wait on the system's checks"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_048(["UC-048 — Put the system's tool on my machine at a release"])
+  end
+  ACT_adopter --> step_1
+  step_1 --> step_2
+  step_2 --> step_3
+  step_3 --> step_4
+```
+
+#### [JRN-002 — Upgrade the system](../use-case-model/journeys/JRN-002-upgrade-system.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-002 — Upgrade the system
+  accDescr: The flow of JRN-002: ACT-adopter takes 2 steps in order, UC-051, UC-053. It relies on 4 use cases outside the journey, drawn apart with no arrow.
+  ACT_adopter["ACT-adopter — Adopter"]
+  step_1(["1. UC-051 — Upgrade the system like a dependency"])
+  step_2(["2. UC-053 — Re-pin an inherited rule set once I have reviewed its new major"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_008(["UC-008 — Release the backbone so adopters can upgrade and pin to it"])
+    UC_023(["UC-023 — Add or remove a capability, and be told of a name collision"])
+    UC_038(["UC-038 — Author and extend my project's own rule sets"])
+    UC_049(["UC-049 — Install the system into my project with one command"])
+  end
+  ACT_adopter --> step_1
+  step_1 --> step_2
+```
+
+#### [JRN-003 — Deliver a change](../use-case-model/journeys/JRN-003-deliver-change.md)
+
+```mermaid
+flowchart LR
+  accTitle: JRN-003 — Deliver a change
+  accDescr: The flow of JRN-003: ACT-developer takes 5 steps in order, UC-037, UC-002, UC-003, UC-034, UC-007. It relies on 2 use cases outside the journey, drawn apart with no arrow.
+  ACT_developer["ACT-developer — Developer"]
+  step_1(["1. UC-037 — Record my decision beside the methodology's"])
+  step_2(["2. UC-002 — Answer what my change made stale"])
+  step_3(["3. UC-003 — Declare what my change means for the next release"])
+  step_4(["4. UC-034 — Land my change on the default branch"])
+  step_5(["5. UC-007 — Resolve what the default branch left out of date"])
+  subgraph relies_on["Relied on, outside the journey"]
+    UC_040(["UC-040 — Have a drafted record or rule become binding only through my own review"])
+    UC_049(["UC-049 — Install the system into my project with one command"])
+  end
+  ACT_developer --> step_1
+  step_1 --> step_2
+  step_2 --> step_3
+  step_3 --> step_4
+  step_4 --> step_5
+```
 
 ### Not built yet
 
