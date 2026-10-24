@@ -1,12 +1,14 @@
 # Permission profile: non-destructive (per ADR-005). Domain work without
-# destructive power — git, gh, the kit CLI, repo reads, the agent workspace
-# (every shipped profile grants it; rules/core.md, the workspace rule). Assumes the low-risk
-# native-allow shell tier (text-processing / fs-cleanup / temp-files) when
-# present; the guardrail floor (recursive rm, sudo, force-push) always denies
-# underneath. read-only ⊂ non-destructive ⊂ autonomous.
+# destructive power — git, gh, the kit CLI, repo reads, the read-only filters
+# (`cat`, `grep`, `head`, `jq`, `sort` with no output file, …; #2000), so a
+# pipe of granted programs needs no prompt, and the agent workspace (every
+# shipped profile grants it; rules/core.md, the workspace rule). Assumes the
+# low-risk native-allow shell tier (text-processing / fs-cleanup / temp-files)
+# when present; the guardrail floor (recursive rm, sudo, force-push) always
+# denies underneath. read-only ⊂ non-destructive ⊂ autonomous.
 schema_version: 1
 
-description: Domain work, no destructive power — vcs, issue-tracker, kit, repo-read, workspace.
+description: Domain work, no destructive power — vcs, issue-tracker, kit, repo-read, read-filter, workspace.
 posture: lenient
 grants:
   - subject: all
@@ -15,5 +17,6 @@ grants:
       - "[privilege-catalog:issue-tracker]"
       - "[privilege-catalog:kit]"
       - "[privilege-catalog:repo-read]"
+      - "[privilege-catalog:read-filter]"
       - "[privilege-catalog:workspace]"
     effect: allow

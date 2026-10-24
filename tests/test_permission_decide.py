@@ -3596,3 +3596,210 @@ def test_hook_decide_still_decides_as_decide(decide_mod, catalog):
         assert decide_mod.hook_decide(MODEL, catalog, payload)[0] == expected, cmd
     verdict, why = decide_mod.hook_decide(MODEL, catalog, {"tool_name": "Bash"})
     assert verdict == "abstain" and "fail-open" in why
+
+
+# ---- read-only filters and the Python runner in a compound (#2000) -----------
+#
+# Every shipped profile grants the read-only filters to every agent, and
+# project-kit's own grants give every agent the Python runner, `uv`. ADR-025
+# point 2 already allows a compound whose every segment a grant covers, so a
+# pipe or chain of filters, `uv` and the programs a profile grants is allowed
+# for the project manager and for a builder alike. A program that writes a file
+# or runs another stays unrecognized, a deny still wins, and an untrusted
+# construct still defers. The model is built from the shipped files, as
+# `load_model` composes them: guardrails, the profile, the project-management
+# fragment, then project-kit's own grants.
+
+_PROFILES = REPO_ROOT / ".pkit" / "permissions" / "profiles"
+_PROJECT_GRANTS = REPO_ROOT / ".pkit" / "permissions" / "project" / "grants.yaml"
+_PM_FRAGMENT = (
+    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "permissions" / "grants.yaml"
+)
+_BUILDERS = ("agent:project-manager", "agent:software-engineer")
+
+
+def _shipped_model(decide_mod, catalog, profile: str) -> dict[str, Any]:
+    shipped = decide_mod.load_yaml(str(_PROFILES / f"{profile}.yaml"))
+    return {
+        "posture": shipped["posture"],
+        "grants": [
+            *decide_mod.guardrail_denies(catalog),
+            *shipped["grants"],
+            *decide_mod.load_yaml(str(_PM_FRAGMENT))["grants"],
+            *decide_mod.load_yaml(str(_PROJECT_GRANTS))["grants"],
+        ],
+    }
+
+
+_FILTER_COMPOUNDS = [
+    "grep x f | head",
+    "cat f | grep x",
+    "uv run pytest t.py -q | tail -3",
+    "cd /Users/x/proj && uv run pkit validate | tail -1",
+    "cat f | sort | uniq -c | head -5",
+    "ls docs | wc -l",
+    "git log --oneline | head -5",
+    "gh pr list | jq .",
+    "jq -r .name f | cut -d, -f1 | tr a-z A-Z",
+    "echo done && pwd",
+]
+
+
+@pytest.mark.parametrize("profile", ["read-only", "non-destructive", "autonomous"])
+@pytest.mark.parametrize("subject", _BUILDERS)
+@pytest.mark.parametrize("command", _FILTER_COMPOUNDS[:4])
+def test_a_filter_or_runner_compound_is_allowed_under_every_profile(
+    decide_mod, catalog, profile, subject, command
+):
+    model = _shipped_model(decide_mod, catalog, profile)
+    d, why = decide_mod.decide(model, catalog, _bash(command, subject))
+    assert d == "allow", (profile, command, why)
+
+
+@pytest.mark.parametrize("subject", _BUILDERS)
+@pytest.mark.parametrize("command", _FILTER_COMPOUNDS)
+def test_a_filter_compound_with_granted_programs_is_allowed(decide_mod, catalog, subject, command):
+    model = _shipped_model(decide_mod, catalog, "autonomous")
+    d, why = decide_mod.decide(model, catalog, _bash(command, subject))
+    assert d == "allow", (command, why)
+
+
+def test_the_runner_is_granted_by_the_project_not_by_a_profile(decide_mod, catalog):
+    # ADR-005: no shipped profile grants scripting; project-kit's grants do.
+    for profile in ("read-only", "non-destructive", "autonomous"):
+        shipped = decide_mod.load_yaml(str(_PROFILES / f"{profile}.yaml"))
+        tokens = {
+            token
+            for grant in shipped["grants"]
+            for token in decide_mod._privilege_ids(grant["privilege"])
+        }
+        assert "read-filter" in tokens and "python-runner" not in tokens, profile
+    profile_only = {
+        "posture": "lenient",
+        "grants": [
+            *decide_mod.guardrail_denies(catalog),
+            *decide_mod.load_yaml(str(_PROFILES / "autonomous.yaml"))["grants"],
+        ],
+    }
+    d, why = decide_mod.decide(profile_only, catalog, _bash("uv run pytest | tail -3", "operator"))
+    assert d == "abstain" and "'uv'" in why, why
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sed -i s/a/b/ f",
+        "awk -f prog.awk f",
+        "find . -name x",
+        "xargs rm",
+        "tee out.txt",
+        "rg x",
+        "diff -l a b",
+        "printf -v PATH /tmp/x",
+        "sort -o out.txt f",
+        "sort f -o out.txt",
+        "sort -ro out.txt f",
+        "sort -rnoout.txt f",
+        "sort --output=out.txt f",
+        "sort --output out.txt f",
+        "sort --out=out.txt f",
+        "sort --compress-program=sh f",
+        "sort --compress-prog sh f",
+        "sort -T /tmp/x f",
+        "sort --temporary-directory=/tmp/x f",
+        "uniq in.txt out.txt",
+        "uniq -c in.txt out.txt",
+        "uniq in.txt -c",
+        "uniq - out.txt",
+        "uniq -- in.txt out.txt",
+        "uniq '' out.txt",
+    ],
+)
+def test_a_program_that_writes_or_runs_another_is_no_filter(decide_mod, catalog, command):
+    assert "read-filter" not in decide_mod.recognized_privileges(
+        catalog, _bash(command, "operator")
+    )
+    lenient = _shipped_model(decide_mod, catalog, "autonomous")
+    strict = _shipped_model(decide_mod, catalog, "read-only")
+    for subject in _BUILDERS:
+        piped = _bash(f"grep x f | {command}", subject)
+        assert decide_mod.decide(lenient, catalog, piped)[0] == "abstain", command
+        assert decide_mod.decide(strict, catalog, piped)[0] == "deny", command
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "sort f",
+        "sort -u -t, -k2,2 f",
+        "sort -rn --key=2 f",
+        "uniq",
+        "uniq -c in.txt",
+        "uniq --skip-fields=1 -d in.txt",
+    ],
+)
+def test_sort_and_uniq_are_filters_where_they_write_no_file(decide_mod, catalog, command):
+    assert "read-filter" in decide_mod.recognized_privileges(catalog, _bash(command, "operator"))
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("cat f | sudo tee /etc/x", "privilege-escalation"),
+        ("grep x f && rm -rf ~", "destructive-fs"),
+        ("uv run pytest -q | tail -3 ; git push --force", "vcs-history-rewrite"),
+        ("cd /x && cat f ; git push origin +main", "vcs-history-rewrite"),
+        ("gh pr view 1 | head", "issue-tracker-read-raw"),
+    ],
+)
+def test_a_deny_still_wins_over_filters_and_the_runner(decide_mod, catalog, command, privilege):
+    model = _shipped_model(decide_mod, catalog, "autonomous")
+    d, why = decide_mod.decide(model, catalog, _bash(command, "agent:project-manager"))
+    assert d == "deny" and privilege in why, why
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "grep x f > out.txt",
+        "cat f | head >> out.txt",
+        "uv run pytest t.py -q 2>&1 | tail -3",
+        "cat < f | head",
+        "cat <<EOF\nx\nEOF",
+        "grep $X f | head",
+        "cat f | head -n $(id -u)",
+        "echo `id` | cat",
+        "uv run pytest {a,b}.py | tail",
+    ],
+)
+def test_an_untrusted_construct_still_defers(decide_mod, catalog, command):
+    for profile, expected in (("autonomous", "abstain"), ("read-only", "deny")):
+        model = _shipped_model(decide_mod, catalog, profile)
+        for subject in _BUILDERS:
+            d, why = decide_mod.decide(model, catalog, _bash(command, subject))
+            assert d == expected, (profile, command, why)
+
+
+def test_filter_and_runner_hook_and_decide_parity(decide_mod, catalog):
+    """The new privileges are catalog data read by the shared core, so
+    hook_decide and decide agree on each new case (ADR-002 / ADR-003)."""
+    model = _shipped_model(decide_mod, catalog, "autonomous")
+    for cmd, expected in (
+        ("grep x f | head", "allow"),
+        ("uv run pytest t.py -q | tail -3", "allow"),
+        ("cd /x && uv run pkit validate | tail -1", "allow"),
+        ("grep x f | sort -o out.txt", "abstain"),
+        ("grep x f | uniq - out.txt", "abstain"),
+        ("grep x f > out.txt", "abstain"),
+        ("cat f && rm -rf ~", "deny"),
+    ):
+        for subject in _BUILDERS:
+            d_decide, _ = decide_mod.decide(model, catalog, _bash(cmd, subject))
+            payload = {
+                "tool_name": "Bash",
+                "tool_input": {"command": cmd},
+                "cwd": "/r",
+                "agent_type": subject.split(":", 1)[1],
+            }
+            d_hook, _ = decide_mod.hook_decide(model, catalog, payload)
+            assert d_decide == d_hook == expected, (cmd, subject)

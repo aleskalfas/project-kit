@@ -2,15 +2,18 @@
 # nothing else — strict posture denies anything unmodeled — except keep their
 # intermediate files in the agent workspace, the excluded folder every shipped
 # profile grants (rules/core.md, the workspace rule; #1043), which holds nothing
-# a commit can carry. The most restrictive shipped tier;
-# read-only ⊂ non-destructive ⊂ autonomous.
+# a commit can carry. Every shipped profile also grants the read-only filters
+# (`cat`, `grep`, `head`, `jq`, `sort` with no output file, …; #2000), which
+# read and write only to standard output, so a pipe of them needs no prompt.
+# The most restrictive shipped tier; read-only ⊂ non-destructive ⊂ autonomous.
 schema_version: 1
 
-description: Read the repo only, plus the agent workspace — strict; everything unmodeled is denied.
+description: Read the repo only, plus the agent workspace and read-only filters — strict; everything unmodeled is denied.
 posture: strict
 grants:
   - subject: all
     privilege:
       - "[privilege-catalog:repo-read]"
       - "[privilege-catalog:workspace]"
+      - "[privilege-catalog:read-filter]"
     effect: allow

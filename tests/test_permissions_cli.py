@@ -438,6 +438,19 @@ def _ledger_doc(proj: Path) -> dict:
         return _YAML(typ="safe").load(fh)
 
 
+def _read_filter_rules() -> list[str]:
+    """The native rules a profile's read-only filter grant realizes (#2000):
+    one `Bash(<program>:*)` per `cmd`-only recognizer. The `sort` and `uniq`
+    regexes, which leave out the forms writing a file, realize none."""
+    from ruamel.yaml import YAML as _YAML
+
+    catalog = _YAML(typ="safe").load(
+        (REPO / ".pkit" / "schemas" / "privilege-catalog.yaml").read_text()
+    )
+    bash = catalog["privileges"]["read-filter"]["recognize"]["bash"]
+    return [f"Bash({rule['cmd']}:*)" for rule in bash if set(rule) == {"cmd"}]
+
+
 def test_apply_routes_profile_only_rules_local_and_ledgers(tmp_path, monkeypatch):
     proj = _with_adapter(_setup(tmp_path))
     _run(proj, monkeypatch, "profile", "activate", "non-destructive", "--no-apply")
@@ -485,11 +498,15 @@ def test_apply_profile_switch_heals_stale_local_rules(tmp_path, monkeypatch):
     out = _run(proj, monkeypatch, "apply")
     assert "healed" in out
     local_allow = _settings_local(proj)["permissions"]["allow"]
-    # Stale ledgered rules are recompute-replaced away; read-only's remain.
-    assert local_allow == ["Glob", "Grep", "Read"]
+    # Stale ledgered rules are recompute-replaced away; read-only's remain:
+    # the repo-read tools and the read-only filters' prefixes.
+    read_only = sorted(["Glob", "Grep", "Read", *_read_filter_rules()])
+    assert local_allow == read_only
+    assert "Bash(cat:*)" in local_allow
+    assert not any(rule.startswith(("Bash(sort", "Bash(uniq")) for rule in local_allow)
     doc = _ledger_doc(proj)
     assert doc["profile"] == "read-only"
-    assert set(doc["rules"]) == {"Glob", "Grep", "Read"}
+    assert set(doc["rules"]) == set(read_only)
 
 
 def test_apply_never_touches_unledgered_local_rules(tmp_path, monkeypatch):
@@ -546,8 +563,10 @@ def test_diff_union_scope_sees_local_realization(tmp_path, monkeypatch):
     local["permissions"]["allow"].append("Bash(operatorown:*)")
     (proj / ".claude" / "settings.local.json").write_text(json.dumps(local))
     out = _run(proj, monkeypatch, "diff")
-    # Union-scope reconciliation: locally-realized profile rules count as applied.
-    assert "applied: 6/6" in out
+    # Union-scope reconciliation: locally-realized profile rules count as applied:
+    # git, gh, pkit, the three repo-read tools and the read-only filters.
+    expected = 6 + len(_read_filter_rules())
+    assert f"applied: {expected}/{expected}" in out
     assert "not applied" not in out
     # Attribution stays committed-scope: the local rule is never flagged.
     assert "operatorown" not in out

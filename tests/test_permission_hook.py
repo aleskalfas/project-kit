@@ -962,3 +962,68 @@ def test_hook_keeps_the_abstain_when_the_check_faults(tmp_path):
         assert parsed is None, (tail, parsed)
         _, parsed = _invoke(root, _bash_payload(root, "git push -uf origin main"))
         assert _decision(parsed) == "deny"
+
+
+# ---- read-only filters and the Python runner, end to end (#2000) -------------
+#
+# The live hook, in a tree whose active profile is a shipped one and whose own
+# grants are project-kit's: a compound of read-only filters, `uv` and granted
+# programs is allowed for the project manager and for a builder. A program
+# that writes a file stays uncovered, a redirection still defers, and a
+# guardrail still denies. The `pkit permissions` CLI, which builds the model
+# and decides through the same loaders, reaches the same verdict on each.
+
+_BUILDER_AGENTS = ("project-manager", "software-engineer")
+_FILTER_CASES = (
+    ("grep x f | head", "allow"),
+    ("cat f | grep x", "allow"),
+    ("uv run pytest t.py -q | tail -3", "allow"),
+    ("cd {root} && uv run pkit validate | tail -1", "allow"),
+    ("grep x f | sort -o out.txt", None),
+    ("grep x f | uniq in.txt out.txt", None),
+    ("grep x f | sed -i s/a/b/ g", None),
+    ("grep x f > out.txt", None),
+    ("cat f && sudo id", "deny"),
+)
+
+
+def _profile_tree(tmp_path: Path, profile: str) -> Path:
+    # As `profile activate` leaves it: the profile's posture in config.yaml,
+    # its name in the per-machine sidecar.
+    posture = "strict" if profile == "read-only" else "lenient"
+    root = _tree(
+        tmp_path,
+        grants=(REPO / ".pkit/permissions/project/grants.yaml").read_text(),
+        config=f"schema_version: 1\nposture: {posture}\n",
+    )
+    shutil.copytree(
+        REPO / ".pkit" / "permissions" / "profiles", root / ".pkit" / "permissions" / "profiles"
+    )
+    (root / ".pkit" / "permissions" / "project" / "active-profile.yaml").write_text(
+        f"schema_version: 1\nactive_profile: {profile}\n"
+    )
+    return root
+
+
+@pytest.mark.parametrize("profile", ["non-destructive", "read-only"])
+def test_hook_allows_filters_and_the_runner_as_the_cli_decides(tmp_path, profile):
+    from project_kit import permissions as perm
+
+    root = _profile_tree(tmp_path, profile)
+    dm = perm.decision_core(root)
+    catalog = perm._load_catalog(root)
+    model = perm._load_model(root)
+    assert model["active_profile"] == profile
+    strict = profile == "read-only"
+    for template, expected in _FILTER_CASES:
+        command = template.format(root=root)
+        if strict and expected is None:
+            expected = "deny"
+        for agent in _BUILDER_AGENTS:
+            payload = {**_bash_payload(root, command), "agent_type": agent}
+            _, parsed = _invoke(root, payload)
+            assert _decision(parsed) == expected, (profile, command, agent, parsed)
+            cli, _ = dm.hook_decide(
+                model, catalog, payload, project_root=str(root), as_subject=f"agent:{agent}"
+            )
+            assert cli == (expected or "abstain"), (profile, command, agent, cli)

@@ -125,3 +125,62 @@ def test_full_model_projection_routes_each_grant(projection, catalog):
     # operator's vcs/issue-tracker/kit (bash) + agent:pm's vcs (bash) → runtime.
     assert {r["privilege"] for r in out["runtime"]} == {"vcs", "issue-tracker", "kit"}
     assert {u["privilege"] for u in out["unprojectable"]} == {"docker"}  # scoped
+
+
+# ---- the read-only filters and the Python runner (#2000) ---------------------
+#
+# A `cmd`-only recognizer renders as a native prefix, so a profile's grant of
+# the read-only filters realizes one `Bash(<program>:*)` per program. The
+# `sort` and `uniq` recognizers are regexes that leave out the forms writing a
+# file, and no native prefix can say that, so none is written for them: a
+# `Bash(sort:*)` would allow `sort -o`. The runner renders as `Bash(uv:*)`.
+
+_FILTER_PROGRAMS = {
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "cut",
+    "tr",
+    "grep",
+    "egrep",
+    "fgrep",
+    "jq",
+    "ls",
+    "cmp",
+    "basename",
+    "dirname",
+    "realpath",
+    "pwd",
+    "echo",
+    "true",
+    "false",
+}
+
+
+def test_the_read_filter_projects_a_prefix_per_program_and_none_for_sort_or_uniq(
+    projection, catalog
+):
+    model = {"grants": [{"subject": "all", "privilege": _tok("read-filter"), "effect": "allow"}]}
+    out = projection.project(model, catalog)
+    assert set(out["settings"]["allow"]) == {f"Bash({p}:*)" for p in _FILTER_PROGRAMS}
+    assert [u["privilege"] for u in out["unprojectable"]] == ["read-filter", "read-filter"]
+
+
+def test_the_python_runner_projects_the_uv_prefix(projection, catalog):
+    model = {"grants": [{"subject": "all", "privilege": _tok("python-runner"), "effect": "allow"}]}
+    assert projection.project(model, catalog)["settings"]["allow"] == ["Bash(uv:*)"]
+
+
+def test_project_kits_own_grants_project_nothing_its_settings_lack(projection, catalog):
+    # project-kit grants the runner in its own grants.yaml. Its committed
+    # settings already allow `uv` alone, so `apply` adds nothing to them.
+    import json
+
+    grants = _load(DECIDE_PATH, "decide_for_self_host").load_yaml(
+        str(REPO / ".pkit" / "permissions" / "project" / "grants.yaml")
+    )
+    settings = json.loads((REPO / ".claude" / "settings.json").read_text())
+    out = projection.project({"grants": grants["grants"]}, catalog)
+    assert out["settings"]["allow"] == ["Bash(uv:*)"]
+    assert set(out["settings"]["allow"]) <= set(settings["permissions"]["allow"])
