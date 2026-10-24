@@ -301,7 +301,7 @@ value:
         pages: [docs/operations.md, docs/runbooks/restart.md]
 ```
 
-An entry replaces another of its id whole, so to give `user` paths, write its `description` with them. No check reads a path. The agent's reader-review takes the paths of a page's reader with its description. Where a rule asks that reader paths stay unbroken, as the user space's own rule does, the review follows each path that passes through the page.
+An entry replaces another of its id whole, so to give `user` paths, write the entry's `description` with them. No check reads a path. The agent's reader-review takes a page's reader from the point, with the reader's description and paths. Where a rule asks that reader paths stay unbroken, as the user space's own rule does, the review follows each path that passes through the page.
 
 A capability that keeps an analysis of the software can supply readers too, under ids of its own. The validator checks a page's `reader` against the resolved point wherever `RS-LDOC-003` binds on the page. Its inert policy is `fail`: if a capability's readers fall out of step with the point's version, the whole point is unresolved rather than checked against whichever readers survived. The validator then reports "readers unresolved" once, not once per page, and `pkit validate` names the fix under `connections`.
 
