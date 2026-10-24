@@ -100,8 +100,9 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-24T04:46:20Z
-      outcome: updated
+      at: 2026-10-24T05:22:38Z
+      outcome: unchanged
+      unchanged-because: "Friction now matches each derived-link form on its own, sets a renamed file's links aside at both versions, and keeps a code span in its paragraph. The CLI reference's account of the commands still holds, beside the refusals main's #1953 added."
       deferred:
         - anchor:
             kind: record
