@@ -700,3 +700,83 @@ def test_dec_002_and_the_readme_name_the_same_revisit_blocks():
         assert words.lower() in readme.lower(), ("README", words)
     for words in ("contradicts what the modified trigger fields now say", "contradicts nothing"):
         assert words in body, words
+
+
+# ---------------------------------------------------------------------------
+# The `[person]` tag — one clause, three bodies, as DEC-028 decides (#1976)
+# ---------------------------------------------------------------------------
+
+_PERSON_LEAD = "- **A finding for the person who authorises the merge is tagged `[person]`**"
+
+#: When a panel finding is `[person]`: DEC-028's "Finding tags" conditions, with the
+#: rule drawn from the corpus the panel judges. The README and each body say them alike.
+_PERSON_CONDITIONS = (
+    "a passage the change owns",
+    "cites by id an accepted rule of the `<project-conventions>` corpus that binds on an"
+    " artefact the change alters or brings under a rule",
+    "Judging the passage against that rule needs a reading the rule does not settle, or a"
+    " fact the rule does not name.",
+    "It withholds no approval, and it is shown to the person who authorises the merge",
+)
+
+
+def _person_clause(path: Path) -> str:
+    lines = [
+        line
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.startswith(_PERSON_LEAD)
+    ]
+    assert len(lines) == 1, f"{path}: expected exactly one `[person]` clause, found {len(lines)}"
+    return lines[0]
+
+
+def _canonical(agent: str) -> Path:
+    return _SE_DIR / "agents" / f"{agent}.md"
+
+
+def test_person_clause_is_identical_across_the_panel():
+    """The three bodies tag a finding for the person alike, so they must not drift."""
+    clauses = {agent: _person_clause(_canonical(agent)) for agent in _PANEL_AGENTS}
+    assert len(set(clauses.values())) == 1, "`[person]` clause differs between panel agents"
+
+
+def test_person_clause_says_when_as_dec_028_decides():
+    """A `[person]` finding cites an accepted rule the reviewer judges, on a passage the
+    change owns, that the rule does not settle; it withholds no approval and goes to the
+    person who authorises the merge. Anything softer that no such rule backs stays
+    `[advisory]` (DEC-028 "Finding tags", "What a reviewer tags")."""
+    clause = _person_clause(_canonical(_PANEL_AGENTS[0]))
+    for words in (
+        '[project-management:DEC-028-agent-as-approver-paths], "Finding tags"',
+        *_PERSON_CONDITIONS,
+        "even where this section would otherwise make it advisory",
+        "A judgement call that no such rule backs, and a point of taste, stay `[advisory]`",
+    ):
+        assert words in clause, words
+
+
+@pytest.mark.parametrize("agent", _PANEL_AGENTS)
+def test_the_verdict_names_the_three_tags(agent):
+    """Each body's verdict step tags its findings with all three of DEC-028's tags."""
+    body = _canonical(agent).read_text(encoding="utf-8")
+    verdict = body.split("\n### 4. Emit the verdict\n", 1)[1].split("\n### ", 1)[0]
+    assert "each tagged `[block]`, `[person]` or `[advisory]`" in verdict
+    assert "each tagged `[block]` or `[advisory]`" not in verdict
+
+
+def test_the_readme_and_the_agents_say_the_same_of_person():
+    """The README's block-threshold paragraph says what each body's clause says."""
+    readme = (_SE_DIR / "README.md").read_text(encoding="utf-8")
+    (paragraph,) = [
+        line for line in readme.splitlines() if line.startswith("**Block-threshold discipline.**")
+    ]
+    assert "`[person]` marks a finding on a passage the change owns." in paragraph
+    for words in _PERSON_CONDITIONS:
+        assert words in paragraph, words
+
+
+@pytest.mark.parametrize("agent", _PANEL_AGENTS)
+def test_deployed_copy_carries_the_person_clause(agent):
+    """The adapter's deploy step carries the clause into the copy the harness loads."""
+    deployed = REPO_ROOT / ".claude" / "agents" / f"{agent}.md"
+    assert _person_clause(deployed) == _person_clause(_canonical(agent))
