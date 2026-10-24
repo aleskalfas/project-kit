@@ -13,9 +13,9 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-23T08:13:40Z
+      at: 2026-10-24T01:51:40Z
       outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. The README's account of the answers its agents write and its reviewers check is untouched.
+      unchanged-because: DEC-003 states what the capability is for, from what the README already says, and decides nothing new. The README's account of the producer and the code-review panel is untouched.
       deferred:
         - anchor:
             kind: record

@@ -30,9 +30,8 @@ pkit:
       artefact:
         - REQ-060
     revalidated:
-      at: 2026-10-23T09:46:27Z
-      outcome: unchanged
-      unchanged-because: Rules 14, 16 and 19 stop calling the permission model a capability, and only their wording changes. The agent still works within the permission model, as the use case says.
+      at: 2026-10-24T01:51:41Z
+      outcome: updated
 ---
 
 # UC-001 — Build my change under my project's conventions
