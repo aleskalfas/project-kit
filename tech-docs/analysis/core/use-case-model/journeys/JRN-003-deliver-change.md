@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T02:01:54Z
+      at: 2026-10-24T03:46:19Z
       outcome: unchanged
-      unchanged-because: UC-037 gains a refusal for a capability whose folder arrives as a synced copy. The journey records a project's own decision, which still stamps, so its step and its seams hold.
+      unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 ---
 
 # JRN-003 — Deliver a change

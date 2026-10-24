@@ -47,8 +47,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-23T18:46:42Z
-      outcome: updated
+      at: 2026-10-24T03:45:06Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
 ---
 
 # UC-009 — Release my component on its own version

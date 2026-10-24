@@ -21,9 +21,6 @@ shortfalls:
   - at: "1b"
     issue: "#1938"
     record: COR-004
-  - at: "5b"
-    issue: "#1934"
-    record: project-management:DEC-032#D4
   - at: "6b"
     issue: "#1872"
     record: project-management:DEC-032#D1
@@ -81,9 +78,8 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T03:43:19Z
-      outcome: unchanged
-      unchanged-because: done-work now works out the required reviewers before it refuses, and refuses a set with no reviewer in it. Step 13 already holds each required reviewer to a standing approval, a contributed one included.
+      at: 2026-10-24T04:20:10Z
+      outcome: updated
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
@@ -143,11 +139,7 @@ pkit:
 - **4b.** The checks still run when the wait ends. The system says so and exits `5`, and the developer runs the command again later. The path rejoins at step 1.
 - **4c.** The head moves while the system waits. The system stops, names both heads, and exits `3`. The path rejoins at step 1.
 - **5a.** The required reviewers cannot be worked out, such as where a contributed reviewer's agent is not deployed. The system refuses, names the cause, and runs no reviewer (DEC-032 point D5). The use case ends.
-- **5b.** The project registers no local reviewer of its own, and a capability contributes one that the change requires. The system runs the contributed reviewer as any other (DEC-032 point D4).
-
-> [!WARNING]
-> **Not built yet:** with no local reviewer of the project's own, `review-pr` refuses before it works out the set, and `land-work` skips the review. DEC-032 point D4 decides that `review-pr` runs every required reviewer, a contributed one included, and #1934 tracks it.
-
+- **5b.** The project registers no local reviewer of its own. The system runs each reviewer a capability contributes that the change requires, as any other (DEC-032 point D4). Where the change requires no local reviewer at all, the system says so and runs none.
 - **6a.** The developer changed something a reviewer checks since its verdict's head, or the pull request no longer stands on the verdict's base. The verdict is stale, and the system runs that reviewer again (DEC-028).
 - **6b.** The developer's only edits since an approving verdict are answer files the change adds. The verdict of a reviewer that only the condition `touches-code` requires stands, since an answer file is no code (DEC-032 point D1).
 

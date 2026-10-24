@@ -29,8 +29,9 @@ pkit:
         - REQ-004
         - REQ-005
     revalidated:
-      at: 2026-10-23T09:50:13Z
-      outcome: updated
+      at: 2026-10-24T03:44:31Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
 ---
 
 # UC-003 — Declare what my change means for the next release

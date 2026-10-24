@@ -813,3 +813,70 @@ def test_hook_reads_quoted_words_under_the_system_python3(tmp_path):
         assert proc.returncode == 0, proc.stderr
         out = proc.stdout.strip()
         assert _decision(json.loads(out) if out else None) == expected, (command, out)
+
+
+# ---- the hook's denies hold against the forms of their command (#1960) -------
+#
+# The live hook, end to end, where git and gh are granted: a force push in a
+# form git reads as one is denied, and one the core cannot see, behind a
+# pathname pattern or a configuration assignment, is not allowed. A lenient
+# posture defers, a strict one denies (ADR-025 point 2). The system `python3`
+# decides them as the interpreter of the tests does.
+
+_FORCE_PUSH_FORMS = (
+    "git push -uf origin main",
+    "git push --force-w origin main",
+    "git push origin +main",
+    "git -C . push --force origin main",
+    "/usr/bin/git push -f origin main",
+)
+_UNSEEN_HOOK_FORMS = (
+    "git push origin --forc[e]",
+    "HOME=/tmp/x git push origin main",
+    "export GIT_CONFIG_GLOBAL=/tmp/x && git push origin main",
+)
+
+
+def test_hook_denies_a_force_push_in_any_form(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _FORCE_PUSH_FORMS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_defers_on_a_form_it_cannot_see(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _UNSEEN_HOOK_FORMS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+    _, parsed = _invoke(root, _bash_payload(root, "git push origin main"))
+    assert _decision(parsed) == "allow"
+
+
+def test_hook_denies_a_form_it_cannot_see_under_strict(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n")
+    for command in _UNSEEN_HOOK_FORMS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_reads_forms_under_the_system_python3(tmp_path):
+    system = Path("/usr/bin/python3")
+    if not system.is_file():
+        pytest.skip("no system python3 at /usr/bin/python3")
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command, expected in (
+        *((command, "deny") for command in _FORCE_PUSH_FORMS),
+        *((command, None) for command in _UNSEEN_HOOK_FORMS),
+        ("git push origin main", "allow"),
+    ):
+        proc = subprocess.run(
+            [str(system), str(HOOK)],
+            input=json.dumps(_bash_payload(root, command)),
+            capture_output=True,
+            text=True,
+            env={"CLAUDE_PROJECT_DIR": str(root), "PATH": "/usr/bin:/bin"},
+        )
+        assert proc.returncode == 0, proc.stderr
+        out = proc.stdout.strip()
+        assert _decision(json.loads(out) if out else None) == expected, (command, out)

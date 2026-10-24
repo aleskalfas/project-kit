@@ -11,10 +11,7 @@ requirements:
   - REQ-024
 shortfalls:
   - at: "1b"
-    issue: "#1922"
-    record: living-docs:DEC-001#1
-  - at: 2
-    issue: "#1922"
+    issue: "#1986"
     record: living-docs:DEC-001#1
   - at: 6
     issue: "#1765"
@@ -52,9 +49,8 @@ pkit:
         - REQ-023
         - REQ-024
     revalidated:
-      at: 2026-10-24T00:22:03Z
-      outcome: unchanged
-      unchanged-because: The package changed only in what the readers point's description says an entry holds. Setting up a space is as it was.
+      at: 2026-10-24T03:53:30Z
+      outcome: updated
 ---
 
 # UC-043 — Set up a documentation space for one audience
@@ -81,11 +77,7 @@ pkit:
 **Main path:**
 
 1. The adopter assigns each place outside every documentation root that holds the space's pages to the space, under `places` in `.pkit/capabilities/living-docs/project/config.yaml` (DEC-001 point 1).
-2. The adopter names the space's audience in the space's entry under `spaces` in that file (DEC-001 point 1).
-
-> [!WARNING]
-> **Not built yet:** the configuration holds no audience, and `pkit validate` refuses one as an unknown key. DEC-001 point 1 decides that the configuration holds each space's audience, and #1922 tracks it.
-
+2. The adopter names the space's audience in words, as `spaces.<space>.audience` in that file (DEC-001 point 1).
 3. The adopter runs `pkit living-docs new space <space> --dry-run`.
 4. The system makes the checks it makes before the write, prints the space definition and the configuration as it would write them, and writes nothing. So the adopter previews each edit, as core:REQ-009 asks.
 5. The adopter reads the scope it would write, and runs `pkit living-docs new space <space>`.
@@ -110,7 +102,7 @@ pkit:
 - **1b.** The space is one the project adds, and records its own location, one that serves its audience (DEC-001 point 1). The configuration gives it no root of its own, so each of its places is assigned to it. Its new pages go into those places.
 
 > [!WARNING]
-> **Not built yet:** the configuration holds no root for a space the project adds. DEC-001 point 1 decides that such a space may record a root as its location, and #1922 tracks it.
+> **Not built yet:** the configuration holds no root for a space the project adds. DEC-001 point 1 decides that such a space may record a root as its location, and #1986 tracks it.
 
 - **1c.** A place outside every root that the adopter assigns gives no type in `friction.places`, and the space definition selects by type. The write then fails validation, as variant 10a says (DEC-001 point 1).
 - **3a.** The adopter has an AI agent run steps 3 and 5 through the `docs-author` skill's space operation. The agent asks the adopter first, where the space needs a configuration file edited (the skill's space operation).

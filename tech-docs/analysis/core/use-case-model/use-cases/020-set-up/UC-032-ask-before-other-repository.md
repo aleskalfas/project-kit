@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T00:58:41Z
+      at: 2026-10-24T04:16:22Z
       outcome: unchanged
-      unchanged-because: "The code still strips the leading cd and allows cd <path> && git commit where vcs is granted. A commit with a quoted message is allowed again, so the hole variant 1c names is as wide as before #1917, and the variant still says so."
+      unchanged-because: The guardrails now deny the forms of a command they name, and release merge's refusal names pkit pull-request land. The check before another repository runs as the use case says.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

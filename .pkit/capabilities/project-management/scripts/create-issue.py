@@ -19,6 +19,11 @@ sub-issue parent (DEC-005), subject to the substrate-map's `containment`
 selector (DEC-039). `--parent` and a first line naming a different issue are
 refused before anything is filed.
 
+Before anything is written, `--dry-run` included, the body is checked against
+`body-format.yaml` (DEC-010) by the reader validate-issue shares
+(`_lib/body_rules`): a body that lacks a section its type requires, or holds a
+heading of the first level, is refused, and a rule that only warns is reported.
+
 A Feature or Task body given with `--body-file` that cites use cases in its
 `## Use cases` section is read against the use-case point (DEC-054): a cited
 use case the point does not hold is reported, and so is a point that could not
@@ -76,6 +81,7 @@ from _lib import (
     axis_carriage,
     axis_labels,
     body_parent_ref,
+    body_rules,
     bootstrap_gate,
     classification_rules,
     containment,
@@ -621,6 +627,23 @@ def main() -> int:
         )
         return 2
     parent_number = args.parent if args.parent is not None else first_line_parent
+
+    # The body rules (DEC-010), read from body-format.yaml by the reader
+    # validate-issue and edit-issue share: each section the type requires, and
+    # the universal rules. A blocking finding refuses before anything is
+    # written, `--dry-run` included; a warning is shown and filing goes on. A
+    # template-stamped body is checked as a body file is: the schema, not the
+    # template, is the contract.
+    body_findings = body_rules.check(body, args.type, body_format)
+    body_refusals = body_rules.blocking(body_findings)
+    for severity, label, detail in body_findings:
+        if (severity, label, detail) not in body_refusals:
+            print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+    if body_refusals:
+        for severity, label, detail in body_refusals:
+            print(f"error: body refused [{severity}] {label}: {detail}", file=sys.stderr)
+        print("error: nothing was filed.", file=sys.stderr)
+        return 2
 
     # Residual-placeholder check at create-phase (DEC-031).
     # Emits warnings when the composed body is still the raw skeleton so

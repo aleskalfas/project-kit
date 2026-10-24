@@ -77,6 +77,10 @@ TERM-documentation-space:
           - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
         record:
           - living-docs:DEC-001#1
+      revalidated:
+        at: 2026-10-24T03:53:04Z
+        outcome: unchanged
+        unchanged-because: A space's entry may now name its audience in the configuration. A space is still a collection of pages for one audience, in the places declared for it.
 TERM-onboarding-plan:
   name: onboarding plan
   noun-forms: [onboarding plans]
@@ -91,9 +95,9 @@ TERM-onboarding-plan:
         record:
           - living-docs:DEC-001#8
       revalidated:
-        at: 2026-10-24T00:21:51Z
+        at: 2026-10-24T03:53:06Z
         outcome: unchanged
-        unchanged-because: The agent and its storyboard changed only where a reader-review takes the reader's paths. Onboarding and its plan are as they were.
+        unchanged-because: The agent changed only how reader-review falls back to a space's audience. Its onboarding plan, and the gate before it, are as they were.
 TERM-page:
   name: page
   status: active
@@ -137,9 +141,9 @@ TERM-proposal:
         record:
           - living-docs:DEC-001#5
       revalidated:
-        at: 2026-10-24T00:21:53Z
+        at: 2026-10-24T03:53:07Z
         outcome: unchanged
-        unchanged-because: The agent changed only where a reader-review takes the reader's paths. What it proposes, and how, is as it was.
+        unchanged-because: The agent changed only how reader-review falls back to a space's audience. What it proposes, and that a person reviews it, are as they were.
 TERM-reader:
   name: reader
   noun-forms: [readers]
@@ -170,9 +174,9 @@ TERM-reader-review:
         record:
           - living-docs:DEC-001#6
       revalidated:
-        at: 2026-10-24T00:21:49Z
+        at: 2026-10-24T03:53:09Z
         outcome: unchanged
-        unchanged-because: The agent's reader-review now takes the reader's paths from the readers point. It still judges one page as its reader would read it, against the rules that bind on it.
+        unchanged-because: Reader-review now takes a space's audience from the configuration while the readers point is unavailable. It still judges one page as its readers would, against the binding rules.
 TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]

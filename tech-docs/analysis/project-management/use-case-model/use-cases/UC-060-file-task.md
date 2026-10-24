@@ -22,18 +22,12 @@ shortfalls:
   - at: 8
     issue: "#1314"
     record: project-management:DEC-005
-  - at: 9
-    issue: "#1932"
-    record: project-management:DEC-010
   - at: "6c"
     issue: "#1313"
     record: project-management:DEC-005
   - at: "6e"
     issue: "#1314"
     record: project-management:DEC-005
-  - at: "9a"
-    issue: "#1932"
-    record: project-management:DEC-010
 pkit:
   friction:
     anchors:
@@ -41,6 +35,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/create-issue.py
         - .pkit/capabilities/project-management/scripts/_lib/title_rules.py
         - .pkit/capabilities/project-management/scripts/_lib/body_parent_ref.py
+        - .pkit/capabilities/project-management/scripts/_lib/body_rules.py
         - .pkit/capabilities/project-management/scripts/_lib/placeholder_detection.py
         - .pkit/capabilities/project-management/scripts/_lib/use_case_citations.py
         - .pkit/capabilities/project-management/scripts/_lib/containment.py
@@ -74,6 +69,9 @@ pkit:
       artefact:
         - REQ-040
         - REQ-041
+    revalidated:
+      at: 2026-10-24T01:41:45Z
+      outcome: updated
 ---
 
 # UC-060 — File a Task under its parent, its title and body checked as it is filed
@@ -121,9 +119,6 @@ pkit:
 
 9. The system checks that the body holds each section a Task requires: `## What`, `## Acceptance criteria` and `## Doc impact`. It checks too that the body holds no heading of the first level, since the title is that heading. It warns of what a body should not hold, such as a reference to a line of a file (DEC-010).
 
-> [!WARNING]
-> **Not built yet:** `create-issue` checks none of these, so a Task with no `## Doc impact` is filed. DEC-010 decides that such a filing is refused, and #1932 tracks it.
-
 10. The system reports each placeholder of the template left in the body, and each use-case entry the body cites that the data point lacks. Neither stops the filing (DEC-031 and DEC-054 point 4).
 11. The system prints the Task it is about to file, with its title, type, kind, priority, workstream, parent and labels. At a terminal, without `--yes`, it asks before it writes.
 12. The system files the Task, with its labels and its assignee, and prints `[ok] created: <url>`. It posts a comment that records the versions it was filed under (DEC-041).
@@ -152,9 +147,6 @@ pkit:
 - **7a.** A label carries the workstream, none is given, and the project's settings give no default. The system refuses, and writes nothing (DEC-012). The use case ends.
 - **8a.** The file's first line is no parent reference of a Task's forms, or it names a parent other than `--parent`. The system refuses, quoting the forms, and writes nothing (DEC-005). The use case ends.
 - **9a.** The body lacks a section a Task requires, or holds a heading of the first level. The system refuses, naming what is wrong, and writes nothing (DEC-010). The use case ends.
-
-> [!WARNING]
-> **Not built yet:** `create-issue` files the Task without the section. DEC-010 decides that the filing is refused, and #1932 tracks it.
 
 - **10a.** The body still holds a placeholder of the template. The system warns, and files the Task. Its first move of the issue lifecycle is then refused until the body is written (DEC-031).
 - **11a.** The developer answers no at the terminal. The system writes nothing, and the use case ends.

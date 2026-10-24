@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T00:58:29Z
+      at: 2026-10-24T04:16:17Z
       outcome: unchanged
-      unchanged-because: The project's grants still sit beside the methodology's, and a deny still wins over an allow. How the code reads a command's words is not what this use case describes.
+      unchanged-because: The guardrails now deny the forms of a command they name, and release merge's refusal names pkit pull-request land. The project's grants still sit beside the methodology's, and a deny still wins, as the use case says.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

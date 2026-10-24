@@ -547,9 +547,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-24T00:58:01Z
+        at: 2026-10-24T03:17:55Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The code reads a command's words as the shell does before a grant matches them, which leaves what a grant is as it was.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope, and an allow still matches a command as written. Only a deny also reads the other forms of the command it names.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T00:58:03Z
+        at: 2026-10-24T03:17:56Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. Its quoted and escaped forms are denied too, and the code still checks the denies before an untrusted construct.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and an adapter still holds its native deny. Its deny now also binds on the forms ADR-025 point 5 lists, and vcs-history-rewrite names --mirror and a refspec opening with +.
 TERM-harness:
   name: harness
   status: active
@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T00:57:54Z
+        at: 2026-10-24T03:17:48Z
         outcome: unchanged
-        unchanged-because: The decision code reads each word as the shell does, and defers a command whose words, expansions or program it cannot be sure of. The hook still has that code allow, deny or defer each call.
+        unchanged-because: The hook still has the backbone's code allow, deny or defer each call. That code now also denies the forms of a command a deny names and defers where it cannot see one, which leaves what the hook is as it was.
 TERM-place:
   name: place
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T00:58:05Z
+        at: 2026-10-24T03:17:58Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. Each word is matched with its quotes removed, as the shell passes it on, which leaves what a privilege is as it was.
+        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. A Bash recognizer may now name the opening of a word through word_prefix_any, which leaves what a privilege is as it was.
 TERM-process:
   name: process
   noun-forms: [processes]
@@ -957,9 +957,9 @@ TERM-release-step:
           - PRJ-002#D4
           - PRJ-004
       revalidated:
-        at: 2026-10-20T01:37:56Z
+        at: 2026-10-24T03:44:23Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-report:
   name: report
   status: active
@@ -1189,9 +1189,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-21T14:25:54Z
+        at: 2026-10-24T03:44:24Z
         outcome: unchanged
-        unchanged-because: This change touches COR-050's preamble and points 6 and 9, and none says what a surface change is. The definition holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-sync:
   name: sync
   status: active

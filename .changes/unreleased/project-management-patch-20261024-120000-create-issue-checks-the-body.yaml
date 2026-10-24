@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `create-issue` checks a body against `body-format.yaml` before it writes
+  anything, `--dry-run` included, as DEC-010 decides (#1932). A body that lacks
+  a section its issue type requires, or holds a heading of the first level, is
+  refused, naming what is wrong, and nothing is filed. A `file:line` reference
+  and a `## Implementation` or `## How` section are warned of, and filing goes
+  on. `create-issue`, `edit-issue` and `validate-issue` now read these rules
+  through one module, `scripts/_lib/body_rules.py`. Each universal rule takes its
+  severity from the schema entry whose new `id` names it. The `## Implementation`
+  and `## How` warning is new to all three, and a `# ` line in a fenced code block
+  is no longer read as a heading.

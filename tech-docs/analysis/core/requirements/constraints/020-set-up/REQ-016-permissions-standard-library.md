@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-24T00:58:26Z
+      at: 2026-10-24T03:18:06Z
       outcome: unchanged
-      unchanged-because: The change imports only shlex, from the standard library, and a new test runs the hook under the system python3. The tests that decide calls with ruamel.yaml made unimportable still pass.
+      unchanged-because: The change imports nothing new into the decision code, and the new hook tests decide the forms under the system python3. The code still needs only the standard library.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library
