@@ -138,7 +138,7 @@ pkit:
 > **Not built yet:** `create-issue` writes the Milestone into the body's first line, while it links the Task under `<N>`. DEC-005 decides that the first line names the parent, and #1314 tracks it.
 
 - **7a.** A label carries the workstream, none is given, and the project's settings give no default. The system refuses, and writes nothing (DEC-012). The use case ends.
-- **7b.** The workstreams file does not hold the given workstream as active, such as one it lacks or one deprecated. The system refuses, naming the active workstreams, and writes nothing (DEC-012 and DEC-018). The use case ends.
+- **7b.** The workstreams file lacks the given workstream, or holds it as deprecated. The system refuses, naming the active workstreams, and writes nothing (DEC-012 and DEC-018). The use case ends.
 - **8a.** The file's first line is no parent reference of a Task's forms, or it names a parent other than `--parent`. The system refuses, quoting the forms, and writes nothing (DEC-005). The use case ends.
 - **9a.** The body lacks a section a Task requires, or holds a heading of the first level. The system refuses, naming what is wrong, and writes nothing (DEC-010). The use case ends.
 
