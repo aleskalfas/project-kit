@@ -11,9 +11,8 @@ pkit:
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
     revalidated:
-      at: 2026-10-21T13:41:42Z
-      outcome: unchanged
-      unchanged-because: COR-016's change is to how an agent declares its storyboards and where its stamp writes them. This page cites COR-016 only to tell its own storyboard-author sub-procedure apart from the core skill, so it holds.
+      at: 2026-10-24T01:18:27Z
+      outcome: updated
 ---
 
 # demo-recording capability
