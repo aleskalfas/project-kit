@@ -27,9 +27,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-24T03:44:45Z
+      at: 2026-10-24T19:00:55Z
       outcome: unchanged
-      unchanged-because: The change adds tests of the refusal of a non-release pull request and of the help of `pkit release merge`. The guard's tests this requirement cites are unchanged.
+      unchanged-because: "As #2003 asks, the release tests gain a refusal of a piped answer and a confirmation at a terminal. The tests of the cross-repository guard are unchanged."
 ---
 
 # REQ-012 · Functional · The system asks the operator before its command changes another repository

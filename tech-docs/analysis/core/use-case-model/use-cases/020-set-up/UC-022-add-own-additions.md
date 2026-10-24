@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T12:25:05Z
+      at: 2026-10-24T19:01:49Z
       outcome: unchanged
-      unchanged-because: The project's own additions to the grants are read and applied as before. The core now removes a redirection that writes no file before it reads a Bash command, which changes no step of adding them.
+      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

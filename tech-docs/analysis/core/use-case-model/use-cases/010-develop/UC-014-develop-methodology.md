@@ -31,9 +31,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-24T03:44:46Z
+      at: 2026-10-24T19:00:43Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: "As #2003 asks, the unregister in the source now refuses an answer piped in, unless --yes is given. Its question, and the refusal of --purge, are as variant 2d says."
 ---
 
 # UC-014 — Develop the methodology in its source repository

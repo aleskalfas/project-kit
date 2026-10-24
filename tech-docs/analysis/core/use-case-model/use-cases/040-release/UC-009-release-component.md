@@ -47,9 +47,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T03:45:06Z
+      at: 2026-10-24T19:01:04Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
+      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal, and refuses off one without --yes. The author confirms at a terminal, as step 3 says."
 ---
 
 # UC-009 — Release my component on its own version

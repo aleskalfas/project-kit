@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-24T03:44:41Z
+      at: 2026-10-24T19:01:26Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: "As #2003 asks, the uninstall's confirmations now refuse an answer piped in off a terminal. Uninstall still never writes a project rule set."
 ---
 
 # UC-038 — Author and extend my project's own rule sets

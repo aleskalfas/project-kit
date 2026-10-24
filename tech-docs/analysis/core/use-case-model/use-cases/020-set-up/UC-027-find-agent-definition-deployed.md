@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T12:25:06Z
+      at: 2026-10-24T19:01:51Z
       outcome: unchanged
-      unchanged-because: The core still resolves an agent from its deployed definition as before. It now removes a redirection that writes no file before it reads a Bash command, which changes no step of this use case.
+      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

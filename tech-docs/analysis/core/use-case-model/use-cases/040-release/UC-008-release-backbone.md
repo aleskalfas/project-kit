@@ -52,8 +52,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T03:45:05Z
-      outcome: updated
+      at: 2026-10-24T19:01:02Z
+      outcome: unchanged
+      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal. The pipeline passes --yes, and a maintainer confirms at a terminal, as variant 1a says."
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
