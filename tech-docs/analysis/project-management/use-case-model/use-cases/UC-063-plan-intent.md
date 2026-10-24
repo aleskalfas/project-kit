@@ -55,6 +55,10 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
+    revalidated:
+      at: 2026-10-24T01:41:53Z
+      outcome: unchanged
+      unchanged-because: Step 8 still has edit-issue check each body it writes. This change only moves that check into a module edit-issue shares with create-issue and validate-issue, and adds a warning on a recipe section.
 ---
 
 # UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan

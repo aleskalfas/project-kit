@@ -16,9 +16,8 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T00:45:50Z
-      outcome: unchanged
-      unchanged-because: "DEC-057 states what project-management is for, from what the README's opening already says, and decides no new behaviour. The README's account of the CI gate, as #1946 changed it, still holds."
+      at: 2026-10-24T01:41:46Z
+      outcome: updated
       deferred:
         - anchor:
             kind: path
@@ -295,6 +294,17 @@ Each parent's sub-issue list is read once per run — for the plan and the links
 pkit pm link-parent --all-open --dry-run     # see what every open issue would get
 pkit pm link-parent 1101 1102 --yes          # link two issues without the prompt
 ```
+
+#### Issue body validation — required sections and universal rules (per [project-management:DEC-010-issue-body-minimum-structure])
+
+`create-issue` checks the body against `schemas/body-format.yaml` before it writes anything, `--dry-run` included. It checks a body file and a body stamped from the template alike, since the schema is the contract and the template is not.
+
+- **Refused:** a body that lacks a section its issue type requires, such as a Task's `## Doc impact`, or that holds a heading of the first level (`# ...`). The refusal names what is wrong, and nothing is filed.
+- **Warned of:** a `file:line` reference, and a `## Implementation` or `## How` section. The warning is printed, and filing goes on.
+
+Each type's required sections, and their severity, come from its entry under `bodies`. Each universal rule's severity comes from the entry of `universal_body_rules` whose `id` is the finding's label. A `# ` line inside a fenced code block is no heading.
+
+`validate-issue` and `edit-issue` run the same checks, through `scripts/_lib/body_rules.py`. No command checks a body for a predicted decision id yet.
 
 #### Issue body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 
