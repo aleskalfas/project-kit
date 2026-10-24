@@ -30,7 +30,7 @@ Exit codes:
   0  removed
   1  membership refusal / validation refusal / non-zero issue count
   2  usage error (slug not found)
-  3  gh failure (the issue count unreadable)
+  3  gh failure (the issue count unreadable; the label not deleted)
 """
 
 from __future__ import annotations
@@ -220,6 +220,16 @@ def main() -> int:
             print("[refused] slug did not match; aborted.", file=sys.stderr)
             return 0
 
+    # Label deletion first: a label already gone counts as deleted, so a re-run
+    # after a failed file write only writes the file.
+    if kit_labels and not args.skip_label and not _gh_label_delete(args.slug, config):
+        print(
+            f"[error] `{axis_labels.label('workstream', args.slug)}` was not deleted, and "
+            "workstreams.yaml was not changed.",
+            file=sys.stderr,
+        )
+        return 3
+
     # File mutation.
     ws = data.get("workstreams")
     if isinstance(ws, list):
@@ -232,14 +242,6 @@ def main() -> int:
     except OSError as exc:
         print(f"error: failed to write {path}: {exc}", file=sys.stderr)
         return 2
-
-    # Label deletion.
-    if kit_labels and not args.skip_label:
-        if not _gh_label_delete(args.slug, config):
-            print(
-                f"[warn] gh label delete `{axis_labels.label('workstream', args.slug)}` failed.",
-                file=sys.stderr,
-            )
 
     print(f"\n[ok] removed workstream {args.slug!r}.")
     return 0

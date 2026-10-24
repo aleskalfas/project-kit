@@ -15,7 +15,8 @@ Keeps the substrate that carries the axis in step with the file: for
 label-substrate adopters it creates the `workstream:<slug>` label
 (idempotent — skips if it already exists), and where a board carries
 the axis it adds the option `<slug>` to the board's `Workstream`
-single-select field before it writes the file.
+single-select field. Either happens before the file is written, so a
+failure leaves the file as it was.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -266,8 +267,12 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # Board first: the option write is idempotent, so a re-run after a failed
-    # file write finds the option there and only writes the file.
+    # The substrate first: the label create and the option write are both
+    # idempotent, so a re-run after a failed file write finds them there and
+    # only writes the file.
+    if kit_labels and not args.skip_label and not _gh_label_create(args.slug, config):
+        print("[error] the label was not created, and nothing was written.", file=sys.stderr)
+        return 3
     if board is not None and board_option is None:
         result = workstream_sync.write_options(
             config,
@@ -285,15 +290,6 @@ def main() -> int:
     # Write the file.
     if not _add_to_file(capability_root, args.slug, new_entry):
         return 2
-
-    # Create the label for label-substrate adopters.
-    if kit_labels and not args.skip_label:
-        if not _gh_label_create(args.slug, config):
-            print(
-                "[warn] workstreams.yaml updated but gh label create failed; "
-                "re-run bootstrap to reconcile.",
-                file=sys.stderr,
-            )
 
     print(f"\n[ok] added workstream {args.slug!r}.")
     return 0

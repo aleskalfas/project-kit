@@ -590,6 +590,20 @@ def test_remove_removes_a_workstream_no_issue_carries(rw, tmp_path, monkeypatch)
     assert repo.labels == set()
 
 
+def test_remove_leaves_the_file_when_the_label_is_not_deleted(rw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, ONE)
+    repo = FakeRepo(labels={"workstream:cli"})
+
+    def failing(cmd, config, **kwargs):
+        if cmd[1:3] == ["label", "delete"]:
+            return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="HTTP 502")
+        return repo(cmd, config, **kwargs)
+
+    monkeypatch.setattr(rw, "gh_run", failing)
+    assert _run(rw, monkeypatch, tmp_path, "remove-workstream", "cli") == 3
+    assert _file(tmp_path) == ONE
+
+
 def test_remove_force_passes_the_precondition(rw, tmp_path, monkeypatch) -> None:
     stage_project(tmp_path, ONE)
     repo = FakeRepo(labels={"workstream:cli"}, issues={1: _issue("One", "workstream:cli")})

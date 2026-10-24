@@ -186,6 +186,27 @@ def test_main_refuses_each_attribute_outside_the_rules(aw, tmp_path, monkeypatch
     assert _run(aw, monkeypatch, tmp_path, "docs", *extra) == 1
 
 
+def test_main_writes_no_file_when_the_label_is_not_created(aw, tmp_path, monkeypatch) -> None:
+    """The label comes before the file, so a failure leaves the file as it was."""
+    stage_project(tmp_path, WORKSTREAMS)
+
+    def refuse(cmd, config, **kwargs):
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr="HTTP 502")
+
+    monkeypatch.setattr(aw, "gh_run", refuse)
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 3
+    assert "docs" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+def test_main_creates_the_label_and_the_entry(aw, tmp_path, monkeypatch) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo(labels={"workstream:cli"})
+    monkeypatch.setattr(aw, "gh_run", repo)
+    assert _run(aw, monkeypatch, tmp_path, "docs") == 0
+    assert repo.labels == {"workstream:cli", "workstream:docs"}
+    assert "docs" in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
 def test_main_adds_the_option_to_the_boards_field(aw, tmp_path, monkeypatch) -> None:
     stage_project(tmp_path, WORKSTREAMS, board=True)
     board = FakeBoard(["cli"])
