@@ -27,15 +27,15 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-23T08:53:55Z
+      at: 2026-10-24T10:39:22Z
       outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A command that changes more than the person named still offers a preview.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`
 
-**Verified by:** Tests run `pkit sync`, `pkit init` and `pkit upgrade` with `--dry-run`, and find nothing written. So do tests of `pkit refs rename`, `pkit settings consolidate`, `pkit friction resolve` and each mode of `pkit visibility`. Tests of a capability's install, registration, upgrade, refresh and uninstall find the same. A test of `pkit merge --dry-run` finds that it prints what it would run, and runs none of it.
+**Verified by:** Tests run `pkit sync`, `pkit init` and `pkit upgrade` with `--dry-run`, and find nothing written. So do tests of `pkit refs rename`, `pkit settings consolidate`, `pkit friction resolve` and each mode of `pkit visibility`. Tests of a [capability](../../glossary.md#term-capability--capability)'s [install](../../glossary.md#term-install--install), registration, upgrade, refresh and uninstall find the same. A test of `pkit merge --dry-run` finds that it prints what it would run, and runs none of it.
 
-No test or check finds a command of the class that lacks the flag. Sixteen of the backbone's commands in the class lack it, among them `pkit config set`, `pkit release apply` and `pkit version bump`. Nobody has sorted the components' commands.
+No test or check finds a command of the class that lacks the flag. Sixteen of the [backbone](../../glossary.md#term-backbone--backbone)'s commands in the class lack it, among them `pkit config set`, `pkit release apply` and `pkit version bump`. Nobody has sorted the [components](../../glossary.md#term-component--component)' commands.
 
-**Rationale:** COR-004 asks for a preview of each command whose effect a project would want to see before it happens. It names the class by effect: a command that changes or removes content that already exists, beyond what the person named. The CLI undoes no run, so such an edit costs far more to undo than to read first. An adopter who installs, upgrades or removes a component sees what it would do to the project's files before it lands.
+**Rationale:** COR-004 asks for a preview of each command whose effect a [project](../../glossary.md#term-project--project) would want to see before it happens. It names the class by effect: a command that changes or removes content that already exists, beyond what the person named. The CLI undoes no run, so such an edit costs far more to undo than to read first. An adopter who installs, upgrades or removes a [component](../../glossary.md#term-component--component) sees what it would do to the project's files before it lands.

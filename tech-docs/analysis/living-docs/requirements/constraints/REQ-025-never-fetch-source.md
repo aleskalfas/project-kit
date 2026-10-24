@@ -27,6 +27,6 @@ pkit:
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names
 
-**Verified by:** A test runs the resolver offline, from an empty cache and apart from the project, and finds its answer. Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
+**Verified by:** A test runs the resolver offline, from an empty cache and apart from the [project](../../../core/glossary.md#term-project--project), and finds its [answer](../../../core/glossary.md#term-answer--answer). Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
 
-**Imposed by:** The friction checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same answer wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).
+**Imposed by:** The [friction](../../../core/glossary.md#term-friction--friction) checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same [answer](../../../core/glossary.md#term-answer--answer) wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).

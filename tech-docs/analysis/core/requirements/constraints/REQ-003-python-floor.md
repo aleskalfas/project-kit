@@ -25,4 +25,4 @@ pkit:
 
 **Verified by:** The linter and the type checker hold the package's code to Python 3.11's syntax and standard library. The tests run on Python 3.13 alone, so no test runs on 3.11.
 
-**Imposed by:** PRJ-003, which chose Python 3.11 or later for the CLI. It names that floor as the one "that mainstream distributions and `uv` tools assume today", which gives "`tomllib`, structural pattern matching, exception groups". The choice is internal to project-kit, so adopters are unaffected: `uv` provisions a Python for `pkit` apart from their project's own (PRJ-003).
+**Imposed by:** PRJ-003, which chose Python 3.11 or later for the CLI. It names that floor as the one "that mainstream [distributions](../../glossary.md#term-distribution--distribution) and `uv` tools assume today", which gives "`tomllib`, structural pattern matching, exception groups". The choice is internal to project-kit, so adopters are unaffected: `uv` provisions a Python for `pkit` apart from their [project](../../glossary.md#term-project--project)'s own (PRJ-003).

@@ -15,8 +15,9 @@ pkit:
         - .pkit/permissions/decide.py
         - src/project_kit/permissions.py
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+      source: [claude-code-hooks]
     revalidated:
-      at: 2026-10-24T12:02:42Z
+      at: 2026-10-24T11:38:21Z
       outcome: updated
 ---
 
@@ -314,7 +315,11 @@ The realizer that makes declared permissions *bite* at runtime (per [COR-028](..
 
 **When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a form of a guardrail, which the core's `hook_hidden_guardrails()` names. The core's abstain on such a doubt is a prompt (ADR-025 point 2), and how this hook carries out an abstain is the adapter's to say (ADR-002, Implications).
 
-Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
+Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository, in every permission mode (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
+
+**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail's form.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
+
+The core never reads the mode, so its allow and deny, a strict posture's deny included, are the same in every mode. The hook reads the mode from the payload's `permission_mode` field. The hooks reference's "Common input fields" gives `auto` for auto mode and `bypassPermissions` for bypass mode. A missing field, or a value the hook does not know, keeps the ask.
 
 **Zero-dep shebang + stdlib YAML fallback.** The hook's shebang is `#!/usr/bin/env python3` (bare, no `uv`). The shared loader in `decide.py` (`load_yaml`) tries `ruamel.yaml` when available and falls back to a stdlib-only YAML-subset parser when not — handling the full file subset (block mappings/sequences, single/double-quoted strings, flow sequences, block scalars, booleans). **The fallback lives in the shared `decide.py` loader, not in the hook**, so both the hook and the `pkit permissions` CLI parse via the same code path — the same-code invariant is mechanically preserved, not aspirational.
 

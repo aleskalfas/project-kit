@@ -1040,3 +1040,86 @@ def test_hook_reads_harmless_redirections_under_the_system_python3(tmp_path):
         assert proc.returncode == 0, proc.stderr
         out = proc.stdout.strip()
         assert _decision(json.loads(out) if out else None) == expected, (command, out)
+
+
+# ---- the hook never asks where the person chose not to be asked (#2004) -----
+#
+# The live hook, end to end: Claude Code names the session's permission mode in
+# the payload's `permission_mode`. In auto mode (`auto`) and bypass mode
+# (`bypassPermissions`) the hook defers where it would ask for a hidden
+# guardrail, so the harness's own mode decides. Every other mode, a payload
+# with no mode and a mode the hook does not know keep the ask. Allow and deny
+# are the same in every mode, and so is the ask on a foreign Edit or Write.
+
+_UNATTENDED_MODES = ("auto", "bypassPermissions")
+_ASKING_MODES = ("default", "plan", "acceptEdits", "dontAsk")
+# Values the hook does not know: it reads only the exact strings above.
+_UNKNOWN_MODES = ("Auto", "bypass", "bypasspermissions", "manual", "", None, 1, ["auto"])
+
+
+def _in_mode(payload: dict, mode: object) -> dict:
+    return {**payload, "permission_mode": mode}
+
+
+def test_hook_defers_a_hidden_guardrail_in_auto_and_bypass_mode(tmp_path):
+    for grants in (_GIT_AND_GH, None):
+        root = _tree(tmp_path / str(grants is None), grants=grants)
+        for mode in _UNATTENDED_MODES:
+            for command in _UNSEEN_HOOK_FORMS:
+                _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+                assert parsed is None, (mode, command, parsed)
+
+
+def test_hook_asks_on_a_hidden_guardrail_in_every_other_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for mode in (*_ASKING_MODES, *_UNKNOWN_MODES):
+        for command in _UNSEEN_HOOK_FORMS:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == "ask", (mode, command, parsed)
+            assert "vcs-history-rewrite" in _reason(parsed)
+
+
+def test_hook_asks_on_a_hidden_guardrail_where_the_payload_names_no_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    payload = _bash_payload(root, "git push origin --forc[e]")
+    assert "permission_mode" not in payload
+    _, parsed = _invoke(root, payload)
+    assert _decision(parsed) == "ask", parsed
+    # The model writes `tool_input`, never the payload's top level, so a mode
+    # inside it is not read.
+    for mode in _UNATTENDED_MODES:
+        inner = {**payload, "tool_input": {**payload["tool_input"], "permission_mode": mode}}
+        _, parsed = _invoke(root, inner)
+        assert _decision(parsed) == "ask", (mode, parsed)
+
+
+def test_hook_allows_and_denies_alike_in_every_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    strict = _tree(
+        tmp_path / "strict", grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n"
+    )
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, "manual", None):
+        for command in _FORCE_PUSH_FORMS:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == "deny", (mode, command, parsed)
+        _, parsed = _invoke(root, _in_mode(_bash_payload(root, "git push origin main"), mode))
+        assert _decision(parsed) == "allow", (mode, parsed)
+        _, parsed = _invoke(root, _in_mode(_bash_payload(root, "gh pr list | sh"), mode))
+        assert parsed is None, (mode, parsed)
+        for command in _UNSEEN_HOOK_FORMS:
+            _, parsed = _invoke(strict, _in_mode(_bash_payload(strict, command), mode))
+            assert _decision(parsed) == "deny", (mode, command, parsed)
+
+
+def test_hook_asks_on_a_foreign_edit_or_write_in_every_mode(tmp_path):
+    root = _tree(tmp_path)
+    foreign = tmp_path / "other-repo" / "file.py"
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, *_UNKNOWN_MODES):
+        for tool, tool_input in (
+            ("Edit", {"file_path": str(foreign), "old_string": "a", "new_string": "b"}),
+            ("Write", {"file_path": str(foreign), "content": "x"}),
+        ):
+            payload = {"tool_name": tool, "tool_input": tool_input, "cwd": str(root)}
+            _, parsed = _invoke(root, _in_mode(payload, mode))
+            assert _decision(parsed) == "ask", (mode, tool, parsed)
+            assert "outside this session's repo" in _reason(parsed)
