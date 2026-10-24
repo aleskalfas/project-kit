@@ -25,6 +25,9 @@ analyses:
       050-adopt: "Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix."
   - component: project-management
     folder: project-management
+    # The record that states what project-management is for (software-analysis
+    # DEC-003 point 8).
+    purpose: project-management:DEC-057
     builds-on:
       - analysis: core
   - component: evidence
