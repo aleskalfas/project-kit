@@ -77,7 +77,7 @@ pkit:
 **Main path:**
 
 1. The adopter assigns each place outside every documentation root that holds the space's pages to the space, under `places` in `.pkit/capabilities/living-docs/project/config.yaml` (DEC-001 point 1).
-2. The adopter names the space's audience in words, as `audience` in the space's entry under `spaces` in that file (DEC-001 point 1).
+2. The adopter names the space's audience in words, as `spaces.<space>.audience` in that file (DEC-001 point 1).
 3. The adopter runs `pkit living-docs new space <space> --dry-run`.
 4. The system makes the checks it makes before the write, prints the space definition and the configuration as it would write them, and writes nothing. So the adopter previews each edit, as core:REQ-009 asks.
 5. The adopter reads the scope it would write, and runs `pkit living-docs new space <space>`.
