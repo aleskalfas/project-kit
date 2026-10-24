@@ -148,3 +148,30 @@ def test_a_schema_without_the_rule_gives_its_default() -> None:
         ("warning", "body.file-line-refs"),
         ("warning", "body.implementation-recipe"),
     ]
+
+
+# ---- what the fence reader leaves to be read ------------------------
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        "```x`\n# Heading\n",  # a backtick in a backtick fence's info string: no fence
+        "- item\n  ```\n# Heading\n",  # a fence never closed hides nothing
+    ],
+)
+def test_a_line_no_closed_fence_holds_is_still_read(shipped, body) -> None:
+    assert _labels(body_rules.universal(body, shipped)) == ["body.h1"]
+
+
+def test_the_file_line_check_stays_linear_on_a_long_body(shipped) -> None:
+    """A long run with no `:digits` after it is read in linear time: a body file
+    has no length limit before `create-issue` checks it."""
+    import time
+
+    started = time.monotonic()
+    assert body_rules.universal("a." * 500_000, shipped) == []
+    assert time.monotonic() - started < 2
+    assert _labels(body_rules.universal("x see foo/bar.py:42 y", shipped)) == [
+        "body.file-line-refs"
+    ]

@@ -44,7 +44,9 @@ _DEFAULTS = {H1: "hard-reject", FILE_LINE: "warning", RECIPE: "warning"}
 _SEVERITY = re.compile(r"\[validation-severity:([a-z-]+)\]")
 _FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,})")
 _H1 = re.compile(r"^# [^#]")
-_FILE_LINE = re.compile(r"[A-Za-z0-9_/\.\-]+\.[a-z]+:\d+\b")
+#: A match starts where no character of a path does, so a long run of them with
+#: no `:digits` after it is read once rather than from each of its characters.
+_FILE_LINE = re.compile(r"(?<![A-Za-z0-9_/.\-])[A-Za-z0-9_/.\-]+\.[a-z]+:\d+\b")
 _RECIPE = re.compile(r"^## (Implementation|How)\s*$")
 
 
@@ -138,9 +140,12 @@ def _lines_outside_fences(body: str) -> Iterator[str]:
     """The lines of *body* outside fenced code blocks, fences' own lines left out.
 
     A fence closes on a line of the same character, at least as long, with
-    nothing after it. A fence never closed runs to the end of the body.
+    nothing after it. A backtick fence's opening line holds no other backtick.
+    The lines of a fence never closed are read, so a fence this reader takes
+    wrongly, such as one opened in a list item, hides no heading.
     """
     fence = ""
+    held: list[str] = []
     for line in body.splitlines():
         match = _FENCE.match(line)
         if fence:
@@ -150,9 +155,12 @@ def _lines_outside_fences(body: str) -> Iterator[str]:
                 and len(match.group(1)) >= len(fence)
                 and not line[match.end() :].strip()
             ):
-                fence = ""
+                fence, held = "", []
+            else:
+                held.append(line)
             continue
-        if match:
+        if match and not (match.group(1)[0] == "`" and "`" in line[match.end() :]):
             fence = match.group(1)
             continue
         yield line
+    yield from held
