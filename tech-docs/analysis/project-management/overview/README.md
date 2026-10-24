@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=4 fingerprint=sha256:61f2d8af67a9f42bbe883c6aa1c377ce6477210eb8a9e963c8385f5b161f8f88 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:59277e93a374bb68e8a50a4e99fc82765a7d72b8a27795907ea4fc6cef53e617 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -10,7 +10,7 @@ This analysis describes what project-management does: who uses it, what they do 
 
 - [UC-060 — File a Task under its parent, its title and body checked as it is filed](../use-case-model/use-cases/UC-060-file-task.md) ([not built yet](#not-built-yet): step 6, step 7, step 8, step 9, variant 6c, variant 6e, variant 9a)
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md) ([not built yet](#not-built-yet): step 4, step 7, variant 1a, variant 1d, variant 1f, variant 6c, variant 7a)
-- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md) ([not built yet](#not-built-yet): step 9, variant 1b, variant 5b, variant 6b, variant 12a, variant 13a)
+- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md) ([not built yet](#not-built-yet): step 9, variant 1b, variant 6b, variant 12a, variant 13a)
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md) ([not built yet](#not-built-yet): step 8, step 9)
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md) ([not built yet](#not-built-yet): step 4, step 7, step 9, variant 7b, variant 7c, variant 7d, variant 7e, variant 11a)
 
@@ -65,7 +65,6 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md): variant 7a, decided by `project-management:DEC-007`, tracked in `#1215`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md): step 9, decided by `project-management:DEC-055#3`, tracked in `#1872`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md): variant 1b, decided by `COR-004`, tracked in `#1938`
-- [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md): variant 5b, decided by `project-management:DEC-032#D4`, tracked in `#1934`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md): variant 6b, decided by `project-management:DEC-032#D1`, tracked in `#1872`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md): variant 12a, decided by `project-management:DEC-055#3`, tracked in `#1779`
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md): variant 13a, decided by `project-management:DEC-028`, tracked in `#1935`
