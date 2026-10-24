@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-planner
     revalidated:
-      at: 2026-10-24T06:13:41Z
+      at: 2026-10-24T09:45:21Z
       outcome: unchanged
-      unchanged-because: A test of done-work now checks that the agent gate gets the issue's number for its refusal. No held move is made without the person's authorisation.
+      unchanged-because: close-issue now reports a parent eligible to close only once its last open child closes, and done-work's refusal names review-pr with the issue's number. No held move is made without the person's authorisation.
 ---
 
 # REQ-042 · Functional · A move a person holds is made only on that person's authorisation
