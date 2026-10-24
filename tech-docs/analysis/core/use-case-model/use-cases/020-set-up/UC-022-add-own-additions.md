@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T10:39:38Z
+      at: 2026-10-24T12:25:05Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: The project's own additions to the grants are read and applied as before. The core now removes a redirection that writes no file before it reads a Bash command, which changes no step of adding them.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's
