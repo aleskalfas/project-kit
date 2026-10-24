@@ -3500,12 +3500,13 @@ def test_hidden_guardrails_says_what_keeps_the_core_from_seeing(
         # deferred, but no guardrail may bind on it unseen
         "gh pr list | sh",
         "git log $X",
-        "git push origin main 2>&1",
+        "git push origin main 2>out.txt",
         "env git status",
         "HOME=/tmp/x gh pr list",
         "gh issue cre* --title x",
         # allowed or denied by decide(), so never asked about
         "git push origin main",
+        "git push origin main 2>&1",
         "git status",
         "git push -uf origin main",
         "sudo whoami",
@@ -3596,3 +3597,288 @@ def test_hook_decide_still_decides_as_decide(decide_mod, catalog):
         assert decide_mod.hook_decide(MODEL, catalog, payload)[0] == expected, cmd
     verdict, why = decide_mod.hook_decide(MODEL, catalog, {"tool_name": "Bash"})
     assert verdict == "abstain" and "fail-open" in why
+
+
+# ---- a redirection that writes no file (#2002) ------------------------------
+#
+# ADR-025 point 2: an fd duplicated or closed, such as `2>&1`, `>&2` or
+# `2>&-`, and output discarded to `/dev/null`, such as `>/dev/null`,
+# `2>/dev/null` or `&>/dev/null`, write no file and change no program. The core
+# removes such a word before it splits the command, so the command is decided
+# as it would be without it. Each counts only as a whole word in the forms
+# pinned below, and every other redirection still keeps every grant from
+# allowing. A deny reads the command with those words removed, so it binds on
+# a program behind one too.
+
+# (command, what the core reads once the harmless words are removed)
+_HARMLESS_REMOVED = [
+    ("git status 2>&1", "git status "),
+    ("git status 1>&2", "git status "),
+    ("git status >&2", "git status "),
+    ("git status 2>&-", "git status "),
+    ("git status 3>&1", "git status "),
+    ("git status 0<&2", "git status "),
+    ("git status <&1", "git status "),
+    ("git status <&-", "git status "),
+    ("git status >/dev/null", "git status "),
+    ("git status > /dev/null", "git status "),
+    ("git status >>/dev/null", "git status "),
+    ("git status 2>/dev/null", "git status "),
+    ("git status 2>> /dev/null", "git status "),
+    ("git status &>/dev/null", "git status "),
+    ("git status &>> /dev/null", "git status "),
+    ("git status\t2>&1", "git status\t"),
+    ("git status >/dev/null 2>&1", "git status  "),
+    ("2>/dev/null git status", " git status"),
+    ("git status 2>&1|gh pr list", "git status |gh pr list"),
+    ("git status 2>&1&& gh pr list", "git status && gh pr list"),
+    ("git status &>/dev/null; gh pr list", "git status ; gh pr list"),
+    ("git status 2>&1\ngh pr list", "git status \ngh pr list"),
+    # a word that only looks like one inside quotes: its text is all that changes
+    ('git commit -m "a 2>&1 b"', 'git commit -m "a  b"'),
+]
+
+# Each is read whole, so its `<` or `>` keeps every grant from allowing.
+_HARMLESS_LOOKALIKES = [
+    "gi2>&1t status",  # zsh runs `gi2`, writing to a file named `1t`
+    "git status 2>&1t",
+    "git status 12>&1",  # zsh passes `12` on as an argument
+    "git status 12>/dev/null",
+    "git status 2>&12",  # dash reads no fd of two digits
+    "git status 2>&3",  # fd 3 may be one the shell holds open on a file
+    "git status >&9",
+    "git status 0<&3",
+    "git status >&0",
+    "git status 3<&0",
+    "git status >&1x",  # writes to the file `1x`
+    "git status >&-x",  # zsh writes to the file `-x`
+    "git status >& /dev/null",
+    "git status {fd}>/dev/null",  # stores the new fd's number in `fd`
+    "git status {fd}>&1",
+    "git status a\\ 2>&1",  # the shell passes on `a 2`
+    "git status >/dev/null2",
+    "git status >/dev/nul",
+    "git status >/dev/null/x",
+    'git status >"/dev/null"',
+    "git status >'/dev/null'",
+    "git status >/dev/null*",
+    "git status >/dev/nul?",
+    "git status >/dev/null~x",
+    "git status &>/dev/null gh pr list",  # dash runs `gh pr list` on its own
+    "git status &>>/dev/null gh pr list",
+    "git status > 2>&1 /dev/null",  # one pass leaves `>  /dev/null`
+    # A segment of redirections and assignments alone: zsh runs `$NULLCMD`.
+    "git status; >/dev/null",
+    "git status | 2>&1",
+    "git status && >&2",
+    "2>&1\ngit status",
+    "X=1 2>/dev/null; git status",
+    "export X=1 2>&1; git status",
+    # ... or behind a word that opens a command of its own
+    "{ 2>&1; }; git status",
+    "git status; ! 2>&1",
+    "time 2>&1; git status",
+    "if git status; then >/dev/null; fi",
+    "exec 2>&1; git status",
+    "git status >|/dev/null",
+    "git status <>/dev/null",
+    "git status </dev/null",
+]
+
+
+@pytest.mark.parametrize("command,removed", _HARMLESS_REMOVED)
+def test_a_harmless_redirection_is_removed_as_a_whole_word(decide_mod, command, removed):
+    strip = decide_mod._without_harmless_redirections
+    assert strip(command) == removed
+    assert strip(removed) == removed
+
+
+@pytest.mark.parametrize("command", _HARMLESS_LOOKALIKES)
+def test_a_lookalike_of_a_harmless_redirection_is_not_removed(decide_mod, command):
+    strip = decide_mod._without_harmless_redirections
+    assert strip(command) == command
+    assert "redirection" in decide_mod._doubts(command)
+
+
+def test_the_core_splits_and_doubts_the_rest_as_before(decide_mod):
+    assert decide_mod.segments("uv run pytest 2>&1 | tail -3") == [
+        ["uv", "run", "pytest"],
+        ["tail", "-3"],
+    ]
+    assert decide_mod.segments("2>/dev/null git status") == [["git", "status"]]
+    assert decide_mod._doubts("git status 2>&1 | gh pr list") == []
+    assert decide_mod._doubts("git status 2>&1 > out.txt") == ["redirection"]
+    # A doubt in a segment split off after the removal is still found.
+    assert decide_mod._doubts("git status 2>&1 | gh pr list # x") == ["comment"]
+    assert decide_mod._doubts('git status 2>&1 | gh pr list "x') == ["unclosed quote"]
+    # A backslash before a newline stays untrusted, and a form right after
+    # one is not removed.
+    assert decide_mod._doubts("git status \\\n2>&1") == ["redirection", "unclosed quote"]
+    assert decide_mod._doubts("git status 2>&1 \\\ngh pr list") == ["unclosed quote"]
+
+
+# A catalog and a model that grant the operator `uv` and `tail` too, as a
+# project granting its runner and a filter would.
+_RUNNER_PRIVILEGES = {
+    "test-runner": {"recognize": {"bash": [{"cmd": "uv"}]}},
+    "test-filter": {"recognize": {"bash": [{"cmd": "tail"}]}},
+}
+_RUNNER_MODEL = {
+    "posture": "lenient",
+    "grants": [
+        *MODEL["grants"],
+        {
+            "subject": "operator",
+            "privilege": [_tok("test-runner"), _tok("test-filter")],
+            "effect": "allow",
+        },
+    ],
+}
+
+
+def _with_runner(catalog):
+    return {**catalog, "privileges": {**catalog["privileges"], **_RUNNER_PRIVILEGES}}
+
+
+@pytest.mark.parametrize(
+    "command,without",
+    [
+        ("uv run pkit validate 2>&1 | tail -1", "uv run pkit validate | tail -1"),
+        ("git status 2>/dev/null", "git status"),
+        ("cd /x && git log >/dev/null", "cd /x && git log"),
+        ("cd /x 2>/dev/null && git log", "cd /x && git log"),
+        ("gh pr list 2>&1 | sh", "gh pr list | sh"),
+        ("2>&1 docker ps", "docker ps"),
+        ("python3 x.py >/dev/null 2>&1", "python3 x.py"),
+    ],
+)
+@pytest.mark.parametrize("posture", ["lenient", "strict"])
+def test_a_harmless_redirection_is_decided_as_without_it(
+    decide_mod, catalog, command, without, posture
+):
+    for model, cat in ((MODEL, catalog), (_RUNNER_MODEL, _with_runner(catalog))):
+        ours = decide_mod.decide(model, cat, _bash(command, "operator"), posture)
+        assert ours == decide_mod.decide(model, cat, _bash(without, "operator"), posture)
+    verdict, why = decide_mod.decide(
+        _RUNNER_MODEL, _with_runner(catalog), _bash(command, "operator"), posture
+    )
+    if command.startswith(("uv", "git", "cd")):
+        assert verdict == "allow", (command, why)
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git status 2>&1",
+        "gh pr list 2>/dev/null",
+        "git log >/dev/null",
+        "cd /x && git log >/dev/null",
+        "git status 2>&1 | gh pr list",
+        "2>/dev/null git status",
+        "git fetch &>/dev/null && git status",
+        "git status >/dev/null 2>&1",
+        "git status 2>&-",
+        'git commit -m "fix: x" 2>&1',
+    ],
+)
+def test_a_granted_command_with_a_harmless_redirection_is_allowed(decide_mod, catalog, command):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "allow", f"{command!r}: {why}"
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        *_HARMLESS_LOOKALIKES,
+        "git status > out.txt",
+        "git status 2>err.txt",
+        "git status >> log.txt",
+        "git status < in.txt",
+        "git status <<<x",
+        "git status <<EOF\nx\nEOF",
+        "git status >/dev/null$X",
+        "git status 2>&1 > ~/.bashrc",
+        "git status &>/dev/null 2>&1",  # `&>` last in its segment only
+        "cd /x && git status 2>&1 > out.txt",
+        "git status 2>&1 | gh pr list # x",
+        'git status 2>&1 | gh pr list "x',
+        "git status \\\n2>&1",
+        "git status 2>&1 \\\ngh pr list",
+        # zsh's `NULLCMD` names the program a command of redirections alone runs
+        "git status; NULLCMD=./x.sh; 2>&1",
+        "git status | NULLCMD=sh 2>&1",
+        "NULLCMD=./x.sh git status",
+        "export READNULLCMD=./x.sh && git status",
+    ],
+)
+def test_any_other_redirection_still_keeps_a_grant_from_allowing(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r} must not be allowed by the grant: {why}"
+    assert "untrusted construct" in why, why
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", f"{command!r} must deny under a strict posture: {why}"
+
+
+@pytest.mark.parametrize(
+    "command", ["cd /x 2>/dev/null && git status", "cd /x >&2; git status", "2>&1 cd /x && git log"]
+)
+def test_a_leading_cd_with_a_harmless_redirection_is_stripped(decide_mod, catalog, command):
+    # The redirection is removed first, so the `cd` is a bare one (ADR-025
+    # point 1).
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "allow", f"{command!r}: {why}"
+    d, why = decide_mod.decide(MODEL, catalog, _bash("cd /x > log && git status", "operator"))
+    assert d == "abstain" and "untrusted construct" in why, why
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("rm -rf ~ 2>&1", "destructive-fs"),
+        ("2>/dev/null rm -rf ~", "destructive-fs"),
+        (">/dev/null sudo whoami", "privilege-escalation"),
+        ("sudo whoami >/dev/null 2>&1", "privilege-escalation"),
+        ("git push --force origin main 2>&1", "vcs-history-rewrite"),
+        ("git push 2>&1 --force origin main", "vcs-history-rewrite"),
+        ("git 2>/dev/null push -f origin main", "vcs-history-rewrite"),
+        ("cd /x && rm -rf ~ 2>/dev/null", "destructive-fs"),
+        ("git status 2>&1 | sudo whoami", "privilege-escalation"),
+        ("git status 2>&1t; rm -rf ~", "destructive-fs"),
+        ("git status > out.txt 2>&1 && rm -rf ~", "destructive-fs"),
+    ],
+)
+def test_a_deny_still_binds_with_a_harmless_redirection(decide_mod, catalog, command, privilege):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert privilege in why, why
+
+
+@pytest.mark.parametrize(
+    "command",
+    ["git push origin --forc[e] 2>&1", "2>/dev/null git push origin --forc[e]"],
+)
+def test_a_hidden_guardrail_is_read_without_a_harmless_redirection(decide_mod, catalog, command):
+    hidden = decide_mod.hidden_guardrails(MODEL, catalog, _bash(command, "operator"))
+    assert list(hidden) == ["vcs-history-rewrite"], hidden
+    assert decide_mod.decide(MODEL, catalog, _bash(command, "operator"))[0] == "abstain"
+
+
+def test_harmless_redirection_hook_and_decide_parity(decide_mod, catalog):
+    """The removal lives in the shared core, so hook_decide, which the
+    `pkit permissions probe` drives too, decides each case as decide does
+    (ADR-002 / ADR-003)."""
+    for cmd, expected in (
+        ("git status 2>&1", "allow"),
+        ("cd /x && git log >/dev/null", "allow"),
+        ("git status 2>&1t", "abstain"),
+        ("git status > out.txt", "abstain"),
+        ("2>/dev/null rm -rf ~", "deny"),
+    ):
+        d_decide, why_decide = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+        payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+        d_hook, why_hook = decide_mod.hook_decide(MODEL, catalog, payload)
+        assert (d_decide, why_decide) == (d_hook, why_hook), cmd
+        assert d_decide == expected, cmd
