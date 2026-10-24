@@ -10,9 +10,6 @@ requirements:
 after:
   - [UC-044, UC-047]
 shortfalls:
-  - at: 3
-    issue: "#1921"
-    record: living-docs:DEC-001#7
   - at: "4a"
     issue: "#1812"
     record: living-docs:DEC-002#8
@@ -63,14 +60,10 @@ pkit:
 
 1. The developer asks the `living-docs` agent to review a page as its reader.
 2. The agent reads the rules that bind on the page, `LDOC`'s and its space's own, with `pkit rule-sets reach --json` (DEC-001 point 3).
-3. The agent resolves the page's reader against the readers data point, with `pkit connections resolve pkit::documentation:readers --json`. It takes that reader's needs, and the paths the reader takes through the pages (DEC-001 points 6 and 7).
-
-> [!WARNING]
-> **Not built yet:** an entry of the readers data point holds only an id and a description of its reader's needs. Its schema refuses any other field. DEC-001 point 7 decides that each entry carries the paths its reader takes too, and #1921 tracks it.
-
+3. The agent resolves the page's reader against the readers data point, with `pkit connections resolve pkit::documentation:readers --json`. It takes that reader's needs, and the paths the reader takes through the pages where the reader's entry carries any. Each path is the pages the reader reads in order (DEC-001 points 6 and 7).
 4. The agent reads the page as that reader. It asks whether the page answers that reader's questions, only those, and in a way the reader can follow (DEC-001 point 6).
 5. The agent judges the page against each rule that binds on it, such as whether its anchors ground each statement. It leaves to validation the parts of `LDOC`'s rules that validation enforces (DEC-001 point 6).
-6. The agent follows the page's links where its space's own rules ask it. The user space's rule that reader paths stay unbroken is one (DEC-001 point 3).
+6. Where its space's own rules ask it, the agent follows each of the reader's paths that passes through the page. The user space's rule that reader paths stay unbroken is one (DEC-001 point 3). With no paths, the agent follows the page's own links.
 7. The agent finds what the reader misses or does not need. It writes one record, `.agent-workspace/living-docs/reader-review/<page-slug>.md`, naming the page, the commit it reviewed and the reader (DEC-001 point 6).
 8. Each finding of the record cites the rule the page breaks, and quotes the passage. It says what the reader misses or does not need, with a direction, never a rewritten page (DEC-001 point 6).
 9. The agent tells the developer where the record lies, and how many findings it holds.
