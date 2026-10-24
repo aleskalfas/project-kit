@@ -13,24 +13,9 @@ shortfalls:
   - at: 4
     issue: "#1939"
     record: project-management:DEC-016
-  - at: 7
-    issue: "#1940"
-    record: project-management:DEC-018
   - at: 9
     issue: "#1939"
     record: project-management:DEC-016
-  - at: "7b"
-    issue: "#1940"
-    record: project-management:DEC-018
-  - at: "7c"
-    issue: "#1940"
-    record: project-management:DEC-018
-  - at: "7d"
-    issue: "#1940"
-    record: project-management:DEC-018
-  - at: "7e"
-    issue: "#1940"
-    record: project-management:DEC-018
   - at: "11a"
     issue: "#1939"
     record: project-management:DEC-016
@@ -49,6 +34,7 @@ pkit:
         - .pkit/capabilities/project-management/scripts/split-workstream.py
         - .pkit/capabilities/project-management/scripts/remove-workstream.py
         - .pkit/capabilities/project-management/scripts/_lib/workstreams.py
+        - .pkit/capabilities/project-management/scripts/_lib/workstream_sync.py
         - .pkit/capabilities/project-management/schemas/time-containers.yaml
         - .pkit/capabilities/project-management/schemas/workstreams.schema.json
       record:
@@ -101,10 +87,6 @@ pkit:
 5. The system creates the Milestone, its description opening with `Close trigger: <trigger>`, and prints `[ok] created: <url>` (DEC-016).
 6. The planner adds a workstream: `pkit pm add-workstream <slug> --name "<name>" --description "<text>"`. The system runs the checks of step 3.
 7. The system checks the slug and each attribute against what DEC-018 decides of their form, and writes the workstream into the project's workstreams file. It creates the label `workstream:<slug>`, or adds the workstream to the board's field where a board carries the axis (DEC-018).
-
-> [!WARNING]
-> **Not built yet:** `add-workstream` checks the slug's form alone, and writes no board's field. DEC-018 decides that it checks each attribute and keeps the board in step, and #1940 tracks it.
-
 8. Work is filed into the Milestone and the workstream, as `UC-060` and `UC-063` describe.
 9. A few days before a date-based Milestone's due date, the agent lists its open issues for the planner to triage (DEC-016).
 
@@ -123,26 +105,10 @@ pkit:
 - **4a.** The category is not declared, or the project declares none. The system refuses, names the declared categories, and creates nothing (DEC-016). The use case ends.
 - **4b.** A Milestone of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.
 - **7a.** The slug is malformed, or a workstream of that slug exists. The system refuses, and writes nothing (DEC-018). The use case ends.
-- **7b.** The planner renames a workstream: `pkit pm rename-workstream <old> <new>`. The system checks both labels first, then renames the entry and the label, so its issues carry the new one (DEC-018).
-
-> [!WARNING]
-> **Not built yet:** `rename-workstream` checks no label first. Where the new label exists, it renames the entry, fails to rename the label and exits `0`, with the issues on the old label. DEC-018 decides that it checks both labels first, and #1940 tracks it.
-
-- **7c.** The planner merges workstreams: `pkit pm merge-workstream --survivor <S> <L>`. The system counts the issues of each workstream it removes, and moves them to the survivor. It rewrites the references to the removed workstreams, and deletes their labels (DEC-018).
-
-> [!WARNING]
-> **Not built yet:** `merge-workstream` rewrites no reference. DEC-018 decides that a merge rewrites them by default, and #1940 tracks it.
-
-- **7d.** The planner splits a workstream: `pkit pm split-workstream --source <S> --into <A> --into <B>`. The system adds the new workstreams, and asks of each issue of the source which one it moves to (DEC-018).
-
-> [!WARNING]
-> **Not built yet:** `split-workstream` moves every issue to the workstream `--default` names, or leaves every one. DEC-018 decides that it triages each issue, and #1940 tracks it.
-
-- **7e.** The planner removes a workstream: `pkit pm remove-workstream <slug>`. The system refuses while any issue carries it. Otherwise it asks the planner to type the slug, removes the entry and deletes the label (DEC-018).
-
-> [!WARNING]
-> **Not built yet:** `remove-workstream` counts the issues only where the labels are the capability's and `--skip-label` is not given. So it can remove a workstream that issues still carry. DEC-018 decides that it refuses while any issue carries the workstream, and #1940 tracks it.
-
+- **7b.** The planner renames a workstream: `pkit pm rename-workstream <old> <new>`. The system checks the new slug, and the old and the new label or board option, before it changes anything. Where both exist, it refuses and changes nothing. Otherwise it renames the label or option, then the entry, so its issues carry the new one (DEC-018).
+- **7c.** The planner merges workstreams: `pkit pm merge-workstream --survivor <S> <L>`. The system counts the issues of each workstream it removes, and moves them to the survivor. It rewrites the references to the removed workstreams, and deletes their labels or board options (DEC-018).
+- **7d.** The planner splits a workstream: `pkit pm split-workstream --source <S> --into <A> --into <B>`. The system adds the new workstreams, and asks of each issue of the source which one it moves to (DEC-018). Where it cannot ask, it takes the answers `--assign` and `--default` give, and refuses while an issue has none (`split-workstream.py`).
+- **7e.** The planner removes a workstream: `pkit pm remove-workstream <slug>`. The system refuses while any issue carries it, on whatever substrate carries the axis. Otherwise it asks the planner to type the slug, removes the entry and deletes the label (DEC-018).
 - **11a.** The Milestone's description holds no close trigger. The system infers one, date-based where the Milestone has a due date, and warns. It offers to write the trigger into the description (DEC-016).
 
 > [!WARNING]
