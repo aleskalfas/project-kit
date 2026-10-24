@@ -24,6 +24,10 @@ pkit:
         - software-analysis:DEC-001#5
         - software-analysis:DEC-001#9
         - COR-050#3
+    revalidated:
+      at: 2026-10-24T01:59:08Z
+      outcome: unchanged
+      unchanged-because: The change has the build read the declared surface before any candidate, and the measures after the last step. A person still decides each candidate, and a reason for having no anchors is written only once a person accepts it.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
