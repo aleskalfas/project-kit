@@ -11,7 +11,7 @@ requirements:
   - REQ-006
   - REQ-007
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
   - [UC-014, UC-023, UC-016]
 pkit:
   friction:
@@ -49,7 +49,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 - **From UC-014, UC-023 or UC-016:** The method rule sets the project may inherit lie in it. They are those the backbone ships, and those of each capability the manifest records (COR-051 point 6).
 
 **Assumptions:**

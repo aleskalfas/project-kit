@@ -6,8 +6,8 @@ actor: ACT-developer
 other-actors:
   - ACT-ai-agent
 after:
-  - [UC-014]
-  - [UC-014, UC-019]
+  - [UC-014, UC-049]
+  - [UC-014, UC-019, UC-049]
 requirements:
   - REQ-002
   - REQ-009
@@ -52,8 +52,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
-- **From UC-014 or UC-019:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-014, UC-019 or UC-049:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
 
 **Assumptions:** None.
 

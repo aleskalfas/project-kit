@@ -19,7 +19,7 @@ requirements:
   - REQ-019
   - REQ-020
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 shortfalls:
   - at: 8
     issue: "#1765"
@@ -82,7 +82,7 @@ pkit:
 - **CI pipeline** (`ACT-ci-pipeline`): runs every check with no terminal and no person to answer, and gates the merge on the exit status. It names the base once, for every check (COR-054 point 3).
 - **Operator** (`ACT-operator`): is asked before `pkit config set` writes in a repository other than the session's own. So no such write happens silently (REQ-012).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 
