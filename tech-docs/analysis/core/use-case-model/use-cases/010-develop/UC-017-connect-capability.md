@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-24T03:44:30Z
-      outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      at: 2026-10-24T06:19:03Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
@@ -83,6 +82,7 @@ pkit:
 
 - **1a.** Another installed capability provides one of the capability's roles. At step 10, `pkit validate` fails with ``role '<role>' is provided by <capabilities> and no provider is selected``, and names `pkit connections providers set` (COR-053 point 1).
 - **4a.** A process of that id exists in the capability. The system refuses, since `process new` writes a process only once, and writes nothing. The path rejoins at step 3.
+- **4b.** The capability is one whose files the project receives as synced copies. Such a capability is kit-shipped outside the methodology's source repository, or externally sourced in any project. The system refuses and writes nothing, even in a dry run, and names a capability the project incubates instead (core rule 1). The use case ends.
 - **6a.** The author skips `pkit capabilities refresh`. At step 10, `pkit validate` fails with ``the generated `depends-on` list is stale``, and names the command. The path rejoins at step 6.
 - **8a.** The project grants the `process-author` agent definition no file, since `process-authoring-targets` ships empty in `.pkit/agents/project/overlay.yaml`. An AI agent working by it then proposes each script, and the author writes it (ADR-051 point 1).
 - **8b.** The overlay has no key `process-authoring-targets`, as in a project that upgraded from before it. The adapter deploys no `process-author` agent definition, and the author writes each script (ADR-051 point 1).

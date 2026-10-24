@@ -50,6 +50,10 @@ pkit:
         - REQ-002
         - REQ-009
         - REQ-012
+    revalidated:
+      at: 2026-10-24T06:19:30Z
+      outcome: unchanged
+      unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. Where per-machine choices are kept, out of what the project commits, is as it was.
 ---
 
 # UC-031 — Keep my per-machine choices out of what the project commits
