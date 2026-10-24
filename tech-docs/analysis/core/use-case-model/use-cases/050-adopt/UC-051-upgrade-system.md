@@ -72,7 +72,7 @@ pkit:
 
 # UC-051 — Upgrade the system like a dependency
 
-**Goal:** Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
+**Goal:** Upgrade the system like a dependency, at a version the whole project pins, with its migrations run for me and my own files left alone.
 
 **Other actors:**
 

@@ -78,7 +78,15 @@ pkit:
 - **1d.** The command changes files rather than the hosting service, such as `pkit new decision` or `pkit sync`. At its entry, before it reads anything, the command compares the two repositories as step 2 does (REQ-012). The path goes on at step 3.
 
 > [!WARNING]
-> **Not built yet:** only the commands that change the hosting service run the guard. So a command that only writes files changes the other repository with no question. The guarded ones are the `pkit pull-request` verbs that write, `pkit version tag` and `untag` with `--push`, `pkit release apply` with `--tag --push`, `release merge` and `release publish-notes`. ADR-034 point 1 decides that every `pkit` command that writes runs the guard, and #1765 tracks it.
+> **Not built yet:** only the commands that change the hosting service run the guard. So a command that only writes files changes the other repository with no question. The guarded commands are these:
+>
+> - the `pkit pull-request` verbs that write
+> - `pkit version tag` and `untag` with `--push`
+> - `pkit release apply` with `--tag --push`
+> - `release merge`
+> - `release publish-notes`
+>
+> ADR-034 point 1 decides that every `pkit` command that writes runs the guard, and #1765 tracks it.
 
 - **1e.** The command is `pkit report`, which files a [report](../../../glossary.md#term-report--report) on the repository of the [distribution](../../../glossary.md#term-distribution--distribution). That write lies outside the guard by its kind. It is confirmed at a terminal, and with nobody to ask it is only drafted (ADR-047 points 1 and 2).
 - **2a.** The working directory lies in a linked worktree of the session's repository, or in another clone whose `origin` matches the session's. The system counts it as the session's own repository. The change goes ahead with no question, and the use case ends.

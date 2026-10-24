@@ -5,7 +5,7 @@ status: active
 summary: "The person who adopts the methodology for a project and keeps its setup."
 needs:
   - Install the system with one command, committed for the team or kept out of the shared repository, and see its wiring into my project.
-  - Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
+  - Upgrade the system like a dependency, at a version the whole project pins, with its migrations run for me and my own files left alone.
   - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
   - Choose which installed capability provides a role.
   - Declare my project's backbone configuration once (name, default branch, documentation roots, friction mode, anchored places, declared surface, excluded paths) and have it validated.

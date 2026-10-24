@@ -53,7 +53,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>`, naming a [release](../../../glossary.md#term-release--release)'s tag (PRJ-004 and REQ-031).
-2. `uv` installs the [system](../../../glossary.md#term-system--system)'s CLI, `pkit`, at that release. The CLI carries the [methodology](../../../glossary.md#term-methodology--methodology)'s content of the same release, so its [version](../../../glossary.md#term-version--version) names one content (ADR-033 and ADR-065 [point](../../../glossary.md#term-point--point) 12).
+2. `uv` installs the [system](../../../glossary.md#term-system--system)'s tool, `pkit`, at that release. The CLI carries the [methodology](../../../glossary.md#term-methodology--methodology)'s content of the same release, so its [version](../../../glossary.md#term-version--version) names one content (ADR-033 and ADR-065 [point](../../../glossary.md#term-point--point) 12).
 3. The operator runs `pkit version`, and the system prints `pkit <version>`.
 4. Later, the operator runs `pkit upgrade` outside any [project](../../../glossary.md#term-project--project), where no git repository and no `.pkit/` lie above the working directory (ADR-063 point 5).
 5. The system asks the [distribution](../../../glossary.md#term-distribution--distribution)'s repository for its latest release, with `git ls-remote --tags` against the URL compiled into the CLI. It waits at most five seconds (ADR-063 point 1).

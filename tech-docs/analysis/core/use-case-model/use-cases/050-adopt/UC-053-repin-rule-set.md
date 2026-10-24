@@ -37,7 +37,7 @@ pkit:
 **Preconditions:**
 
 - **From UC-023 or UC-038:** A [rule set](../../../glossary.md#term-rule-set--rule-set) of the [project](../../../glossary.md#term-project--project)'s own inherits another set, pinned to that set's major (COR-051 [point](../../../glossary.md#term-point--point) 7).
-- **From UC-051, UC-054 or UC-038:** The inherited set has moved to a new major. An upgrade, or a [capability](../../../glossary.md#term-capability--capability)'s upgrade, brought a method rule set's new major, or the project gave a set of its own one.
+- **From UC-051, UC-054 or UC-038:** The inherited set has moved to a new major. An upgrade, or a [capability](../../../glossary.md#term-capability--capability)'s upgrade, brought a method rule set's new major, or the project gave a set of its own a new major.
 
 **Assumptions:** None.
 

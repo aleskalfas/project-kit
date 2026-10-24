@@ -112,7 +112,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `create-issue` checks `--workstream` only against the legacy `workstreams:` key of the capability's settings. Where that key is empty, any value passes. DEC-012 decides that a value outside the project's allowed set is refused, and #1933 tracks it.
 
-8. The system composes the body: its first line the parent reference, such as `Feature: #12`, then the Task's sections (DEC-010). Where the developer gave a file, the system checks that the file's first line is a Task's parent reference, naming the parent of `--parent` (DEC-005).
+8. The system composes the body: its first line is the parent reference, such as `Feature: #12`, then the Task's sections (DEC-010). Where the developer gave a file, the system checks that the file's first line is a Task's parent reference, naming the parent of `--parent` (DEC-005).
 
 > [!WARNING]
 > **Not built yet:** the template opens with a comment, and the composed body puts the parent reference below it. So the body's first line names no parent. DEC-005 decides that every body opens with its parent reference, and #1314 tracks it.

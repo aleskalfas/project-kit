@@ -118,7 +118,7 @@ An onboarding plan says how a project's existing documents come into its [docume
 - which space each existing document belongs to (DEC-001 point 8)
 - how pages are split, merged or rewritten for their [readers](../glossary.md#term-reader--reader) (DEC-001 point 8)
 - which anchors each statement should carry (DEC-001 point 8)
-- which of the project's mappings from code to documentation become [page](../glossary.md#term-page--page) anchors, where it keeps any (DEC-001 point 8)
+- which of the project's mappings from code to documents become [page](../glossary.md#term-page--page) anchors, where it keeps any (DEC-001 point 8)
 
 **Relations:**
 
@@ -130,5 +130,5 @@ An onboarding plan says how a project's existing documents come into its [docume
 **Always true:**
 
 - It cites its evidence for each thing it proposes (DEC-001 point 8).
-- Retiring a mapping from code to documentation is a separate change, for whoever owns the mapping (DEC-001 point 8).
+- Retiring a mapping from code to documents is a separate change, for whoever owns the mapping (DEC-001 point 8).
 - Onboarding is complete when the declared surface is covered, and no page is left unanchored without an accepted reason (DEC-001 point 8).

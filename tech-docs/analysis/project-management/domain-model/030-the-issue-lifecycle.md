@@ -79,7 +79,7 @@ Defined in [TERM-issue-lifecycle](../glossary.md#term-issue-lifecycle--issue-lif
 
 **Why:** Every [issue](../glossary.md#term-issue--issue) moves from filing to closure, and an agent makes most of the moves. Fixed states, with fixed moves between them, make what the agent does deterministic. The moves that start and end work are the ones a person holds (DEC-006).
 
-The issue lifecycle is the [process](../../core/glossary.md#term-process--process) every issue moves through: Todo, Backlog, In Progress, Review and Done. Who moves it:
+The issue lifecycle is the [process](../../core/glossary.md#term-process--process) every issue moves through: Todo, Backlog, In Progress, Review and Done. Who moves an issue:
 
 - a person schedules the work
 - the agent moves it through the middle

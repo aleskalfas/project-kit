@@ -137,7 +137,7 @@ pkit:
 - **4c.** The permission hook cannot start, such as where its script is missing. The system reports that enforcement is not running, and never ends `goal reached` while the fault stands (ADR-002 point 4).
 
 > [!WARNING]
-> **Not built yet:** `setup autonomy` does not [report](../../../glossary.md#term-report--report) it. Its probes call the permission code directly, so it can end `goal reached` with a hook that cannot start. `pkit permissions overview` reports some of its causes. ADR-002 point 4 decides that this fault fails loud, and #1764 tracks it.
+> **Not built yet:** `setup autonomy` does not [report](../../../glossary.md#term-report--report) the fault. Its probes call the permission code directly, so it can end `goal reached` with a hook that cannot start. `pkit permissions overview` reports some of the fault's causes. ADR-002 point 4 decides that this fault fails loud, and #1764 tracks it.
 
 - **5a.** The host runs macOS. The system turns the [sandbox](../../../glossary.md#term-sandbox--sandbox) on, and excludes from it each command the platform requires outside it (ADR-014 point 2). Those are `uv` until a fixed [release](../../../glossary.md#term-release--release) is installed, and `gh` where the [project](../../../glossary.md#term-project--project) holds `.github/` (ADR-014 point 4, ADR-027 and ADR-030). Every other shell command stays confined, and the system reports the commands that run outside the sandbox (ADR-014 point 3).
 

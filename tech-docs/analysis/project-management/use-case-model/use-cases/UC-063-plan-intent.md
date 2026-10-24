@@ -94,7 +94,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. DEC-014 decides that no issue is left half filed, and #1761 tracks it.
 
-9. The agent attaches each issue the plan schedules to its [Milestone](../../glossary.md#term-milestone--milestone) with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval its reason (DEC-006 and DEC-029).
+9. The agent attaches each issue the plan schedules to its [Milestone](../../glossary.md#term-milestone--milestone) with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval being its reason (DEC-006 and DEC-029).
 
 > [!WARNING]
 > **Not built yet:** the `batch-plan` procedure attaches the Milestone with a raw `gh issue edit`. That leaves no [audit comment](../../glossary.md#term-audit-comment--audit-comment) and no journal entry, and checks no repository. DEC-029 decides that the agent files through the [capability](../../../core/glossary.md#term-capability--capability)'s own commands, and #1761 tracks it.

@@ -48,7 +48,7 @@ pkit:
 - **AI agent** (`ACT-ai-agent`): composes the [report](../../../glossary.md#term-report--report) with the adopter through the `report-author` [skill](../../../glossary.md#term-skill--skill). Where the agent runs a report verb with `--yes`, the [system](../../../glossary.md#term-system--system) stages the report and posts nothing. So the adopter sees every word before the report leaves (ADR-047 [point](../../../glossary.md#term-point--point) 2).
 - **Methodology maintainer** (`ACT-methodology-maintainer`): receives the report, and links each tracked fix to it (UC-013).
 
-**Preconditions:** **From UC-048:** The adopter has the [system](../../../glossary.md#term-system--system)'s CLI, `pkit`, on the machine.
+**Preconditions:** **From UC-048:** The adopter has the [system](../../../glossary.md#term-system--system)'s tool, `pkit`, on the machine.
 
 **Assumptions:**
 

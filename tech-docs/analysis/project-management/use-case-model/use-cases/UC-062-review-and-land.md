@@ -90,7 +90,7 @@ pkit:
 - **CI pipeline** (`core:ACT-ci-pipeline`): runs the checks the merge waits for, at the [pull request](../../../core/glossary.md#term-pull-request--pull-request)'s head.
 - **Operator** (`core:ACT-operator`): is asked before a command changes a repository other than the session's own, so no such write happens silently (core:REQ-012).
 
-**Preconditions:** **From UC-061:** The [Task](../../glossary.md#term-task--task) is in Review, its [pull request](../../../core/glossary.md#term-pull-request--pull-request) open (DEC-026).
+**Preconditions:** **From UC-061:** The [Task](../../glossary.md#term-task--task) is in Review, and its [pull request](../../../core/glossary.md#term-pull-request--pull-request) is open (DEC-026).
 
 **Assumptions:**
 
