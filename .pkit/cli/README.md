@@ -1016,7 +1016,9 @@ Five commands ask before they write anything, and in a dry run too where they ta
 - `new schema`, for `core` or a capability
 - `new migration`, for the backbone or a capability
 
-Where the folder holds synced copies, the command writes nothing and exits 1. It names the folder, and where the project's own artefact goes. For a decision that is the `project` or the `adr` namespace, and for an agent the `project` namespace. For a schema or a migration, it is a capability the project incubates. A capability incubated in the project stamps as before. In the methodology's source repository, so does every folder but an externally-sourced capability's.
+Where the folder holds synced copies, the command writes nothing and exits 1. It names the folder, and where the project's own artefact goes. That is the `project` or the `adr` namespace for a decision, and the `project` namespace for an agent or its storyboard. For a schema or a migration, it is a capability the project incubates.
+
+Each command stamps as before into a capability the project incubates. In the methodology's source repository, it stamps into every folder but an externally-sourced capability's.
 
 `new area`, `new adapter` and `new capability` make a folder no sync writes, and `new scratchpad` writes in the project's own tier, so none of them asks. Nor does `new migration --tier adapter`, since a sync copies no adapter's `migrations/` folder.
 
@@ -1147,7 +1149,7 @@ Stamps a storyboard (COR-016) beside an existing agent: `storyboard.md`, or `<sl
 - **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, capabilities by name, then core — and stamps beside the first agent of that name, the one that deploys.
 - **`--namespace <ns>`** pins the lookup to one location: `core`, `project` or a capability name (an unknown capability gets the `new agent` refusal).
 
-Refuses if the storyboard already exists or no agent of that name is found. It refuses too an agent whose files the project receives as synced copies ("Folders a sync writes" above), before a flat agent moves to folder form. **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.
+Refuses if the storyboard already exists or no agent of that name is found. It also refuses an agent whose files the project receives as synced copies, leaving a flat agent flat ("Folders a sync writes" above). **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.
 
 ### `new scratchpad <slug>`
 
