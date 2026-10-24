@@ -26,7 +26,7 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-24T18:58:06Z
+      at: 2026-10-24T20:08:10Z
       outcome: updated
       deferred:
         - anchor:
@@ -169,16 +169,18 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
 - **Which fences:** a fence whose info string opens with the word `console`. A fence in another language is never run. So a command that cannot run as a test goes in a `sh` fence, with no output.
 - **Where a command runs:** in `/bin/sh`, in the fence's own copy of a scratch project outside the repository, with a home and a temporary folder of its own. The run builds that project once, with `pkit init` from your checkout, and gives uv a cache of its own, which fills from the network. The command's environment holds your `PATH`, with the checkout's `pkit` first, and nothing else of yours. Git in the copy reads only the scratch home's configuration, which signs nothing and allows no SSH.
 - **The limits:** a command is stopped when it runs longer than `--timeout`, 60 seconds by default, or prints more than 1 MiB. The run then kills every process left in the command's process group, and the command fails its fence. Interrupting the run stops the command the same way.
-- **What is compared:** what a command prints, its standard output and error together, with the fence's output. The exit status is not compared. The run writes `<project>`, `<home>`, `<tmp>`, `<repository>` and `<version>` for the paths and the version that vary between runs. In the page, `<any>` stands for any text within one line.
-- **A write in the repository:** before and after each command, the run lists each file by its size, times, mode and inode, and each folder by its mode. A path added, removed or changed fails the test, and stops the run. The listing leaves out the git index, and each folder that holds a repository of its own, such as a linked worktree. A write by another process during the command is taken for the command's.
+- **What is compared:** what a command prints, its standard output and error together, with the fence's output, but not the command's exit status. The run writes `<project>`, `<home>`, `<tmp>`, `<scratch>`, `<repository>` and `<version>` for the paths and the version that vary between runs. `<scratch>` stands for the run's scratch folder, which holds the scratch project, each fence's folders and uv's cache. In the page, `<any>` stands for any text within one line.
+- **A write in the repository:** before and after each command, the run lists each file by its size, times, mode and inode, and each folder by its mode. A path added, removed or changed fails the test, and stops the run. The listing leaves out the git directory, `.git`, and each folder that holds a repository of its own, such as a linked worktree. A write by another process elsewhere in the repository during the command is taken for the command's.
 - **What the run cannot detect:**
   - a write outside the repository, such as in your home folder by an absolute path, or in the git directory a linked worktree shares
-  - a change to the git index alone, or a write the command undoes before it ends
+  - a write in the repository's git directory, `.git`, which every session sharing the repository writes in at any time
+  - a write the command undoes before it ends
   - a write by a process that left the command's process group
+  - anything done over the network
 - **What the run confines:** nothing. A command runs as you, and can read whatever you can, such as your SSH keys. On Linux, that includes the environment of the processes that started the run. The run detects writes in the repository, and prevents none.
-- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output with a line that would read as a command or close the fence. Review the new output as any change to the page. Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`.
+- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output with a line that would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
 
-The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
+Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`. The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
