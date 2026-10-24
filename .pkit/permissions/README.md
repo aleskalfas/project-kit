@@ -18,7 +18,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy]
     revalidated:
-      at: 2026-10-24T06:10:04Z
+      at: 2026-10-24T11:38:23Z
       outcome: updated
 ---
 
@@ -157,9 +157,9 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
 - **A pathname pattern**, such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written. For a structured recognizer, the core cannot tell where such a pattern stands for the program or the subcommand, or may open with `-` or `+`. For a regex `pattern`, it cannot tell where one stands anywhere in a segment of the program the regex opens with, or of any program where it opens with none plainly.
 - **An assignment that changes the program's configuration**, which may set a forced refspec or an alias. These are `HOME`, the XDG base directories, any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`, and git's repository directories. Such an assignment counts in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it. It keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` defers.
 
-**Where Claude Code may allow what the core defers on a guardrail, the person is asked.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form it cannot see (`hidden_guardrails()`). An adapter may use it to ask the person rather than defer.
+**Where Claude Code may allow what the core defers on a guardrail, the person is asked, outside auto and bypass mode.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form it cannot see (`hidden_guardrails()`). An adapter may use it to ask the person rather than defer.
 
-The Claude Code hook asks the person on such a command ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it, and where it cannot tell the deny it defers. The deny side stays a speed bump all the same (ADR-025 point 5).
+The Claude Code hook asks the person on such a command ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). In auto mode and bypass mode it does not ask, since there the person chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it, and where it cannot tell the deny it defers. The deny side stays a speed bump all the same (ADR-025 point 5).
 
 What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth (ADR-025 point 5). A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core defers, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
 
