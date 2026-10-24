@@ -78,9 +78,8 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T01:37:21Z
-      outcome: unchanged
-      unchanged-because: REQ-042 now names the tests of close-issue that refuse a held close with no terminal and no --yes. Landing a pull request, and the authorisation of its merge, are as the use case says.
+      at: 2026-10-24T04:20:10Z
+      outcome: updated
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
