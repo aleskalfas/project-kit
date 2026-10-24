@@ -11,6 +11,6 @@ body: >
   as `git log | head -5`, is allowed by the permission hook without a prompt.
   No shipped profile grants `uv-run`, and a project grants it in its own
   grants. Only the hook realizes either: `profile activate` and
-  `pkit permissions apply` write no native rule for them. A redirection, an
-  expansion or another untrusted construct still defers, and a deny still
-  wins.
+  `pkit permissions apply` write no native rule for them. A redirection that
+  writes a file, an expansion or another untrusted construct still defers,
+  and a deny still wins.
