@@ -13,9 +13,8 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-24T15:03:07Z
-      outcome: unchanged
-      unchanged-because: The README describes the capability's agents and its code-review panel as before. This branch adds the capability's purpose record and its analysis, which change none of what the README says.
+      at: 2026-10-24T16:06:05Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -44,6 +43,7 @@ When an adopter runs `pkit capabilities install software-engineering`:
 - `review-contributions.yaml` — registers the panel into the project-management merge gate through the reviewer-contribution socket ([project-management:DEC-032]).
 - `decisions/DEC-001-producer-agent-and-conventions-seam.md` — the producer discipline's invariant: the conventions-thin producer, the overlay-resolved seam, the producer/checker boundary, empty-tolerance.
 - `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, the per-agent block-threshold and knowledge-split disciplines, and `docs-reviewer`'s check of a change's answers.
+- `decisions/DEC-003-purpose.md` — what the capability is for: code that agents write follows the project's own conventions in every session, and code is reviewed, with its documentation, before the merge gate lets it through.
 
 It deliberately ships **no conventions content** — the conventions corpus is adopter-owned and accretes over time (see Adopter setup).
 
