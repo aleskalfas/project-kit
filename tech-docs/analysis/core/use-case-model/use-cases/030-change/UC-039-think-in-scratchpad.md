@@ -49,9 +49,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T03:45:02Z
+      at: 2026-10-24T19:01:10Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: "As #2003 asks, the report post that stamps a note now confirms only at a terminal. The note's steps, and the stamp, are unchanged."
 ---
 
 # UC-039 — Think a question through in a scratchpad note, and retire it

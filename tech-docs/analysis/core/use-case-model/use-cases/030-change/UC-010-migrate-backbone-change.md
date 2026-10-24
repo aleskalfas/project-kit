@@ -46,9 +46,9 @@ pkit:
         - REQ-012
         - REQ-017
     revalidated:
-      at: 2026-10-24T18:58:12Z
+      at: 2026-10-24T19:54:15Z
       outcome: unchanged
-      unchanged-because: The aggregator gains a line that runs the pages' console fences. The migration check still runs in it, as the steps say.
+      unchanged-because: The aggregator gains a line that runs the pages' console fences, and the migration check still runs in it, as the steps say. The confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal, and no step here asks one of them.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

@@ -29,9 +29,9 @@ pkit:
         - REQ-004
         - REQ-005
     revalidated:
-      at: 2026-10-24T03:44:31Z
+      at: 2026-10-24T19:00:30Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
+      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal, and refuses off one without --yes. The changeset guard this use case describes asks nothing."
 ---
 
 # UC-003 — Declare what my change means for the next release

@@ -34,9 +34,9 @@ pkit:
         - REQ-002
         - REQ-012
     revalidated:
-      at: 2026-10-24T10:39:40Z
+      at: 2026-10-24T19:00:47Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, an install's collision is now refused off a terminal before any write. Choosing a role provider, and its consent, are as the steps say."
 ---
 
 # UC-025 — Choose which installed capability provides a role

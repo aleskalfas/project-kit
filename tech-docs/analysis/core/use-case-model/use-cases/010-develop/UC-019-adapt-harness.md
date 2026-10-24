@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-24T04:46:28Z
+      at: 2026-10-24T19:01:45Z
       outcome: unchanged
-      unchanged-because: The migration stamp now refuses the backbone or a capability that arrives as synced copies, never the adapter tier. The adapter stamp asks nothing, so the adapter the use case authors still stamps.
+      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-019 — Adapt the system to another harness

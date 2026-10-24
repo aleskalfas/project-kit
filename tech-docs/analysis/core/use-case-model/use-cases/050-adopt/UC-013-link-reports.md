@@ -36,9 +36,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T10:39:44Z
+      at: 2026-10-24T19:01:08Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, off a terminal without --yes the close is now refused after the listing. Step 7 asks at a terminal, and variant 6b still lists only."
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix

@@ -190,9 +190,9 @@ TERM-backbone-configuration:
           - COR-048#4
           - COR-048#5
       revalidated:
-        at: 2026-10-20T01:37:11Z
+        at: 2026-10-24T19:00:26Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "As #2003 asks, project_config.py gains a helper that asks only at a terminal. The configuration file, and the consent its writer asks, are as the definition says."
 TERM-base:
   name: base
   status: active

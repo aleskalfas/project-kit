@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T10:39:27Z
+      at: 2026-10-24T19:00:32Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, the capability tests gain cases that refuse a collision answer piped in. The tests of the compatibility gates, and what they find, are unchanged."
 ---
 
 # REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything

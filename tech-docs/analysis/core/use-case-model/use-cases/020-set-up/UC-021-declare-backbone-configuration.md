@@ -48,9 +48,9 @@ pkit:
         - REQ-014
         - REQ-015
     revalidated:
-      at: 2026-10-24T10:39:36Z
+      at: 2026-10-24T19:00:45Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, a helper beside the writer asks other commands' questions only at a terminal. The writer's consent, and variant 5a, are unchanged."
 ---
 
 # UC-021 — Declare my project's backbone configuration once, and have it validated
