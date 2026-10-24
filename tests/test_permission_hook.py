@@ -844,11 +844,13 @@ def test_hook_denies_a_force_push_in_any_form(tmp_path):
         assert _decision(parsed) == "deny", command
 
 
-def test_hook_defers_on_a_form_it_cannot_see(tmp_path):
+def test_hook_asks_on_a_form_it_cannot_see(tmp_path):
+    # The core defers on these, and Claude Code's baseline `Bash(git:*)` would
+    # run them unasked, so the hook asks the person instead (#1982).
     root = _tree(tmp_path, grants=_GIT_AND_GH)
     for command in _UNSEEN_HOOK_FORMS:
         _, parsed = _invoke(root, _bash_payload(root, command))
-        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+        assert _decision(parsed) == "ask", f"{command!r} must ask, not be allowed: {parsed}"
     _, parsed = _invoke(root, _bash_payload(root, "git push origin main"))
     assert _decision(parsed) == "allow"
 
@@ -867,8 +869,9 @@ def test_hook_reads_forms_under_the_system_python3(tmp_path):
     root = _tree(tmp_path, grants=_GIT_AND_GH)
     for command, expected in (
         *((command, "deny") for command in _FORCE_PUSH_FORMS),
-        *((command, None) for command in _UNSEEN_HOOK_FORMS),
+        *((command, "ask") for command in _UNSEEN_HOOK_FORMS),
         ("git push origin main", "allow"),
+        ("gh pr list | sh", None),
     ):
         proc = subprocess.run(
             [str(system), str(HOOK)],
@@ -880,3 +883,82 @@ def test_hook_reads_forms_under_the_system_python3(tmp_path):
         assert proc.returncode == 0, proc.stderr
         out = proc.stdout.strip()
         assert _decision(json.loads(out) if out else None) == expected, (command, out)
+
+
+# ---- the hook asks where a deferred command may hide a guardrail (#1982) ----
+#
+# The live hook, end to end: where the core defers on a Bash call that may hide
+# a form of a guardrail, the hook answers `ask`, so the person decides it
+# rather than the harness's own allow list. The reason names the guardrail and
+# the kind of form, never the command. A call the core defers on for another
+# reason, or for a project's own deny, still defers, a strict posture still
+# denies, and a fault in the check keeps the abstain (ADR-002 point 3).
+
+
+def _reason(parsed: dict | None) -> str:
+    assert parsed is not None
+    return parsed["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+def test_hook_asks_where_no_grant_covers_the_program_too(tmp_path):
+    # With no grant at all the core defers, and the harness's own list decides.
+    root = _tree(tmp_path)
+    for command in ("git push origin --forc[e]", "HOME=/tmp/x git push origin main"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "ask", (command, parsed)
+        reason = _reason(parsed)
+        assert "vcs-history-rewrite" in reason, reason
+        assert "forc[e]" not in reason and "/tmp/x" not in reason, reason
+    _, parsed = _invoke(root, _bash_payload(root, "git push origin --forc[e]"))
+    assert "a pathname pattern" in _reason(parsed)
+
+
+def test_hook_still_defers_where_no_guardrail_may_bind(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in ("gh pr list | sh", "gh pr list > out.txt", "env git status", "git log $X"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, (command, parsed)
+
+
+def test_hook_defers_on_a_projects_own_deny_it_cannot_tell(tmp_path):
+    # A project's own deny rides the hook's speed bump: the core defers on a
+    # glob it cannot tell, and the hook does not ask. A guardrail it asks about.
+    root = _tree(
+        tmp_path,
+        grants=(
+            "schema_version: 1\n"
+            "grants:\n"
+            "  - subject: agent:project-manager\n"
+            '    privilege: "[privilege-catalog:issue-tracker]"\n'
+            "    effect: allow\n"
+            "  - subject: agent:project-manager\n"
+            '    privilege: "[privilege-catalog:issue-tracker-write]"\n'
+            "    effect: deny\n"
+        ),
+    )
+    pm = {"agent_type": "project-manager"}
+    _, parsed = _invoke(root, {**_bash_payload(root, "gh issue cre* --title x"), **pm})
+    assert parsed is None, parsed
+    _, parsed = _invoke(root, {**_bash_payload(root, "gh issue create --title x"), **pm})
+    assert _decision(parsed) == "deny"
+    _, parsed = _invoke(root, {**_bash_payload(root, "git push origin --forc[e]"), **pm})
+    assert _decision(parsed) == "ask" and "vcs-history-rewrite" in _reason(parsed)
+
+
+def test_hook_keeps_the_abstain_when_the_check_faults(tmp_path):
+    # A decision core without the check, as in a project whose adapter is newer
+    # than its backbone, or one whose check raises: the hook still defers.
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    decide_py = root / ".pkit" / "permissions" / "decide.py"
+    original = decide_py.read_text(encoding="utf-8")
+    for tail in (
+        "\ndel hook_hidden_guardrails\n",
+        "\ndef hook_hidden_guardrails(*a, **k):\n    raise RuntimeError('boom')\n",
+        # an answer of another shape, as from a mismatched decision core
+        "\ndef hook_hidden_guardrails(*a, **k):\n    return {'x': 1}\n",
+    ):
+        decide_py.write_text(original + tail, encoding="utf-8")
+        _, parsed = _invoke(root, _bash_payload(root, "git push origin --forc[e]"))
+        assert parsed is None, (tail, parsed)
+        _, parsed = _invoke(root, _bash_payload(root, "git push -uf origin main"))
+        assert _decision(parsed) == "deny"

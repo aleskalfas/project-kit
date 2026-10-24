@@ -41,7 +41,7 @@ pkit:
         - REQ-012
         - REQ-016
     revalidated:
-      at: 2026-10-24T03:19:16Z
+      at: 2026-10-24T04:49:22Z
       outcome: updated
 ---
 
@@ -95,7 +95,7 @@ pkit:
 - **4b.** The diagnostic session's time runs out. The hook stops logging, and `pkit permissions diagnose status` shows `EXPIRED` (PRJ-006 point 5).
 - **4c.** The log reaches its cap, 2000 entries. The system drops the oldest entries first (PRJ-006 point 5 and `diagnose_capture.py`).
 - **4d.** Logging a call fails. The hook's decision stands, and nothing is logged for that call (PRJ-006 point 2).
-- **4e.** The hook asks the operator about a file write outside the session anchor, as Claude Code's does (UC-032). The log holds that call as a deferral. The harness's settings allow the file tools, so the report counts the call as never prompted (#1764).
+- **4e.** The hook asks the operator about a file write outside the session anchor, as Claude Code's does (UC-032). Claude Code's hook also asks about a deferred Bash call that may hide a guardrail's form (`permission-hook.py`). The log holds each such call as a deferral. Where the harness's settings allow the call, as they allow the file tools and `git`, the report counts it as never prompted (#1764).
 - **7a.** A file tool was deferred on a target in the agent workspace. The report puts that deferral first, in its `workspace` group in the band of defects (ADR-060 point 7). Every agent is granted the `workspace` privilege, so the remediation is to check the active profile and enforcement, or to report a bug.
 - **9a.** A remediation needs a privilege the catalog lacks. Defining a privilege is the operator's own task, which no fix may ever do unattended (PRJ-006 point 4).
 

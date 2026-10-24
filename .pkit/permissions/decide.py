@@ -1136,43 +1136,103 @@ def hook_decide(
     passes the root too, with ``as_subject`` naming the subject it probes.
     """
     try:
-        agent_type = payload.get("agent_type")
-        if as_subject:
-            subject = as_subject
-        elif agent_type:
-            subject = f"agent:{agent_type}"
-        elif project_root:
-            default_agent = _read_default_agent(project_root)
-            subject = f"agent:{default_agent}" if default_agent else "operator"
-        else:
-            subject = "operator"
-        tool = payload["tool_name"]
-        if tool == "Bash":
-            request = {
-                "type": "bash",
-                "command": payload["tool_input"]["command"],
-                "cwd": payload.get("cwd", ""),
-                "subject": subject,
-            }
-        else:
-            request = {
-                "type": "tool",
-                "tool": tool,
-                "cwd": payload.get("cwd", ""),
-                "subject": subject,
-                # Surface the URL for domain-scoped privilege checks (web-fetch).
-                # WebFetch and WebSearch both supply `url` in tool_input; absent
-                # for all other tools.  A missing key becomes None, which _scope_ok
-                # treats as an unparseable host → deny for domain-scoped grants.
-                "url": payload.get("tool_input", {}).get("url"),
-                # A file tool's target and the project root, for the path-scoped
-                # privileges (the agent workspace).
-                "path": _target_path(payload.get("tool_input", {})),
-                "root": project_root,
-            }
-        return decide(model, catalog, request)
+        return decide(model, catalog, _hook_request(payload, project_root, as_subject))
     except Exception as exc:  # fail-open
         return "abstain", f"hook fault → fail-open: {exc!r}"
+
+
+def _hook_request(
+    payload: dict[str, Any], project_root: str | None, as_subject: str | None
+) -> dict[str, Any]:
+    """The request `decide()` reads for a PreToolUse payload, with its subject
+    resolved as `hook_decide` describes. Raises on a malformed payload."""
+    agent_type = payload.get("agent_type")
+    if as_subject:
+        subject = as_subject
+    elif agent_type:
+        subject = f"agent:{agent_type}"
+    elif project_root:
+        default_agent = _read_default_agent(project_root)
+        subject = f"agent:{default_agent}" if default_agent else "operator"
+    else:
+        subject = "operator"
+    tool = payload["tool_name"]
+    if tool == "Bash":
+        return {
+            "type": "bash",
+            "command": payload["tool_input"]["command"],
+            "cwd": payload.get("cwd", ""),
+            "subject": subject,
+        }
+    return {
+        "type": "tool",
+        "tool": tool,
+        "cwd": payload.get("cwd", ""),
+        "subject": subject,
+        # Surface the URL for domain-scoped privilege checks (web-fetch).
+        # WebFetch and WebSearch both supply `url` in tool_input; absent
+        # for all other tools.  A missing key becomes None, which _scope_ok
+        # treats as an unparseable host → deny for domain-scoped grants.
+        "url": payload.get("tool_input", {}).get("url"),
+        # A file tool's target and the project root, for the path-scoped
+        # privileges (the agent workspace).
+        "path": _target_path(payload.get("tool_input", {})),
+        "root": project_root,
+    }
+
+
+# ---- the guardrails a deferred command may hide (#1982) ---------------------
+#
+# Where the core abstains on a Bash command, a harness may still allow it by
+# rules of its own, as Claude Code's baseline `Bash(git:*)` allows a deferred
+# `git push origin --forc[e]`. ADR-025 point 2 makes that abstain a prompt, so
+# the core names the guardrails that may bind on the command in a form it
+# cannot see, and an adapter may ask the person rather than defer, as the
+# Claude Code hook does. Only a guardrail's deny is named: it is the
+# non-negotiable one (ADR-002 point 3), while a project's own deny rides the
+# hook's speed bump.
+# Nothing here changes a verdict of `decide()`.
+
+
+def hidden_guardrails(
+    model: dict[str, Any], catalog: dict[str, Any], request: dict[str, Any]
+) -> dict[str, list[str]]:
+    """The guardrails among the subject's denies that may bind on a Bash
+    request in a form the core cannot see, and on none it can see, each with
+    what keeps the core from seeing it, such as "a pathname pattern" (ADR-025
+    points 2 and 5). A guardrail is a privilege the catalog flags
+    `guardrail: true`. Each keeps `decide()` from allowing the request, whatever
+    it abstained on first. Empty for a tool request."""
+    if request.get("type") != "bash":
+        return {}
+    _, unseen = _deny_forms(catalog, request)
+    privileges = catalog.get("privileges", {})
+    denied: set[str] = set()
+    for grant in _effective_grants(model, request["subject"]):
+        if grant.get("effect", "allow") == "deny":
+            denied |= _privilege_ids(grant.get("privilege"))
+    return {
+        name: sorted(_UNSEEN_KIND[kind] for kind in kinds)
+        for name, kinds in sorted(unseen.items())
+        if name in denied and privileges.get(name, {}).get("guardrail") is True
+    }
+
+
+def hook_hidden_guardrails(
+    model: dict[str, Any],
+    catalog: dict[str, Any],
+    payload: dict[str, Any],
+    project_root: str | None = None,
+    *,
+    as_subject: str | None = None,
+) -> dict[str, list[str]]:
+    """`hidden_guardrails` for a PreToolUse payload, its subject resolved as
+    `hook_decide` resolves it. Fails open: a fault names no guardrail, so the
+    caller keeps the abstain."""
+    try:
+        return hidden_guardrails(model, catalog, _hook_request(payload, project_root, as_subject))
+    except Exception:
+        return {}
 
 
 def targets_path_scoped(

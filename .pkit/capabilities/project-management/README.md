@@ -16,9 +16,8 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T06:13:47Z
-      outcome: unchanged
-      unchanged-because: done-work's refusal now names review-pr with the issue's number, the <N> the README already writes. What it says of each command still holds.
+      at: 2026-10-24T06:05:00Z
+      outcome: updated
       deferred:
         - anchor:
             kind: path
@@ -721,6 +720,35 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 `promote-issue` without `--milestone` leaves the milestone as it is and says so (`milestone: unchanged`). On an issue already past Todo, `promote-issue --milestone` still attaches the milestone but has no transition to carry an audit comment, so it points at `edit-issue` instead.
 
 **Review-mode resolution** is settled in [project-management:DEC-027-review-modes] (mode lookup) and [project-management:DEC-028-agent-as-approver-paths] (agent gate).
+
+#### Workstream lifecycle — `add-workstream` to `remove-workstream` (per [project-management:DEC-018-workstream-taxonomy-and-lifecycle])
+
+`project/workstreams.yaml` is the source of truth, and the substrate that carries the workstream axis follows it. That substrate is the kit's `workstream:<slug>` label, or the board's `Workstream` single-select field where a board carries the axis.
+
+| Command | What it does |
+|---|---|
+| `add-workstream <slug> [--name N] [--description D] [--status S] [--deprecated-reason R]` | Checks the slug and each attribute. It creates the label, or adds the option `<slug>` to the board's field, then adds the entry. |
+| `edit-workstream <slug> [--name N] [--description D] [--status S] [--deprecated-reason R]` | Checks each value given, then edits the entry. A status flip asks first. |
+| `rename-workstream <old> <new>` | Checks the new slug, and the old and the new label or option, before it changes anything. It renames the label or the option, then the entry. |
+| `merge-workstream --survivor <S> <L>...` | Moves each loser's issues to the survivor, deletes the loser's label or option, and drops the loser from the file. It rewrites the references to each loser. |
+| `split-workstream --source <S> --into <A> --into <B>...` | Asks of each issue of the source which new workstream it moves to, then moves it. |
+| `remove-workstream <slug>` | Refuses while any issue carries the workstream, then asks you to type the slug. |
+
+**The checks.** A slug has 2 to 40 characters, matches `^[a-z][a-z0-9-]*[a-z0-9]$` and holds no consecutive hyphens. A name is one line of at most 64 characters. A description or a deprecation reason is one line of at most 200. Each command refuses a value outside these rules before it writes anything.
+
+**The substrate before the file.** A command that changes a label or the board does so before it writes the file. When that change fails, the file keeps what the change did not finish, and the command exits 3. Running it again finishes the change. Where the board has no single-select `Workstream` field, the command refuses.
+
+**Renaming.** `rename-workstream` refuses where both the old and the new label exist, since the issues would sit under two labels. Consolidate two such labels with `merge-workstream`. Where only the new label exists, there is nothing to rename. The board's options follow the same rule, and a renamed option keeps each card's value.
+
+**References.** Once the file is written, a merge rewrites each typed reference to a loser, `workstream:<loser>` and `[workstream:<loser>]`, by default. It rewrites them in the files git tracks, and in the bodies of issues, pull requests and comments. It asks before each file and each body, and `--yes` confirms every file and body at once. `--skip-references` leaves every reference.
+
+Without an interactive shell, a merge that would rewrite references refuses before any change unless `--yes` is given. A comment by someone else is left, with a warning, unless you hold admin rights on the repository. The `.pkit/` tree, the changelog and the pending changesets are left too, and a bare slug is never rewritten.
+
+**Triage.** `split-workstream` asks of each issue which new workstream it moves to. `--assign <issue>=<slug>` answers for one issue up front, and `--default <slug>` answers for the rest. Without an interactive shell, or with `--yes`, the command takes those answers alone, and refuses before any change while an issue has none.
+
+`--include-github-bodies` opts into rewriting the references to the source, as a merge rewrites them. A reference on a triaged issue takes that issue's answer. Any other reference is asked about, takes `--default`, or is left with a warning.
+
+**Removing.** `remove-workstream` counts the issues that carry the workstream, on the kit's label, your own label or title prefix, or the board's field. It counts with `--skip-label` too, and refuses when it cannot count. `--force` removes the workstream anyway (DEC-046).
 
 #### Read-only diagnostics — `show-issue` / `show-pr`
 

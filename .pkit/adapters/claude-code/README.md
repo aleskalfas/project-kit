@@ -12,11 +12,12 @@ pkit:
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
-      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+        - .pkit/permissions/decide.py
+        - src/project_kit/permissions.py
+      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-24T00:58:18Z
-      outcome: unchanged
-      unchanged-because: ADR-060 point 4 names any untrusted construct where it named a quote. This README says only that a shell write into the workspace is judged like any other shell write, which holds.
+      at: 2026-10-24T06:10:44Z
+      outcome: updated
 ---
 
 # Claude Code adapter
@@ -309,7 +310,11 @@ The confined form holds what the harness can hold. This is what it cannot, state
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../tech-docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.
 
-`permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI can never decide differently (ADR-002's same-code invariant).
+`permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`, or `ask` in the cases "When the hook asks" names) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI reach the same verdict (ADR-002's same-code invariant), and the hook then answers an abstain with `ask` in those cases.
+
+**When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a form of a guardrail, which the core's `hook_hidden_guardrails()` names. The core's abstain on such a doubt is a prompt (ADR-025 point 2), and how this hook carries out an abstain is the adapter's to say (ADR-002, Implications).
+
+Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
 
 **Zero-dep shebang + stdlib YAML fallback.** The hook's shebang is `#!/usr/bin/env python3` (bare, no `uv`). The shared loader in `decide.py` (`load_yaml`) tries `ruamel.yaml` when available and falls back to a stdlib-only YAML-subset parser when not — handling the full file subset (block mappings/sequences, single/double-quoted strings, flow sequences, block scalars, booleans). **The fallback lives in the shared `decide.py` loader, not in the hook**, so both the hook and the `pkit permissions` CLI parse via the same code path — the same-code invariant is mechanically preserved, not aspirational.
 
