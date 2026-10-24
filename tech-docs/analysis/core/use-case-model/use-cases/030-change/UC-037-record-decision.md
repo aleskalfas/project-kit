@@ -63,8 +63,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:57:35Z
-      outcome: updated
+      at: 2026-10-24T22:53:28Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup takes several ids with --json, and the decisions README says so. How a record is stamped, cited and accepted is untouched, so the steps hold."
 ---
 
 # UC-037 — Record my decision beside the methodology's

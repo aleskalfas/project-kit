@@ -24,9 +24,9 @@ pkit:
         - ACT-component-author
         - REQ-005
     revalidated:
-      at: 2026-10-24T20:51:59Z
+      at: 2026-10-24T22:48:23Z
       outcome: unchanged
-      unchanged-because: ACT-component-author says each new version of their component where it said release, and names the author where it said role. Its needs are the same, so this use case holds.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-018 — Know my capability is ready to share

@@ -26,8 +26,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-24T20:08:10Z
-      outcome: updated
+      at: 2026-10-24T22:54:46Z
+      outcome: unchanged
+      unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json. What CONTRIBUTING says of authoring and checking records is untouched.
       deferred:
         - anchor:
             kind: record

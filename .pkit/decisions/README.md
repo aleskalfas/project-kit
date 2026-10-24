@@ -19,9 +19,8 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-24T04:34:45Z
-      outcome: unchanged
-      unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. The README names the namespaces the command stamps, leaving where it refuses to the CLI reference, so what it says holds.
+      at: 2026-10-24T22:54:35Z
+      outcome: updated
 ---
 
 # Decision records

@@ -38,9 +38,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T21:20:22Z
+      at: 2026-10-24T22:53:22Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent keeps its words and drops only its links on role, and ACT-developer names the developer. Their needs are the same, so this use case holds.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json, answered in one document. The refs member of pkit validate checks what an agent definition cites as before, so step 10 holds."
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

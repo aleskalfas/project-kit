@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T19:00:53Z
+      at: 2026-10-24T22:54:19Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations in cli.py now refuse an answer piped in off a terminal. What each adapter's primitives do on install and uninstall is unchanged."
+      unchanged-because: The lifecycle README's table of reading commands gains pkit refs lookup --json. What this README says of the commands an adapter runs is untouched.
 ---
 
 # Adapters

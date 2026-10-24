@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-24T04:34:43Z
+      at: 2026-10-24T22:54:28Z
       outcome: unchanged
-      unchanged-because: The agent and storyboard stamps now refuse a core or capability folder the project receives as synced copies. The README says where each namespace stamps and which names it refuses, leaving that refusal to the CLI reference, so what it says holds.
+      unchanged-because: pkit refs lookup now takes several ids with --json. The README names the lookup among the refs commands and says nothing of its form, so it holds.
       deferred:
         - anchor:
             kind: record
