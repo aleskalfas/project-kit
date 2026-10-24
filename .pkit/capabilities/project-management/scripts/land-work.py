@@ -1085,10 +1085,7 @@ def _review(
             f"review: stopped — review-pr exited {run.exit_code}, so the review is not complete",
         )
     if not run.required:
-        _say(
-            "review: no local reviewer is required — done-work's gate reads the "
-            "remote reviewers' verdicts"
-        )
+        _say("review: no local reviewer is required — the approval is done-work's gate")
         return agents
     kept, ran = len(run.kept), len(run.posted)
     if args.dry_run:

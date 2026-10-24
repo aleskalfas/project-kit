@@ -964,10 +964,7 @@ def test_a_pr_that_requires_no_local_reviewer_leaves_the_approval_to_the_gate(
     rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
     assert run.invoked == []
-    assert (
-        "review: no local reviewer is required — done-work's gate reads the remote "
-        "reviewers' verdicts"
-    ) in _steps(out)
+    assert "review: no local reviewer is required — the approval is done-work's gate" in _steps(out)
     assert [merge[-1] for merge in run.github.merges] == [head]
 
 
