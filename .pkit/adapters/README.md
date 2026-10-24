@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T04:45:34Z
+      at: 2026-10-24T11:38:24Z
       outcome: unchanged
-      unchanged-because: The Claude Code README gains when its hook asks, a detail of that adapter. What every adapter provides, and the list of adapters, are as before.
+      unchanged-because: The Claude Code README now says its hook does not ask in auto or bypass mode, a detail of that adapter. What every adapter provides, and the list of adapters, are as before.
 ---
 
 # Adapters

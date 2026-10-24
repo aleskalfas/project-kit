@@ -16,7 +16,7 @@ pkit:
         - src/project_kit/permissions.py
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-24T06:10:44Z
+      at: 2026-10-24T11:38:21Z
       outcome: updated
 ---
 
