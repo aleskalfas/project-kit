@@ -45,7 +45,7 @@ The decision core decides each tool call against the permission model ([COR-028]
 
 ## The permission-prompt diagnostic loop
 
-The diagnostic loop is opt-in and recommend-only: it turns the friction of confirmation prompts into a feedback loop you can measure and close. It has two halves, one in the hook and one in the CLI.
+The diagnostic loop is opt-in and recommend-only. It turns the friction of confirmation prompts into a feedback loop you can measure and close. It has two halves, one in the hook and one in the CLI.
 
 - **Capture, in the hook.** While the loop is off, the default, the hook does one cheap read of a marker and logs nothing. While it is armed, the hook appends each decision it deferred to a local log, after the decision is made. A fault in capture changes no decision and never breaks the hook's fail-open.
 - **What the log holds.** The hook observes only its own deferral, not whether the harness then prompted. So the log holds a superset of real prompts. The report states its coverage, never a predicted fall in the number of prompts.
@@ -192,7 +192,11 @@ Three things in a Bash command keep every grant from allowing it, each described
 
 - a backtick
 - a `<` / `>` redirection other than one that writes no file (below)
-- a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code
+- a `(`, which opens every substitution:
+  - `$(…)`
+  - `<(…)` / `>(…)`
+  - zsh's `=(…)`
+  - zsh's glob qualifiers and parameter flags that run code
 - a `$`, since it opens every expansion. The expansion's value is one the core never sees, and some forms, such as `${X@P}` and `$[…]`, evaluate it as code.
 
 **So does a word the core cannot read as the shell does.** The command's words may not be the words the shell passes on:
@@ -217,7 +221,9 @@ A segment led by `export` runs no program. `export` takes each word after it as 
 
 Each word after `export` must be a plain name or assignment, since the shell expands any other first. So `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory. Such a word keeps every grant from allowing.
 
-So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. For a grant, outside an `export`, a glob is read as written. A glob changes only arguments, from the names of files, never the program a grant names.
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is.
+
+For a grant, outside an `export`, a glob is read as written. A glob changes only arguments, from the names of files, never the program a grant names.
 
 ### A redirection that writes no file
 
@@ -257,7 +263,10 @@ A deny, a guardrail's included, matches its command in more forms than a grant d
 - a short flag inside a bundle, such as `-f` in `git push -uf`
 - a long flag cut to a prefix, such as `--force-w`, which git reads as `--force-with-lease`
 - a long flag with its value after `=`, such as `--force-with-lease=main`, or behind one dash, such as `-force`
-- a program named by its path, such as `/usr/bin/sudo`, by zsh's `=sudo`, or in another case, such as `Git`, which macOS runs as `git`
+- a program named in one of these ways:
+  - by its path, such as `/usr/bin/sudo`
+  - by zsh's `=sudo`
+  - in another case, such as `Git`, which macOS runs as `git`
 - a subcommand behind the options before it, such as `push` in `git -C . push --force`
 
 The core reads these forms from a structured recognizer's `cmd`, `subcommand` and `flag_any`. Each reading errs toward the deny, so a prefix several long flags share reads as each. So does an option that is itself a prefix of a denied one, such as `--proxy` of `--proxy-insecure`.
@@ -270,9 +279,13 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
 
 - **A pathname pattern,** such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written.
   - **For a structured recognizer,** the core cannot tell where such a pattern stands for the program or subcommand, or may open with `-` or `+`.
-  - **For a regex `pattern`,** the core cannot tell where one stands anywhere in a segment of the program the regex opens with. Where the regex plainly opens with no program, that holds for a segment of any program.
+  - **For a regex `pattern`,** the core cannot tell where such a pathname pattern stands anywhere in a segment of the program the regex opens with. Where the regex plainly opens with no program, that holds for a segment of any program.
 - **An assignment that changes the program's configuration,** which may set a forced refspec or an alias. Such an assignment keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` defers.
-  - **The variables:** `HOME`, the XDG base directories, any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`, and git's repository directories.
+  - **The variables:**
+    - `HOME`
+    - the XDG base directories
+    - any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`
+    - git's repository directories
   - **Where such an assignment counts:** in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it.
 
 **Where Claude Code may allow what the core defers on a guardrail, the person is asked, outside auto and bypass mode.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form the core cannot see. An adapter may use those names to ask the person rather than defer.
