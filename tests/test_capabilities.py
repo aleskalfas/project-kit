@@ -4035,8 +4035,9 @@ def test_cli_uninstall_incubated_purge_confirms_then_deletes(
 def test_cli_uninstall_incubated_purge_refuses_a_piped_yes(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
-    """Off a terminal a `y` piped in does not purge: the uninstall is refused, naming
-    `--yes`, and the authored subtree and its registration both stay (#2003)."""
+    """Off a terminal a `y` piped in does not purge: the uninstall is refused, with no
+    ready-made command for the irreversible delete, and the authored subtree and its
+    registration both stay (#2003)."""
     cap_dir = _register_incubated_via_cli(
         kit_target,
         kit_source,
@@ -4049,7 +4050,8 @@ def test_cli_uninstall_incubated_purge_refuses_a_piped_yes(
 
     assert result.exit_code == 1
     assert "refusing to purge .pkit/capabilities/homegrown/" in result.output
-    assert "pkit capabilities uninstall homegrown --purge --yes" in result.output
+    assert "Deleting it is a person's decision" in result.output
+    assert "pkit capabilities uninstall homegrown --purge --yes" not in result.output
     assert cap_dir.is_dir()
     assert caps.is_installed(kit_target, "homegrown")
 

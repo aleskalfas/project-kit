@@ -4835,15 +4835,19 @@ def _visibility_target() -> Path:
     return target_root
 
 
-def _confirm_untrack(question: str) -> bool:
-    """Ask before untracking the footprint; refuse off a terminal (#2003)."""
+def _confirm_untrack(question: str, *, wrote_region: bool = False) -> bool:
+    """Ask before untracking the footprint; refuse off a terminal (#2003).
+
+    `wrote_region`: `visibility private` wrote its `.git/info/exclude` region
+    before asking, so the refusal says so."""
     from project_kit.project_config import confirm_at_terminal
 
+    written = " `.git/info/exclude` now lists them, but" if wrote_region else ""
     return confirm_at_terminal(
         question,
         refusal="refusing to remove the tracked footprint files from the index: stdin is not "
-        "a terminal, so nobody can confirm it (#2003). They stay tracked. Run `pkit "
-        "visibility untrack` at a terminal.",
+        f"a terminal, so nobody can confirm it (#2003).{written} They stay tracked. Run "
+        "`pkit visibility untrack` at a terminal.",
     )
 
 
@@ -4880,7 +4884,10 @@ def visibility_private(dry_run: bool) -> None:
 
     click.echo(
         vis.set_visibility(
-            _visibility_target(), "private", dry_run=dry_run, confirm=_confirm_untrack
+            _visibility_target(),
+            "private",
+            dry_run=dry_run,
+            confirm=lambda question: _confirm_untrack(question, wrote_region=True),
         ),
         nl=False,
     )
@@ -7892,17 +7899,6 @@ def uninstall_capability_cmd(
     # pause-before-destructive-ops discipline), unless --yes or --dry-run.
     from project_kit.project_config import confirm_at_terminal
 
-    rerun = shlex.join(
-        [
-            "pkit",
-            "capabilities",
-            "uninstall",
-            name,
-            *(["--force"] if force else []),
-            *(["--purge"] if purge else []),
-            "--yes",
-        ]
-    )
     if purge and incubated and not dry_run and not yes:
         cap_dir = target_root / ".pkit" / "capabilities" / name
         confirm_at_terminal(
@@ -7912,8 +7908,9 @@ def uninstall_capability_cmd(
             abort=True,
             refusal=f"refusing to purge {cap_dir.relative_to(target_root)}/: stdin is not a "
             "terminal and --yes was not given, so nobody confirmed deleting the only copy of "
-            f"this capability's work (#2003). Nothing was removed. To purge it "
-            f"non-interactively, run:\n  {rerun}",
+            f"this capability's work (#2003). Nothing was removed. Deleting it is a "
+            "person's decision: run the command at a terminal, or add --yes once they "
+            "have agreed.",
         )
 
     # A kit-shipped registration is one whose uninstall deletes the subtree. In the
@@ -7932,6 +7929,16 @@ def uninstall_capability_cmd(
             "and deletes nothing (ADR-059)."
         )
         if not dry_run and not yes:
+            rerun = shlex.join(
+                [
+                    "pkit",
+                    "capabilities",
+                    "uninstall",
+                    name,
+                    *(["--force"] if force else []),
+                    "--yes",
+                ]
+            )
             confirm_at_terminal(
                 f"Unregister {name!r} and keep {subtree}?",
                 abort=True,

@@ -144,13 +144,14 @@ class Consent:
 
 
 def stdin_is_tty() -> bool:
-    """Whether stdin is an interactive terminal; an absent or closed stdin is not."""
+    """Whether stdin is an interactive terminal; an absent or closed stdin is not, nor
+    is a replacement stream with no `isatty`."""
     stdin = sys.stdin
     if stdin is None:
         return False
     try:
-        return stdin.isatty()
-    except (ValueError, OSError):  # ValueError: I/O operation on a closed file
+        return bool(stdin.isatty())
+    except (AttributeError, ValueError, OSError):  # ValueError: I/O on a closed file
         return False
 
 

@@ -315,6 +315,11 @@ def test_confirm_at_terminal_refuses_a_piped_answer() -> None:
     assert "answer=" not in result.output
 
 
+def test_a_stdin_with_no_isatty_is_not_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("sys.stdin", object())
+    assert pc.stdin_is_tty() is False
+
+
 def test_confirm_at_terminal_asks_at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(pc, "stdin_is_tty", lambda: True)
     result = _ask()

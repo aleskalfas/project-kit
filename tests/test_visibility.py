@@ -665,6 +665,8 @@ def test_cli_visibility_refuses_a_piped_yes_to_untrack(
     assert result.exit_code == 1
     assert "stdin is not a terminal" in result.output
     assert "Run `pkit visibility untrack` at a terminal." in result.output
+    # `private` wrote its exclude region before asking, and says so.
+    assert ("now lists them" in result.output) == (command == ["private"])
     assert vis._tracked_footprint(repo, vis.footprint(repo)) == before
 
 
