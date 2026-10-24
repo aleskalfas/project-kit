@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T03:44:49Z
+      at: 2026-10-24T03:18:08Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: The project's grants still sit beside the methodology's, and a deny still wins over an allow. Which forms of a command a deny reads is not what this use case describes.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T03:44:53Z
+      at: 2026-10-24T03:18:10Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: Each of the agent's calls is still decided under its own grants and those to all, and a deny still wins. Which forms of a command a deny reads is not what this use case describes.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T00:58:28Z
+      at: 2026-10-24T03:18:07Z
       outcome: unchanged
-      unchanged-because: The code checks every deny grant before it looks for an untrusted construct, and new tests find a deny winning behind a PATH assignment, a brace expansion and a comment. The order of the grants still changes no decision.
+      unchanged-because: The code still checks every deny grant before it allows, and a deny now also binds on the forms of a command ADR-025 point 5 lists, which only widens what a deny wins over. The order of the grants still changes no decision.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

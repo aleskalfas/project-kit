@@ -17,7 +17,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-24T00:58:45Z
+      at: 2026-10-24T03:19:17Z
       outcome: updated
 ---
 
@@ -126,14 +126,39 @@ So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py`
 **And so does a leading assignment that changes which program runs, or one written with a quote or a backslash** (ADR-025 point 2). `PATH=/tmp/x gh pr list` runs whichever `gh` the new path finds first. Each such assignment is stripped for the denies, so `PATH=/tmp/x sudo id` is denied.
 
 - **The variables that change which program runs** are a search path, `PATH` or any other name ending in `PATH`, and the dynamic loader's `LD_*` and `DYLD_*`. So are the variables that name the startup files a shell reads first, such as `BASH_ENV`, `ENV` and `ZDOTDIR`, and the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own. The list names a family of variables, and is no boundary.
-- **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. A `git` grant already lets `git -c core.fsmonitor=…` run any program.
+- **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. A `git` grant already lets `git -c core.fsmonitor=…` run any program. A setting that changes which configuration the program reads may still keep a deny from telling (below).
 - **An assignment written with a quote or a backslash** is never allowed by a grant. The core never matches an assignment's value, so removing its quotes would make no match more accurate: only a quoted argument is matched as the shell passes it on.
 
-A segment led by `export` runs no program: `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. Its assignments are judged as above, and no grant on a program covers it. Each word after `export` must be a plain name or assignment: the shell expands any other first, so `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory, and such a word keeps every grant from allowing.
+A segment led by `export` runs no program: `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. Its assignments are judged as above, and no grant on a program covers it. Each word after `export` must be a plain name or assignment: the shell expands any other first, so `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory, and such a word keeps every grant from allowing. A segment led by `builtin export` or `command export` stays a program no grant covers.
 
-So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. Outside an `export`, a glob is read as written: it changes only arguments, from the names of files, never the program a grant names.
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. For a grant, outside an `export`, a glob is read as written: it changes only arguments, from the names of files, never the program a grant names.
 
 A deny on any segment still wins over every allow, and over an untrusted construct. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
+
+## A deny holds against the forms of its command
+
+A grant matches a command as it is written. A deny, a guardrail's included, also matches these forms of it, as programs read them (ADR-025 point 5):
+
+- a short flag inside a bundle, such as `-f` in `git push -uf`
+- a long flag cut to a prefix, such as `--force-w`, which git reads as `--force-with-lease`
+- a long flag with its value after `=`, such as `--force-with-lease=main`, or behind one dash, such as `-force`
+- a program named by its path, such as `/usr/bin/sudo`, by zsh's `=sudo`, or in another case, such as `Git`, which macOS runs as `git`
+- a subcommand behind the options before it, such as `push` in `git -C . push --force`
+
+The core reads these forms from a structured recognizer's `cmd`, `subcommand` and `flag_any`. Each reading errs toward the deny: a prefix several long flags share reads as each, and so does an option that is itself a prefix of a denied one, such as `--proxy` of `--proxy-insecure`.
+
+A recognizer's regex `pattern` is matched with a program's path cut to its name, and with the options before a subcommand left out. The core reads up to 64 places where the subcommand may stand behind an option's value, and past them it defers. Otherwise the regex is matched as written, so it spells each form of the flags it names, as the shipped `destructive-fs` regex spells `--recursive` cut down to `--r`.
+
+The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates every ref the remote holds. It names a refspec opening with `+`, as in `git push origin +main`, through the recognizer field `word_prefix_any`.
+
+**Where a deny may bind on what the core cannot see, no grant allows the command.** The core then defers, naming the deny, and a strict posture denies. Two things keep it from seeing:
+
+- **A pathname pattern**, such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written. For a structured recognizer, the core cannot tell where such a pattern stands for the program or the subcommand, or may open with `-` or `+`. For a regex `pattern`, it cannot tell where one stands anywhere in a segment of the program the regex opens with, or of any program where it opens with none plainly.
+- **An assignment that changes the program's configuration**, which may set a forced refspec or an alias. These are `HOME`, the XDG base directories, any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`, and git's repository directories. Such an assignment counts in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it. It keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` defers.
+
+A deferred command goes to the harness's own rules, which may allow it: the deny side stays a speed bump (ADR-025 point 5). A glob form needs a file of its name planted where the command runs, so reading one pays off chiefly under a strict posture.
+
+What the forms leave out stays unseen. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth (ADR-025 point 5). A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core defers, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
 
 ## Default-agent subject resolution
 

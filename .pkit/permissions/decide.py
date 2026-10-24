@@ -142,6 +142,40 @@ _BARE_CD = re.compile(r"""^cd[ \t]+([^\s'"`$<>|&;()]+)$""")
 # A program name a reason may show (#1908): letters, digits and `.`, `_`, `+`,
 # `-` only, so never a path, an assignment or a quoted fragment.
 _BARE_WORD = re.compile(r"^[A-Za-z0-9._+-]+$")
+# A character that makes a word a pathname pattern, which the shell expands to
+# the names of files before the program sees it (#1960): `*`, `?` and `[` in
+# every shell, and `^`, `#` and `~` under zsh's EXTENDED_GLOB. It counts only
+# outside quotes and not after a backslash (`_globbed()`).
+_GLOB = re.compile(r"[*?\[^#~]")
+# The first characters of a pathname pattern that may expand to a word opening
+# with `-` or `+`, a flag or a refspec that forces its ref (#1960): the `-` or
+# `+` itself, or a glob character that may match it.
+_FLAG_OPENERS = "-+*?[^"
+# A bundle of short flags, such as `-uf`, which a program reads as `-u -f`
+# (#1960).
+_BUNDLE = re.compile(r"^-[A-Za-z0-9]{2,}$")
+# An assignment to a variable that changes which configuration a program reads,
+# which may set a forced refspec or an alias (#1960): `HOME` and the XDG base
+# directories, any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`,
+# `GIT_CONFIG_COUNT` or `GH_CONFIG_DIR`, and git's repository directories. The
+# list names a family of variables and cannot be complete.
+_CONFIG_VAR = re.compile(
+    r"^(?:HOME|XDG_[A-Za-z0-9_]*|[A-Za-z0-9_]*(?i:config)[A-Za-z0-9_]*"
+    r"|GIT_DIR|GIT_COMMON_DIR)\+?="
+)
+# The program a recognizer's `pattern` names, where it opens with one plainly,
+# such as `rm` in `^rm(?=\s)…`, `gh` in `^gh\s+…` or `git` in `^git push…`
+# (#1960), as `projection._pattern_command` reads one. A pattern that names
+# none may match any program.
+_PATTERN_PROGRAM = re.compile(
+    r"^\^([A-Za-z0-9._+-]+)(?=\\s|\(\?=\\s|\(\\s|\(\?:\\s|\\b|\s|$)"
+)
+# What keeps a deny from telling a form, for the reason `decide()` gives.
+_UNSEEN_KIND = {
+    "glob": "a pathname pattern",
+    "config": "an assignment to a variable that changes the program's configuration",
+    "options": "more options before a subcommand than the core reads",
+}
 # fmt: on
 
 
@@ -323,6 +357,9 @@ def _matches_bash(rule: dict[str, Any], toks: list[str]) -> bool:
         if "flag_any" in rule:
             if not any(f in toks for f in rule["flag_any"]):
                 return False
+        if "word_prefix_any" in rule:
+            if not any(t.startswith(p) for t in toks[1:] for p in rule["word_prefix_any"]):
+                return False
         return True
     return False
 
@@ -336,6 +373,239 @@ def _segment_privileges(privileges: dict[str, Any], toks: list[str]) -> set[str]
         for name, spec in privileges.items()
         if any(_matches_bash(rule, toks) for rule in spec.get("recognize", {}).get("bash", []))
     }
+
+
+# ---- the forms a deny holds against (#1960) --------------------------------
+#
+# A deny binds on the command it names in the forms programs read, not only in
+# the form its recognizer spells (ADR-025 point 5): a short flag inside a
+# bundle, a long flag cut to a prefix, with its value after `=` or behind one
+# dash, a program named by its path or in other case, and a subcommand behind
+# the options before it. Where a pathname pattern, or an assignment that
+# changes the program's configuration, may make the command one a deny names,
+# the core cannot tell, and defers rather than allows (ADR-025 point 2, from
+# ADR-004 decision point 4). Only the denies read these forms: a grant still
+# matches the command as written, so no form widens what a grant allows. Each
+# reading errs toward the deny, which only narrows what runs unasked.
+
+
+def _program_name(word: str) -> str:
+    """The name of the program a word runs, in lower case: the last part of a
+    path, such as `sudo` for `/usr/bin/sudo`, without the `=` zsh expands to
+    the program's path. A case-insensitive file system, as macOS's is by
+    default, runs `Git` as `git`."""
+    return word.lstrip("=").rsplit("/", 1)[-1].lower()
+
+
+def _flag_form(word: str, flags: list[str]) -> bool:
+    """Is `word` a form of one of `flags`? The flag itself; a long flag with its
+    value after `=`; a long flag cut to a prefix, as git and getopt read an
+    unambiguous one; a long flag behind a single dash, as Go's flag package
+    reads one; and a short flag inside a bundle, such as `-f` in `-uf`. A
+    prefix of several long flags reads as each of them, and so does one that
+    is itself another option of the program, such as `--proxy` for a denied
+    `--proxy-insecure`: the reading errs toward the deny."""
+    if word in flags:
+        return True
+    name = word.split("=", 1)[0]
+    if name.startswith("--"):
+        return len(name) > 2 and any(f.startswith(name) for f in flags if f.startswith("--"))
+    if len(name) > 2 and name[0] == "-" and "-" + name in flags:
+        return True
+    if _BUNDLE.match(word):
+        return any(len(f) == 2 and f[0] == "-" and f[1] in word[1:] for f in flags)
+    return False
+
+
+def _subcommand_candidates(rest: list[tuple[str, str]]) -> list[int]:
+    """Where a program's subcommand may stand among the words after it: the
+    first word that is no flag, and, while each such word follows a flag that
+    may take it as its value, the next one too. `git -C . push` runs `push`."""
+    found: list[int] = []
+    after_flag = False
+    for index, (_, word) in enumerate(rest):
+        if word.startswith("-"):
+            after_flag = True
+            continue
+        found.append(index)
+        if not after_flag:
+            break
+        after_flag = False
+    return found
+
+
+def _globbed(text: str) -> bool:
+    """Is a word, as written, a pathname pattern: does it hold a glob character
+    the shell expands, outside quotes and not after a backslash? A `~` counts
+    only after the word's first character, where zsh's EXTENDED_GLOB reads it;
+    a word opening with one is a home directory."""
+    quote = ""
+    escaped = False
+    for index, char in enumerate(text):
+        if escaped:
+            escaped = False
+        elif quote:
+            if char == quote:
+                quote = ""
+            elif char == "\\" and quote == '"':
+                escaped = True
+        elif char == "\\":
+            escaped = True
+        elif char in "'\"":
+            quote = char
+        elif _GLOB.match(char) and (char != "~" or index > 0):
+            return True
+    return False
+
+
+def _glob_head(word: str) -> str:
+    """What every word a pathname pattern expands to opens with: the text
+    before its first glob character. Nothing where it holds a `#`, which zsh's
+    EXTENDED_GLOB reads as making the character before it optional."""
+    return "" if "#" in word else _GLOB.split(word, maxsplit=1)[0]
+
+
+def _may_open_flag(text: str, word: str) -> bool:
+    """May this word reach the program as one opening with `-` or `+`? Only a
+    pathname pattern, which the shell expands, and only where its first
+    character is `-`, `+` or a glob character that may match one, or where
+    it holds a `#` (`_glob_head`)."""
+    return bool(word) and (word[0] in _FLAG_OPENERS or "#" in word) and _globbed(text)
+
+
+def _structured_form(
+    rule: dict[str, Any], words: list[tuple[str, str]], configured: bool
+) -> str | None:
+    """How a structured recognizer (`cmd`, `subcommand`, `flag_any`,
+    `word_prefix_any`) reads one segment for a deny: "sure" where the segment
+    is one of its forms, "glob" or "config" where a pathname pattern or a
+    configuration assignment may make it one, None otherwise."""
+    (first, program), rest = words[0], words[1:]
+    if _globbed(first):
+        return "glob"
+    if _program_name(program) != rule["cmd"].lower():
+        return None
+    sub_sure = sub_maybe = flag_sure = flag_maybe = prefix_sure = prefix_maybe = True
+    if "subcommand" in rule:
+        places = [rest[i] for i in _subcommand_candidates(rest)]
+        sub_sure = any(w in rule["subcommand"] for t, w in places if not _globbed(t))
+        sub_maybe = sub_sure or any(_globbed(t) for t, _ in places)
+    if "flag_any" in rule:
+        flags = rule["flag_any"]
+        flag_sure = any(_flag_form(w, flags) for t, w in rest if not _globbed(t))
+        flag_maybe = flag_sure or any(_may_open_flag(t, w) for t, w in rest)
+    if "word_prefix_any" in rule:
+        # Every word a pathname pattern expands to opens with its head
+        # (`_glob_head`): where the head opens with a prefix, the word does,
+        # and where the prefix opens with the head, the word may. A quoted
+        # glob character the shell passes on as it is.
+        prefixes = rule["word_prefix_any"]
+        globs = [_glob_head(w) for t, w in rest if _globbed(t)]
+        heads = globs + [w for t, w in rest if not _globbed(t)]
+        prefix_sure = any(h.startswith(p) for h in heads for p in prefixes)
+        prefix_maybe = prefix_sure or any(p.startswith(h) for h in globs for p in prefixes)
+    if sub_sure and flag_sure and prefix_sure:
+        return "sure"
+    if configured:
+        return "config"
+    if sub_maybe and flag_maybe and prefix_maybe:
+        return "glob"
+    return None
+
+
+def _pattern_form(pattern: str, words: list[tuple[str, str]], configured: bool) -> str | None:
+    """How a recognizer's `pattern` reads one segment for a deny, as
+    `_structured_form` does. The pattern is matched with the program named by
+    its name, and with the options before each place the subcommand may stand
+    left out. A pattern spells the words it names, and their forms with them,
+    so a pathname pattern anywhere in the segment, or a configuration
+    assignment in the command, keeps the core from telling, for the program
+    the pattern names, or for any where it names none plainly."""
+    (first, program), rest = words[0], words[1:]
+    name = _program_name(program)
+    toks = [w for _, w in rest]
+    places = _subcommand_candidates(rest)
+    # The first 64 places only: each is a search over the rest of the segment,
+    # and a crafted run of options must not stall the hook. Past them the core
+    # cannot tell, so it defers.
+    for start in (0, *places[:64]):
+        if re.search(pattern, " ".join([name, *toks[start:]])):
+            return "sure"
+    if _globbed(first):
+        return "glob"
+    named = _PATTERN_PROGRAM.match(pattern)
+    if named and named.group(1).lower() != name:
+        return None
+    if configured:
+        return "config"
+    if any(_globbed(text) for text, _ in rest):
+        return "glob"
+    if len(places) > 64:
+        return "options"
+    return None
+
+
+def _rule_form(rule: dict[str, Any], words: list[tuple[str, str]], configured: bool) -> str | None:
+    """`_structured_form` or `_pattern_form` of one recognizer, as
+    `_matches_bash` reads a rule: its `pattern`, or else its structured fields."""
+    found = []
+    if "pattern" in rule:
+        found.append(_pattern_form(rule["pattern"], words, configured))
+    if "cmd" in rule:
+        found.append(_structured_form(rule, words, configured))
+    if "sure" in found:
+        return "sure"
+    return next((form for form in found if form), None)
+
+
+def _export_prefix(words: list[tuple[str, str]]) -> int:
+    """How many words at the front of a segment run the `export` builtin:
+    `export` itself, behind any `builtin` words, which run the builtin they
+    name. 0 where the segment is not led so. Only the denies read
+    `builtin export` so: no grant covers a segment it leads."""
+    for index, (_, word) in enumerate(words):
+        if word == "export":
+            return index + 1
+        if word != "builtin":
+            return 0
+    return 0
+
+
+def _deny_forms(
+    catalog: dict[str, Any], request: dict[str, Any]
+) -> tuple[set[str], dict[str, set[str]]]:
+    """For the denies of a Bash request: the privileges it matches in a form
+    the program reads, and those it may match in a form the core cannot see,
+    each with what keeps the core from seeing it (the keys of `_UNSEEN_KIND`).
+
+    An assignment that changes the program's configuration counts where the
+    shell hands it on: in front of a command, for that command, and in a
+    segment that only assigns or exports, `builtin export` included, for the
+    segments after it."""
+    if request.get("type") != "bash":
+        return set(), {}
+    parts: list[tuple[list[tuple[str, str]], bool]] = []
+    inherited = False
+    for raw in _SEP.split(request.get("command", "").strip()):
+        words = _segment_words(raw)
+        exported = _export_prefix(words)
+        count = len(words) if exported else _assignments(words)
+        configured = any(_CONFIG_VAR.match(text) for text, _ in words[exported:count])
+        if words[count:]:
+            parts.append((words[count:], inherited or configured))
+        else:
+            inherited = inherited or configured
+    sure: set[str] = set()
+    unsure: dict[str, set[str]] = {}
+    for name, spec in catalog.get("privileges", {}).items():
+        for rule in spec.get("recognize", {}).get("bash", []):
+            for words, configured in parts:
+                form = _rule_form(rule, words, configured)
+                if form == "sure":
+                    sure.add(name)
+                elif form:
+                    unsure.setdefault(name, set()).add(form)
+    return sure, {name: kinds for name, kinds in unsure.items() if name not in sure}
 # fmt: on
 
 
@@ -712,15 +982,25 @@ def decide(
             return decide(model, catalog, {**request, "command": remainder}, posture)
 
     hits = recognized_privileges(catalog, request)
+    # A deny binds on the forms of the command it names (ADR-025 point 5), and
+    # where a form may be one the core cannot see, the deny keeps every grant
+    # from allowing (#1960, ADR-025 point 2). A grant still matches the command
+    # as written.
+    forms, unseen = _deny_forms(catalog, request)
     privileges_catalog = catalog.get("privileges", {})
     allowed: set[str] = set()
+    undecided: set[str] = set()
     for g in _effective_grants(model, subject):
         privs = _privilege_ids(g.get("privilege"))
+        if g.get("effect", "allow") == "deny":
+            overlap = (hits | forms) & privs
+            if overlap:
+                return "deny", f"deny grant for {subject} on {sorted(overlap)}"
+            undecided |= set(unseen) & privs
+            continue
         overlap = hits & privs
         if not overlap:
             continue
-        if g.get("effect", "allow") == "deny":
-            return "deny", f"deny grant for {subject} on {sorted(overlap)}"
         # Determine scope_type from the catalog for the overlapping privileges.
         # When the overlap spans multiple privileges, use the most restrictive
         # scope_type: prefer "domain" > "directory" > None.  In practice a
@@ -765,6 +1045,23 @@ def decide(
         return "abstain", (
             f"an untrusted construct ({kinds}) in the command — fail closed, "
             f"defer to the harness's normal flow"
+        )
+    # A deny that may bind on a form the core cannot see keeps every grant from
+    # allowing (#1960): a pathname pattern may expand to a flag the deny names,
+    # and a configuration may set one. The reason names the privileges and the
+    # kinds of form, never the command's text.
+    if undecided:
+        kinds = " / ".join(
+            sorted({_UNSEEN_KIND[kind] for name in undecided for kind in unseen[name]})
+        )
+        if posture == "strict":
+            return "deny", (
+                f"strict posture: a deny on {sorted(undecided)} may bind on what the "
+                f"shell runs ({kinds})"
+            )
+        return "abstain", (
+            f"a deny on {sorted(undecided)} may bind on what the shell runs ({kinds}) "
+            f"— fail closed, defer to the harness's normal flow"
         )
     if allowed:
         # A grant on one segment of a compound never carries another (#1908):

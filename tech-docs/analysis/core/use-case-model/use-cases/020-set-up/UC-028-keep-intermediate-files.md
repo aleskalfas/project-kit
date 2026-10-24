@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T00:58:40Z
+      at: 2026-10-24T03:19:12Z
       outcome: unchanged
-      unchanged-because: A shell write into the workspace is still judged like any other, and a redirect still defers wherever it stands. ADR-060 point 4 names any untrusted construct where it named a quote, and the workspace grant still covers the file tools alone.
+      unchanged-because: A shell write into the workspace is still judged like any other, and the workspace grant still covers the file tools alone. The catalog's new matcher field and the forms a deny reads leave the workspace privilege as it was.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries
