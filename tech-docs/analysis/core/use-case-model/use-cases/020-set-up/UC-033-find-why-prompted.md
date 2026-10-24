@@ -41,8 +41,9 @@ pkit:
         - REQ-012
         - REQ-016
     revalidated:
-      at: 2026-10-24T03:19:16Z
-      outcome: updated
+      at: 2026-10-24T06:19:32Z
+      outcome: unchanged
+      unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. How a prompt or a block is explained is as it was.
 ---
 
 # UC-033 — Find out why a command prompted me or was blocked

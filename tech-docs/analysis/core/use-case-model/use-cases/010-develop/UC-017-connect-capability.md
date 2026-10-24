@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-24T03:44:30Z
-      outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      at: 2026-10-24T06:19:03Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

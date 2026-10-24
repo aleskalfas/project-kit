@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T03:17:48Z
+        at: 2026-10-24T06:19:10Z
         outcome: unchanged
-        unchanged-because: The hook still has the backbone's code allow, deny or defer each call. That code now also denies the forms of a command a deny names and defers where it cannot see one, which leaves what the hook is as it was.
+        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. The hook, and what it asks the backbone's decision code, are as they were.
 TERM-place:
   name: place
   status: active
@@ -824,6 +824,10 @@ TERM-profile:
           - ADR-005#1
           - ADR-005#2
           - ADR-032
+      revalidated:
+        at: 2026-10-24T06:19:14Z
+        outcome: unchanged
+        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. A profile, its grants and its posture are as they were.
 TERM-project:
   name: project
   status: active
@@ -1064,6 +1068,10 @@ TERM-sandbox:
           - ADR-004#2
           - ADR-004#5
           - ADR-008#4
+      revalidated:
+        at: 2026-10-24T06:19:12Z
+        outcome: unchanged
+        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. The sandbox, and what it bounds, are as they were.
 TERM-scratchpad-note:
   name: scratchpad note
   noun-forms: [scratchpad notes]

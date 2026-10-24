@@ -19,9 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-24T04:34:57Z
+      at: 2026-10-24T06:19:33Z
       outcome: unchanged
-      unchanged-because: The CLI reference's Authoring commands gain a section on the folders a sync writes. This index still points authors of an area, adapter, capability or migration to Authoring commands as a whole, so what it says holds.
+      unchanged-because: The CLI reference's Authoring commands now name process new and permissions scaffold among the commands that refuse a folder received by sync. This index still points authors to Authoring commands as a whole, so it holds.
 ---
 
 # project-kit

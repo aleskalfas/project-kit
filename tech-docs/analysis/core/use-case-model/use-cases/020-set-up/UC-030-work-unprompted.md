@@ -71,8 +71,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T03:19:15Z
-      outcome: updated
+      at: 2026-10-24T06:19:24Z
+      outcome: unchanged
+      unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. How agents work without confirmations, and where their confinement does not hold, is as it was.
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
