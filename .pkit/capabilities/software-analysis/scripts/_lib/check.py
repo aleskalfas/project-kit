@@ -193,11 +193,14 @@ What is checked, each against the record's words:
 And a finding that never fails:
 
 - **An open regression** (point 5), a report: a record's `code-regressed`
-  artefact not revalidated since the record — its `at` on no later day (UTC)
-  than the record's date, or no `at` at all. The defect the record names is
-  still open, or its fix was never revalidated against the artefact. Derived
-  from the records and the artefacts in the working tree each time, never
-  kept in a ledger (COR-050 point 9).
+  artefact not revalidated since the record — the `at` of none of its live
+  revalidations on a later day (UTC) than the record's date, or no `at` at
+  all. The defect the record names is still open, or its fix was never
+  revalidated against the artefact. Derived each time from the records in the
+  working tree and the artefact's live revalidations at HEAD, as the
+  backbone's explanation gives them (`pkit friction explain --json`, COR-062
+  Implications), never kept in a ledger (COR-050 point 9). An artefact the
+  backbone cannot explain is reported with why.
 
 Always, whatever any rule's status:
 
@@ -284,7 +287,8 @@ errors, the project mending its own file (COR-055 point 1). A group whose rule
 is superseded or withdrawn binds nothing, and is reported.
 
 It reads the working tree — and, when a record copies evidence, the evidence
-point — so the same tree gets the same answer as long as the evidence fillers
+point, and for a `code-regressed` outcome the artefact's revalidations at HEAD —
+so the same tree and HEAD get the same answer as long as the evidence fillers
 read the tree alone.
 
 **Not here.** A number two branches took (point 3) is `pkit analysis
@@ -351,7 +355,6 @@ from _lib.model import (
     RELIES_ON,
     REQUIREMENTS,
     REQUIREMENTS_FOLDER,
-    REVALIDATED_AT,
     REVALIDATIONS,
     SHORTFALLS,
     TERM,
@@ -2047,10 +2050,19 @@ def _cited(rel: str, outcomes: object, analysis: Analysis) -> list[Finding]:
     ]
 
 
-def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> list[Finding]:
+#: The backbone's explanation of one artefact, `pkit friction explain <artefact>
+#: --json`, as `backbone.explain` reads it: a test stands it in.
+Explain = Callable[[Path, str], Mapping[str, Any]]
+
+
+def _open_regressions(
+    root: Path, records: list[Record], analysis: Analysis, explain: Explain = backbone.explain
+) -> list[Finding]:
     """Each `code-regressed` outcome whose artefact was not revalidated on a later day
-    than its record: reported, never failed (DEC-001 point 5)."""
+    than its record: reported, never failed (DEC-001 point 5). Each artefact is
+    explained once, however many records cite it."""
     found: list[Finding] = []
+    days: dict[str, str | None | Unreadable] = {}
     for rel, data in records:
         day, outcomes = data.get("date"), data.get("outcomes")
         if not isinstance(day, str) or not isinstance(outcomes, dict):
@@ -2059,10 +2071,18 @@ def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> 
             artefact = analysis.find(cited) if isinstance(cited, str) else None
             if outcome != REGRESSED or artefact is None:
                 continue
-            last = _revalidated_on(root, artefact)
-            if last is not None and last > day[:10]:
+            if artefact.location not in days:
+                try:
+                    days[artefact.location] = _revalidated_on(root, artefact, explain)
+                except Unreadable as exc:
+                    days[artefact.location] = exc
+            last = days[artefact.location]
+            if isinstance(last, Unreadable):
+                since = f"its revalidations could not be read ({last})"
+            elif last is not None and last > day[:10]:
                 continue
-            since = f"last revalidated {last}" if last else "never revalidated"
+            else:
+                since = f"last revalidated {last}" if last else "never revalidated"
             found.append(
                 Finding(
                     REPORT,
@@ -2076,20 +2096,29 @@ def _open_regressions(root: Path, records: list[Record], analysis: Analysis) -> 
     return found
 
 
-def _revalidated_on(root: Path, artefact: Artefact) -> str | None:
-    """The day, `YYYY-MM-DD` in UTC, of the artefact's revalidation marker as the
-    working tree holds it; `None` without one. The marker is inside the container,
-    which the backbone's reading leaves out of an artefact's own fields, so it is
-    read from the file."""
-    try:
-        front, _body = markdown.split((root / artefact.path).read_text(encoding="utf-8"))
-        data = markdown.load(front) if front is not None else None
-    except (OSError, UnicodeDecodeError, YAMLError):
-        return None  # the core reports a file it cannot read
-    node: object = data.get(artefact.id) if artefact.entry and isinstance(data, dict) else data
-    for key in (CONTAINER, *REVALIDATED_AT):
-        node = node.get(key) if isinstance(node, dict) else None
-    return node[:10] if isinstance(node, str) and len(node) >= 10 else None
+def _revalidated_on(
+    root: Path, artefact: Artefact, explain: Explain = backbone.explain
+) -> str | None:
+    """The latest day, `YYYY-MM-DD` in UTC, of the artefact's live revalidations at
+    HEAD, as the backbone gives their `at`: `answers` in `pkit friction explain
+    --json`, read from the artefact's block or from the answer files (COR-062
+    Implications). It is never read from a file. `None` without one. Two live
+    revalidations made apart each count. Raises Unreadable where the backbone
+    cannot explain the artefact, or gives no `answers`."""
+    document = explain(root, artefact.location)
+    if "answers" not in document:
+        raise Unreadable(
+            "`pkit friction explain --json` gives no `answers`: the installed backbone "
+            "predates them — upgrade it (`pkit upgrade`)"
+        )
+    answers = document.get("answers")
+    revalidations = answers.get("revalidations") if isinstance(answers, Mapping) else None
+    days = [
+        at[:10]
+        for entry in (revalidations if isinstance(revalidations, list) else [])
+        if isinstance(entry, Mapping) and isinstance(at := entry.get("at"), str) and len(at) >= 10
+    ]
+    return max(days, default=None)
 
 
 # --- evidence a record copies (DEC-001 point 7) --------------------------------------------

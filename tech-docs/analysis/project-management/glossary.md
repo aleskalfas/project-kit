@@ -273,6 +273,10 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
+      revalidated:
+        at: 2026-10-24T21:24:42Z
+        outcome: unchanged
+        unchanged-because: This change keeps an answer file from meeting the condition touches-code, as DEC-032 point D1 says. A required reviewer is still one the settings name, or one a capability contributes whose condition the change meets.
 TERM-task:
   name: Task
   status: active
