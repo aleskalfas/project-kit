@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T04:45:10Z
+        at: 2026-10-24T09:00:42Z
         outcome: unchanged
-        unchanged-because: The backbone code still allows, denies or defers each call. Where it defers a Bash call that may hide a guardrail form, the Claude Code hook asks the person, as it asks on a foreign file write, which leaves what the hook is as it was.
+        unchanged-because: "Since #1982, the hook asks where a guardrail may hide its form, and process new and permissions scaffold now refuse a synced tree. The hook still has the decision core allow, deny or defer each call, as the term says."
 TERM-place:
   name: place
   status: active

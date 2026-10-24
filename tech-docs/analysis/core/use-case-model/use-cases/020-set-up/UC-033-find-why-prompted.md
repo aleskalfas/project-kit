@@ -41,8 +41,9 @@ pkit:
         - REQ-012
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:49:22Z
-      outcome: updated
+      at: 2026-10-24T09:00:46Z
+      outcome: unchanged
+      unchanged-because: "Since #1982, the hook asks where a guardrail may hide its form, and process new and permissions scaffold now refuse a synced tree. Its variants say what the hook's reason names, as #1982 left them."
 ---
 
 # UC-033 — Find out why a command prompted me or was blocked

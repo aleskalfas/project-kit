@@ -71,8 +71,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:49:20Z
-      outcome: updated
+      at: 2026-10-24T09:00:45Z
+      outcome: unchanged
+      unchanged-because: "Since #1982, the hook asks where a guardrail may hide its form, and process new and permissions scaffold now refuse a synced tree. Its steps and variants say what the code does, as #1982 left them."
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
