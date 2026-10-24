@@ -1465,6 +1465,21 @@ def test_checks_that_cannot_be_read_stop_unreadable(world, capsys) -> None:
     assert run.invoked == []
 
 
+def test_checks_done_work_cannot_read_stop_the_merge_unreadable(world, capsys) -> None:
+    """The checks passed on land-work's reading; done-work's own reading of them
+    gets no answer, and its gate refuses rather than read none as green (#1946)."""
+    run = world()
+    run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and a[-1] == "statusCheckRollup")
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE == 2
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — [refused] CI-status gate for PR #{PR}: its checks could not be "
+        "read (HTTP 502: Bad Gateway). Nothing was changed."
+    )
+    assert run.github.merges == []
+    assert run.after_merge == []
+
+
 def test_checks_unreadable_once_are_read_again_while_waiting(world, capsys) -> None:
     run = world()
     run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and "statusCheckRollup" in a[-1])
