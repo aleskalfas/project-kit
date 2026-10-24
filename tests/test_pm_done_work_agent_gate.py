@@ -27,6 +27,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -1622,7 +1623,7 @@ def test_no_reviewer_refusal_names_the_contributions_opted_out(dw, rc, monkeypat
         comments=[],
         closing_issue_labels={42: ["workstream:design"]},
     )
-    config = _config(local=(), remote=())
+    config: dict[str, Any] = _config(local=(), remote=())
     config["review"]["agents"]["contributed_opt_out"] = [_DESIGN_OPT_OUT]
     result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
     assert result.passed is False
