@@ -11,5 +11,5 @@ body: >
   project writes there, so the command now writes nothing, exits 1, and names
   `pkit new decision project <slug>` and `pkit new decision adr <slug>` as
   where the project's own decision goes. A capability incubated in the
-  project, and any capability in the methodology's source repository, stamps
-  as before.
+  project, and a kit-shipped one in the methodology's source repository,
+  stamps as before.

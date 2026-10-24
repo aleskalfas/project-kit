@@ -362,9 +362,10 @@ def _refuse_synced_copy(target_root: Path, capability: str, folder: Path, slug: 
     The question is the tree's own predicate, `is_synced_copy` of
     `.pkit/lifecycle/ownership.py`, keyed on the capability's origin: a kit-shipped
     capability's folder in a project that is not the methodology's source, or an
-    externally-sourced one's in any project. An incubated capability, and every
-    capability in the methodology's source, is authored where it stands, so it
-    stamps. A tree without that module has no synced copy, as for validation.
+    externally-sourced one's in any project, the methodology's source included.
+    An incubated capability, and a kit-shipped one in the methodology's source,
+    is authored where it stands, so it stamps. A tree without that module has no
+    synced copy, as for validation.
     """
     ownership = lifecycle_ownership.load_ownership(target_root)
     if ownership is None:

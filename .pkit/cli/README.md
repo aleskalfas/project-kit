@@ -76,6 +76,7 @@ pkit:
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#what-sync-writes
+        - .pkit/lifecycle/README.md#the-ownership-predicates-ownershippy
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#a-new-collision
