@@ -1,0 +1,6 @@
+component: software-analysis
+kind: none
+body: >
+  The project's own settings name software-analysis DEC-001 and living-docs
+  DEC-001 as the purpose of their analyses. The settings file is project-kit's
+  own, so no adopter sees a change, and no behaviour of the capability changes.
