@@ -13,20 +13,32 @@ shared seam to import across that boundary):
 
   * `summarize_checks(rollup)` — pure reduction of a `statusCheckRollup` to
     (all-passing, non-passing-check-labels). No I/O.
-  * `evaluate_ci_gate(rollup)` — the gate verdict (`CiGateResult`): pass, or
-    refuse naming the offending checks. The verdict also tells apart the four
-    states a head's checks can be in (`CiGateResult.state`) — none reported
-    yet, still running, failed, passed — for a reader that waits for them
-    (`land-work`, #1203): the merge gate passes a head with no check reported, and
-    a reader that waits must not take that for green.
+  * `evaluate_ci_gate(rollup, required=…)` — the gate verdict (`CiGateResult`):
+    pass, or refuse naming the offending checks. The verdict also tells apart
+    the four states a head's checks can be in (`CiGateResult.state`) — none
+    reported yet, still running, failed, passed — for a reader that waits for
+    them (`land-work`, #1203), which must not take a head with no check
+    reported for green.
 
-The gh round-trip (`gh pr view --json statusCheckRollup`) stays at the call
-site so each script threads its own adopter config through the pm `gh` helper.
+An empty rollup is what GitHub answers in a project that runs no checks, and
+also for a head just pushed, before its checks started. The merge gate tells
+the two apart by the checks the PR's base branch requires
+(`read_required_checks`, #1965): it passes an empty rollup only where the base
+requires none, and otherwise refuses it as a pending one, naming the cause.
+
+The gh round-trips (`gh pr view --json statusCheckRollup`, and the two reads of
+the base's requirements) go through the runner each script passes, so each
+threads its own adopter config through the pm `gh` helper.
 """
 
 from __future__ import annotations
 
+import json
+import subprocess
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from typing import Any
+from urllib.parse import quote
 
 # CheckRun conclusions / StatusContext states that count as "not blocking a
 # merge". SKIPPED and NEUTRAL are non-failures; everything else that is not
@@ -71,15 +83,18 @@ class CiGateResult:
 
     passing: bool
     failing_checks: tuple[str, ...] = field(default_factory=tuple)
-    #: No check reported at all. The merge gate passes it — a repository that
-    #: runs no checks — but it is also what GitHub reports for a head just
-    #: pushed, before any check has started, so a reader that waits for the
-    #: checks reads it as :data:`NO_RUN`, never as green.
+    #: No check reported at all. It is what GitHub reports in a repository
+    #: that runs no checks, and for a head just pushed, before any check has
+    #: started. The merge gate passes it only where the base branch requires
+    #: no check (#1965), and a reader that waits for the checks reads it as
+    #: :data:`NO_RUN`, never as green.
     no_checks: bool = False
     #: The checks that finished without passing.
     failed: tuple[FailedCheck, ...] = field(default_factory=tuple)
     #: The checks still running, labelled as `failing_checks` labels them.
     running: tuple[str, ...] = field(default_factory=tuple)
+    #: Why a rollup with no check does not pass; empty otherwise.
+    cause: str = ""
 
     @property
     def state(self) -> str:
@@ -92,6 +107,17 @@ class CiGateResult:
         if self.running:
             return RUNNING
         return PASSED
+
+
+@dataclass(frozen=True)
+class RequiredChecks:
+    """The checks a branch requires before a PR merges into it, as GitHub's
+    protection and rulesets for it state them — or, in `problem`, why they
+    could not be read, which is not an answer of none (#1965)."""
+
+    branch: str
+    names: tuple[str, ...] = ()
+    problem: str = ""
 
 
 def _check_identity(check: dict) -> str:
@@ -175,17 +201,51 @@ def summarize_checks(rollup: list[dict] | None) -> tuple[bool, tuple[str, ...]]:
     return (not failing, tuple(failing))
 
 
-def evaluate_ci_gate(rollup: list[dict] | None) -> CiGateResult:
+def evaluate_ci_gate(
+    rollup: list[dict] | None, required: RequiredChecks | None = None
+) -> CiGateResult:
     """Decide whether a PR's CI status permits a merge — pure, no I/O.
 
-    A green (or check-free) rollup passes; any failing or still-pending check
-    refuses, naming the offending checks so the operator sees exactly what
-    blocks. The caller decides how a `--bypass` overrides a refusal.
+    A green rollup passes; any failing or still-pending check refuses, naming
+    the offending checks so the operator sees exactly what blocks. The caller
+    decides how a `--bypass` overrides a refusal.
+
+    A rollup with no check passes only where *required*, the checks the PR's
+    base branch requires, are none (#1965). Where the base requires checks, it
+    is refused as pending, each required check labelled `EXPECTED`, GitHub's
+    word for a required check not yet reported. Where they could not be read,
+    it is refused as pending too: the gate cannot tell that none is required.
+    `cause` says which. A reader that only waits for the checks passes no
+    *required*, and reads the rollup's state alone.
 
     The verdict also separates a rollup with no check at all, the checks that
     failed and those still running (`CiGateResult.state`), each read off the
     same latest run per check the gate judges.
     """
+    if not rollup and required is not None and (required.names or required.problem):
+        base = required.branch or "the base branch"
+        if required.problem:
+            return CiGateResult(
+                passing=False,
+                failing_checks=("none reported",),
+                no_checks=True,
+                cause=(
+                    "no check has been reported on the PR's head, and the checks "
+                    f"{base} requires could not be read ({required.problem}), "
+                    "so the gate cannot tell that it requires none"
+                ),
+            )
+        expected = tuple(f"{name} (EXPECTED)" for name in required.names)
+        return CiGateResult(
+            passing=False,
+            failing_checks=expected,
+            no_checks=True,
+            running=expected,
+            cause=(
+                f"no check has been reported on the PR's head, and {base} "
+                "requires checks: they have not started yet, or will not start"
+            ),
+        )
     passing, failing = summarize_checks(rollup)
     failed: list[FailedCheck] = []
     running: list[str] = []
@@ -205,3 +265,148 @@ def evaluate_ci_gate(rollup: list[dict] | None) -> CiGateResult:
         failed=tuple(failed),
         running=tuple(running),
     )
+
+
+#: Runs one `gh` command with the caller's adopter config: the pm `gh` helper.
+GhRunner = Callable[..., subprocess.CompletedProcess]
+
+
+def _contexts(entries: Any) -> list[str] | None:
+    """The `context` of each entry of a list of required checks, or None when
+    the list is not one."""
+    if not isinstance(entries, list):
+        return None
+    if not all(
+        isinstance(entry, dict) and isinstance(entry.get("context"), str) for entry in entries
+    ):
+        return None
+    return [entry["context"] for entry in entries]
+
+
+def _protection_requires(answer: Any) -> list[str] | None:
+    """The checks a branch's classic protection requires, from GitHub's answer
+    for the branch; None when the answer does not say.
+
+    An unprotected branch requires none, and so does protection whose
+    `enforcement_level` is `off`. Any other level enforces the checks listed,
+    by name (`contexts`) and by app (`checks`).
+    """
+    if not isinstance(answer, dict):
+        return None
+    protection = answer.get("protection")
+    if protection is None:
+        return [] if answer.get("protected") is False else None
+    if not isinstance(protection, dict):
+        return None
+    status = protection.get("required_status_checks")
+    if status is None:
+        return []
+    if not isinstance(status, dict):
+        return None
+    if status.get("enforcement_level") == "off":
+        return []
+    contexts = status.get("contexts", [])
+    checks = _contexts(status.get("checks", []))
+    if not isinstance(contexts, list) or not all(isinstance(c, str) for c in contexts):
+        return None
+    if checks is None:
+        return None
+    return [*contexts, *checks]
+
+
+def _rules_require(rules: Any) -> list[str] | None:
+    """The checks the rulesets that apply to a branch require, from GitHub's
+    list of those rules; None when it is not a list of rules."""
+    if not isinstance(rules, list) or not all(isinstance(rule, dict) for rule in rules):
+        return None
+    names: list[str] = []
+    for rule in rules:
+        if rule.get("type") != "required_status_checks":
+            continue
+        parameters = rule.get("parameters")
+        contexts = (
+            _contexts(parameters.get("required_status_checks"))
+            if isinstance(parameters, dict)
+            else None
+        )
+        if contexts is None:
+            return None
+        names.extend(contexts)
+    return names
+
+
+def _pages(text: str) -> list[Any] | None:
+    """The JSON value of each page `gh api --paginate` printed, one after
+    another, or None when the output is not JSON values alone."""
+    decoder = json.JSONDecoder()
+    pages: list[Any] = []
+    index, end = 0, len(text)
+    while True:
+        while index < end and text[index].isspace():
+            index += 1
+        if index >= end:
+            return pages
+        try:
+            page, index = decoder.raw_decode(text, index)
+        except ValueError:
+            return None
+        pages.append(page)
+
+
+def _gh_api(args: list[str], config: dict, run: GhRunner) -> tuple[str, str]:
+    """`gh api` with *args*: its output, and why there is none, else ""."""
+    try:
+        proc = run(args, config, check=False)
+    except OSError as exc:
+        return "", f"`gh` could not be run ({exc})"
+    if proc.returncode != 0:
+        return "", " ".join((proc.stderr or "").split()) or f"gh exited {proc.returncode}"
+    return proc.stdout or "", ""
+
+
+def read_required_checks(branch: str, config: dict, run: GhRunner) -> RequiredChecks:
+    """Read the checks *branch* requires before a PR merges into it (#1965).
+
+    Two sources state them: the branch's classic protection, in GitHub's
+    answer for the branch, and the rulesets that apply to it, every page of
+    them. *run* is the caller's pm `gh` helper, which threads its adopter
+    config. The branch name is one segment of each endpoint, every character
+    but a letter, a digit and `_.-~` escaped. A call that fails, or an answer
+    that does not read as these, is no answer, never one of none: `problem`
+    names it.
+    """
+    if not branch:
+        return RequiredChecks(branch, problem="the PR's base branch is not known")
+    segment = quote(branch, safe="")
+    stdout, problem = _gh_api(
+        ["gh", "api", f"repos/{{owner}}/{{repo}}/branches/{segment}"], config, run
+    )
+    if problem:
+        return RequiredChecks(branch, problem=problem)
+    try:
+        answer = json.loads(stdout)
+    except ValueError:
+        return RequiredChecks(branch, problem=f"GitHub's answer for {branch} is not JSON")
+    protected = _protection_requires(answer)
+    if protected is None:
+        return RequiredChecks(branch, problem=f"GitHub's answer for {branch} carries no protection")
+    stdout, problem = _gh_api(
+        ["gh", "api", "--paginate", f"repos/{{owner}}/{{repo}}/rules/branches/{segment}"],
+        config,
+        run,
+    )
+    if problem:
+        return RequiredChecks(branch, problem=problem)
+    pages = _pages(stdout)
+    if not pages:
+        return RequiredChecks(branch, problem=f"GitHub's rules for {branch} are not JSON")
+    ruled = (
+        _rules_require([rule for page in pages for rule in page])
+        if all(isinstance(page, list) for page in pages)
+        else None
+    )
+    if ruled is None:
+        return RequiredChecks(
+            branch, problem=f"GitHub's rules for {branch} are not a list of rules"
+        )
+    return RequiredChecks(branch, tuple(dict.fromkeys([*protected, *ruled])))

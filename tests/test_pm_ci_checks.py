@@ -2,12 +2,15 @@
 
 The gate reduces a PR's `statusCheckRollup` to a pass/refuse verdict, mirroring
 `src/project_kit/release.py`'s #475 release-merge logic in the pm layer. Pure —
-no I/O, no network.
+no I/O, no network: the reading of the checks a base branch requires (#1965)
+runs on a fake `gh`.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import subprocess
 import sys
 from pathlib import Path
 
@@ -313,3 +316,188 @@ def test_the_states_read_the_latest_run_per_check(ci) -> None:
     result = ci.evaluate_ci_gate(rollup)
     assert result.state == ci.RUNNING
     assert result.failed == ()
+
+
+# --- the checks the base branch requires (#1965) ----------------------
+# GitHub answers an empty rollup for a head no check reported on: in a project
+# that runs none, and for a head just pushed, before its checks started. The
+# merge gate passes it only where the base branch requires no check.
+
+
+def test_an_empty_rollup_passes_where_the_base_requires_no_check(ci) -> None:
+    result = ci.evaluate_ci_gate([], required=ci.RequiredChecks("main"))
+    assert result.passing is True
+    assert result.no_checks is True
+    assert result.state == ci.NO_RUN
+    assert result.cause == ""
+
+
+def test_an_empty_rollup_is_pending_where_the_base_requires_checks(ci) -> None:
+    result = ci.evaluate_ci_gate([], required=ci.RequiredChecks("main", ("checks", "docs")))
+    assert result.passing is False
+    assert result.failing_checks == ("checks (EXPECTED)", "docs (EXPECTED)")
+    assert result.running == ("checks (EXPECTED)", "docs (EXPECTED)")
+    assert result.failed == ()
+    assert result.state == ci.NO_RUN
+    assert result.cause == (
+        "no check has been reported on the PR's head, and main requires checks: "
+        "they have not started yet, or will not start"
+    )
+
+
+def test_an_empty_rollup_is_pending_where_the_required_checks_cannot_be_read(ci) -> None:
+    required = ci.RequiredChecks("main", problem="HTTP 403: Forbidden")
+    result = ci.evaluate_ci_gate([], required=required)
+    assert result.passing is False
+    assert result.failing_checks == ("none reported",)
+    assert result.failed == ()
+    assert result.state == ci.NO_RUN
+    assert result.cause == (
+        "no check has been reported on the PR's head, and the checks main requires "
+        "could not be read (HTTP 403: Forbidden), so the gate cannot tell that it "
+        "requires none"
+    )
+
+
+def test_a_rollup_with_checks_is_judged_on_them_alone(ci) -> None:
+    """The base's requirement decides only an empty rollup."""
+    green = [{"name": "checks", "status": "COMPLETED", "conclusion": "SUCCESS"}]
+    required = ci.RequiredChecks("main", ("checks", "docs"))
+    result = ci.evaluate_ci_gate(green, required=required)
+    assert (result.passing, result.cause) == (True, "")
+
+
+def _gh(answers):
+    """A `gh` runner answering each call from *answers*, keyed by the endpoint,
+    and recording what it was asked."""
+    asked = []
+
+    def run(args, config, **kwargs):
+        asked.append((args, config, kwargs))
+        answer = answers[args[-1]]
+        if isinstance(answer, Exception):
+            raise answer
+        if isinstance(answer, tuple):
+            return subprocess.CompletedProcess(args, answer[0], "", answer[1])
+        return subprocess.CompletedProcess(args, 0, answer, "")
+
+    return run, asked
+
+
+_BRANCH = "repos/{owner}/{repo}/branches/main"
+_RULES = "repos/{owner}/{repo}/rules/branches/main"
+_UNPROTECTED = json.dumps(
+    {
+        "protected": False,
+        "protection": {
+            "enabled": False,
+            "required_status_checks": {"enforcement_level": "off", "contexts": [], "checks": []},
+        },
+    }
+)
+
+
+def _rule(*contexts):
+    return {
+        "type": "required_status_checks",
+        "parameters": {"required_status_checks": [{"context": c} for c in contexts]},
+    }
+
+
+def test_a_branch_nothing_protects_requires_no_check(ci) -> None:
+    run, asked = _gh({_BRANCH: _UNPROTECTED, _RULES: "[]"})
+    assert ci.read_required_checks("main", {"gh": {}}, run) == ci.RequiredChecks("main")
+    assert [args for args, _, _ in asked] == [
+        ["gh", "api", _BRANCH],
+        ["gh", "api", "--paginate", _RULES],
+    ]
+    assert all(config == {"gh": {}} and kw == {"check": False} for _, config, kw in asked)
+
+
+def test_the_required_checks_are_read_from_protection_and_rulesets(ci) -> None:
+    branch = {
+        "protected": True,
+        "protection": {
+            "enabled": True,
+            "required_status_checks": {
+                "enforcement_level": "non_admins",
+                "contexts": ["checks", "lint"],
+                "checks": [{"context": "lint", "app_id": 15368}],
+            },
+        },
+    }
+    rules = [{"type": "deletion"}, _rule("checks", "docs")]
+    run, _ = _gh({_BRANCH: json.dumps(branch), _RULES: json.dumps(rules)})
+    reading = ci.read_required_checks("main", {}, run)
+    assert reading == ci.RequiredChecks("main", ("checks", "lint", "docs"))
+
+
+def test_protection_that_enforces_no_check_requires_none(ci) -> None:
+    branch = {
+        "protected": True,
+        "protection": {
+            "enabled": True,
+            "required_status_checks": {"enforcement_level": "off", "contexts": ["old"]},
+        },
+    }
+    run, _ = _gh({_BRANCH: json.dumps(branch), _RULES: "[]"})
+    assert ci.read_required_checks("main", {}, run) == ci.RequiredChecks("main")
+
+
+def test_every_page_of_the_rules_is_read(ci) -> None:
+    pages = json.dumps([_rule("a")]) + json.dumps([_rule("b")])
+    run, _ = _gh({_BRANCH: _UNPROTECTED, _RULES: pages})
+    assert ci.read_required_checks("main", {}, run).names == ("a", "b")
+
+
+def test_a_branch_name_is_one_segment_of_the_endpoint(ci) -> None:
+    endpoint = "repos/{owner}/{repo}/branches/release%2F1.0%3F"
+    rules = "repos/{owner}/{repo}/rules/branches/release%2F1.0%3F"
+    run, asked = _gh({endpoint: _UNPROTECTED, rules: "[]"})
+    assert ci.read_required_checks("release/1.0?", {}, run).problem == ""
+    assert [args[-1] for args, _, _ in asked] == [endpoint, rules]
+
+
+_NO_PROTECTION = "GitHub's answer for main carries no protection"
+_NO_RULES = "GitHub's rules for main are not a list of rules"
+
+
+@pytest.mark.parametrize(
+    ("answers", "problem"),
+    [
+        ({_BRANCH: (1, "HTTP 403: Forbidden\n"), _RULES: "[]"}, "HTTP 403: Forbidden"),
+        ({_BRANCH: _UNPROTECTED, _RULES: (1, "")}, "gh exited 1"),
+        ({_BRANCH: FileNotFoundError("gh"), _RULES: "[]"}, "`gh` could not be run (gh)"),
+        ({_BRANCH: "<html>", _RULES: "[]"}, "GitHub's answer for main is not JSON"),
+        ({_BRANCH: _UNPROTECTED, _RULES: "[] <html>"}, "GitHub's rules for main are not JSON"),
+        ({_BRANCH: _UNPROTECTED, _RULES: ""}, "GitHub's rules for main are not JSON"),
+        ({_BRANCH: "[]", _RULES: "[]"}, _NO_PROTECTION),
+        ({_BRANCH: json.dumps({"protected": True}), _RULES: "[]"}, _NO_PROTECTION),
+        (
+            {
+                _BRANCH: json.dumps(
+                    {"protected": True, "protection": {"required_status_checks": {"contexts": "x"}}}
+                ),
+                _RULES: "[]",
+            },
+            _NO_PROTECTION,
+        ),
+        ({_BRANCH: _UNPROTECTED, _RULES: "{}"}, _NO_RULES),
+        (
+            {_BRANCH: _UNPROTECTED, _RULES: json.dumps([{"type": "required_status_checks"}])},
+            _NO_RULES,
+        ),
+    ],
+)
+def test_required_checks_that_cannot_be_read_name_why(ci, answers, problem) -> None:
+    """No answer is never an answer of none: the reading names why."""
+    run, _ = _gh(answers)
+    reading = ci.read_required_checks("main", {}, run)
+    assert (reading.names, reading.problem) == ((), problem)
+
+
+def test_a_base_branch_not_known_is_no_answer(ci) -> None:
+    run, asked = _gh({})
+    reading = ci.read_required_checks("", {}, run)
+    assert reading.problem == "the PR's base branch is not known"
+    assert asked == []

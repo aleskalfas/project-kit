@@ -196,8 +196,8 @@ def test_a_rollup_with_checks_is_read(mp) -> None:
     assert (reading.checks, reading.problem) == (tuple(rollup), "")
 
 
-def test_a_rollup_with_no_checks_is_read_as_none_configured(mp) -> None:
-    """GitHub answers an empty rollup for a project that runs no checks: an
+def test_a_rollup_with_no_checks_is_read_as_none_reported(mp) -> None:
+    """GitHub answers an empty rollup for a head no check reported on: an
     answer of no checks, told apart from no answer (#1952)."""
     reading = mp._read_rollup({"statusCheckRollup": []})
     assert (reading.checks, reading.problem) == ((), "")
@@ -363,9 +363,21 @@ _ABSENT = object()
 
 
 def _wire_merge_seams(
-    mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False, state="open"
+    mp,
+    monkeypatch,
+    *,
+    rollup,
+    head_branch="fix/42-slug",
+    cross_repository=False,
+    state="open",
+    required=(),
+    base=None,
 ):
     """Stub merge-pr's heavy seams so main() reaches the CI gate on *rollup*.
+
+    *required* is the checks the PR's base requires, by name, or the reason
+    they cannot be read as a string (#1965); `calls["required_read"]` lists
+    each base they were read for. *base*, when given, is the PR's base branch.
 
     `calls["order"]` records the post-merge side-effects (merge, hooks, remote
     ref delete, local cleanup) so a test can assert their sequence; the merge
@@ -416,7 +428,17 @@ def _wire_merge_seams(
     }
     if rollup is _ABSENT:
         del pr["statusCheckRollup"]
+    if base is not None:
+        pr["baseRefName"] = base
     monkeypatch.setattr(mp, "_gh_get_pr", lambda pr_number, config: pr)
+
+    def _stub_required(base, config):
+        calls.setdefault("required_read", []).append(base)
+        if isinstance(required, str):
+            return mp.RequiredChecks(base, problem=required)
+        return mp.RequiredChecks(base, tuple(required))
+
+    monkeypatch.setattr(mp, "_read_required_checks", _stub_required)
     monkeypatch.setattr(
         mp,
         "_gather_unticked_findings",
@@ -426,6 +448,7 @@ def _wire_merge_seams(
     def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
         calls["ci_audit"] = True
         calls["ci_audit_head"] = head
+        calls["ci_audit_checks"] = checks
         return True
 
     def _stub_merge(pr_number, *, pr_title, admin, config, head_oid="", allow_foreign_repo=False):
@@ -536,20 +559,84 @@ def test_merge_green_ci_no_bypass_needed(mp, monkeypatch):
     assert calls["ci_audit"] is False
 
 
-# ---- checks that cannot be read (#1952) --------------------------------
+# ---- checks that cannot be read (#1952), and no check reported (#1965) --
 #
-# A project that runs no checks gets an empty rollup back, and passes. A
-# rollup that cannot be read is no answer, never one of no checks: the gate
-# refuses, names why, and writes nothing, as done-work's does (#1946).
+# GitHub answers an empty rollup in a project that runs no checks, and for a
+# head just pushed, before its checks started. It passes only where the PR's
+# base requires no check; otherwise it is refused as a pending one is, naming
+# the cause. A rollup that cannot be read is no answer, never one of no checks:
+# the gate refuses, names why, and writes nothing, as done-work's does (#1946).
 
 
-def test_a_rollup_with_no_checks_passes_and_merges(mp, monkeypatch, capsys):
-    calls = _wire_merge_seams(mp, monkeypatch, rollup=[])
+def test_a_rollup_with_no_checks_passes_where_the_base_requires_none(mp, monkeypatch, capsys):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=[], base="main")
     rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
     assert rc == 0
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
-    assert "  ci-status: green (no checks configured)" in capsys.readouterr().out
+    assert calls["required_read"] == ["main"]
+    out = capsys.readouterr().out
+    assert "  ci-status: green (no check reported, and main requires none)" in out
+
+
+def test_a_rollup_with_checks_reads_no_requirement(mp, monkeypatch):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=_MP_GREEN, required=("checks",))
+    assert _run_merge_main(mp, monkeypatch, ["99", "--yes"]) == 0
+    assert "required_read" not in calls
+
+
+@pytest.mark.parametrize(
+    ("required", "pending", "cause"),
+    [
+        (
+            ("checks", "docs"),
+            "checks (EXPECTED), docs (EXPECTED)",
+            "main requires checks: they have not started yet, or will not start",
+        ),
+        (
+            "HTTP 403: Forbidden",
+            "none reported",
+            "the checks main requires could not be read (HTTP 403: Forbidden), so the gate "
+            "cannot tell that it requires none",
+        ),
+    ],
+)
+def test_a_rollup_with_no_checks_is_pending_where_the_base_may_require_some(
+    mp, monkeypatch, capsys, required, pending, cause
+):
+    """Refused as a pending check is: nothing posted or merged (#1965)."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=[], required=required, base="main")
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 1
+    assert (calls["merged"], calls["ci_audit"], calls["order"]) == (False, False, [])
+    err = " ".join(capsys.readouterr().err.split())
+    assert "[refused] CI-status gate: the PR's checks are not all green." in err
+    assert f"failing/pending: {pending} no check has been reported on the PR's head, and " in err
+    assert f"{cause}. → wait for the checks to pass" in err
+
+
+def test_bypass_ci_clears_a_rollup_with_no_checks_the_base_requires(mp, monkeypatch):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=[], required=("checks",), base="main")
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes", "--bypass-ci", "the runner is down"])
+    assert rc == 0
+    assert calls["ci_audit_checks"] == ("checks (EXPECTED)",)
+    assert calls["merged"] is True
+
+
+def test_read_required_checks_reads_through_the_pm_gh_helper(mp, monkeypatch) -> None:
+    asked = []
+
+    def gh(args, config, **kwargs):
+        asked.append(args[-1])
+        return subprocess.CompletedProcess(args, 0, '{"protected": false}', "")
+
+    monkeypatch.setattr(mp, "gh_run", gh)
+    reading = mp._read_required_checks("main", {})
+    assert reading.problem == "GitHub's rules for main are not a list of rules"
+    assert asked == [
+        "repos/{owner}/{repo}/branches/main",
+        "repos/{owner}/{repo}/rules/branches/main",
+    ]
 
 
 @pytest.mark.parametrize("rollup", [_ABSENT, None])
