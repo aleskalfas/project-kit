@@ -14,6 +14,8 @@ pkit:
         - src/project_kit/agents.py
         - src/project_kit/storyboards.py
         - src/project_kit/schemas_authoring.py
+        - src/project_kit/process_authoring.py
+        - src/project_kit/permissions.py
         - src/project_kit/manifest.py
         - src/project_kit/capabilities.py
         - src/project_kit/declared_rule_sets.py
@@ -41,9 +43,8 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-24T05:22:40Z
-      outcome: unchanged
-      unchanged-because: "This branch adds only the records its friction.places row cites to its anchors. Its text is main's, with #1953's consumers clause, and still holds against the derived links' fix."
+      at: 2026-10-24T06:26:00Z
+      outcome: updated
 ---
 
 # Lifecycle
