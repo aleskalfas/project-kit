@@ -43,7 +43,7 @@ builds-on:
 TERM-code-review-panel:
   name: code-review panel
   status: active
-  definition: "set of three reviewer agents software-engineering ships to judge a pull request's correctness, security and documentation, each a required reviewer of every change that meets its condition"
+  definition: "set of reviewer agents software-engineering ships, judging a pull request's correctness, security and documentation, each a required reviewer where its condition holds"
   pkit:
     friction:
       anchors:
@@ -79,7 +79,7 @@ TERM-conventions-corpus:
 TERM-hand-off:
   name: hand-off
   status: active
-  definition: "report an AI agent gives the person it works for as it passes a change on, saying what it did and what it leaves that person to decide"
+  definition: "report an AI agent gives the person it works for on a change it passes on, with what that person must decide"
   pkit:
     friction:
       anchors:
