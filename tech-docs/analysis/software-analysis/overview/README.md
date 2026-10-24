@@ -1,6 +1,6 @@
 # Overview of the analysis of software-analysis
 
-<!-- pkit:overview reads=4 fingerprint=sha256:369b747db514d04b929496ab9392f6f77ae701bf3a2f3523c4451c6ef4a31647 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:d2de137e36bfa396d07d54f2aaf5ff060fd4f5e42b4a2843d901f9e49549b1ac -->
 
 [Software analysis keeps actors, use cases, journeys and terms true as the software changes](../../../../.pkit/capabilities/software-analysis/decisions/DEC-001-software-analysis-discipline.md).
 
@@ -11,7 +11,7 @@ This analysis describes what software-analysis does: who uses it, what they do w
 - [UC-070 — Choose the parts of each kind of analysis artefact as I adopt software analysis](../use-case-model/use-cases/UC-070-choose-parts.md) ([not built yet](#not-built-yet): step 5)
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md) ([not built yet](#not-built-yet): step 2, step 5, step 11, variant 3b, variant 3c, variant 4b)
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md) ([not built yet](#not-built-yet): step 7)
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md) ([not built yet](#not-built-yet): step 13, variant 7c)
+- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md) ([not built yet](#not-built-yet): step 13)
 - [UC-074 — Free the ids of artefacts nothing cites](../use-case-model/use-cases/UC-074-free-uncited-ids.md)
 
 ## Reference
@@ -55,7 +55,6 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-071 — Describe my existing project from its code, documents and decisions](../use-case-model/use-cases/UC-071-describe-existing-project.md): variant 4b, decided by `COR-004`, tracked in `#1884`
 - [UC-072 — Revise the analysis before a proposed change is built](../use-case-model/use-cases/UC-072-revise-before-change.md): step 7, decided by `ADR-034#1`, tracked in `#1765`
 - [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md): step 13, decided by `ADR-034#1`, tracked in `#1765`
-- [UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes](../use-case-model/use-cases/UC-073-revalidate-after-change.md): variant 7c, decided by `software-analysis:DEC-001#5`, tracked in `#1929`
 
 ### Diagrams
 

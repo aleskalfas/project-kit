@@ -15,9 +15,6 @@ shortfalls:
   - at: 13
     issue: "#1765"
     record: ADR-034#1
-  - at: "7c"
-    issue: "#1929"
-    record: software-analysis:DEC-001#5
 pkit:
   friction:
     anchors:
@@ -104,12 +101,8 @@ pkit:
 - **6a.** Every changed anchor moved: its code was renamed, or carried into another file. The system proposes `holds`, the anchor re-pointed, recorded `unchanged`, since an edit to the anchors alone changes no content.
 - **6b.** The artefact and the code disagree, and no quote says whether the change was meant, so the system finds the case ambiguous. The agent holds the artefact and those downstream of it. It asks the developer what was meant, naming what disagrees, the commit and the two readings (DEC-001 point 5). The developer's answer is a quote, its source the developer, and the path rejoins at step 4.
 - **7a.** The change was meant, so the analysis was stale. The agent drafts the artefact's edit as a diff, with the one sentence on what changed in it, and the answer is `updated`. A revised use case keeps each step's number, which `pkit analysis check-numbers` holds (DEC-001 point 3). Where the analysis keeps a domain model, `pkit analysis link` runs before the answer, as `UC-071` describes in its variant 3b.
-- **7b.** The code regressed, and no accepted decision record decides the regressed step. The agent proposes no edit. The developer reports a defect, and records `unchanged` with its reason naming the defect, as `core:UC-002` describes in its variant 5b (DEC-001 point 5).
-- **7c.** The code regressed a step that an accepted decision record decides. The developer reports the defect, then adds the step's box and its entry in `shortfalls`, naming the decision record and the defect's issue. The step keeps its words, and the answer is `updated`, since the box changes the use case (DEC-001 points 1 and 5).
-
-> [!WARNING]
-> **Not built yet:** `pkit analysis propose` gives `--outcome unchanged` for every regression and names no box. The agent's definition lists `updated` for this case, yet tells the agent to copy the commands `propose` gives. DEC-001 point 5 decides that such a regression ends `updated`, with its box, and #1929 tracks it.
-
+- **7b.** The code regressed, and no accepted decision record decides the regressed step. Where the use case anchors an accepted decision record, `pkit analysis propose` gives no command until the agent passes `--no-box`. The agent proposes no edit. The developer reports a defect, and records `unchanged` with its reason naming the defect, as `core:UC-002` describes in its variant 5b (DEC-001 point 5).
+- **7c.** The code regressed a step that an accepted decision record decides. The agent names the step and the record to `pkit analysis propose`, which then gives the answer `updated`. What comes first is the defect to report, then the step's box and its `shortfalls` entry, naming the record and the defect's issue. The step keeps its words, since the box changes the use case (DEC-001 points 1 and 5).
 - **7d.** The agent finds a gap: behaviour nothing describes, or a description with no behaviour. `pkit analysis propose` never proposes one, so the agent finds it by reading. Where a new artefact closes the gap, the agent drafts it for the developer to write with the `analysis-author` skill. The answer is then `unchanged`, naming the gap and the artefact, but the answer is `updated` where the artefact itself changes.
 - **7e.** On the path of 7d, the gap is a description with no behaviour. Where an accepted decision record decides it, the step keeps its words and takes its box. Otherwise the step says what the system does, under its own number (DEC-001 point 5).
 - **7f.** The developer would rather put an artefact off, such as until a fix lands. The proposal gives a deferral, `pkit friction defer`, whose reason names an open follow-up, in place of the answer. It names each deferral the artefact carries, and whether to keep it with `--keep`.
