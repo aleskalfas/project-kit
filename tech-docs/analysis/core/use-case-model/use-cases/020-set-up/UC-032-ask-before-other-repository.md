@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T00:58:41Z
+      at: 2026-10-24T03:19:13Z
       outcome: unchanged
-      unchanged-because: "The code still strips the leading cd and allows cd <path> && git commit where vcs is granted. A commit with a quoted message is allowed again, so the hole variant 1c names is as wide as before #1917, and the variant still says so."
+      unchanged-because: The code still strips a bare leading cd and allows cd <path> && git commit where vcs is granted, so the hole variant 1c names is as wide as before. The forms a deny reads leave that path alone.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

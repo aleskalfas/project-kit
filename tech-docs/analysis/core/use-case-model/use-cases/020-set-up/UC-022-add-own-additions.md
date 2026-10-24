@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T00:58:29Z
+      at: 2026-10-24T03:18:08Z
       outcome: unchanged
-      unchanged-because: The project's grants still sit beside the methodology's, and a deny still wins over an allow. How the code reads a command's words is not what this use case describes.
+      unchanged-because: The project's grants still sit beside the methodology's, and a deny still wins over an allow. Which forms of a command a deny reads is not what this use case describes.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's
