@@ -25,9 +25,9 @@ pkit:
         - software-analysis:DEC-001#9
         - COR-050#3
     revalidated:
-      at: 2026-10-24T01:59:08Z
+      at: 2026-10-24T03:40:39Z
       outcome: unchanged
-      unchanged-because: The change has the build read the declared surface before any candidate, and the measures after the last step. A person still decides each candidate, and a reason for having no anchors is written only once a person accepts it.
+      unchanged-because: The proposal now gives a regressed step a record decides its box and the updated answer, and onboarding starts from the declared surface. An agent still proposes each outcome and candidate, and a person decides each, as the requirement states.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it

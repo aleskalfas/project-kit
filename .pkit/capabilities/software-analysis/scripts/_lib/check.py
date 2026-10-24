@@ -2724,21 +2724,11 @@ def _shortfall_records(
 def _record_status(root: Path, record: str, known: dict[str, str]) -> str:
     """The status a record's front matter gives, as written, read once per record: empty
     where it gives none, and `_NO_RECORD` where the id names no record. Where the record
-    lies is the backbone's answer (`backbone.record_file`). Raises Unreadable where `pkit`
-    cannot be run."""
+    lies is the backbone's answer (`backbone.record_status`). Raises Unreadable where
+    `pkit` cannot be run."""
     if record not in known:
-        rel = backbone.record_file(root, record)
-        text = _read(root / rel) if rel is not None else None
-        if text is None:
-            known[record] = _NO_RECORD
-        else:
-            yaml_text = markdown.split(text)[0]
-            try:
-                front = markdown.load(yaml_text) if yaml_text is not None else None
-            except YAMLError:
-                front = None
-            status = front.get("status") if isinstance(front, Mapping) else None
-            known[record] = status if isinstance(status, str) else ""
+        status = backbone.record_status(root, record)
+        known[record] = _NO_RECORD if status is None else status
     return known[record]
 
 
