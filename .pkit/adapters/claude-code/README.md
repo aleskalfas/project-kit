@@ -17,7 +17,7 @@ pkit:
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
       source: [claude-code-hooks]
     revalidated:
-      at: 2026-10-24T13:26:53Z
+      at: 2026-10-24T13:52:36Z
       outcome: updated
 ---
 
@@ -356,10 +356,10 @@ This is the Claude Code realization of the universal "work with the permission l
 
 **With live enforcement on, the hook allows some of these shapes before the harness's parser sees them.**
 
-- **A compound whose every segment is granted,** behind a bare leading `cd` or not (ADR-025 point 1). Every shipped profile grants the read-only text filters, such as `grep`, `head`, `tail` and `sort` with no output file, and a project may grant `uv run` ([the permissions README, "Compound commands"](../../permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)). So `git log | head` runs unasked under a profile that grants `git`, and `cd <path> && uv run pytest t.py -q | tail -3` runs unasked in project-kit, which grants `uv run`.
+- **A compound whose every segment is granted,** behind a bare leading `cd` or not (ADR-025 point 1). Every shipped profile grants the read-only text filters, such as `grep` and `head`, and a project may grant `uv run` ([the permissions README, "Compound commands"](../../permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)). So `git log | head` runs unasked under a profile that grants `git`, and `cd <path> && uv run pytest t.py -q | head -3` runs unasked in a project that grants `uv run`.
 - **A granted command whose only redirections write no file,** such as `2>&1` or `>/dev/null` (ADR-025 point 2).
 
-Any other redirection, such as `> out.txt`, a `$`, a heredoc or a command substitution still defers to the harness's own flow, or is denied under a strict posture. The file tools stay the way to read and write files.
+A redirection that writes a file, such as `> out.txt`, a `$`, a heredoc or a command substitution still defers to the harness's own flow, or is denied under a strict posture. The file tools stay the way to read and write files.
 
 For a genuinely multi-step diagnostic, compose the complexity into a file and run it as one invocation: author the script with the `Write` tool in the agent workspace (prompt-free, and the call shows its contents), then run a single `bash .agent-workspace/<file>`. The parser sees only that one clean command; the box auto-allows it; the multi-step logic runs *inside* the sandbox.
 
