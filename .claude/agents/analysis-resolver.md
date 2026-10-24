@@ -75,7 +75,7 @@ What each outcome records on its artefact — the four outcomes onto the core's 
 
 **The defect is the person's.** A regression is answered by reporting a defect, and only the person reports it: a regression's command, or the box its step takes, carries `<the defect reference>`, and the writers and the analysis's check refuse it until the person has written the reference in its place. You never fill it.
 
-**Which regression it is.** A regressed step that an accepted record decides keeps its words and takes its `Not built yet` box and its entry in `shortfalls`, and its answer is `updated`; any other regression is `unchanged` ([software-analysis:DEC-001-software-analysis-discipline] points 1 and 5). Where a use case anchors an accepted record, `pkit analysis propose` gives its regression no command until you say which it is, and its `which` names those records. Read the regressed step against them, then ask again with `--box <step> --decided-by <record>` where one decides it, or `--no-box` where none does.
+**Which regression it is.** A regressed step that an accepted record decides keeps its words and takes its `Not built yet` box and its entry in `shortfalls`, and its answer is `updated`. Any other regression is `unchanged` ([software-analysis:DEC-001-software-analysis-discipline] points 1 and 5). Where a use case anchors an accepted record, `pkit analysis propose` gives a regression of it no command until you say which regression it is: the answer's `which` names those records. Read the regressed step against them, then ask again with `--box <step> --decided-by <record>` where one decides it, or `--no-box` where none does.
 
 ## The proposal
 

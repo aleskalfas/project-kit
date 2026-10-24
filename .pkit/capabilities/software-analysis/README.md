@@ -1569,7 +1569,7 @@ It never proposes `gap-found`: behaviour nothing describes is found by reading. 
 - **`--box <step> --decided-by <record>`.** The record decides the step, `2` or `2a` for a variant. What you do first is to report the defect, then to add the box and the entry, with `<the defect reference>` where the issue goes. The command is `--outcome updated`.
 - **`--no-box`.** No record decides the step. The command is `--outcome unchanged`, naming the defect.
 
-A record counts as accepted where its own front matter says so, its file found through `pkit refs lookup`, as the check of shortfalls reads it. A box is refused with exit 2 on an artefact that is no use case, and on a record that is not one of the use case's accepted record anchors, written as the anchor writes it.
+A record counts as accepted where its own front matter says so, its file found through `pkit refs lookup`, as the check of shortfalls reads a record's status. `--box` is refused with exit 2 on an artefact that is no use case, and where `--decided-by` names no accepted record the use case anchors, written as its anchor writes it.
 
 **What an anchor matches is the explanation's.** `propose` matches no anchor itself: the files each path anchor stands on at the revalidation point and at HEAD, the commits behind each finding with the paths behind them — for a dead anchor, where its files went — and the artefact's body (for a term, its own section) all come from `pkit friction explain --json`, so they never disagree with what the checks decide. Git only reads what those files hold. A file `friction.exclude` leaves out is none of them: a quote only such a file still holds is gone, not kept.
 
