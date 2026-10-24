@@ -17,7 +17,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-24T03:19:17Z
+      at: 2026-10-24T04:49:16Z
       outcome: updated
 ---
 
@@ -107,7 +107,7 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   - **A pipe is decided segment by segment.** The cd-strip does not touch pipes, and `|` is not a cd-separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
-  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition) and deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
+  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition), and any other widening is deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
 
 **Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
