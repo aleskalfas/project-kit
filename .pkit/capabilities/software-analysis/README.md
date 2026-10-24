@@ -930,7 +930,9 @@ It says nothing of an id the point no longer holds, or of a point that does not 
 
 While no rule of `SAN` is accepted, it reports, and never fails on, **no rule of `SAN` binding on any of the analysis**, since none could bind yet.
 
-It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
+It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record. None of its live revalidations has an `at` on a later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out each time, never kept in a ledger.
+
+The artefact's revalidations come from the backbone's explanation of it (`pkit friction explain --json`), which reads HEAD, so a revalidation counts once it is committed. The explanation gives the `at` of each live revalidation, whether the backbone read it from the artefact's block or from an answer file, and this check never reads `at` from a file. An artefact the backbone cannot explain is still reported, with why.
 
 A time written unquoted in a record's front matter, such as a source's `version` in `reviewed-against`, is read by YAML as a time and not as the text written. The check says so, and asks you to quote it.
 
