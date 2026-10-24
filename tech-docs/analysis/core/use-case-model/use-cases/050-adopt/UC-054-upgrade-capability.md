@@ -54,6 +54,10 @@ pkit:
         - REQ-026
         - REQ-029
         - REQ-030
+    revalidated:
+      at: 2026-10-24T03:45:18Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-054 — Upgrade one capability on its own

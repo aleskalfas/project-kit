@@ -47,6 +47,10 @@ pkit:
         - REQ-012
         - REQ-014
         - REQ-015
+    revalidated:
+      at: 2026-10-24T03:44:48Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-021 — Declare my project's backbone configuration once, and have it validated

@@ -24,9 +24,9 @@ pkit:
         - ACT-component-author
         - REQ-005
     revalidated:
-      at: 2026-10-22T23:47:04Z
+      at: 2026-10-24T03:44:29Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
 ---
 
 # UC-018 — Know my capability is ready to share

@@ -36,8 +36,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-23T22:22:54Z
-      outcome: updated
+      at: 2026-10-24T03:45:09Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix

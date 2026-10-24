@@ -69,8 +69,9 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-23T09:50:24Z
-      outcome: updated
+      at: 2026-10-24T03:45:20Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

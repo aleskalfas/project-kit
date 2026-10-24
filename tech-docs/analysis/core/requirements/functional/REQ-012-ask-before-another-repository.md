@@ -26,6 +26,10 @@ pkit:
         - ADR-047#1
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-10-24T03:44:45Z
+      outcome: unchanged
+      unchanged-because: The change adds tests of the refusal of a non-release pull request and of the help of `pkit release merge`. The guard's tests this requirement cites are unchanged.
 ---
 
 # REQ-012 · Functional · The system asks the operator before its command changes another repository

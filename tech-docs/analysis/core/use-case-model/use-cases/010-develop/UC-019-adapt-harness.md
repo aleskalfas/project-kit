@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-23T10:28:55Z
+      at: 2026-10-24T03:44:37Z
       outcome: unchanged
-      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-019 — Adapt the system to another harness
