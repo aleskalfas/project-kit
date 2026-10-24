@@ -6,10 +6,6 @@ actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
 requirements: []
-shortfalls:
-  - at: "3b"
-    issue: "#1904"
-    record: demo-recording:DEC-001
 pkit:
   friction:
     anchors:
@@ -37,6 +33,9 @@ pkit:
         - COR-050#2
         - COR-050#13
         - COR-055#3
+    revalidated:
+      at: 2026-10-24T01:18:29Z
+      outcome: updated
 ---
 
 # UC-035 — Record a demo of my command line
@@ -79,14 +78,10 @@ pkit:
 - **3a.** The executable storyboard breaks its format, in one of these ways:
   - it has no title
   - two of its steps share a number
-  - a fence is never closed
+  - a fenced block is never closed
 
   Or a directive's content is not what its tag asks. The system lists each error with its line, and exits with status 1. The developer mends the document, and the path goes back to step 2.
-- **3b.** A fence carries a language tag that no loaded plugin provides. The system warns, naming its step and line, and goes on with the next fence (DEC-001).
-
-> [!WARNING]
-> **Not built yet:** the system lists the tag as an error, `step <n> line <l>: unrecognised directive '<tag>' — is the providing plugin loaded?`, and exits with status 1. DEC-001 decides that an unknown tag is a warning, and #1904 tracks it.
-
+- **3b.** A fenced block carries a language tag that no loaded plugin provides. The system warns, naming its step and line, and goes on with the next fenced block (DEC-001). At step 8, the system skips that fenced block with a warning.
 - **4a.** The developer passes `--validate`. The system finds the executable storyboard and the recording configuration as step 5 does, and variant 5a applies. It then parses and prints the executable storyboard as step 3 does, opens no window, and the use case ends.
 - **4b.** The developer passes `--no-recording`. The system carries out the directives as step 8 does, with no screen capture. It saves no video, runs no after-record hook and leaves both windows open, and the use case ends.
 - **4c.** The developer passes `--interactive`. The system waits for the developer's Enter in the second window before the capture starts, and again before it stops. Ctrl-C at the first prompt starts no capture, leaves both windows open, and ends the use case. Ctrl-C at the second prompt keeps the capture running until the developer runs `pkit demo-recording record stop`, and the path then goes on at step 9.
