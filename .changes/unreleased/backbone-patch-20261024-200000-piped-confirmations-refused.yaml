@@ -1,0 +1,18 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A question that guards a person's decision is now asked only at a terminal,
+  so an answer piped into stdin, as in `echo y | pkit …`, is never read (#2003).
+  Off a terminal without `--yes`, `release apply`, `settings consolidate` and
+  `capabilities uninstall`, both its `--purge` and its unregister in the
+  methodology's source, refuse, write nothing and name the command with `--yes`.
+  A report's post and `report submit` refuse too, and `--yes` still stages a
+  report without posting it. `report inbox --resolved` lists the reports and
+  then refuses to close any. `visibility untrack` and `visibility private`
+  leave the footprint tracked. A naming collision in `capabilities install` or
+  `capabilities upgrade --interactive` is refused before anything is written.
+  `permissions setup autonomy` leaves the overrides in place unless
+  `--remove-overrides` is given. At a terminal, and with `--yes`, each command
+  works as before.

@@ -55,9 +55,9 @@ pkit:
         - REQ-029
         - REQ-030
     revalidated:
-      at: 2026-10-24T10:39:47Z
+      at: 2026-10-24T19:01:20Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, --interactive now asks about a collision only at a terminal, and refuses off one before any write. Variants 6a and 6b hold."
 ---
 
 # UC-054 — Upgrade one capability on its own

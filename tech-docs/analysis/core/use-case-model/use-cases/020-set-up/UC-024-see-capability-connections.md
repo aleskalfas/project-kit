@@ -28,9 +28,9 @@ pkit:
         - REQ-010
         - REQ-011
     revalidated:
-      at: 2026-10-24T10:39:35Z
+      at: 2026-10-24T19:00:51Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, the collision prompts now refuse an answer piped in off a terminal. Showing a capability's connections asks nothing, so the steps hold."
 ---
 
 # UC-024 — See what a capability would connect to before I install it
