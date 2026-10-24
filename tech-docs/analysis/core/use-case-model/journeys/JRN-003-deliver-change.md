@@ -50,6 +50,10 @@ pkit:
         - UC-049
         - UC-040
         - UC-006
+    revalidated:
+      at: 2026-10-24T02:01:54Z
+      outcome: unchanged
+      unchanged-because: UC-037 gains a refusal for a capability whose folder arrives as a synced copy. The journey records a project's own decision, which still stamps, so its step and its seams hold.
 ---
 
 # JRN-003 — Deliver a change

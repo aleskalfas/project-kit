@@ -6,7 +6,8 @@
 # checkbox semantics (validated at tick, hard-stop at close, sticky
 # ticks, two ticked-states); and the sub-task promotion procedure.
 #
-# Consumed by create-issue (generates the right scaffold at filing) and
+# Consumed by create-issue (generates the right scaffold at filing, and
+# checks the required sections and universal rules before it files) and
 # validate-body (checks required sections, universal rules, integration
 # marker shape, checkbox close-gate, sub-task promotion mechanics).
 
@@ -114,15 +115,18 @@ universal_body_rules:
       `hierarchy: gated` keeps the hard-reject below. The containment
       invariants in issue-types.yaml are NOT softened by advisory mode.
     severity: "[validation-severity:hard-reject]"
-  - rule: |
+  - id: body.h1
+    rule: |
       No h1 (`# ...`) headings — the issue title is the h1. Sections
       use `## Title`.
     severity: "[validation-severity:hard-reject]"
-  - rule: |
+  - id: body.file-line-refs
+    rule: |
       No `file:line` references like `foo/bar.py:42`. Line numbers go
       stale; name the file and the identifier separately.
     severity: "[validation-severity:warning]"
-  - rule: |
+  - id: body.implementation-recipe
+    rule: |
       No `## Implementation` or `## How` recipes. Bodies describe
       outcomes, not how to build them. Implementation belongs in the
       PR or a separate design doc.

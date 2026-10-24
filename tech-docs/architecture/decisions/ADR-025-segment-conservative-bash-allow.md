@@ -22,7 +22,9 @@ as the shell reads it — an expansion (`$`, `$()`, a backtick), a redirection
 the core reads it, or an assignment that changes which program runs — or
 whose command no grant recognizes makes the core **abstain (prompt)**, never
 auto-allow. A quote alone does not: the core removes quotes as the shell does
-before it matches.
+before it matches. A deny is matched on the forms of its command point 5
+names, and where a pathname pattern or a configuration assignment may make a
+command one a deny names, the core abstains too.
 
 **Decision in one line:** the core auto-approves a compound only by stripping a
 leading `cd` and matching the remainder against existing grants; a general
@@ -113,12 +115,22 @@ leading `cd` included, and strips no `cd` from a command that holds one
 grant or a deny, the core removes a word's quotes and backslashes as the shell
 removes them, by the POSIX quoting rules of Python's standard library, so a
 quoted word is matched as the word the shell runs, and `"--force"` is denied as
-`--force` is. Outside an operand of `export`, a pathname pattern is matched as
-written: it changes only arguments, from the names of files, never the program
-a grant names. An
+`--force` is. For a grant, outside an operand of `export`, a pathname pattern
+is matched as written: it changes only arguments, from the names of files, never
+the program a grant names. An
 assignment to a program's own setting, such as `GIT_PAGER`, is stripped like
 any other: what a granted program is told to run is the grant's breadth, and a
-`git` grant already lets `git -c core.fsmonitor=…` run any program. The segment
+`git` grant already lets `git -c core.fsmonitor=…` run any program. Where an
+unquoted pathname pattern, or an assignment that changes which configuration
+the program reads, such as `HOME` or `GIT_CONFIG_GLOBAL`, may make the command
+one a deny names, the core cannot tell, and abstains whatever a grant allows.
+It abstains rather than denies, as on any other construct it cannot read: a
+deny would claim a match the core cannot see. Such an assignment is still a
+program's own setting to a grant. For a deny, it counts on every command of
+the program the deny names, since the configuration may hold an alias of any
+name, and it counts where the shell hands it on: for the command it stands in
+front of, and from a segment that only assigns or exports, for the segments
+after it. The segment
 splitter stays dumb; the conservatism lives in the classification, not in
 parsing the shell's grammar.
 
@@ -153,8 +165,23 @@ fixtures.
 ### 5. The deny side remains porous
 
 This ADR touches the deny side only by matching a deny on the words the shell
-runs (point 2). The deny side's mechanism — guardrail denies, the fail-open
-hook + fail-closed native double-lock — is untouched, and the merge layer / hook
+runs, in the forms below, and by abstaining where a pathname pattern or a
+configuration assignment may make a command one a deny names (point 2). A deny
+is matched on these forms of its command, as programs read them: a short flag
+inside a bundle, a long flag cut to a prefix, carrying its value after `=` or
+behind one dash, a program named by its path or in another case, and a
+subcommand behind the options before it. Each reading errs toward the deny: a
+prefix several long flags share reads as each of them. A grant is matched on
+the command as written: reading these forms for a grant would widen what it
+allows, while for a deny they only narrow what runs unasked. They are the
+forms listed, not every form a command can take. A configuration git already
+reads, or one an option such as `git -c` or a granted `git config` sets, stays
+the grant's breadth, as `git -c core.fsmonitor=…` does (point 2). A program
+behind a wrapper, such as `env`, is read as the wrapper: the core abstains where
+no grant covers the wrapper, and a grant on a program runner allows what it
+runs.
+The deny side's mechanism — guardrail denies, the fail-open
+hook + fail-closed native double-lock — is kept, and the merge layer / hook
 remains a **speed-bump, not a boundary**
 ([ADR-004](ADR-004-autonomy-intent-confinement.md),
 [ADR-019](ADR-019-enforcement-gate-mechanism-vs-boundary.md)). A reader must not
@@ -204,9 +231,10 @@ shell, abstains.
 **Why this is a refinement of ADR-004, not a supersession.** ADR-004's model —
 intent × confinement, the double-lock, the speed-bump-not-boundary posture, and
 decision point 4's fail-closed-on-uncertainty — is unchanged and is *inherited*
-here. This ADR only refines how the intent axis classifies one shape of compound
-command, tightening a false prompt while obeying ADR-004's invariants. It adds no
-new ownership tier and changes no prior decision.
+here. This ADR only refines how the intent axis classifies a Bash command: the
+one shape of compound command it allows, and the words and forms a grant or a
+deny matches, while obeying ADR-004's invariants. It adds no new ownership tier
+and changes no prior decision.
 
 ### Alternatives considered
 
@@ -242,11 +270,12 @@ new ownership tier and changes no prior decision.
   conformance fixtures proving hook and CLI decide identically. Implementation is
   the issue-#240 follow-on, not this ADR.
 
-- **Deny mechanism untouched; speed-bump posture preserved.** Guardrail denies,
+- **Deny mechanism kept; speed-bump posture preserved.** Guardrail denies,
   the fail-open hook + fail-closed native double-lock, and the
   speed-bump-not-boundary framing of ADR-004 / ADR-019 are unchanged. The deny
   side remains porous by design; this ADR narrows the allow path's false
-  prompts and matches a deny on the words the shell runs.
+  prompts and matches a deny on the words the shell runs, in the forms point 5
+  names.
 
 - **The broader widening is gated, not scheduled.** Any auto-approve beyond the
   leading-`cd` strip requires a demonstrated residual-prompt need (COR-007), and

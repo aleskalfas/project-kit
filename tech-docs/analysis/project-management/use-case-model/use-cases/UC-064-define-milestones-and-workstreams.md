@@ -65,6 +65,10 @@ pkit:
         - ACT-planner
         - REQ-040
         - REQ-041
+    revalidated:
+      at: 2026-10-24T01:41:54Z
+      outcome: unchanged
+      unchanged-because: How edit-issue attaches an issue to a Milestone, and rolls it forward, is untouched. This change only moves its body check into a module it shares with create-issue and validate-issue.
 ---
 
 # UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward

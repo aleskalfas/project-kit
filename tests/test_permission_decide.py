@@ -3053,3 +3053,393 @@ def test_reading_words_hook_and_decide_parity(decide_mod, catalog):
         payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
         d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
         assert d_decide == d_hook == expected, cmd
+
+
+# ---- a deny holds against the forms of the command it names (#1960) ---------
+#
+# ADR-025 point 5: a deny binds on the command in the forms programs read, not
+# only the form its recognizer spells. A short flag inside a bundle, a long
+# flag cut to a prefix, with its value after `=` or behind one dash, a program
+# named by its path or in another case, and a subcommand behind the options
+# before it are denied, as are `--mirror` and a refspec opening with `+`, which
+# the catalog names. ADR-025 point 2: where a pathname pattern,
+# or an assignment that changes the program's configuration, may make the
+# command one a deny names, the core cannot tell: a lenient posture abstains, a
+# strict one denies, and no grant allows it. A command no deny can name in any
+# form is decided as before.
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # a short flag inside a bundle
+        "git push -uf origin main",
+        "git push -fu origin main",
+        "git push -vf origin main",
+        # a long flag cut to a prefix, or carrying its value after `=`
+        "git push --forc origin main",
+        "git push --fo origin main",
+        "git push --force-w origin main",
+        "git push --force-with-lease=main origin main",
+        "git push --force-w=main:abc origin main",
+        "git push --forc=x origin main",
+        # a refspec opening with `+` forces the update of its ref
+        "git push origin +main",
+        "git push origin '+main'",
+        "git push origin +HEAD:refs/heads/main",
+        "git push origin '+refs/heads/*:refs/heads/*'",
+        "git push origin +ma*",
+        # the subcommand behind the options before it
+        "git -C . push --force origin main",
+        "git -c core.x=y push -f origin main",
+        "git --git-dir .git push -f origin main",
+        "git -C ~/repo push origin +main",
+        # the program named by its path, by zsh's `=`, or in other case, which
+        # a case-insensitive file system runs as `git`
+        "/usr/bin/git push --force origin main",
+        "./git push -f origin main",
+        "=git push -f origin main",
+        "Git push -f origin main",
+        # a long flag behind one dash, and `--mirror`, which forces every ref
+        "git push -force origin main",
+        "git push --mirror origin",
+        "git push --mirr origin",
+        # behind a leading `cd`, and behind a configuration assignment
+        "cd /x && git push -uf origin main",
+        "HOME=/tmp/x git push --forc origin main",
+    ],
+)
+def test_a_force_push_in_any_form_is_denied(decide_mod, catalog, command):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert "vcs-history-rewrite" in why, why
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("/usr/bin/sudo whoami", "privilege-escalation"),
+        ("=sudo whoami", "privilege-escalation"),
+        ("SUDO whoami", "privilege-escalation"),
+        ("/bin/rm -rf build", "destructive-fs"),
+        ("RM -rf build", "destructive-fs"),
+        ("rm --recur build", "destructive-fs"),
+        ("rm --r build", "destructive-fs"),
+        ("rm --recursive build", "destructive-fs"),
+    ],
+)
+def test_a_guardrail_in_any_form_is_denied(decide_mod, catalog, command, privilege):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert privilege in why, why
+
+
+def test_the_recognizer_names_a_forced_refspec_and_a_cut_recursive_flag(decide_mod, catalog):
+    # The forms a recognizer spells itself are recognized as written too.
+    for command, privilege in (
+        ("git push origin +main", "vcs-history-rewrite"),
+        ("rm --recur build", "destructive-fs"),
+    ):
+        hits = decide_mod.recognized_privileges(catalog, _bash(command, "operator"))
+        assert privilege in hits, (command, hits)
+    hits = decide_mod.recognized_privileges(catalog, _bash("git push origin main", "operator"))
+    assert "vcs-history-rewrite" not in hits
+
+
+# A form the core cannot see: what a pathname pattern expands to, or what a
+# configuration an assignment points the program at holds.
+_UNSEEN_FORMS = [
+    # a pathname pattern that may expand to a flag or a forced refspec
+    "git push origin --forc[e]",
+    "git push origin -[f] main",
+    "git push origin -?",
+    "git push origin *",
+    "git push origin [+]main",
+    "git push origin ^main",  # zsh's EXTENDED_GLOB negation
+    "git push origin --forc#e",  # zsh's EXTENDED_GLOB repetition
+    "git push origin x#+main",  # `x#` may match nothing, leaving `+main`
+    "git push x#-f origin main",
+    # a pathname pattern where the program or its subcommand stands
+    "gi? push --force origin main",
+    "[g]it push -f origin main",
+    "git pu?h --force origin main",
+    # an assignment that changes the program's configuration, which may set a
+    # forced refspec or an alias
+    "HOME=/tmp/x git push origin main",
+    "GIT_CONFIG_GLOBAL=/tmp/x git push origin main",
+    "XDG_CONFIG_HOME=/tmp/x git push origin main",
+    "GIT_DIR=/tmp/x/.git git push origin main",
+    "GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=alias.p GIT_CONFIG_VALUE_0=push git p origin main",
+    "HOME=/tmp/x git p origin main",
+    "HOME=/tmp/x git status",  # a configuration may hold an alias of any name
+    "export HOME=/tmp/x && git push origin main",
+    "HOME=/tmp/x; git push origin main",
+    "builtin export HOME=/tmp/x; git push origin main",
+    "cd /x && HOME=/tmp/x git push origin main",
+]
+
+
+@pytest.mark.parametrize("command", _UNSEEN_FORMS)
+def test_a_form_the_core_cannot_see_is_not_allowed(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r} must not be allowed by the grant: {why}"
+    assert "vcs-history-rewrite" in why, why
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", f"{command!r} must deny under a strict posture: {why}"
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("rm -[r]f build", "destructive-fs"),
+        ("rm * build", "destructive-fs"),
+        ("r? -rf build", "destructive-fs"),
+        ("sud? whoami", "privilege-escalation"),
+    ],
+)
+def test_a_guardrail_form_the_core_cannot_see_keeps_a_grant_from_allowing(
+    decide_mod, catalog, command, privilege
+):
+    # Where a grant covers the program, the deny's doubt is what keeps it from
+    # allowing: grant every `r…` and `s…` program, and the command still
+    # abstains, naming the guardrail.
+    model = {
+        "posture": "lenient",
+        "grants": [
+            *MODEL["grants"],
+            {"subject": "operator", "privilege": _tok("anything"), "effect": "allow"},
+        ],
+    }
+    wide = {
+        "privileges": {
+            **catalog["privileges"],
+            "anything": {
+                "description": "any program",
+                "recognize": {"bash": [{"pattern": "^"}]},
+            },
+        }
+    }
+    d, why = decide_mod.decide(model, wide, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r}: {why}"
+    assert privilege in why, why
+
+
+@pytest.mark.parametrize(
+    "command,kind",
+    [
+        ("git push origin --forc[e]", "pathname pattern"),
+        ("HOME=/tmp/x git push origin main", "configuration"),
+    ],
+)
+def test_the_reason_names_the_kind_of_form_not_the_command(decide_mod, catalog, command, kind):
+    for posture in ("lenient", "strict"):
+        _, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert kind in why, why
+        assert "/tmp/x" not in why and "forc[e]" not in why, why
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "git push origin main",
+        "git push -u origin feat/x",
+        "git push --set-upstream origin feat/x",
+        "git push --follow-tags origin main",
+        "git push --no-force origin main",
+        "git push origin 'refs/heads/*:refs/heads/*'",
+        "git push origin HEAD:refs/heads/feat-*",
+        "git -C ~/repo push origin main",
+        "git -C sub status",
+        "git -c core.pager=cat log",
+        "git add *.py",
+        "git add src/*.py",
+        "git log -- '*.md'",
+        "git show HEAD^",
+        "git rebase -i HEAD~3",
+        "GIT_PAGER=cat git log",
+        "HOME=/tmp/x gh pr list",  # no deny names `gh` for the operator
+        # an assignment in front of a command is that command's alone, and one
+        # a later segment exports reaches no segment before it
+        "HOME=/tmp/x gh pr list && git status",
+        "git push origin main && export HOME=/tmp/x",
+        "gh api 'repos/o/r/issues?state=open'",
+        "gh pr view 1 --json files --jq '.files[].path'",
+        # a quoted or escaped glob character the shell passes on as it is
+        "git push origin '[+]main'",
+        "git push origin \\*",
+        "git push origin '--forc*'",
+    ],
+)
+def test_a_command_no_deny_names_in_any_form_is_allowed(decide_mod, catalog, command):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "allow", f"{command!r}: {why}"
+
+
+def test_builtin_export_stays_a_program_no_grant_covers(decide_mod, catalog):
+    # A segment led by `builtin export` is no grant's, so no grant allows the
+    # command, as on main. The denies read its assignments as `export`'s, so
+    # one that changes the configuration names the deny it may get past.
+    assert decide_mod.segments("builtin export GH_HOST=x && gh pr list") == [
+        ["builtin", "export", "GH_HOST=x"],
+        ["gh", "pr", "list"],
+    ]
+    for command in (
+        "builtin export GH_HOST=x && gh pr list",
+        "builtin export PATH=/tmp/x; gh pr list",
+        "command export GH_HOST=x && gh pr list",
+    ):
+        for posture, verdict in (("lenient", "abstain"), ("strict", "deny")):
+            d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+            assert d == verdict, (command, posture, why)
+    for command in (
+        "builtin export HOME=/tmp/x; git push origin main",
+        "builtin builtin export GIT_CONFIG_GLOBAL=/tmp/x; git push origin main",
+    ):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+        assert d == "abstain" and "vcs-history-rewrite" in why, (command, why)
+
+
+def test_a_word_prefix_a_pathname_pattern_may_expand_to_is_not_allowed(decide_mod, catalog):
+    # Where the text before a pattern's first glob character opens a prefix the
+    # recognizer names, the word may open with it.
+    wide = {
+        "privileges": {
+            **catalog["privileges"],
+            "main-push": {
+                "description": "pushing to main",
+                "recognize": {
+                    "bash": [
+                        {
+                            "cmd": "git",
+                            "subcommand": ["push"],
+                            "word_prefix_any": ["refs/heads/main"],
+                        }
+                    ]
+                },
+            },
+        }
+    }
+    model = {
+        "posture": "lenient",
+        "grants": [
+            *MODEL["grants"],
+            {"subject": "operator", "privilege": _tok("main-push"), "effect": "deny"},
+        ],
+    }
+    for command, verdict in (
+        ("git push origin refs/heads/main", "deny"),
+        ("git push origin refs/heads/main*", "deny"),
+        ("git push origin refs/heads/ma?n", "abstain"),
+        ("git push origin refs/heads/mai*", "abstain"),
+        ("git push origin r*", "abstain"),
+        ("git push origin refs/tags/v*", "allow"),
+        ("git push origin v*", "allow"),
+        # zsh's EXTENDED_GLOB `#` makes the character before it optional
+        ("git push origin x#refs/heads/main", "abstain"),
+    ):
+        d, why = decide_mod.decide(model, wide, _bash(command, "operator"))
+        assert d == verdict, (command, why)
+
+
+def test_a_regex_names_its_program_before_a_space(decide_mod, catalog):
+    # A regex opening with `^git push` names `git`, so a pathname pattern in a
+    # command of another program leaves it alone.
+    wide = {
+        "privileges": {
+            **catalog["privileges"],
+            "push-unverified": {
+                "description": "a push past the hooks",
+                "recognize": {"bash": [{"pattern": "^git push.*--no-verify"}]},
+            },
+        }
+    }
+    model = {
+        "posture": "lenient",
+        "grants": [
+            *MODEL["grants"],
+            {"subject": "operator", "privilege": _tok("push-unverified"), "effect": "deny"},
+        ],
+    }
+    d, why = decide_mod.decide(model, wide, _bash("gh pr list --label x*", "operator"))
+    assert d == "allow", why
+    d, why = decide_mod.decide(model, wide, _bash("git log -- x*", "operator"))
+    assert d == "abstain" and "push-unverified" in why, why
+    # The core reads the subcommand behind 64 options with values at most: past
+    # them it cannot tell, and defers rather than allows.
+    for count, verdict in ((63, "deny"), (64, "abstain"), (500, "abstain")):
+        command = "git " + "-C . " * count + "push origin main --no-verify"
+        d, why = decide_mod.decide(model, wide, _bash(command, "operator"))
+        assert d == verdict, (count, why)
+
+
+def test_a_pattern_deny_holds_against_a_program_named_by_its_path(decide_mod, catalog):
+    for command in (
+        "/opt/homebrew/bin/gh issue create --title x",
+        "=gh pr merge 27",
+        "gh --repo o/r issue create --title x",
+    ):
+        d, why = decide_mod.decide(
+            _PM_WITH_DENY_MODEL, catalog, _bash(command, "agent:project-manager")
+        )
+        assert d == "deny" and "issue-tracker-write" in why, (command, why)
+
+
+def test_a_pathname_pattern_in_a_pattern_denys_program_is_not_allowed(decide_mod, catalog):
+    # A pattern spells the words it names, so a pathname pattern anywhere in a
+    # segment of its program keeps the core from telling. A quoted one is
+    # passed on as it is.
+    pm = "agent:project-manager"
+    for command in ("gh issue cre* --title x", "gh pr list --label -*"):
+        d, why = decide_mod.decide(_PM_WITH_DENY_MODEL, catalog, _bash(command, pm))
+        assert d == "abstain" and "issue-tracker-write" in why, (command, why)
+    for command in ("gh api 'repos/o/r/issues?state=open'", "gh pr list --jq '.[].title'"):
+        d, why = decide_mod.decide(_PM_WITH_DENY_MODEL, catalog, _bash(command, pm))
+        assert d == "allow", (command, why)
+
+
+def test_a_sure_deny_wins_over_a_form_the_core_cannot_see(decide_mod, catalog):
+    for command in (
+        "HOME=/tmp/x git push -uf origin main",
+        "git push origin * --force",
+        "gi? status && git push origin +main",
+    ):
+        for posture in ("lenient", "strict"):
+            d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+            assert d == "deny" and "vcs-history-rewrite" in why, (command, why)
+
+
+def test_flag_forms(decide_mod):
+    flags = ["--force", "-f", "--force-with-lease"]
+    for word in (
+        "--force",
+        "-f",
+        "--forc",
+        "--f",
+        "--force-with-lease=x",
+        "-uf",
+        "-4f",
+        "-force",
+        "-force-with-lease=x",
+    ):
+        assert decide_mod._flag_form(word, flags), word
+    for word in ("--", "-", "--no-force", "--forcex", "-u", "-F", "-o.f", "--=x", "f", "-="):
+        assert not decide_mod._flag_form(word, flags), word
+
+
+def test_forms_hook_and_decide_parity(decide_mod, catalog):
+    """The forms are read in the shared core, so hook_decide and decide agree
+    (ADR-002 / ADR-003)."""
+    for cmd, expected in (
+        ("git push -uf origin main", "deny"),
+        ("git push origin +main", "deny"),
+        ("git push origin --forc[e]", "abstain"),
+        ("HOME=/tmp/x git push origin main", "abstain"),
+        ("git push origin main", "allow"),
+    ):
+        d_decide, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+        payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+        d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
+        assert d_decide == d_hook == expected, cmd

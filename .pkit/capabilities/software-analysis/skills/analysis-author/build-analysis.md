@@ -5,9 +5,17 @@ An analysis is built from its concepts up, in four steps ([software-analysis:DEC
 - **Each artefact uses only what the order puts before it:** what an earlier step wrote, or what its own step wrote first. So a definition uses terms already defined, and an area uses the areas it builds on. Each artefact names a concept by the one term that defines it, in every area.
 - **Go back when something is missing.** Where an artefact needs something the order puts before it, and finds it missing, go back and write it there first. Then go on. It may be a concept, an actor, a requirement, or a use case of an area this one builds on.
 - **Choose a kind's parts before its first artefact,** as the dispatcher says (`choose-templates.md`).
-- **On a brownfield project,** derive each step's candidates from the code, the existing documents and the project's decisions. A person confirms the candidates (DEC-001 point 9). Confirming a step's candidates before the next step builds on them saves rework, but the order does not ask it.
+- **On a brownfield project,** start from the declared surface, and end once it is covered (the sections before step 1 and after step 4). Derive each step's candidates from the code, the existing documents and the project's decisions. A person confirms the candidates (DEC-001 point 9). Confirming a step's candidates before the next step builds on them saves rework, but the order does not ask it.
 
 Each step below says what to write, and when it is done. "Names each concept by its term" means what the shared framing's "Use the glossary's terms" says.
+
+## Before step 1, on a brownfield project: the declared surface
+
+Before you derive any candidate, find the surface the analysis ought to cover (DEC-001 point 9). The project declares it as `surface` in the `friction` key of `.pkit/project/config.yaml`. An installed capability may declare some of it too.
+
+1. **Run `pkit friction check --all`,** and read its `Uncovered surface` line.
+2. **Where the line reads `no surface declared`,** the declared surface holds no file. Ask the person which paths the analysis ought to cover, such as `src/**`. Write the paths they name under `surface` by hand, since `pkit config set` writes no list, and run `pkit validate`. Derive no candidate until the check counts the paths of the declared surface.
+3. **Where the line counts those paths,** go on with step 1. The paths listed under it are those no artefact anchors yet, and show where to start.
 
 ## 1. The concepts, then the actors
 
@@ -77,6 +85,15 @@ You may not know every concept yet. A concept a later step finds is added then, 
 - each such goal of an actor is a journey, across the areas it passes through
 - each journey names each concept by its term
 - `pkit analysis validate --preview` reports nothing on the journeys, and `pkit analysis check-numbers` passes
+
+## After step 4, on a brownfield project: the surface covered
+
+Each step's list says when that step is done. Onboarding ends only once the declared surface is covered (DEC-001 point 9). So run `pkit friction check --all` once more, and read its two measures. The check never fails, so read the measures, not its exit status.
+
+- **`Uncovered surface`** counts none uncovered, as in `0 of 40 paths in the declared surface`. A path it lists is one no artefact anchors yet. Go back to the step whose artefact describes what the path does, and anchor that artefact to the path, or write one there.
+- **`Unanchored artefacts`** lists none of the analysis's artefacts. An artefact it lists has neither anchors nor a reason a person accepted. Anchor it, or show the person its reason for having none, word for word, and write the reason only once they accept it. The shared framing's "An actor, a term or a requirement nothing embodies" says how.
+
+Until both hold, onboarding is not done, whatever each step's list says. An artefact accepted with its reason is listed apart, and never counted (COR-050 point 8).
 
 ## What a reviewer checks
 
