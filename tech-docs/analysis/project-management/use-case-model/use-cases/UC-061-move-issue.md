@@ -22,9 +22,6 @@ shortfalls:
   - at: "1a"
     issue: "#1938"
     record: COR-004
-  - at: "1f"
-    issue: "#1937"
-    record: project-management:DEC-006
   - at: "7a"
     issue: "#1215"
     record: project-management:DEC-007
@@ -126,11 +123,7 @@ pkit:
 - **6b.** The issue is still in Todo. `start-work` refuses, names the move to make first, and changes nothing (`composed_move.py`).
 - **1d.** While the issue is in Todo or Backlog, the developer decides that it will not be done: `pkit pm close-issue <N> --reason "<R>"`. The system checks each checkbox, then asks the developer at the terminal to authorise the close, or takes `--yes` as that authorisation (DEC-006 and DEC-007). With no terminal and no `--yes`, the system refuses and writes nothing. Once the close is authorised, the system posts the reason, closes the issue as not planned and moves it to Done.
 - **1e.** A checkbox of the issue is unticked. `close-issue` refuses, listing each one. The developer ticks it, having checked its claim, or removes it, and the path rejoins at variant 1d (DEC-007).
-- **1f.** The issue closed is the last open child of its parent. The system says that the parent is eligible to close, and asks the developer to authorise its close (DEC-006).
-
-> [!WARNING]
-> **Not built yet:** after every close, the system reports the parent as "eligible to close pending sibling check". It reads the parent's checkboxes alone, whether a child is still open or not. DEC-006 decides that a parent is offered for its close once its last open child closes, and #1937 tracks it.
-
+- **1f.** The issue closed is the last open child of its parent. The system asks the process engine whether the parent's children are all done, and says that none is open (DEC-034). A parent whose checkboxes are all ticked too is said to be eligible to close (DEC-006). The system names the command of variant 6c, which asks the developer to authorise the close.
 - **6c.** The issue is a parent issue whose children are all done, and the developer authorises its close: `pkit pm close-issue <N> --mode=cascade-eligibility-close`. The system checks the parent issue's checkboxes, and that its children are all done (DEC-034). The authorisation is the developer's yes at the terminal, or `--yes`, and with neither the system refuses and writes nothing (DEC-006). Once the close is authorised, the system closes the parent issue as completed.
 - **6d.** The parent issue still has an open child, or an unticked checkbox. The system refuses, naming what holds it, and closes nothing (DEC-034).
 - **7a.** The developer moves the Task to Done directly: `pkit pm move-issue <N> --to done`. The system checks that each checkbox is ticked before it writes (DEC-007).
