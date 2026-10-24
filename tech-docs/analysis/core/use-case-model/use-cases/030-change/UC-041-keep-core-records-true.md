@@ -34,6 +34,10 @@ pkit:
         - REQ-005
         - REQ-021
         - CONTRIBUTING.md#adding-a-core-record-cor
+    revalidated:
+      at: 2026-10-24T03:45:03Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-041 — Keep each core record true for any project that adopts it

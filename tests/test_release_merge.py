@@ -21,6 +21,7 @@ import ast
 import dataclasses
 import inspect
 import json
+import re
 import subprocess
 from collections.abc import Callable, Sequence
 from pathlib import Path
@@ -29,6 +30,7 @@ from typing import Any
 import click
 import pytest
 from click.testing import CliRunner
+from ruamel.yaml import YAML
 
 from project_kit import cli, release, session_guard
 from tests import hosting_fake as fake
@@ -254,14 +256,86 @@ def test_evaluate_refuses_non_release_head_branch() -> None:
         release.parse_release_pr(_raw(headRefName="fix/123-a-bug"))
     )
     assert decision.action == "refuse"
-    # Points at the issue-PR gate rather than silently bypassing it.
-    assert "merge-pr" in decision.message
+    # Points at the backbone's own landing, never at a capability's command
+    # (#1918): a project need not have installed the capability (COR-014).
+    assert "`pkit pull-request land 42 --head <sha> --subject <title>`" in decision.message
+    assert "merge-pr" not in decision.message
+    assert "project-management" not in decision.message
 
 
 def test_evaluate_refuses_non_release_title() -> None:
     decision = release.evaluate_release_pr(release.parse_release_pr(_raw(title="feat: something")))
     assert decision.action == "refuse"
     assert "not a release title" in decision.message
+
+
+# --- no message names a capability's command (#1918) -----------------
+
+#: The repository whose capabilities the backbone's messages must not name.
+_REPO = Path(__file__).resolve().parents[1]
+
+
+def _capability_command() -> re.Pattern[str]:
+    """`pkit <name>` for each capability the repository ships and each of its
+    aliases: the forms a message names a capability's command by."""
+    yaml = YAML(typ="safe")
+    names: set[str] = set()
+    for package in sorted((_REPO / ".pkit" / "capabilities").glob("*/package.yaml")):
+        data = yaml.load(package.read_text(encoding="utf-8"))
+        names.add(data["component"]["name"])
+        names.update(data.get("aliases") or ())
+    assert "project-management" in names and "pm" in names
+    return re.compile(rf"\bpkit ({'|'.join(map(re.escape, sorted(names)))})\b")
+
+
+def _messages(source: str) -> list[str]:
+    """The text of each string the code builds, its constants and the text of
+    its f-strings, leaving out docstrings, which no message carries."""
+    tree = ast.parse(source)
+    docstrings = {
+        id(node.body[0].value)
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.Module, ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef))
+        and node.body
+        and isinstance(node.body[0], ast.Expr)
+        and isinstance(node.body[0].value, ast.Constant)
+    }
+    return [
+        node.value
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+        and id(node) not in docstrings
+    ]
+
+
+def test_the_scan_finds_a_capability_command_in_a_message_and_not_in_a_docstring() -> None:
+    pattern = _capability_command()
+    source = (
+        "def refuse(n):\n"
+        '    """Points at `pkit project-management merge-pr`, in a docstring."""\n'
+        '    return f"use `pkit project-management merge-pr {n}` for an issue PR"\n'
+    )
+    assert [m for m in _messages(source) if pattern.search(m)] == [
+        "use `pkit project-management merge-pr "
+    ]
+    assert not [m for m in _messages('def f():\n    """`pkit pm x`."""\n') if pattern.search(m)]
+
+
+def test_no_message_of_release_names_a_capability_command() -> None:
+    """A core message holds in a project that installed no capability
+    (COR-014): `release.py` names the backbone's commands only (#1918)."""
+    pattern = _capability_command()
+    named = [m for m in _messages(inspect.getsource(release)) if pattern.search(m)]
+    assert named == []
+
+
+def test_release_merge_help_names_the_landing_and_no_capability_command() -> None:
+    result = CliRunner().invoke(cli.main, ["release", "merge", "--help"])
+    assert result.exit_code == 0, result.output
+    text = " ".join(result.output.split())
+    assert "`pkit pull-request land`" in text
+    assert not _capability_command().search(text)
 
 
 def test_evaluate_reports_already_merged() -> None:
@@ -613,7 +687,8 @@ def test_merge_release_pr_refuses_non_release(monkeypatch: pytest.MonkeyPatch) -
     host = _Host(queue=False)
     with pytest.raises(click.ClickException) as exc:
         _land(monkeypatch, host, headRefName="fix/1-x")
-    assert "merge-pr" in str(exc.value)
+    assert "`pkit pull-request land 42 " in str(exc.value)
+    assert "merge-pr" not in str(exc.value)
     assert host.commands == []
 
 

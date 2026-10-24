@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T03:18:10Z
+      at: 2026-10-24T04:16:19Z
       outcome: unchanged
-      unchanged-because: Each of the agent's calls is still decided under its own grants and those to all, and a deny still wins. Which forms of a command a deny reads is not what this use case describes.
+      unchanged-because: The guardrails now deny the forms of a command they name, and release merge's refusal names pkit pull-request land. Each call of an agent is still decided under its grants and a deny still wins, as the use case says.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

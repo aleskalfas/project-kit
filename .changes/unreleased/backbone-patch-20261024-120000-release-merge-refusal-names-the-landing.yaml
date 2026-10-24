@@ -1,0 +1,10 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `pkit release merge` now names the backbone's own landing,
+  `pkit pull-request land <n> --head <sha> --subject <title>`, when it refuses
+  a pull request whose head branch is no `release/` branch. It named the
+  project-management capability's `merge-pr`, which a project may not have
+  installed (COR-014). The help of `pkit release merge` names the same command.
