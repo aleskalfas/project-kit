@@ -84,6 +84,7 @@ it has none.
 from __future__ import annotations
 
 import functools
+import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -287,7 +288,7 @@ def _message(
     renumbers this branch's, with `--base` where `base` names one."""
     noun = noun_numbered(number)
     cited = "DEC-001 point 3; DEC-002 point 2" if noun == REQUIREMENT else "DEC-001 point 3"
-    command = f"pkit analysis renumber {number}" + (f" --base {base}" if base else "")
+    command = f"pkit analysis renumber {number}" + (f" --base {shlex.quote(base)}" if base else "")
     renumber = (
         f"renumber this {noun} before merging — `{command}` gives it the next free number, "
         f"with every reference to it ({cited})"

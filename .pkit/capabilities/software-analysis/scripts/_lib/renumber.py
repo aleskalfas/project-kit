@@ -204,12 +204,20 @@ def plan(root: Path, old_id: str, to: str | None = None, base: str | None = None
 
 def apply(root: Path, planned: Plan) -> Written:
     """Write `planned`: each file whole, the renamed one before its old file is removed,
-    then each overview that names the id drawn anew. Raises Failed, naming what was
-    written, when a write fails partway. An overview that cannot be drawn is a warning
-    naming `pkit analysis overview`, as the stamp's is."""
+    then each overview that names the id drawn anew. Each file is held again, as it is
+    written, to be reached through no link, since the plan was read before a person was
+    asked. Raises Failed, naming what was written, when a write fails partway. An
+    overview that cannot be drawn is a warning naming `pkit analysis overview`, as the
+    stamp's is."""
     written = Written()
     for change in planned.changes:
         target = change.renamed or change.path
+        try:
+            stamp.refuse_links(root, root / target, target)
+        except stamp.Refused as exc:
+            raise Failed(
+                f"{exc}; written before it: {', '.join(written.paths) or 'nothing'}"
+            ) from exc
         try:
             stamp.write_whole(root / target, change.text.encode("utf-8"))
             written.paths.append(target)
