@@ -81,6 +81,7 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#what-sync-writes
         - .pkit/lifecycle/README.md#the-ownership-predicates-ownershippy
+        - .pkit/lifecycle/README.md#an-adapters-manifest
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#a-new-collision
@@ -1020,7 +1021,7 @@ Where the folder holds synced copies, the command writes nothing and exits 1. It
 
 Each command stamps as before into a capability the project incubates. In the methodology's source repository, it stamps into every folder but an externally-sourced capability's.
 
-`new area`, `new adapter` and `new capability` make a folder no sync writes, and `new scratchpad` writes in the project's own tier, so none of them asks. Nor does `new migration --tier adapter`, since a sync copies no adapter's `migrations/` folder.
+`new area`, `new adapter` and `new capability` make a folder no sync writes, and `new scratchpad` writes in the project's own tier, so none of them asks. Nor does `new migration --tier adapter`, since a project's copy of an adapter carries no `migrations/` folder ([the lifecycle README, "An adapter's manifest"](../lifecycle/README.md#an-adapters-manifest)).
 
 ### `new area <name> [--variant <variant>]`
 
@@ -1082,7 +1083,7 @@ Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.m
 
   Numbering is independent per id-space. A `<namespace>` that is not `core`, `project`, or `adr` is interpreted as a capability name: the record stamps under that capability's `decisions/` directory with the `DEC` prefix, numbered independently within that capability (two different capabilities may both hold a `DEC-001`). The command refuses if no capability of that name exists under `.pkit/capabilities/` — a capability being a folder there that carries a `package.yaml` — naming the command's own namespaces and the capabilities that do exist; the `decisions/` subdirectory is created on first use.
 
-  The command also refuses `core`, and a capability, whose files the project receives as synced copies ("Folders a sync writes" above). That is `core` or a kit-shipped capability outside the methodology's source repository, and an externally-sourced capability in any project. The command names `pkit new decision project <slug>` and `pkit new decision adr <slug>` as where the project's own decision goes.
+  The command also refuses `core`, and a capability, whose files the project receives as synced copies ("Folders a sync writes" above). It names `pkit new decision project <slug>` and `pkit new decision adr <slug>` as where the project's own decision goes.
 
 - **`<slug>`** is a kebab-case shorthand of the decision's title — short enough to keep listings self-documenting (e.g., `merge-delivery`, `pattern-extraction`).
 
