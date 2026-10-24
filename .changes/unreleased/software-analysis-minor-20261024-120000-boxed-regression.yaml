@@ -1,0 +1,15 @@
+component: software-analysis
+kind: minor
+custom:
+  category: Changed
+body: >
+  `pkit analysis propose` answers a regression as DEC-001 point 5 decides. A
+  regressed step that an accepted record of its use case decides takes its
+  `Not built yet` box and its `shortfalls` entry, naming the record and the
+  defect's issue, and ends `updated`. Which record decides which step is the
+  resolving agent's reading: on a use case that anchors an accepted record, a
+  regression's answer gives no command, and its new `which` field names those
+  records, until the agent passes `--box <step> --decided-by <record>` or
+  `--no-box`. A box on an artefact that is no use case, or on a record that is
+  not one of the use case's accepted record anchors, is refused with exit 2.
+  The `analysis-resolver` agent and its storyboard script both regressions.
