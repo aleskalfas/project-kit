@@ -7,13 +7,15 @@
 # ///
 """Project-management capability — add-workstream (verb-subject per DEC-020 + DEC-018).
 
-Adds a workstream to `project/workstreams.yaml`. Validates the slug
-against `schemas/workstreams.schema.json`'s pattern; refuses
+Adds a workstream to `project/workstreams.yaml`. Checks the slug and
+each attribute against DEC-018's rules (`_lib/workstreams`), and refuses
 duplicates; defaults `name` to the slug; defaults `status` to active.
 
-For label-substrate adopters, additionally creates the
-`workstream:<slug>` label via `gh label create` (idempotent — skips
-if it already exists).
+Keeps the substrate that carries the axis in step with the file: for
+label-substrate adopters it creates the `workstream:<slug>` label
+(idempotent — skips if it already exists), and where a board carries
+the axis it adds the option `<slug>` to the board's `Workstream`
+single-select field before it writes the file.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -25,9 +27,9 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  added (or dry-run reported)
-  1  membership refusal / validation refusal / duplicate slug
+  1  membership refusal / validation refusal / duplicate slug / no usable board field
   2  usage error (capability not found; bad slug)
-  3  gh failure (label creation)
+  3  gh failure (board read or write; label creation)
 """  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
@@ -41,7 +43,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard, workstream_sync
 from _lib.gh import gh_run, load_adopter_config
 
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS
@@ -60,8 +62,9 @@ from _lib.membership import (
     resolve_invoker_identity,
 )
 from _lib.workstreams import (
-    SLUG_PATTERN,
     parse_workstreams,
+    validate_attributes,
+    validate_slug,
     workstreams_path,
 )
 
@@ -159,10 +162,20 @@ def main() -> int:
         print(f"[refused] {refusal}", file=sys.stderr)
         return 1
 
-    # Slug validation.
+    # Slug and attribute validation (DEC-018's rules, all of them).
+    errors = []
     err = validate_slug(args.slug)
     if err:
-        print(f"[refused] {err}", file=sys.stderr)
+        errors.append(err)
+    errors += validate_attributes(
+        name=args.name,
+        description=args.description,
+        status=args.status,
+        deprecated_reason=args.deprecated_reason,
+    )
+    if errors:
+        for err in errors:
+            print(f"[refused] {err}", file=sys.stderr)
         return 1
 
     if args.status == "deprecated" and not args.deprecated_reason:
@@ -186,6 +199,7 @@ def main() -> int:
     substrate_map = axis_labels.load_substrate_map(capability_root)
     kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
+    on_board = axis_carriage.is_board_carried("workstream", config, substrate_map)
 
     current = _read_workstreams_file_or_legacy(capability_root, yaml_loader)
     parsed = parse_workstreams(current if current else None)
@@ -207,6 +221,21 @@ def main() -> int:
     if args.deprecated_reason:
         new_entry["deprecated_reason"] = args.deprecated_reason
 
+    # Where a board carries the axis, read its `Workstream` field before
+    # anything is written: a board that cannot take the option refuses here.
+    board = None
+    board_option = None
+    if on_board:
+        read = workstream_sync.read_board_field(config)
+        if read.error is not None:
+            print(f"[error] could not read the board: {read.error}", file=sys.stderr)
+            return 3
+        if read.field is None:
+            print(f"[refused] {read.problem}", file=sys.stderr)
+            return 1
+        board = read.field
+        board_option = workstream_sync.find_option(board, args.slug)
+
     print(f"add-workstream: {args.slug}")
     print(f"  name:        {new_entry['name']}")
     if "description" in new_entry:
@@ -222,6 +251,11 @@ def main() -> int:
         )
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
+    if board is not None:
+        if board_option is None:
+            print(f"  board:       add the option `{args.slug}` to the `Workstream` field")
+        else:
+            print(f"  board:       the `Workstream` field already offers `{args.slug}`")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -231,6 +265,22 @@ def main() -> int:
         if reply not in ("y", "yes"):
             print("aborted.", file=sys.stderr)
             return 0
+
+    # Board first: the option write is idempotent, so a re-run after a failed
+    # file write finds the option there and only writes the file.
+    if board is not None and board_option is None:
+        result = workstream_sync.write_options(
+            config,
+            board,
+            workstream_sync.options_adding(board, args.slug, args.description or ""),
+        )
+        if not result.ok:
+            print(
+                f"[error] the board's `Workstream` field was not changed, and nothing "
+                f"was written: {result.error}",
+                file=sys.stderr,
+            )
+            return 3
 
     # Write the file.
     if not _add_to_file(capability_root, args.slug, new_entry):
@@ -247,25 +297,6 @@ def main() -> int:
 
     print(f"\n[ok] added workstream {args.slug!r}.")
     return 0
-
-
-# ---- slug validation ------------------------------------------------
-
-
-def validate_slug(slug: str) -> str | None:
-    """Return an error message string if invalid, None if valid."""
-    if not isinstance(slug, str) or not slug:
-        return "slug must be a non-empty string"
-    if not SLUG_PATTERN.match(slug):
-        return (
-            f"slug {slug!r} does not match `^[a-z][a-z0-9-]*[a-z0-9]$`. "
-            "Kebab-case, lowercase, no leading or trailing hyphen, no underscores."
-        )
-    if "--" in slug:
-        return f"slug {slug!r} contains consecutive hyphens (forbidden)."
-    if not (2 <= len(slug) <= 40):
-        return f"slug {slug!r} length must be 2–40 chars; got {len(slug)}."
-    return None
 
 
 # ---- file I/O -------------------------------------------------------

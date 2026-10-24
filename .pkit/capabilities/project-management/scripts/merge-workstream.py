@@ -13,11 +13,24 @@ DEC-018's lifecycle table:
   * Survivor must exist as an active workstream.
   * Losers' issue counts are surfaced before proceeding.
   * Issues using each loser's `workstream:<loser>` label are re-tagged
-    to `workstream:<survivor>` (label-substrate adopters).
+    to `workstream:<survivor>` (label-substrate adopters), and the loser
+    label is deleted from the repo.
+  * Where a board carries the axis, each card whose `Workstream` value is
+    a loser is set to the survivor (the survivor's option is added when
+    the field lacks it), and the loser's option is dropped from the field.
   * Each loser is removed from workstreams.yaml.
-  * The loser label is deleted from the repo.
+  * References are rewritten by default: each typed `workstream:<loser>`
+    and `[workstream:<loser>]` becomes the survivor's, in the tracked
+    files and in issue, pull-request and comment bodies. A comment by
+    someone else is skipped, with a warning, without admin rights on the
+    repository. `--skip-references` leaves them.
 
-Per-change confirmation; --yes opts into batch.
+The substrate is changed before the file. A loser whose issues did not
+all move stays in the file, with its label or option, so a re-run
+finishes it.
+
+Per-change confirmation; per-file and per-object confirmation for the
+references; --yes opts into batch.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -29,15 +42,14 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  merged
-  1  membership refusal / validation refusal
+  1  membership refusal / validation refusal / no usable board field
   2  usage error
-  3  gh failure
+  3  gh failure (an issue count unreadable; a move, a delete or a rewrite failed)
 """  # noqa: E501 — a usage line is a command, kept whole
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -53,7 +65,14 @@ sys.path.insert(0, str(_HERE))
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    provenance,
+    session_guard,
+    workstream_sync,
+)
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -85,6 +104,14 @@ def main() -> int:
         "--skip-labels",
         action="store_true",
         help="Skip the gh label rename + delete operations.",
+    )
+    parser.add_argument(
+        "--skip-references",
+        action="store_true",
+        help=(
+            "Leave the typed references to the losers (`workstream:<loser>`) in "
+            "the files and on GitHub. They are rewritten by default."
+        ),
     )
     parser.add_argument("--capability-root", type=Path, default=None)
     parser.add_argument("--dry-run", action="store_true")
@@ -175,23 +202,70 @@ def main() -> int:
     # their own labels reach `gh label delete` on a name the kit never owned.
     substrate_map = axis_labels.load_substrate_map(capability_root)
     kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
-    kit_labels = kit_label_note is None
+    kit_labels = kit_label_note is None and not args.skip_labels
+    on_board = axis_carriage.is_board_carried("workstream", config, substrate_map)
+    survivor_label = axis_labels.label("workstream", args.survivor)
 
-    # Per-loser issue counts (best-effort).
-    print(f"merge-workstream: survivor={args.survivor}")
-    impact: dict[str, int] = {}
-    if kit_labels and not args.skip_labels:
+    # Read every loser's issues before anything changes: DEC-018 surfaces the
+    # per-loser count, and the moves below need the issues themselves.
+    labelled: dict[str, tuple[workstream_sync.Carrier, ...]] = {}
+    if kit_labels:
         for loser in args.losers:
-            n = _gh_count_label_uses(axis_labels.label("workstream", loser), config)
-            impact[loser] = n
+            read = workstream_sync.issues_with_label(
+                axis_labels.label("workstream", loser), config, gh_call=gh_run
+            )
+            if not read.ok:
+                print(
+                    f"[error] could not list the issues of {loser!r}, so nothing was "
+                    f"changed: {read.error}",
+                    file=sys.stderr,
+                )
+                return 3
+            labelled[loser] = read.carriers
+
+    board = None
+    carded: dict[str, tuple[workstream_sync.Carrier, ...]] = {}
+    if on_board:
+        field_read = workstream_sync.read_board_field(config)
+        if field_read.error is not None:
+            print(f"[error] could not read the board: {field_read.error}", file=sys.stderr)
+            return 3
+        if field_read.field is None:
+            print(f"[refused] {field_read.problem}", file=sys.stderr)
+            return 1
+        board = field_read.field
+        for loser in args.losers:
+            read = workstream_sync.board_carriers(board, loser, config)
+            if not read.ok:
+                print(
+                    f"[error] could not list the cards of {loser!r}, so nothing was "
+                    f"changed: {read.error}",
+                    file=sys.stderr,
+                )
+                return 3
+            carded[loser] = read.carriers
+
+    print(f"merge-workstream: survivor={args.survivor}")
+    for loser in args.losers:
+        if loser in labelled:
             print(
-                f"  loser {loser!r}: {n if n is not None else '?'} issue(s) tagged "
+                f"  loser {loser!r}: {len(labelled[loser])} issue(s) tagged "
                 f"{axis_labels.label('workstream', loser)}"
             )
-    else:
-        reason = kit_label_note or "--skip-labels"
-        for loser in args.losers:
+        else:
+            reason = "--skip-labels" if args.skip_labels else kit_label_note
             print(f"  loser {loser!r}: (gh label ops skipped — {reason})")
+        if loser in carded:
+            print(f"  loser {loser!r}: {len(carded[loser])} card(s) on the board")
+    if board is not None and workstream_sync.find_option(board, args.survivor) is None:
+        print(f"  board: add the option `{args.survivor}` to the `Workstream` field")
+    if args.skip_references:
+        print("  references: left as they are (--skip-references)")
+    else:
+        print(
+            f"  references: rewrite each typed reference to a loser as `{survivor_label}`, "
+            "in the tracked files and in issue, pull-request and comment bodies"
+        )
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -206,13 +280,67 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
-    # File mutation.
+    failures: list[str] = []
+    merged = set(args.losers)
+
+    # The board: give it the survivor's option, move each loser's cards to it,
+    # and drop the options whose cards all moved.
+    if board is not None:
+        board, error = _ensure_option(config, board, args.survivor)
+        if board is None:
+            print(
+                f"[error] the board's `Workstream` field was not changed, and nothing "
+                f"was written: {error}",
+                file=sys.stderr,
+            )
+            return 3
+        survivor_option = workstream_sync.find_option(board, args.survivor) or {}
+        for loser, cards in carded.items():
+            for card in cards:
+                if card.item_id is None:
+                    continue
+                result = workstream_sync.set_card_option(
+                    config, board, card.item_id, survivor_option.get("id", "")
+                )
+                if not result.ok:
+                    failures.append(f"card of #{card.number} ({loser}): {result.error}")
+                    merged.discard(loser)
+        emptied = [loser for loser in args.losers if loser in merged]
+        if any(workstream_sync.find_option(board, loser) for loser in emptied):
+            result = workstream_sync.write_options(
+                config, board, workstream_sync.options_without(board, emptied)
+            )
+            if not result.ok:
+                failures.append(f"the board's loser options: {result.error}")
+                merged.clear()
+
+    # The labels: move each loser's issues, then delete the loser's label.
+    for loser, issues in labelled.items():
+        loser_label = axis_labels.label("workstream", loser)
+        moved = True
+        for issue in issues:
+            if issue.number is None:
+                continue
+            error = workstream_sync.retag_issue(
+                issue.number, loser_label, survivor_label, config, gh_call=gh_run
+            )
+            if error is not None:
+                failures.append(f"#{issue.number} ({loser}): {error}")
+                moved = False
+        if not moved:
+            merged.discard(loser)
+            continue
+        error = _gh_label_delete(loser_label, config)
+        if error is not None:
+            failures.append(f"`{loser_label}`: {error}")
+
+    # The file: drop each loser whose issues all moved. A loser left here keeps
+    # its label or option, so a re-run finishes it.
     ws = data.get("workstreams")
     if isinstance(ws, list):
-        new_list = [item for item in ws if item not in args.losers]
-        data["workstreams"] = new_list
+        data["workstreams"] = [item for item in ws if item not in merged]
     elif isinstance(ws, dict):
-        for loser in args.losers:
+        for loser in merged:
             ws.pop(loser, None)
     try:
         with path.open("w", encoding="utf-8") as f:
@@ -221,121 +349,73 @@ def main() -> int:
         print(f"error: failed to write {path}: {exc}", file=sys.stderr)
         return 2
 
-    # Label mutations.
-    if kit_labels and not args.skip_labels:
-        for loser in args.losers:
-            ok = _gh_merge_label(loser, args.survivor, config)
-            if not ok:
-                print(
-                    f"[warn] gh label merge for {loser!r} failed.",
-                    file=sys.stderr,
-                )
+    # The references (DEC-018: default-on for a merge).
+    if not args.skip_references:
+        versions = provenance.read_versions(capability_root)
+        root = workstream_sync.repo_root(capability_root)
+        confirm = workstream_sync.confirm_each(args.yes)
+        for loser in sorted(merged):
+            outcome = workstream_sync.rewrite_everywhere(
+                axis_labels.label("workstream", loser),
+                target=lambda _number, _where: survivor_label,
+                confirm=confirm,
+                root=root,
+                config=config,
+                gh_call=gh_run,
+                stamp=lambda text: provenance.stamp(text, versions),
+                cwd=root,
+            )
+            for line in outcome.rewritten:
+                print(f"  rewrote {line}")
+            for line in outcome.skipped:
+                print(f"[warn] left {line}", file=sys.stderr)
+            failures += outcome.failed
+
+    if failures:
+        for line in failures:
+            print(f"[error] {line}", file=sys.stderr)
+        left = [loser for loser in args.losers if loser not in merged]
+        if left:
+            print(
+                f"[error] not merged, kept in workstreams.yaml: {', '.join(left)}. "
+                "Re-run the merge to finish them.",
+                file=sys.stderr,
+            )
+        return 3
 
     print(f"\n[ok] merged {len(args.losers)} loser(s) into {args.survivor!r}.")
     return 0
 
 
-def _gh_count_label_uses(label: str, config: dict) -> int | None:
-    """Count open + closed issues with the given label."""
+def _ensure_option(
+    config: dict, board: workstream_sync.BoardField, slug: str
+) -> tuple[workstream_sync.BoardField | None, str | None]:
+    """The board's field, with an option `slug` added first where it lacks one.
+
+    Reads the field again after adding, for the new option's id.
+    """
+    if workstream_sync.find_option(board, slug) is not None:
+        return board, None
+    result = workstream_sync.write_options(
+        config, board, workstream_sync.options_adding(board, slug)
+    )
+    if not result.ok:
+        return None, result.error
+    read = workstream_sync.read_board_field(config)
+    if read.field is None or workstream_sync.find_option(read.field, slug) is None:
+        return None, read.error or read.problem or f"the option `{slug}` did not appear"
+    return read.field, None
+
+
+def _gh_label_delete(label: str, config: dict) -> str | None:
+    """Delete `label`; the error, or None. A label already gone counts as deleted."""
     try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--label",
-                label,
-                "--state",
-                "all",
-                "--limit",
-                "1000",
-                "--json",
-                "number",
-            ],
-            config,
-            check=False,
-        )
+        proc = gh_run(["gh", "label", "delete", label, "--yes"], config, check=False)
     except FileNotFoundError:
+        return "`gh` not on PATH"
+    if proc.returncode == 0 or "not found" in (proc.stderr or ""):
         return None
-    if proc.returncode != 0:
-        return None
-    try:
-        return len(json.loads(proc.stdout))
-    except json.JSONDecodeError:
-        return None
-
-
-def _gh_merge_label(loser: str, survivor: str, config: dict) -> bool:
-    """Re-tag issues from loser → survivor, then delete the loser label."""
-    # 1. Fetch issues with the loser label.
-    try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--label",
-                axis_labels.label("workstream", loser),
-                "--state",
-                "all",
-                "--limit",
-                "1000",
-                "--json",
-                "number",
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        return False
-    if proc.returncode != 0:
-        return False
-    try:
-        numbers = [item["number"] for item in json.loads(proc.stdout)]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        return False
-
-    # 2. Re-tag each issue.
-    for n in numbers:
-        try:
-            edit = gh_run(
-                [
-                    "gh",
-                    "issue",
-                    "edit",
-                    str(n),
-                    "--add-label",
-                    axis_labels.label("workstream", survivor),
-                    "--remove-label",
-                    axis_labels.label("workstream", loser),
-                ],
-                config,
-                check=False,
-            )
-        except FileNotFoundError:
-            return False
-        if edit.returncode != 0:
-            print(
-                f"[warn] failed to retag #{n}: {edit.stderr.strip()}",
-                file=sys.stderr,
-            )
-
-    # 3. Delete the loser label.
-    try:
-        delete = gh_run(
-            ["gh", "label", "delete", axis_labels.label("workstream", loser), "--yes"],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        return False
-    if delete.returncode != 0 and "not found" not in delete.stderr:
-        print(
-            f"[warn] failed to delete `{axis_labels.label('workstream', loser)}`: "
-            f"{delete.stderr.strip()}",
-            file=sys.stderr,
-        )
-    return True
+    return (proc.stderr or "").strip() or "gh label delete failed"
 
 
 def _read_yaml(path: Path, yaml_loader: YAML) -> dict:

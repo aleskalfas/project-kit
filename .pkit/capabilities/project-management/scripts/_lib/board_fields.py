@@ -48,12 +48,15 @@ their own, keeping their existing invocation path and patch point unchanged.
 Exports:
 
     ProjectLookup / BoardFieldsRead / ItemLookup — the three read results
+    FieldOptionsRead / ItemsRead / BoardItem — the workstream mutators' reads
     board_number(config)            — the configured board NUMBER, or None
     default_owner(config)           — `gh.default_owner`, or None
     read_project_node_id(...)       — board number → project node id (rich)
     resolve_project_node_id(...)    — the same, as a bare `str | None`
     read_fields(...)                — the board's live fields + their options
     resolve_item_id(...)            — the issue's card (item) id on that board
+    read_field_options(...)         — a single-select's options, with colour + description
+    read_items_with_option(...)     — the cards whose value is one option
     find_field / field_names / field_type / is_single_select
     option_id / option_names        — name → id matching over a read field
 """
@@ -325,6 +328,171 @@ def resolve_item_id(
         if project_id == project_node_id and isinstance(item_id, str) and item_id:
             return ItemLookup(ok=True, item_id=item_id)
     return ItemLookup(ok=True, item_id=None)
+
+
+@dataclass(frozen=True)
+class FieldOptionsRead:
+    """Outcome of reading a single-select field's options in full.
+
+    Each option carries `id`, `name`, `color` and `description`: the four
+    values a write of the field's option list must pass back for every option
+    it keeps, so that the board keeps the value each card holds.
+    """
+
+    ok: bool
+    options: tuple[dict[str, str], ...] = ()
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class BoardItem:
+    """One card on the board: its item id and the issue or pull request it holds.
+
+    `number` is None for a draft card, which holds no issue.
+    """
+
+    item_id: str
+    number: int | None = None
+    title: str = ""
+
+
+@dataclass(frozen=True)
+class ItemsRead:
+    """Outcome of reading the cards whose single-select value is one option."""
+
+    ok: bool
+    items: tuple[BoardItem, ...] = ()
+    error: str | None = None
+
+
+# Bound on the pages a card scan reads, at 100 cards a page. A board larger than
+# this is reported as an error rather than read in part, since a caller counting
+# cards must not take a partial count for the whole.
+_MAX_ITEM_PAGES = 100
+
+
+def read_field_options(
+    config: dict[str, Any],
+    *,
+    field_id: str,
+    gh_call: GhCall | None = None,
+) -> FieldOptionsRead:
+    """The options of the single-select field `field_id`, each with its colour and description.
+
+    `gh project field-list` gives each option's id and name only. Rewriting a
+    field's option list needs the colour and the description of each option it
+    keeps too, so this reads them through one GraphQL query.
+    """
+    query = (
+        "query($field: ID!) { node(id: $field) { ... on ProjectV2SingleSelectField "
+        "{ options { id name color description } } } }"
+    )
+    args = ["gh", "api", "graphql", "-f", f"query={query}", "-F", f"field={field_id}"]
+    proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
+    if proc is None:
+        return FieldOptionsRead(ok=False, error=error)
+    payload = _parse_json(proc.stdout)
+    data = payload.get("data") if isinstance(payload, dict) else None
+    node = data.get("node") if isinstance(data, dict) else None
+    options = node.get("options") if isinstance(node, dict) else None
+    if not isinstance(options, list):
+        return FieldOptionsRead(
+            ok=False,
+            error=f"`gh api graphql` returned no options for field {field_id}.",
+        )
+    read: list[dict[str, str]] = []
+    for option in options:
+        if not isinstance(option, dict):
+            continue
+        oid, name = option.get("id"), option.get("name")
+        if not (isinstance(oid, str) and isinstance(name, str)):
+            continue
+        read.append(
+            {
+                "id": oid,
+                "name": name,
+                "color": str(option.get("color") or ""),
+                "description": str(option.get("description") or ""),
+            }
+        )
+    return FieldOptionsRead(ok=True, options=tuple(read))
+
+
+def read_items_with_option(
+    config: dict[str, Any],
+    *,
+    project_node_id: str,
+    field_name: str,
+    option_id: str,
+    gh_call: GhCall | None = None,
+) -> ItemsRead:
+    """Every card on the board whose `field_name` value is the option `option_id`.
+
+    Reads the board's cards a page at a time through GraphQL, and keeps those
+    whose single-select value is that option. Cards from every repository on
+    the board count, since the field and its options are the board's.
+    """
+    query = (
+        "query($project: ID!, $field: String!, $after: String) { node(id: $project) "
+        "{ ... on ProjectV2 { items(first: 100, after: $after) { pageInfo "
+        "{ hasNextPage endCursor } nodes { id content { ... on Issue { number title } "
+        "... on PullRequest { number title } ... on DraftIssue { title } } "
+        "fieldValueByName(name: $field) { ... on ProjectV2ItemFieldSingleSelectValue "
+        "{ optionId } } } } } } }"
+    )
+    found: list[BoardItem] = []
+    after: str | None = None
+    for _page in range(_MAX_ITEM_PAGES):
+        args = [
+            "gh",
+            "api",
+            "graphql",
+            "-f",
+            f"query={query}",
+            "-F",
+            f"project={project_node_id}",
+            "-f",
+            f"field={field_name}",
+        ]
+        if after:
+            args += ["-f", f"after={after}"]
+        proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
+        if proc is None:
+            return ItemsRead(ok=False, error=error)
+        payload = _parse_json(proc.stdout)
+        data = payload.get("data") if isinstance(payload, dict) else None
+        node = data.get("node") if isinstance(data, dict) else None
+        items = node.get("items") if isinstance(node, dict) else None
+        if not isinstance(items, dict):
+            return ItemsRead(ok=False, error="`gh api graphql` returned no board items.")
+        for item in items.get("nodes") or []:
+            if not isinstance(item, dict):
+                continue
+            value = item.get("fieldValueByName")
+            if not (isinstance(value, dict) and value.get("optionId") == option_id):
+                continue
+            item_id = item.get("id")
+            if not isinstance(item_id, str) or not item_id:
+                continue
+            content = item.get("content") if isinstance(item.get("content"), dict) else {}
+            number = content.get("number")
+            found.append(
+                BoardItem(
+                    item_id=item_id,
+                    number=number if isinstance(number, int) else None,
+                    title=str(content.get("title") or ""),
+                )
+            )
+        page_info = items.get("pageInfo") if isinstance(items.get("pageInfo"), dict) else {}
+        if not page_info.get("hasNextPage"):
+            return ItemsRead(ok=True, items=tuple(found))
+        after = page_info.get("endCursor") if isinstance(page_info.get("endCursor"), str) else None
+        if not after:
+            return ItemsRead(ok=False, error="`gh api graphql` gave a next page with no cursor.")
+    return ItemsRead(
+        ok=False,
+        error=f"the board holds more than {_MAX_ITEM_PAGES * 100} cards; not read in part.",
+    )
 
 
 # ----- name → id matching over a read field ------------------------------
