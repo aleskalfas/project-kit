@@ -107,15 +107,16 @@ connections:
         schema_version: 1
         schema: readers.schema.json
         description: >-
-          Who reads the documentation and what they need, one entry per reader:
-          its id, which a page names as its reader, and a description of what
-          that reader needs. A user and a maintainer are always included; a
-          project filler adds or overrides readers, and a capability that keeps
-          knowledge about the software's users may add its own. Where
-          RS-LDOC-003 binds on a page, validation fails the page when its
-          reader does not resolve, so a filler that cannot answer leaves the
-          point unresolved rather than check pages against whichever readers
-          survived.
+          Who reads the documentation, what they need and the paths they take,
+          one entry per reader: its id, which a page names as its reader, a
+          description of what that reader needs, and optionally the paths that
+          reader takes, each the pages they read in order. A user and a
+          maintainer are always included; a project filler adds or overrides
+          readers, and a capability that keeps knowledge about the software's
+          users may add its own. Where RS-LDOC-003 binds on a page, validation
+          fails the page when its reader does not resolve, so a filler that
+          cannot answer leaves the point unresolved rather than check pages
+          against whichever readers survived.
         combination: union
         default:
           participation: always
