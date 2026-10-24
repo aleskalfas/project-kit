@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  The permissions README is rewritten for the people who run, set up and
+  extend the permission model. It cites only core records, its renamed
+  headings keep their old link addresses, and it describes the
+  issue-tracker-write privilege as the catalog defines it, ten raw gh
+  mutations. Nothing the backbone ships or runs changes.
