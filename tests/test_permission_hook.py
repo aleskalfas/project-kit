@@ -1007,6 +1007,12 @@ def test_hook_asks_on_a_hidden_guardrail_where_the_payload_names_no_mode(tmp_pat
     assert "permission_mode" not in payload
     _, parsed = _invoke(root, payload)
     assert _decision(parsed) == "ask", parsed
+    # The model writes `tool_input`, never the payload's top level, so a mode
+    # inside it is not read.
+    for mode in _UNATTENDED_MODES:
+        inner = {**payload, "tool_input": {**payload["tool_input"], "permission_mode": mode}}
+        _, parsed = _invoke(root, inner)
+        assert _decision(parsed) == "ask", (mode, parsed)
 
 
 def test_hook_allows_and_denies_alike_in_every_mode(tmp_path):
