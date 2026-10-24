@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-23T18:42:08Z
+      at: 2026-10-23T22:29:30Z
       outcome: unchanged
-      unchanged-because: "Variant 1c still holds wherever vcs is granted: the leading cd is stripped, and the one segment left is the granted commit. The change narrows only a chain with a segment no grant covers."
+      unchanged-because: The code still strips the leading cd and allows cd <path> && git commit where vcs is granted, since that command holds no untrusted construct. A commit with a quoted message now defers, which narrows the hole variant 1c names without closing it.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

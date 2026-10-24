@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-23T18:42:02Z
+      at: 2026-10-23T22:29:28Z
       outcome: unchanged
-      unchanged-because: The workspace grant still covers the file tools alone, and a shell command is still decided on its own grants. The change narrows only how a grant allows a chained command.
+      unchanged-because: A shell write into the workspace is still judged like any other, and a redirect now defers wherever it stands in the command. The workspace grant still covers the file tools alone.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

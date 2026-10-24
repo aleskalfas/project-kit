@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-23T18:41:55Z
+      at: 2026-10-23T22:29:20Z
       outcome: unchanged
-      unchanged-because: The change adds no import, so the decision code still runs under the system python3 with its standard library alone. The tests still decide calls with ruamel.yaml made unimportable.
+      unchanged-because: The change adds no import, and its new checks are plain scans with the standard library's re. The tests that decide calls with ruamel.yaml made unimportable still pass.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library
