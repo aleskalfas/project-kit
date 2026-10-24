@@ -10,6 +10,7 @@ pkit:
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
         - scripts/check_deployed_agents.py
+        - scripts/console_fences.py
         - scripts/short_check.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
@@ -19,15 +20,14 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053", "living-docs:DEC-002"]
       artefact:
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-23T08:13:45Z
-      outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. The friction gate and its escape hatch work as the guide says.
+      at: 2026-10-24T18:58:06Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -57,7 +57,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`, "The deployed agents' check" below). Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`) and the pages' console fences (`uv run python scripts/console_fences.py`), each described below. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -163,6 +163,22 @@ Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one 
 - the deploy skips the agent, for the reason it prints.
 
 To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy and commit what it changes. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
+
+**The pages' console fences** (#1807). A page shows a command and its output in a `console` fence, each command after the prompt `$ ` ([living-docs:DEC-002](.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md) point 6). The aggregator's `console fences` line, `uv run python scripts/console_fences.py`, runs each such fence as a test. The line reads each artefact that the backbone's discovery gives living-docs' page type, `living-docs:page`, wherever the artefact lies.
+
+- **Which fences:** a fence whose info string opens with the word `console`. A fence in another language is never run. So a command that cannot run as a test goes in a `sh` fence, with no output.
+- **Where a command runs:** in `/bin/sh`, in the fence's own copy of a scratch project outside the repository, with a home and a temporary folder of its own. The run builds that project once, with `pkit init` from your checkout, and gives uv a cache of its own, which fills from the network. The command's environment holds your `PATH`, with the checkout's `pkit` first, and nothing else of yours. Git in the copy reads only the scratch home's configuration, which signs nothing and allows no SSH.
+- **The limits:** a command is stopped when it runs longer than `--timeout`, 60 seconds by default, or prints more than 1 MiB. The run then kills every process left in the command's process group, and the command fails its fence. Interrupting the run stops the command the same way.
+- **What is compared:** what a command prints, its standard output and error together, with the fence's output. The exit status is not compared. The run writes `<project>`, `<home>`, `<tmp>`, `<repository>` and `<version>` for the paths and the version that vary between runs. In the page, `<any>` stands for any text within one line.
+- **A write in the repository:** before and after each command, the run lists each file by its size, times, mode and inode, and each folder by its mode. A path added, removed or changed fails the test, and stops the run. The listing leaves out the git index, and each folder that holds a repository of its own, such as a linked worktree. A write by another process during the command is taken for the command's.
+- **What the run cannot detect:**
+  - a write outside the repository, such as in your home folder by an absolute path, or in the git directory a linked worktree shares
+  - a change to the git index alone, or a write the command undoes before it ends
+  - a write by a process that left the command's process group
+- **What the run confines:** nothing. A command runs as you, and can read whatever you can, such as your SSH keys. On Linux, that includes the environment of the processes that started the run. The run detects writes in the repository, and prevents none.
+- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output with a line that would read as a command or close the fence. Review the new output as any change to the page. Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`.
+
+The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 
