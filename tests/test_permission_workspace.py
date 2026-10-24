@@ -213,6 +213,9 @@ def test_a_redirect_behind_a_leading_cd_still_fails_closed(dm, catalog, root) ->
     for command in (
         f"cd {root} && git diff > {WS}/change.patch",
         f"cd {root} && cat > {WS}/body.md <<'EOF'\nIt's done.\nEOF",
+        # a redirection that writes no file beside it changes nothing (#2002)
+        f"cd {root} && git diff > {WS}/change.patch 2>&1",
+        f"cd {root} && git diff 2>/dev/null > {WS}/change.patch",
     ):
         verdict, reason = dm.hook_decide(
             model, catalog, _bash(command, root), project_root=str(root)
@@ -258,6 +261,11 @@ def main_dm(tmp_path_factory):
         "git status",
         "rm -rf build/",
         "python3 build.py > out.txt",
+        # a redirection that writes no file (#2002)
+        "git status 2>&1",
+        "cd src && gh pr list >/dev/null",
+        f"echo hello > {WS}/note.txt 2>&1",
+        f"cd src && git diff 2>/dev/null > ../{WS}/change.patch",
     ],
 )
 @pytest.mark.parametrize("posture", ["lenient", "strict"])
@@ -265,20 +273,13 @@ def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, postur
     model = _autonomous(dm, catalog, posture=posture)
     payload = _bash(command, root)
     ours = dm.hook_decide(model, catalog, payload, project_root=str(root))
-    mains = main_dm.hook_decide(model, catalog, payload, project_root=str(root))
-    # Deliberate, reviewed verdict change (#1942): a command whose words the
-    # core cannot read as the shell does is never allowed by a grant, with or
-    # without a leading `cd`, so a lenient posture abstains and a strict one
-    # denies, with a reason naming each kind of construct (ADR-025 point 2).
-    # Where main decides such a command otherwise, or gives another reason,
-    # ours is that verdict, and a deny of main's stays a deny: a deny still
-    # wins. Once this is on main, ours equals main's again, and this branch may
-    # be deleted.
-    if ours != mains and dm._doubts(command):
-        assert ours[0] == ("deny" if posture == "strict" else "abstain"), ours
-        assert mains[0] != "deny" or ours[0] == "deny", (ours, mains)
-        assert "untrusted construct" in ours[1], ours
-        return
+    # Deliberate, reviewed verdict change (#2002): a redirection that writes no
+    # file, such as `2>&1` or `>/dev/null`, is removed before the core reads
+    # the command (ADR-025 point 2), so ours is main's verdict on the command
+    # without it. A redirection into the workspace stays untrusted. Once this
+    # is on main, main reads each command as ours does.
+    stripped = dm._without_harmless_redirections(command)
+    mains = main_dm.hook_decide(model, catalog, _bash(stripped, root), project_root=str(root))
     assert ours == mains
 
 

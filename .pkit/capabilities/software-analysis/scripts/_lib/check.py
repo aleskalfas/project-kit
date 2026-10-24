@@ -124,9 +124,10 @@ What is checked, each against the record's words:
   with no domain model meets none of this.
 - **The links between terms and views** (DEC-004 point 7), whatever any rule's
   status, in an analysis that keeps a domain model: each view section's link to
-  its term, and each mention's link to a term's entry, against what `pkit
-  analysis link` writes (`_lib/links.py`) — a link missing, extra or stale, the
-  message naming the command.
+  its term, and each mention's link to a term's entry, in the glossary, the views
+  and each part of an actor, a use case, a journey and a requirement, against what
+  `pkit analysis link` writes (`_lib/links.py`) — a link missing, extra or stale,
+  the message naming the command.
 - **One name, one concept** (points 1 and 2), whatever any rule's status, as a
   shared id is refused: no two terms in force of an analysis share a name, a
   noun form counted, and none takes a name another replaces; no term takes a
@@ -1510,14 +1511,21 @@ def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) ->
     """Each section's link to its term, and the mentions' links, in every analysis that
     keeps a domain model (DEC-004 point 7), whatever any rule's status: a link missing,
     one extra and one whose target is stale, each against what `pkit analysis link`
-    writes (`_lib/links.py`). An analysis whose folder of views holds none is not read."""
+    writes (`_lib/links.py`), in the glossary, the views, and the actors, use cases,
+    journeys and requirements. An analysis whose folder of views holds none is not read.
+    Where the kinds' declared structure cannot be read, which the structure check
+    reports, the four kinds' parts are not read either."""
+    try:
+        kinds: Mapping[str, structure.Kind] | None = links.parted(root)
+    except structure.Unreadable:
+        kinds = None
     texts: dict[str, str | None] = {}
     read: dict[str, str | None] = {}
-    for rel in links.files(analysis, listing):
+    for rel in links.files(analysis, listing, kinds):
         text = _cached(root, rel, texts)
         read[rel] = text.replace("\r\n", "\n") if text is not None else None
     found: list[Finding] = []
-    for linked in links.plan(analysis, listing, read):
+    for linked in links.plan(analysis, listing, read, kinds):
         for d in linked.departures:
             found.append(Finding(ERROR, d.location, _link_message(d)))
     return found
@@ -2724,21 +2732,11 @@ def _shortfall_records(
 def _record_status(root: Path, record: str, known: dict[str, str]) -> str:
     """The status a record's front matter gives, as written, read once per record: empty
     where it gives none, and `_NO_RECORD` where the id names no record. Where the record
-    lies is the backbone's answer (`backbone.record_file`). Raises Unreadable where `pkit`
-    cannot be run."""
+    lies is the backbone's answer (`backbone.record_status`). Raises Unreadable where
+    `pkit` cannot be run."""
     if record not in known:
-        rel = backbone.record_file(root, record)
-        text = _read(root / rel) if rel is not None else None
-        if text is None:
-            known[record] = _NO_RECORD
-        else:
-            yaml_text = markdown.split(text)[0]
-            try:
-                front = markdown.load(yaml_text) if yaml_text is not None else None
-            except YAMLError:
-                front = None
-            status = front.get("status") if isinstance(front, Mapping) else None
-            known[record] = status if isinstance(status, str) else ""
+        status = backbone.record_status(root, record)
+        known[record] = _NO_RECORD if status is None else status
     return known[record]
 
 

@@ -24,10 +24,14 @@ pkit:
         - software-analysis:DEC-001#5
         - software-analysis:DEC-001#9
         - COR-050#3
+    revalidated:
+      at: 2026-10-24T10:39:54Z
+      outcome: unchanged
+      unchanged-because: The authoring skill gains a step that runs `pkit analysis link` after stamping. The links are no proposal, and an agent still proposes what a person decides.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
 
-**Verified by:** Tests of the agent definition find that it grants Read, Glob, Grep, Bash and Write alone, and owns no path. They find that it gives each writer as a command for the person, with no consent flag. Nothing confines its Write or its Bash at run time. No test holds what the skill asks of an agent, and no test runs an agent.
+**Verified by:** Tests of the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) find that it grants Read, Glob, Grep, Bash and Write alone, and owns no path. They find that it gives each writer as a command for the person, with no consent flag. Nothing confines its Write or its Bash at run time. No test holds what the [skill](../../../core/glossary.md#term-skill--skill) asks of an agent, and no test runs an agent.
 
-**Rationale:** Whether a change was meant is a question of intent, and where intent is unclear only a person knows (DEC-001 point 5). On a brownfield project, a person confirms the candidates (DEC-001 point 9). Only the project frees an id, and no tool infers one (DEC-001 point 3). A kind's parts are the project's own choice as it adopts the capability (DEC-001 point 1).
+**Rationale:** Whether a [change](../../../core/glossary.md#term-change--change) was meant is a question of intent, and where intent is unclear only a person knows (DEC-001 point 5). On a brownfield [project](../../../core/glossary.md#term-project--project), a person confirms the [candidates](../../glossary.md#term-candidate--candidate) (DEC-001 point 9). Only the project frees an id, and no tool infers one (DEC-001 point 3). A kind's parts are the project's own choice as it adopts the [capability](../../../core/glossary.md#term-capability--capability) (DEC-001 point 1).

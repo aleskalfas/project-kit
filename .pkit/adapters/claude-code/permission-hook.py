@@ -6,6 +6,9 @@ top-level `hooks` key in `.claude/settings.json`. On every matched tool call
 Claude Code pipes a PreToolUse payload to this script's stdin; the script
 decides via the shared, harness-neutral decision core
 (`.pkit/permissions/decide.py`) and prints a `permissionDecision`, or abstains.
+Where the core abstains on a call that may hide a form of a guardrail, the
+hook asks the person instead, except in auto or bypass mode, where the person
+chose not to be asked. On an Edit/Write to a foreign path it asks in every mode.
 
 Runtime: bare system `python3` — NO uv, no PEP-723 metadata, no third-party
 deps at startup. Running under bare python3 is required so the hook can start
@@ -53,6 +56,23 @@ def _target_root() -> Path:
     if env:
         return Path(env)
     return Path(__file__).resolve().parents[3]
+
+
+# The session's permission modes in which the person chose not to be asked, as
+# Claude Code's hook input names them in `permission_mode` (the hooks
+# reference, "Common input fields"): auto mode and bypass mode. A hook's `ask`
+# forces a prompt even there, so the hidden-guardrail ask defers in them.
+_UNASKED_MODES = frozenset({"auto", "bypassPermissions"})
+
+
+def _person_chose_not_to_be_asked(payload: object) -> bool:
+    """Does the payload name auto mode or bypass mode? A missing field, a value
+    of another type or a value not named above reads as False, so the hook
+    keeps its ask: an unknown mode is never taken for an unattended one."""
+    if not isinstance(payload, dict):
+        return False
+    mode = payload.get("permission_mode")
+    return isinstance(mode, str) and mode in _UNASKED_MODES
 
 
 def _foreign_edit_write_prompt(payload: dict) -> str | None:
@@ -139,13 +159,51 @@ def main() -> int:
     except Exception as exc:  # inert: capture must never affect enforcement
         _debug(f"diagnostic capture fault (inert): {exc!r}")
 
+    # A guardrail the core cannot tell (ADR-025 point 2, #1982): where the core
+    # abstained on a Bash call that may hide a form of a guardrail, such as
+    # `git push origin --forc[e]`, Claude Code's own rules, such as the
+    # baseline's `Bash(git:*)`, would run it unasked. The core's abstain is a
+    # prompt, so the hook asks the person. A strict posture has denied such a
+    # call already. The reason names the guardrails and the kinds of form,
+    # never the command's text. A fault keeps the abstain. The `pkit
+    # permissions probe` drives `hook_decide` alone, so it reports the abstain.
+    # In auto or bypass mode the person chose not to be asked, and a hook's
+    # ask would prompt them all the same, so the hook defers there and the
+    # harness's own mode decides (#2004). It reads the mode from the payload
+    # alone, and a missing or unknown mode keeps the ask. The core's verdict
+    # is the same in every mode (ADR-002's same-code invariant).
+    if decision == "abstain":
+        try:
+            hidden = {}
+            if isinstance(payload, dict) and payload.get("tool_name") == "Bash":
+                hidden = decide.hook_hidden_guardrails(
+                    model, catalog, payload, project_root=str(root)
+                )
+            if hidden and _person_chose_not_to_be_asked(payload):
+                _debug(
+                    f"hidden guardrail {sorted(hidden)} in "
+                    f"{payload['permission_mode']} mode → defer, not ask"
+                )
+            elif hidden:
+                kinds = " / ".join(sorted({kind for found in hidden.values() for kind in found}))
+                decision, reason = (
+                    "ask",
+                    f"the guardrail {sorted(hidden)} may bind on what the shell runs ({kinds}), "
+                    f"which the permission code cannot see: confirm the command "
+                    f"(ADR-025 point 2: the core defers, and the harness's own rules may allow it)",
+                )
+        except Exception as exc:  # the ask must never break fail-open
+            _debug(f"hidden-guardrail check fault → ignore: {exc!r}")
+
     # Additive foreign-repo corner (ADR-034 point 2): when the decision core
     # abstained (deferred), an Edit/Write to an absolute foreign path is
     # upgraded to a PROMPT (`ask`) — the one honestly-inspectable cross-repo
     # corner at the intent layer. This never overrides an allow/deny from the
     # core (decide.py is authoritative for what it decides) and never denies —
     # it only asks. The self-guard in the mutating program (point 1) is the
-    # lever; this is a small catch on the Edit/Write surface only.
+    # lever; this is a small catch on the Edit/Write surface only. It asks in
+    # every permission mode, auto and bypass mode included: it is the one
+    # prompt at the project's boundary (#2004).
     if decision == "abstain":
         try:
             foreign_reason = _foreign_edit_write_prompt(payload)

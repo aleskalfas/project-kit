@@ -47,9 +47,9 @@ TERM-agent-definition:
           - COR-013#2
           - COR-013#5
       revalidated:
-        at: 2026-10-23T08:53:45Z
+        at: 2026-10-24T04:34:09Z
         outcome: unchanged
-        unchanged-because: It anchors the core's agents code and its contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.
+        unchanged-because: The agent stamp now refuses a core or capability folder the project receives as synced copies. An agent definition is still a deployed document with one remit, so the definition holds.
 TERM-agent-workspace:
   name: agent workspace
   noun-forms: [agent workspaces]
@@ -82,9 +82,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-23T08:13:49Z
+        at: 2026-10-24T04:57:41Z
         outcome: unchanged
-        unchanged-because: Discovery gains the declaration of derived links and the reading that sets them aside. What an anchor is stays as the definition says.
+        unchanged-because: Discovery now matches each declared form of derived link on its own, so forms that clash when joined stop no check. What an anchor is stays as defined.
 TERM-answer:
   name: answer
   status: active
@@ -138,9 +138,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-23T08:13:50Z
+        at: 2026-10-24T04:57:48Z
         outcome: unchanged
-        unchanged-because: Discovery gives each artefact the derived links its places declare, read as their words alone. What an artefact is stays as defined.
+        unchanged-because: Discovery now matches each form of derived link a place declares on its own. What an artefact is stays as defined.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -157,9 +157,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-23T08:13:52Z
+        at: 2026-10-24T04:57:50Z
         outcome: unchanged
-        unchanged-because: Discovery gains the derived links a place declares, and resolves types as before. The definition holds.
+        unchanged-because: Discovery now matches each form of derived link on its own, and resolves types as before. The definition holds.
 TERM-backbone:
   name: backbone
   status: active
@@ -383,9 +383,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-23T08:13:54Z
+        at: 2026-10-24T04:58:03Z
         outcome: unchanged
-        unchanged-because: The whole-repository check reads derived links as their words alone, so a moved link dates no debt. What debt is stays as defined.
+        unchanged-because: The whole-repository check now reads a renamed placed file under the derived links its name at HEAD sets aside, at both versions. What debt is stays as defined.
         deferred:
           - anchor:
               kind: path
@@ -414,9 +414,9 @@ TERM-decision-record:
           - COR-025
           - COR-058#1
       revalidated:
-        at: 2026-10-20T01:37:26Z
+        at: 2026-10-24T04:34:14Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. A record is still numbered in its namespace and binds once accepted, so the definition holds.
 TERM-default-branch:
   name: default branch
   status: active
@@ -504,9 +504,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-23T08:13:56Z
+        at: 2026-10-24T04:58:05Z
         outcome: unchanged
-        unchanged-because: COR-050 point 5 reads derived links as their words alone when a body is compared. Friction is still an anchor that changed with no answer, as defined.
+        unchanged-because: A renamed placed file is now read under the derived links HEAD sets aside in it, at both versions. Friction is still an anchor that changed with no answer, as defined.
         deferred:
           - anchor:
               kind: path
@@ -547,9 +547,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-24T00:58:01Z
+        at: 2026-10-24T11:48:10Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The code reads a command's words as the shell does before a grant matches them, which leaves what a grant is as it was.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The core now removes a redirection that writes no file before it matches a grant, so a grant matches the words of the command it always matched.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T00:58:03Z
+        at: 2026-10-24T12:56:59Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. Its quoted and escaped forms are denied too, and the code still checks the denies before an untrusted construct.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The new privileges for read-only filters and uv run are allow grants, and a guardrail still binds on a program behind a redirection that writes no file.
 TERM-harness:
   name: harness
   status: active
@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T00:57:54Z
+        at: 2026-10-24T11:48:05Z
         outcome: unchanged
-        unchanged-because: The decision code reads each word as the shell does, and defers a command whose words, expansions or program it cannot be sure of. The hook still has that code allow, deny or defer each call.
+        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
 TERM-place:
   name: place
   status: active
@@ -756,9 +756,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-23T08:14:00Z
+        at: 2026-10-24T04:57:52Z
         outcome: unchanged
-        unchanged-because: A component's place may declare derived links too. A place still holds what its declaration matches, as defined.
+        unchanged-because: Each form of derived link a place declares is now matched on its own. What a place is stays as defined.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T00:58:05Z
+        at: 2026-10-24T12:57:01Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. Each word is matched with its quotes removed, as the shell passes it on, which leaves what a privilege is as it was.
+        unchanged-because: A privilege is still recognised from a tool call or a command. The catalog gains text-filter and uv-run, each recognised by its program, and the core removes a redirection that writes no file before it recognises one.
 TERM-process:
   name: process
   noun-forms: [processes]
@@ -824,6 +824,10 @@ TERM-profile:
           - ADR-005#1
           - ADR-005#2
           - ADR-032
+      revalidated:
+        at: 2026-10-24T12:39:08Z
+        outcome: unchanged
+        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active
@@ -957,9 +961,9 @@ TERM-release-step:
           - PRJ-002#D4
           - PRJ-004
       revalidated:
-        at: 2026-10-20T01:37:56Z
+        at: 2026-10-24T03:44:23Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-report:
   name: report
   status: active
@@ -1158,9 +1162,9 @@ TERM-stamp:
         record:
           - COR-005
       revalidated:
-        at: 2026-10-21T15:45:09Z
+        at: 2026-10-24T04:34:17Z
         outcome: unchanged
-        unchanged-because: COR-005 says the adapter stamp writes package.yaml, README.md and migrations/, and that templates live in the CLI's code. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
+        unchanged-because: The migration stamp now refuses a backbone or capability folder the project receives as synced copies. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
 TERM-storyboard:
   name: storyboard
   noun-forms: [storyboards]
@@ -1174,6 +1178,10 @@ TERM-storyboard:
           - src/project_kit/storyboards.py
         record:
           - COR-016
+      revalidated:
+        at: 2026-10-24T04:34:19Z
+        outcome: unchanged
+        unchanged-because: The storyboard stamp now refuses an agent whose files the project receives as synced copies. A storyboard still scripts a dialogue for the file that carries it out, so the definition holds.
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
@@ -1189,9 +1197,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-21T14:25:54Z
+        at: 2026-10-24T03:44:24Z
         outcome: unchanged
-        unchanged-because: This change touches COR-050's preamble and points 6 and 9, and none says what a surface change is. The definition holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-sync:
   name: sync
   status: active
@@ -1328,9 +1336,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-23T08:14:01Z
+        at: 2026-10-24T04:58:06Z
         outcome: unchanged
-        unchanged-because: The whole-repository check reads derived links under the latest commit's declaration. It still compares each artefact with its revalidation point, as defined.
+        unchanged-because: The check now reads a renamed placed file under the derived links HEAD sets aside in it, at both versions. What the check is stays as defined.
 ---
 
 # Glossary

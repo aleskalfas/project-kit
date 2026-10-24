@@ -130,14 +130,6 @@ def test_axis_values_empty_for_unknown_axis(sf, classification) -> None:
     assert sf._axis_values(classification, "nope") == set()
 
 
-def test_adopter_workstreams_list_form(sf) -> None:
-    assert sf._adopter_workstreams({"workstreams": ["cli", "docs"]}) == {"cli", "docs"}
-
-
-def test_adopter_workstreams_mapping_form(sf) -> None:
-    assert sf._adopter_workstreams({"workstreams": {"cli": {}, "docs": {}}}) == {"cli", "docs"}
-
-
 # --- label planning (greenfield: substrate_map None) -----------------------
 
 
@@ -1170,6 +1162,74 @@ def test_main_board_axis_writes_the_board_single_select(sf, tmp_path, monkeypatc
     assert "[ok] priority: set board field `Priority` = 'High'" in out
     assert "updated" in out
     assert "[refused]" not in out
+
+
+# --- #1933: the workstreams file is the allowed set --------------------------
+# DEC-018 makes `project/workstreams.yaml` authoritative: set-field takes a
+# workstream the file holds as active, whatever the legacy config key holds.
+
+_WORKSTREAMS_FILE = (
+    "schema_version: 1\n"
+    "workstreams:\n"
+    "  cli:\n"
+    "    name: cli\n"
+    "    status: active\n"
+    "  docs:\n"
+    "    name: docs\n"
+    "    status: active\n"
+    "  old:\n"
+    "    name: old\n"
+    "    status: deprecated\n"
+)
+
+
+def _stage_with_workstreams_file(tmp_path: Path) -> Path:
+    """A label tree whose workstreams live in the file, its legacy key holding only `cli`."""
+    root = _stage_capability_root(tmp_path, has_board=False)
+    (root / "project" / "workstreams.yaml").write_text(_WORKSTREAMS_FILE, encoding="utf-8")
+    return root
+
+
+@pytest.mark.parametrize(
+    ("workstream", "says"),
+    [
+        ("no-such-workstream", "'no-such-workstream' is not in project/workstreams.yaml"),
+        ("old", "'old' is deprecated in project/workstreams.yaml"),
+    ],
+)
+def test_main_refuses_a_workstream_the_file_does_not_hold_as_active(
+    sf, tmp_path, monkeypatch, capsys, workstream, says
+) -> None:
+    root = _stage_with_workstreams_file(tmp_path)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--workstream", workstream],
+        issue=_TASK_ISSUE,
+    )
+    out = capsys.readouterr().out
+    assert captured["rc"] == 1
+    assert captured["labels"] == []
+    assert says in out
+    assert "Its active workstreams: cli, docs." in out
+
+
+def test_main_takes_a_workstream_the_file_holds_beyond_the_legacy_key(
+    sf, tmp_path, monkeypatch, capsys
+) -> None:
+    """`docs` is in the file alone, as after `add-workstream`: the legacy `[cli]` no
+    longer refuses it."""
+    root = _stage_with_workstreams_file(tmp_path)
+    captured = _run_main(
+        sf,
+        monkeypatch,
+        root=root,
+        argv=["42", "--workstream", "docs"],
+        issue=_TASK_ISSUE,
+    )
+    assert captured["rc"] == 0
+    assert captured["labels"] == [(["workstream:docs"], [])]
 
 
 def test_main_missing_card_refuses_nonzero_and_writes_nothing(

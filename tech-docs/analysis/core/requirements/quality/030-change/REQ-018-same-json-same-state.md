@@ -18,14 +18,18 @@ pkit:
         - tests/test_friction_artefacts.py
       artefact:
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-24T04:58:15Z
+      outcome: unchanged
+      unchanged-because: The tests of the whole-repository check gain one for derived links across a rename. The tests that run each reading command twice are as they were.
 ---
 
 # REQ-018 · Quality · A reading command of the friction group prints the same document for the same state
 
-**Verified by:** Tests run the change check, the whole-repository check, the debt listing, the explanation of an artefact and the listing of artefacts twice over one state. Each finds the two documents equal. No test runs `friction since` twice.
+**Verified by:** Tests run the [change check](../../../glossary.md#term-change-check--change-check), the [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check), the [debt](../../../glossary.md#term-debt--debt) listing, the explanation of an [artefact](../../../glossary.md#term-artefact--artefact) and the listing of artefacts twice over one state. Each finds the two documents equal. No test runs `friction since` twice.
 
-**Rationale:** No record decides it. The requirement is its own home, and merging the change that adds it approves it (software-analysis DEC-002 point 8).
+**Rationale:** No record decides it. The requirement is its own home, and merging the [change](../../../glossary.md#term-change--change) that adds it approves it (software-analysis DEC-002 [point](../../../glossary.md#term-point--point) 8).
 
-The CLI reference gives each of these documents as stable, its keys sorted, and says that components read them, never the human view. A reader that compares two runs then sees only what changed in the repository.
+The CLI reference gives each of these documents as stable, its keys sorted, and says that [components](../../../glossary.md#term-component--component) read them, never the human view. A reader that compares two runs then sees only what changed in the repository.
 
-REQ-007 asks the same of a command a component registers. These commands are the backbone's own, so it does not reach them.
+REQ-007 asks the same of a command a component registers. These commands are the [backbone](../../../glossary.md#term-backbone--backbone)'s own, so it does not reach them.

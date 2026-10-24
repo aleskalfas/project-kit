@@ -3565,14 +3565,16 @@ def _head_moved(pr: ReleasePrState, end: _End, rerun: str) -> ReleaseNotMerged:
 
 def release_pr_refusal(pr: ReleasePrState) -> ReleaseMergeDecision | None:
     """The refusal of a PR that is not a release PR — a `release/*` head under
-    a `chore(release):` title — else None. A non-release PR is pointed at the
-    issue-PR gate."""
+    a `chore(release):` title — else None. A PR on another head branch is
+    pointed at the backbone's own landing, `pkit pull-request land`, never at
+    a capability's command, which a project may not have installed (COR-014)."""
     if not pr.head_ref.startswith(RELEASE_BRANCH_PREFIX):
         return ReleaseMergeDecision(
             "refuse",
             f"PR #{pr.number} head branch {pr.head_ref!r} is not a release branch "
             f"({RELEASE_BRANCH_PREFIX}*). `pkit release merge` only merges release PRs; "
-            f"use `pkit project-management merge-pr {pr.number}` for an issue PR.",
+            f"land any other PR with `pkit pull-request land {pr.number} --head <sha> "
+            "--subject <title>`.",
         )
     if not pr.title.startswith(RELEASE_TITLE_PREFIX):
         return ReleaseMergeDecision(

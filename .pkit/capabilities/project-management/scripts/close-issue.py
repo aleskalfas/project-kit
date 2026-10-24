@@ -14,17 +14,27 @@ Closes a GitHub issue via either path declared in workflow.yaml's
     explicit) — posts a closing comment with the reason, verifies the
     checkbox close-gate per DEC-007, then closes via `gh issue close`.
   * `--mode=pr-merge` — issue closure was triggered by GitHub's
-    `Closes #N` keyword. The script runs the cascade pass on parents
-    after the fact; it does not itself close the issue.
+    `Closes #N` keyword. The script reconciles the labels of the issue GitHub
+    closed and runs the cascade pass on parents after the fact; it does not
+    itself close the issue, and refuses an open one (#1968).
     With `--pr <M>` it DOES close an open leaf (a Task) whose work landed in
-    merged PR M without the PR naming it: PR M is verified merged, the
-    DEC-007 checkbox close-gate runs, the reference is posted as a comment,
-    and the issue closes as completed before the cascade pass (#1049).
+    merged PR M where GitHub did not close it (#1049): PR M is verified
+    merged and related to the issue — its body closes the issue, or it was
+    merged from the issue's branch, `<type>/<N>-<slug>` (DEC-013) — and the
+    relation found is named (#1968). The DEC-007 checkbox close-gate runs, the
+    reference is posted as a comment, and the issue closes as completed before
+    the cascade pass. A merged PR that does not relate to the issue is refused.
   * `--mode=cascade-eligibility-close` — closes a container (epic/feature/
     umbrella) once every child is closed AND its own checkboxes are ticked
     (the DEC-007 gate is non-skippable here). Implements the
     `cascade-eligibility-close` trigger this script previously only reported.
     Closes via `gh issue close --reason completed`.
+
+A won't-do close, a container's close and a leaf's close through ``--pr`` are
+moves the person authorises, a hard reject when that is missing (DEC-006), as
+``move-issue`` holds such a move: ``--yes`` authorises the close, a terminal
+asks, and with neither the close is refused before anything is written (#1936,
+#1968). A dry run writes nothing and asks for no authorisation.
 
 All three paths reconcile the issue's ``state:*`` labels after closing: any
 non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
@@ -36,8 +46,13 @@ After closing, every path runs the closure cascade (DEC-006), which reports and
 never closes: each parent issue in this repository the close gate counts the
 issue under — its native parent and the parent its first line names, as the
 containment seam resolves them (``containment.resolve_parent``) — is checked for
-close eligibility, and so is each Milestone the issue sits in (its native
-Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
+close eligibility. A parent is reported eligible only once it has no open child
+left, by the process engine's fold over its children (``pkit process cascade``,
+the reading ``--mode=cascade-eligibility-close`` takes), and its own checkboxes
+are ticked, with the command that closes it; a parent with an open child is
+reported with that child named (#1937). Each Milestone the issue sits in (its
+native Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref)
+is checked too. A
 content-based (or ``either``) Milestone whose every child issue is closed is
 reported as eligible, with the ``close-milestone`` command that closes it
 (#414); a date-based one closes on its date, so its children closing makes
@@ -83,7 +98,8 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  closed (or cascade reported)
   1  membership refusal / authorisation refusal / checkbox close-gate refusal /
-     `--pr` names a PR that is not merged
+     `--pr` names a PR that is not merged or does not relate to the issue /
+     pr-merge mode without `--pr` on an open issue
   2  usage error (issue or PR not found; mode contradicts state; `--pr` outside
      pr-merge mode or on a non-leaf)
   3  gh failure
@@ -109,6 +125,7 @@ from _lib import (
     bootstrap_gate,
     containment,
     engine_said,
+    issue_branch,
     session_guard,
 )
 from _lib import lifecycle_inference as infer
@@ -142,6 +159,7 @@ from _lib.move_journal import (
     pr_merge_close_reason,
     report_unrecorded,
 )
+from _lib.pr_validation import extract_closing_issues
 from _lib.structural_type import infer_structural_type
 
 VALID_MODES = ("wont-do", "pr-merge", "cascade-eligibility-close")
@@ -175,8 +193,8 @@ def main() -> int:
         help=(
             f"Closure mode. Default: {DEFAULT_MODE}. "
             "`wont-do` posts a closing comment + closes; "
-            "`pr-merge` is the cascade-only hook after GitHub-native close "
-            "(with --pr, it closes an open leaf itself); "
+            "`pr-merge` is the cascade-only hook after GitHub-native close, "
+            "refusing an open issue (with --pr, it closes an open leaf itself); "
             "`cascade-eligibility-close` closes a container (epic/feature/"
             "umbrella) once all children are closed and its own checkboxes "
             "are ticked (non-skippable gate)."
@@ -188,12 +206,15 @@ def main() -> int:
         default=None,
         metavar="M",
         help=(
-            "pr-merge mode only: the merged PR that completed this issue "
-            "without naming it in a `Closes #N` line. An OPEN leaf (a Task) is "
-            "closed as completed — PR M is verified merged, the DEC-007 "
+            "pr-merge mode only: the merged PR that completed this issue where "
+            "GitHub did not close it. An OPEN leaf (a Task) is closed as "
+            "completed only where PR M is merged and relates to it — its body "
+            "closes the issue, or it was merged from the issue's branch "
+            "(`<type>/<N>-<slug>`); the relation found is named, the DEC-007 "
             "checkbox close-gate runs, the reference is posted as a comment, "
             "then the closure cascade runs. Without --pr, pr-merge mode only "
-            "reconciles labels after GitHub's own close."
+            "reconciles labels after GitHub's own close, and refuses an open "
+            "issue."
         ),
     )
     parser.add_argument(
@@ -231,7 +252,12 @@ def main() -> int:
     parser.add_argument(
         "--yes",
         action="store_true",
-        help="Skip the confirmation prompt.",
+        help=(
+            "Skip the confirmation prompt. A won't-do close, a container's "
+            "close and a leaf's close through --pr are the person's to "
+            "authorise (DEC-006): with no terminal to ask at, they are refused "
+            "without --yes."
+        ),
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
@@ -343,11 +369,13 @@ def main() -> int:
         if args.dry_run:
             print("\n[dry-run] gh would be invoked; nothing written.")
             return 0
-        if not args.yes and sys.stdin.isatty():
-            reply = input("Proceed? [y/N] ").strip().lower()
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        held = _authorise(
+            args.yes,
+            close=f"closing #{args.issue_number} as won't do",
+            prompt="Proceed? [y/N] ",
+        )
+        if held is not None:
+            return held
 
         comment_body = (
             f"[wont-do close] {args.reason}\n\n"
@@ -394,23 +422,26 @@ def main() -> int:
         # via GitHub's Closes #N. The script's job is the cascade pass
         # plus label reconciliation (GitHub's auto-close does not touch
         # state:* labels).
+        if state != "closed":
+            # No merged PR is named, so nothing says this issue's work landed:
+            # a move to Done is the merge's that completed it, or a person's
+            # won't-do (DEC-006). Refused before anything is written (#1968).
+            print(
+                f"\n[refused] #{args.issue_number} is open, and pr-merge mode without "
+                "--pr moves no open issue to Done: it reconciles the labels of an "
+                "issue GitHub closed as a PR merged.\n"
+                "          → If a merged PR completed it, re-run with --pr <M>, naming "
+                "that PR.\n"
+                "          → Otherwise close it as won't do, which asks the person: "
+                f'close-issue {args.issue_number} --reason "<R>".',
+                file=sys.stderr,
+            )
+            return 1
         if args.pr is not None:
             print(
                 f"\n[noop] #{args.issue_number} is already closed; --pr is not "
                 "needed — reconciling labels only."
             )
-        elif state != "closed":
-            print(
-                "\n[warn] pr-merge mode but issue is still open. "
-                "GitHub's Closes #N should have closed it on PR merge. "
-                "Re-check the merged PR's body for `Closes #N`; if the PR did "
-                "not name this issue, re-run with --pr <M> to close it through "
-                "that PR.",
-                file=sys.stderr,
-            )
-        # Reconcile state:* labels regardless of open/closed state warning
-        # above — the caller explicitly indicated a PR-merge close, so the
-        # terminal label must be correct.
         if not args.dry_run:
             if not reconcile_state_labels_to_done(
                 args.issue_number,
@@ -506,11 +537,13 @@ def main() -> int:
                 "gh would close with --reason completed."
             )
             return 0
-        if not args.yes and sys.stdin.isatty():
-            reply = input("Close cascade-eligible container? [y/N] ").strip().lower()
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        held = _authorise(
+            args.yes,
+            close=f"closing container #{args.issue_number}",
+            prompt="Close cascade-eligible container? [y/N] ",
+        )
+        if held is not None:
+            return held
 
         comment_body = (
             "[cascade-eligibility close] all children closed and the container's "
@@ -570,6 +603,37 @@ def main() -> int:
     return 0
 
 
+# ---- the person's authorisation (#1936) ------------------------------
+
+
+def _authorise(yes: bool, *, close: str, prompt: str) -> int | None:
+    """Ask for the person's authorisation of a close DEC-006 holds for them.
+
+    A won't-do close (Backlog/Todo → Done), a container's close (In Progress
+    → Done) and a leaf's close through the merged PR ``--pr`` names (#1968)
+    are user-authorised, a hard reject when the authorisation is missing — as
+    ``move-issue`` holds such a move. ``--yes`` gives it; at a terminal the
+    person is asked. With neither, the close is refused before anything is
+    written. Returns None once authorised, else the exit code to stop with: 1
+    for the refusal, 0 where the person declined at the prompt.
+    """
+    if yes:
+        return None
+    if not sys.stdin.isatty():
+        print(
+            f"[refused] {close} is user-authorised (hard-reject on violation).\n"
+            "          → Pass --yes to confirm the authorisation, "
+            "or re-run from an interactive shell.",
+            file=sys.stderr,
+        )
+        return 1
+    reply = input(prompt).strip().lower()
+    if reply not in ("y", "yes"):
+        print("aborted.", file=sys.stderr)
+        return 0
+    return None
+
+
 # ---- pr-merge close through a named PR (#1049) -----------------------
 
 
@@ -585,12 +649,14 @@ def _close_leaf_through_pr(
 ) -> int | None:
     """Close an open leaf as completed through merged PR ``args.pr``.
 
-    The `pr-merge-into-main` closure trigger, for a leaf whose PR closed another
-    issue and never named this one. Refuses a container (containers close
-    through the cascade), a PR that is not merged, and — as every closure path
-    does — an unticked checkbox (DEC-007). Returns the exit code to stop with,
-    or None once the issue is closed, labelled and ``close_move`` recorded, so
-    the caller runs the closure cascade and the after-close hooks.
+    The `pr-merge-into-main` closure trigger, for a leaf GitHub did not close
+    as the PR merged — a base it does not close issues on, or a PR from the
+    leaf's branch whose body does not name it. Refuses a container (containers
+    close through the cascade), a PR that is not merged, a merged PR that does
+    not relate to the leaf (:func:`_relation`, #1968), and — as every closure
+    path does — an unticked checkbox (DEC-007). Returns the exit code to stop
+    with, or None once the issue is closed, labelled and ``close_move``
+    recorded, so the caller runs the closure cascade and the after-close hooks.
     """
     issue_number = args.issue_number
     if structural_type != "task":
@@ -615,6 +681,22 @@ def _close_leaf_through_pr(
             file=sys.stderr,
         )
         return 1
+    relation = _relation(pr, issue_number)
+    if relation is None:
+        head = str(pr.get("headRefName") or "")
+        branch = f"its branch `{head}`" if head else "its branch"
+        print(
+            f"\n[refused] PR #{args.pr} has merged, but nothing in it relates it to "
+            f"#{issue_number}: its body does not close #{issue_number}, and {branch} is "
+            f"not #{issue_number}'s (`<type>/{issue_number}-<slug>`). A leaf closes as "
+            "completed only through the merged PR that completed it.\n"
+            f"          → If PR #{args.pr} did, name #{issue_number} in it "
+            f"(`edit-pr {args.pr} --closes {issue_number}`), then run this again.\n"
+            "          → Otherwise close it as won't do, which asks the person: "
+            f'close-issue {issue_number} --reason "<R>".',
+            file=sys.stderr,
+        )
+        return 1
 
     unticked = [] if args.skip_checkbox_gate else _unticked_boxes(body)
     if unticked:
@@ -631,7 +713,7 @@ def _close_leaf_through_pr(
         )
         return 1
 
-    print(f"\ncompleted by: PR #{args.pr} (merged)")
+    print(f"\ncompleted by: PR #{args.pr} (merged), {relation}")
     if args.dry_run:
         print(
             "\n[dry-run] would comment the reference, close "
@@ -639,13 +721,15 @@ def _close_leaf_through_pr(
             "written."
         )
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    held = _authorise(
+        args.yes,
+        close=f"closing #{issue_number} as completed through PR #{args.pr}",
+        prompt="Proceed? [y/N] ",
+    )
+    if held is not None:
+        return held
 
-    key, comment_body = _pr_merge_close_comment(args.pr)
+    key, comment_body = _pr_merge_close_comment(args.pr, relation)
     if not post_audit_once("issue", issue_number, key, comment_body, config, run=gh_run):
         return 3
     if not _gh_close_issue(issue_number, reason="completed", config=config):
@@ -668,15 +752,35 @@ def _pr_is_merged(pr: dict) -> bool:
     return str(pr.get("state") or "").upper() == "MERGED" or bool(pr.get("mergedAt"))
 
 
-def _pr_merge_close_comment(pr_number: int) -> tuple[str, str]:
-    """The reference comment a `--pr` close posts, and its idempotency key.
+def _relation(pr: dict, issue_number: int) -> str | None:
+    """What relates merged PR ``pr`` to the issue, in words, or None (#1968).
+
+    A PR relates to an issue where its body closes it — the closing references
+    as `open-pr`, `validate-pr` and `done-work` read them — or where it was
+    merged from the issue's branch, `<type>/<N>-<slug>` (DEC-013), the shape the
+    verbs find an issue's branch by. Both found, both are named. A merged PR
+    with neither records nothing of having completed the issue, so it is no
+    evidence for closing it as completed.
+    """
+    found: list[str] = []
+    if issue_number in extract_closing_issues(str(pr.get("body") or "")):
+        found.append(f"whose body closes #{issue_number}")
+    head = str(pr.get("headRefName") or "")
+    if issue_branch.is_issue_branch(head, issue_number):
+        found.append(f"whose branch `{head}` is #{issue_number}'s")
+    return " and ".join(found) or None
+
+
+def _pr_merge_close_comment(pr_number: int, relation: str) -> tuple[str, str]:
+    """The reference comment a `--pr` close posts, naming the relation found,
+    and its idempotency key.
 
     The key makes the comment retry-safe: a run that posted it and then failed
     to close finds it on the re-run and does not post it again.
     """
     key = _audit.audit_key(PR_MERGE_CLOSE_WRITER, str(pr_number))
     body = (
-        f"[pr-merge close] completed by merged PR #{pr_number}.\n\n"
+        f"[pr-merge close] completed by merged PR #{pr_number}, {relation}.\n\n"
         "Closed via `pkit project-management close-issue --mode=pr-merge "
         f"--pr {pr_number}` "
         "(per [project-management:DEC-006-state-machine-and-cascade]).\n"
@@ -833,11 +937,18 @@ def _report_parents(
 
 
 def _check_parent_eligibility(parent_num: int, config: dict) -> None:
-    """Report whether a parent is eligible to close.
+    """Report whether a parent has an open child left, and whether it is
+    eligible to close.
 
-    Eligibility per DEC-006: every open child has closed, AND parent's
-    own checkboxes are ticked. We surface the report; we do not auto-
-    close (DEC-006 explicit: closure is never auto).
+    Eligibility per DEC-006 is the conjunction DEC-034 names: the parent has no
+    open child left, AND its own checkboxes are ticked. Whether a child is open
+    is the process engine's fold over the parent's children, read as
+    ``--mode=cascade-eligibility-close`` reads it (:func:`_engine_cascade_fold`,
+    #1937), so a parent is reported eligible only where that close would close
+    it, with the command that asks the person to authorise the close. A fold
+    that did not open is said with what holds it (:func:`_report_held_parent`).
+    We surface the report; we do not auto-close (DEC-006 explicit: closure is
+    never auto).
     """
     parent = _gh_get_issue(parent_num, config)
     if parent is None:
@@ -847,15 +958,52 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     if state == "closed":
         print(f"  · parent #{parent_num} already closed")
         return
-    body = str(parent.get("body") or "")
-    unticked = _unticked_boxes(body)
+    fold = _engine_cascade_fold(parent_num)
+    if fold is None or not fold.get("opened"):
+        _report_held_parent(parent_num, fold, config)
+        return
+    unticked = _unticked_boxes(str(parent.get("body") or ""))
     if unticked:
-        print(f"  · parent #{parent_num} open; not eligible ({len(unticked)} unticked box(es))")
+        print(
+            f"  · parent #{parent_num} open; no open child left, but not eligible "
+            f"({len(unticked)} unticked box(es))"
+        )
         return
     print(
-        f"  · parent #{parent_num} open; checkboxes complete — "
-        "eligible to close pending sibling check"
+        f"  · parent #{parent_num} open; no open child left and checkboxes complete — "
+        f"eligible to close: run `pkit pm close-issue {parent_num} "
+        "--mode=cascade-eligibility-close`"
     )
+
+
+def _report_held_parent(parent_num: int, fold: dict | None, config: dict) -> None:
+    """Say why a parent the engine's fold did not open is not eligible.
+
+    Its open children are named, from the containment seam's reading of them
+    (:func:`_find_open_children`), as the refusal of a held container names
+    them. Where the engine could not be run, its fold stopped on a read before
+    it counted a member (:func:`_stopped_on_a_read`), or no open child is
+    found, whether one is open is not known: the engine's reason is said, with
+    what a predicate it could not evaluate said.
+    """
+    if fold is None:
+        print(
+            f"  · parent #{parent_num} open; not eligible — the process engine could not "
+            "fold its children, so whether one is open is not known"
+        )
+        return
+    if not _stopped_on_a_read(fold):
+        children = _find_open_children(parent_num, config)
+        if children.open:
+            named = ", ".join(_child_named(child) for child in children.open)
+            print(f"  · parent #{parent_num} open; not eligible — open child(ren): {named}")
+            return
+    print(
+        f"  · parent #{parent_num} open; not eligible — whether a child is open is not "
+        f"known: {fold.get('reason') or 'the fold did not open.'}"
+    )
+    for line in engine_said.said_lines(fold.get("stderr_tail"), "      "):
+        print(line)
 
 
 def _check_milestone_eligibility(
@@ -1222,7 +1370,7 @@ def _gh_comment(issue_number: int, body: str, config: dict) -> bool:
 
 
 def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
-    return gh_get_pr(pr_number, config, fields="number,state,mergedAt,url")
+    return gh_get_pr(pr_number, config, fields="number,state,mergedAt,url,headRefName,body")
 
 
 def _gh_close_issue(issue_number: int, *, reason: str = "completed", config: dict) -> bool:

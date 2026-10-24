@@ -18,10 +18,14 @@ pkit:
       record:
         - software-analysis:DEC-001#1
         - COR-051#7
+    revalidated:
+      at: 2026-10-24T10:39:53Z
+      outcome: unchanged
+      unchanged-because: check.py also holds the term links in each part of an actor, a use case, a journey and a requirement. Where a body is held to its declared structure is as it was.
 ---
 
 # REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always
 
-**Verified by:** Tests find that an artefact outside every scope is not held to its structure, and that the check reports where no rule of `SAN` binds. They find that a record is held to its structure while the format rule is proposed, and that a preview never changes the exit status.
+**Verified by:** Tests find that an [artefact](../../../core/glossary.md#term-artefact--artefact) outside every scope is not held to its structure, and that the check reports where no [rule](../../../core/glossary.md#term-rule--rule) of `SAN` binds. They find that a record is held to its structure while the format rule is proposed, and that a preview never changes the exit status.
 
-**Rationale:** A shipped rule binds only through a rule set of the project's own, which decides where it binds (DEC-001 point 1 and COR-051 point 7). No route leads from a held document, so the capability checks a record's structure itself (DEC-001 point 1).
+**Rationale:** A shipped [rule](../../../core/glossary.md#term-rule--rule) binds only through a [rule set](../../../core/glossary.md#term-rule-set--rule-set) of the [project](../../../core/glossary.md#term-project--project)'s own, which decides where it binds (DEC-001 point 1 and COR-051 point 7). No route leads from a held document, so the [capability](../../../core/glossary.md#term-capability--capability) checks a record's structure itself (DEC-001 point 1).

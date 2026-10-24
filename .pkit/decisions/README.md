@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-21T14:26:11Z
+      at: 2026-10-24T04:34:45Z
       outcome: unchanged
-      unchanged-because: The README already says how a record overturned in part reads Partially superseded by. Anchors on points, dead anchors and rule sets are untouched by COR-062, so it holds.
+      unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. The README names the namespaces the command stamps, leaving where it refuses to the CLI reference, so what it says holds.
 ---
 
 # Decision records

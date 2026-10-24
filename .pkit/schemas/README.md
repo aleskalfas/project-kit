@@ -24,9 +24,9 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-23T14:50:19Z
+      at: 2026-10-24T05:22:41Z
       outcome: unchanged
-      unchanged-because: The package schema's description names the permission model's code as backbone code, not a capability. No key, type or check of the schema changes, so what the README says of it holds.
+      unchanged-because: Friction now matches each derived-link form on its own, so a clash between forms no longer changes what one means. What the README says of a place's derived links, and of the rest of the schemas, still holds.
       deferred:
         - anchor:
             kind: path

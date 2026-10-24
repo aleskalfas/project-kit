@@ -67,7 +67,11 @@ def project(model: dict[str, Any], catalog: dict[str, Any]) -> dict[str, Any]:
     unprojectable: list[dict[str, str]] = []
 
     def note(bucket: list, subject: str, pid: str, reason: str) -> None:
-        bucket.append({"subject": subject, "privilege": pid, "reason": reason})
+        # One entry per grant and reason, however many recognizers the
+        # privilege has, so a count of the bucket counts grants (#2000).
+        entry = {"subject": subject, "privilege": pid, "reason": reason}
+        if entry not in bucket:
+            bucket.append(entry)
 
     for g in model.get("grants", []):
         if g.get("effect", "allow") != "allow":

@@ -17,10 +17,14 @@ pkit:
         - COR-049#7
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-24T10:39:18Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails
 
 **Verified by:** A test declares a root whose folder is missing, and finds a warning and no error. Another pins the warning's words. A third finds that `pkit validate` exits 0 with the warning, and exits 1 once the configuration holds an error.
 
-**Rationale:** The adopter may declare the roots before the project holds any document. COR-049 point 7 decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
+**Rationale:** The adopter may declare the roots before the [project](../../glossary.md#term-project--project) holds any document. COR-049 [point](../../glossary.md#term-point--point) 7 decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".

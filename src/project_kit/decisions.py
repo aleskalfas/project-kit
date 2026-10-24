@@ -24,6 +24,11 @@ name** (Feature #162): `pkit new decision <capability> <slug>` stamps a
 `DEC-NNN` record under `.pkit/capabilities/<capability>/decisions/`, with
 the next number scoped to that capability (each capability is its own
 DEC id-space). The capability must exist; the command refuses otherwise.
+It refuses too, writing nothing, where that folder arrives in the project as
+a synced copy, as the tree's ownership predicate answers (`is_synced_copy`):
+the next sync would overwrite the record (core rule 1). So does a `core`
+record outside the methodology's source repository. The refusal names the
+`project` and `adr` namespaces, where the project's own decision goes.
 
 **The number** is one past the highest that the namespace's folder holds, in
 the working tree or on the default branch, each read from a record's file name
@@ -57,7 +62,7 @@ from typing import Any, Literal
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agents_overlay, default_branch, docs_roots
+from project_kit import agents_overlay, default_branch, docs_roots, lifecycle_ownership
 from project_kit.capability_namespace import resolve_capability_dir
 from project_kit.friction_git import SHORT, CommitTree, run_git
 
@@ -125,7 +130,8 @@ def stamp_decision(
     takes over a folder already holding documents). Any other `namespace` value
     is treated as a **capability name** (Feature #162): the record stamps under
     `.pkit/capabilities/<namespace>/decisions/` with the `DEC` prefix, numbered
-    independently within that capability.
+    independently within that capability. A `core` folder, or a capability's,
+    that arrives in the project as a synced copy is refused (`_refuse_synced_copy`).
 
     The number is one past the highest the namespace's folder holds in the working
     tree or on the default branch (`_next_number`). What the stamp says of the
@@ -137,9 +143,11 @@ def stamp_decision(
 
     Returns the stamped file path. Raises `click.ClickException` for any
     user-facing precondition failure (invalid slug, missing decisions dir,
-    duplicate slug, overlay misconfiguration, unknown capability, no consent to
-    the recording), and `click.Abort` when the recording is declined at the
-    prompt. Writes the file synchronously.
+    duplicate slug, overlay misconfiguration, unknown capability, a `core` folder
+    or a capability the project receives as a synced copy, no consent to the
+    recording), and
+    `click.Abort` when the recording is declined at the prompt. Writes the file
+    synchronously.
     """
     if not _SLUG_RE.match(slug):
         raise click.ClickException(
@@ -155,9 +163,17 @@ def stamp_decision(
         decisions_dir = target_root / ".pkit" / "decisions" / namespace
         if not decisions_dir.is_dir():
             raise click.ClickException(f"{decisions_dir} does not exist.")
+        if namespace == "core":
+            _refuse_synced_copy(
+                target_root,
+                "the core namespace",
+                decisions_dir,
+                slug,
+                "A core decision is recorded in the methodology's source repository.",
+            )
     else:
         prefix = "DEC"
-        decisions_dir = _resolve_capability_decisions_dir(target_root, namespace)
+        decisions_dir = _resolve_capability_decisions_dir(target_root, namespace, slug)
 
     if any(decisions_dir.glob(f"{prefix}-*-{slug}.md")):
         raise click.ClickException(
@@ -331,19 +347,54 @@ def _record_derived_adr_records(target_root: Path, rel: str, slug: str, *, yes: 
     return docs_roots.recording_notice(target_root, docs_roots.BACKBONE, _ADR_CATEGORY, rel)
 
 
-def _resolve_capability_decisions_dir(target_root: Path, capability: str) -> Path:
-    """Resolve a capability's `decisions/` directory, refusing if the capability is absent.
+def _resolve_capability_decisions_dir(target_root: Path, capability: str, slug: str) -> Path:
+    """Resolve a capability's `decisions/` directory, refusing if the capability is absent
+    or the folder arrives here as a synced copy.
 
     The existence contract and the refusal are the shared capability-namespace
-    ones (`capability_namespace.resolve_capability_dir`). The `decisions/`
-    subdirectory is created if the capability exists but hasn't held a DEC
-    record yet — stamping the first DEC into a capability is a normal first
-    step, not an error.
+    ones (`capability_namespace.resolve_capability_dir`). A folder that arrives as
+    a synced copy is the methodology's, or its external source's, and the next sync
+    overwrites what is written there (core rule 1), so the stamp refuses it before
+    it writes anything (`_refuse_synced_copy`). The `decisions/` subdirectory is
+    created if the capability exists but hasn't held a DEC record yet — stamping
+    the first DEC into a capability is a normal first step, not an error.
     """
     cap_dir = resolve_capability_dir(target_root, capability, _FIXED_NAMESPACES)
     decisions_dir = cap_dir / "decisions"
+    _refuse_synced_copy(
+        target_root,
+        f"capability {capability!r}",
+        decisions_dir,
+        slug,
+        "A decision of the capability itself is recorded where the capability is authored.",
+    )
     decisions_dir.mkdir(parents=True, exist_ok=True)
     return decisions_dir
+
+
+def _refuse_synced_copy(
+    target_root: Path, subject: str, folder: Path, slug: str, authored: str
+) -> None:
+    """Refuse to stamp into *folder* when it arrives in this project as a synced copy.
+
+    The question is the tree's own predicate, asked through
+    `lifecycle_ownership.synced_copy_refusal`: `.pkit/decisions/core/` in a project
+    that is not the methodology's source, a kit-shipped capability's folder there
+    too, and an externally-sourced one's in any project. The core records, an
+    incubated capability, and a kit-shipped one in the methodology's source, are
+    authored where they stand, so they stamp. *subject* names what arrives as a
+    copy, and *authored* where its own decisions are recorded. The refusal names
+    the `project` and `adr` namespaces, where the project's own decision goes.
+    """
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        target_root,
+        folder,
+        subject,
+        f"Record the project's own decision with `pkit new decision project {slug}`, or "
+        f"with `pkit new decision adr {slug}` for one about what the project builds. {authored}",
+    )
+    if refusal is not None:
+        raise click.ClickException(refusal)
 
 
 def _next_number(decisions_dir: Path, prefix: str, settled: Iterable[str] = ()) -> int:

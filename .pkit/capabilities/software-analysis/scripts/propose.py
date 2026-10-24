@@ -2,6 +2,7 @@
 # /// script
 # requires-python = ">=3.10"
 # dependencies = [
+#   "jsonschema>=4.18",
 #   "ruamel.yaml>=0.18",
 # ]
 # ///
@@ -29,6 +30,16 @@ what the person does first, and the writer commands that record the outcome,
 word for word, with a placeholder where the words are the agent's to draft or
 the person's to supply. It runs none of them.
 
+A regression of a use case that anchors an accepted record takes one of two
+answers, and which is the agent's reading (`_lib/answers.py`): `--box <step>
+--decided-by <record>` where that record decides the regressed step or
+variant, so the step takes its `Not built yet` box and its entry and the
+answer is `updated`, or `--no-box` where no record decides it, so the answer
+is `unchanged` (DEC-001 points 1 and 5). Until the agent says which, the
+answer gives no command, only what to read. Whether a record the use case
+anchors is accepted is read in its own front matter, its file found through
+`pkit refs lookup`, as the check of a use case's shortfalls reads it.
+
 What the agent read goes in as quotes, each with where it was read:
 `--contradicted` (the change contradicts what the artefact says),
 `--intended` (the change's context says the change was meant), `--unintended`
@@ -46,15 +57,19 @@ Usage:
   pkit analysis propose <artefact>
       [--contradicted <quote> --contradicted-from <source>]
       [--intended <quote> --intended-from <source>]
-      [--unintended <quote> --unintended-from <source>] [--json]
+      [--unintended <quote> --unintended-from <source>]
+      [--box <step> --decided-by <record> | --no-box] [--json]
 
 Exit codes:
   0  answered, whatever the verdict
   1  the artefact cannot be explained — not committed, not found — or was not
      judged: its revalidation point is beyond a shallow clone, an anchor of it
      cannot be resolved, or its state is one this capability does not read;
-     said on standard error
-  2  a usage error, a quote without its source among them
+     or, for a regressed use case, whether a record it anchors is accepted
+     cannot be read; said on standard error
+  2  a usage error, a quote without its source among them, or a regression's
+     box that cannot stand: on an artefact that is no use case, or naming no
+     accepted record the use case anchors
 """
 
 from __future__ import annotations
@@ -69,7 +84,7 @@ from typing import Any
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
 from _lib import answers, backbone, reading, resolve
-from _lib.model import Unreadable
+from _lib.model import PREFIX, USE_CASE, Unreadable
 
 #: The version of the `--json` document.
 SCHEMA_VERSION = 1
@@ -79,6 +94,13 @@ READINGS = ("contradicted", "intended", "unintended")
 
 #: A source that names a commit: an abbreviated or full object name.
 _COMMIT = re.compile(r"^[0-9a-f]{7,40}$")
+
+#: A step's number or a variant's, as a use case numbers it and a `shortfalls` entry's
+#: `at` writes it: `2`, or `2a`.
+_AT = re.compile(r"^[1-9][0-9]*[a-z]?$")
+
+#: The status of a record that grounds a box (DEC-001 point 1).
+ACCEPTED = "accepted"
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -102,6 +124,25 @@ def _parser() -> argparse.ArgumentParser:
             metavar="SOURCE",
             help=f"Where the --{name} quote was read: a commit, a URL, or a person.",
         )
+    parser.add_argument(
+        "--box",
+        metavar="STEP",
+        help="For a regressed use case: the step or variant the change regressed, `2` or "
+        "`2a`, which an accepted record it anchors decides. The step takes its `Not built "
+        "yet` box, and the answer is `updated` (DEC-001 points 1 and 5).",
+    )
+    parser.add_argument(
+        "--decided-by",
+        metavar="RECORD",
+        help="The accepted record that decides the --box step, as the use case's record "
+        "anchor writes it.",
+    )
+    parser.add_argument(
+        "--no-box",
+        action="store_true",
+        help="For a regressed use case: no accepted record decides the step the change "
+        "regressed, so it takes no box, and the answer is `unchanged`.",
+    )
     parser.add_argument("--json", action="store_true", help="Print the verdict document.")
     return parser
 
@@ -115,6 +156,15 @@ def main() -> int:
             parser.error(
                 f"--{name} and --{name}-from go together: the quote, and where it was read"
             )
+    if (args.box is None) != (args.decided_by is None):
+        parser.error(
+            "--box and --decided-by go together: the regressed step, and the accepted record "
+            "that decides it"
+        )
+    if args.box is not None and args.no_box:
+        parser.error("--box and --no-box exclude each other: a regressed step takes its box or not")
+    if args.box is not None and not _AT.match(args.box):
+        parser.error(f"--box takes a step's number or a variant's, such as 2 or 2a: {args.box!r}")
     root = backbone.project_root()
     try:
         evidence = reading.read(root, args.artefact)
@@ -128,7 +178,24 @@ def main() -> int:
     }
     intent = resolve.Intent(**quotes)
     verdict = resolve.propose(evidence.artefact, evidence.state, evidence.anchors, intent)
-    answer = answers.answer(evidence.location, verdict, evidence.anchors)
+    use_case = _use_case(evidence.artefact)
+    box = answers.Box(args.box, args.decided_by) if args.box is not None else None
+    deciders: tuple[str, ...] = ()
+    if answers.outcome_of(verdict) == resolve.REGRESSED:
+        try:
+            deciders = _deciders(root, evidence.anchors) if use_case else ()
+        except Unreadable as exc:
+            print(f"cannot propose: {exc}", file=sys.stderr)
+            return 1
+        refused = (
+            None if box is None else answers.box_refused(evidence.artefact, use_case, deciders, box)
+        )
+        if refused is not None:
+            print(f"cannot propose: {refused}", file=sys.stderr)
+            return 2
+    answer = answers.answer(
+        evidence.location, verdict, evidence.anchors, deciders, box, args.no_box
+    )
     if args.json:
         document = _document(evidence, intent, verdict, answer)
         print(json.dumps(document, indent=2, ensure_ascii=False))
@@ -152,6 +219,32 @@ def _quote(
 
 def _fold(text: str) -> str:
     return " ".join(text.split())
+
+
+def _use_case(artefact: str) -> bool:
+    """Whether the artefact is a use case, by its id's prefix (DEC-001 point 3): only a
+    use case's step or variant takes a box."""
+    return artefact.split("-", 1)[0] == PREFIX[USE_CASE]
+
+
+def _deciders(root: Path, anchors: tuple[resolve.Anchor, ...]) -> tuple[str, ...]:
+    """The accepted records among the record anchors, as each writes its record: those
+    whose decision may ground a regressed step's box (DEC-001 point 1). Each record's
+    status is read once. Raises Unreadable where `pkit` cannot be run."""
+    statuses: dict[str, str | None] = {}
+    found: list[str] = []
+    for anchor in anchors:
+        if anchor.kind != "record" or anchor.value in found:
+            continue
+        named = anchor.value.partition("#")[0]
+        if named not in statuses:
+            try:
+                statuses[named] = backbone.record_status(root, named)
+            except Unreadable as exc:
+                raise Unreadable(f"whether {named} is accepted cannot be read: {exc}") from exc
+        if statuses[named] == ACCEPTED:
+            found.append(anchor.value)
+    return tuple(found)
 
 
 def _source_kind(quote: resolve.Quote) -> str:
@@ -210,6 +303,7 @@ def _document(
             "outcome": answer.outcome,
             "first": list(answer.first),
             "commands": list(answer.commands),
+            "which": answer.which,
         },
     }
 
@@ -253,6 +347,8 @@ def _lines(
         lines.append(f"Commands for the person ({answer.outcome}):")
         lines += [f"  first: {step}" for step in answer.first]
         lines += [f"  {command}" for command in answer.commands]
+        if answer.which is not None:
+            lines.append(f"  no command yet: {answer.which}")
     lines.append("Read-only: nothing was written.")
     return lines
 

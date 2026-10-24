@@ -21,13 +21,13 @@ pkit:
         - living-docs:DEC-001#8
         - COR-050#3
     revalidated:
-      at: 2026-10-24T00:21:57Z
+      at: 2026-10-24T03:53:18Z
       outcome: unchanged
-      unchanged-because: The agent changed only where a reader-review takes the reader's paths, and its test checks that text. Its tools and its writes are as they were.
+      unchanged-because: The agent changed only how reader-review falls back to a space's audience. It still proposes each change, and applies none.
 ---
 
 # REQ-022 · Functional · The living-docs agent proposes each change, and applies none
 
-**Verified by:** A test finds that the agent definition grants Read, Glob, Grep, Bash and Write alone, and owns no path. So it has no tool that edits a file in place, and none that asks the person. Tests of its text find that it names each friction writer and runs none, and that its storyboard hands over no consent. Nothing confines its Write or its Bash to the workspace at run time, and no test runs the agent.
+**Verified by:** A test finds that the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) grants Read, Glob, Grep, Bash and Write alone, and owns no path. So it has no tool that edits a file in [place](../../../core/glossary.md#term-place--place), and none that asks the person. Tests of its text find that it names each [friction](../../../core/glossary.md#term-friction--friction) writer and runs none, and that its storyboard hands over no consent. Nothing confines its Write or its Bash to the workspace at run time, and no test runs the agent.
 
-**Rationale:** An agent that rewrites pages directly will eventually rewrite them wrongly. It will misjudge an ambiguous file's audience, or fix a page to match a regression. Proposals that cite their evidence, reviewed by a person, keep speed without giving up judgement (living-docs DEC-001). The answer a page carries is a person's decision too (COR-050 point 3).
+**Rationale:** An agent that rewrites pages directly will eventually rewrite them wrongly. It will misjudge an ambiguous file's audience, or fix a [page](../../glossary.md#term-page--page) to match a regression. [Proposals](../../glossary.md#term-proposal--proposal) that cite their evidence, reviewed by a person, keep speed without giving up judgement (living-docs DEC-001). The [answer](../../../core/glossary.md#term-answer--answer) a page carries is a person's decision too (COR-050 point 3).

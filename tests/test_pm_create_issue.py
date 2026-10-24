@@ -1,7 +1,7 @@
 """Tests for project-management's create-issue script's pure logic.
 
 Covers title composition, parent-ref line formatting, template body
-substitution, frontmatter stripping, adopter-workstream extraction.
+substitution, frontmatter stripping, the workstream check at filing.
 The gh subprocess invocations are not tested at unit level — they're
 thin wrappers; their behaviour is the same shape as evidence's
 validate.py call path.
@@ -348,34 +348,6 @@ def test_compose_body_no_parent_ref_leaves_template_placeholder(ci, tmp_path: Pa
     body = ci._compose_body(template, parent_ref="")
     # Placeholder line stays as-is; author fills in.
     assert "Feature: #" in body
-
-
-# --- adopter workstreams ---------------------------------------------
-
-
-def test_adopter_workstreams_bare_list(ci) -> None:
-    config = {"workstreams": ["cli", "schemas", "agents"]}
-    assert ci._adopter_workstreams(config) == {"cli", "schemas", "agents"}
-
-
-def test_adopter_workstreams_mapping_form(ci) -> None:
-    """DEC-018's v0.5.0 mapping form is also recognised (forward-compatible)."""
-    config = {
-        "workstreams": {
-            "cli": {"name": "cli", "status": "active"},
-            "schemas": {"name": "schemas", "status": "active"},
-        },
-    }
-    assert ci._adopter_workstreams(config) == {"cli", "schemas"}
-
-
-def test_adopter_workstreams_empty_when_absent(ci) -> None:
-    assert ci._adopter_workstreams({}) == set()
-
-
-def test_adopter_workstreams_skips_non_string_entries(ci) -> None:
-    config = {"workstreams": ["cli", 42, None, "schemas"]}
-    assert ci._adopter_workstreams(config) == {"cli", "schemas"}
 
 
 # --- titles.yaml checks at filing (#803) ----------------------------
@@ -2470,6 +2442,121 @@ def test_main_label_fallback_greenfield_rejects_unknown_workstream_value(
     assert ci.main() == 2
 
 
+# --- #1933: the workstreams file is the allowed set at filing ----------------
+# DEC-018 makes `project/workstreams.yaml` authoritative, and DEC-012 refuses a
+# value outside the allowed set. The legacy `workstreams:` key of config.yaml is
+# read only where the file is absent.
+
+_WORKSTREAMS_FILE = (
+    "schema_version: 1\n"
+    "workstreams:\n"
+    "  spyre:\n"
+    "    name: spyre\n"
+    "    status: active\n"
+    "  legacy:\n"
+    "    name: legacy\n"
+    "    status: deprecated\n"
+)
+
+
+def _stage_with_workstreams_file(tmp_path: Path, *, legacy: str) -> Path:
+    """A label-fallback tree whose workstreams live in the file, the config's key `legacy`."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    (root / "project" / "config.yaml").write_text(legacy, encoding="utf-8")
+    (root / "project" / "workstreams.yaml").write_text(_WORKSTREAMS_FILE, encoding="utf-8")
+    return root
+
+
+def _file_with_workstream(ci, monkeypatch, root: Path, workstream: str) -> tuple[int, dict]:
+    """Run create-issue main() for a Task in ``workstream``; return (rc, what it created)."""
+    monkeypatch.setattr(
+        ci.subprocess, "run", _gh_command_dispatcher("https://github.com/acme/repo/issues/69")
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            workstream,
+            "--capability-root",
+            str(root),
+            "--yes",
+        ],
+    )
+    return ci.main(), created
+
+
+def test_filing_refuses_a_workstream_the_file_lacks_where_the_legacy_key_is_empty(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The reported gap: an empty legacy key, as in project-kit, let any value through."""
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "no-such-workstream")
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert created == {}
+    assert "'no-such-workstream' is not in project/workstreams.yaml" in err
+    assert "Its active workstreams: spyre." in err
+
+
+def test_filing_refuses_a_deprecated_workstream(ci, tmp_path, monkeypatch, capsys) -> None:
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "legacy")
+    assert rc == 2
+    assert created == {}
+    assert "'legacy' is deprecated in project/workstreams.yaml" in capsys.readouterr().err
+
+
+def test_filing_takes_an_active_workstream_of_the_file(ci, tmp_path, monkeypatch) -> None:
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "spyre")
+    assert rc == 0
+    assert "workstream:spyre" in created["labels"]
+
+
+def test_a_workstream_add_workstream_adds_is_taken_at_the_next_filing(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """The other half of the gap: the 0.5.0 migration left `[spyre]` in config.yaml,
+    and a workstream added since lives only in the file."""
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: [spyre]\n")
+    spec = importlib.util.spec_from_file_location(
+        "pm_add_workstream_for_filing", SCRIPT_PATH.parent / "add-workstream.py"
+    )
+    assert spec is not None and spec.loader is not None
+    add_workstream = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(add_workstream)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(add_workstream.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(
+        add_workstream.sys,
+        "argv",
+        ["add-workstream.py", "quantum", "--skip-label", "--capability-root", str(root), "--yes"],
+    )
+    assert add_workstream.main() == 0
+
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "quantum")
+    assert rc == 0
+    assert "workstream:quantum" in created["labels"]
+
+
 # --- #454: a title-prefix-bound axis writes NO label -----------------------
 # In brownfield with a `substrate-map.yaml` binding the `type` axis via
 # `title-prefix` (structural remap task:[Task], feature:[Feature], …),
@@ -2889,3 +2976,152 @@ def test_body_first_line_parent_in_textual_mode_skips_link_and_refreshes_view(
     assert rc == 0
     assert link_calls == [], "native link must not fire under containment: textual"
     assert refreshed == [{"parent": 77, "mode": "textual"}]
+
+
+# --- the body rules, checked before anything is written (DEC-010, #1932) -----
+# create-issue checks a body against `body-format.yaml` as validate-issue does,
+# through the one reader they share (`_lib/body_rules`): a missing required
+# section or a heading of the first level refuses, before any write and under
+# --dry-run too; a rule that only warns is printed, and filing goes on.
+
+_COMPLETE_TASK_BODY = (
+    "Feature: #77\n\n"
+    "## What\n\nthe work\n\n"
+    "## Acceptance criteria\n\n- [ ] it holds\n\n"
+    "## Doc impact\n\nNo doc impact: internal only.\n"
+)
+_PARENT = ["--parent", "77"]
+
+
+def _stage_shipped_body_tree(tmp_path: Path) -> Path:
+    """The real-schema tree, with the shipped body-format.yaml and templates."""
+    root = _stage_real_schema_tree(tmp_path)
+    shipped = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas" / "body-format.yaml").write_text(
+        (shipped / "schemas" / "body-format.yaml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    for name in ("EPIC.md", "Feature.md", "Umbrella.md", "Task.md"):
+        (root / "templates" / name).write_text(
+            (shipped / "templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    return root
+
+
+def test_a_body_missing_a_required_section_is_refused_and_nothing_written(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body = _COMPLETE_TASK_BODY.replace("## Doc impact\n\nNo doc impact: internal only.\n", "")
+    rc, link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 2
+    assert created == {}, "nothing may be filed"
+    assert link_calls == []
+    err = capsys.readouterr().err
+    assert "body.required-section" in err
+    assert "'## Doc impact'" in err
+
+
+def test_the_refusal_holds_under_dry_run(ci, tmp_path, monkeypatch, capsys) -> None:
+    """The failing example of #1932: a --dry-run of a body with no `## Doc impact`
+    exited 0 and printed its summary."""
+    body = _COMPLETE_TASK_BODY.replace("## Doc impact\n\nNo doc impact: internal only.\n", "")
+    rc, _link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=body,
+        extra=[*_PARENT, "--dry-run"],
+        root=_stage_shipped_body_tree(tmp_path),
+    )
+    assert rc == 2
+    assert created == {}
+    out, err = capsys.readouterr()
+    assert "about to create issue" not in out
+    assert "'## Doc impact'" in err
+
+
+def test_a_heading_of_the_first_level_is_refused(ci, tmp_path, monkeypatch, capsys) -> None:
+    body = _COMPLETE_TASK_BODY.replace("## What", "# The task\n\n## What")
+    rc, _link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 2
+    assert created == {}
+    assert "body.h1" in capsys.readouterr().err
+
+
+def test_each_rule_that_only_warns_is_printed_and_the_task_filed(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body = _COMPLETE_TASK_BODY + "\nSee foo/bar.py:42.\n\n## Implementation\n\nstep one\n"
+    rc, _link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 0
+    assert created["body"].startswith("Feature: #77")
+    err = capsys.readouterr().err
+    assert "[warning] body.file-line-refs" in err
+    assert "[warning] body.implementation-recipe" in err
+
+
+def test_a_complete_body_raises_no_body_rule(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, _link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=_COMPLETE_TASK_BODY,
+        extra=_PARENT,
+        root=_stage_shipped_body_tree(tmp_path),
+    )
+    assert rc == 0
+    assert created
+    err = capsys.readouterr().err
+    for label in ("body.required-section", "body.h1", "body.file-line-refs"):
+        assert label not in err
+
+
+@pytest.mark.parametrize(
+    ("issue_type", "parent"),
+    [
+        ("epic", []),
+        ("feature", ["--parent", "9"]),
+        ("umbrella", ["--parent", "9"]),
+        ("task", ["--parent", "9"]),
+    ],
+)
+def test_each_shipped_template_composes_a_body_the_rules_accept(
+    ci, tmp_path, monkeypatch, capsys, issue_type, parent
+) -> None:
+    """A body stamped from a type's shipped template holds each section the type
+    requires, so the check refuses no filing that names no body file."""
+    root = _stage_shipped_body_tree(tmp_path)
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _dispatcher_with_milestone("https://github.com/acme/repo/issues/400"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            issue_type,
+            "--title",
+            "a stamped body filed from the template",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
+            "--dry-run",
+            *parent,
+        ],
+    )
+    assert ci.main() == 0
+    err = capsys.readouterr().err
+    assert "body.required-section" not in err
+    assert "body.h1" not in err

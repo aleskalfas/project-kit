@@ -736,6 +736,16 @@ def _undeclared(
     return found
 
 
+def marks(lines: Sequence[Line], kind: Kind) -> list[tuple[int, str, int, str]]:
+    """Where a body's parts open, as the structure reads its marks: each heading, and each
+    label `kind`'s `labels` holds, outside fenced code and comments, in order. Each is given
+    as the index of its line among `lines`, its type, its level and its text as written.
+    The mentions' links read an actor's, a use case's, a journey's and a requirement's
+    body one part at a time here (`_lib/links.py`)."""
+    body = _read(lines, kind.labels)
+    return [(mark.index, mark.type, mark.level, mark.text) for mark in body.marks]
+
+
 def rows(lines: Sequence[Line]) -> tuple[forms.Row, ...]:
     """A body's lines as a part's rows are read: comments left out, and fenced code marked.
     The check of a use case's boxes reads the whole body so (`_lib/shortfalls.py`)."""

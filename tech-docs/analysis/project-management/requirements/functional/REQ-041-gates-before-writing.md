@@ -26,6 +26,6 @@ pkit:
 
 # REQ-041 · Functional · A command that writes checks the project's prerequisites and the person's membership first
 
-**Verified by:** Tests of the first check find that a project short of the prerequisites is refused, with the command to run. A project that meets them passes. Tests of the second find who the person is, from their login or their email. No test finds that every command that writes runs both checks first.
+**Verified by:** Tests of the first check find that a [project](../../../core/glossary.md#term-project--project) short of the prerequisites is refused, with the command to run. A project that meets them passes. Tests of the second find who the person is, from their login or their email. No test finds that every command that writes runs both checks first.
 
-**Rationale:** The prerequisites are a hard gate on every operation, held by the commands rather than by an agent's reading of a report (DEC-017). Where a team keeps a list of its members, only a member acts on its work, and the check runs before any other work (DEC-021).
+**Rationale:** The prerequisites are a hard gate on every operation, held by the commands rather than by an agent's reading of a [report](../../../core/glossary.md#term-report--report) (DEC-017). Where a team keeps a list of its members, only a member acts on its work, and the check runs before any other work (DEC-021).

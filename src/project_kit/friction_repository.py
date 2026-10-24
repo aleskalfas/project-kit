@@ -1036,7 +1036,7 @@ class _Judge:
             for v in self.history.versions(rel)
             if v.index not in covered
             and v.entry.changes_content
-            and self._wrote_version(v, readings[rel])
+            and self._wrote_version(rel, v, readings[rel])
         }
 
     def readings(self, anchor: Anchor, own: frozenset[str], state: int) -> dict[str, bool]:
@@ -1068,15 +1068,18 @@ class _Judge:
         now = self.placed_in(rel, listed.after)
         return all(self.placed_in(rel, before) != now for before in listed.before)
 
-    def _wrote_version(self, version: Version, content: bool) -> bool:
-        """Whether a version of a file a registered kind's resolver names changed what the
-        anchor stands on in it: always where it is read as stored; where read by its
-        content, only where its mode and content differ from those at every parent."""
+    def _wrote_version(self, rel: str, version: Version, content: bool) -> bool:
+        """Whether a version of the file now at `rel`, which a registered kind's resolver
+        names, changed what the anchor stands on in it: always where it is read as stored;
+        where read by its content, only where its mode and content differ from those at
+        every parent. Both sides are read under the derived links HEAD sets aside in `rel`
+        (`placed_in`), whatever the file's name at either, so a commit that renamed it and
+        moved only those links wrote nothing."""
         if not content:
             return True
-        now = self.placed_in(version.path, version.entry.after)
+        now = self.placed_in(rel, version.entry.after)
         return all(
-            self.placed_in(source or version.path, None if source is None else before) != now
+            self.placed_in(rel, None if source is None else before) != now
             for before, source in version.parents()
         )
 

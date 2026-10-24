@@ -12,11 +12,13 @@ pkit:
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
-      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+        - .pkit/permissions/decide.py
+        - src/project_kit/permissions.py
+      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+      source: [claude-code-hooks]
     revalidated:
-      at: 2026-10-24T00:58:18Z
-      outcome: unchanged
-      unchanged-because: ADR-060 point 4 names any untrusted construct where it named a quote. This README says only that a shell write into the workspace is judged like any other shell write, which holds.
+      at: 2026-10-24T13:52:36Z
+      outcome: updated
 ---
 
 # Claude Code adapter
@@ -309,7 +311,15 @@ The confined form holds what the harness can hold. This is what it cannot, state
 
 The realizer that makes declared permissions *bite* at runtime (per [COR-028](../../decisions/core/COR-028-permission-model-realization.md) / [ADR-002](../../../tech-docs/architecture/decisions/ADR-002-permission-realizer-ownership.md)). It's **opt-in** — see *enable / disable* below.
 
-`permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI can never decide differently (ADR-002's same-code invariant).
+`permission-hook.py` runs under the **system `python3`** interpreter — no `uv`, no PEP-723 metadata, no third-party deps at startup. This is required so the hook starts inside macOS Seatbelt, where `uv` panics on a fixed `SCDynamicStore` denial (ADR-014). On each matched tool call Claude Code pipes a PreToolUse payload to its stdin; the hook builds the model through the shared, harness-neutral decision core (`.pkit/permissions/decide.py`) and either prints a `permissionDecision` (`allow` / `deny`, or `ask` in the cases "When the hook asks" names) or **abstains** (exit 0, no stdout → the harness's normal permission flow proceeds). It imports the *same* `decide.load_model` + `decide.decide` the `pkit permissions` CLI uses, so the hook and the CLI reach the same verdict (ADR-002's same-code invariant), and the hook then answers an abstain with `ask` in those cases.
+
+**When the hook asks.** Where the core abstains, the baseline's own rules, or the sandbox's auto-allow, may run the call unasked, as `Bash(git:*)` runs `git push origin --forc[e]`. So the hook answers `ask` on a deferred Bash call that may hide a form of a guardrail, which the core's `hook_hidden_guardrails()` names. The core's abstain on such a doubt is a prompt (ADR-025 point 2), and how this hook carries out an abstain is the adapter's to say (ADR-002, Implications).
+
+Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository, in every permission mode (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
+
+**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail's form.** The person chose not to be asked there, yet [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks) says a hook's `ask` forces a prompt in auto mode. So the hook abstains there, and the harness's own mode and rules decide the call. A rule such as `Bash(git:*)` may then run a hidden form unasked.
+
+The core never reads the mode, so its allow and deny, a strict posture's deny included, are the same in every mode. The hook reads the mode from the payload's `permission_mode` field. The hooks reference's "Common input fields" gives `auto` for auto mode and `bypassPermissions` for bypass mode. A missing field, or a value the hook does not know, keeps the ask.
 
 **Zero-dep shebang + stdlib YAML fallback.** The hook's shebang is `#!/usr/bin/env python3` (bare, no `uv`). The shared loader in `decide.py` (`load_yaml`) tries `ruamel.yaml` when available and falls back to a stdlib-only YAML-subset parser when not — handling the full file subset (block mappings/sequences, single/double-quoted strings, flow sequences, block scalars, booleans). **The fallback lives in the shared `decide.py` loader, not in the hook**, so both the hook and the `pkit permissions` CLI parse via the same code path — the same-code invariant is mechanically preserved, not aspirational.
 
@@ -343,6 +353,13 @@ The hook **script** itself is a propagated adapter file — `pkit sync` owns its
 ### Prompt-free command shape under the sandbox
 
 This is the Claude Code realization of the universal "work with the permission layer, not around it" rule (`.pkit/rules/core.md`). With the sandbox on, `.claude/settings.json` carries `sandbox.autoAllowBashIfSandboxed: true` — so a **single, simple Bash command auto-allows** because it runs inside the box, no prompt. What still prompts is the command *shape* the parser can't statically vet: a leading `cd`, statements chained with `;`, pipelines (`| grep | head`), and command substitution. Those fall back to a confirmation even under the sandbox, and an allow-list entry for the inner tool does not help (the parser keys on the outer/first token). So the agent's discipline is: **one clean command per call; the harness's `Read` / `Grep` / `Glob` / `Write` tools for inspection and file I/O — not `cat`/`sed`/heredocs/pipelines.**
+
+**With live enforcement on, the hook allows some of these shapes before the harness's parser sees them.**
+
+- **A compound whose every segment is granted,** behind a bare leading `cd` or not (ADR-025 point 1). Every shipped profile grants the read-only text filters, such as `grep` and `head`, and a project may grant `uv run` ([the permissions README, "Compound commands"](../../permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)). So `git log | head` runs unasked under a profile that grants `git`, and `cd <path> && uv run pytest t.py -q | head -3` runs unasked in a project that grants `uv run`.
+- **A granted command whose only redirections write no file,** such as `2>&1` or `>/dev/null` (ADR-025 point 2).
+
+A redirection that writes a file, such as `> out.txt`, a `$`, a heredoc or a command substitution still defers to the harness's own flow, or is denied under a strict posture. The file tools stay the way to read and write files.
 
 For a genuinely multi-step diagnostic, compose the complexity into a file and run it as one invocation: author the script with the `Write` tool in the agent workspace (prompt-free, and the call shows its contents), then run a single `bash .agent-workspace/<file>`. The parser sees only that one clean command; the box auto-allows it; the multi-step logic runs *inside* the sandbox.
 

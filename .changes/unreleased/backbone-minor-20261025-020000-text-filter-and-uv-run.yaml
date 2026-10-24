@@ -1,0 +1,16 @@
+component: backbone
+kind: minor
+custom:
+  category: Added
+body: >
+  The privilege catalog gains `text-filter`, the read-only text filters such
+  as `cat`, `grep`, `head`, `tail` and `wc`, with `sort`, `uniq` and `diff`
+  only in a form that writes no file and runs no other program, and `uv-run`,
+  which recognizes `uv run`. Every shipped profile grants `text-filter` to
+  every agent, so a pipe or chain of filters and other granted programs, such
+  as `git log | head -5`, is allowed by the permission hook without a prompt.
+  No shipped profile grants `uv-run`, and a project grants it in its own
+  grants. Only the hook realizes either: `profile activate` and
+  `pkit permissions apply` write no native rule for them. A redirection that
+  writes a file, an expansion or another untrusted construct still defers,
+  and a deny still wins.

@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import shutil
 from pathlib import Path
 
 import click
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit import decisions, decisions_validate, default_branch, record_points
 from project_kit import project_config as pc
 from project_kit.cli import main
+from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED, ORIGIN_INCUBATED_IN_REPO
 from tests.adopter_repo import AdopterRepo, GitRepo, MakeAdopterRepo
 
 
@@ -366,6 +369,141 @@ def test_stamp_decision_dec_refuses_duplicate_slug(kit_target: Path) -> None:
     decisions.stamp_decision(kit_target, namespace="cap", slug="dupe")
     with pytest.raises(click.ClickException, match="already exists"):
         decisions.stamp_decision(kit_target, namespace="cap", slug="dupe")
+
+
+# ----------------------------------- a capability the project receives as a synced copy
+
+
+def _new_dec(namespace: str, slug: str = "ours") -> tuple[int, str]:
+    """Run `pkit new decision <namespace> <slug>`; return (exit code, output)."""
+    result = CliRunner().invoke(main, ["--color", "never", "new", "decision", namespace, slug])
+    return result.exit_code, result.output
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _stamped(root: Path, capability: str, slug: str = "ours") -> list[Path]:
+    folder = root / ".pkit" / "capabilities" / capability / "decisions"
+    return sorted(folder.glob(f"DEC-*-{slug}.md"))
+
+
+def test_new_decision_refuses_a_kit_shipped_capability_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In a project that receives the capability by sync, its `decisions/` folder is the
+    methodology's, and the next sync overwrites what the project writes there (core
+    rule 1). The command writes nothing, not even the folder of a capability that ships
+    no record, and names where the project's decision goes."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    shutil.rmtree(repo.root / ".pkit" / "capabilities" / "evidence" / "decisions")
+    before = _tree(repo.root)
+
+    code, output = _new_dec("evidence")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+    assert "`pkit new decision project ours`" in output
+    assert "`pkit new decision adr ours`" in output
+
+
+def test_new_decision_refuses_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """An externally-sourced capability is pulled whole from where it is authored, so its
+    folder is a copy in any project, the methodology's source included (COR-041)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+    before = _tree(repo.root)
+
+    code, output = _new_dec("evidence")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+
+
+def test_new_decision_stamps_a_kit_shipped_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, a kit-shipped capability's folder is its
+    source, never a copy, so the record stamps as before."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+
+    code, output = _new_dec("evidence")
+
+    assert code == 0, output
+    [stamped] = _stamped(repo.root, "evidence")
+    assert f"Stamped: {stamped.relative_to(repo.root).as_posix()}" in output
+
+
+def test_new_decision_stamps_a_capability_incubated_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability incubated in the project is the project's own (COR-031 D1), so the
+    record stamps as before."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+
+    code, output = _new_dec("evidence")
+
+    assert code == 0, output
+    [stamped] = _stamped(repo.root, "evidence")
+    assert f"Stamped: {stamped.relative_to(repo.root).as_posix()}" in output
+
+
+def test_new_decision_refuses_the_core_namespace_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In a project that receives the methodology by sync, `.pkit/decisions/core/` is a
+    synced copy, and the next sync overwrites a core record written there (core rule 1).
+    The command writes nothing and names where the project's decision goes."""
+    repo = make_adopter_repo()
+    before = _tree(repo.root)
+
+    code, output = _new_dec("core")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "the core namespace arrives in this project as a synced copy" in output
+    assert ".pkit/decisions/core/" in output
+    assert "`pkit new decision project ours`" in output
+    assert "`pkit new decision adr ours`" in output
+
+
+def test_new_decision_stamps_the_core_namespace_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, the core records are its source, so a core
+    record stamps as before."""
+    repo = make_adopter_repo()
+    _as_methodology_source(repo.root)
+
+    code, output = _new_dec("core")
+
+    assert code == 0, output
+    [stamped] = sorted((repo.root / ".pkit" / "decisions" / "core").glob("COR-*-ours.md"))
+    assert f"Stamped: {stamped.relative_to(repo.root).as_posix()}" in output
+
+
+def test_new_decision_stamps_the_project_namespace_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The project's own records are never a synced copy."""
+    repo = make_adopter_repo()
+
+    code, output = _new_dec("project")
+
+    assert code == 0, output
+    assert sorted((repo.root / ".pkit" / "decisions" / "project").glob("PRJ-*-ours.md"))
 
 
 # ------------------------------------- `pkit new decision adr`: the documentation roots (COR-049)

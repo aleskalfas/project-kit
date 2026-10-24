@@ -20,13 +20,13 @@ pkit:
         - living-docs:DEC-001#4
         - COR-050#2
     revalidated:
-      at: 2026-10-24T00:21:55Z
+      at: 2026-10-24T03:53:17Z
       outcome: unchanged
-      unchanged-because: The agent changed only where a reader-review takes the reader's paths from the readers point. It still fetches no captured source.
+      unchanged-because: The agent changed only how reader-review falls back to a space's audience, read from a file of the repository. It still never fetches a source.
 ---
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names
 
-**Verified by:** A test runs the resolver offline, from an empty cache and apart from the project, and finds its answer. Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
+**Verified by:** A test runs the resolver offline, from an empty cache and apart from the [project](../../../core/glossary.md#term-project--project), and finds its [answer](../../../core/glossary.md#term-answer--answer). Nothing checks the agent, whose definition grants it a shell: its text alone says it fetches no source.
 
-**Imposed by:** The friction checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same answer wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).
+**Imposed by:** The [friction](../../../core/glossary.md#term-friction--friction) checks read the repository alone and reach no network (COR-050 point 2). A check that gives the same [answer](../../../core/glossary.md#term-answer--answer) wherever it runs cannot ask a source whether it changed. A fetched copy of the text also changes with every timestamp on it (living-docs DEC-001).

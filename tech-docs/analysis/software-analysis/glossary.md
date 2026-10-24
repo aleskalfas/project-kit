@@ -90,6 +90,10 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
+      revalidated:
+        at: 2026-10-24T01:59:05Z
+        outcome: unchanged
+        unchanged-because: The change adds where brownfield onboarding starts and ends to the build. A candidate is still an artefact or a record written but not yet committed, which a person confirms or discards.
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -104,6 +108,10 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
+      revalidated:
+        at: 2026-10-24T10:39:51Z
+        outcome: unchanged
+        unchanged-because: structure.py gains a reading of where a body's parts open, which the term links use. The declared structure, and how a body is held to it, are as they were.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -165,6 +173,10 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
+      revalidated:
+        at: 2026-10-24T02:12:38Z
+        outcome: unchanged
+        unchanged-because: The term still names the four outcomes and how they map onto the two answers. The change makes pkit analysis propose answer a boxed regression updated, as its distinctions already say.
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -177,6 +189,10 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
+      revalidated:
+        at: 2026-10-24T02:12:40Z
+        outcome: unchanged
+        unchanged-because: The term still names what the agent drafts for a person to record. The change adds how the agent tells a boxed regression from one no record decides, which the term does not describe.
 TERM-revalidation-record:
   name: revalidation record
   status: active
@@ -388,7 +404,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s results, and a person records each (DEC-001 point 5).
+- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s [revalidation outcomes](#term-revalidation-outcome--revalidation-outcome), and a person records each (DEC-001 point 5).
 - **A run a command starts:** project-management's run of the agent with nobody watching. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command (project-management DEC-056 point 6).
 
 ## TERM-revalidation-record — revalidation record

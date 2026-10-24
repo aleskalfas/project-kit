@@ -14,7 +14,9 @@ Namespaces: `core` and `project` stamp under `.pkit/agents/<namespace>/`; any
 other namespace names a capability (COR-017, COR-026) and stamps under
 `.pkit/capabilities/<capability>/agents/` — the capability must exist, the
 `agents/` folder is created on first use, the same shape as
-`pkit new decision <capability>`.
+`pkit new decision <capability>`. A `core` folder, or a capability's, that
+arrives in the project as a synced copy is refused before anything is written
+(`refuse_synced_copy`): the next sync would overwrite the agent (core rule 1).
 """
 
 from __future__ import annotations
@@ -24,6 +26,7 @@ from pathlib import Path
 
 import click
 
+from project_kit import lifecycle_ownership
 from project_kit.capability_namespace import (
     CAPABILITIES_DIR,
     capability_names,
@@ -120,13 +123,20 @@ def stamp_new_agent(
     Refuses if the name is already taken anywhere agents ship from — core,
     project, or any capability — since the deploy resolves one agent per
     name and a colliding one would mask the other. Surface the collision
-    instead of silently shadowing.
+    instead of silently shadowing. Refuses, in a dry run too, a folder that
+    arrives in the project as a synced copy (`refuse_synced_copy`).
 
     Returns the agent file path (not the storyboard). When stamping
     folder-form, that's `<agents folder>/<name>/<name>.md`.
     """
     _validate_name(name)
     ns_dir = agents_dir_for(target_root, namespace)
+    refuse_synced_copy(
+        target_root,
+        namespace,
+        ns_dir,
+        f"Stamp the project's own agent with `pkit new agent project {name}`.",
+    )
 
     for _, location in agent_locations(target_root):
         existing = find_agent_file(location, name)
@@ -189,6 +199,37 @@ def agents_dir_for(target_root: Path, namespace: Namespace) -> Path:
             )
         return ns_dir
     return resolve_capability_dir(target_root, namespace, AREA_NAMESPACES) / "agents"
+
+
+def refuse_synced_copy(target_root: Path, namespace: Namespace, folder: Path, instead: str) -> None:
+    """Refuse to write into *folder*, an agents folder of *namespace*, where it is a synced copy.
+
+    The question is the tree's own predicate, asked through
+    `lifecycle_ownership.synced_copy_refusal`: `.pkit/agents/core/` in a project
+    that is not the methodology's source, a kit-shipped capability's `agents/`
+    there too, and an externally-sourced capability's in any project. The
+    `project` namespace is the project's own, so it is never asked. *instead*
+    says where the project's own artefact goes.
+    """
+    if namespace == "project":
+        return
+    if namespace == "core":
+        subject = "the core namespace"
+        authored = (
+            "Core agents, and their storyboards, are authored in the methodology's source "
+            "repository."
+        )
+    else:
+        subject = f"capability {namespace!r}"
+        authored = (
+            "A capability's own agents, and their storyboards, are authored where the "
+            "capability is authored."
+        )
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        target_root, folder, subject, f"{instead} {authored}"
+    )
+    if refusal is not None:
+        raise click.ClickException(refusal)
 
 
 def agent_locations(target_root: Path) -> list[tuple[Namespace, Path]]:

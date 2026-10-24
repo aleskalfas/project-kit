@@ -123,14 +123,22 @@ def read(issue_number: int, config: dict[str, Any]) -> Reading:
     """The local branches that name `issue_number`, and which is its branch.
     `gh` is asked only when several match, once for all of them."""
     names = _local_branches()
-    shaped = re.compile(rf"^[a-z]+/{issue_number}-[a-z0-9-]+$")
     naming = re.compile(rf"^[a-z]+/{issue_number}(-|$)")
-    matching = tuple(name for name in names if shaped.match(name))
-    misshapen = tuple(name for name in names if naming.match(name) and not shaped.match(name))
+    matching = tuple(name for name in names if is_issue_branch(name, issue_number))
+    misshapen = tuple(
+        name for name in names if naming.match(name) and not is_issue_branch(name, issue_number)
+    )
     if len(matching) < 2:
         return Reading(issue_number, matching, misshapen)
     open_prs, unread = _open_prs(matching, config)
     return Reading(issue_number, matching, misshapen, open_prs, unread)
+
+
+def is_issue_branch(name: str, issue_number: int) -> bool:
+    """Whether a branch named `name` is issue `issue_number`'s by its shape,
+    `<type>/<N>-<slug>`: the one shape :func:`read` matches the clone's local
+    branches by, and `close-issue` a merged pull request's head branch by."""
+    return re.fullmatch(rf"[a-z]+/{issue_number}-[a-z0-9-]+", name) is not None
 
 
 def _local_branches() -> tuple[str, ...]:

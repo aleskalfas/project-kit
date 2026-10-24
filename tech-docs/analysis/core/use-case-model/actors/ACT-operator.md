@@ -28,13 +28,13 @@ pkit:
 
 # ACT-operator — Operator
 
-The person at the controls of a machine. The role is per machine and per clone.
+The person at the controls of a machine. The [role](../../glossary.md#term-role--role) is per machine and per clone.
 
 - **Activities:**
   - start agent sessions
   - choose how much the agents may do without asking
-  - answer what the methodology gates
+  - [answer](../../glossary.md#term-answer--answer) what the [methodology](../../glossary.md#term-methodology--methodology) gates
 - **Occasions:** every working day, in every clone.
-- **Context:** the machine, its credentials and sandbox, and the judgement the gates ask for.
-- **Core:** the permission model, its sandbox and the cross-repository gate are this role's controls.
-- **Note:** the role is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator.
+- **Context:** the machine, its credentials and [sandbox](../../glossary.md#term-sandbox--sandbox), and the judgement the gates ask for.
+- **Core:** the permission model, its [sandbox](../../glossary.md#term-sandbox--sandbox) and the cross-repository gate are this [role](../../glossary.md#term-role--role)'s controls.
+- **Note:** the [role](../../glossary.md#term-role--role) is not whoever holds the repository's settings, since making merges wait on the checks is the adopter's. CONTRIBUTING.md also calls whoever holds those settings the operator.

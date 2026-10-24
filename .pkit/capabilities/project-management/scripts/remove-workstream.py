@@ -10,7 +10,11 @@
 Removes a workstream. Per DEC-018:
 
   * Zero-issues precondition: refuses if any issue (open or closed)
-    still carries the `workstream:<slug>` label.
+    still carries the workstream, whatever substrate carries the axis:
+    the `workstream:<slug>` label, the adopter's own label or title
+    prefix, or the board's `Workstream` field. The count is taken with
+    `--skip-label` too, and a count that cannot be read refuses as well.
+    `--force` (DEC-046) passes the precondition.
   * Type-the-slug confirmation prompt to prevent accidents.
   * Removes the entry from workstreams.yaml; deletes the GitHub label.
 
@@ -26,13 +30,12 @@ Exit codes:
   0  removed
   1  membership refusal / validation refusal / non-zero issue count
   2  usage error (slug not found)
-  3  gh failure
+  3  gh failure (the issue count unreadable; the label not deleted)
 """
 
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -48,7 +51,7 @@ sys.path.insert(0, str(_HERE))
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard, workstream_sync
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -162,20 +165,41 @@ def main() -> int:
     kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
 
-    # Issue-count precondition.
-    n = None
-    if kit_labels and not args.skip_label:
-        n = _gh_count_label_uses(axis_labels.label("workstream", args.slug), config)
-        if n is not None and n > 0 and not args.force:
+    # Issue-count precondition (DEC-018): taken from whatever substrate carries
+    # the axis, and taken with --skip-label too, which skips the label delete
+    # alone.
+    carriage = axis_carriage.carriage("workstream", config, substrate_map)
+    read = workstream_sync.carriers(
+        args.slug,
+        carriage=carriage,
+        config=config,
+        substrate_map=substrate_map,
+        gh_call=gh_run,
+    )
+    where = axis_carriage.describe("workstream", config, substrate_map)
+    n = len(read.carriers) if read.ok else None
+    if not read.ok:
+        if not args.force:
             print(
-                f"[refused] {n} issue(s) still tagged "
-                f"`{axis_labels.label('workstream', args.slug)}`. "
-                "Re-tag them (or use `merge-workstream` to consolidate into "
-                "another slug) first.\n"
-                "  → Pass --force to remove anyway (will leave orphan labels).",
+                f"[error] could not tell whether any issue carries {args.slug!r} "
+                f"(workstream is carried {where}), so nothing was removed: {read.error}\n"
+                "  → Pass --force to remove anyway.",
                 file=sys.stderr,
             )
-            return 1
+            return 3
+        print(f"[warn] --force: the issue count could not be read: {read.error}", file=sys.stderr)
+    elif n and not args.force:
+        numbers = ", ".join(f"#{c.number}" for c in read.carriers[:20] if c.number is not None)
+        print(
+            f"[refused] {n} issue(s) still carry {args.slug!r} (workstream is carried "
+            f"{where}): {numbers}. Re-tag them (or use `merge-workstream` to "
+            "consolidate into another slug) first.\n"
+            "  → Pass --force to remove anyway (will leave orphan values).",
+            file=sys.stderr,
+        )
+        return 1
+    elif n:
+        print(f"[warn] --force: {n} issue(s) still carry {args.slug!r}.", file=sys.stderr)
 
     print(f"remove-workstream: {args.slug}")
     print(f"  file:           {path}")
@@ -196,6 +220,16 @@ def main() -> int:
             print("[refused] slug did not match; aborted.", file=sys.stderr)
             return 0
 
+    # Label deletion first: a label already gone counts as deleted, so a re-run
+    # after a failed file write only writes the file.
+    if kit_labels and not args.skip_label and not _gh_label_delete(args.slug, config):
+        print(
+            f"[error] `{axis_labels.label('workstream', args.slug)}` was not deleted, and "
+            "workstreams.yaml was not changed.",
+            file=sys.stderr,
+        )
+        return 3
+
     # File mutation.
     ws = data.get("workstreams")
     if isinstance(ws, list):
@@ -209,45 +243,8 @@ def main() -> int:
         print(f"error: failed to write {path}: {exc}", file=sys.stderr)
         return 2
 
-    # Label deletion.
-    if kit_labels and not args.skip_label:
-        if not _gh_label_delete(args.slug, config):
-            print(
-                f"[warn] gh label delete `{axis_labels.label('workstream', args.slug)}` failed.",
-                file=sys.stderr,
-            )
-
     print(f"\n[ok] removed workstream {args.slug!r}.")
     return 0
-
-
-def _gh_count_label_uses(label: str, config: dict) -> int | None:
-    try:
-        proc = gh_run(
-            [
-                "gh",
-                "issue",
-                "list",
-                "--label",
-                label,
-                "--state",
-                "all",
-                "--limit",
-                "1000",
-                "--json",
-                "number",
-            ],
-            config,
-            check=False,
-        )
-    except FileNotFoundError:
-        return None
-    if proc.returncode != 0:
-        return None
-    try:
-        return len(json.loads(proc.stdout))
-    except json.JSONDecodeError:
-        return None
 
 
 def _gh_label_delete(slug: str, config: dict) -> bool:
