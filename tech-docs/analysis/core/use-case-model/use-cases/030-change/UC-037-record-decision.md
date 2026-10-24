@@ -32,6 +32,7 @@ pkit:
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/record_points.py
         - src/project_kit/cli.py
+        - .pkit/lifecycle/ownership.py
         - .pkit/skills/core/decision-author.md
         - .pkit/decisions/README.md
         - .pkit/rules/core.md
@@ -79,7 +80,7 @@ pkit:
 **Assumptions:**
 
 - Work that builds on a decision record cites only an accepted one, as the acceptance gate asks. No check of the system reads what a change builds on, save a rule's origin (core rule 2 and COR-051 point 5).
-- The developer writes records only where the project authors them, never in a folder of synced copies. Nothing stops a stamp or an edit there, and sync owns that folder (core rule 1).
+- The developer edits only the records the project authors, never a synced copy. A core record is stamped only in the methodology's source repository. Nothing stops an edit of a synced copy or a core stamp in another project, and sync owns those folders (core rule 1).
 
 **Trigger:** The developer makes a choice that the project's records do not hold yet, such as a technology or a way of working.
 
@@ -117,6 +118,7 @@ pkit:
 - **4a.** The default branch cannot be read in this clone. The system says so on standard error, and numbers past the working tree alone (COR-054 point 4). A record on the default branch may then hold the number already, which step 8 finds.
 - **4b.** The slug is not kebab-case, or a record of the namespace holds it already. The system refuses and writes nothing, and the path rejoins at step 2.
 - **4c.** The namespace names no capability the project holds. The system refuses and writes nothing, and the use case ends.
+- **4d.** The namespace names a capability whose folder the project receives as a synced copy. Such a capability is kit-shipped in a project other than the methodology's source repository, or externally sourced in any project. The system refuses and writes nothing, naming `project` and `adr` as where the project's decision goes (core rule 1). The use case ends.
 - **7a.** Two records of one namespace share an id, or a record's id differs from its file name's number. The system fails, naming each, and the path rejoins at step 6.
 - **7b.** A record's points break what COR-058 point 7 holds, such as a stub whose sentence differs from its entry. The system fails, naming `<file>#<id>`, and the path rejoins at step 6. A duplicate point id, a gap in the ids or a misspelt point heading draws only a warning.
 - **7c.** A line of a record narrates its own revision, such as an amendment heading or a correction stamped with a date. The system warns of it, naming the file and the line, and never fails on it. The developer states the fact plainly instead.
