@@ -39,6 +39,10 @@ pkit:
       artefact:
         - REQ-022
         - REQ-025
+    revalidated:
+      at: 2026-10-24T00:21:59Z
+      outcome: unchanged
+      unchanged-because: The agent, its storyboard and the package changed only where the readers point and a reader-review take the reader's paths. Proposing a page's fix is as it was.
 ---
 
 # UC-045 — Have the fix for a stale page proposed, and review it before it is applied

@@ -90,6 +90,10 @@ TERM-onboarding-plan:
           - .pkit/capabilities/living-docs/agents/living-docs/storyboard.md
         record:
           - living-docs:DEC-001#8
+      revalidated:
+        at: 2026-10-24T00:21:51Z
+        outcome: unchanged
+        unchanged-because: The agent and its storyboard changed only where a reader-review takes the reader's paths. Onboarding and its plan are as they were.
 TERM-page:
   name: page
   status: active
@@ -132,6 +136,10 @@ TERM-proposal:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#5
+      revalidated:
+        at: 2026-10-24T00:21:53Z
+        outcome: unchanged
+        unchanged-because: The agent changed only where a reader-review takes the reader's paths. What it proposes, and how, is as it was.
 TERM-reader:
   name: reader
   noun-forms: [readers]
@@ -145,6 +153,10 @@ TERM-reader:
           - .pkit/capabilities/living-docs/scripts/_lib/readers.py
         record:
           - living-docs:DEC-001#7
+      revalidated:
+        at: 2026-10-24T00:21:47Z
+        outcome: unchanged
+        unchanged-because: An entry of the readers point may now carry the paths its reader takes. The term names a reader's id and needs, and its view lists the paths, so it holds.
 TERM-reader-review:
   name: reader-review
   noun-forms: [reader-reviews]
@@ -157,6 +169,10 @@ TERM-reader-review:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#6
+      revalidated:
+        at: 2026-10-24T00:21:49Z
+        outcome: unchanged
+        unchanged-because: The agent's reader-review now takes the reader's paths from the readers point. It still judges one page as its reader would read it, against the rules that bind on it.
 TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]

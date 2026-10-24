@@ -30,6 +30,10 @@ pkit:
         - COR-050#14
       artefact:
         - REQ-022
+    revalidated:
+      at: 2026-10-24T00:22:01Z
+      outcome: unchanged
+      unchanged-because: The agent and its storyboard changed only where a reader-review takes the reader's paths. Onboarding is as it was.
 ---
 
 # UC-047 — Bring my existing documents into documentation spaces

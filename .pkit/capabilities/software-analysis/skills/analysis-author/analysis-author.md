@@ -6,6 +6,7 @@ metadata:
     - pkit analysis new
     - pkit analysis validate
     - pkit analysis check-numbers
+    - pkit analysis renumber
 composes:
   - choose-templates.md
   - build-analysis.md
@@ -155,7 +156,7 @@ An actor, a term or a requirement with nothing to anchor is stamped with `--unan
      - **A revalidation record** is held to it always, whatever any rule's status: no rule binds on a record, so the capability checks it itself.
      - **An artefact** is held to it where the format rule, `RS-SAN-001`, is accepted and binds. While the rule is proposed, the preview reports what would break where the rule would bind. `SAN` binds only through a rule set of the project's own that inherits it. So an artefact no such set selects is neither checked nor previewed. The check says so: its summary counts those artefacts, and where `SAN` binds on none of the analysis, it reports it, or warns once a rule of `SAN` is accepted. The README's "Where `SAN` binds" says how to write the set.
    - **The project's own parts.** A project may relabel a kind's parts and add its own, in the capability's `project/structures.yaml`, as it chooses them in `choose-templates.md`. The stamp writes them, each added part's hint naming the rule that asks for it. Delete an optional one you have nothing for. The check holds an added part only where its rule binds. The preview places one whose rule is still proposed where the rule would bind, as `pkit rule-sets reach --preview` reads it. A record's kind takes no added part, since no rule binds on a record. The README's "A project's own structures" says how.
-3. **Before merging a use case, a journey or a requirement** — `pkit analysis check-numbers`: a number the default branch gave another file since your branch left it is renumbered, and the stamp gives the next free one. It also fails on a use case's step or variant renumbered or removed, which you put back (`use-case.md`, "Later").
+3. **Before merging a use case, a journey or a requirement** — `pkit analysis check-numbers`: where the default branch gave your number to another file since your branch left it, renumber yours with `pkit analysis renumber <id>`, which gives your artefact the next free number and rewrites each reference to it. It also fails on a use case's step or variant renumbered or removed, which you put back (`use-case.md`, "Later").
 4. **Commit** per COR-008, one artefact or one revalidation per commit where you can.
 
 ### Withdrawing, never deleting
