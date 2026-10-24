@@ -208,6 +208,10 @@ TERM-merge-gate:
           - project-management:DEC-028
           - project-management:DEC-007
           - project-management:DEC-026
+      revalidated:
+        at: 2026-10-24T02:34:41Z
+        outcome: unchanged
+        unchanged-because: The gate still needs the checks green. It now reads the checks the base branch requires only to judge a rollup with no check (#1965).
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]

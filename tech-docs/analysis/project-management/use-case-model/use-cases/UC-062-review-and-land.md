@@ -80,6 +80,10 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
+    revalidated:
+      at: 2026-10-24T02:34:59Z
+      outcome: unchanged
+      unchanged-because: Step 4 still waits for a reported check before step 13, so the gate of this path never meets a rollup with no check. Variant 4b still says so and exits 5.
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it

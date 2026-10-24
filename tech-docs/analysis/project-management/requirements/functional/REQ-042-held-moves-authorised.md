@@ -23,6 +23,10 @@ pkit:
         - project-management:DEC-055#3
       artefact:
         - ACT-planner
+    revalidated:
+      at: 2026-10-24T02:34:44Z
+      outcome: unchanged
+      unchanged-because: The tests added to done-work's module cover its CI gate on a rollup with no check. Its tests of the authorisation and of an empty bypass are unchanged.
 ---
 
 # REQ-042 · Functional · A move a person holds is made only on that person's authorisation

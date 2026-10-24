@@ -955,7 +955,8 @@ def _ran_out(head: _Head, gate: CiGateResult, waited: float, wait_seconds: float
             "Only in a project that runs no checks on pull requests — never because a "
             f"wait ran out — review it with `review-pr {issue}` and merge it, on the "
             f"person's authorisation, with `done-work {issue} --yes`: `done-work` does "
-            "not wait for a check nobody reported"
+            "not wait for a check nobody reported, and passes a head with none wherever "
+            "the base requires no check"
         )
     return (
         f"ci: still running on {sha} {after}: {', '.join(gate.running)}. "

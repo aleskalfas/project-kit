@@ -74,6 +74,10 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
+    revalidated:
+      at: 2026-10-24T02:34:46Z
+      outcome: unchanged
+      unchanged-because: The skill's exit 5 entry now says that done-work passes a head with no check only where the base requires none. No step or variant of this use case speaks of that fallback.
 ---
 
 # UC-061 — Move my issue through its lifecycle, each move checked

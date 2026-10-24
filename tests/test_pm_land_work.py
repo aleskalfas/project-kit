@@ -130,6 +130,9 @@ class _FakeGitHub:
     bodies: list[str] = field(default_factory=list)
     #: The branch the PR merges into.
     base_branch: str = "main"
+    #: The checks the base branch requires, by name, which its rulesets state
+    #: (#1965); none by default.
+    required: list[str] = field(default_factory=list)
     #: The PR's author as GitHub returns it; None for one it returns as null.
     author: dict[str, Any] | None = field(default_factory=lambda: {"login": "author"})
     _reads: dict[str, int] = field(default_factory=dict)
@@ -192,6 +195,21 @@ class _FakeGitHub:
             return _done(argv, json.dumps(issue))
         if argv[:2] == ["api", "user"]:
             return _done(argv, "octocat\n")
+        if argv == ["api", f"repos/{{owner}}/{{repo}}/branches/{self.base_branch}"]:
+            # A ruleset protects the branch; its classic protection is off.
+            off = {"enabled": False, "required_status_checks": {"enforcement_level": "off"}}
+            return _done(argv, json.dumps({"protected": bool(self.required), "protection": off}))
+        if argv == [
+            "api",
+            "--paginate",
+            f"repos/{{owner}}/{{repo}}/rules/branches/{self.base_branch}",
+        ]:
+            checks = [{"context": name} for name in self.required]
+            rule = {
+                "type": "required_status_checks",
+                "parameters": {"required_status_checks": checks},
+            }
+            return _done(argv, json.dumps([rule] if checks else []))
         if issue_branch_support.is_open_prs_reading(argv):
             # The open PRs of several local branches matching the issue (#1608).
             open_on = {BRANCH: [PR]} if self.state == "OPEN" else {}
@@ -768,10 +786,11 @@ def test_the_wait_running_out_on_no_run_is_its_own_exit(world, capsys) -> None:
         "([skip ci]), or a run from a fork awaits approval."
     )
     assert f"Run `land-work {ISSUE}` again to keep waiting" in last
-    assert (
+    assert last.endswith(
         f"review it with `review-pr {ISSUE}` and merge it, on the person's authorisation, "
-        f"with `done-work {ISSUE} --yes`"
-    ) in last
+        f"with `done-work {ISSUE} --yes`: `done-work` does not wait for a check nobody "
+        "reported, and passes a head with none wherever the base requires no check"
+    )
     assert run.invoked == []
 
 
@@ -1418,6 +1437,23 @@ def test_a_head_that_moves_between_the_gate_and_the_merge_request_merges_nothing
         f"{_short(run.github.head)} before the merge. Nothing was merged; "
         f"`land-work {ISSUE}` checks and reviews the new head"
     )
+
+
+def test_a_head_pushed_as_the_gate_reads_its_checks_is_not_passed_unchecked(world, capsys) -> None:
+    """No check has reported on the new head yet. Where the base requires
+    checks, `done-work`'s gate takes that for pending, so no merge is asked
+    for (#1965)."""
+    run = world()
+    run.github.required = ["checks"]
+
+    def rollup_read(argv: list[str]) -> bool:
+        return argv[:2] == ["pr", "view"] and argv[-1] == "statusCheckRollup"
+
+    run.github.before(rollup_read, lambda: run.push_new_head("racing.txt"))
+    rc, _out, err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_HEAD_MOVED
+    assert (run.github.state, run.github.merges) == ("OPEN", [])
+    assert "failing/pending: checks (EXPECTED)" in err
 
 
 def test_a_head_review_pr_cannot_read_stops_unreadable_not_moved(world, capsys) -> None:
