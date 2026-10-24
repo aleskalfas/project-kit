@@ -12,12 +12,15 @@
   the version written as placeholders, and `<any>` in the page matching any text
   within a line.
 - **`--update`:** writes the new output, keeping the page's lines that still
-  match and the output of the commands that matched.
+  match and the output of the commands that matched, and never an output with a
+  line that would read as a command or close the fence.
 - **Safety:** a write in the repository fails the test and stops the run; a
-  command past its time limit fails its fence; what a command leaves running is
-  stopped; the scratch area lies outside the repository and is removed after.
+  command past its time or output limit fails its fence, and so does one whose
+  escaped process holds its output; what a command leaves running is stopped,
+  an interrupted run included; the scratch area lies outside the repository and
+  is removed after.
 - **The scratch project:** built only when a fence can run, by `git init`,
-  `pkit init` and a commit that is not signed.
+  `pkit init` and a commit that is not signed; git there allows no SSH.
 
 Each test but the page-type one runs the runner on fixture pages, with a builder
 that makes an empty project, so no test installs project-kit or reaches the
@@ -26,7 +29,9 @@ network; the build itself is tested with a stand-in `pkit`.
 
 from __future__ import annotations
 
+import os
 import subprocess
+import sys
 import time
 from collections.abc import Mapping
 from pathlib import Path
@@ -192,13 +197,15 @@ def test_a_command_runs_in_the_scratch_project_with_a_home_and_tmp_of_its_own(
         "none none",
         f"$ echo {pages.root}",
         "<repository>",
+        "$ git config --global --get protocol.ssh.allow",
+        "never",
         FENCE,
     )
 
     report = pages.run()
 
     assert report.findings == []
-    assert report.commands == 5
+    assert report.commands == 6
     assert cf.exit_status(report, update=False) == 0
 
 
@@ -343,6 +350,25 @@ def test_update_leaves_a_page_whose_output_matches_untouched(pages: Pages) -> No
     assert pages.read("guide.md") == before
 
 
+@pytest.mark.parametrize(
+    "printed",
+    ["$ echo injected", "$", "```", "  ````  "],
+    ids=["a-command", "a-bare-prompt", "a-closing-fence", "a-longer-closing-fence"],
+)
+def test_update_never_writes_output_that_would_read_as_markup(pages: Pages, printed: str) -> None:
+    pages.write("guide.md", "```console", f"$ printf '%s\\n' '{printed}'", "old", FENCE)
+    before = pages.read("guide.md")
+
+    report = pages.run(update=True)
+
+    (finding,) = report.findings
+    assert not finding.rewritable
+    assert "`--update` leaves it, since a line of it would read as a command" in finding.message
+    assert report.updated == []
+    assert pages.read("guide.md") == before
+    assert cf.exit_status(report, update=True) == 1
+
+
 def test_the_longest_run_of_matching_lines_is_kept() -> None:
     expected = ["header", "x <any>", "gone", "footer"]
     actual = ["header", "new", "x 1", "footer", "tail"]
@@ -399,6 +425,47 @@ def test_a_command_past_its_time_limit_fails_its_fence_only(pages: Pages) -> Non
     assert message.startswith("`sleep 20` ran longer than 0.5 seconds")
     assert report.commands == 2
     assert not report.stopped
+
+
+def _plain() -> dict[str, str]:
+    return {"PATH": os.environ.get("PATH", os.defpath)}
+
+
+def test_a_command_printing_past_the_output_limit_is_stopped(tmp_path: Path) -> None:
+    started = time.monotonic()
+    ran = cf.run_command("yes", tmp_path, _plain(), timeout=20, limit=1000)
+
+    assert time.monotonic() - started < 10
+    assert ran.stopped == "size"
+    assert len(ran.output) == 1000
+
+
+def test_a_process_that_left_the_group_holding_the_output_is_left_at_the_time_limit(
+    tmp_path: Path,
+) -> None:
+    escape = f"{sys.executable} -c 'import os, time; os.setsid(); time.sleep(3)' &"
+
+    started = time.monotonic()
+    ran = cf.run_command(escape, tmp_path, _plain(), timeout=0.5)
+
+    assert time.monotonic() - started < 2.5
+    assert ran.stopped == "time"
+
+
+def test_an_interrupted_run_stops_the_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    marker = tmp_path / "marker"
+
+    def interrupted(*_args: object, **_kwargs: object) -> list[object]:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(cf.selectors.DefaultSelector, "select", interrupted)
+    with pytest.raises(KeyboardInterrupt):
+        cf.run_command(f"sleep 1; touch {marker}", tmp_path, _plain(), timeout=20)
+    time.sleep(1.5)
+
+    assert not marker.exists()
 
 
 def test_what_a_command_leaves_running_is_stopped(pages: Pages, tmp_path: Path) -> None:

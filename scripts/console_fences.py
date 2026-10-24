@@ -19,19 +19,23 @@ runs it. This is project-kit's runner, the design note's decision 7, option A
 - **Where a command runs:** in a scratch project, never in the repository. The
   run builds one project, with project-kit installed from this checkout and
   committed, the first time a page holds a fence. Each fence runs in a copy of
-  it, with a home and a temporary directory of its own, so no fence sees what
-  another left. Each command runs on its own in `/bin/sh`, from the project's
-  root, with its input closed. A `cd` or a variable does not carry over to the
-  next command, and what a command writes in the project does.
-- **What it is given:** an environment the run builds, with nothing taken from
-  the caller's but `PATH`, behind this checkout's interpreter folder, so `pkit`
-  is this checkout's. No token, key or git variable reaches a command. `HOME`,
-  `TMPDIR` and the XDG folders lie in the fence's scratch area, git reads only
-  the scratch home's configuration, which signs nothing, and uv's cache is the
-  run's own. So the run fetches what uv needs once, from the network.
-- **The time limit:** a command that runs longer than `--timeout` seconds is
-  stopped with every process it started, and fails its fence. So does one that
-  leaves a process holding its output.
+  it, with a home and a temporary directory of its own, so no fence finds in its
+  own area what another left. Each command runs on its own in `/bin/sh`, from
+  the project's root, with its input closed. A `cd` or a variable does not
+  carry over to the next command, and what a command writes in the project does.
+- **What it is given:** an environment the run builds, with nothing of the
+  caller's but `PATH`, behind this checkout's interpreter folder, so `pkit` is
+  this checkout's. `HOME`, `TMPDIR` and the XDG folders lie in the fence's
+  scratch area, git reads only the scratch home's configuration, which signs
+  nothing and allows no SSH, and uv's cache is the run's own. So the run fetches
+  what uv needs once, from the network.
+- **What it is not:** a confinement. A command runs as the caller, and can read
+  whatever the caller can, such as the caller's SSH configuration and keys, or
+  on Linux the environment of the processes that started the run.
+- **The limits:** a command that runs longer than `--timeout` seconds, or
+  prints more than `OUTPUT_LIMIT` bytes, is stopped with every process left in
+  its process group, and fails its fence. So does one that leaves a process
+  holding its output. An interrupted run stops the command it is running.
 - **What is compared:** what the command printed, its standard output and error
   together as a terminal shows them, with the page's output. The exit status
   is not compared. The spaces that end a line and the blank lines that end an
@@ -42,17 +46,22 @@ runs it. This is project-kit's runner, the design note's decision 7, option A
   one line.
 - **`--update`:** writes each command's output into its page where they differ,
   keeping each line of the page's that still matches, `<any>` included. A person
-  reviews the new output like any change to the page (DEC-002 point 6).
-- **A write outside the scratch area:** the run lists every path in the
-  repository, with its size, times, mode and inode, before and after each
-  command. A path added, removed or changed fails the test, and stops the run.
-  The git index is left out, since any `git status` rewrites it. A folder that
-  holds a repository of its own, such as a linked worktree, is not listed.
+  reviews the new output like any change to the page (DEC-002 point 6). Output
+  with a line that would read as a command or close the fence is never written,
+  so nothing a command prints becomes a command of the next run.
+- **A write outside the scratch area:** the run lists every file in the
+  repository, with its size, times, mode and inode, and every folder, with its
+  mode, before and after each command. A path added, removed or changed fails
+  the test, and stops the run. The git index is left out, since any `git status`
+  rewrites it. A folder that holds a repository of its own, such as a linked
+  worktree, is not listed.
 
 What it cannot detect: a write anywhere but the repository, such as in the
-caller's home or the system's temporary folder by an absolute path, a write by
-another process at the same time, which it takes for the command's, a process
-that leaves its process group and writes later, and anything the network does.
+caller's home or the system's temporary folder by an absolute path, or in the
+git directory a linked worktree shares, which lies outside the worktree. Nor a
+change to the git index alone, a write undone before the command ends, a
+process that leaves its process group and writes later, or anything the network
+does. A write by another process at the same time it takes for the command's.
 Nothing confines a command: the run detects, it does not prevent.
 
 From the repository root:
@@ -74,12 +83,14 @@ import difflib
 import functools
 import os
 import re
+import selectors
 import shutil
 import signal
 import stat
 import subprocess
 import sys
 import tempfile
+import time
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -97,6 +108,8 @@ PROMPT = "$ "
 ANY = "<any>"
 #: Seconds a command may run.
 DEFAULT_TIMEOUT = 60.0
+#: Bytes a command may print.
+OUTPUT_LIMIT = 1 << 20
 #: Seconds each step of building the scratch project may run.
 BUILD_TIMEOUT = 600.0
 #: Paths in the repository that change without a write of the command's.
@@ -112,6 +125,8 @@ GITCONFIG = """\
 \tgpgsign = false
 [tag]
 \tgpgsign = false
+[protocol "ssh"]
+\tallow = never
 """
 
 _OPENING = re.compile(r"^(?P<indent> *)(?P<mark>`{3,}|~{3,})(?P<info>.*)$")
@@ -140,7 +155,8 @@ class Command:
 class Fence:
     """A `console` fence of the page at `path`: the opening line's `index`, the
     `indent` its lines carry, `end`, the closing line's index, and its commands, or
-    the `problem` that keeps it from running."""
+    the `problem` that keeps it from running. `mark` is the opening's run of
+    backticks or tildes."""
 
     path: str
     index: int
@@ -148,10 +164,23 @@ class Fence:
     end: int
     commands: tuple[Command, ...]
     problem: str | None = None
+    mark: str = "```"
 
     @property
     def line(self) -> int:
         return self.index + 1
+
+    def reads_as_markup(self, line: str) -> bool:
+        """Whether `line`, written as output in this fence, would read as a command or
+        close the fence."""
+        if line.startswith(PROMPT) or line.rstrip() == PROMPT.rstrip():
+            return True
+        return _closing(self.mark).match(line) is not None
+
+
+def _closing(mark: str) -> re.Pattern[str]:
+    """A line that closes a fence opened with `mark`."""
+    return re.compile(rf"^ *{re.escape(mark[0])}{{{len(mark)},}}[ \t]*$")
 
 
 def _body_start(lines: Sequence[str]) -> int:
@@ -180,19 +209,19 @@ def console_fences(lines: Sequence[str], path: str) -> list[Fence]:
             index += 1
             continue
         mark = opening["mark"]
-        closing = re.compile(rf"^ *{re.escape(mark[0])}{{{len(mark)},}}[ \t]*$")
+        closing = _closing(mark)
         end = next(
             (later for later in range(index + 1, len(lines)) if closing.match(lines[later])),
             len(lines),
         )
         words = opening["info"].split()
         if words and words[0] == LANGUAGE:
-            found.append(_fence(lines, path, index, len(opening["indent"]), end))
+            found.append(_fence(lines, path, index, len(opening["indent"]), end, mark))
         index = end + 1
     return found
 
 
-def _fence(lines: Sequence[str], path: str, index: int, indent: int, end: int) -> Fence:
+def _fence(lines: Sequence[str], path: str, index: int, indent: int, end: int, mark: str) -> Fence:
     commands: list[Command] = []
     problem: str | None = None
     prompt: tuple[int, str] | None = None
@@ -214,7 +243,7 @@ def _fence(lines: Sequence[str], path: str, index: int, indent: int, end: int) -
         commands.append(Command(prompt[0], prompt[1], tuple(output), end))
     if not commands and problem is None:
         problem = "the fence holds no command: no line starts with `$ `"
-    return Fence(path, index, indent, end, tuple(commands), problem)
+    return Fence(path, index, indent, end, tuple(commands), problem, mark)
 
 
 # --- comparing output ------------------------------------------------------------------
@@ -390,8 +419,11 @@ def build_project(project: Path, env: Mapping[str, str]) -> None:
 
 @dataclass(frozen=True)
 class Ran:
+    """What a command printed, at most `OUTPUT_LIMIT` bytes of it, and why the run
+    stopped it, if it did: `time` or `size`."""
+
     output: str
-    timed_out: bool
+    stopped: str | None = None
 
 
 def _stop_group(group: int) -> None:
@@ -399,10 +431,25 @@ def _stop_group(group: int) -> None:
         os.killpg(group, signal.SIGKILL)
 
 
-def run_command(command: str, cwd: Path, env: Mapping[str, str], timeout: float) -> Ran:
+def _ended(process: subprocess.Popen[bytes]) -> bool:
+    """Whether `process` has ended. On Linux it is left unreaped, so its id cannot yet
+    be another process group's. Elsewhere it is reaped, since macOS has `waitid`
+    only from Python 3.13: the moment until its group is killed is left open."""
+    if sys.platform == "linux":
+        flags = os.WEXITED | os.WNOHANG | os.WNOWAIT
+        return os.waitid(os.P_PID, process.pid, flags) is not None
+    return process.poll() is not None
+
+
+def run_command(
+    command: str, cwd: Path, env: Mapping[str, str], timeout: float, limit: int = OUTPUT_LIMIT
+) -> Ran:
     """Run `command` in `/bin/sh` from `cwd`, in a process group of its own, with its
-    input closed. Whatever it leaves running in its group is stopped when it ends, and
-    the whole group when it runs out of time."""
+    input closed, for at most `timeout` seconds and `limit` bytes of output.
+
+    However it ends, timed out, too long, done, or the run interrupted, its process
+    group is killed, so whatever it left running in the group stops. A process that
+    left the group and holds the output is left behind once the time is up."""
     process = subprocess.Popen(
         ["/bin/sh", "-c", command],
         cwd=cwd,
@@ -412,15 +459,37 @@ def run_command(command: str, cwd: Path, env: Mapping[str, str], timeout: float)
         stderr=subprocess.STDOUT,
         start_new_session=True,
     )
-    timed_out = False
+    pipe = process.stdout
+    assert pipe is not None
+    received = bytearray()
+    stopped: str | None = None
+    deadline = time.monotonic() + timeout
     try:
-        output, _ = process.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        timed_out = True
+        with selectors.DefaultSelector() as selector:
+            selector.register(pipe, selectors.EVENT_READ)
+            while stopped is None:
+                left = deadline - time.monotonic()
+                if left <= 0:
+                    stopped = "time"
+                elif selector.select(left):
+                    chunk = os.read(pipe.fileno(), 65536)
+                    if not chunk:
+                        break
+                    received += chunk
+                    if len(received) > limit:
+                        stopped = "size"
+        pause = 0.005
+        while stopped is None and not _ended(process):
+            if time.monotonic() >= deadline:
+                stopped = "time"
+            else:
+                time.sleep(pause)
+                pause = min(pause * 2, 0.05)
+    finally:
         _stop_group(process.pid)
-        output, _ = process.communicate()
-    _stop_group(process.pid)
-    return Ran(output.decode("utf-8", errors="replace"), timed_out)
+        pipe.close()
+        process.wait()
+    return Ran(bytes(received[:limit]).decode("utf-8", errors="replace"), stopped)
 
 
 Listing = dict[str, tuple[int, ...]]
@@ -646,13 +715,17 @@ def _run_fence(
             )
             report.stopped = True
             return outputs
-        if ran.timed_out:
+        if ran.stopped is not None:
+            why = (
+                f"ran longer than {timeout:g} seconds, or left a process holding its output"
+                if ran.stopped == "time"
+                else f"printed more than {OUTPUT_LIMIT} bytes"
+            )
             report.findings.append(
                 Finding(
                     fence.path,
                     line,
-                    f"`{command.text}` ran longer than {timeout:g} seconds, or left a process "
-                    "holding its output; the fence's later commands did not run",
+                    f"`{command.text}` {why}; the fence's later commands did not run",
                 )
             )
             return outputs
@@ -661,16 +734,24 @@ def _run_fence(
         if output_matches(expected, actual):
             continue
         diff = difflib.unified_diff(expected, actual, "the page", "the run", lineterm="", n=2)
+        rewritable = not any(fence.reads_as_markup(row) for row in actual)
+        message = f"`{command.text}` printed other output than the page shows"
+        if not rewritable:
+            message += (
+                "; `--update` leaves it, since a line of it would read as a command "
+                "or close the fence"
+            )
         report.findings.append(
             Finding(
                 fence.path,
                 line,
-                f"`{command.text}` printed other output than the page shows",
+                message,
                 tuple(f"  {row}" for row in diff),
-                rewritable=True,
+                rewritable=rewritable,
             )
         )
-        outputs[command.index] = updated_output(expected, actual)
+        if rewritable:
+            outputs[command.index] = updated_output(expected, actual)
     return outputs
 
 
@@ -731,5 +812,12 @@ def main(argv: Sequence[str] | None = None, root: Path = ROOT) -> int:
     return exit_status(report, update=args.update)
 
 
+def _terminated(signum: int, _frame: object) -> None:
+    """End the run on SIGTERM as on an interrupt: the command running is stopped with
+    its process group, and the scratch area is removed."""
+    raise SystemExit(128 + signum)
+
+
 if __name__ == "__main__":
+    signal.signal(signal.SIGTERM, _terminated)
     sys.exit(main())
