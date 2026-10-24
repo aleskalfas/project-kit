@@ -14,8 +14,8 @@ Each step below says what to write, and when it is done. "Names each concept by 
 Before you derive any candidate, find the surface the analysis ought to cover (DEC-001 point 9). The project declares it as `surface` in the `friction` key of `.pkit/project/config.yaml`. An installed capability may declare some of it too.
 
 1. **Run `pkit friction check --all`,** and read its `Uncovered surface` line.
-2. **Where it reads `no surface declared`,** the declared surface holds no file. Ask the person which paths the analysis ought to cover, such as `src/**`. Write the paths they name under `surface` by hand, since `pkit config set` writes no list, and run `pkit validate`. Derive no candidate until the check counts the paths of the declared surface.
-3. **Where it counts them,** go on with step 1. The paths it lists are those no artefact anchors yet, and show where to start.
+2. **Where the line reads `no surface declared`,** the declared surface holds no file. Ask the person which paths the analysis ought to cover, such as `src/**`. Write the paths they name under `surface` by hand, since `pkit config set` writes no list, and run `pkit validate`. Derive no candidate until the check counts the paths of the declared surface.
+3. **Where the line counts those paths,** go on with step 1. The paths listed under it are those no artefact anchors yet, and show where to start.
 
 ## 1. The concepts, then the actors
 

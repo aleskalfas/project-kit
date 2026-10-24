@@ -193,7 +193,7 @@ def test_the_build_onboards_a_brownfield_project_from_its_declared_surface_to_it
     assert "(DEC-001 point 9)" in declared
     assert "as `surface` in the `friction` key of `.pkit/project/config.yaml`" in declared
     assert "**Run `pkit friction check --all`,** and read its `Uncovered surface` line" in declared
-    assert "**Where it reads `no surface declared`,**" in declared
+    assert "**Where the line reads `no surface declared`,**" in declared
     assert "Ask the person which paths the analysis ought to cover" in declared
     assert "Derive no candidate until" in declared
 

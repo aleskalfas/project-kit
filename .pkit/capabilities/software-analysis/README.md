@@ -76,7 +76,7 @@ Install it with `pkit capabilities install software-analysis`. Then:
 
    It holds for an area you add later too, and for the artefacts an agent derives on a brownfield project. `build-analysis.md` says what each artefact may use, when to go back, and when each step is done.
 
-   **On a brownfield project,** onboarding starts from the surface you declare: the paths your analysis ought to cover (DEC-001 point 9). You declare them under `surface` in the `friction` key of `.pkit/project/config.yaml`. Where you declare none, the skill asks you for them before it derives any candidate. Onboarding ends only once `pkit friction check --all` counts none of them uncovered, and lists none of the analysis's artefacts as unanchored without a reason you accepted.
+   **On a brownfield project,** onboarding starts from the surface you declare: the paths your analysis ought to cover (DEC-001 point 9). You declare them under `surface` in the `friction` key of `.pkit/project/config.yaml`. Where you declare none, an agent following the skill asks you for them, and derives no candidate before. Onboarding ends only once `pkit friction check --all` counts none of those paths uncovered, and lists none of the analysis's artefacts as unanchored without a reason you accepted.
 
 Steps 2 and 3 may interleave: choose a kind's parts before you write its first artefact, or its first record. A candidate that describes your project truly can be that first one. The analysis's location needs no step: it is recorded the first time you stamp an artefact ("Where things live", below).
 
