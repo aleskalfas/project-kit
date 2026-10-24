@@ -81,9 +81,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T01:37:21Z
+      at: 2026-10-24T03:43:19Z
       outcome: unchanged
-      unchanged-because: REQ-042 now names the tests of close-issue that refuse a held close with no terminal and no --yes. Landing a pull request, and the authorisation of its merge, are as the use case says.
+      unchanged-because: done-work now works out the required reviewers before it refuses, and refuses a set with no reviewer in it. Step 13 already holds each required reviewer to a standing approval, a contributed one included.
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
