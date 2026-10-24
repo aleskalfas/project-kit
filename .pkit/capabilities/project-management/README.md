@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T04:20:08Z
+      at: 2026-10-24T04:52:46Z
       outcome: updated
       deferred:
         - anchor:
@@ -818,6 +818,8 @@ Mode is resolved per-PR by three layers (highest wins):
 `done-work`'s gate evaluates the resolved mode:
 - **human mode** — three-way OR (APPROVED review / `Approved`-prefix comment from non-author / `--bypass`).
 - **agent mode** — DEC-028's gate-checker: at least one configured path (remote-bot OR local-agent) has a fresh APPROVED verdict (see "When a verdict stays fresh" below), plus `--bypass`. The gate counts a verdict only when its comment carries the `<!-- pkit-verdict -->` marker the reviewer path stamps (#593) — a bare `Reviewer agent … APPROVED` line posted by any other path (hand-typed, or a freeform note) does not gate. The read surface (`show-pr --field review`) still displays every verdict-shaped comment, marked or not. Under a reviewer panel (DEC-032's resolved required set), a reviewer's slot is *also* satisfiable by an audited **per-reviewer override** (`--bypass-reviewer`, see below) — a `satisfied-by-override` state distinct from an APPROVED, leaving every other required reviewer gating.
+
+**The gate works out the required reviewers before it judges whether any is required** (#1979). So a reviewer a capability contributes satisfies the gate in a project that registers no remote or local reviewer of its own (DEC-032 D3). Where the required set holds no reviewer, the gate refuses the merge, and never passes. The refusal says whether nothing is registered, or whether your entries under `review.agents.*` name no reviewer, such as a `local_registered:` entry with no `name`.
 
 **An author the gate cannot read stops the approvals that rest on excluding it** (#1485). The gate tells a remote reviewer or a commenter from the PR's author by the author `gh pr view` returns. When that names nobody — no author, no login, a blank login, or `app/` with nothing after it, which is how `gh` writes an author GitHub returns as null — none of them is known to be someone else, so the gate counts none of the approvals author exclusion guards, and says why:
 

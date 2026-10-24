@@ -216,6 +216,10 @@ TERM-merge-gate:
           - project-management:DEC-028
           - project-management:DEC-007
           - project-management:DEC-026
+      revalidated:
+        at: 2026-10-24T03:43:21Z
+        outcome: unchanged
+        unchanged-because: done-work now works out the required reviewers before it refuses, and refuses a set with no reviewer in it. A pull request still lands only once each verdict it needs stands, its checks are green and its checkboxes are ticked.
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
