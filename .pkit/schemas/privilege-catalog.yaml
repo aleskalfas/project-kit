@@ -129,17 +129,28 @@ privileges:
     guardrail: true
     recognize:
       bash:
-        # Recursive rm in ANY form: -r, -R, --recursive[=...], or a short bundle
-        # containing r/R (-rf, -fr, -fR, -Rf, -rfv, ...). A flag_any token list
-        # can't express bundles or `--recursive=`, so this uses the regex escape
-        # hatch. Bare `rm` / `rm -f <file>` (single-file, non-recursive) is
-        # intentionally NOT a guardrail — that is fs-cleanup territory.
-        - pattern: '^rm(?=\s).*(\s-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|\s--recursive)'
+        # Recursive rm in ANY form: -r, -R, --recursive[=...] or a prefix of it
+        # down to --r, which GNU rm reads as --recursive, or a short bundle
+        # containing r/R (-rf, -fr, -fR, -Rf, -rfv, ...). The regex escape
+        # hatch spells these forms itself: the decision core reads a regex's
+        # flags as written. Bare `rm` / `rm -f <file>` (single-file,
+        # non-recursive) is intentionally NOT a guardrail — that is fs-cleanup
+        # territory.
+        - pattern: '^rm(?=\s).*(\s-[a-zA-Z]*[rR][a-zA-Z]*(\s|$)|\s--r(e|ec|ecu|ecur|ecurs|ecursi|ecursiv|ecursive)?(=|\s|$))'
   vcs-history-rewrite:
     description: Rewriting published git history (force-push).
     guardrail: true
     recognize:
       bash:
+        # For a deny, the decision core reads these flags in the forms git
+        # reads them: inside a bundle (-uf), cut to a prefix (--force-w), and
+        # with a value after `=` (--force-with-lease=main). --mirror
+        # force-updates every ref the remote holds.
         - cmd: git
           subcommand: [push]
-          flag_any: ["--force", "-f", "--force-with-lease"]
+          flag_any: ["--force", "-f", "--force-with-lease", "--mirror"]
+        # A refspec opening with `+` forces the update of its ref, as
+        # `git push origin +main` does without --force.
+        - cmd: git
+          subcommand: [push]
+          word_prefix_any: ["+"]

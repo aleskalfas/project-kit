@@ -2932,9 +2932,10 @@ def test_decide_verdict_path_byte_identical_to_main():
     # a deliberate, reviewed edit to this list.
     #
     # Transitive call graph (verified against decide.py):
-    #   decide        → _strip_leading_cd, recognized_privileges,
+    #   decide        → _strip_leading_cd, recognized_privileges, _deny_forms,
     #                   _effective_grants, _privilege_ids, _scope_ok,
     #                   _uncovered_segments, _shown_program, _doubts
+    #                   (+ _UNSEEN_KIND)
     #   hook_decide   → _read_default_agent, decide
     #   recognized_privileges → segments, _segment_privileges
     #   segments      → _segment_words, _assignments (+ _SEP/_UNTRUSTED)
@@ -2942,6 +2943,17 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _assignments          → (+ _ENVVAR)
     #   _doubts       → _words, _assignments (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/
     #                   _ODD_SPACE/_PROGRAM_VAR/_QUOTED/_EXPORT_OPERAND), _brace_expansion
+    #   _deny_forms   → _segment_words, _assignments, _export_prefix, _rule_form
+    #                   (+ _SEP/_CONFIG_VAR)
+    #   _rule_form    → _structured_form, _pattern_form
+    #   _structured_form      → _program_name, _globbed, _glob_head, _may_open_flag,
+    #                           _subcommand_candidates, _flag_form
+    #   _pattern_form         → _program_name, _globbed, _subcommand_candidates
+    #                           (+ _PATTERN_PROGRAM)
+    #   _may_open_flag        → _globbed (+ _FLAG_OPENERS)
+    #   _globbed              → (+ _GLOB)
+    #   _glob_head            → (+ _GLOB)
+    #   _flag_form            → (+ _BUNDLE)
     #   _uncovered_segments   → segments, _segment_privileges
     #   _segment_privileges   → _matches_bash
     #   _shown_program        → (+ _BARE_WORD)
@@ -2979,6 +2991,17 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_assignments",
         "_doubts",
         "_brace_expansion",
+        "_export_prefix",
+        "_deny_forms",
+        "_rule_form",
+        "_structured_form",
+        "_pattern_form",
+        "_program_name",
+        "_flag_form",
+        "_subcommand_candidates",
+        "_may_open_flag",
+        "_globbed",
+        "_glob_head",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
@@ -2992,161 +3015,121 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_QUOTED",
         "_BARE_CD",
         "_BARE_WORD",
+        "_GLOB",
+        "_FLAG_OPENERS",
+        "_BUNDLE",
+        "_CONFIG_VAR",
+        "_PATTERN_PROGRAM",
+        "_UNSEEN_KIND",
     )
-    # Deliberate, reviewed wording change (#1421): `_scope_ok` cited
-    # "ADR-004 §61", in its docstring and in the reason it gives for refusing a
-    # negation glob. ADR-004 now writes its points as headings, so its line 61
-    # no longer holds the alternative those words named. Both now cite that
-    # alternative by section. Only the citation's words change, not the logic
-    # or a verdict, so this one rewrite is applied to main's side and the rest
-    # of `_scope_ok` is compared byte for byte. Once this is on main, main
-    # carries the new words, the rewrite finds nothing to replace, and the
-    # guard compares main as it stands, and this entry may be deleted.
+    # Deliberate, reviewed verdict change (#1960): a deny binds on the forms of
+    # the command it names, as programs read them (`_deny_forms` and the
+    # helpers it calls), and where a pathname pattern or a configuration
+    # assignment may make the command one a deny names, `decide` keeps every
+    # grant from allowing and names the kind in its reason (ADR-025 point 2).
+    # `_matches_bash` reads a recognizer's `word_prefix_any`. These rewrites
+    # apply exactly that change to main's side, and the rest of each is
+    # compared byte for byte. Once this is on
+    # main, the rewrites find nothing to replace, and these entries may be
+    # deleted.
     sanctioned = {
-        "_scope_ok": (
+        "_matches_bash": (
             (
-                "      (ADR-004 §61).  Only positive allow-lists are honest at this layer.",
-                '      (ADR-004, Alternatives considered, "Relabel `network-egress` as\n'
-                '      natively enforced…").  Only positive allow-lists are honest at this\n'
-                "      layer.",
-            ),
-            (
-                '            f"(ADR-004 §61); use positive allow-list globs only"',
-                "            f'(ADR-004, Alternatives considered, \"Relabel `network-egress` as '\n"
-                "            f'natively enforced…\"); use positive allow-list globs only'",
-            ),
-        ),
-        # Deliberate, reviewed verdict change (#1942): the core reads each word
-        # of a Bash command as the shell does before it matches, removing quotes
-        # and backslashes (`_words`), so a quote alone no longer keeps a grant
-        # from allowing, and a deny binds on `"--force"` as on `--force`. A
-        # word it cannot read so, an expansion opened by `$`, or a leading
-        # assignment that changes which program runs, or is written with a
-        # quote or a backslash, keeps every grant from
-        # allowing (`_doubts`), and `decide` names each kind in its reason
-        # (ADR-025 point 2). `_ENVVAR` reads `NAME+=value` as an assignment
-        # too, as the shell does. `decide` strips no leading `cd` from a
-        # command holding such a construct, and `_BARE_CD` parts `cd` from its
-        # path with a space or a tab alone. These rewrites apply exactly that change to main's
-        # side, and the rest of each is compared byte for byte. Once this is on
-        # main, the rewrites find nothing to replace, and these entries may be
-        # deleted.
-        "_UNTRUSTED": (
-            (
-                '_UNTRUSTED = re.compile(r"""[\'"`<>(]""")',
-                '_UNTRUSTED = re.compile(r"""[$`<>(]""")',
-            ),
-        ),
-        "_ENVVAR": (
-            (
-                '_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")',
-                '_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\\+?=")',
-            ),
-        ),
-        "_BARE_CD": (
-            (
-                '_BARE_CD = re.compile(r"""^cd\\s+([^\\s\'"`$<>|&;()]+)$""")',
-                '_BARE_CD = re.compile(r"""^cd[ \\t]+([^\\s\'"`$<>|&;()]+)$""")',
-            ),
-        ),
-        "segments": (
-            (
-                "    false-prompt that the flat settings matcher couldn't catch.\n\n",
-                "    false-prompt that the flat settings matcher couldn't catch.\n\n"
-                "    Each word is the word the shell passes on, with its quotes and backslashes\n"
-                '    removed (#1942), so a grant or a deny matches `"--force"` as `--force`.\n\n',
-            ),
-            (
-                "        toks = raw.split()\n"
-                "        rest = toks\n"
-                '        while rest and (rest[0] == "export" or _ENVVAR.match(rest[0])):\n'
-                "            rest = rest[1:]\n"
-                "        if rest:\n"
-                "            out.append(rest)\n"
-                "        elif any(_UNTRUSTED.search(tok) for tok in toks):\n"
-                "            out.append(toks)\n",
-                "        words = _segment_words(raw)\n"
-                "        rest = words[_assignments(words):]\n"
-                "        if rest:\n"
-                "            out.append([word for _, word in rest])\n"
-                "        elif any(_UNTRUSTED.search(text) for text, _ in words):\n"
-                "            out.append([word for _, word in words])\n",
+                '            if not any(f in toks for f in rule["flag_any"]):\n'
+                "                return False\n"
+                "        return True\n",
+                '            if not any(f in toks for f in rule["flag_any"]):\n'
+                "                return False\n"
+                '        if "word_prefix_any" in rule:\n'
+                "            if not any(t.startswith(p) for t in toks[1:] "
+                'for p in rule["word_prefix_any"]):\n'
+                "                return False\n"
+                "        return True\n",
             ),
         ),
         "decide": (
             (
-                "    # construct below covers it as it covers a command with no `cd` (#1917);\n"
-                "    # the bare `cd` it strips cannot hold one.\n",
-                "    # construct below covers it as it covers a command with no `cd` (#1917).\n"
-                "    # A command holding such a construct anywhere, its `cd` included, is not\n"
-                "    # stripped at all (#1942): it is decided whole, where every deny still\n"
-                "    # binds on each segment and the construct then keeps every grant from\n"
-                "    # allowing, so a `cd` whose word the shell reads otherwise, such as\n"
-                "    # `cd {a,b}`, never hides what it runs.\n",
+                "    hits = recognized_privileges(catalog, request)\n"
+                '    privileges_catalog = catalog.get("privileges", {})\n'
+                "    allowed: set[str] = set()\n"
+                "    for g in _effective_grants(model, subject):\n"
+                '        privs = _privilege_ids(g.get("privilege"))\n'
+                "        overlap = hits & privs\n"
+                "        if not overlap:\n"
+                "            continue\n"
+                '        if g.get("effect", "allow") == "deny":\n'
+                '            return "deny", f"deny grant for {subject} on {sorted(overlap)}"\n',
+                "    hits = recognized_privileges(catalog, request)\n"
+                "    # A deny binds on the forms of the command it names (ADR-025 point 5), and\n"
+                "    # where a form may be one the core cannot see, the deny keeps every grant\n"
+                "    # from allowing (#1960, ADR-025 point 2). A grant still matches the command\n"
+                "    # as written.\n"
+                "    forms, unseen = _deny_forms(catalog, request)\n"
+                '    privileges_catalog = catalog.get("privileges", {})\n'
+                "    allowed: set[str] = set()\n"
+                "    undecided: set[str] = set()\n"
+                "    for g in _effective_grants(model, subject):\n"
+                '        privs = _privilege_ids(g.get("privilege"))\n'
+                '        if g.get("effect", "allow") == "deny":\n'
+                "            overlap = (hits | forms) & privs\n"
+                "            if overlap:\n"
+                '                return "deny", f"deny grant for {subject} on {sorted(overlap)}"\n'
+                "            undecided |= set(unseen) & privs\n"
+                "            continue\n"
+                "        overlap = hits & privs\n"
+                "        if not overlap:\n"
+                "            continue\n",
             ),
             (
-                '    if request.get("type") == "bash":\n'
-                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
-                '    if request.get("type") == "bash" and '
-                'not _doubts(request.get("command", "")):\n'
-                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
-            ),
-            (
-                "    # commands the shell runs. It is checked after the grants, so a deny still\n"
-                "    # wins. The reason lists the kinds of construct, never the command's text.\n"
-                '    if request.get("type") == "bash" and '
-                '_UNTRUSTED.search(request.get("command", "")):\n'
+                '            f"defer to the harness\'s normal flow"\n        )\n    if allowed:\n',
+                '            f"defer to the harness\'s normal flow"\n'
+                "        )\n"
+                "    # A deny that may bind on a form the core cannot see keeps every grant from\n"
+                "    # allowing (#1960): a pathname pattern may expand to a flag the deny names,\n"
+                "    # and a configuration may set one. The reason names the privileges and the\n"
+                "    # kinds of form, never the command's text.\n"
+                "    if undecided:\n"
+                '        kinds = " / ".join(\n'
+                "            sorted({_UNSEEN_KIND[kind] for name in undecided "
+                "for kind in unseen[name]})\n"
+                "        )\n"
                 '        if posture == "strict":\n'
                 '            return "deny", (\n'
-                '                "strict posture: an untrusted construct '
-                '(quote / substitution / "\n'
-                '                "backtick / redirection) in the command"\n'
+                '                f"strict posture: a deny on {sorted(undecided)} '
+                'may bind on what the "\n'
+                '                f"shell runs ({kinds})"\n'
                 "            )\n"
                 '        return "abstain", (\n'
-                '            "an untrusted construct (quote / substitution / backtick / "\n'
-                '            "redirection) in the command — fail closed, '
-                "defer to the harness's \"\n"
-                '            "normal flow"\n'
-                "        )\n",
-                "    # commands the shell runs. So does a word the core cannot read as the shell\n"
-                "    # does, or an assignment that changes which program runs (#1942): the\n"
-                "    # words matched may not be the words the shell passes on, or the program\n"
-                "    # not the one the grant names. It is checked after the grants, so a deny\n"
-                "    # still wins. The reason lists the kinds of construct, never the command's\n"
-                "    # text.\n"
-                '    doubts = _doubts(request.get("command", "")) '
-                'if request.get("type") == "bash" else []\n'
-                "    if doubts:\n"
-                '        kinds = " / ".join(doubts)\n'
-                '        if posture == "strict":\n'
-                '            return "deny", f"strict posture: an untrusted construct '
-                '({kinds}) in the command"\n'
-                '        return "abstain", (\n'
-                '            f"an untrusted construct ({kinds}) in the command — fail closed, "\n'
-                '            f"defer to the harness\'s normal flow"\n'
-                "        )\n",
+                '            f"a deny on {sorted(undecided)} may bind on what the shell runs '
+                '({kinds}) "\n'
+                '            f"— fail closed, defer to the harness\'s normal flow"\n'
+                "        )\n"
+                "    if allowed:\n",
             ),
         ),
     }
     introduced = (
-        "_segment_privileges",
-        "_uncovered_segments",
-        "_shown_program",
-        "_BARE_WORD",
-        "_words",
-        "_segment_words",
-        "_assignments",
-        "_doubts",
-        "_brace_expansion",
-        "_UNTRUSTED_KIND",
-        "_ODD_SPACE",
-        "_EXPORT_OPERAND",
-        "_PROGRAM_VAR",
-        "_QUOTED",
+        "_export_prefix",
+        "_deny_forms",
+        "_rule_form",
+        "_structured_form",
+        "_pattern_form",
+        "_program_name",
+        "_flag_form",
+        "_subcommand_candidates",
+        "_may_open_flag",
+        "_globbed",
+        "_glob_head",
+        "_GLOB",
+        "_FLAG_OPENERS",
+        "_BUNDLE",
+        "_CONFIG_VAR",
+        "_PATTERN_PROGRAM",
+        "_UNSEEN_KIND",
     )
     for fn in frozen:
         if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
-            continue  # #1908, #1942: compared once main defines it
+            continue  # #1960: compared once main defines it
         base_source = _extract_func_source(base, fn)
         for old, new in sanctioned.get(fn, ()):
             base_source = base_source.replace(old, new)
