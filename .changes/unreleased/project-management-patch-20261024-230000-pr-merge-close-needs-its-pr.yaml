@@ -11,4 +11,6 @@ body: >
   still reconciled. With `--pr <M>` the pull request must close the issue in
   its body or come from the issue's branch, `<type>/<N>-<slug>`. The close
   names the relation it found, in its output and its comment, and a pull
-  request with neither is refused with exit 1.
+  request with neither is refused with exit 1. Like a won't-do close, the
+  close through `--pr` is the person's: with no terminal and no `--yes` it
+  is refused, writing nothing. `done-work` passes `--yes` after the merge.

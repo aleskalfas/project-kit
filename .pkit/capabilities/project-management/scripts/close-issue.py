@@ -30,11 +30,11 @@ Closes a GitHub issue via either path declared in workflow.yaml's
     `cascade-eligibility-close` trigger this script previously only reported.
     Closes via `gh issue close --reason completed`.
 
-A won't-do close and a container's close are moves the person authorises, a
-hard reject when that is missing (DEC-006), as ``move-issue`` holds such a
-move: ``--yes`` authorises the close, a terminal asks, and with neither the
-close is refused before anything is written (#1936). A dry run writes nothing
-and asks for no authorisation.
+A won't-do close, a container's close and a leaf's close through ``--pr`` are
+moves the person authorises, a hard reject when that is missing (DEC-006), as
+``move-issue`` holds such a move: ``--yes`` authorises the close, a terminal
+asks, and with neither the close is refused before anything is written (#1936,
+#1968). A dry run writes nothing and asks for no authorisation.
 
 All three paths reconcile the issue's ``state:*`` labels after closing: any
 non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
@@ -248,9 +248,10 @@ def main() -> int:
         "--yes",
         action="store_true",
         help=(
-            "Skip the confirmation prompt. A won't-do close and a container's "
-            "close are the person's to authorise (DEC-006): with no terminal "
-            "to ask at, they are refused without --yes."
+            "Skip the confirmation prompt. A won't-do close, a container's "
+            "close and a leaf's close through --pr are the person's to "
+            "authorise (DEC-006): with no terminal to ask at, they are refused "
+            "without --yes."
         ),
     )
     session_guard.add_override_argument(parser)
@@ -603,12 +604,13 @@ def main() -> int:
 def _authorise(yes: bool, *, close: str, prompt: str) -> int | None:
     """Ask for the person's authorisation of a close DEC-006 holds for them.
 
-    A won't-do close (Backlog/Todo → Done) and a container's close (In Progress
-    → Done) are user-authorised, a hard reject when the authorisation is
-    missing — as ``move-issue`` holds such a move. ``--yes`` gives it; at a
-    terminal the person is asked. With neither, the close is refused before
-    anything is written. Returns None once authorised, else the exit code to
-    stop with: 1 for the refusal, 0 where the person declined at the prompt.
+    A won't-do close (Backlog/Todo → Done), a container's close (In Progress
+    → Done) and a leaf's close through the merged PR ``--pr`` names (#1968)
+    are user-authorised, a hard reject when the authorisation is missing — as
+    ``move-issue`` holds such a move. ``--yes`` gives it; at a terminal the
+    person is asked. With neither, the close is refused before anything is
+    written. Returns None once authorised, else the exit code to stop with: 1
+    for the refusal, 0 where the person declined at the prompt.
     """
     if yes:
         return None
@@ -714,11 +716,13 @@ def _close_leaf_through_pr(
             "written."
         )
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    held = _authorise(
+        args.yes,
+        close=f"closing #{issue_number} as completed through PR #{args.pr}",
+        prompt="Proceed? [y/N] ",
+    )
+    if held is not None:
+        return held
 
     key, comment_body = _pr_merge_close_comment(args.pr, relation)
     if not post_audit_once("issue", issue_number, key, comment_body, config, run=gh_run):
