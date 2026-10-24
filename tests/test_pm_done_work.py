@@ -926,38 +926,57 @@ def test_main_reads_the_argv_it_is_given(dw, monkeypatch, capsys) -> None:
 # ---- CI-status gate (#498) -------------------------------------------
 
 
-def test_gh_get_status_rollup_returns_list(dw, monkeypatch) -> None:
-    """_gh_get_status_rollup returns the rollup list from the JSON response."""
-    import subprocess
+def _gh_answers(dw, monkeypatch, *, returncode: int = 0, stdout: str = "", stderr: str = ""):
+    """Make every `gh` call done-work runs answer as given."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        lambda args, config, **k: subprocess.CompletedProcess(args, returncode, stdout, stderr),
+    )
 
+
+def test_gh_get_status_rollup_returns_the_checks(dw, monkeypatch) -> None:
+    """_gh_get_status_rollup returns the rollup's checks from the JSON response."""
     rollup = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
-
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout=json.dumps({"statusCheckRollup": rollup}),
-            stderr="",
-        )
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    assert dw._gh_get_status_rollup(496, {}) == rollup
+    _gh_answers(dw, monkeypatch, stdout=json.dumps({"statusCheckRollup": rollup}))
+    reading = dw._gh_get_status_rollup(496, {})
+    assert (reading.checks, reading.problem) == (tuple(rollup), "")
 
 
-def test_gh_get_status_rollup_none_on_failure(dw, monkeypatch) -> None:
-    """A gh failure yields None (treated as check-free / passing by the gate)."""
-    import subprocess
+def test_a_rollup_with_no_checks_is_read_as_none_configured(dw, monkeypatch) -> None:
+    """GitHub answers an empty rollup for a project that runs no checks: an
+    answer of no checks, told apart from no answer (#1946)."""
+    _gh_answers(dw, monkeypatch, stdout=json.dumps({"statusCheckRollup": []}))
+    reading = dw._gh_get_status_rollup(496, {})
+    assert (reading.checks, reading.problem) == ((), "")
 
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=1,
-            stdout="",
-            stderr="not found",
-        )
 
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    assert dw._gh_get_status_rollup(496, {}) is None
+@pytest.mark.parametrize(
+    ("answer", "problem"),
+    [
+        ({"returncode": 1, "stderr": "HTTP 502: Bad Gateway\n"}, "HTTP 502: Bad Gateway"),
+        ({"returncode": 1}, "gh exited 1"),
+        ({"stdout": "<html>"}, "gh's answer is not JSON"),
+        ({"stdout": "[]"}, "gh's answer carries no statusCheckRollup"),
+        ({"stdout": "{}"}, "gh's answer carries no statusCheckRollup"),
+        ({"stdout": '{"statusCheckRollup": null}'}, "gh's answer carries no statusCheckRollup"),
+        ({"stdout": '{"statusCheckRollup": ["x"]}'}, "gh's answer carries no statusCheckRollup"),
+    ],
+)
+def test_a_rollup_that_cannot_be_read_names_why(dw, monkeypatch, answer, problem) -> None:
+    """A failed call, an answer that is not JSON, and one without the rollup are
+    no answer, never one of no checks (#1946)."""
+    _gh_answers(dw, monkeypatch, **answer)
+    reading = dw._gh_get_status_rollup(496, {})
+    assert (reading.checks, reading.problem) == ((), problem)
+
+
+def test_a_rollup_gh_cannot_be_run_for_names_why(dw, monkeypatch) -> None:
+    def no_gh(args, config, **kwargs):
+        raise FileNotFoundError("gh")
+
+    monkeypatch.setattr(dw, "gh_run", no_gh)
+    assert dw._gh_get_status_rollup(496, {}).problem == "`gh` could not be run (gh)"
 
 
 def test_ci_gate_refuses_failing_and_pending(dw) -> None:
@@ -1184,7 +1203,9 @@ def _wire_main_seams(
         "_check_pr_placeholder",
         lambda body, pr_number, cap_root: [],
     )
-    monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: rollup)
+    # *rollup* is the checks GitHub answers, or a `_RollupReading` as it is.
+    reading = rollup if isinstance(rollup, dw._RollupReading) else dw._RollupReading(tuple(rollup))
+    monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: reading)
 
     def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
         calls["ci_audit"] = True
@@ -1324,6 +1345,52 @@ def test_green_ci_needs_no_bypass_ci(dw, monkeypatch):
     assert rc == 0
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
+
+
+# ---- checks that cannot be read (#1946) --------------------------------
+#
+# A project that runs no checks gets an empty rollup back, and passes. A
+# rollup that cannot be read is no answer, never one of no checks: the gate
+# refuses, names why, and writes nothing.
+
+
+def test_a_rollup_with_no_checks_passes_and_merges(dw, monkeypatch, capsys) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=[])
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
+    assert calls["merged"] is True
+    assert calls["ci_audit"] is False
+    assert "  ci-status: green (no checks configured)" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("bypass", [[], ["--bypass-ci", "flaky"]])
+def test_a_rollup_that_cannot_be_read_refuses_and_writes_nothing(
+    dw, monkeypatch, capsys, bypass
+) -> None:
+    """Refused as unreadable, exit 2 as any gh failure: nothing posted, moved or
+    merged — `--bypass-ci` included, since it overrides checks that were read."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=dw._RollupReading(problem="HTTP 502: Bad Gateway")
+    )
+    run = dw.run(["42", "--yes", *bypass])
+    assert (run.kind, run.exit_code) == (dw.UNREADABLE, 2)
+    assert run.reason == (
+        "[refused] CI-status gate for PR #496: its checks could not be read "
+        "(HTTP 502: Bad Gateway). Nothing was changed."
+    )
+    assert (calls["merged"], calls["moved"], calls["ci_audit"]) == (False, False, False)
+    assert calls["order"] == []
+    err = capsys.readouterr().err
+    assert run.reason in err
+    assert "--bypass-ci does not clear checks that were never read" in err
+
+
+def test_a_failing_check_still_refuses(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 1, False)
+    assert run.reason.startswith("[refused] CI-status gate for PR #496: checks are")
+    assert calls["merged"] is False
 
 
 # ---- checkbox close-gate pre-flight (DEC-007, #734) ------------------
