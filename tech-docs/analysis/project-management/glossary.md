@@ -108,9 +108,9 @@ TERM-cascade:
           - project-management:DEC-006
           - project-management:DEC-034
       revalidated:
-        at: 2026-10-24T05:04:16Z
+        at: 2026-10-24T06:23:37Z
         outcome: unchanged
-        unchanged-because: close-issue now refuses a pr-merge close of an open issue without --pr, or through a merged pull request that does not relate to it. The cascade still never closes a parent, and a person authorises that close.
+        unchanged-because: close-issue now offers a parent for closing only once the engine finds no open child under it, as the term says. The cascade still never closes a parent.
 TERM-checkbox:
   name: checkbox
   noun-forms: [checkboxes]

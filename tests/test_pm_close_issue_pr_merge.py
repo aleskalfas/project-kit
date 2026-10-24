@@ -98,6 +98,9 @@ def _run(
 
     issues = {42: issue, **(parents or {})}
     monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: issues.get(n))
+    # The closure cascade's report reads the engine's fold over each parent's
+    # children (#1937): every child closed, it says here.
+    monkeypatch.setattr(ci, "_engine_cascade_fold", lambda _n: {"opened": True})
     # The closure cascade resolves the closed issue's parent from its record,
     # which carries its native parent: none here.
     monkeypatch.setattr(
@@ -255,7 +258,7 @@ def test_a_first_line_not_in_an_allowed_form_has_its_parent_checked_with_a_warni
     assert rec.rc == 0
     out, err = capsys.readouterr()
     assert "[cascade] parents to check for eligibility: #10\n" in out
-    assert "  · parent #10 open; checkboxes complete" in out
+    assert "  · parent #10 open; no open child left and checkboxes complete" in out
     assert (
         f"[warn] #42's first line `{line}` is not a parent-ref a task may have: Feature: #<N> "
         "or Umbrella: #<N> or EPIC: #<N> or Milestone: [#<N>](../milestone/<N>); #10 is "

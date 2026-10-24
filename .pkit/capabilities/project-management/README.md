@@ -16,9 +16,8 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T09:09:51Z
-      outcome: unchanged
-      unchanged-because: done-work's refusal now names review-pr with the issue's number. What the README says of the merge gate, as the workstream commands' fix left it, still holds.
+      at: 2026-10-24T09:45:19Z
+      outcome: updated
       deferred:
         - anchor:
             kind: path
@@ -632,6 +631,17 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 - a first line in a form the issue's type does not allow is quoted in a warning, with the allowed forms, and the parent it names is checked all the same;
 - a native parent in another repository is named and not checked;
 - where the issue's record cannot be read, the first line's parent is checked, with a warning that the native one was not compared.
+
+**A parent is eligible to close only once its last open child closes** ([project-management:DEC-006-state-machine-and-cascade], [project-management:DEC-034-cascade-slot-binding]). Whether a parent has an open child left is the process engine's fold over its children (`pkit process cascade`), as `--mode=cascade-eligibility-close` reads it. A parent with no open child left and every box ticked is reported eligible, with the command that closes it:
+
+```
+[cascade] parents to check for eligibility: #10
+  · parent #10 open; no open child left and checkboxes complete — eligible to close: run `pkit pm close-issue 10 --mode=cascade-eligibility-close`
+```
+
+A parent with an open child is not eligible, and each open child is named: `· parent #10 open; not eligible — open child(ren): #12`. The open children are found by the read of the children the `--mode=cascade-eligibility-close` refusal makes. The report makes that read once more for each parent the fold holds, unless the fold stopped on a read. A parent with no open child left but an unticked box is not eligible either.
+
+Where the process engine could not fold the children, the report says that whether a child is open is not known. The report says the same, with the process engine's reason, where the fold stopped on a read, or held with no open child found. Such a parent is never reported eligible.
 
 What holds a container open:
 
