@@ -10,11 +10,17 @@ import click
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit.cli import main
 from project_kit.default_branch import CHECK_BASE_ENV
-from project_kit.manifest import BackboneManifest, write_backbone_manifest
+from project_kit.manifest import (
+    ORIGIN_EXTERNALLY_SOURCED,
+    ORIGIN_INCUBATED_IN_REPO,
+    BackboneManifest,
+    write_backbone_manifest,
+)
 from project_kit.scaffolds import MigrationScaffoldResult, stamp_migration
-from tests.adopter_repo import GitRepo
+from tests.adopter_repo import GitRepo, MakeAdopterRepo
 
 
 @pytest.fixture
@@ -390,3 +396,111 @@ def test_the_command_says_the_version_it_chose_and_why(released: GitRepo) -> Non
     )
     assert refused.exit_code == 1
     assert "--version 1.149.0 is already released" in refused.output
+
+
+# --- a migrations folder the project receives as a synced copy (#1953) ------
+
+
+def _new_migration(tier: str, *component: str) -> tuple[int, str]:
+    """Run `pkit new migration --tier <tier> [--component <c>] --version 99.0.0 --name ours`."""
+    args = ["--tier", tier, *(["--component", *component] if component else [])]
+    result = CliRunner().invoke(
+        main,
+        ["--color", "never", "new", "migration", *args, "--version", "99.0.0", "--name", "ours"],
+    )
+    return result.exit_code, result.output
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _tree(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+@pytest.mark.parametrize(
+    ("tier", "component", "subject"),
+    [
+        ("backbone", (), "the backbone's migrations"),
+        ("capability", ("evidence",), "capability 'evidence'"),
+    ],
+)
+def test_new_migration_refuses_a_synced_copy_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo, tier: str, component: tuple[str, ...], subject: str
+) -> None:
+    """In a project that receives the methodology by sync, the backbone's migrations and
+    a kit-shipped capability's are synced copies, and the next sync overwrites a script
+    written there (core rule 1). The command writes nothing and names where a migration
+    of the project's own goes."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    before = _tree(repo.root)
+
+    code, output = _new_migration(tier, *component)
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert f"{subject} arrives in this project as a synced copy" in output
+    assert "`pkit new migration --tier capability --component <capability>`" in output
+
+
+def test_new_migration_refuses_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+    before = _tree(repo.root)
+
+    code, output = _new_migration("capability", "evidence")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+
+
+@pytest.mark.parametrize(("tier", "component"), [("backbone", ()), ("capability", ("evidence",))])
+def test_new_migration_stamps_the_backbone_and_a_kit_shipped_capability_in_the_source(
+    make_adopter_repo: MakeAdopterRepo, tier: str, component: tuple[str, ...]
+) -> None:
+    """Where the methodology is authored, its trees are the source, never a copy."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+
+    code, output = _new_migration(tier, *component)
+
+    assert code == 0, output
+    assert "Stamped: " in output
+
+
+def test_new_migration_stamps_an_incubated_capability_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability the project incubates is its own (COR-031 D1)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+
+    code, output = _new_migration("capability", "evidence")
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/migrations/99.0.0/001-ours.sh" in output
+
+
+def test_new_migration_never_asks_of_the_adapter_tier(make_adopter_repo: MakeAdopterRepo) -> None:
+    """A sync copies no adapter's `migrations/` folder, and an adapter the project
+    authors is its own (COR-005), so the adapter tier stamps in an adopter."""
+    repo = make_adopter_repo()
+    [adapter] = sorted(p.name for p in (repo.root / ".pkit" / "adapters").iterdir() if p.is_dir())
+
+    code, output = _new_migration("adapter", adapter)
+
+    assert code == 0, output
+    assert f"Stamped: .pkit/adapters/{adapter}/migrations/99.0.0/001-ours.sh" in output
