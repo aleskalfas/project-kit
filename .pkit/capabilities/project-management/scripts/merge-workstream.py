@@ -345,6 +345,8 @@ def main() -> int:
         error = _gh_label_delete(loser_label, config)
         if error is not None:
             failures.append(f"`{loser_label}`: {error}")
+            # The label stays, so the file keeps the loser and a re-run deletes it.
+            merged.discard(loser)
 
     # The file: drop each loser whose issues all moved. A loser left here keeps
     # its label or option, so a re-run finishes it.

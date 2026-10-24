@@ -62,6 +62,7 @@ class FakeRepo:
         login: str = "me",
         admin: bool = False,
         fail_edit: set[int] | None = None,
+        fail_delete: set[str] | None = None,
     ) -> None:
         self.labels = set(labels)
         self.issues = issues or {}
@@ -69,6 +70,7 @@ class FakeRepo:
         self.login = login
         self.admin = admin
         self.fail_edit = fail_edit or set()
+        self.fail_delete = fail_delete or set()
         self.calls: list[list[str]] = []
         self.patched: dict[str, str] = {}
 
@@ -106,6 +108,8 @@ class FakeRepo:
                     issue["labels"] = [new if x == old else x for x in issue["labels"]]
             return _proc(cmd)
         if verb == ["label", "delete"]:
+            if cmd[3] in self.fail_delete:
+                return _proc(cmd, returncode=1, stderr="HTTP 502")
             self.labels.discard(cmd[3])
             for issue in self.issues.values():
                 issue["labels"] = [x for x in issue["labels"] if x != cmd[3]]

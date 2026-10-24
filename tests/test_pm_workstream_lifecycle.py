@@ -402,6 +402,27 @@ def test_merge_keeps_a_loser_whose_issues_did_not_all_move(mw, tmp_path, monkeyp
     assert "workstream:old" in repo.labels
 
 
+def test_merge_keeps_a_loser_whose_label_was_not_deleted(mw, tmp_path, monkeypatch) -> None:
+    """Every issue moved but the label's delete failed: the file keeps the
+    loser, so running the merge again deletes the label (#1940)."""
+    stage_project(tmp_path, TWO)
+    repo = FakeRepo(
+        labels={"workstream:cli", "workstream:old"},
+        issues={1: _issue("One", "workstream:old")},
+        fail_delete={"workstream:old"},
+    )
+    monkeypatch.setattr(mw, "gh_run", repo)
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, "--skip-references")
+    assert rc == 3
+    assert repo.issues[1]["labels"] == ["workstream:cli"]
+    assert "old:" in _file(tmp_path)
+    repo.fail_delete.clear()
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, "--skip-references")
+    assert rc == 0
+    assert "workstream:old" not in repo.labels
+    assert "old:" not in _file(tmp_path)
+
+
 def test_merge_moves_the_board_cards_and_drops_the_loser_option(
     mw, tmp_path, monkeypatch, seams
 ) -> None:
