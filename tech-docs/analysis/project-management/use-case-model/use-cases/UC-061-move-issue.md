@@ -66,9 +66,8 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T05:05:12Z
-      outcome: unchanged
-      unchanged-because: close-issue's pr-merge mode now refuses an open issue without --pr, or through a merged pull request that does not relate to it. REQ-042 now names the close through --pr among the closes the person holds. This use case's closes are the won't-do close and the parent's close, which hold.
+      at: 2026-10-24T06:23:42Z
+      outcome: updated
 ---
 
 # UC-061 — Move my issue through its lifecycle, each move checked

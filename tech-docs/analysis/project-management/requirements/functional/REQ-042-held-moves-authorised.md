@@ -25,8 +25,9 @@ pkit:
       artefact:
         - ACT-planner
     revalidated:
-      at: 2026-10-24T05:04:15Z
-      outcome: updated
+      at: 2026-10-24T06:23:40Z
+      outcome: unchanged
+      unchanged-because: The tests of close-issue this change adds check the closure cascade's report on a parent, which moves nothing. The tests of the closes a person holds are as they were.
 ---
 
 # REQ-042 · Functional · A move a person holds is made only on that person's authorisation
