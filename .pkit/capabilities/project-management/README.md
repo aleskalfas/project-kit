@@ -725,7 +725,7 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 
 | Command | What it does |
 |---|---|
-| `add-workstream <slug> [--name N] [--description D] [--status S] [--deprecated-reason R]` | Checks the slug and each attribute, then adds the entry. It creates the label, or adds the option `<slug>` to the board's field. |
+| `add-workstream <slug> [--name N] [--description D] [--status S] [--deprecated-reason R]` | Checks the slug and each attribute. It creates the label, or adds the option `<slug>` to the board's field, then adds the entry. |
 | `edit-workstream <slug> [--name N] [--description D] [--status S] [--deprecated-reason R]` | Checks each value given, then edits the entry. A status flip asks first. |
 | `rename-workstream <old> <new>` | Checks the new slug, and the old and the new label or option, before it changes anything. It renames the label or the option, then the entry. |
 | `merge-workstream --survivor <S> <L>...` | Moves each loser's issues to the survivor, deletes the loser's label or option, and drops the loser from the file. It rewrites the references to each loser. |
@@ -734,15 +734,17 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 
 **The checks.** A slug has 2 to 40 characters, matches `^[a-z][a-z0-9-]*[a-z0-9]$` and holds no consecutive hyphens. A name is one line of at most 64 characters. A description or a deprecation reason is one line of at most 200. Each command refuses a value outside these rules before it writes anything.
 
-**The substrate before the file.** Each command changes the label or the board first, and the file last. A failure leaves the file as it was and exits 3, and running the command again finishes the change. A board with no single-select `Workstream` field is refused.
+**The substrate before the file.** A command that changes a label or the board does so first, and writes the file last. When that change fails, the command leaves the file as it was and exits 3. Running it again finishes the change. Where the board has no single-select `Workstream` field, the command refuses.
 
-**Renaming.** `rename-workstream` refuses where both the old and the new label exist, since the issues would sit under two labels. `merge-workstream` consolidates them instead. Where only the new label exists, there is nothing to rename. The board's options follow the same rule, and a renamed option keeps each card's value.
+**Renaming.** `rename-workstream` refuses where both the old and the new label exist, since the issues would sit under two labels. Consolidate two such labels with `merge-workstream`. Where only the new label exists, there is nothing to rename. The board's options follow the same rule, and a renamed option keeps each card's value.
 
-**References.** A merge rewrites each typed reference to a loser, `workstream:<loser>` and `[workstream:<loser>]`, by default. It rewrites them in the files git tracks, and in the bodies of issues, pull requests and comments. It asks before each file and each body, and `--yes` takes them all at once. `--skip-references` leaves every reference.
+**References.** A merge rewrites each typed reference to a loser, `workstream:<loser>` and `[workstream:<loser>]`, by default. It rewrites them in the files git tracks, and in the bodies of issues, pull requests and comments. It asks before each file and each body, and `--yes` confirms every file and body at once. `--skip-references` leaves every reference.
 
 A comment by someone else is left, with a warning, unless you hold admin rights on the repository. A bare slug is never rewritten.
 
-**Triage.** `split-workstream` asks of each issue which new workstream it moves to. `--assign <issue>=<slug>` answers for one issue up front, and `--default <slug>` answers for the rest. Without an interactive shell, or with `--yes`, it takes those answers alone, and it refuses before any change while an issue has none. `--include-github-bodies` opts into rewriting the references to the source, each on an issue to that issue's answer.
+**Triage.** `split-workstream` asks of each issue which new workstream it moves to. `--assign <issue>=<slug>` answers for one issue up front, and `--default <slug>` answers for the rest. Without an interactive shell, or with `--yes`, the command takes those answers alone, and refuses before any change while an issue has none.
+
+`--include-github-bodies` opts into rewriting the references to the source. A reference on a triaged issue takes that issue's answer. Any other reference is asked about, takes `--default`, or is left with a warning.
 
 **Removing.** `remove-workstream` counts the issues that carry the workstream, on the kit's label, your own label or title prefix, or the board's field. It counts with `--skip-label` too, and refuses when it cannot count. `--force` removes the workstream anyway (DEC-046).
 
