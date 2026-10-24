@@ -17,7 +17,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-23T22:29:36Z
+      at: 2026-10-24T00:58:45Z
       outcome: updated
 ---
 
@@ -91,15 +91,17 @@ A scope *confines* a privilege: a scoped allow denies the privilege outside its 
 
 ## Compound commands (segment splitting + leading-`cd` strip)
 
-A compound Bash command reaches `decide()` as one string. The decision core splits it on `&&` / `||` / `|` / `;`, a background `&` and a newline with a **dumb regex segmenter** (no shell parser — see ADR-025 for the altitude rationale: the hook runs bare `python3` in-sandbox, where hosting an adversarial-input parser would trade an abstain-on-doubt splitter for parsing fragility) and decides on the per-segment matches. Two prefix-strips reduce false prompts over already-granted intent:
+A compound Bash command reaches `decide()` as one string. The decision core splits it on `&&` / `||` / `|` / `;`, a background `&` and a newline with a **dumb regex segmenter** (no shell parser — see ADR-025 for the altitude rationale: the hook runs bare `python3` in-sandbox, where hosting an adversarial-input parser would trade an abstain-on-doubt splitter for parsing fragility) and decides on the per-segment matches. Within each segment it reads the words as the shell does: it splits them at spaces and tabs, and removes quotes and backslashes by the standard library's POSIX quoting rules. So a grant or a deny matches `"--force"` as `--force`, and `git commit -m "fix: x"` as the command the shell runs. That reads words, never the shell's grammar, so it is no shell parser. Two prefix-strips reduce false prompts over already-granted intent:
 
-- **Env-prefix strip** (`segments()`): a leading `export` / `VAR=value` on a segment is dropped before matching, so `export GH_HOST=x && gh pr list` matches `gh pr list`. A segment that only assigns, with an untrusted construct (below) in it, such as `X=$(./x.sh)`, is not dropped. Its value may run a command, so the segment stays, and no grant covers it.
+- **Env-prefix strip** (`segments()`): a leading `export` / `VAR=value` on a segment is dropped before matching, so `export GH_HOST=x && gh pr list` matches `gh pr list`. An assignment counts only where its name is written unquoted, as the shell reads it. A segment that only assigns, with an untrusted construct (below) in it, such as `X=$(./x.sh)`, is not dropped. Its value may run a command, so the segment stays, and no grant covers it.
 
 - **Leading-`cd` strip** (ADR-025 Phase 1): when the **first** segment is a bare `cd <path>` followed by `&&` / `;`, the core drops it and decides on the remainder against the unchanged grant model — `cd src && gh pr list` auto-approves exactly as `gh pr list` would. It is a prompt-reduction over already-granted intent, **never a new grant** (`cd` only changes the cwd, which the intent layer does not confine), and the remainder is decided at the **original** cwd (the strip can never grant a directory-scoped privilege the un-stripped command lacked).
 
   The strip is deliberately conservative, and fails closed (ADR-004 decision point 4):
 
-  - **Only a bare `cd`** is stripped — a single path arg, no quotes, no `$()`, no backtick, no redirection, no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
+  - **Only a bare `cd`** is stripped — a single path arg, parted from `cd` by a space or a tab, no quotes, no `$()`, no backtick, no redirection, no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
+
+  - **No `cd` is stripped from a command holding an untrusted construct** (below), its `cd` included. Such a command is decided whole, so `cd {a,b} && git status` never hides what its `cd` word runs.
 
   - **The remainder is decided like any command.** An untrusted construct in it keeps every grant from allowing it, as it does anywhere in a command (below). So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through — and so does a redirect into the agent workspace (`cd /x && cat > .agent-workspace/body.md <<'EOF'`): the workspace grant covers the file tools only.
 
@@ -111,9 +113,24 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
 
-**An untrusted construct keeps every grant from allowing** (ADR-025 point 2). Where a Bash command holds a construct the dumb splitter cannot be trusted on, its segments may not be the commands the shell runs. These are a quote, a backtick, a `<` / `>` redirection and a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code. Such a command, with or without a leading `cd`, makes the core abstain, and a strict posture denies it instead.
+**An untrusted construct keeps every grant from allowing** (ADR-025 point 2). Where a Bash command holds a construct the dumb splitter cannot be trusted on, its segments may not be the commands the shell runs. These are a backtick, a `<` / `>` redirection, and a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code. A `$` is one too, since it opens every expansion. Its value is one the core never sees, and some forms, such as `${X@P}` and `$[…]`, evaluate it as code. The scan finds each of them inside quotes as well. Such a command, with or without a leading `cd`, makes the core abstain, and a strict posture denies it instead.
 
-So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `git commit -m "fix: x"` abstain, and the harness's own flow decides each.
+**So does a word the core cannot read as the shell does** (ADR-025 point 2). Its words may not be the words the shell passes on:
+
+- a quote or a backslash that does not close, as where the splitter cuts a quoted `;`
+- whitespace other than a space, a tab or a newline, such as a no-break space, inside which the shell reads one word
+- a word opening with `#`, a comment the shell drops
+- a brace expansion, such as `{a,b}` or `{1..3}`, which the shell turns into several words
+
+**And so does a leading assignment that changes which program runs, or one written with a quote or a backslash** (ADR-025 point 2). `PATH=/tmp/x gh pr list` runs whichever `gh` the new path finds first. Each such assignment is stripped for the denies, so `PATH=/tmp/x sudo id` is denied.
+
+- **The variables that change which program runs** are a search path, `PATH` or any other name ending in `PATH`, and the dynamic loader's `LD_*` and `DYLD_*`. So are the startup files a shell reads first, and the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own. The list names a family of variables, and is no boundary.
+- **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. A `git` grant already lets `git -c core.fsmonitor=…` run any program.
+- **An assignment written with a quote or a backslash** is never allowed by a grant. The core never matches an assignment's value, so removing its quotes would make no match more accurate: only a quoted argument is matched as the shell passes it on.
+
+A segment led by `export` runs no program: `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. Its assignments are judged as above, and no grant on a program covers it.
+
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. A glob is read as written: it changes only arguments, from the names of files, never the program a grant names.
 
 A deny on any segment still wins over every allow, and over an untrusted construct. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
 

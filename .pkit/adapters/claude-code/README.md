@@ -14,9 +14,9 @@ pkit:
         - src/project_kit/visibility.py
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-23T09:46:30Z
+      at: 2026-10-24T00:58:18Z
       outcome: unchanged
-      unchanged-because: ADR-060 now says the backbone's permission code grants the agent workspace, where it named a permission capability. The adapter's translation of that grant is as it was.
+      unchanged-because: ADR-060 point 4 names any untrusted construct where it named a quote. This README says only that a shell write into the workspace is judged like any other shell write, which holds.
 ---
 
 # Claude Code adapter
