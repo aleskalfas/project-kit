@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T03:46:19Z
+      at: 2026-10-24T04:58:27Z
       outcome: unchanged
-      unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
+      unchanged-because: The whole-repository check reads a renamed placed file under HEAD's derived links at both versions. The journey's steps are unchanged.
 ---
 
 # JRN-003 — Deliver a change

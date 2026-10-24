@@ -24,9 +24,9 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-23T14:50:19Z
+      at: 2026-10-24T04:58:39Z
       outcome: unchanged
-      unchanged-because: The package schema's description names the permission model's code as backbone code, not a capability. No key, type or check of the schema changes, so what the README says of it holds.
+      unchanged-because: "Discovery now matches each form of derived link on its own, as the passage on derived links reads: a link's target matches a form whole."
       deferred:
         - anchor:
             kind: path

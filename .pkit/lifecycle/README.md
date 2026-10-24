@@ -38,8 +38,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-24T02:28:19Z
-      outcome: updated
+      at: 2026-10-24T04:58:36Z
+      outcome: unchanged
+      unchanged-because: It now anchors the points of COR-050 and COR-056 its friction.places row cites. Discovery matches each derived-link form on its own, and the row holds.
 ---
 
 # Lifecycle

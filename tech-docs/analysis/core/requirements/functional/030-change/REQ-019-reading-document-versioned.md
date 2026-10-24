@@ -20,6 +20,10 @@ pkit:
         - tests/test_friction_report_body.py
       artefact:
         - ACT-ci-pipeline
+    revalidated:
+      at: 2026-10-24T04:58:14Z
+      outcome: unchanged
+      unchanged-because: The tests of the whole-repository check gain one for derived links across a rename. The tests of each reading document's version are as they were.
 ---
 
 # REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know

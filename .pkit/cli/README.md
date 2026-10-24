@@ -95,9 +95,9 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-24T03:46:20Z
+      at: 2026-10-24T04:58:37Z
       outcome: unchanged
-      unchanged-because: The reference says `pkit release merge` is guarded to `release/*` heads, which still holds. The change rewords only that command's help and the pointer in its refusal.
+      unchanged-because: Each derived-link form is matched on its own, a renamed placed file is read under HEAD's forms, and a code span ends within its paragraph. The friction checks hold as written.
       deferred:
         - anchor:
             kind: record

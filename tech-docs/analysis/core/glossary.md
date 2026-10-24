@@ -82,9 +82,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-23T08:13:49Z
+        at: 2026-10-24T04:57:41Z
         outcome: unchanged
-        unchanged-because: Discovery gains the declaration of derived links and the reading that sets them aside. What an anchor is stays as the definition says.
+        unchanged-because: Discovery now matches each declared form of derived link on its own, so forms that clash when joined stop no check. What an anchor is stays as defined.
 TERM-answer:
   name: answer
   status: active
@@ -138,9 +138,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-23T08:13:50Z
+        at: 2026-10-24T04:57:48Z
         outcome: unchanged
-        unchanged-because: Discovery gives each artefact the derived links its places declare, read as their words alone. What an artefact is stays as defined.
+        unchanged-because: Discovery now matches each form of derived link a place declares on its own. What an artefact is stays as defined.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -157,9 +157,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-23T08:13:52Z
+        at: 2026-10-24T04:57:50Z
         outcome: unchanged
-        unchanged-because: Discovery gains the derived links a place declares, and resolves types as before. The definition holds.
+        unchanged-because: Discovery now matches each form of derived link on its own, and resolves types as before. The definition holds.
 TERM-backbone:
   name: backbone
   status: active
@@ -383,9 +383,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-23T08:13:54Z
+        at: 2026-10-24T04:58:03Z
         outcome: unchanged
-        unchanged-because: The whole-repository check reads derived links as their words alone, so a moved link dates no debt. What debt is stays as defined.
+        unchanged-because: The whole-repository check now reads a renamed placed file under the derived links its name at HEAD sets aside, at both versions. What debt is stays as defined.
         deferred:
           - anchor:
               kind: path
@@ -504,9 +504,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-23T08:13:56Z
+        at: 2026-10-24T04:58:05Z
         outcome: unchanged
-        unchanged-because: COR-050 point 5 reads derived links as their words alone when a body is compared. Friction is still an anchor that changed with no answer, as defined.
+        unchanged-because: A renamed placed file is now read under the derived links HEAD sets aside in it, at both versions. Friction is still an anchor that changed with no answer, as defined.
         deferred:
           - anchor:
               kind: path
@@ -756,9 +756,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-23T08:14:00Z
+        at: 2026-10-24T04:57:52Z
         outcome: unchanged
-        unchanged-because: A component's place may declare derived links too. A place still holds what its declaration matches, as defined.
+        unchanged-because: Each form of derived link a place declares is now matched on its own. What a place is stays as defined.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -1328,9 +1328,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-23T08:14:01Z
+        at: 2026-10-24T04:58:06Z
         outcome: unchanged
-        unchanged-because: The whole-repository check reads derived links under the latest commit's declaration. It still compares each artefact with its revalidation point, as defined.
+        unchanged-because: The check now reads a renamed placed file under the derived links HEAD sets aside in it, at both versions. What the check is stays as defined.
 ---
 
 # Glossary
