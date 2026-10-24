@@ -17,11 +17,12 @@ pkit:
         - .pkit/schemas/permission-runs.schema.json
         - .pkit/permissions/project/grants.yaml
         - .pkit/skills/core/capability-author.md
-      record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+      record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact:
         - .pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#schemas-validate-path
+        - .pkit/cli/README.md#standard-flags
         - .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy
         - .pkit/adapters/claude-code/README.md#the-agent-workspace
         - .pkit/adapters/claude-code/README.md#the-probe-probe-confined-runpy
@@ -33,103 +34,231 @@ pkit:
       outcome: updated
 ---
 
-# Permissions — decision core
+# The permission model
 
-The decision core decides each tool call against the permission model ([COR-028](../decisions/core/COR-028-permission-model-realization.md)): allow, deny or abstain. An abstain leaves the call to the harness's own flow. The `pkit permissions` commands, such as `explain` and `diff`, and the Claude Code hook build the model and decide through this one core. So both reach the same verdict.
+The permission model decides your agents' tool calls: which run without asking you, and which are refused ([COR-028](../decisions/core/COR-028-permission-model-realization.md)). This page explains what it does and how it decides a call. It then shows how to turn it on and do the common tasks, with the reference last.
 
-- **Guardrails.** The model denies each privilege the catalog flags `guardrail: true` to every subject, `all`. That is the model's half of a double lock, and the harness's native denies are the other half ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
-- **Faults.** A fault while the hook decides gives an abstain, never a block ([the same section](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
-- **Capabilities' privileges.** The model merges the privileges that installed capabilities define ("Capability-contributed privilege *definitions*" below).
+## What it does for you
 
-<a id="the-permission-prompt-diagnostic-loop-prj-006"></a>
+The permission model lets your agents do their regular work without asking you, and keeps them from what you deny them.
 
-## The permission-prompt diagnostic loop
+- **Regular work runs unasked.** Once you turn the model on, each call your grants allow runs with no prompt, such as an agent's `git` and `gh` commands.
+- **What you deny is refused.** A deny wins over every allow, and nobody is asked about the call it refuses.
+- **The guardrails hold for everyone.** Recursive deletion, `sudo` and rewriting published history are denied to every agent and to you, whatever you grant.
+- **The rest is Claude Code's.** A call the model does not decide goes to Claude Code, which decides it by its own rules and may ask you.
+- **Unwatched runs keep your denies.** A command that starts agents with nobody watching may confine each run to rules of its own. The denies you set for every agent, or for that run's agent, hold there too.
 
-The diagnostic loop is opt-in and recommend-only. It turns the friction of confirmation prompts into a feedback loop you can measure and close. It has two halves, one in the hook and one in the CLI.
+## How a tool call is decided
 
-- **Capture, in the hook.** While the loop is off, the default, the hook does one cheap read of a marker and logs nothing. While it is armed, the hook appends each decision it deferred to a local log, after the decision is made. A fault in capture changes no decision and never breaks the hook's fail-open.
-- **What the log holds.** The hook observes only its own deferral, not whether the harness then prompted. So the log holds a superset of real prompts. The report states its coverage, never a predicted fall in the number of prompts.
-- **Arm, disarm and report, in the CLI:** `pkit permissions diagnose on`, `off`, `status` and `report`.
-  - **The marker,** `.pkit/permissions/project/diagnose.yaml`, carries a time to live, so a session expires by itself and cannot stay silently on.
-  - **The log,** `.pkit/permissions/project/diagnose-log.jsonl`, is capped in size and drops its oldest entries first. It redacts each command's tail by default.
-  - **Both files are ignored by git,** through the `.pkit/.gitignore` that pkit owns and renders.
-- **The report's groups.** The report groups the raw command text, to order and explain its recommendations. The groups are advisory for ranking only, and never authorize a change.
-- **Nothing applied.** Automatic fixes are deferred, and writing a new catalog privilege is never one of them.
+Each tool call an agent makes goes through the Claude Code hook, which has the decision core decide it: allow, deny or abstain.
 
-<a id="two-sharpening-axes-on-the-report-issue-317"></a>
-
-### Two sharpening axes on the report
-
-Since the log is a superset, the report adds two static axes that turn raw counts of deferrals into counts you can act on. Both are computed over the logged command text, which is redacted, and both stay recommend-only.
-
-- **Prompted vs auto-allowed.** Each logged record is an abstain of the hook's, to which the harness then applies its own allow patterns. Those are the `permissions.allow` patterns of the live `settings.json` and `settings.local.json`. The report matches each record against them, flat, and counts a record that matches none as a real prompt:
-  - **A Bash command** matches where its leading words are exactly a `Bash(<prefix>:*)` pattern. A command of shell shape, such as one holding `&&`, `|`, `;` or `$(…)`, never matches one pattern, so it always counts as a real prompt.
-  - **Another tool's call,** such as `Read` or `Edit`, matches where its tool is allow-listed.
-  - **The headline** gives the real prompts apart from the auto-allowed rest: `outcome: N real prompt(s) of M captured (M−N auto-allowed by the live settings.json flat matcher — NOT prompts).`
-- **Allowlisted-but-compound vs genuinely-missing.** Of the real prompts, the report splits each command on its shell operators. It tests every segment against the same matcher, except a bare `cd <path>`, which changes the working directory and is never an intent target.
-  - **Allowlisted-but-compound:** a command of shell shape whose every segment matches alone. It is an allowlisted command defeated only by compounding, a decomposition or butter-verb target that the report recommends eliminating at its source.
-  - **Genuinely-missing:** a real allowlist gap: an uncovered segment head, a bare uncovered command, or an un-allowed tool.
-  - **The headline** carries the split, and the line of the shell-shape group is tagged with it.
-- **Scope and honesty.** Both axes are static over redacted text, so a `Bash(<prefix>:*)` longer than the head the redaction keeps cannot match as a prefix. They leave `deny` patterns out of scope, since a logged record already abstained, so a guardrail's deny is decided upstream, not here. The numbers sharpen the superset's honesty, and promise no fall in live prompts.
-
-### A prompt for the agent workspace is a defect
-
-Every agent is granted the agent workspace, so a file tool's prompt there is a defect, never an allowlist gap to tune around. Its cause is a missing active profile, or enforcement that is off: worth a report, not a new allow rule.
-
-- **The tag.** Capture tags each deferral `workspace: true` or `false`. The tag says whether the decision core's own recognizer places a file tool's target in the workspace ("The agent workspace" below). The path itself is never logged.
-- **The band.** The report puts each deferral tagged `true` in a `workspace` group, under a **DEFECTS** band of its own, ahead of every recommendation.
-- **A shell command** that writes into the folder is not tagged. It is judged like any other shell write, so its prompt is an ordinary one.
-
-## The agent workspace
-
-Every checkout of a project has one agent workspace: `.agent-workspace/` at its root. Agents keep their intermediate files there, and nowhere else outside the repository, as the workspace rule in `.pkit/rules/core.md` says. The workspace's design is a path-scoped allow, recognised from a file tool's target path, with no exception for the shell. Every harness adapter meets this contract:
-
-- **What it holds:** agents' intermediate files, such as pull-request and issue bodies, scripts, captured output and notes.
-- **Per checkout, never committed:** `pkit init` and `pkit sync` create the folder, and exclude it through the repository's local exclude file in the common git directory:
-  - each worktree has its own folder at its own root
-  - one exclude entry covers all of them
-  - nothing in them reaches a commit
-
-  That entry covers the clone it was written in, and nothing in the folder is shared between clones. `init` recommends the same line for the project's committed `.gitignore`, which covers every clone and which pkit never writes ([the CLI README, `init`, step 4](../cli/README.md#init)).
-- **Granted to every agent, for the file tools, and only there.** The catalog's `workspace` privilege is a path-scoped allow (`recognize.path`), recognized only where both of these hold, and never for the tool alone:
-  - the tool is a file tool the privilege lists: `Read`, `Write`, `Edit`, `MultiEdit` or `NotebookEdit`
-  - its target lies inside `.agent-workspace/` of the project root, or of another working tree of the same repository
-- **Every shipped profile grants the privilege** to `all`, `read-only` included, since the folder holds nothing a commit can carry.
-- **Prompts, not confinement:** the privilege reduces prompts on the allow side, keyed on the target path, and confines nothing. Shell reach is the OS sandbox's, and the file tools run outside the sandbox, so inside the folder the recogniser's precision is the gate. A grant of the privilege can therefore neither reach nor deny a file anywhere else. Outside the folder the privilege does not apply, and a request is decided exactly as before.
-- **What lies inside:** a target whose path resolves inside the folder, symlinks resolved. A link out of the folder is outside.
-  - **The folder counts only as the checkout itself holds it.** A symlinked `.agent-workspace` is never the workspace, and a catalog folder entry that is absolute or climbs out with `..` is never recognized. Another working tree counts only when git registered it for the same repository, and another repository's workspace never does.
-  - **A repository or worktree nested inside the folder is not the folder.** When any directory from the folder down to the target holds a `.git` entry, the target is another checkout's.
-  - **An existing file with more than one link is not inside either.** A hard link planted in the folder would carry a write to its other name.
-- **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included ("Compound commands" below). A remainder with a redirect into the folder still abstains. Write intermediate files with the file tools.
-- **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing. [The Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does, and that its enforcement declaration names the dimension `path-scoped-allow`.
-- **A prompt there is a defect** ("A prompt for the agent workspace is a defect" above).
-
-## Scope enforcement
-
-Grant scope globs constrain the reach of an allow grant. The dimension they are matched against depends on the privilege's `scope_type` in `.pkit/schemas/privilege-catalog.yaml`:
-
-- **`directory` scope,** such as `docker`'s: grant scope globs are matched against the request's `cwd` with `fnmatch`. A request outside the listed paths is denied. The hook enforces this at decision time. This is no OS-level confinement boundary, since confining a shell by checking its working directory is no security boundary.
-- **`domain` scope,** such as `web-fetch`'s: grant scope globs are matched against the hostname of the request's URL with `fnmatch`, with positive allow-list semantics. The grant permits only URLs whose host matches at least one glob. A request whose host matches none, or that carries no URL that parses, is denied.
-- **No scope:** the grant is unconstrained, for any working directory and any host.
-
-An example of a `domain` scope, in `.pkit/permissions/project/grants.yaml`:
-
-```yaml
-- subject: agent:researcher
-  privilege: "[privilege-catalog:web-fetch]"
-  scope: ["docs.python.org", "*.github.com"]
-  effect: allow
+```mermaid
+flowchart TD
+  accTitle: How a tool call is decided
+  accDescr: An agent's tool call goes to the Claude Code hook, which has the decision core decide it. The core reads the permission model, and its verdict is allow, deny or abstain. On allow the call runs, and on deny it is refused, with no prompt for either. On abstain, Claude Code's own rules decide: they run the call or refuse it, and otherwise Claude Code may ask you.
+  call["An agent's tool call"] --> hook["The Claude Code hook"]
+  hook --> core["The decision core"]
+  model[("The permission model")] --> core
+  core -->|allow| runs["The call runs, unasked"]
+  core -->|deny| refused["The call is refused, unasked"]
+  core -->|abstain| rules["Claude Code's own rules"]
+  rules -->|allowed| runs
+  rules -->|denied| refused
+  rules -->|neither| asked["Claude Code may ask you"]
 ```
 
-This grant allows `researcher` to fetch from `docs.python.org` or any subdomain of `github.com`, and blocks all other hosts.
+- **The hook.** Claude Code passes each tool call to the hook before the call runs, once you turn enforcement on ("Turning it on" below). The hook prints the verdict for Claude Code, and prints nothing for an abstain ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+- **The decision core** reads the permission model at each call, and gives one verdict. The model holds:
+  - the guardrails, the privileges the catalog flags `guardrail: true`, denied to every subject, `all`
+  - the active profile's grants
+  - your project's grants, in `.pkit/permissions/project/grants.yaml`
+  - the grants and privileges of each installed capability ("Capability-contributed privilege *definitions*" below)
+- **Allow** runs the call with no prompt. **Deny** refuses it, and Claude Code asks nobody. A deny wins over every allow, whatever the order of the grants.
+- **Abstain** leaves the call to Claude Code's native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to Claude Code's own permission mode, which may ask you.
+- **The posture.** Where no grant allows or denies a call, the core abstains under the default posture, `lenient`, and denies under `strict`. The `read-only` profile is strict.
+- **A fault** while the hook decides gives an abstain, never a deny. The guardrails hold all the same, since Claude Code's native denies hold them too. That is the double lock ([the same section](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+- **A hidden guardrail.** Where a call may hide a guardrail's form, the hook asks you rather than abstain, outside auto and bypass mode. "A deny holds against the forms of its command" below says when.
+- **The CLI decides alike.** The `pkit permissions` commands, such as `explain` and `diff`, build the model and decide through the same core. So they reach the hook's verdict.
 
-A scope confines a privilege: a scoped allow denies the privilege outside its scope. The agent workspace needs the opposite, a privilege that exists only inside a folder and has no opinion elsewhere. So its folder is part of the privilege's recognizer (`recognize.path`), not a grant scope ("The agent workspace" above).
+## Turning it on
 
-### Deny/negation scopes are intentionally unsupported
+Two steps turn the model on: a profile supplies the grants, and registering the hook makes the core decide each call.
 
-A negation glob, such as `!*.ru`, in a domain-scoped grant is explicitly rejected with an error, rather than silently accepted or partly enforced. A tool-layer denylist is a false boundary: an agent's raw `bash curl` bypasses it at the sandbox layer, which is agent-blind. Advertising negation enforcement would overstate fidelity, and violate COR-028's honesty discipline. Only positive allow-lists are supported, so to block a host, remove it from the allow-list rather than add a negation glob.
+- **A profile** is a named set of grants and a posture. Three ship, each granting more than the one before: `read-only`, `non-destructive` and `autonomous`. `pkit permissions profile list` describes each.
+- **Activating one** sets its posture, layers its grants under your own, and writes the native rules it can. It does not register the hook.
+- **`enable`** registers the hook, and makes sure Claude Code's settings deny the guardrails natively.
+- **`explain`** shows the posture, and who may or may not use each privilege.
 
-## Compound commands (segment splitting + leading-`cd` strip)
+```console
+$ pkit permissions profile activate autonomous
+profile 'autonomous' active — posture lenient; its grants are layered under your own (manual grants untouched).
+
+4 profile-derived allow rule(s) realized in .claude/settings.local.json.
+  model's session-wide allow rules: Bash(docker-compose:*), Bash(docker:*), Bash(gh:*), Bash(git:*), Bash(pkit:*), Glob, Grep, Read, WebFetch, WebSearch
+
+out-of-harness gap (enforced elsewhere or not natively expressible):
+  1 grant(s) enforced at runtime, not in settings (per-agent / scoped → the hook)
+  1 grant(s) no native layer expresses (scoped / recognizer-shape — see ADR-004)
+⚠ not natively enforceable (declare + enforce out-of-harness): network-egress
+
+enforcement is OFF — run `pkit permissions enable` to make the model bite.
+$ pkit permissions enable
+live enforcement enabled: registered PreToolUse hook; native guardrail denies already present.
+$ pkit permissions explain
+Permission policy — who may (allow) or may not (deny) each privilege   (vocabulary: `pkit permissions overview`)
+
+  posture: lenient · ownership: additive
+
+all  (every agent and the operator)
+  deny  destructive-fs                                                                 guardrail
+  deny  privilege-escalation                                                           guardrail
+  deny  vcs-history-rewrite                                                            guardrail
+  allow vcs, issue-tracker, kit, repo-read, text-filter, workspace, docker, web-fetch
+
+Legend
+  allow / deny   the subject may / may not use the privilege
+  guardrail      denied for everyone, always — can't be granted around
+  posture        lenient = uncovered requests defer to Claude Code · strict = denied
+  ownership      additive = only adds to settings.json · managed = owns the permissions region
+  subjects       all = every agent + operator · operator = the human · agent:<name> = one subagent
+
+Commands
+  pkit permissions grant <subj> <priv> [--scope G] [--deny]   add a grant
+  pkit permissions revoke <subj> <priv>                       remove a grant
+  pkit permissions overview                                   privilege vocabulary + live status
+```
+
+`pkit permissions setup autonomy` takes both steps, sets up the OS sandbox too, and then proves the result. It stops where a session restart is needed. Run it again after the restart, and it declares the goal reached only once its probes pass.
+
+```sh
+pkit permissions setup autonomy
+```
+
+`pkit permissions disable` turns enforcement off again. It removes the hook's registration, and leaves the native guardrail denies in place.
+
+## Common tasks
+
+Each task shows its commands with their output, in a project where pkit is installed.
+
+Some tasks pass a call to the hook by hand, to show its verdict without a session. Claude Code passes each call as a JSON document on the hook's standard input, with the tool in `tool_name` and its input in `tool_input`. The hook prints an allow or a deny, and nothing when it abstains.
+
+### Find out why a call prompted
+
+The diagnostic loop logs each call the hook abstains on, and its report says which prompts you can remove, and how.
+
+1. Arm a session with `pkit permissions diagnose on`. It ends by itself after eight hours, or after the seconds `--ttl` gives.
+2. Work as usual. Below, two calls stand in for a session's: `make test`, which no grant covers, and `gh pr list | jq .`, a compound.
+3. Read the report with `pkit permissions diagnose report`.
+4. Disarm the session with `pkit permissions diagnose off`, which keeps the log.
+
+```console
+$ pkit permissions diagnose on
+diagnostic session armed — capturing deferred (prompted) decisions for 8.0h (auto-expires).
+  redaction: on (command tail dropped) · size cap: 2000 entries (drop-oldest)
+  the log is local + git-ignored: .pkit/permissions/project/diagnose-log.jsonl
+  run `pkit permissions diagnose report` to see the classified, ranked, recommend-only report · `diagnose off` to disarm.
+$ echo '{"tool_name":"Bash","tool_input":{"command":"make test"}}' | .pkit/adapters/claude-code/permission-hook.py
+$ echo '{"tool_name":"Bash","tool_input":{"command":"gh pr list | jq ."}}' | .pkit/adapters/claude-code/permission-hook.py
+$ pkit permissions diagnose report
+Permission-prompt diagnosis — captured deferred decisions, classified + ranked
+
+  captured: 2 deferred decision(s) · session: ARMED
+  note: the raw capture is a SUPERSET of real prompts (the hook sees its own deferral, not whether the harness prompted) — the axes below sharpen it.
+  outcome: 2 real prompt(s) of 2 captured (0 auto-allowed by the live settings.json flat matcher — NOT prompts).
+  of those real prompts: 1 allowlisted-but-compound (decompose / butter-verb — eliminate at source) · 1 genuinely-missing (a real allowlist gap).
+
+RECOMMENDED — remediations pkit recommends (MVP applies NOTHING; recommend-only)   1 deferral(s) · 1 group(s)
+  [1] allowlist-gap    1×   make test (1×)
+      → recommend granting the matching catalog privilege (a NEW catalog privilege is never auto-fixable — operator task)
+
+NEEDS YOUR JUDGEMENT — real trade-offs only you can settle   1 deferral(s) · 1 group(s)
+  [2] shell-shape      1×   gh pr list | jq …[redacted] (1×)
+      → narrow to single commands, or extract a named project command (COR-007) the matcher can vet
+      ↳ of these: 1 allowlisted-but-compound (butter-verb / decompose — eliminate at source) · 0 genuinely-missing (real allowlist gap)
+
+recommend-only: this report applies NOTHING — it ranks + recommends. Apply the remediations yourself.
+  (auto-fix is deferred per PRJ-006; a new catalog privilege is never auto-fixable.)
+$ pkit permissions diagnose off
+diagnostic session disarmed — the hook stops capturing.
+  the captured log is left in place; run `pkit permissions diagnose report` to read it, or delete it to clear.
+```
+
+The report's headline counts the real prompts: the logged calls that Claude Code's own allow rules would not run.
+
+- **`make test`** matches none of those rules, so the report counts it as genuinely missing.
+- **`gh pr list | jq .`** matches them part by part, but prompts as a compound. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project.
+- **Nothing is applied.** You act on each recommendation yourself ("The permission-prompt diagnostic loop" below).
+
+### Allow a command
+
+Grant the privilege that recognizes the command. `pkit permissions catalog` lists the privileges, and `pkit permissions grant` writes the grant into `.pkit/permissions/project/grants.yaml`. Below, the grant is of `uv-run`, which no shipped profile grants:
+
+```console
+$ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/adapters/claude-code/permission-hook.py
+$ pkit permissions grant all uv-run
+granted: all allow uv-run
+$ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/adapters/claude-code/permission-hook.py
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "allow grant for operator on ['uv-run']"}}
+```
+
+- **Who:** `all` grants it to every agent and to you. Name one agent as `agent:<name>`, or yourself as `operator`.
+- **When:** the hook reads the model at each call, so the grant holds from the next call on.
+- **Scope:** a privilege with a scope type, such as `docker` or `web-fetch`, takes `--scope` to narrow the grant ("Scope enforcement" below).
+- **Note:** `uv run` runs any program it is given, so this grant allows whatever that program does ("The read-only text filters and `uv run`" below).
+
+### Deny something to one agent
+
+Record a deny grant for that agent with `--deny`. A deny wins over every allow, so it holds where a grant to `all` allows the call. Below, every subject may use `gh`, but the agent `researcher` may not edit an issue with it:
+
+```console
+$ pkit permissions grant all issue-tracker
+granted: all allow issue-tracker
+$ pkit permissions grant agent:researcher issue-tracker-write --deny
+granted: agent:researcher deny issue-tracker-write
+$ echo '{"agent_type":"researcher","tool_name":"Bash","tool_input":{"command":"gh issue edit 7"}}' | .pkit/adapters/claude-code/permission-hook.py
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "deny grant for agent:researcher on ['issue-tracker-write']"}}
+$ echo '{"tool_name":"Bash","tool_input":{"command":"gh issue edit 7"}}' | .pkit/adapters/claude-code/permission-hook.py
+{"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "allow grant for operator on ['issue-tracker', 'issue-tracker-write']"}}
+```
+
+Claude Code names a subagent in the call's `agent_type`, and the hook decides the call for that agent ("Default-agent subject resolution" below). The last call names no agent, so the hook decides it for you, `operator`, and the grant to `all` allows it. `pkit permissions explain researcher` lists that agent's grants.
+
+### Ship a privilege of your own
+
+A capability can define a privilege of its own and deny it to its agents, with no edit to the core catalog. `pkit permissions scaffold` stamps the two files such a capability ships:
+
+```console
+$ pkit new capability my-cap
+Stamped: .pkit/capabilities/my-cap/
+$ pkit permissions scaffold my-cap
+Stamped: .pkit/capabilities/my-cap/permissions/privilege-catalog.yaml
+Stamped: .pkit/capabilities/my-cap/permissions/grants.yaml
+Next: replace the illustrative entries with this capability's own privilege(s) and deny(ies) — keep fragment keys BARE and reference them with the scoped token `[privilege-catalog:my-cap:<name>]`. `pkit schemas validate` lints the grant tokens.
+```
+
+- **Edit the two files.** Replace their illustrative entries with your privilege and its deny. Write the privilege's key bare, and name it in a grant with the scoped token `[privilege-catalog:my-cap:<name>]` ("Authoring a fragment" below).
+- **Check the tokens.** Once the manifest registers the capability, `pkit schemas validate`, run with no path, fails a grant token that names no privilege.
+- **The skill.** The `capability-author` skill walks you through these steps, at its step 6b.
+
+## Reference
+
+These sections say how each part of the model works, for looking up a rule.
+
+### Default-agent subject resolution
+
+The hook resolves the subject for every PreToolUse call, in this order:
+
+1. **`agent_type` present in the payload** → `agent:<agent_type>`. Claude Code sets this for spawned Task subagents.
+2. **`agent_type` absent, and `.claude/settings.json` has `agent: X`** → `agent:X`. The main session runs as that agent, so all of the agent's grants apply, allow and deny. A missing, unreadable or malformed `settings.json` silently falls back to rule 3.
+3. **`agent_type` absent, and no `agent` key in `settings.json`** → `operator`.
+
+**Implication:** in a session with a configured default agent, the operator's `!`-typed command is also bound to that agent's grants. That is consistent, because the session runs as the agent.
+
+**A session started with `--agent`:** the runs of project-management's `review-pr` name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json`, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
+
+**A confined run,** such as a fixer's, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
+
+### Compound commands (segment splitting + leading-`cd` strip)
 
 The decision core splits a compound Bash command into segments, and decides on what each segment matches. The command reaches the core as one string. The core splits it on `&&`, `||`, `|`, `;`, a background `&` and a newline, with a dumb regex splitter, which is no shell parser.
 
@@ -157,13 +286,13 @@ Two prefix-strips reduce false prompts over already-granted intent:
   - **The remainder is decided like any command.** An untrusted construct keeps every grant from allowing the remainder, as such a construct does anywhere in a command (below). So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through. So does a redirect into the agent workspace, as in `cd /x && cat > .agent-workspace/body.md <<'EOF'`, since the workspace grant covers the file tools only.
   - **A pipe is decided segment by segment.** The `cd` strip does not touch pipes, and `|` is not a `cd` separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
-The broader widening, to auto-approve any compound whose every segment is independently safe, is rejected as unsound, since a per-segment matcher is blind to composition. Any other widening is deferred (COR-007). The widenings taken are the leading-`cd` strip and the removal of a redirection that writes no file (below).
+The broader widening, to auto-approve any compound whose every segment is independently safe, is rejected as unsound, since a per-segment matcher is blind to composition. Any other widening is not built yet (COR-007). The widenings taken are the leading-`cd` strip and the removal of a redirection that writes no file (below).
 
 **Every segment needs its own allow.** The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
 
-### The read-only text filters and `uv run`
+#### The read-only text filters and `uv run`
 
 Two catalog privileges cover the programs a compound most often pipes into or runs. A compound of these programs and other granted ones is then allowed, each segment still needing a grant of its own:
 
@@ -174,13 +303,13 @@ Two catalog privileges cover the programs a compound most often pipes into or ru
 
 Each recognizer of the two is a `pattern` or names a subcommand. So a grant of either writes no native allow rule, and only the hook realizes them.
 
-Neither recognizes a program that writes a file or runs another, such as `sed`, `awk`, `find`, `xargs`, `tee` or `rg`. Nor does either recognize `echo`, the usual way to answer a confirmation from a pipe (`echo y | pkit …`), or `printf`, whose `-v` sets a shell variable. `jq` stays out too: its filters hold a `|`, and some of its options read files no check sees. So under a shipped profile, `grep x f | head` is allowed for every agent, and `grep x f | sed s/a/b/` defers.
+Neither recognizes a program that writes a file or runs another, such as `sed`, `awk`, `find`, `xargs`, `tee` or `rg`. Nor does either recognize `echo`, the usual way to answer a confirmation from a pipe (`echo y | pkit …`), or `printf`, whose `-v` sets a shell variable. `jq` stays out too: its filters hold a `|`, and some of its options read files no check sees. So under a shipped profile, `grep x f | head` is allowed for every agent, and `grep x f | sed s/a/b/` abstains.
 
-Leaving `echo` out does not close that path. What a granted program reads from a pipe is within its own grant, as its arguments are, so `basename y | pkit …` answers a confirmation too. Keeping a confirmation meant for a person from taking its answer from a pipe is open work.
+What a granted program reads from a pipe is within its own grant, as its arguments are. So leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`. A `pkit` confirmation that guards the operator's decision reads no answer from a pipe all the same ([the CLI README, "Standard flags"](../cli/README.md#standard-flags)).
 
 Recognition goes by the program's name, as for every privilege. A shell alias or function under one of these names runs what it names, unasked. The privilege is sound only where its names reach the system's own programs.
 
-### What keeps a grant from allowing
+#### What keeps a grant from allowing
 
 Three things in a Bash command keep every grant from allowing it, each described below:
 
@@ -225,7 +354,7 @@ So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(pyt
 
 For a grant, outside an `export`, a glob is read as written. A glob changes only arguments, from the names of files, never the program a grant names.
 
-### A redirection that writes no file
+#### A redirection that writes no file
 
 A redirection that writes no file is no untrusted construct. The core removes such a redirection before it splits the command, and decides the command as it would without the redirection:
 
@@ -250,13 +379,13 @@ A lookalike stays untrusted:
 
 So does every other redirection, such as `> out.txt`, `< in.txt`, `>|`, `<>`, a here-string or a heredoc.
 
-### Denies, and what an abstain says
+#### Denies, and what an abstain says
 
 A deny on any segment still wins over every allow, and over an untrusted construct.
 
 The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments. So the reason undoes none of the diagnostic log's redaction. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
 
-## A deny holds against the forms of its command
+### A deny holds against the forms of its command
 
 A deny, a guardrail's included, matches its command in more forms than a grant does. A grant matches a command as it is written, and a deny also matches these forms of it, as programs read them:
 
@@ -271,16 +400,16 @@ A deny, a guardrail's included, matches its command in more forms than a grant d
 
 The core reads these forms from a structured recognizer's `cmd`, `subcommand` and `flag_any`. Each reading errs toward the deny, so a prefix several long flags share reads as each. So does an option that is itself a prefix of a denied one, such as `--proxy` of `--proxy-insecure`.
 
-A recognizer's regex `pattern` is matched with a program's path cut to its name, and with the options before a subcommand left out. The core reads up to 64 places where the subcommand may stand behind an option's value, and past them it defers. Otherwise the regex is matched as written, so it spells each form of the flags it names. An example is the shipped `destructive-fs` regex, which spells `--recursive` cut down to `--r`.
+A recognizer's regex `pattern` is matched with a program's path cut to its name, and with the options before a subcommand left out. The core reads up to 64 places where the subcommand may stand behind an option's value, and past them it abstains. Otherwise the regex is matched as written, so it spells each form of the flags it names. An example is the shipped `destructive-fs` regex, which spells `--recursive` cut down to `--r`.
 
 The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates every ref the remote holds. It names a refspec opening with `+`, as in `git push origin +main`, through the recognizer field `word_prefix_any`.
 
-**Where a deny may bind on what the core cannot see, no grant allows the command.** The core then defers, naming the deny, and a strict posture denies. Two things keep the core from seeing:
+**Where a deny may bind on what the core cannot see, no grant allows the command.** The core then abstains, naming the deny, and a strict posture denies. Two things keep the core from seeing:
 
 - **A pathname pattern,** such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written.
   - **For a structured recognizer,** the core cannot tell where such a pattern stands for the program or subcommand, or may open with `-` or `+`.
   - **For a regex `pattern`,** the core cannot tell where such a pathname pattern stands anywhere in a segment of the program the regex opens with. Where the regex plainly opens with no program, that holds for a segment of any program.
-- **An assignment that changes the program's configuration,** which may set a forced refspec or an alias. Such an assignment keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` defers.
+- **An assignment that changes the program's configuration,** which may set a forced refspec or an alias. Such an assignment keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` abstains.
   - **The variables:**
     - `HOME`
     - the XDG base directories
@@ -288,29 +417,68 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
     - git's repository directories
   - **Where such an assignment counts:** in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it.
 
-**Where Claude Code may allow what the core defers on a guardrail, the person is asked, outside auto and bypass mode.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form the core cannot see. An adapter may use those names to ask the person rather than defer.
+**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's own rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter may use those names to ask the operator rather than abstain.
 
-[The Claude Code hook](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) asks the person on such a command, except in auto and bypass mode, where the person chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it. Where the core cannot tell such a deny, it defers. The deny side stays a speed bump all the same, not a security boundary.
+[The Claude Code hook](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) asks the operator on such a command, except in auto and bypass mode, where the operator chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it. Where the core cannot tell such a deny, it abstains. The deny side stays a speed bump all the same, not a security boundary.
 
-What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth. A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core defers, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
+What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth. A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core abstains, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
 
-A command the core defers for a construct it cannot read, such as `git push origin $F`, names no guardrail either, so the harness's own rules decide it. So does a wrapper the harness allows, as Claude Code's baseline allows `find`, and with it `find . -exec rm -rf {} +`, which no native deny's prefix matches.
+An abstain for a construct the core cannot read, such as `git push origin $F`, names no guardrail either, so the harness's own rules decide the command. So does a wrapper the harness allows, as Claude Code's baseline allows `find`, and with it `find . -exec rm -rf {} +`, which no native deny's prefix matches.
 
-## Default-agent subject resolution
+### Scope enforcement
 
-The hook resolves the subject for every PreToolUse call, in this order:
+Grant scope globs constrain the reach of an allow grant. The dimension they are matched against depends on the privilege's `scope_type` in `.pkit/schemas/privilege-catalog.yaml`:
 
-1. **`agent_type` present in the payload** → `agent:<agent_type>`. Claude Code sets this for spawned Task subagents.
-2. **`agent_type` absent, and `.claude/settings.json` has `agent: X`** → `agent:X`. The main session runs as that agent, so all of the agent's grants apply, allow and deny. A missing, unreadable or malformed `settings.json` silently falls back to rule 3.
-3. **`agent_type` absent, and no `agent` key in `settings.json`** → `operator`.
+- **`directory` scope,** such as `docker`'s, and the default where a privilege declares no `scope_type`: grant scope globs are matched against the request's `cwd` with `fnmatch`. A request outside the listed paths is denied. The hook enforces this at decision time. This is no OS-level confinement boundary, since confining a shell by checking its working directory is no security boundary.
+- **`domain` scope,** such as `web-fetch`'s: grant scope globs are matched against the hostname of the request's URL with `fnmatch`, with positive allowlist semantics. The grant permits only URLs whose host matches at least one glob. A request whose host matches none, or that carries no URL that parses, is denied.
+- **No scope:** the grant is unconstrained, for any working directory and any host.
 
-**Implication:** in a session with a configured default agent, a human's `!`-typed command is also bound to that agent's grants. That is consistent, because the session runs as the agent.
+An example of a `domain` scope, in `.pkit/permissions/project/grants.yaml`:
 
-**A session started with `--agent`:** the runs of project-management's `review-pr` name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json`, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
+```yaml
+- subject: agent:researcher
+  privilege: "[privilege-catalog:web-fetch]"
+  scope: ["docs.python.org", "*.github.com"]
+  effect: allow
+```
 
-**A confined run,** such as a fixer's, loads no project settings. So the hook is not registered there at all ("The rules of an agent run" below).
+This grant allows `researcher` to fetch from `docs.python.org` or any subdomain of `github.com`, and denies every other host.
 
-## Surgical deny: blocking raw gh mutations for project-manager
+A scope confines a privilege: a scoped allow denies the privilege outside its scope. The agent workspace needs the opposite, a privilege that exists only inside a folder and has no opinion elsewhere. So its folder is part of the privilege's recognizer (`recognize.path`), not a grant scope ("The agent workspace" below).
+
+#### Deny/negation scopes are intentionally unsupported
+
+A negation glob, such as `!*.ru`, in a grant's scope is rejected: each call the grant covers is denied, with a reason that says why. It is neither silently accepted nor partly enforced. A tool-layer denylist is a false boundary: an agent's raw `bash curl` bypasses it at the sandbox layer, which is agent-blind. Advertising negation enforcement would overstate fidelity, and violate COR-028's honesty discipline.
+
+Only positive allowlists are supported, so to deny a host, remove it from the allowlist rather than add a negation glob.
+
+### The agent workspace
+
+Every checkout of a project has one agent workspace: `.agent-workspace/` at its root. Agents keep their intermediate files there, and nowhere else outside the repository, as the workspace rule in `.pkit/rules/core.md` says. The workspace's design is a path-scoped allow, recognized from a file tool's target path, with no exception for the shell. Every harness adapter meets this contract:
+
+- **What it holds:** agents' intermediate files, such as pull-request and issue bodies, scripts, captured output and notes.
+- **Per checkout, never committed:** `pkit init` and `pkit sync` create the folder, and exclude it through the repository's local exclude file in the common git directory:
+  - each worktree has its own folder at its own root
+  - one exclude entry covers all of them
+  - nothing in them reaches a commit
+
+  That entry covers the clone it was written in, and nothing in the folder is shared between clones. `init` recommends the same line for the project's committed `.gitignore`, which covers every clone and which pkit never writes ([the CLI README, `init`, step 4](../cli/README.md#init)).
+- **Granted to every agent, for the file tools, and only there.** The catalog's `workspace` privilege is a path-scoped allow (`recognize.path`), recognized only where both of these hold, and never for the tool alone:
+  - the tool is a file tool the privilege lists: `Read`, `Write`, `Edit`, `MultiEdit` or `NotebookEdit`
+  - its target lies inside `.agent-workspace/` of the project root, or of another working tree of the same repository
+- **Every shipped profile grants the privilege** to `all`, `read-only` included, since the folder holds nothing a commit can carry.
+- **Prompts, not confinement:** the privilege reduces prompts on the allow side, keyed on the target path, and confines nothing. Shell reach is the OS sandbox's, and the file tools run outside the sandbox, so inside the folder the recognizer's precision is the gate. A grant of the privilege can therefore neither reach nor deny a file anywhere else. Outside the folder the privilege does not apply, and a request is decided exactly as before.
+- **What lies inside:** a target whose path resolves inside the folder, symlinks resolved. A link out of the folder is outside.
+  - **The folder counts only as the checkout itself holds it.** A symlinked `.agent-workspace` is never the workspace, and a catalog folder entry that is absolute or climbs out with `..` is never recognized. Another working tree counts only when git registered it for the same repository, and another repository's workspace never does.
+  - **A repository or worktree nested inside the folder is not the folder.** When any directory from the folder down to the target holds a `.git` entry, the target is another checkout's.
+  - **An existing file with more than one link is not inside either.** A hard link planted in the folder would carry a write to its other name.
+- **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included ("Compound commands" above). A remainder with a redirect into the folder still abstains. Write intermediate files with the file tools.
+- **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing. [The Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does, and that its enforcement declaration names the dimension `path-scoped-allow`.
+- **A prompt there is a defect** ("A prompt for the agent workspace is a defect" below).
+
+<a id="surgical-deny-blocking-raw-gh-mutations-for-project-manager"></a>
+
+### Surgical denies for project-manager
 
 Two privileges of the backbone catalog let a deny aim at the raw `gh` commands that the project-management capability's own scripts replace:
 
@@ -321,7 +489,7 @@ The capability denies both to its `project-manager` agent, and routes the agent 
 
 <a id="where-the-deny-lives-adr-016"></a>
 
-### Where the deny lives
+#### Where the deny lives
 
 The deny is a grant that the project-management capability contributes, in `.pkit/capabilities/project-management/permissions/grants.yaml`. It is no manual grant in `.pkit/permissions/project/grants.yaml`, which stays empty for this policy. The model takes such grants from each capability that the manifest's `components:` list registers. A capability folder the manifest does not register contributes nothing (install-state-as-gate).
 
@@ -338,20 +506,20 @@ The capability scripts' own `gh` calls are unaffected. They run inside the `pkit
 
 <a id="capability-contributed-privilege-definitions-adr-021"></a>
 
-## Capability-contributed privilege *definitions*
+### Capability-contributed privilege *definitions*
 
 A capability may define privileges of its own, beside the denies it ships ("Where the deny lives" above). An installed capability may ship a **privilege-catalog fragment** at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`, which the core merges into the central catalog. So a capability ships a privilege's definition and its deny together, self-contained. It needs no edit to the core catalog, which `pkit sync` would overwrite anyway.
 
 - **One shape.** The fragment reuses the document shape of `.pkit/schemas/privilege-catalog.yaml`, with no new schema.
 - **Installed capabilities only.** As for grants, only a capability the manifest registers contributes, and an orphan folder contributes nothing.
-- **The merge rule:** additive only, rejecting collisions, and forbidding guardrails. Each fragment id is rewritten to a capability-scoped key, `<cap>:<name>`. So a fragment can extend the recognised vocabulary in its own namespace, but can never overwrite a backbone or peer privilege. Nor can it install a deny on every adopter, since a `guardrail: true` fragment entry is rejected.
+- **The merge rule:** additive only, rejecting collisions, and forbidding guardrails. Each fragment id is rewritten to a capability-scoped key, `<cap>:<name>`. So a fragment can extend the recognized vocabulary in its own namespace, but can never overwrite a backbone or peer privilege. Nor can it install a deny on every adopter, since a `guardrail: true` fragment entry is rejected.
 - **Referencing one.** A grant references a scoped privilege with the COR-019 token whose id half carries the scope, `[privilege-catalog:<cap>:<name>]`, per COR-019's id-scope clarification.
 - **Inert until granted.** A fragment privilege is inert until a grant references it. What narrows an agent's reach is the deny grant the capability also ships. A tool-call deny is a speed bump that shapes behaviour, not a security boundary.
 - **Visible.** `pkit permissions overview` attributes each merged privilege to its contributing capability, and shows any rejected fragment.
 
-### Authoring a fragment (`pkit permissions scaffold <cap>`)
+#### Authoring a fragment (`pkit permissions scaffold <cap>`)
 
-Run `pkit permissions scaffold <cap>` to stamp the skeleton of both fragment files, with the correct shapes and inline guidance on their footguns. The command stamps `privilege-catalog.yaml` and `grants.yaml` into the capability's `permissions/` folder. It refuses an unknown capability, and refuses to clobber an existing fragment. It is paired with the `capability-author` skill, step 6b, and both files are hand-authored and kit-owned.
+Run `pkit permissions scaffold <cap>` to stamp the skeleton of both fragment files, with the correct shapes and inline guidance on their footguns. The command stamps `privilege-catalog.yaml` and `grants.yaml` into the capability's `permissions/` folder. It refuses an unknown capability, and refuses to clobber an existing fragment. It is paired with the `capability-author` skill, step 6b, and both files are hand-authored.
 
 The scaffold's guidance captures two footguns:
 
@@ -362,25 +530,64 @@ The scaffold's guidance captures two footguns:
 
 <a id="the-rules-of-an-agent-run-adr-066-point-5"></a>
 
-## The rules of an agent run
+### The rules of an agent run
 
 A command that starts agents with nobody watching may confine each run to rules of its own. The capability that ships the command declares them, and the privileges they name, in `.pkit/capabilities/<cap>/permissions/runs.yaml`, beside its grants fragment. The file keys them by the command whose runs they bind, and its shape is `.pkit/schemas/permission-runs.schema.json`. project-management's `fix-drift` is the first such command ([its README, "The rules of a fixer's run"](../capabilities/project-management/README.md#the-rules-of-a-fixers-run)).
 
-**In the model, a run's rules are denies,** for every subject, `all`. One rule denies every call that none of the privileges the run needs recognises. The run's other rules are a floor of denies. A deny prevails over every allow, the shared baseline's included, so a run may do only what the first deny leaves open, whatever else allows.
+**In the model, a run's rules are denies,** for every subject, `all`. One rule denies every call that none of the privileges the run needs recognizes. The run's other rules are a floor of denies. A deny prevails over every allow, the shared baseline's included, so a run may do only what the first deny leaves open, whatever else allows.
 
-**No session's model composes the file,** and no hook sees it. The backbone's run command, `pkit agents run`, reads the file at the commit the run is pinned to, and fills in the run's folders. It then projects the file through the shared decision core. The adapter realises the result in that run's own settings, never in a settings file of the project's ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)).
+**No session's model composes the file,** and no hook sees it. The backbone's run command, `pkit agents run`, reads the file at the commit the run is pinned to, and fills in the run's folders. It then projects the file through the shared decision core. The adapter realizes the result in that run's own settings, never in a settings file of the project's ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)).
 
-**The run's privileges take the catalog's entry shape, with three forms of their own,** which only a run fills in. They live in the run's file and never in the session catalog. So an older permission core never reads one, and the catalog schema's version does not move:
+**The run's privileges take the catalog's entry shape, with three forms of their own,** which only a run fills in. They live in the run's file and never in the session catalog:
 
 - `args`: the words a command starts with after its `cmd`, where `{working-copy}` and `{workspace}` stand for the run's folders, as in `git -C {working-copy} log`. A path-scoped privilege names those folders too.
 - `kit`: `reading`, the backbone's reading commands, or `queries`, each command another installed component declares a query, as `pkit <component or alias> <command>`. The backbone fills in both from the commit.
-- `except`: a call the rest of the recognizer matches, or every call where it has no other key, that none of the named privileges recognises.
+- `except`: a call the rest of the recognizer matches, or every call where it has no other key, that none of the named privileges recognizes.
 
-**How the projection holds each deny.** The first deny becomes an allow list: each privilege it leaves open, in a native rule's form. The other denies are the run's floor, and the session model's denies for every agent or for the run's agent. Each is held in one of two ways:
+**How the projection holds each deny.** The first deny becomes an allowlist: each privilege it leaves open, in a native rule's form. The other denies are the run's floor, and the session model's denies for every agent or for the run's agent. Each is held in one of two ways:
 
-- **Held by the list:** a deny that reaches nothing the allow list allows. Each part of it a native rule can name is also written as a native deny.
-- **Written as native denies:** a deny that reaches something the allow list allows. The native denies take it from the list, and where no native rule can name it, the run is refused.
+- **Held by the list:** a deny that reaches nothing the allowlist allows. Each part of it a native rule can name is also written as a native deny.
+- **Written as native denies:** a deny that reaches something the allowlist allows. The native denies take it from the list, and where no native rule can name it, the run is refused.
 
 Where the projection cannot tell that two recognizers never match the same call, it takes them to match the same call.
 
-`pkit agents rules <capability>:<command>` shows the allow list, the denies and how each is held ([the CLI README, "agents rules"](../cli/README.md#agents-rules-capabilitycommand---agent-agent---json)). `pkit permissions overview` and `explain` list each run's rules under "RULES OF AGENT RUNS", with the capability that contributed them.
+`pkit agents rules <capability>:<command>` shows the allowlist, the denies and how each is held ([the CLI README, "agents rules"](../cli/README.md#agents-rules-capabilitycommand---agent-agent---json)). `pkit permissions overview` and `explain` list each run's rules under "RULES OF AGENT RUNS", with the capability that contributed them.
+
+<a id="the-permission-prompt-diagnostic-loop-prj-006"></a>
+
+### The permission-prompt diagnostic loop
+
+The diagnostic loop is opt-in and recommend-only. It turns the burden of confirmation prompts into a feedback loop you can measure and close. It has two halves, one in the hook and one in the CLI.
+
+- **Capture, in the hook.** While the loop is off, the default, the hook does one cheap read of a marker and logs nothing. While it is armed, the hook appends each call it abstained on to a local log, after the decision is made. A fault in capture changes no decision and never breaks the hook's fail-open.
+- **What the log holds.** The hook observes only its own abstain, not whether the harness then prompted. So the log holds a superset of real prompts. The report states its coverage, never a predicted fall in the number of prompts.
+- **Arm, disarm and report, in the CLI:** `pkit permissions diagnose on`, `off`, `status` and `report`.
+  - **The marker,** `.pkit/permissions/project/diagnose.yaml`, carries a time to live, so a session expires by itself and cannot stay silently on.
+  - **The log,** `.pkit/permissions/project/diagnose-log.jsonl`, is capped in size and drops its oldest entries first. It redacts each command's tail by default.
+  - **Both files are ignored by git,** through the `.pkit/.gitignore` that pkit owns and renders.
+- **The report's groups.** The report groups the raw command text, to order and explain its recommendations. The groups are advisory for ranking only, and never authorize a change.
+- **Nothing applied.** Automatic fixes are not built yet, and writing a new catalog privilege is never one of them.
+
+<a id="two-sharpening-axes-on-the-report-issue-317"></a>
+
+#### Two sharpening axes on the report
+
+Since the log is a superset, the report adds two static axes that turn raw counts of abstains into counts you can act on. Both are computed over the logged command text, which is redacted, and both stay recommend-only.
+
+- **Prompted vs auto-allowed.** Each logged record is an abstain of the hook's, to which the harness then applies its own allow patterns. Those are the `permissions.allow` patterns of the live `settings.json` and `settings.local.json`. The report matches each record against them, flat, and counts a record that matches none as a real prompt:
+  - **A Bash command** matches where its leading words are exactly a `Bash(<prefix>:*)` pattern. A command of shell shape, such as one holding `&&`, `|`, `;` or `$(…)`, never matches one pattern, so it always counts as a real prompt.
+  - **Another tool's call,** such as `Read` or `Edit`, matches where its tool is allowlisted.
+  - **The headline** gives the real prompts apart from the auto-allowed rest: `outcome: N real prompt(s) of M captured (M−N auto-allowed by the live settings.json flat matcher — NOT prompts).`
+- **Allowlisted-but-compound vs genuinely-missing.** Of the real prompts, the report splits each command on its shell operators. It tests every segment against the same matcher, except a bare `cd <path>`, which changes the working directory and is never an intent target.
+  - **Allowlisted-but-compound:** a command of shell shape whose every segment matches alone. It is an allowlisted command defeated only by compounding. The report recommends eliminating it at its source, by a decomposition or a butter verb. A butter verb is one clean command for the job, as `pkit project-management show-issue` replaces a piped `gh issue view`.
+  - **Genuinely-missing:** a real allowlist gap: an uncovered segment head, a bare uncovered command, or an un-allowed tool.
+  - **The headline** carries the split, and the line of the shell-shape group is tagged with it.
+- **Scope and honesty.** Both axes are static over redacted text, so a `Bash(<prefix>:*)` longer than the head the redaction keeps cannot match as a prefix. They leave `deny` patterns out of scope, since a logged record already abstained, so a guardrail's deny is decided upstream, not here. The numbers sharpen the superset's honesty, and promise no fall in live prompts.
+
+#### A prompt for the agent workspace is a defect
+
+Every agent is granted the agent workspace, so a file tool's prompt there is a defect, never an allowlist gap to tune around. Its cause is a missing active profile, or enforcement that is off: worth a report, not a new allow rule.
+
+- **The tag.** Capture tags each abstain `workspace: true` or `false`. The tag says whether the decision core's own recognizer places a file tool's target in the workspace ("The agent workspace" above). The path itself is never logged.
+- **The band.** The report puts each abstain tagged `true` in a `workspace` group, under a **DEFECTS** band of its own, ahead of every recommendation.
+- **A shell command** that writes into the folder is not tagged. It is judged like any other shell write, so its prompt is an ordinary one.
