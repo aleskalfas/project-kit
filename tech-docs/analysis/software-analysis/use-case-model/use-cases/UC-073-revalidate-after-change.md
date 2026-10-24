@@ -86,7 +86,7 @@ pkit:
 9. The agent tells the developer where the proposal lies, what to do first, and the commands. It runs none (REQ-050).
 10. The developer reviews each artefact's revalidation outcome against its evidence, and accepts it.
 11. The developer applies each diff and does what comes first, such as reporting a defect. The developer records each answer with the commands, as `core:UC-002` describes.
-12. Where the revalidation has something to say, the developer runs the command the proposal drafts for its revalidation record, `pkit analysis new revalidation` (REQ-052). The command names the agent with `--by-agent analysis-resolver`, and the developer with `--confirmed-by` (DEC-001 point 6).
+12. Where the revalidation has something to say, the developer runs the command the proposal drafts for its revalidation record, `pkit analysis new revalidation` (REQ-052). The command names the agent with `--by-agent analysis-resolver`, and it names the developer with `--confirmed-by` (DEC-001 point 6).
 13. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
 
 > [!WARNING]

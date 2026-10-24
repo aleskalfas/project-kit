@@ -29,7 +29,11 @@ pkit:
 
 # VIEW-revalidations — Revalidations and what they find
 
-When something an [analysis](../glossary.md#term-analysis--analysis) rests on changes, someone must judge whether each description still holds. A wrong judgement either rewrites the truth to match a bug, or reports a defect for an intended [change](../../core/glossary.md#term-change--change) (DEC-001). A [revalidation](../glossary.md#term-revalidation--revalidation) is that judgement, before code or after it, and it ends in a [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) for each [artefact](../../core/glossary.md#term-artefact--artefact) it covers. A [revalidation proposal](../glossary.md#term-revalidation-proposal--revalidation-proposal) drafts the outcomes, a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) logs a revalidation with something to say, and a [shortfall](../glossary.md#term-shortfall--shortfall) is a step not built yet.
+When something an [analysis](../glossary.md#term-analysis--analysis) rests on changes, someone must judge whether each description still holds. A wrong judgement either rewrites the truth to match a bug, or reports a defect for an intended [change](../../core/glossary.md#term-change--change) (DEC-001). A [revalidation](../glossary.md#term-revalidation--revalidation) is that judgement, before code or after it, and it ends in a [revalidation outcome](../glossary.md#term-revalidation-outcome--revalidation-outcome) for each [artefact](../../core/glossary.md#term-artefact--artefact) it covers. Three things go with it:
+
+- a [revalidation proposal](../glossary.md#term-revalidation-proposal--revalidation-proposal) drafts the outcomes
+- a [revalidation record](../glossary.md#term-revalidation-record--revalidation-record) logs a revalidation with something to say
+- a [shortfall](../glossary.md#term-shortfall--shortfall) is a step not built yet
 
 ```mermaid
 classDiagram
@@ -107,7 +111,14 @@ Defined in [TERM-revalidation-outcome](../glossary.md#term-revalidation-outcome-
 
 **Why:** A stale [analysis](../glossary.md#term-analysis--analysis) and regressed code differ in intent: was the [change](../../core/glossary.md#term-change--change) meant? A wrong call either rewrites the truth to match a bug, or reports a defect for an intended change (DEC-001).
 
-A revalidation outcome ends one [artefact](../../core/glossary.md#term-artefact--artefact)'s review. The artefact holds, the analysis was stale and is updated, the code regressed and a defect is reported, or a gap was found. Each is recorded on the artefact as one of the core's two answers, `unchanged` or `updated`.
+A revalidation outcome ends one [artefact](../../core/glossary.md#term-artefact--artefact)'s review. It is one of these:
+
+- the artefact holds
+- the analysis was stale and is updated
+- the code regressed and a defect is reported
+- a gap was found
+
+Each is recorded on the artefact as one of the core's two answers, `unchanged` or `updated`.
 
 **Attributes:**
 
@@ -117,7 +128,10 @@ A revalidation outcome ends one [artefact](../../core/glossary.md#term-artefact-
 **Relations:**
 
 - A [revalidation](../glossary.md#term-revalidation--revalidation) gives it to one artefact (DEC-001 point 5).
-- It maps onto one of the core's two answers. `holds` and `code-regressed` map to `unchanged`, `analysis-stale` maps to `updated`, and `gap-found` maps to either (DEC-001 point 5).
+- It maps onto one of the core's two answers (DEC-001 point 5):
+  - `holds` and `code-regressed` map to `unchanged`
+  - `analysis-stale` maps to `updated`
+  - `gap-found` maps to either
 - A regression whose step an accepted [decision record](../../core/glossary.md#term-decision-record--decision-record) decides takes a [shortfall](../glossary.md#term-shortfall--shortfall)'s box, so it maps to `updated` (DEC-001 point 5).
 
 **States:** None.
