@@ -17,7 +17,7 @@ pkit:
         - .pkit/schemas/permission-runs.schema.json
         - .pkit/permissions/project/grants.yaml
         - .pkit/skills/core/capability-author.md
-      record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+      record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-009, ADR-032, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact:
         - .pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json
         - .pkit/cli/README.md#init
@@ -30,7 +30,7 @@ pkit:
         - .pkit/capabilities/project-management/README.md#permissions
         - .pkit/capabilities/project-management/README.md#the-rules-of-a-fixers-run
     revalidated:
-      at: 2026-10-24T18:56:54Z
+      at: 2026-10-24T22:32:02Z
       outcome: updated
 ---
 
@@ -40,23 +40,23 @@ The permission model decides your agents' tool calls: which run without asking y
 
 ## What it does for you
 
-The permission model lets your agents do their regular work without asking you, and keeps them from what you deny them.
+The permission model lets your agents do their regular work without asking you, and refuses the commands you deny them.
 
 - **Regular work runs unasked.** Once you turn the model on, each call your grants allow runs with no prompt, such as an agent's `git` and `gh` commands.
-- **What you deny is refused.** A deny wins over every allow, and nobody is asked about the call it refuses.
-- **The guardrails hold for everyone.** Recursive deletion, `sudo` and rewriting published history are denied to every agent and to you, whatever you grant.
+- **What you deny is refused, where the model can tell.** A deny wins over every allow, so the commands it names are refused, and nobody is asked. It is a speed bump, not a security boundary. A command behind a wrapper, such as `bash -c`, can slip past it ("A deny holds against the forms of its command" below).
+- **The guardrails hold for everyone.** Recursive deletion, `sudo` and rewriting published history are denied to every agent and to you, in each form the model can see. No grant lifts that deny.
 - **The rest is Claude Code's.** A call the model does not decide goes to Claude Code, which decides it by its own rules and may ask you.
 - **Unwatched runs keep your denies.** A command that starts agents with nobody watching may confine each run to rules of its own. The denies you set for every agent, or for that run's agent, hold there too.
 
 ## How a tool call is decided
 
-Each tool call an agent makes goes through the Claude Code hook, which has the decision core decide it: allow, deny or abstain.
+Each tool call an agent makes goes through Claude Code's permission hook, which has the decision core decide it: allow, deny or abstain.
 
 ```mermaid
 flowchart TD
   accTitle: How a tool call is decided
-  accDescr: An agent's tool call goes to the Claude Code hook, which has the decision core decide it. The core reads the permission model, and its verdict is allow, deny or abstain. On allow the call runs, and on deny it is refused, with no prompt for either. On abstain, Claude Code's own rules decide: they run the call or refuse it, and otherwise Claude Code may ask you.
-  call["An agent's tool call"] --> hook["The Claude Code hook"]
+  accDescr: An agent's tool call goes to Claude Code's permission hook, which has the decision core decide it. The core reads the permission model, and its verdict is allow, deny or abstain. On allow the call runs, and on deny it is refused, with no prompt for either. On abstain, Claude Code's own rules decide: they run the call or refuse it, and otherwise Claude Code may ask you.
+  call["An agent's tool call"] --> hook["Claude Code's permission hook"]
   hook --> core["The decision core"]
   model[("The permission model")] --> core
   core -->|allow| runs["The call runs, unasked"]
@@ -74,10 +74,12 @@ flowchart TD
   - your project's grants, in `.pkit/permissions/project/grants.yaml`
   - the grants and privileges of each installed capability ("Capability-contributed privilege *definitions*" below)
 - **Allow** runs the call with no prompt. **Deny** refuses it, and Claude Code asks nobody. A deny wins over every allow, whatever the order of the grants.
-- **Abstain** leaves the call to Claude Code's native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to Claude Code's own permission mode, which may ask you.
+- **Abstain** leaves the call to Claude Code's own rules, its native rules: the allows and denies in its settings, which it enforces itself. The adapter writes them from its baseline and from the model (COR-028 point 2). A call they neither allow nor deny goes to Claude Code's permission mode, which may ask you.
 - **The posture.** Where no grant allows or denies a call, the core abstains under the default posture, `lenient`, and denies under `strict`. The `read-only` profile is strict.
-- **A fault** while the hook decides gives an abstain, never a deny. The guardrails hold all the same, since Claude Code's native denies hold them too. That is the double lock ([the same section](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
-- **A hidden guardrail.** Where a call may hide a guardrail's form, the hook asks you rather than abstain, outside auto and bypass mode. "A deny holds against the forms of its command" below says when.
+- **A fault** while the hook decides gives an abstain, never a deny. Claude Code's native denies still refuse the forms of the guardrails' commands they name. That is the double lock ([the same section](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+- **When the hook asks.** The hook asks you rather than abstain in two cases:
+  - a call that may hide a guardrail's form, outside auto and bypass mode ("A deny holds against the forms of its command" below)
+  - an `Edit` or `Write` to an absolute path outside the session's repository, in every mode ([the same section](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
 - **The CLI decides alike.** The `pkit permissions` commands, such as `explain` and `diff`, build the model and decide through the same core. So they reach the hook's verdict.
 
 ## Turning it on
@@ -86,6 +88,7 @@ Two steps turn the model on: a profile supplies the grants, and registering the 
 
 - **A profile** is a named set of grants and a posture. Three ship, each granting more than the one before: `read-only`, `non-destructive` and `autonomous`. `pkit permissions profile list` describes each.
 - **Activating one** sets its posture, layers its grants under your own, and writes the native rules it can. It does not register the hook.
+- **Per machine.** The active profile is your machine's own choice, kept in a file git ignores. Its posture goes into `.pkit/permissions/project/config.yaml`, which the project shares. So another clone takes the posture from that file, and the profile's grants only once it activates the profile too.
 - **`enable`** registers the hook, and makes sure Claude Code's settings deny the guardrails natively.
 - **`explain`** shows the posture, and who may or may not use each privilege.
 
@@ -128,6 +131,8 @@ Commands
   pkit permissions overview                                   privilege vocabulary + live status
 ```
 
+Activation also reports the gap that Claude Code's settings leave (COR-028 point 3). The hook enforces the grants they cannot express. Intent that nothing in Claude Code enforces, such as network egress, needs a layer outside it, such as the operating system or the network.
+
 `pkit permissions setup autonomy` takes both steps, sets up the OS sandbox too, and then proves the result. It stops where a session restart is needed. Run it again after the restart, and it declares the goal reached only once its probes pass.
 
 ```sh
@@ -138,18 +143,18 @@ pkit permissions setup autonomy
 
 ## Common tasks
 
-Each task shows its commands with their output, in a project where pkit is installed.
+Each task shows its commands with their output. Each fence starts from a fresh project where pkit is installed and no profile is active, so a task grants what it shows.
 
-Some tasks pass a call to the hook by hand, to show its verdict without a session. Claude Code passes each call as a JSON document on the hook's standard input, with the tool in `tool_name` and its input in `tool_input`. The hook prints an allow or a deny, and nothing when it abstains.
+Some tasks pass a call to the hook by hand, to show its verdict without a Claude Code session. Claude Code passes each call as a JSON document on the hook's standard input, with the tool in `tool_name` and its input in `tool_input`. The hook prints an allow or a deny, and nothing when it abstains.
 
 ### Find out why a call prompted
 
-The diagnostic loop logs each call the hook abstains on, and its report says which prompts you can remove, and how.
+The diagnostic loop logs each call the hook abstains on, and its report says which prompts you can remove, and how. The hook logs only while enforcement is on ("Turning it on" above).
 
-1. Arm a session with `pkit permissions diagnose on`. It ends by itself after eight hours, or after the seconds `--ttl` gives.
-2. Work as usual. Below, two calls stand in for a session's: `make test`, which no grant covers, and `gh pr list | jq .`, a compound.
+1. Arm the loop with `pkit permissions diagnose on`. It disarms itself after eight hours, or after the seconds `--ttl` gives.
+2. Work in Claude Code as usual. Below, two calls stand in for a session's: `uv run pytest`, which no grant covers, and `gh pr list | jq .`, a compound.
 3. Read the report with `pkit permissions diagnose report`.
-4. Disarm the session with `pkit permissions diagnose off`, which keeps the log.
+4. Disarm the loop with `pkit permissions diagnose off`, which keeps the log.
 
 ```console
 $ pkit permissions diagnose on
@@ -157,7 +162,7 @@ diagnostic session armed — capturing deferred (prompted) decisions for 8.0h (a
   redaction: on (command tail dropped) · size cap: 2000 entries (drop-oldest)
   the log is local + git-ignored: .pkit/permissions/project/diagnose-log.jsonl
   run `pkit permissions diagnose report` to see the classified, ranked, recommend-only report · `diagnose off` to disarm.
-$ echo '{"tool_name":"Bash","tool_input":{"command":"make test"}}' | .pkit/adapters/claude-code/permission-hook.py
+$ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/adapters/claude-code/permission-hook.py
 $ echo '{"tool_name":"Bash","tool_input":{"command":"gh pr list | jq ."}}' | .pkit/adapters/claude-code/permission-hook.py
 $ pkit permissions diagnose report
 Permission-prompt diagnosis — captured deferred decisions, classified + ranked
@@ -168,7 +173,7 @@ Permission-prompt diagnosis — captured deferred decisions, classified + ranked
   of those real prompts: 1 allowlisted-but-compound (decompose / butter-verb — eliminate at source) · 1 genuinely-missing (a real allowlist gap).
 
 RECOMMENDED — remediations pkit recommends (MVP applies NOTHING; recommend-only)   1 deferral(s) · 1 group(s)
-  [1] allowlist-gap    1×   make test (1×)
+  [1] allowlist-gap    1×   uv run pytest (1×)
       → recommend granting the matching catalog privilege (a NEW catalog privilege is never auto-fixable — operator task)
 
 NEEDS YOUR JUDGEMENT — real trade-offs only you can settle   1 deferral(s) · 1 group(s)
@@ -183,10 +188,10 @@ diagnostic session disarmed — the hook stops capturing.
   the captured log is left in place; run `pkit permissions diagnose report` to read it, or delete it to clear.
 ```
 
-The report's headline counts the real prompts: the logged calls that Claude Code's own allow rules would not run.
+The report's headline counts the real prompts: the logged calls for which the report finds no allow rule in Claude Code's settings.
 
-- **`make test`** matches none of those rules, so the report counts it as genuinely missing.
-- **`gh pr list | jq .`** matches them part by part, but prompts as a compound. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project.
+- **`uv run pytest`** matches no allow rule, so the report counts it as genuinely missing, and recommends granting a privilege. The next task grants it.
+- **`gh pr list | jq .`** matches allow rules part by part, but not as a whole. So the report counts it as allowlisted-but-compound, and recommends single commands or a named command of your project.
 - **Nothing is applied.** You act on each recommendation yourself ("The permission-prompt diagnostic loop" below).
 
 ### Allow a command
@@ -201,9 +206,10 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/a
 {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "allow grant for operator on ['uv-run']"}}
 ```
 
-- **Who:** `all` grants it to every agent and to you. Name one agent as `agent:<name>`, or yourself as `operator`.
+- **Who:** `all` grants it to every agent and to you. Name one agent as `agent:<name>`, or name yourself as `operator`. The verdict above names `operator`, since the call names no agent ("Deny something to one agent" below).
 - **When:** the hook reads the model at each call, so the grant holds from the next call on.
 - **Scope:** a privilege with a scope type, such as `docker` or `web-fetch`, takes `--scope` to narrow the grant ("Scope enforcement" below).
+- **No privilege for the command:** where the catalog lists none, a capability can define one ("Ship a capability's own privilege" below).
 - **Note:** `uv run` runs any program it is given, so this grant allows whatever that program does ("The read-only text filters and `uv run`" below).
 
 ### Deny something to one agent
@@ -221,11 +227,13 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"gh issue edit 7"}}' | .pkit
 {"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "allow", "permissionDecisionReason": "allow grant for operator on ['issue-tracker', 'issue-tracker-write']"}}
 ```
 
-Claude Code names a subagent in the call's `agent_type`, and the hook decides the call for that agent ("Default-agent subject resolution" below). The last call names no agent, so the hook decides it for you, `operator`, and the grant to `all` allows it. `pkit permissions explain researcher` lists that agent's grants.
+Claude Code names a subagent in the call's `agent_type`, and the hook decides the call for that agent ("Default-agent subject resolution" below). The last call names no agent, and this project sets no default agent. So the hook decides it for you, `operator`, and the grant to `all` allows it.
 
-### Ship a privilege of your own
+An allow's reason names every privilege the call matches, and a deny's names the privileges the deny reaches. `pkit permissions explain researcher` lists that agent's grants.
 
-A capability can define a privilege of its own and deny it to its agents, with no edit to the core catalog. `pkit permissions scaffold` stamps the two files such a capability ships:
+### Ship a capability's own privilege
+
+A capability can define a privilege of its own and deny it to its agents, with no edit to the backbone catalog. `pkit permissions scaffold` stamps the two files such a capability ships, and the model reads them once the manifest registers the capability:
 
 ```console
 $ pkit new capability my-cap
@@ -234,11 +242,44 @@ $ pkit permissions scaffold my-cap
 Stamped: .pkit/capabilities/my-cap/permissions/privilege-catalog.yaml
 Stamped: .pkit/capabilities/my-cap/permissions/grants.yaml
 Next: replace the illustrative entries with this capability's own privilege(s) and deny(ies) — keep fragment keys BARE and reference them with the scoped token `[privilege-catalog:my-cap:<name>]`. `pkit schemas validate` lints the grant tokens.
+$ pkit capabilities register my-cap
+
+  Registered incubated capability 'my-cap' v0.1.0 (in-repo) at .pkit/capabilities/my-cap/
+  exists     .claude/settings.json
+  exists     CLAUDE.md (already includes @.pkit/rules/core.md)
+  exists     .claude/skills/adapter-author/SKILL.md
+  exists     .claude/skills/agent-author/SKILL.md
+  exists     .claude/skills/area-author/SKILL.md
+  exists     .claude/skills/capability-author/SKILL.md
+  exists     .claude/skills/decision-author/SKILL.md
+  exists     .claude/skills/migration-author/SKILL.md
+  exists     .claude/skills/process/SKILL.md
+  exists     .claude/skills/process/couple.md
+  exists     .claude/skills/process/hand-off.md
+  exists     .claude/skills/process/new.md
+  exists     .claude/skills/report-author/SKILL.md
+  exists     .claude/skills/schema/SKILL.md
+  exists     .claude/skills/schema/author.md
+  exists     .claude/skills/schema/distill.md
+  exists     .claude/skills/schema/extend.md
+  exists     .claude/skills/schema/rename.md
+  exists     .claude/skills/scratchpad-author/SKILL.md
+  exists     .claude/skills/storyboard-author/SKILL.md
+Done.
+  exists     .claude/agents/architect.md
+  exists     .claude/agents/convention-compliance-reviewer.md
+  exists     .claude/agents/critic.md
+  exists     .claude/agents/methodology-reviewer.md
+  exists     .claude/agents/process-author.md
+  exists     .claude/agents/rule-set-reviewer.md
+Done.
+$ pkit schemas validate
+  Validated 8 schema(s) and 6 backbone file schema(s). All checks passed.
 ```
 
 - **Edit the two files.** Replace their illustrative entries with your privilege and its deny. Write the privilege's key bare, and name it in a grant with the scoped token `[privilege-catalog:my-cap:<name>]` ("Authoring a fragment" below).
-- **Check the tokens.** Once the manifest registers the capability, `pkit schemas validate`, run with no path, fails a grant token that names no privilege.
-- **The skill.** The `capability-author` skill walks you through these steps, at its step 6b.
+- **Check the tokens.** `pkit schemas validate`, run with no path, fails a grant token that names no privilege, in each capability the manifest registers. Run it again after each edit.
+- **Note:** the `capability-author` skill walks you through these steps. The fragment is its step 6b, and registering the capability is its step 8.
 
 ## Reference
 
@@ -262,7 +303,7 @@ The hook resolves the subject for every PreToolUse call, in this order:
 
 The decision core splits a compound Bash command into segments, and decides on what each segment matches. The command reaches the core as one string. The core splits it on `&&`, `||`, `|`, `;`, a background `&` and a newline, with a dumb regex splitter, which is no shell parser.
 
-Within each segment the core reads the words as the shell does. It splits them at spaces and tabs, and removes quotes and backslashes by the standard library's POSIX quoting rules. So a grant or a deny matches `"--force"` as `--force`, and `git commit -m "fix: x"` as the command the shell runs. That reads words, never the shell's grammar, so it is no shell parser.
+Within each segment the core reads the words as the shell does. It splits them at spaces and tabs, and removes quotes and backslashes by the standard library's POSIX quoting rules. So a grant or a deny matches `"--force"` as `--force`, and matches `git commit -m "fix: x"` as the command the shell runs. That reads words, never the shell's grammar, so it is no shell parser.
 
 Two prefix-strips reduce false prompts over already-granted intent:
 
@@ -305,7 +346,7 @@ Each recognizer of the two is a `pattern` or names a subcommand. So a grant of e
 
 Neither recognizes a program that writes a file or runs another, such as `sed`, `awk`, `find`, `xargs`, `tee` or `rg`. Nor does either recognize `echo`, the usual way to answer a confirmation from a pipe (`echo y | pkit …`), or `printf`, whose `-v` sets a shell variable. `jq` stays out too: its filters hold a `|`, and some of its options read files no check sees. So under a shipped profile, `grep x f | head` is allowed for every agent, and `grep x f | sed s/a/b/` abstains.
 
-What a granted program reads from a pipe is within its own grant, as its arguments are. So leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`. A `pkit` confirmation that guards the operator's decision reads no answer from a pipe all the same ([the CLI README, "Standard flags"](../cli/README.md#standard-flags)).
+What a granted program reads from a pipe is within its own grant, as its arguments are. So leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`. A `pkit` confirmation that guards a person's decision reads no answer from a pipe all the same ([the CLI README, "Standard flags"](../cli/README.md#standard-flags)).
 
 Recognition goes by the program's name, as for every privilege. A shell alias or function under one of these names runs what it names, unasked. The privilege is sound only where its names reach the system's own programs.
 
@@ -473,7 +514,7 @@ Every checkout of a project has one agent workspace: `.agent-workspace/` at its 
   - **A repository or worktree nested inside the folder is not the folder.** When any directory from the folder down to the target holds a `.git` entry, the target is another checkout's.
   - **An existing file with more than one link is not inside either.** A hard link planted in the folder would carry a write to its other name.
 - **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included ("Compound commands" above). A remainder with a redirect into the folder still abstains. Write intermediate files with the file tools.
-- **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing. [The Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does, and that its enforcement declaration names the dimension `path-scoped-allow`.
+- **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing. [The Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does. It also says that the adapter's enforcement declaration names the dimension `path-scoped-allow`.
 - **A prompt there is a defect** ("A prompt for the agent workspace is a defect" below).
 
 <a id="surgical-deny-blocking-raw-gh-mutations-for-project-manager"></a>
@@ -508,7 +549,7 @@ The capability scripts' own `gh` calls are unaffected. They run inside the `pkit
 
 ### Capability-contributed privilege *definitions*
 
-A capability may define privileges of its own, beside the denies it ships ("Where the deny lives" above). An installed capability may ship a **privilege-catalog fragment** at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`, which the core merges into the central catalog. So a capability ships a privilege's definition and its deny together, self-contained. It needs no edit to the core catalog, which `pkit sync` would overwrite anyway.
+A capability may define privileges of its own, beside the denies it ships ("Where the deny lives" above). An installed capability may ship a **privilege-catalog fragment** at `.pkit/capabilities/<cap>/permissions/privilege-catalog.yaml`, which the core merges into the central catalog. So a capability ships a privilege's definition and its deny together, self-contained. It needs no edit to the backbone catalog, which `pkit sync` would overwrite anyway.
 
 - **One shape.** The fragment reuses the document shape of `.pkit/schemas/privilege-catalog.yaml`, with no new schema.
 - **Installed capabilities only.** As for grants, only a capability the manifest registers contributes, and an orphan folder contributes nothing.
@@ -519,7 +560,7 @@ A capability may define privileges of its own, beside the denies it ships ("Wher
 
 #### Authoring a fragment (`pkit permissions scaffold <cap>`)
 
-Run `pkit permissions scaffold <cap>` to stamp the skeleton of both fragment files, with the correct shapes and inline guidance on their footguns. The command stamps `privilege-catalog.yaml` and `grants.yaml` into the capability's `permissions/` folder. It refuses an unknown capability, and refuses to clobber an existing fragment. It is paired with the `capability-author` skill, step 6b, and both files are hand-authored.
+Run `pkit permissions scaffold <cap>` to stamp the skeleton of both fragment files, with the correct shapes and inline guidance on their footguns. The command stamps `privilege-catalog.yaml` and `grants.yaml` into the capability's `permissions/` folder. It refuses an unknown capability, and refuses to clobber an existing fragment. Both files are hand-authored.
 
 The scaffold's guidance captures two footguns:
 
@@ -527,6 +568,8 @@ The scaffold's guidance captures two footguns:
 - **A grant references it with the scoped token,** `[privilege-catalog:<cap>:<name>]`. A bare grant token against a fragment privilege resolves to no merged privilege, so the deny silently does not bind: a fail-open hazard.
 
 `pkit schemas validate`, run with no path, fails a grant token that resolves to no privilege in the merged catalog, in every installed capability's `grants.yaml`. It merges the catalog and reads tokens as the hook does. So a token it passes is a token the hook binds ([the CLI README, "schemas validate"](../cli/README.md#schemas-validate-path)).
+
+**Note:** the command is paired with the `capability-author` skill, step 6b.
 
 <a id="the-rules-of-an-agent-run-adr-066-point-5"></a>
 
