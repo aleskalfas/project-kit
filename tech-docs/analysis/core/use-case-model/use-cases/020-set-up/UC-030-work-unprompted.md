@@ -71,8 +71,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T12:02:39Z
-      outcome: updated
+      at: 2026-10-24T12:57:09Z
+      outcome: unchanged
+      unchanged-because: "Its steps hold: a compound runs unasked where grants allow each segment, and the read-only filters and uv run are now among them; 10d reads a redirection that writes no file as harmless."
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations

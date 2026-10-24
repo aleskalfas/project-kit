@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T11:48:28Z
+      at: 2026-10-24T12:57:07Z
       outcome: unchanged
-      unchanged-because: The workspace grant still covers the file tools alone, and a redirect or here-document into the folder is judged like any other shell write. ADR-060 point 4 now names a redirect into the folder, which is what variant 1b says.
+      unchanged-because: The workspace grant still covers the file tools alone, and a redirect into the folder is judged like any other shell write. The read-only filters write no file, so they change no step here.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

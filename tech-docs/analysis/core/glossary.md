@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T11:48:12Z
+        at: 2026-10-24T12:56:59Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and the adapter still holds its native deny. The core now reads a command with a redirection that writes no file removed, so a guardrail binds on a program behind one too.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The new privileges for read-only filters and uv run are allow grants, and a guardrail still binds on a program behind a redirection that writes no file.
 TERM-harness:
   name: harness
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T11:48:14Z
+        at: 2026-10-24T12:57:01Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command. The core removes a redirection that writes no file before it recognises one, which changes no privilege and no recogniser.
+        unchanged-because: A privilege is still recognised from a tool call or a command. The catalog gains text-filter and uv-run, each recognised by its program, and the core removes a redirection that writes no file before it recognises one.
 TERM-process:
   name: process
   noun-forms: [processes]
