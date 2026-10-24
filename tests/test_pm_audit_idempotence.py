@@ -558,7 +558,9 @@ def _wire_done_work(dw, monkeypatch) -> None:
     )
     monkeypatch.setattr(dw, "_gh_get_pr_body", lambda n, config: "## Test plan\n- [x] ok\n")
     monkeypatch.setattr(dw, "_check_pr_placeholder", lambda body, n, root: [])
-    monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda n, config: _RED)
+    monkeypatch.setattr(
+        dw, "_gh_get_status_rollup", lambda n, config: dw._RollupReading(tuple(_RED))
+    )
     _direct_merge(dw, monkeypatch)
     monkeypatch.setattr(dw.pr_merge, "delete_branch", lambda n, h, c, **kw: None)
     monkeypatch.setattr(dw.pr_merge, "cleanup_local", lambda b, c, **kw: None)

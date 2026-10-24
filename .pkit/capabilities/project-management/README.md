@@ -16,9 +16,8 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-23T23:02:39Z
-      outcome: unchanged
-      unchanged-because: DEC-057 states what the capability is for, from what the README's opening already says, and decides no new behaviour. Nothing the README describes changes.
+      at: 2026-10-24T00:14:31Z
+      outcome: updated
       deferred:
         - anchor:
             kind: path
@@ -947,6 +946,8 @@ This is a pre-flight rather than a declared `gate:` on the `review → done` tra
 #### The CI-status gate (in front of the merge)
 
 The approval gate answers *did a reviewer approve?* — not *did CI pass?* A reviewer's APPROVED verdict is not evidence the PR's checks are green (the #498 hole: PR #496 merged with a red check on an APPROVED PR). So **both** merge paths — `done-work` and the lower-level `merge-pr` — run a **CI-status gate in front of the merge**, mirroring the release-merge gate (#475): they fetch the PR's `statusCheckRollup` and **refuse to merge when any check is failing or still pending**, naming the offending checks. An empty rollup (no checks configured) passes. This is additive — the reviewer-verdict and checkbox close-gates are unchanged; the CI gate sits ahead of them at the merge itself.
+
+A rollup `done-work` cannot read is no answer, never an answer of no checks (#1946). That is a call to GitHub that fails, an answer that is not JSON, or one that carries no `statusCheckRollup`. `done-work` then refuses the merge as unreadable, with exit 2, naming the cause, and writes nothing. `--bypass-ci` does not clear it, since that flag overrides checks that were read and named.
 
 A failing check is **bypassable-with-audit** (`schemas/validation-severity.yaml`), but only through a **dedicated `--bypass-ci "<reason>"`** flag — distinct from any general `--bypass` — so overriding another gate never silently lands a red CI (the #498 footgun). Pass `--bypass-ci "<reason>"` to override the CI gate deliberately — e.g. an advisory changeset guard failing on a decision-only PR. It posts the schema's audit-comment (`Bypassed by <name> <<email>>: <reason>`, naming the overridden checks) to the PR **before** merging, so the trail survives even if the merge later fails; it is posted at most once per bypass (see the audit-comment idempotence notes above). A non-green check with **no** `--bypass-ci` is a hard refuse — and the general `--bypass` (approval gate) does **not** clear it. On `done-work` the two overrides are independent deliberate acts: `--bypass` clears the approval gate, `--bypass-ci` clears the CI gate, and a merge blocked on both needs **both** flags. Both merge paths (`done-work`, `merge-pr`) take `--bypass-ci` as the CI override — except where the base merges through a merge queue, where both refuse it: the queue runs the checks the base requires and merges only once they pass, so a PR held by a red one would wait in it indefinitely while the audit comment said the check was bypassed ([project-management:DEC-026-work-ownership-lifecycle]).
 

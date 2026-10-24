@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `done-work` refuses to merge a pull request whose checks it cannot read
+  (#1946). A failed call to GitHub, an answer that is not JSON, or one that
+  carries no `statusCheckRollup` was read as a rollup of no checks, and passed
+  the CI-status gate. Now it refuses as unreadable, with exit 2, names the
+  cause and writes nothing, and `--bypass-ci` does not clear it. `land-work`
+  stops on it as on any other reading that fails. A rollup GitHub answers
+  with no checks, as for a project that runs none, still passes, and the run
+  now says `ci-status: green (no checks configured)`.
