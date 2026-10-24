@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T04:45:34Z
+      at: 2026-10-24T10:54:29Z
       outcome: unchanged
-      unchanged-because: The Claude Code README gains when its hook asks, a detail of that adapter. What every adapter provides, and the list of adapters, are as before.
+      unchanged-because: The Claude Code README gains a paragraph on the compounds its hook allows, a detail of that adapter. What every adapter provides, and the list of adapters, are as before.
 ---
 
 # Adapters

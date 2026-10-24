@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:45:30Z
+      at: 2026-10-24T10:54:34Z
       outcome: unchanged
-      unchanged-because: The workspace grant still covers the file tools alone, and a shell write into the workspace is judged like any other. The new ask concerns only a deferred Bash call that may hide a guardrail.
+      unchanged-because: The new privileges are recognised from shell commands, never from a file tool's target, so the workspace grant and how a shell write into the folder is judged do not change.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

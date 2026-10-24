@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T04:45:17Z
+        at: 2026-10-24T10:54:22Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and the adapter still holds its native deny. Where the core cannot tell one, the Claude Code hook asks the person, which adds a prompt and changes what a guardrail is in no way.
+        unchanged-because: The catalog gains two allow-shaped privileges, read-filter and python-runner, and no guardrail. A guardrail is still denied to every subject whatever any grant allows, on each segment of a compound.
 TERM-harness:
   name: harness
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T04:45:19Z
+        at: 2026-10-24T10:54:24Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, and the catalog flag guardrail is read as before. The new query only names which guardrails a deferred command may hide.
+        unchanged-because: The catalog gains read-filter and python-runner, each recognised from a command by its program or a regex over its words, and a grant allows or denies each as before.
 TERM-process:
   name: process
   noun-forms: [processes]
@@ -824,6 +824,10 @@ TERM-profile:
           - ADR-005#1
           - ADR-005#2
           - ADR-032
+      revalidated:
+        at: 2026-10-24T10:54:27Z
+        outcome: unchanged
+        unchanged-because: Every shipped profile now grants read-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active

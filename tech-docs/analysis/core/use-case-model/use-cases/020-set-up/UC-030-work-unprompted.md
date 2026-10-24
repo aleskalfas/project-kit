@@ -71,8 +71,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:49:20Z
-      outcome: updated
+      at: 2026-10-24T10:54:36Z
+      outcome: unchanged
+      unchanged-because: "The autonomous profile now grants the read-only filters too, which step 10 and variant 10a already cover: a chain runs unasked where grants allow each segment and deny none."
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations

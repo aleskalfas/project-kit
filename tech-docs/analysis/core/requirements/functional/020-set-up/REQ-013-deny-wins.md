@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T04:45:24Z
+      at: 2026-10-24T10:54:32Z
       outcome: unchanged
-      unchanged-because: Every deny still binds before any allow, and decide() returns the verdicts it did. The hook asks only where the core abstained, so an ask never stands in for a deny or an allow.
+      unchanged-because: The new tests find a guardrail's deny and a capability's deny still winning over a compound of read-only filters and the Python runner, which every agent is granted.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins
