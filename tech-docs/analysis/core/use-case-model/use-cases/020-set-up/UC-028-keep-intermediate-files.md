@@ -6,7 +6,7 @@ actor: ACT-ai-agent
 other-actors:
   - ACT-operator
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 requirements:
   - REQ-016
 pkit:
@@ -50,7 +50,7 @@ pkit:
 
 - **Operator** (`ACT-operator`): commits the work, or has the agent commit it. No file the agent keeps in the agent workspace reaches that commit.
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 
