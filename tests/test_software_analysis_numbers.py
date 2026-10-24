@@ -123,8 +123,8 @@ def test_a_number_the_default_branch_took_first_fails(project: AdopterRepo) -> N
         "message": (
             f"UC-002 is numbered on main too, for {USE_CASES}/UC-002-two.md, since this branch "
             "left it: the first to reach the default branch keeps the number, so renumber this "
-            "use case before merging — `pkit analysis new` gives the next free one (DEC-001 "
-            "point 3)"
+            "use case before merging — `pkit analysis renumber UC-002` gives it the next free "
+            "number, with every reference to it (DEC-001 point 3)"
         ),
     }
     read_view = numbers(project, "--base", MAIN)
@@ -188,8 +188,8 @@ def _possibly_ours(number: str, path: str) -> str:
     return (
         f"{number} is numbered on main too, for {path}, since this branch left it, in a file "
         "of the name this branch gives it: possibly your own work landed — merge main and keep "
-        "one file; otherwise renumber this use case before merging — `pkit analysis new` gives "
-        "the next free one (DEC-001 point 3)"
+        f"one file; otherwise renumber this use case before merging — `pkit analysis renumber "
+        f"{number}` gives it the next free number, with every reference to it (DEC-001 point 3)"
     )
 
 
@@ -315,7 +315,8 @@ def test_a_number_the_default_branch_took_and_removed_since_is_still_taken(
         "message": (
             f"UC-002 was numbered on main since this branch left it, for {theirs}, which main no "
             "longer holds: a number is never used again, so renumber this use case before "
-            "merging — `pkit analysis new` gives the next free one (DEC-001 point 3)"
+            "merging — `pkit analysis renumber UC-002` gives it the next free number, with every "
+            "reference to it (DEC-001 point 3)"
         ),
     }
 
@@ -347,7 +348,8 @@ def test_a_requirement_s_number_is_one_across_its_three_places(project: AdopterR
         "message": (
             f"REQ-002 is numbered on main too, for {theirs}, since this branch left it: the "
             "first to reach the default branch keeps the number, so renumber this requirement "
-            "before merging — `pkit analysis new` gives the next free one (DEC-001 point 3; "
+            "before merging — `pkit analysis renumber REQ-002` gives it the next free number, "
+            "with every reference to it (DEC-001 point 3; "
             "DEC-002 point 2)"
         ),
     }
@@ -484,3 +486,26 @@ def test_the_base_is_the_variable_else_the_default_branch(
     named = numbers(seeded, "--json")
     assert named.returncode == 0, named.stderr
     assert document(named)["base"]["ref"] == MAIN
+
+
+def test_a_collision_on_another_base_names_it_in_the_command_that_renumbers(
+    branched: AdopterRepo,
+) -> None:
+    """Judged against an integration branch, a collision names that branch in the command
+    that renumbers, so the new number is given past it too (DEC-001 point 3)."""
+    branched.checkout(MAIN)
+    branched.checkout("integration", create=True)
+    branched.checkout("topic")
+    stamped(branched, "use-case", "mine", "--actor", "ACT-tester")
+    branched.commit("UC-002 on topic")
+    branched.checkout("integration")
+    stamped(branched, "use-case", "theirs", "--actor", "ACT-tester")
+    branched.commit("UC-002 on integration")
+    branched.checkout("topic")
+    completed = numbers(branched, "--base", "integration", "--json")
+    assert completed.returncode == 1, completed.stderr
+    _outdated, collision = document(completed)["findings"]
+    assert (
+        "renumber this use case before merging — `pkit analysis renumber UC-002 --base "
+        "integration` gives it the next free number"
+    ) in collision["message"]
