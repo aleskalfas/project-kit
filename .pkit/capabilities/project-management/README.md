@@ -16,8 +16,9 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T05:56:28Z
-      outcome: updated
+      at: 2026-10-24T06:13:47Z
+      outcome: unchanged
+      unchanged-because: done-work's refusal now names review-pr with the issue's number, the <N> the README already writes. What it says of each command still holds.
       deferred:
         - anchor:
             kind: path
