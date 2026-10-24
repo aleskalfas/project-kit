@@ -20,10 +20,14 @@ pkit:
         - ADR-065#6
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-24T10:39:28Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently
 
-**Verified by:** A test runs `pkit upgrade` with no terminal over a new name collision, with `--force` passed, and finds every file as it was. Tests of the dependency gates find that a warning refuses without `--force`. A test finds that `pkit capabilities upgrade` refuses a new name collision without `--interactive`. Tests of the questions find that with nobody to answer none runs, and each one's line is printed.
+**Verified by:** A test runs `pkit upgrade` with no terminal over a new name collision, with `--force` passed, and finds every file as it was. Tests of the dependency gates find that a warning refuses without `--force`. A test finds that `pkit capabilities upgrade` refuses a new name collision without `--interactive`. Tests of the questions find that with nobody to [answer](../../../glossary.md#term-answer--answer) none runs, and each one's line is printed.
 
-**Rationale:** The adopter's own files sit beside the methodology's, and a transition must never choose for the adopter which of two colliding artefacts stays. COR-059 point 4 lets one consent, choosing the target, cover a transition's parts. Some choices keep the consent their own records set, and each is given by a person's answer or an explicit override. None is ever taken silently.
+**Rationale:** The adopter's own files sit beside the [methodology](../../../glossary.md#term-methodology--methodology)'s, and a transition must never choose for the adopter which of two colliding [artefacts](../../../glossary.md#term-artefact--artefact) stays. COR-059 [point](../../../glossary.md#term-point--point) 4 lets one [consent](../../../glossary.md#term-consent--consent), choosing the target, cover a transition's parts. Some choices keep the consent their own records set, and each is given by a person's [answer](../../../glossary.md#term-answer--answer) or an explicit override. None is ever taken silently.

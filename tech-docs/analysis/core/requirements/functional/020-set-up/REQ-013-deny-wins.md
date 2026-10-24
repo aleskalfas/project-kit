@@ -21,13 +21,13 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T04:45:24Z
+      at: 2026-10-24T10:39:33Z
       outcome: unchanged
-      unchanged-because: Every deny still binds before any allow, and decide() returns the verdicts it did. The hook asks only where the core abstained, so an ask never stands in for a deny or an allow.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins
 
-**Verified by:** Tests decide calls whose grants allow and deny the same privilege, with the allow before the deny and after it, and find each call denied. A test finds that a capability's deny holds over the allow of the autonomous profile. Another finds that a forced push stays denied to an agent granted version control.
+**Verified by:** Tests decide calls whose grants allow and deny the same [privilege](../../../glossary.md#term-privilege--privilege), with the allow before the deny and after it, and find each call denied. A test finds that a [capability](../../../glossary.md#term-capability--capability)'s deny holds over the allow of the autonomous [profile](../../../glossary.md#term-profile--profile). Another finds that a forced push stays denied to an agent granted [version](../../../glossary.md#term-version--version) control.
 
-**Rationale:** COR-028 point 1 makes each agent's permissions the union of the shared baseline and its own grants. There, "where an allow and a deny conflict, deny prevails". So a grant the adopter adds beside the methodology's never widens one of its denies. The operator lets agents work on their own knowing that a deny holds, whatever profile is active.
+**Rationale:** COR-028 [point](../../../glossary.md#term-point--point) 1 makes each agent's permissions the union of the shared baseline and its own grants. There, "where an allow and a deny conflict, deny prevails". So a [grant](../../../glossary.md#term-grant--grant) the adopter adds beside the [methodology](../../../glossary.md#term-methodology--methodology)'s never widens one of its denies. The operator lets agents work on their own knowing that a deny holds, whatever [profile](../../../glossary.md#term-profile--profile) is active.

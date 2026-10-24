@@ -36,13 +36,13 @@ pkit:
 
 **Verified by:** Tests lower the bound to one second, and run a command that outlives it in each of the four uses. They find that:
 
-- each run ends within the bound, and gives no answer
+- each run ends within the bound, and gives no [answer](../../glossary.md#term-answer--answer)
 - where the command started a program of its own, that program is stopped too
 - a run's own bound is thirty seconds
 - a run inside another has no more than the time its caller has left
 
 No test covers a program the command starts outside the command's own group, which the kill does not reach.
 
-**Rationale:** The CI pipeline runs every check with no person to answer, and gates the merge on its exit status. A check that waited on a command for ever would never exit. COR-050 point 2 bounds the time of a command that resolves an anchor, so that a check "never hangs". COR-052 point 6 puts a command that fills a data point under the same limits, and COR-055 point 3 puts one that joins validation there.
+**Rationale:** The CI pipeline runs every check with no person to [answer](../../glossary.md#term-answer--answer), and gates the merge on its exit status. A check that waited on a command for ever would never exit. COR-050 [point](../../glossary.md#term-point--point) 2 bounds the time of a command that resolves an [anchor](../../glossary.md#term-anchor--anchor), so that a check "never hangs". COR-052 point 6 puts a command that fills a [data point](../../glossary.md#term-data-point--data-point) under the same limits, and COR-055 point 3 puts one that joins [validation](../../glossary.md#term-validation--validation) there.
 
-ADR-057 point 3 fixes the bound at thirty seconds, "the same thirty seconds the predicate runner uses", so a process's commands share it. ADR-058 point 4 applies it to validation unchanged. The backbone enforces the bound itself, so this is a quality it reaches, not a limit it trusts. A command that overruns gives no answer, which REQ-004 keeps from reading as a clean one.
+ADR-057 point 3 fixes the bound at thirty seconds, "the same thirty seconds the predicate runner uses", so a [process](../../glossary.md#term-process--process)'s commands share it. ADR-058 point 4 applies it to validation unchanged. The [backbone](../../glossary.md#term-backbone--backbone) enforces the bound itself, so this is a quality it reaches, not a limit it trusts. A command that overruns gives no answer, which REQ-004 keeps from reading as a clean one.

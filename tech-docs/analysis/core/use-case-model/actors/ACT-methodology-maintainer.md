@@ -28,7 +28,7 @@ pkit:
 Whoever maintains a distribution of the methodology.
 
 - **Role holders:** project-kit's maintainers, or a fork's.
-- **Activities:** work in the distribution's source repository, on the core records, the backbone and the releases adopters upgrade to.
-- **Occasions:** for every change to the methodology and every backbone release.
-- **Context:** the methodology's disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
-- **Core:** the source repository, its release policy and its report inbox exist for this role.
+- **Activities:** work in the [distribution](../../glossary.md#term-distribution--distribution)'s [source repository](../../glossary.md#term-source-repository--source-repository), on the core records, the [backbone](../../glossary.md#term-backbone--backbone) and the releases adopters upgrade to.
+- **Occasions:** for every [change](../../glossary.md#term-change--change) to the [methodology](../../glossary.md#term-methodology--methodology) and every [backbone](../../glossary.md#term-backbone--backbone) [release](../../glossary.md#term-release--release).
+- **Context:** the [methodology](../../glossary.md#term-methodology--methodology)'s disciplines (CONTRIBUTING.md). They are the first adopter of what they ship.
+- **Core:** the [source repository](../../glossary.md#term-source-repository--source-repository), its [release](../../glossary.md#term-release--release) policy and its [report](../../glossary.md#term-report--report) inbox exist for this [role](../../glossary.md#term-role--role).

@@ -51,9 +51,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
         revalidated:
-          at: 2026-10-20T21:11:19Z
+          at: 2026-10-24T10:40:00Z
           outcome: unchanged
-          unchanged-because: The change adds a flow to a view's opening. The number a view's file opens with, and what it means, are as before.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Points 4 and 6 read as they did, so a view's number holds as this rule says.
   RS-ANA-004:
     status: proposed
     origin: {why: "Each component owns its analysis, as it owns its decision records. A capability may move to a repository of its own (software-analysis DEC-001 point 2). On 19 October the maintainer decided that project-kit keeps one analysis for its core and one for each capability. The maintainer's delegate decided that an adapter keeps one once it needs one. The design note on analysis concepts and order records both (PR #1808)."}

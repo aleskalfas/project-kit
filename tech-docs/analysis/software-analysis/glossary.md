@@ -108,6 +108,10 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
+      revalidated:
+        at: 2026-10-24T10:39:51Z
+        outcome: unchanged
+        unchanged-because: structure.py gains a reading of where a body's parts open, which the term links use. The declared structure, and how a body is held to it, are as they were.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -400,7 +404,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s results, and a person records each (DEC-001 point 5).
+- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s [revalidation outcomes](#term-revalidation-outcome--revalidation-outcome), and a person records each (DEC-001 point 5).
 - **A run a command starts:** project-management's run of the agent with nobody watching. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command (project-management DEC-056 point 6).
 
 ## TERM-revalidation-record — revalidation record
