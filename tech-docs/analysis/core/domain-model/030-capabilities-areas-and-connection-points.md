@@ -63,7 +63,7 @@ classDiagram
   class ConnectionPoint["Connection point"]
   ConnectionPoint : address
   ConnectionPoint : kind
-  ConnectionPoint : schema version
+  ConnectionPoint : version
   class Role["Role"]
   Role : qualified name
   class DataPoint["Data point"]
@@ -88,7 +88,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How a capability comes to connect
-  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components connect to each at a schema version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
+  accDescr: A capability installs only where what it depends on falls within its ranges, and install refuses otherwise. Installed, it provides roles. Where two capabilities provide one role, that is an error until the project selects one. The capability providing a role defines its connection points, and other components connect to each at a version equal to its own, which the backbone resolves and checks. A data point, the kind that takes data in, is filled by a project file, installed capabilities and the providing capability's default. The backbone resolves what it holds. Where fillers overlap, a project file wins over a capability, and a capability over the default.
   I([A capability is to be installed]) --> K{Its ranges admit what it depends on?}
   K -->|no| N[Install refuses]
   K -->|yes| C[Capability installed]
@@ -96,7 +96,7 @@ flowchart LR
   R -->|two capabilities provide it| E[Error until the project selects one]
   E -->|the project selects one| R
   R -->|its provider defines| P[Connection point]
-  O[Other component] -->|connects at an equal schema version, which the backbone checks| P
+  O[Other component] -->|connects at an equal version, which the backbone checks| P
   P -->|the kind that takes data in| D[Data point]
   F["Project file, installed capabilities, the default"] -->|fill| D
   D -->|the backbone resolves it, a project file over a capability over the default| H[What the data point holds]
@@ -198,13 +198,13 @@ A connection point is a declared interface that one installed capability defines
   - a [data point](../glossary.md#term-data-point--data-point), which takes data in
   - a [process](../glossary.md#term-process--process), offered for others to depend on
   - an event, which signals that a writing command finished
-- a schema version, an integer that rises only where it breaks what connects to it (COR-053 point 5)
+- a <!-- pkit:not-the-term -->version, an integer that rises only where it breaks what connects to it (COR-053 point 5)
 - a description, in prose (COR-053 point 3)
 
 **Relations:**
 
 - The capability that provides its role defines it (COR-053 point 2).
-- Other components connect to it at a schema version equal to its own (COR-053 point 5).
+- Other components connect to it at a <!-- pkit:not-the-term -->version equal to its own (COR-053 point 5).
 - The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it (COR-053 point 7).
 
 **States:** None.
@@ -212,7 +212,7 @@ A connection point is a declared interface that one installed capability defines
 **Always true:**
 
 - It is optional by default. A connection to it is mandatory only with a reason (COR-053 point 6).
-- Two of its schema versions are compatible only when they are equal (COR-053 point 5).
+- Two of its <!-- pkit:not-the-term -->versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
 ## Role
@@ -226,7 +226,7 @@ A role is a name under which one installed capability provides [connection point
 **Attributes:**
 
 - its qualified name, `<publisher>::<role>` (COR-053 [point](../glossary.md#term-point--point) 1)
-- no schema version: a role redefined in a way that breaks takes a new name (COR-053 point 5)
+- no <!-- pkit:not-the-term -->version: a role redefined in a way that breaks takes a new name (COR-053 point 5)
 
 **Relations:**
 

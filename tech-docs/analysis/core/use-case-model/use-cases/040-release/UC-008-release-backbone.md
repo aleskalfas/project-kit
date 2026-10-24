@@ -134,7 +134,7 @@ pkit:
 - **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
 - **14a.** The repository is another, and the operator declines. Or nobody can reply, and the maintainer passed no `--allow-foreign-repo`. The system refuses, merges nothing, and the use case ends.
 
-**Postconditions:** The [release](../../../glossary.md#term-release--release) commit on the [default branch](../../../glossary.md#term-default-branch--default-branch) carries the tag `v<version>`, which adopters take the CLI from, upgrade to and pin (PRJ-004). That [version](../../../glossary.md#term-version--version)'s changelog section, and the notes of its GitHub release, say what each [change](../../../glossary.md#term-change--change) the release carries means for adopters.
+**Postconditions:** The [release](../../../glossary.md#term-release--release) commit on the [default branch](../../../glossary.md#term-default-branch--default-branch) carries the tag `v<version>`, which adopters <!-- pkit:not-the-term -->install, upgrade to and pin (PRJ-004). That [version](../../../glossary.md#term-version--version)'s changelog section, and the notes of its GitHub release, say what each [change](../../../glossary.md#term-change--change) the release carries means for adopters.
 
 **Minimal guarantees:**
 

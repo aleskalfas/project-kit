@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-24T20:51:55Z
+      at: 2026-10-24T21:20:15Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent says one remit and another actor's work where it said role, and ACT-component-author names a new version and the author. Their needs are the same, so this use case holds.
+      unchanged-because: ACT-ai-agent keeps its words and drops only its links on role, and ACT-component-author names a new version and the author. Their needs are the same, so this use case holds.
 ---
 
 # UC-015 — Package a recurring discipline as a capability

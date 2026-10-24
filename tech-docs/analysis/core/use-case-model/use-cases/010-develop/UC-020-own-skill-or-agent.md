@@ -38,9 +38,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T20:52:03Z
+      at: 2026-10-24T21:20:22Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent says one remit and another actor's work where it said role, and ACT-developer names the developer. Their needs are the same, so this use case holds.
+      unchanged-because: ACT-ai-agent keeps its words and drops only its links on role, and ACT-developer names the developer. Their needs are the same, so this use case holds.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

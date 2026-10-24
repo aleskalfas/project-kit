@@ -2271,7 +2271,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 **Distinctions:**
 
 - **A rule set's version:** its own, apart from its [component](#term-component--component)'s. An inheriting set pins its major (COR-051 [point](#term-point--point) 7).
-- **A connection point's version:** its schema version, an integer that rises only on an edit that breaks its counterparts (COR-053 point 5).
+- **A connection point's version:** an integer that rises only on an edit that breaks its counterparts (COR-053 point 5).
 - **A schema version:** the integer a schema and the data it checks each carry (COR-052 point 5 and COR-023).
 - **Recorded version:** the number or ref a [project](#term-project--project) keeps for what it installed. An externally-sourced component's ref is no version in the sense of this term.
 

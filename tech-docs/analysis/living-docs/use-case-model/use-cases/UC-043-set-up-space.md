@@ -49,9 +49,9 @@ pkit:
         - REQ-023
         - REQ-024
     revalidated:
-      at: 2026-10-24T20:51:50Z
+      at: 2026-10-24T21:20:23Z
       outcome: unchanged
-      unchanged-because: REQ-024 says an unreadable result where it said an unreadable answer, for the same error. Its steps still meet it, so this use case holds.
+      unchanged-because: REQ-024 now calls the unreadable answer of where the rules bind the backbone's one answer, for the same error. Its steps still meet it, so this use case holds.
 ---
 
 # UC-043 — Set up a documentation space for one audience

@@ -24,6 +24,6 @@ pkit:
 
 # REQ-024 · Functional · Validation checks a part of an LDOC rule only where the rule binds
 
-**Verified by:** Tests find that a [page](../../glossary.md#term-page--page) `RS-LDOC-003` binds on is checked for its [reader](../../glossary.md#term-reader--reader), and that one it does not bind on has no reader read. Others find that a page reached only through a pin behind `LDOC`'s major is not checked. Another finds that a diagram fails only where `RS-LDOC-008` binds. One more finds that an unreadable result of where the rules bind is one error, with nothing checked.
+**Verified by:** Tests find that a [page](../../glossary.md#term-page--page) `RS-LDOC-003` binds on is checked for its [reader](../../glossary.md#term-reader--reader), and that one it does not bind on has no reader read. Others find that a page reached only through a pin behind `LDOC`'s major is not checked. Another finds that a diagram fails only where `RS-LDOC-008` binds. One more finds that where the [backbone](../../../core/glossary.md#term-backbone--backbone)'s one <!-- pkit:not-the-term -->answer of where the rules bind cannot be read, that is one error, with nothing checked.
 
 **Rationale:** Checks that enforced `LDOC`'s parts on every [page](../../glossary.md#term-page--page) of the spaces would enforce one requirement two ways. The [rule](../../../core/glossary.md#term-rule--rule)'s status and its scope would then no longer decide where its check applies (living-docs DEC-001, and COR-051 point 2).

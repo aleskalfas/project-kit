@@ -115,7 +115,7 @@ A documentation space is the collection of pages written for one audience. Every
 
 Defined in [TERM-space-definition](../glossary.md#term-space-definition--space-definition).
 
-**Why:** A method written once, and inherited, can be reused across projects and changed in one file, while one mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A space's definition already names the rules its pages follow, so its scope says where they bind (DEC-001).
+**Why:** A method written once, and inherited, can be reused across projects and changed in one <!-- pkit:not-the-term -->place, while one mixed into content cannot be separated again. A shipped [rule set](../../core/glossary.md#term-rule-set--rule-set) takes no scope, so a set of the [project](../../core/glossary.md#term-project--project)'s own says where its rules bind. A space's definition already names the rules its pages follow, so its scope says where they bind (DEC-001).
 
 A space definition is the rule set that says which rules a space's pages follow. It inherits `LDOC`, the shared rules living-docs ships, and adds the space's own. Its scope selects the space's pages, so those rules bind on them as soon as the definition exists.
 

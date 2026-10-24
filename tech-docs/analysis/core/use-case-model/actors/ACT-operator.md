@@ -34,7 +34,7 @@ The person at the controls of a machine. The operator is per machine and per clo
 - **Activities:**
   - start agent sessions
   - choose how much the agents may do without asking
-  - decide what the [methodology](../../glossary.md#term-methodology--methodology) gates
+  - <!-- pkit:not-the-term -->answer what the [methodology](../../glossary.md#term-methodology--methodology) gates
 - **Occasions:** every working day, in every clone.
 - **Context:** the machine, its credentials and [sandbox](../../glossary.md#term-sandbox--sandbox), and the judgement the gates ask for.
 - **Core:** the permission model, its [sandbox](../../glossary.md#term-sandbox--sandbox) and the cross-repository gate are the operator's controls.

@@ -57,7 +57,7 @@ pkit:
 4. Later, the operator runs `pkit upgrade` outside any [project](../../../glossary.md#term-project--project), where no git repository and no `.pkit/` lie above the working directory (ADR-063 point 5).
 5. The system asks the [distribution](../../../glossary.md#term-distribution--distribution)'s repository for its latest release, with `git ls-remote --tags` against the URL compiled into the CLI. It waits at most five seconds (ADR-063 point 1).
 6. The system finds the CLI behind that release. Run by the CLI `uv` installed, at a terminal, it runs `uv tool install --force` with that URL and the latest release's tag (ADR-063 point 2).
-7. The system hands over to the same command under the new CLI, which finds itself current and prints `pkit tool is current (v<version>).`.
+7. The system replaces itself with the same command under the new CLI, which finds itself current and prints `pkit tool is current (v<version>).`.
 
 **Variants:**
 

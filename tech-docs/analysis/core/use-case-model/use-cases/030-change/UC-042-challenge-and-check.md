@@ -59,7 +59,7 @@ pkit:
 
 - The [harness](../../../glossary.md#term-harness--harness) hands each [reviewer](../../../glossary.md#term-reviewer--reviewer)'s whole result back to the session that dispatched it, as UC-029 describes. It does so at the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names (COR-047 [point](../../../glossary.md#term-point--point) 2).
 - A reviewer keeps to the remit its [agent definition](../../../glossary.md#term-agent-definition--agent-definition) gives it, read-only included. Nothing at run time checks what a reviewer changed, beyond the tools the harness grants it (COR-024 and COR-057 point 1).
-- The rule-set reviewer judges under no [rule](../../../glossary.md#term-rule--rule) but those the [backbone](../../../glossary.md#term-backbone--backbone)'s one listing gives. It approves no [change](../../../glossary.md#term-change--change) it could not judge, nor one in which it found a settled break. Nothing checks its verdict against the rules (COR-057 points 1 and 3).
+- The rule-set reviewer judges under no [rule](../../../glossary.md#term-rule--rule) but those the [backbone](../../../glossary.md#term-backbone--backbone)'s one <!-- pkit:not-the-term -->answer gives. It approves no [change](../../../glossary.md#term-change--change) it could not judge, nor one in which it found a settled break. Nothing checks its verdict against the rules (COR-057 points 1 and 3).
 
 **Trigger:** The developer, or the agent making the [change](../../../glossary.md#term-change--change), has a substantive draft to adopt, or a diff to commit.
 
