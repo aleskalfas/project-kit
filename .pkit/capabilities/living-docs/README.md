@@ -188,22 +188,26 @@ A template you copy into the definitions location takes the template type there,
 Where your documentation lives is declared in two files, joined by path:
 
 - **The backbone configuration** (`.pkit/project/config.yaml`) names the two documentation roots (`docs.user`, `docs.internal`) and every place outside them that holds pages (`friction.places`), and the paths the friction checks leave out (`friction.exclude`). The CLI reference's "Configuration file" section documents those keys.
-- **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml`) holds what only living-docs needs: each space's entry point and definition, and which space each place belongs to.
+- **This capability's project configuration** (`.pkit/capabilities/living-docs/project/config.yaml`) holds what only living-docs needs: each space's audience, entry point and definition, and which space each place belongs to.
 
 ```yaml
 pkit_schema: living-docs:config
 schema_version: 1
 spaces:
-  user:                                        # the page a user starts from, and the space's rules
+  user:                                        # who it serves, where they start, the space's rules
+    audience: users
     entry-point: README.md
     definition: docs/living-docs/rule-sets/user.md
   technical:
+    audience: maintainers
     entry-point: CONTRIBUTING.md
     definition: docs/living-docs/rule-sets/technical.md
 places:                                        # place → space, the place written as in friction.places
   README.md: user
   CONTRIBUTING.md: technical
 ```
+
+A space's `audience` says, in words, who the space serves. DEC-001 gives the user space users and the technical space maintainers, and a space you add serves an audience neither serves, such as `integrators who call the HTTP API`. Until the readers point resolves, the living-docs agent reads a page as its space's audience, so name it for each space you add. `pkit validate` refuses one that is not text.
 
 A place inside a root belongs to that root's space; list it under `places` only to assign it elsewhere. A place outside every root must be listed, unless it is declared to hold rule sets and gives no type. Such a place gives no space until you list it. A document only it holds, such as its `README.md`, is then neither a page nor an unclassified document (DEC-001 point 1). A place of rule sets you give a type must be listed as any other. Each place names exactly one space. A project place never equals or encloses a root. The file's shape is `schemas/config.schema.json`, which `pkit validate` applies. Trees a sync copies into your repository are never places; in a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, yours or a capability's, as its `synced-place` finding (the schemas README, "The friction block"), and this capability's place validation relies on that finding rather than checking a second time.
 
@@ -363,7 +367,7 @@ What it will not do:
 
 Nothing is applied until you accept it.
 
-Until the readers point resolves, the agent reads a page as the audience DEC-001 gives its space — users for the user space, maintainers for the technical one — and says so. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source, a fixer run a command started) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
+Until the readers point resolves, the agent reads a page as its space's `audience` ([Declaring your spaces](#declaring-your-spaces)), and says so. Where the entry names none, it reads a user page as users and a technical page as maintainers, as DEC-001 gives them. For a space you added that names none, it reads no page, and names the entry that lacks an audience. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source, a fixer run a command started) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
 
 ## Onboarding an existing project
 
