@@ -1,0 +1,16 @@
+component: living-docs
+kind: minor
+custom:
+  category: Added
+body: >
+  An entry of the `pkit::documentation:readers` point may now carry `paths`,
+  the paths its reader takes through your pages, as living-docs DEC-001 point 7
+  decides. Each path lists under `pages` the pages the reader reads in order,
+  each named by its Markdown file's path from the repository's root, with an
+  optional `description` of what the reader comes to do. A path names pages,
+  never a pattern of files, so a glob such as `docs/runbooks/**` fits no path.
+  The point stays at version 1, and an entry without paths reads as before. The
+  `living-docs` agent's reader-review takes the paths of a page's reader from
+  the point. Where a rule asks that reader paths stay unbroken, as the user
+  space's own rule does, the review follows each path that passes through the
+  page.
