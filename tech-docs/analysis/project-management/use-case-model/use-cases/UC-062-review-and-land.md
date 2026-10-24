@@ -15,15 +15,9 @@ requirements:
 after:
   - [UC-061]
 shortfalls:
-  - at: 9
-    issue: "#1872"
-    record: project-management:DEC-055#3
   - at: "1b"
     issue: "#1938"
     record: COR-004
-  - at: "6b"
-    issue: "#1872"
-    record: project-management:DEC-032#D1
   - at: "12a"
     issue: "#1779"
     record: project-management:DEC-055#3
@@ -75,7 +69,7 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T20:58:49Z
+      at: 2026-10-24T22:00:52Z
       outcome: updated
 ---
 
@@ -113,10 +107,6 @@ pkit:
 7. Each reviewer posts its verdict, whose first line approves the change or requests changes, and whose marker names the head and the [base](../../../core/glossary.md#term-base--base) it reviewed. Its [findings](../../../core/glossary.md#term-finding--finding) follow, each tagged `[block]`, `[person]` or `[advisory]` (DEC-028).
 8. The system prints each `[person]` finding whole, and marks one whose verdict no longer stands for the head (DEC-055 point 3).
 9. The system lists the answers the change wrote, from the [change check](../../../core/glossary.md#term-change-check--change-check), and writes the list into the pull request's description (DEC-055 point 1). It prints, beside the list, each revalidation of a document on the base's tip that the change's [answer](../../../core/glossary.md#term-answer--answer) did not read (DEC-055 point 3).
-
-> [!WARNING]
-> **Not built yet:** the system prints no revalidation that was answered apart. DEC-055 point 3 decides that it prints each one beside the list, and #1872 tracks it.
-
 10. With no [authorisation](../../glossary.md#term-authorisation--authorisation) yet, the system stops ready and exits `8`. It names the command that merges: `pkit pm land-work <N> --yes --expect-head <sha>`.
 11. The merge authoriser reads the findings and the list, and authorises the merge of the pull request at that head (DEC-055 point 3).
 12. The developer runs `pkit pm land-work <N> --yes --expect-head <sha>`, and the system runs steps 2 to 9 again at that head.
@@ -139,10 +129,6 @@ pkit:
 - **5b.** The project registers no local reviewer of its own. The system runs each reviewer a [capability](../../../core/glossary.md#term-capability--capability) contributes that the change requires, as any other (DEC-032 point D4). Where the change requires no local reviewer at all, the system says so and runs none.
 - **6a.** The developer changed something a reviewer checks since its [verdict](../../glossary.md#term-verdict--verdict)'s head, or the [pull request](../../../core/glossary.md#term-pull-request--pull-request) no longer stands on the verdict's [base](../../../core/glossary.md#term-base--base). The verdict is stale, and the system runs that reviewer again (DEC-028).
 - **6b.** The developer's only edits since an approving verdict are [answer](../../../core/glossary.md#term-answer--answer) files the change adds. The verdict of a reviewer that only the condition `touches-code` requires stands, since an answer file is no code (DEC-032 point D1).
-
-> [!WARNING]
-> **Not built yet:** an answer file counts as code, so such a change makes that verdict stale. DEC-032 point D1 decides that an answer file is no code, and #1872 tracks it.
-
 - **6c.** A reviewer's output holds no line that reads as a verdict. The system counts no verdict for it, prints the reviewer's whole output, and stops, exiting `6` (DEC-028). The use case ends.
 - **7a.** A verdict requests changes. The system prints the first line of each `[block]` [finding](../../../core/glossary.md#term-finding--finding), and starts no merge (DEC-028). The developer changes the work, and the path rejoins at step 1.
 - **8a.** A `[person]` finding's verdict was posted while the run went on, or does not stand for the head. A run authorised up front stops ready, and merges nothing until the merge authoriser has seen the finding (DEC-055 point 3).

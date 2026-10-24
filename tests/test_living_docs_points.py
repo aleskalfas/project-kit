@@ -488,6 +488,27 @@ def test_a_page_unjudged_only_on_a_kind_nothing_resolves_owes_what_its_other_anc
     ]
 
 
+def test_a_page_answered_apart_owes_nothing_for_it() -> None:
+    """Two revalidations of a page made apart are debt, not staleness: the check keeps
+    the page `current`, `stale` or `deferred` and reports `answered-apart` beside it,
+    with no anchor. A page the change leaves alone owes nothing for it, and a stale
+    page owes only its changed anchors (project-management DEC-053 point 4, COR-062
+    point 7). The filler reads the check's own result, as the backbone gives it."""
+    apart = {"location": "docs/current.md", "kind": "answered-apart", "anchor": None}
+    stale = {"location": "docs/guide.md", "kind": "answered-apart", "anchor": None}
+    deferred = {"location": "docs/deferred.md", "kind": "answered-apart", "anchor": None}
+    report = {**REPORT, "findings": [*REPORT["findings"], apart, stale, deferred]}
+    read = doc_check_lib.read_friction(".", _check_answering(report))
+    assert doc_check_lib.obligations(read, PAGES) == doc_check_lib.obligations(REPORT, PAGES)
+    alone = {
+        **REPORT,
+        "artefacts": [{"location": "docs/current.md", "state": "current"}],
+        "findings": [apart],
+    }
+    assert [o.get("document") for o in doc_check_lib.obligations(alone, PAGES)] == [None, None]
+    assert doc_check_lib.unresolved_kinds(report, PAGES) == []
+
+
 def test_a_dormant_check_owes_nothing() -> None:
     assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
 
