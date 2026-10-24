@@ -45,12 +45,18 @@ analyses:
       - analysis: project-management
   - component: software-analysis
     folder: software-analysis
+    # The record that states what software-analysis is for (software-analysis
+    # DEC-003 point 8).
+    purpose: software-analysis:DEC-001
     builds-on:
       - analysis: core
       - analysis: project-management
         optional: true
   - component: living-docs
     folder: living-docs
+    # The record that states what living-docs is for (software-analysis DEC-003
+    # point 8).
+    purpose: living-docs:DEC-001
     builds-on:
       - analysis: core
       - analysis: project-management
