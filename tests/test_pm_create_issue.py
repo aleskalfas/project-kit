@@ -1,7 +1,7 @@
 """Tests for project-management's create-issue script's pure logic.
 
 Covers title composition, parent-ref line formatting, template body
-substitution, frontmatter stripping, adopter-workstream extraction.
+substitution, frontmatter stripping, the workstream check at filing.
 The gh subprocess invocations are not tested at unit level — they're
 thin wrappers; their behaviour is the same shape as evidence's
 validate.py call path.
@@ -348,34 +348,6 @@ def test_compose_body_no_parent_ref_leaves_template_placeholder(ci, tmp_path: Pa
     body = ci._compose_body(template, parent_ref="")
     # Placeholder line stays as-is; author fills in.
     assert "Feature: #" in body
-
-
-# --- adopter workstreams ---------------------------------------------
-
-
-def test_adopter_workstreams_bare_list(ci) -> None:
-    config = {"workstreams": ["cli", "schemas", "agents"]}
-    assert ci._adopter_workstreams(config) == {"cli", "schemas", "agents"}
-
-
-def test_adopter_workstreams_mapping_form(ci) -> None:
-    """DEC-018's v0.5.0 mapping form is also recognised (forward-compatible)."""
-    config = {
-        "workstreams": {
-            "cli": {"name": "cli", "status": "active"},
-            "schemas": {"name": "schemas", "status": "active"},
-        },
-    }
-    assert ci._adopter_workstreams(config) == {"cli", "schemas"}
-
-
-def test_adopter_workstreams_empty_when_absent(ci) -> None:
-    assert ci._adopter_workstreams({}) == set()
-
-
-def test_adopter_workstreams_skips_non_string_entries(ci) -> None:
-    config = {"workstreams": ["cli", 42, None, "schemas"]}
-    assert ci._adopter_workstreams(config) == {"cli", "schemas"}
 
 
 # --- titles.yaml checks at filing (#803) ----------------------------
@@ -2468,6 +2440,121 @@ def test_main_label_fallback_greenfield_rejects_unknown_workstream_value(
     )
 
     assert ci.main() == 2
+
+
+# --- #1933: the workstreams file is the allowed set at filing ----------------
+# DEC-018 makes `project/workstreams.yaml` authoritative, and DEC-012 refuses a
+# value outside the allowed set. The legacy `workstreams:` key of config.yaml is
+# read only where the file is absent.
+
+_WORKSTREAMS_FILE = (
+    "schema_version: 1\n"
+    "workstreams:\n"
+    "  spyre:\n"
+    "    name: spyre\n"
+    "    status: active\n"
+    "  legacy:\n"
+    "    name: legacy\n"
+    "    status: deprecated\n"
+)
+
+
+def _stage_with_workstreams_file(tmp_path: Path, *, legacy: str) -> Path:
+    """A label-fallback tree whose workstreams live in the file, the config's key `legacy`."""
+    root = _stage_capability_tree(tmp_path, has_board=False)
+    (root / "project" / "config.yaml").write_text(legacy, encoding="utf-8")
+    (root / "project" / "workstreams.yaml").write_text(_WORKSTREAMS_FILE, encoding="utf-8")
+    return root
+
+
+def _file_with_workstream(ci, monkeypatch, root: Path, workstream: str) -> tuple[int, dict]:
+    """Run create-issue main() for a Task in ``workstream``; return (rc, what it created)."""
+    monkeypatch.setattr(
+        ci.subprocess, "run", _gh_command_dispatcher("https://github.com/acme/repo/issues/69")
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    created: dict = {}
+    real_create = ci._gh_create_issue
+
+    def capturing_create(**kwargs):
+        created.update(kwargs)
+        return real_create(**kwargs)
+
+    monkeypatch.setattr(ci, "_gh_create_issue", capturing_create)
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            "task",
+            "--title",
+            "do a thing",
+            "--parent",
+            "1",
+            "--workstream",
+            workstream,
+            "--capability-root",
+            str(root),
+            "--yes",
+        ],
+    )
+    return ci.main(), created
+
+
+def test_filing_refuses_a_workstream_the_file_lacks_where_the_legacy_key_is_empty(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    """The reported gap: an empty legacy key, as in project-kit, let any value through."""
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "no-such-workstream")
+    err = capsys.readouterr().err
+    assert rc == 2
+    assert created == {}
+    assert "'no-such-workstream' is not in project/workstreams.yaml" in err
+    assert "Its active workstreams: spyre." in err
+
+
+def test_filing_refuses_a_deprecated_workstream(ci, tmp_path, monkeypatch, capsys) -> None:
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "legacy")
+    assert rc == 2
+    assert created == {}
+    assert "'legacy' is deprecated in project/workstreams.yaml" in capsys.readouterr().err
+
+
+def test_filing_takes_an_active_workstream_of_the_file(ci, tmp_path, monkeypatch) -> None:
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: []\n")
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "spyre")
+    assert rc == 0
+    assert "workstream:spyre" in created["labels"]
+
+
+def test_a_workstream_add_workstream_adds_is_taken_at_the_next_filing(
+    ci, tmp_path, monkeypatch
+) -> None:
+    """The other half of the gap: the 0.5.0 migration left `[spyre]` in config.yaml,
+    and a workstream added since lives only in the file."""
+    root = _stage_with_workstreams_file(tmp_path, legacy="workstreams: [spyre]\n")
+    spec = importlib.util.spec_from_file_location(
+        "pm_add_workstream_for_filing", SCRIPT_PATH.parent / "add-workstream.py"
+    )
+    assert spec is not None and spec.loader is not None
+    add_workstream = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(add_workstream)
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(add_workstream.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(
+        add_workstream.sys,
+        "argv",
+        ["add-workstream.py", "quantum", "--skip-label", "--capability-root", str(root), "--yes"],
+    )
+    assert add_workstream.main() == 0
+
+    rc, created = _file_with_workstream(ci, monkeypatch, root, "quantum")
+    assert rc == 0
+    assert "workstream:quantum" in created["labels"]
 
 
 # --- #454: a title-prefix-bound axis writes NO label -----------------------

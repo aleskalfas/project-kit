@@ -89,6 +89,7 @@ from _lib import (
     session_guard,
     title_rules,
     use_case_citations,
+    workstreams,
 )
 from _lib.containment import LinkOutcome, link_sub_issue
 from _lib.gh import gh_project_run, gh_run, load_adopter_config
@@ -154,7 +155,7 @@ def main() -> int:
         "--workstream",
         default=None,
         help=(
-            "Workstream slug per the adopter's workstreams list. Required "
+            "Workstream slug, one project/workstreams.yaml holds as active. Required "
             "whenever a LABEL carries the workstream axis — greenfield, or a "
             "`label:` binding in substrate-map.yaml — and no `default:` covers it."
         ),
@@ -485,26 +486,27 @@ def main() -> int:
         )
         return 2
 
-    # Workstream value validation against adopter config.
+    # Workstream value validation against the project's workstreams file.
+    #
+    # DEC-012 refuses a value outside the allowed set, and DEC-018 makes
+    # `project/workstreams.yaml` that set: the value must be one the file holds
+    # as active (#1933). The legacy `workstreams:` key of config.yaml is read
+    # only where the file is absent (`_lib/workstreams.read_declared`).
     #
     # Skipped when the substrate-map declares `workstream` unsupported (or absent
     # — absent ≡ unsupported, the load-bearing rule): the writer discards the
-    # value (`resolve_write` DEGRADEs, no label written), so validating it against
-    # config.yaml's list would false-refuse a filing for a value that will never
-    # be written (#559). Kept for greenfield / served — a typo-catch on a value
-    # that WILL be written.
+    # value (`resolve_write` DEGRADEs, no label written), so validating it
+    # would false-refuse a filing for a value that will never be written (#559).
+    # Kept for greenfield / served — a typo-catch on a value that WILL be written.
     workstream_unsupported = (
         axis_labels.axis_disposition("workstream", substrate_map) == "unsupported"
     )
     if args.workstream is not None and not workstream_unsupported:
-        adopter_workstreams = _adopter_workstreams(config)
-        if adopter_workstreams and args.workstream not in adopter_workstreams:
-            print(
-                f"error: workstream {args.workstream!r} is not in the "
-                "adopter's declared workstreams list "
-                f"({', '.join(sorted(adopter_workstreams))}).",
-                file=sys.stderr,
-            )
+        refusal = workstreams.filing_refusal(
+            args.workstream, workstreams.read_declared(capability_root)
+        )
+        if refusal is not None:
+            print(f"error: {refusal}", file=sys.stderr)
             return 2
 
     # Compose the body. Two paths per #218:
@@ -1323,25 +1325,6 @@ def _parent_ref_form_matchers(parent_ref_form: str) -> list[re.Pattern[str]]:
     line, which the derived native link (#1033) uses too.
     """
     return body_parent_ref.form_matchers(parent_ref_form)
-
-
-def _adopter_workstreams(config: dict) -> set[str]:
-    """Extract the adopter's declared workstream slugs.
-
-    Supports both the v0.2.0 shape (`workstreams:` as a bare list in
-    config.yaml) and the v0.5.0 shape (mapping form per DEC-018) as a
-    forward-compatible read.
-    """
-    ws = config.get("workstreams")
-    if isinstance(ws, list):
-        out: set[str] = set()
-        for entry in ws:
-            if isinstance(entry, str):
-                out.add(entry)
-        return out
-    if isinstance(ws, dict):
-        return set(ws.keys())
-    return set()
 
 
 def _parent_ref_line(

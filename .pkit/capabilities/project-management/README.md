@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T09:45:19Z
+      at: 2026-10-24T10:37:29Z
       outcome: updated
       deferred:
         - anchor:
@@ -575,7 +575,7 @@ Three narrow, batch-capable verbs replace the whole-body fetch-edit-resend that 
 - **Index out of range** → refuse the whole batch; report the criterion count. Never create a checkbox.
 - **Expected-text mismatch** (criteria reordered between read and write) → refuse; report the actual line so the caller re-reads. Never tick blind.
 - **Ambiguous guard** (text matches more than one criterion) → refuse and list the matches; ambiguity never silently resolves.
-- **Unknown field value** (`set-field`, including an unknown `--kind`) → refuse before any mutation, listing the adopter's declared values.
+- **Unknown field value** (`set-field`, including an unknown `--kind`) → refuse before any mutation, listing the adopter's declared values, or for a workstream the active ones.
 - **Kind/structural mismatch** (`set-field --kind` with a non-`feature` kind on an epic/feature/umbrella) → refuse before any mutation, naming the rule (DEC-011 / `structural_restriction`). `--kind feature` on those types is permitted (it's the kind they already carry) and lands as a no-op.
 - **Parent link cannot follow the first line** (`set-field --parent`) → an issue whose native parent cannot be read is refused before any mutation (exit 1); a native move GitHub refuses stops the call before the first line is rewritten, naming the parent the issue stays under (exit 3).
 - **Already in the requested state** → no-op success. Ticking a ticked box, or setting a field to its current value, is not an error.
@@ -746,6 +746,10 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 | `remove-workstream <slug>` | Refuses while any issue carries the workstream, then asks you to type the slug. |
 
 **The checks.** A slug has 2 to 40 characters, matches `^[a-z][a-z0-9-]*[a-z0-9]$` and holds no consecutive hyphens. A name is one line of at most 64 characters. A description or a deprecation reason is one line of at most 200. Each command refuses a value outside these rules before it writes anything.
+
+**Filing.** `create-issue` and `set-field` take only a workstream that `project/workstreams.yaml` holds as active. They refuse any other, a deprecated one included, and name the active ones. An active workstream that `add-workstream` adds is taken at the next filing.
+
+Where the file is absent, the two commands read the legacy `workstreams:` key of `config.yaml`, and check nothing where that key is empty. Where a substrate map binds no workstream axis, or marks it unsupported, `create-issue` writes no workstream and checks none.
 
 **The substrate before the file.** A command that changes a label or the board does so before it writes the file. When that change fails, the file keeps what the change did not finish, and the command exits 3. Running it again finishes the change. Where the board has no single-select `Workstream` field, the command refuses.
 
