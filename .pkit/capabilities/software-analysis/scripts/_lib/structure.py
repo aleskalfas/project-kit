@@ -316,11 +316,12 @@ def read_kinds(path: Path = KINDS_FILE, schema: Path = KINDS_SCHEMA) -> dict[str
         schema_text: str | None = schema.read_text(encoding="utf-8")
     except (OSError, ValueError):
         schema_text = None
+    if schema_text is None:
+        return _kinds(text, schema, None)  # never kept, so a later read tries the schema again
     return dict(_declared_kinds(text, schema, schema_text))
 
 
-@functools.lru_cache(maxsize=4)
-def _declared_kinds(text: str, schema: Path, schema_text: str | None) -> dict[str, Kind]:
+def _kinds(text: str, schema: Path, schema_text: str | None) -> dict[str, Kind]:
     """`read_kinds`' answer for the declaration's `text` and its schema's: a schema with
     no text is read again, so the error says why it cannot be."""
     try:
@@ -338,6 +339,10 @@ def _declared_kinds(text: str, schema: Path, schema_text: str | None) -> dict[st
         pointer = "".join(f"/{segment}" for segment in first.absolute_path)
         raise Unreadable(f"it does not fit {schema.name}: at `{pointer or '/'}`, {first.message}")
     return {name: _kind(name, entry) for name, entry in data["kinds"].items()}
+
+
+#: `_kinds`, kept for each pair of texts the declaration and its schema had when read.
+_declared_kinds = functools.lru_cache(maxsize=4)(_kinds)
 
 
 def _kind(name: str, entry: Mapping[str, Any]) -> Kind:
