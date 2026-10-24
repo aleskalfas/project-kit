@@ -71,9 +71,9 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-23T14:50:30Z
+      at: 2026-10-24T04:58:26Z
       outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
+      unchanged-because: A renamed placed file whose derived links alone moved is no longer listed behind a deferral. How a person resolves debt is unchanged.
 ---
 
 # UC-007 — Resolve what the default branch left out of date

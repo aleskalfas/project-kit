@@ -9,7 +9,8 @@ makes real commits before running a check. They cover:
   running text as its words alone, and leaves code, comments, headings, images and
   links of any other form as written;
 - **the declaration** — read from a capability place, a target that does not compile
-  declaring nothing and failing the package check;
+  declaring nothing and failing the package check, and each form matched on its own, so
+  forms that would clash when joined pass the check and set their links aside (#1912);
 - **the change check** — a change that only adds, removes or retargets such links
   asks nothing of what rests on the document, through an anchor on it whole, on a
   section, on its file or on a record; a word beside a link, or a link of another
@@ -281,6 +282,61 @@ def test_a_target_that_does_not_compile_fails_the_package_check_and_declares_not
     assert "is no regular expression" in errors[0][1]
     (place, _records) = [p for p in fd.read_friction_settings(repo.root).places if p.is_capability]
     assert [form.target for form in place.derived_links] == ["kept"]
+
+
+@pytest.mark.parametrize(
+    ("forms", "aside", "kept"),
+    [
+        pytest.param(
+            (r"glossary\.md#(?P<slug>term-[a-z-]+)", r"#(?P<slug>term-[a-z-]+)"),
+            ("glossary.md#term-order", "#term-payment"),
+            "notes.md#term-order",
+            id="one group name in two forms",
+        ),
+        pytest.param(
+            (r"(a+)-\1", r"(b+)-\1"),
+            ("aa-aa", "b-b"),
+            "a-b",
+            id="a numbered back-reference in each form",
+        ),
+        pytest.param(
+            (r"(?i)glossary\.md#term-[a-z-]+", r"#term-[a-z-]+"),
+            ("GLOSSARY.md#term-order", "#term-payment"),
+            "#TERM-payment",
+            id="a flag set for one whole form",
+        ),
+    ],
+)
+def test_each_form_is_matched_on_its_own(
+    forms: tuple[str, str], aside: tuple[str, str], kept: str
+) -> None:
+    """Forms that each compile may clash when joined into one pattern (#1912): each is
+    matched on its own, so a group, a back-reference or a flag means what it means alone."""
+    assert all(fd.compiles(form) is None for form in forms)
+    text = f"[one]({aside[0]}), [two]({aside[1]}) and [three]({kept})."
+    assert fd.SetAside(forms).body(text) == f"one, two and [three]({kept})."
+
+
+def test_forms_that_clash_when_joined_pass_the_package_check_and_set_links_aside(
+    repo: AdopterRepo,
+) -> None:
+    """Two forms on one place that name the same group: the package check passes them, and
+    the change check reads a links-only edit as before, asking nothing."""
+    clashing = (
+        "      derived-links:\n"
+        r"        - target: '(?:[^()\s:#]*/)?glossary\.md#(?P<slug>term-[^()\s]*)'" + "\n"
+        r"        - target: '#(?P<slug>term-[^()\s]*)'" + "\n"
+    )
+    declare_deriver(repo.root, clashing)
+    _start(repo)
+    assert [
+        finding.path
+        for report in pv.validate_installed_packages(repo.root).reports
+        for finding in report.findings
+        if finding.severity is pv.Severity.ERROR
+    ] == []
+    repo.commit("move the links", LINKS_MOVED)
+    assert _friction(_run(repo)) == []
 
 
 # --- the change check ---------------------------------------------------------------------
