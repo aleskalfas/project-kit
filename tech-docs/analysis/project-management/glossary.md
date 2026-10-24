@@ -107,6 +107,10 @@ TERM-cascade:
         record:
           - project-management:DEC-006
           - project-management:DEC-034
+      revalidated:
+        at: 2026-10-24T01:37:10Z
+        outcome: unchanged
+        unchanged-because: close-issue now refuses a won't-do close and a container's close with no terminal and no --yes. The cascade still never closes a parent, and a person authorises that close, as the term says.
 TERM-checkbox:
   name: checkbox
   noun-forms: [checkboxes]
