@@ -26,6 +26,12 @@ Closes a GitHub issue via either path declared in workflow.yaml's
     `cascade-eligibility-close` trigger this script previously only reported.
     Closes via `gh issue close --reason completed`.
 
+A won't-do close and a container's close are moves the person authorises, a
+hard reject when that is missing (DEC-006), as ``move-issue`` holds such a
+move: ``--yes`` authorises the close, a terminal asks, and with neither the
+close is refused before anything is written (#1936). A dry run writes nothing
+and asks for no authorisation.
+
 All three paths reconcile the issue's ``state:*`` labels after closing: any
 non-terminal label (``state:todo``, ``state:backlog``, ``state:in-progress``,
 ``state:review``) is removed and ``state:done`` is ensured.  The reconcile
@@ -231,7 +237,11 @@ def main() -> int:
     parser.add_argument(
         "--yes",
         action="store_true",
-        help="Skip the confirmation prompt.",
+        help=(
+            "Skip the confirmation prompt. A won't-do close and a container's "
+            "close are the person's to authorise (DEC-006): with no terminal "
+            "to ask at, they are refused without --yes."
+        ),
     )
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
@@ -343,11 +353,13 @@ def main() -> int:
         if args.dry_run:
             print("\n[dry-run] gh would be invoked; nothing written.")
             return 0
-        if not args.yes and sys.stdin.isatty():
-            reply = input("Proceed? [y/N] ").strip().lower()
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        held = _authorise(
+            args.yes,
+            close=f"closing #{args.issue_number} as won't do",
+            prompt="Proceed? [y/N] ",
+        )
+        if held is not None:
+            return held
 
         comment_body = (
             f"[wont-do close] {args.reason}\n\n"
@@ -506,11 +518,13 @@ def main() -> int:
                 "gh would close with --reason completed."
             )
             return 0
-        if not args.yes and sys.stdin.isatty():
-            reply = input("Close cascade-eligible container? [y/N] ").strip().lower()
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        held = _authorise(
+            args.yes,
+            close=f"closing container #{args.issue_number}",
+            prompt="Close cascade-eligible container? [y/N] ",
+        )
+        if held is not None:
+            return held
 
         comment_body = (
             "[cascade-eligibility close] all children closed and the container's "
@@ -568,6 +582,36 @@ def main() -> int:
     )
 
     return 0
+
+
+# ---- the person's authorisation (#1936) ------------------------------
+
+
+def _authorise(yes: bool, *, close: str, prompt: str) -> int | None:
+    """Ask for the person's authorisation of a close DEC-006 holds for them.
+
+    A won't-do close (Backlog/Todo → Done) and a container's close (In Progress
+    → Done) are user-authorised, a hard reject when the authorisation is
+    missing — as ``move-issue`` holds such a move. ``--yes`` gives it; at a
+    terminal the person is asked. With neither, the close is refused before
+    anything is written. Returns None once authorised, else the exit code to
+    stop with: 1 for the refusal, 0 where the person declined at the prompt.
+    """
+    if yes:
+        return None
+    if not sys.stdin.isatty():
+        print(
+            f"[refused] {close} is user-authorised (hard-reject on violation).\n"
+            "          → Pass --yes to confirm the authorisation, "
+            "or re-run from an interactive shell.",
+            file=sys.stderr,
+        )
+        return 1
+    reply = input(prompt).strip().lower()
+    if reply not in ("y", "yes"):
+        print("aborted.", file=sys.stderr)
+        return 0
+    return None
 
 
 # ---- pr-merge close through a named PR (#1049) -----------------------

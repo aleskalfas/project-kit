@@ -1,15 +1,19 @@
 """Tests for project-management's close-issue script's pure logic.
 
 Covers checkbox gate detection (`_unticked_boxes`, and the gate's `all_boxes_ticked`),
-structural-type inference, parent-chain walking, and — per issue #60 — the
-label-reconciliation helper that close-issue shares with move-issue.
+structural-type inference, parent-chain walking, — per issue #60 — the
+label-reconciliation helper that close-issue shares with move-issue, and — per
+issue #1936 — the person's authorisation a won't-do close and a container's
+close need.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
@@ -578,3 +582,136 @@ def test_check_parent_eligibility_already_closed(ci, monkeypatch) -> None:
     monkeypatch.setattr(ci, "_gh_get_issue", lambda num, cfg: fake_parent)
     result = ci._check_parent_eligibility(59, config={})
     assert result is None
+
+
+# ---- #1936 — a won't-do close and a container's close are the person's -------
+#
+# DEC-006 makes Backlog/Todo → Done (won't-do) and In Progress → Done (a
+# container's cascade-eligibility close) moves the user authorises, a hard
+# reject when the authorisation is missing. close-issue used to ask only at a
+# terminal, so with no terminal and no --yes it closed in both modes and nobody
+# was asked. It now refuses there, as move-issue refuses a user-held move, and
+# writes nothing.
+
+CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+
+#: The two closes DEC-006 holds for the person: (mode argv, issue, write it makes).
+HELD_CLOSES = [
+    pytest.param(
+        ["--reason", "superseded by #99"],
+        {"title": "[Task] not needed", "labels": [{"name": "state:backlog"}]},
+        ["gh", "issue", "close", "42", "--reason", "not planned"],
+        id="wont-do",
+    ),
+    pytest.param(
+        ["--mode", "cascade-eligibility-close"],
+        {"title": "[EPIC] all done", "labels": [{"name": "state:in-progress"}]},
+        ["gh", "issue", "close", "42", "--reason", "completed"],
+        id="cascade-eligibility-close",
+    ),
+]
+
+
+class _Stdin:
+    """A standard input that is, or is not, a terminal."""
+
+    def __init__(self, tty: bool) -> None:
+        self._tty = tty
+
+    def isatty(self) -> bool:
+        return self._tty
+
+
+def _close(
+    ci, monkeypatch, argv: list[str], issue: dict, *, tty: bool, reply: str | None = None
+) -> SimpleNamespace:
+    """Run close-issue's main() on issue #42 with every other gate passed, and
+    record each `gh` call and each move handed to the engine."""
+    monkeypatch.setattr(sys, "argv", ["close-issue", "42", *argv, "--no-cascade"])
+    monkeypatch.setattr(sys, "stdin", _Stdin(tty))
+    prompts: list[str] = []
+
+    def fake_input(prompt: str = "") -> str:
+        prompts.append(prompt)
+        assert reply is not None, "close-issue asked although no reply was expected"
+        return reply
+
+    monkeypatch.setattr("builtins.input", fake_input)
+    monkeypatch.setattr(ci, "resolve_capability_root", lambda _explicit: CAP_ROOT)
+    monkeypatch.setattr(ci.bootstrap_gate, "enforce", lambda *a, **k: True)
+    monkeypatch.setattr(ci.session_guard, "enforce", lambda **k: True)
+    monkeypatch.setattr(ci, "load_adopter_config", lambda _root: {})
+    monkeypatch.setattr(ci, "_read_members", lambda *a: [])
+    monkeypatch.setattr(
+        ci, "resolve_invoker_identity", lambda **k: SimpleNamespace(github_login="me")
+    )
+    monkeypatch.setattr(ci, "check_membership", lambda *a: SimpleNamespace(allowed=True))
+    monkeypatch.setattr(ci.axis_labels, "load_substrate_map", lambda *_a, **_k: None)
+    monkeypatch.setattr(ci, "fire_hooks", lambda *a, **k: None)
+    monkeypatch.setattr(ci, "_engine_cascade_fold", lambda _n: {"opened": True})
+    journaled: list[tuple] = []
+    monkeypatch.setattr(ci, "journal_move", lambda *a, **k: journaled.append(a))
+    record = {"body": "## What\nx\n", "state": "OPEN", "milestone": None, **issue}
+    monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: record if n == 42 else None)
+    calls: list[list[str]] = []
+
+    def fake_gh_run(cmd, config, **kwargs):
+        calls.append(cmd)
+        return subprocess.CompletedProcess(cmd, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(ci, "gh_run", fake_gh_run)
+    rc = ci.main()
+    return SimpleNamespace(rc=rc, calls=calls, journaled=journaled, prompts=prompts)
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_with_no_terminal_and_no_yes_is_refused(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    run = _close(ci, monkeypatch, argv, issue, tty=False)
+    assert run.rc == 1
+    assert run.calls == []
+    assert run.journaled == []
+    err = capsys.readouterr().err
+    assert "[refused]" in err
+    assert "user-authorised" in err
+    assert "Pass --yes to confirm the authorisation" in err
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_with_yes_closes_without_asking(ci, monkeypatch, argv, issue, close) -> None:
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False)
+    assert run.rc == 0
+    assert close in run.calls
+    assert run.prompts == []
+    assert len(run.journaled) == 1
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_at_a_terminal_closes_on_a_yes(ci, monkeypatch, argv, issue, close) -> None:
+    run = _close(ci, monkeypatch, argv, issue, tty=True, reply="y")
+    assert run.rc == 0
+    assert len(run.prompts) == 1
+    assert close in run.calls
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_at_a_terminal_declined_writes_nothing(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    run = _close(ci, monkeypatch, argv, issue, tty=True, reply="n")
+    assert run.rc == 0
+    assert run.calls == []
+    assert run.journaled == []
+    assert "aborted." in capsys.readouterr().err
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), HELD_CLOSES)
+def test_held_close_dry_run_needs_no_authorisation(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    """A dry run writes nothing, so it is no close to authorise."""
+    run = _close(ci, monkeypatch, [*argv, "--dry-run"], issue, tty=False)
+    assert run.rc == 0
+    assert run.calls == []
+    assert "[dry-run]" in capsys.readouterr().out
