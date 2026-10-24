@@ -129,10 +129,10 @@ class Tracker:
         self.comment_reads_fail: set[int] = set()
         self.closes = 0
 
-    def merge(self, pr: int, closes: list[int], merged_by: str = MERGER) -> None:
+    def merge(self, pr: int, closes: list[int], merged_by: str = MERGER, branch: str = "") -> None:
         """Merge pull request `pr`, whose body closes `closes`, as `merged_by`,
-        and close each of those issues the way GitHub does: closed, labels
-        untouched."""
+        from head branch `branch`, and close each of those issues the way
+        GitHub does: closed, labels untouched."""
         body = "".join(f"Closes #{n}\n" for n in closes)
         self.merged_prs[pr] = {
             "number": pr,
@@ -140,6 +140,7 @@ class Tracker:
             "mergedAt": MOMENT,
             "mergedBy": {"login": merged_by},
             "body": body,
+            "headRefName": branch,
             "url": f"https://github.com/acme/repo/pull/{pr}",
         }
         for number in closes:

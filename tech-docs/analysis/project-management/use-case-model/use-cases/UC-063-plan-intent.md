@@ -56,9 +56,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T03:42:23Z
+      at: 2026-10-24T05:04:54Z
       outcome: unchanged
-      unchanged-because: create-issue now checks each body before it writes, and close-issue asks the person before a held close. The batch plan still files its issues through create-issue once the planner approves it, so the use case holds.
+      unchanged-because: REQ-042 now names a close through a merged pull request among the closes its tests find held. The batch plan still files its issues through create-issue once the planner approves it, so the use case holds.
 ---
 
 # UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan
