@@ -15,7 +15,9 @@ changes.
   under a capability's `schemas/` directory, or under the core schemas
   area for the reserved target `core`. Stamps the envelope, an empty
   collection, and the `x-pkit-id-collection` annotation pointing at it.
-  Validates the stamp; rolls back if anything fails.
+  Validates the stamp; rolls back if anything fails. Refuses, writing
+  nothing, a schemas folder that arrives in the project as a synced copy
+  (`_refuse_synced_copy`): the next sync would overwrite the schema.
 
 - `rename_entry` renames an entry id across the schemas mechanism:
   the namespace owner's collection key, every `[<namespace>:<old>]`
@@ -40,6 +42,7 @@ from typing import Any, Literal
 
 from ruamel.yaml import YAML
 
+from project_kit import lifecycle_ownership
 from project_kit.schemas import find_namespace_owner
 from project_kit.schemas_validate import (
     _ID_COLLECTION_ANNOTATION,
@@ -340,7 +343,9 @@ def stamp_new_schema(
       with no collection annotation.
 
     Re-validates the stamp via `validate_path`. On failure, removes
-    both files and raises `SchemaAuthoringError`.
+    both files and raises `SchemaAuthoringError`. A schemas folder that
+    arrives in the project as a synced copy is refused before anything is
+    written (`_refuse_synced_copy`).
     """
     if not _KEBAB_CASE.match(name):
         raise SchemaAuthoringError(
@@ -362,6 +367,7 @@ def stamp_new_schema(
                 f"core schemas area not found at {schemas_dir} — expected "
                 f".pkit/schemas/ in this project tree."
             )
+        _refuse_synced_copy(target_root, capability, schemas_dir, name)
     else:
         capability_dir = schemas_dir.parent
         if not capability_dir.is_dir():
@@ -371,6 +377,7 @@ def stamp_new_schema(
                 f"capability {capability!r} not found at {shown}. "
                 f"Create the capability first via `pkit new capability`."
             )
+        _refuse_synced_copy(target_root, capability, schemas_dir, name)
         schemas_dir.mkdir(exist_ok=True)
 
     yaml_path = schemas_dir / f"{name}.yaml"
@@ -416,6 +423,32 @@ def stamp_new_schema(
         )
 
     return SchemaStampResult(yaml_path=yaml_path, companion_path=companion_path)
+
+
+def _refuse_synced_copy(target_root: Path, owner: str, schemas_dir: Path, name: str) -> None:
+    """Refuse to stamp into *schemas_dir* where it arrives in this project as a synced copy.
+
+    The question is the tree's own predicate, asked through
+    `lifecycle_ownership.synced_copy_refusal`: the core schemas area in a project
+    that is not the methodology's source, a kit-shipped capability's `schemas/`
+    there too, and an externally-sourced capability's in any project. The
+    project's own schema goes in a capability it incubates.
+    """
+    if owner == CORE_SCHEMAS_OWNER:
+        subject = "the core schemas area"
+        authored = "Core schemas are authored in the methodology's source repository."
+    else:
+        subject = f"capability {owner!r}"
+        authored = "A capability's own schemas are authored where the capability is authored."
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        target_root,
+        schemas_dir,
+        subject,
+        "Stamp the project's own schema in a capability the project incubates, with "
+        f"`pkit new schema <capability> {name}`. {authored}",
+    )
+    if refusal is not None:
+        raise SchemaAuthoringError(refusal)
 
 
 def _build_companion(

@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T03:46:19Z
+      at: 2026-10-24T04:46:24Z
       outcome: unchanged
-      unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
+      unchanged-because: UC-037 now refuses the core namespace outside the methodology's source repository too. The journey records a project's own decision, which still stamps.
 ---
 
 # JRN-003 — Deliver a change

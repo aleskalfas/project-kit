@@ -350,6 +350,33 @@ def test_the_backbone_loads_the_tree_s_module_without_writing_into_the_tree(
     assert lifecycle_ownership.load_ownership(tmp_path / "unsynced") is None
 
 
+def test_a_stamp_s_refusal_follows_the_tree_s_predicate(tmp_path: Path) -> None:
+    """Every `pkit new` command that writes into a tree a sync may write asks the tree's
+    predicate of its target (#1953): a refusal naming the folder and the way out where it
+    is a synced copy, None where the project authors it or the tree has no module."""
+    from project_kit import lifecycle_ownership
+
+    root = _project(tmp_path, capabilities={"shipped": "kit-shipped"})
+    lifecycle = root / ".pkit" / "lifecycle"
+    lifecycle.mkdir()
+    (lifecycle / "ownership.py").write_bytes(OWNERSHIP_PATH.read_bytes())
+
+    def refusal(folder: str, at: Path = root) -> str | None:
+        return lifecycle_ownership.synced_copy_refusal(at, at / folder, "it", "Go elsewhere.")
+
+    assert refusal(".pkit/agents/core") == (
+        "it arrives in this project as a synced copy: .pkit/agents/core/ is not the "
+        "project's, and the next sync overwrites what is written there (the "
+        "no-shared-files invariant). Go elsewhere."
+    )
+    assert refusal(".pkit/capabilities/shipped/agents") is not None
+    assert refusal(".pkit/agents/project") is None
+    assert refusal(".pkit/capabilities/fresh/agents") is None
+    assert refusal(".pkit/agents/core", tmp_path / "unsynced") is None
+    _source_repository(root)
+    assert refusal(".pkit/agents/core") is None
+
+
 # --- nested adopter tiers (#823) ---------------------------------------------
 #
 # The tier rule was depth-1: it saw `.pkit/<area>/project/` and missed
