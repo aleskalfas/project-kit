@@ -20,6 +20,10 @@ pkit:
         - living-docs:DEC-001#6
         - living-docs:DEC-001#8
         - COR-050#3
+    revalidated:
+      at: 2026-10-24T00:21:57Z
+      outcome: unchanged
+      unchanged-because: The agent changed only where a reader-review takes the reader's paths, and its test checks that text. Its tools and its writes are as they were.
 ---
 
 # REQ-022 · Functional · The living-docs agent proposes each change, and applies none

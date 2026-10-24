@@ -84,6 +84,7 @@ it has none.
 from __future__ import annotations
 
 import functools
+import shlex
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
@@ -202,7 +203,8 @@ def compare(root: Path, ref: str | None = None, *, preview: bool = False) -> Com
     outdated = Finding(REPORT, analysis.location or ".", f"outdated base: {_outdated(base)}")
     folders = analysis.place_folders(NUMBERED) | on_base.place_folders(NUMBERED)
     theirs = _taken(root, base, analysis, on_base, before, folders, set(ours), freeing.files)
-    findings = _collisions(root, base, ours, theirs, folders) if theirs else []
+    default = reading.default_branch.ref
+    findings = _collisions(root, base, ours, theirs, folders, default) if theirs else []
     outcome = Outcome([line, *said, *appended], [outdated, *problems, *findings, *departing])
     return Comparison(base, outcome, freeing.freed)
 
@@ -245,11 +247,18 @@ def _taken(
 
 
 def _collisions(
-    root: Path, base: Base, ours: dict[str, set[str]], theirs: dict[str, Theirs], folders: set[str]
+    root: Path,
+    base: Base,
+    ours: dict[str, set[str]],
+    theirs: dict[str, Theirs],
+    folders: set[str],
+    default: str | None,
 ) -> list[Finding]:
     """Each number both sides took, found against the file the default branch holds or
     gave for it: none for this branch's own work landed byte for byte, a warning for a
-    file of a name this branch has for the number, an error for another."""
+    file of a name this branch has for the number, an error for another. Each names the
+    command that renumbers this branch's, with the base where it is not the default
+    branch, `default`, so the new number is given past it too."""
     written = backbone.blobs_written(root, base.commit, folders)
     names = {i: {_name(p) for p in ours[i]} for i in theirs}
     for number in history.given(root, f"{base.commit}..HEAD", folders):
@@ -265,19 +274,24 @@ def _collisions(
         if not other:
             continue  # this branch's own work, landed byte for byte
         path = other[0]
-        severity, message = _message(i, path, their.held, _name(path) in names[i], base.ref)
+        named = base.ref if base.ref != default else None
+        severity, message = _message(i, path, their.held, _name(path) in names[i], base.ref, named)
         found += [Finding(severity, here, message) for here in sorted(ours[i])]
     return found
 
 
-def _message(number: str, path: str, held: bool, same_name: bool, ref: str) -> tuple[str, str]:
+def _message(
+    number: str, path: str, held: bool, same_name: bool, ref: str, base: str | None = None
+) -> tuple[str, str]:
     """A finding's severity and message for `number`, which the default branch took for
-    `path` — its tip holds it, or its history gave it (`held`)."""
+    `path` — its tip holds it, or its history gave it (`held`) — naming the command that
+    renumbers this branch's, with `--base` where `base` names one."""
     noun = noun_numbered(number)
     cited = "DEC-001 point 3; DEC-002 point 2" if noun == REQUIREMENT else "DEC-001 point 3"
+    command = f"pkit analysis renumber {number}" + (f" --base {shlex.quote(base)}" if base else "")
     renumber = (
-        f"renumber this {noun} before merging — `pkit analysis new` gives the next free one "
-        f"({cited})"
+        f"renumber this {noun} before merging — `{command}` gives it the next free number, "
+        f"with every reference to it ({cited})"
     )
     if held:
         taken = f"{number} is numbered on {ref} too, for {path}, since this branch left it"
