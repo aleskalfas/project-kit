@@ -1,8 +1,0 @@
-component: claude-code
-kind: none
-body: >
-  The adapter README's section "Prompt-free command shape under the sandbox"
-  says that with enforcement on, the hook allows a compound where a grant
-  covers each part, such as the read-only filters every shipped profile
-  grants. The adapter's files do not change, and nothing it ships behaves
-  otherwise.
