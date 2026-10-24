@@ -102,7 +102,10 @@ substitution opened by a `(`, a `<` / `>` redirection, a word the shell
 splits, drops as a comment or brace-expands otherwise than the core reads it,
 a leading assignment to a variable that changes which program runs or loads
 code into it ahead of its own, such as `PATH` or `LD_PRELOAD`, a leading
-assignment written with a quote or a backslash, or an unrecognized command. It
+assignment written with a quote or a backslash, an operand of `export` other
+than a plain name or assignment, which the shell expands before `export` reads
+it, a program name holding whitespace, which a recognizer's pattern would read
+as two words, or an unrecognized command. It
 NEVER auto-allows under uncertainty; a deny on the words it reads wins over any
 such construct. The core looks for such a construct in the whole command, a
 leading `cd` included, and strips no `cd` from a command that holds one
@@ -110,8 +113,9 @@ leading `cd` included, and strips no `cd` from a command that holds one
 grant or a deny, the core removes a word's quotes and backslashes as the shell
 removes them, by the POSIX quoting rules of Python's standard library, so a
 quoted word is matched as the word the shell runs, and `"--force"` is denied as
-`--force` is. A pathname pattern is matched as written: it changes only
-arguments, from the names of files, never the program a grant names. An
+`--force` is. Outside an operand of `export`, a pathname pattern is matched as
+written: it changes only arguments, from the names of files, never the program
+a grant names. An
 assignment to a program's own setting, such as `GIT_PAGER`, is stripped like
 any other: what a granted program is told to run is the grant's breadth, and a
 `git` grant already lets `git -c core.fsmonitor=…` run any program. The segment

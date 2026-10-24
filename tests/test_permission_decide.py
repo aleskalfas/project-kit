@@ -2889,6 +2889,8 @@ _UNREADABLE = [
     "cd {a,b} && git status",
     "cd #x && git status",
     "cd\u00a0sub/x;git status",
+    "git push origin {a{b},--force}",  # nested: the outer brace still expands
+    "'gh pr' list",  # one program word, which a `pattern` would read as two
 ]
 
 # An expansion opened by `$`: a value the core never sees, and some forms
@@ -2922,6 +2924,13 @@ _PROGRAM_PATH_ASSIGNMENTS = [
     "export git PATH=/tmp/x; git status",
     "export gh LD_PRELOAD=/tmp/x.so && gh pr list",
     "export pkit PYTHONPATH=/tmp/x; pkit status",
+    # an `export` word the shell expands first: with a file named `PATH=bin`
+    # in the directory, each of these sets `PATH`
+    "export PAT?=bin; gh pr list",
+    "export [P]ATH=bin && gh pr list",
+    "export * && git status",
+    "export LD_PRELOA?=x.so; git status",
+    "cd sub && export PAT?=bin && gh pr list",
     # an assignment written with a quote or a backslash: its value may name a
     # command the grant never sees
     'GH_HOST="github.example.com" gh pr list',
@@ -2975,6 +2984,28 @@ def test_an_assignment_that_leaves_the_program_alone_is_still_stripped(
 ):
     d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
     assert d == "allow", f"{command!r}: {why}"
+
+
+@pytest.mark.parametrize(
+    "command", ["cd\n./x.sh;git status", "cd\n./x.sh && git status", "declare PATH=/x; git status"]
+)
+def test_a_cd_before_a_newline_is_not_stripped(decide_mod, catalog, command):
+    # The word after the newline is a command of its own, which no grant covers.
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r}: {why}"
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", f"{command!r}: {why}"
+
+
+def test_the_brace_check_is_linear(decide_mod):
+    # A word of many `{` and `,` with no `}` must not stall the hook.
+    import time
+
+    word = "{," * 20000
+    started = time.perf_counter()
+    assert decide_mod._brace_expansion(word) is False
+    assert decide_mod._doubts(f"gh pr list {word}") == []
+    assert time.perf_counter() - started < 1.0
 
 
 def test_an_export_segment_runs_no_program(decide_mod):

@@ -100,11 +100,11 @@ _UNTRUSTED_KIND = {
 # return or a no-break space (#1942). `gh<no-break space>pr list` runs a
 # program named `gh pr`, not `gh`, so a command holding one is not trusted.
 _ODD_SPACE = re.compile(r"[^\S \t\n]")
-# A brace expansion, which the shell turns into several words: `{a,b}` or
-# `{1..3}` in a word (#1942). `git push origin {main,--force}` runs
-# `git push origin main --force`. The scan ignores quoting, so a quoted brace
-# with a comma in it is not trusted either.
-_BRACE = re.compile(r"\{.*(?:,|\.\.).*\}")
+# An operand of `export` the core can read: a plain `NAME`, or `NAME=value` /
+# `NAME+=value`, its name written unquoted (#1942). The shell expands any other
+# word before `export` reads it, so `export PAT?=bin` sets `PATH` where a file
+# named `PATH=bin` lies in the directory.
+_EXPORT_OPERAND = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\+?=|[ \t]*$)")
 # An assignment to a variable that changes which program runs, or the code
 # loaded into it before its own (#1942): the shell's search path (`PATH`, and
 # zsh's `path`) and any other search path, such as `LD_LIBRARY_PATH`,
@@ -197,7 +197,9 @@ def _assignments(words: list[tuple[str, str]]) -> int:
     A segment led by `export` runs no program (#1942): `export` takes every
     word after it as a name or an assignment, so `export git PATH=/tmp/x`
     sets `PATH` and runs no `git`. All its words count, and no grant on a
-    program covers it."""
+    program covers it. The other builtins that assign, such as `declare`,
+    `typeset`, `readonly` and `local`, stay the program a segment names, so
+    the segment is left uncovered while no grant names them."""
     if words and words[0][1] == "export":
         return len(words)
     count = 0
@@ -232,6 +234,20 @@ def segments(command: str) -> list[list[str]]:
     return out
 
 
+def _brace_expansion(text: str) -> bool:
+    """May the shell turn this word into several, by a brace expansion such as
+    `{a,b}` or `{1..3}` (#1942)? `git push origin {main,--force}` runs
+    `git push origin main --force`. True where a `{` has a `}` after it and a
+    `,` or `..` after it, nested or not. The scan ignores quoting, so a quoted
+    brace with a comma in it is not trusted either. It is a plain search of the
+    word, linear in its length, so no word makes the hook stall."""
+    start = text.find("{")
+    if start < 0 or text.find("}", start) < 0:
+        return False
+    rest = text[start:]
+    return "," in rest or ".." in rest
+
+
 def _doubts(command: str) -> list[str]:
     """The kinds of construct in a Bash command that keep the core from reading
     its words, or the program it runs, as the shell does: empty when there is
@@ -247,13 +263,23 @@ def _doubts(command: str) -> list[str]:
             continue
         if any(text.startswith("#") for text, _ in words):
             kinds.add("comment")
-        if any(_BRACE.search(text) for text, _ in words):
+        if any(_brace_expansion(text) for text, _ in words):
             kinds.add("brace expansion")
-        leading = [text for text, word in words[: _assignments(words)] if word != "export"]
+        count = _assignments(words)
+        leading = [text for text, word in words[:count] if word != "export"]
         if any(_PROGRAM_VAR.match(text) for text in leading):
             kinds.add("assignment to PATH or another variable that picks the program")
         if any(_QUOTED.search(text) for text in leading):
             kinds.add("assignment written with a quote or a backslash")
+        if words and words[0][1] == "export" and not all(
+            _EXPORT_OPERAND.match(text) for text in leading
+        ):
+            kinds.add("export of a word the shell expands")
+        # A program word holding whitespace, such as `'make test/x'`: a
+        # recognizer's `pattern` reads the words joined by spaces, so it would
+        # read that one word as two (#1942).
+        if count < len(words) and any(space in words[count][1] for space in " \t"):
+            kinds.add("program name holding whitespace")
     return sorted(kinds)
 
 

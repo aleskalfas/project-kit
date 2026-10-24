@@ -2941,7 +2941,7 @@ def test_decide_verdict_path_byte_identical_to_main():
     #   _segment_words        → _words
     #   _assignments          → (+ _ENVVAR)
     #   _doubts       → _words, _assignments (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/
-    #                   _ODD_SPACE/_BRACE/_PROGRAM_VAR/_QUOTED)
+    #                   _ODD_SPACE/_PROGRAM_VAR/_QUOTED/_EXPORT_OPERAND), _brace_expansion
     #   _uncovered_segments   → segments, _segment_privileges
     #   _segment_privileges   → _matches_bash
     #   _shown_program        → (+ _BARE_WORD)
@@ -2978,6 +2978,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_segment_words",
         "_assignments",
         "_doubts",
+        "_brace_expansion",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
@@ -2986,7 +2987,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_UNTRUSTED",
         "_UNTRUSTED_KIND",
         "_ODD_SPACE",
-        "_BRACE",
+        "_EXPORT_OPERAND",
         "_PROGRAM_VAR",
         "_QUOTED",
         "_BARE_CD",
@@ -3136,9 +3137,10 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_segment_words",
         "_assignments",
         "_doubts",
+        "_brace_expansion",
         "_UNTRUSTED_KIND",
         "_ODD_SPACE",
-        "_BRACE",
+        "_EXPORT_OPERAND",
         "_PROGRAM_VAR",
         "_QUOTED",
     )

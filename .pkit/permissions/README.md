@@ -101,7 +101,7 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   - **Only a bare `cd`** is stripped — a single path arg, parted from `cd` by a space or a tab, no quotes, no `$()`, no backtick, no redirection, no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
 
-  - **No `cd` is stripped from a command holding an untrusted construct** (below), its `cd` included. Such a command is decided whole, so `cd {a,b} && git status` never hides what its `cd` word runs.
+  - **No `cd` is stripped from a command holding an untrusted construct, a word the core cannot read as the shell does, or such a leading assignment** (all below), its `cd` included. Such a command is decided whole, so `cd {a,b} && git status` never hides what its `cd` word runs.
 
   - **The remainder is decided like any command.** An untrusted construct in it keeps every grant from allowing it, as it does anywhere in a command (below). So `cd /x && echo z > ~/f` and `cd /x && gh $(rm -rf ~)` prompt rather than slip through — and so does a redirect into the agent workspace (`cd /x && cat > .agent-workspace/body.md <<'EOF'`): the workspace grant covers the file tools only.
 
@@ -121,16 +121,17 @@ So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py`
 - whitespace other than a space, a tab or a newline, such as a no-break space, inside which the shell reads one word
 - a word opening with `#`, a comment the shell drops
 - a brace expansion, such as `{a,b}` or `{1..3}`, which the shell turns into several words
+- a program name holding whitespace, such as `'make test/x'`, which a recognizer's `pattern` would read as two words
 
 **And so does a leading assignment that changes which program runs, or one written with a quote or a backslash** (ADR-025 point 2). `PATH=/tmp/x gh pr list` runs whichever `gh` the new path finds first. Each such assignment is stripped for the denies, so `PATH=/tmp/x sudo id` is denied.
 
-- **The variables that change which program runs** are a search path, `PATH` or any other name ending in `PATH`, and the dynamic loader's `LD_*` and `DYLD_*`. So are the startup files a shell reads first, and the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own. The list names a family of variables, and is no boundary.
+- **The variables that change which program runs** are a search path, `PATH` or any other name ending in `PATH`, and the dynamic loader's `LD_*` and `DYLD_*`. So are the variables that name the startup files a shell reads first, such as `BASH_ENV`, `ENV` and `ZDOTDIR`, and the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own. The list names a family of variables, and is no boundary.
 - **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. A `git` grant already lets `git -c core.fsmonitor=…` run any program.
 - **An assignment written with a quote or a backslash** is never allowed by a grant. The core never matches an assignment's value, so removing its quotes would make no match more accurate: only a quoted argument is matched as the shell passes it on.
 
-A segment led by `export` runs no program: `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. Its assignments are judged as above, and no grant on a program covers it.
+A segment led by `export` runs no program: `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. Its assignments are judged as above, and no grant on a program covers it. Each word after `export` must be a plain name or assignment: the shell expands any other first, so `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory, and such a word keeps every grant from allowing.
 
-So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. A glob is read as written: it changes only arguments, from the names of files, never the program a grant names.
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. Outside an `export`, a glob is read as written: it changes only arguments, from the names of files, never the program a grant names.
 
 A deny on any segment still wins over every allow, and over an untrusted construct. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
 
