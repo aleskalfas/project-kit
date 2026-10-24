@@ -61,12 +61,12 @@ pkit project-management close-issue <N> --mode wont-do --reason "<text>" \
   [--skip-checkbox-gate] [--no-cascade] [--dry-run] [--yes]
 ```
 
-**Close (PR-merge cascade hook):**
+**Close (PR-merge cascade hook)** (an issue GitHub closed as its PR merged: the label is reconciled to done and the cascade runs; an open issue is refused):
 ```
 pkit project-management close-issue <N> --mode pr-merge [--no-cascade]
 ```
 
-**Close a leaf done through another Task's merged PR** (the PR never named it, so GitHub did not close it; verified merged, checkbox-gated, reference commented, closed as completed):
+**Close a leaf its merged PR did not close** (merged into a base GitHub does not close issues on, or from the leaf's branch with a body that does not name it). PR `M` must be merged and relate to the leaf: its body closes the leaf, or it was merged from the leaf's branch. The relation found is named, and the close is checkbox-gated, commented and made as completed:
 ```
 pkit project-management close-issue <N> --mode pr-merge --pr <M> [--dry-run] [--yes]
 ```

@@ -170,6 +170,27 @@ def test_a_branch_naming_the_issue_in_another_shape_is_never_its_branch(lib, mon
     assert reading.branch == "fix/42-ok"
 
 
+@pytest.mark.parametrize(
+    ("name", "is_its"),
+    [
+        (PR_BRANCH, True),
+        ("feat/42-a", True),
+        ("fix/42", False),
+        ("fix/42-Upper", False),
+        ("Fix/42-x", False),
+        ("fix/420-x", False),
+        ("fix/4-2", False),
+        ("origin/fix/42-x", False),
+        ("fix/42-x\n", False),
+        ("", False),
+    ],
+)
+def test_a_branch_is_an_issue_s_by_its_name(lib, name: str, is_its: bool) -> None:
+    """The one shape the reading matches local branches by, and close-issue a
+    merged pull request's head branch by (#1968)."""
+    assert lib.is_issue_branch(name, 42) is is_its
+
+
 def _git(cwd: Path, *argv: str) -> str:
     proc = subprocess.run(["git", *argv], cwd=cwd, capture_output=True, text=True, check=True)
     return proc.stdout.strip()

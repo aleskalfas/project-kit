@@ -2301,16 +2301,34 @@ sys.exit(0)
 """
 
 
+_BRANCH_42 = "whose branch `fix/42-slug` is #42's"
+
+
+@pytest.mark.parametrize(
+    ("pr_body", "relation_42"),
+    [
+        pytest.param(
+            _TWO_ISSUE_PR_BODY, f"whose body closes #42 and {_BRANCH_42}", id="both-named"
+        ),
+        pytest.param(
+            _TWO_ISSUE_PR_BODY.replace("Closes #42\n", ""), _BRANCH_42, id="primary-by-its-branch"
+        ),
+    ],
+)
 def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
     dw,
     tmp_path,
     monkeypatch,
     capfd,
+    pr_body: str,
+    relation_42: str,
 ):
     """End to end past the merge: done-work runs the real close-issue on each
     closing issue against a fake `gh`. Both issues are still open after the
     merge (a base branch GitHub does not auto-close on), so each is closed as
-    completed, and each one's closure cascade visits its parent."""
+    completed, and each one's closure cascade visits its parent. The PR was
+    merged from #42's branch, so it relates to #42 even where its body names
+    only #43 (#1968)."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -2339,7 +2357,14 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
                 "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [x] shipped\n",
             },
         },
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-29T10:00:00Z", "url": "u"},
+        "pr": {
+            "number": 496,
+            "state": "MERGED",
+            "mergedAt": "2026-09-29T10:00:00Z",
+            "url": "u",
+            "headRefName": "fix/42-slug",
+            "body": pr_body,
+        },
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -2359,7 +2384,7 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
         dw,
         monkeypatch,
         rollup=_GREEN_ROLLUP,
-        pr_body=_TWO_ISSUE_PR_BODY,
+        pr_body=pr_body,
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
     monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
@@ -2372,6 +2397,8 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
     for number in ("42", "43"):
         assert ["issue", "close", number, "--reason", "completed"] in calls
         assert f"[ok] closed #{number} (pr-merge through PR #496, completed)." in out
+    assert f"completed by: PR #496 (merged), {relation_42}\n" in out
+    assert "completed by: PR #496 (merged), whose body closes #43\n" in out
     assert out.count("[cascade] parents to check for eligibility: #7") == 2
 
 
@@ -2704,7 +2731,14 @@ def _run_done_work_end_to_end(
     state = {
         "issues": {"42": task, "7": feature},
         "milestones": milestones,
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": merged_at, "url": "u"},
+        "pr": {
+            "number": 496,
+            "state": "MERGED",
+            "mergedAt": merged_at,
+            "url": "u",
+            "headRefName": "fix/42-slug",
+            "body": "Closes #42\n",
+        },
         "merged_prs": [
             {
                 "number": 496,
