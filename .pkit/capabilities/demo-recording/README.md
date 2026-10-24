@@ -202,7 +202,7 @@ The split is clean and load-bearing (per `DEC-001`):
 
 ## Dependencies
 
-- **macOS** (per `DEC-004`). The recording machinery uses `osascript` + System Events (keystroke injection), iTerm2 AppleScript (window control), and `screencapture`. Recording refuses cleanly off darwin; **storyboard validation is platform-neutral** and runs anywhere Python 3.9 or later runs.
+- **macOS** (per `DEC-004`). The recording machinery uses `osascript` + System Events (keystroke injection), iTerm2 AppleScript (window control), and `screencapture`. Recording refuses cleanly off darwin; **storyboard validation is platform-neutral**.
 - **iTerm2** — the window control is iTerm-specific.
 - **Python 3.9+** — stdlib only, no pip dependencies.
 - **ffmpeg** (optional) — for `.mov` → smaller `.mp4` re-encode with corrected colour. Recording works without it (the `.mov` is kept).
