@@ -186,7 +186,11 @@ The glossary stays one collection of terms, each defined in ISO 1087's form (DEC
 - **The escape serves last,** where neither helps, such as a word in a quotation, or an actor named in an entry beside the term for its role (point 5).
 
 **Written by a command, held by the check.** Nobody writes these links by hand.
-- **The command,** `pkit analysis link`, writes each section's link to its term and the mentions' links, in every analysis that keeps a domain model. It reads a body only to place its links, as the stamp reads the glossary to place a term's link. Its data comes from front matter, the one data of an artefact a tool reads (DEC-001 point 1), and from the declared structures. That is each term's name, noun forms and other senses, each view's `explains`, and each actor's name. It also reads whether an actor gives a summary, and the labels that open each section.
+- **The command,** `pkit analysis link`, writes each section's link to its term and the mentions' links, in every analysis that keeps a domain model. It reads a body only to place its links, as the stamp reads the glossary to place a term's link. Its data comes from front matter, the one data of an artefact a tool reads (DEC-001 point 1), and from the declared structures:
+  - each term's name, noun forms and other senses
+  - each view's `explains`
+  - each actor's name, and whether it gives a summary
+  - the labels that open each section
 - **The check** reports a link missing, one extra and one whose target is stale, and names the command. It holds them whatever any rule's status, as it holds the term's link. A link to a glossary entry written by hand is held as the command's, so it is extra where the command writes none.
 - **A copy for navigation.** Each link is such a copy, which the check holds equal to the data, so it never drifts. Both its ends lie in the analysis, and it draws no anchor.
 - **Set aside by friction.** Each place of the capability declares these links' form, a link to a glossary entry (COR-050 point 5). Friction reads each such link as its words alone. So a change that only moves links asks nothing of what rests on the artefact that holds them. A word changed beside a link still does.
