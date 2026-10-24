@@ -4399,6 +4399,33 @@ def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_p
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # ends SEALED
 
 
+def _removal_answers(proj: Path, monkeypatch) -> list[bool]:
+    """Run `setup autonomy` with a `y` piped in, recording what its removal
+    question answers; the setup itself is stubbed to ask once."""
+    answers: list[bool] = []
+
+    def setup(target_root, *, profile, confirm):
+        answers.append(confirm("Remove these overrides?"))
+        return "Result: stubbed\n", True
+
+    monkeypatch.setattr(_perm, "setup_autonomy", setup)
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["permissions", "setup", "autonomy"], input="y\n")
+    assert result.exit_code == 0, result.output
+    return answers
+
+
+def test_setup_autonomy_a_piped_yes_does_not_remove_overrides(tmp_path, monkeypatch):
+    # Off a terminal the removal question is never asked, so a `y` piped in is not
+    # read as consent: the overrides are warned of only (#2003).
+    assert _removal_answers(_with_adapter(_setup(tmp_path)), monkeypatch) == [False]
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_setup_autonomy_asks_about_removal_at_a_terminal(tmp_path, monkeypatch):
+    assert _removal_answers(_with_adapter(_setup(tmp_path)), monkeypatch) == [True]
+
+
 def test_setup_autonomy_cli_warns_only_without_consent(tmp_path, monkeypatch):
     # Without --remove-overrides and non-interactive, the run completes (no abort)
     # and warns only. On Linux the confinement half runs, so the pre-existing

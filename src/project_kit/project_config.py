@@ -94,7 +94,7 @@ def read_config(target_root: Path) -> dict[str, Any]:
 
 
 class ConsentRefused(click.ClickException):
-    """Nobody could consent to the write: non-interactive without `--yes` (COR-048 point 5)."""
+    """Nobody could consent: non-interactive without `--yes` (COR-048 point 5, #2003)."""
 
 
 @dataclass(frozen=True)
@@ -152,6 +152,22 @@ def stdin_is_tty() -> bool:
         return stdin.isatty()
     except (ValueError, OSError):  # ValueError: I/O operation on a closed file
         return False
+
+
+def confirm_at_terminal(
+    question: str, *, refusal: str, default: bool = False, abort: bool = False
+) -> bool:
+    """Ask `question` of the person at the terminal; refuse when there is none (#2003).
+
+    A confirmation that guards a person's decision is answered only at a
+    terminal. Off one (stdin piped, as in `echo y | pkit …`, redirected, absent
+    or closed) the question is never shown and no answer is read: `refusal` is
+    raised as `ConsentRefused`, exit 1. The caller handles its own `--yes`
+    first, and words `refusal` to say what was not done and what to run.
+    """
+    if not stdin_is_tty():
+        raise ConsentRefused(refusal)
+    return click.confirm(question, default=default, abort=abort)
 
 
 # --- writing -----------------------------------------------------------------

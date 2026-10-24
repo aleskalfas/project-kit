@@ -353,6 +353,7 @@ def test_cli_file_yes_stages_and_does_not_post(tmp_path, monkeypatch) -> None:
     assert rep.list_staged(tmp_path)  # the payload landed as a draft
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_file_confirm_yes_posts(monkeypatch) -> None:
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
     monkeypatch.setattr(
@@ -367,6 +368,7 @@ def test_cli_file_confirm_yes_posts(monkeypatch) -> None:
     assert "filed:" in res.output and "700" in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_file_decline_degrades(monkeypatch) -> None:
     posted = {"v": False}
     monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
@@ -1268,8 +1270,10 @@ def test_cli_inbox_resolved_yes_lists_but_never_closes(monkeypatch) -> None:
     assert "#10" in res.output and "listing only" in res.output
 
 
-def test_cli_inbox_resolved_no_input_never_closes(monkeypatch) -> None:
-    # non-interactive without --yes: the confirm aborts on EOF; nothing closes.
+@pytest.mark.parametrize("piped", [None, "y\n"], ids=["no-input", "piped-yes"])
+def test_cli_inbox_resolved_off_a_terminal_never_closes(monkeypatch, piped: str | None) -> None:
+    # Off a terminal without --yes, the close is refused after the listing, and a
+    # `y` piped in is never read as the maintainer's answer (#2003).
     closed = {"v": False}
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
     monkeypatch.setattr(rep, "list_resolved", lambda target: [_RESOLVED_ROW])
@@ -1278,11 +1282,15 @@ def test_cli_inbox_resolved_no_input_never_closes(monkeypatch) -> None:
         "close_report_as_resolved",
         lambda *a, **k: closed.__setitem__("v", True) or True,
     )
-    res = CliRunner().invoke(main, ["report", "inbox", "--resolved"])
+    res = CliRunner().invoke(main, ["report", "inbox", "--resolved"], input=piped)
     assert closed["v"] is False
-    assert res.exit_code != 0  # aborted at the confirm, after listing
+    assert res.exit_code == 1
+    assert "#10" in res.output  # listed first
+    assert "refusing to close the resolved reports" in res.output
+    assert "Post a closing comment" not in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_inbox_resolved_confirm_closes(monkeypatch) -> None:
     calls: list[tuple] = []
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
@@ -1298,6 +1306,7 @@ def test_cli_inbox_resolved_confirm_closes(monkeypatch) -> None:
     assert "Closed #10" in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_inbox_resolved_decline_skips(monkeypatch) -> None:
     closed = {"v": False}
     monkeypatch.setattr(rep, "in_report_target", lambda: True)
@@ -1506,6 +1515,7 @@ def test_cli_draft_path_uses_remote_fallback_without_prompt(tmp_path: Path, monk
     assert urllib.parse.quote_plus("Project: remote-repo") in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_interactive_compose_prompts_once_and_writes_back(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / ".pkit").mkdir()
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
@@ -1540,6 +1550,34 @@ def test_cli_interactive_compose_prompts_once_and_writes_back(tmp_path: Path, mo
     assert "Project: myproj" in res2.output  # echoed body carries the context
 
 
+def test_cli_api_path_off_a_terminal_asks_no_name_and_writes_nothing(
+    tmp_path: Path, monkeypatch
+) -> None:
+    # Off a terminal the API path asks nothing: the answers piped in name no project,
+    # save no name and post nothing (#2003).
+    (tmp_path / ".pkit").mkdir()
+    monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)
+    monkeypatch.setattr(cli_mod, "_resolve_report_context", _REAL_RESOLVE_CONTEXT)
+    monkeypatch.setattr(rc_mod, "git_remote_repo_name", lambda root: None)
+    monkeypatch.setattr(rc_mod, "pm_workstream", lambda root: None)
+    monkeypatch.setattr(rep, "gh_authenticated", lambda: True)
+    posted = {"v": False}
+    monkeypatch.setattr(
+        rep, "file_report_via_gh", lambda *a, **k: posted.__setitem__("v", True) or "url"
+    )
+    res = CliRunner().invoke(
+        main,
+        ["report", "bug", "--title", "t", "--body", "b", "--file"],
+        input="myproj\ny\ny\n",
+    )
+    assert res.exit_code == 1
+    assert "Project name for the report" not in res.output
+    assert not rc_mod.project_config_path(tmp_path).exists()
+    assert posted["v"] is False
+    assert "refusing to post: stdin is not a terminal" in res.output
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_interactive_prompt_blank_omits_and_writes_nothing(tmp_path: Path, monkeypatch) -> None:
     (tmp_path / ".pkit").mkdir()
     monkeypatch.setattr(cli_mod, "find_target_root", lambda: tmp_path)

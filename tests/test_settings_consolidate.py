@@ -270,6 +270,7 @@ def test_cli_consolidate_with_yes_writes_immediately(adopter_with_redundancies: 
     assert data["permissions"]["allow"] == ["Bash(pkit:*)", "Bash(git:*)"]
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_consolidate_prompt_no_cancels(adopter_with_redundancies: Path) -> None:
     original = (adopter_with_redundancies / ".claude" / "settings.json").read_text(encoding="utf-8")
     runner = CliRunner()
@@ -281,6 +282,25 @@ def test_cli_consolidate_prompt_no_cancels(adopter_with_redundancies: Path) -> N
     assert (adopter_with_redundancies / ".claude" / "settings.json").read_text(
         encoding="utf-8"
     ) == original
+
+
+def test_cli_consolidate_refuses_a_piped_yes(adopter_with_redundancies: Path) -> None:
+    """Off a terminal a `y` piped in is not consent: the write is refused, naming
+    `--dry-run` and `--yes`, and the file is unchanged (#2003)."""
+    settings = adopter_with_redundancies / ".claude" / "settings.json"
+    original = settings.read_text(encoding="utf-8")
+    result = CliRunner().invoke(main, ["settings", "consolidate"], input="y\n")
+    assert result.exit_code == 1
+    assert "stdin is not a terminal and --yes was not given" in result.output
+    assert "pkit settings consolidate --yes" in result.output
+    assert settings.read_text(encoding="utf-8") == original
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_consolidate_prompt_yes_writes(adopter_with_redundancies: Path) -> None:
+    result = CliRunner().invoke(main, ["settings", "consolidate"], input="y\n")
+    assert result.exit_code == 0, result.output
+    assert "Removed 2 entry(ies)" in result.output
 
 
 def test_cli_consolidate_no_redundancies_is_noop(

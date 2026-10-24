@@ -653,6 +653,32 @@ def test_cli_visibility_untrack_subcommand(repo: Path, monkeypatch: pytest.Monke
     assert CliRunner().invoke(main, ["untrack"]).exit_code != 0
 
 
+@pytest.mark.parametrize("command", [["untrack"], ["private"]])
+def test_cli_visibility_refuses_a_piped_yes_to_untrack(
+    repo: Path, monkeypatch: pytest.MonkeyPatch, command: list[str]
+) -> None:
+    """Off a terminal a `y` piped in does not untrack: the command is refused and
+    the footprint stays tracked (#2003)."""
+    monkeypatch.chdir(repo)
+    before = vis._tracked_footprint(repo, vis.footprint(repo))
+    result = CliRunner().invoke(main, ["visibility", *command], input="y\n")
+    assert result.exit_code == 1
+    assert "stdin is not a terminal" in result.output
+    assert "Run `pkit visibility untrack` at a terminal." in result.output
+    assert vis._tracked_footprint(repo, vis.footprint(repo)) == before
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_cli_visibility_untrack_at_a_terminal_untracks_on_a_yes(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(repo)
+    result = CliRunner().invoke(main, ["visibility", "untrack"], input="y\n")
+    assert result.exit_code == 0, result.output
+    assert "Proceed?" in result.output
+    assert vis._tracked_footprint(repo, vis.footprint(repo)) == []
+
+
 def test_cli_visibility_never_load_bearing(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     from project_kit import cli_render
 
