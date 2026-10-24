@@ -47,7 +47,7 @@ updated document's sentence from the change's author:
   could open or close a comment around the section's markers.
   `sentence_closing_reference` and `sentence_comment_delimiter` name the same
   in an author's sentence.
-- `listed_paths(document)` names the files the list's words are in, from the
+- `listed_paths(document)` names the files the list's words are on, from the
   file the change check gives each answer, an answer file or the artefact's own
   (COR-062 point 1): the firm stop on a base that changed one (DEC-055 point 3).
   `apart(document)` is each revalidation on the base's tip that a merge would
@@ -608,7 +608,7 @@ def _entries(document: Mapping[str, Any]) -> list[Mapping[str, Any]]:
 
 
 def listed_paths(document: Mapping[str, Any]) -> set[str]:
-    """The files the list's words are in: the file the change check names for each
+    """The files the list's words are on: the file the change check names for each
     answer (`file`), which holds the deferrals a revalidation kept too. That is an
     answer file the change adds, or the artefact's own file for an answer in its
     block (COR-062 point 1). An answer it names no file for, such as a target

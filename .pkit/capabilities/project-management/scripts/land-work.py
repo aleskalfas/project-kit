@@ -109,13 +109,13 @@ there instead, and changes nothing else.
           reference or holds an HTML comment's delimiter, a list the
           description cannot hold, and — where there is a list — a base whose
           commits since the head left it changed a file the list's words are
-          in: the file the change check names for an answer, an answer file or
+          on: the file the change check names for an answer, an answer file or
           the artefact's own. A write the host answers with an error merges
           nothing. Beside the list, never in it, the step prints each
           revalidation on the base's tip that the change's answer on its
           document did not read, which the check derived against the base it
-          fetched (`answered_apart_at_tip`, DEC-055 point 3): merged, the two
-          are answered apart. It stops nothing.
+          fetched (`answered_apart_at_tip`, DEC-055 point 3): once merged,
+          each and the change's own are answered apart. It stops nothing.
           The step also prints each grant and refusal the change adds to the
           fixers' grant list or removes from it, a line each: `fixers` in this
           capability's project configuration, read where the head left its
@@ -1434,7 +1434,7 @@ def _grants_between(
 
 def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> None:
     """Where the base moved on after the head left it, refuse when its commits
-    since changed what the list's words are in — the file the change check names
+    since changed what the list's words are on — the file the change check names
     for an answer, an answer file or the artefact's own (`listed_paths`), or the
     friction settings the list shows: the merge could then land words the list
     does not show. An outdated base that changed none of them stops nothing; one
