@@ -44,9 +44,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T04:46:34Z
+      at: 2026-10-24T19:01:58Z
       outcome: unchanged
-      unchanged-because: The capability migration stamp now refuses a capability the project receives as synced copies. The author stamps where the component is authored, which still stamps, so the steps hold.
+      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

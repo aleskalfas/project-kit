@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T11:48:30Z
+      at: 2026-10-24T19:01:00Z
       outcome: unchanged
-      unchanged-because: The guard before a change to another repository and the hook ask on a foreign file write are as before. ADR-025 now removes a redirection that writes no file before the leading cd strip, which is not about another repository.
+      unchanged-because: "As #2003 asks, a report's post is now confirmed only at a terminal, and refused off one without --yes. Variant 1e holds, and the guard's steps are unchanged."
 ---
 
 # UC-032 — Be asked before an agent changes another repository

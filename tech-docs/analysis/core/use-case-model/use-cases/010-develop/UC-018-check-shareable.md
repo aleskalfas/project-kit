@@ -24,9 +24,9 @@ pkit:
         - ACT-component-author
         - REQ-005
     revalidated:
-      at: 2026-10-24T03:44:29Z
+      at: 2026-10-24T19:01:32Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
+      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
 ---
 
 # UC-018 — Know my capability is ready to share

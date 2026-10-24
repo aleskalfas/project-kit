@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T10:39:32Z
+      at: 2026-10-24T19:00:36Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: "As #2003 asks, the capability tests gain cases that refuse a collision answer piped in. The tests of an interrupted transition, and what they find, are unchanged."
 ---
 
 # REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it

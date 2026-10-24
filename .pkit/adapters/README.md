@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T12:56:57Z
+      at: 2026-10-24T19:00:53Z
       outcome: unchanged
-      unchanged-because: The Claude Code README now says its hook allows a compound of granted programs, read-only filters included, and a redirection that writes no file. What every adapter provides, and the list of adapters, are as before.
+      unchanged-because: "As #2003 asks, the confirmations in cli.py now refuse an answer piped in off a terminal. What each adapter's primitives do on install and uninstall is unchanged."
 ---
 
 # Adapters

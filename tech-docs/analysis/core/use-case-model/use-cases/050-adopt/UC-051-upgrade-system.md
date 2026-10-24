@@ -65,8 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-24T10:40:07Z
-      outcome: updated
+      at: 2026-10-24T19:01:14Z
+      outcome: unchanged
+      unchanged-because: "As #2003 asks, the capability commands' collision prompts now refuse an answer piped in. The transition's own collision question, in variant 5c, is unchanged."
 ---
 
 # UC-051 — Upgrade the system like a dependency
