@@ -1,0 +1,11 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `close-issue` closes an issue as won't do, or closes a container, only on
+  the person's authorisation (#1936). It asked only at a terminal, so with no
+  terminal and no `--yes` it closed in both modes and nobody was asked. Now it
+  refuses there with exit 1 and writes nothing, as `move-issue` refuses a move
+  the person holds. `--yes` authorises the close, a terminal still asks, and a
+  dry run needs no authorisation.

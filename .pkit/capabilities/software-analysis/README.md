@@ -15,7 +15,7 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-004, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-24T00:35:15Z
+      at: 2026-10-24T01:59:11Z
       outcome: updated
       deferred:
         - anchor:
@@ -75,6 +75,8 @@ Install it with `pkit capabilities install software-analysis`. Then:
    4. the journeys, last
 
    It holds for an area you add later too, and for the artefacts an agent derives on a brownfield project. `build-analysis.md` says what each artefact may use, when to go back, and when each step is done.
+
+   **On a brownfield project,** onboarding starts from the surface you declare: the paths your analysis ought to cover (DEC-001 point 9). You declare them under `surface` in the `friction` key of `.pkit/project/config.yaml`. Where you declare none, an agent following the skill asks you for them, and derives no candidate before. Onboarding ends only once `pkit friction check --all` counts none of those paths uncovered, and lists none of the analysis's artefacts as unanchored without a reason you accepted.
 
 Steps 2 and 3 may interleave: choose a kind's parts before you write its first artefact, or its first record. A candidate that describes your project truly can be that first one. The analysis's location needs no step: it is recorded the first time you stamp an artefact ("Where things live", below).
 
