@@ -27,7 +27,7 @@ builds-on:
         name: Developer
         needs:
           - Build my change with an agent that writes the change's code to my project's own conventions, read from wherever I keep them.
-          - Decide each answer the change check did not ask of my change, from its words in the agent's hand-off, before it is written.
+          - Decide each answer the change check did not ask of my change, named for me in the agent's hand-off, before anything writes it.
       - id: ACT-ai-agent
         name: AI agent
       - id: ACT-merge-authoriser
@@ -37,6 +37,9 @@ builds-on:
   - analysis: project-management
     version: 2.0.0
     terms:
+      - {id: TERM-authorisation, name: authorisation}
+      - {id: TERM-bypass, name: bypass}
+      - {id: TERM-issue, name: issue}
       - {id: TERM-merge-gate, name: merge gate}
       - {id: TERM-required-reviewer, name: required reviewer}
       - {id: TERM-verdict, name: verdict}
@@ -116,11 +119,14 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Build my change with an agent that writes the change's code to my project's own conventions, read from wherever I keep them.
-    - Decide each answer the change check did not ask of my change, from its words in the agent's hand-off, before it is written.
+    - Decide each answer the change check did not ask of my change, named for me in the agent's hand-off, before anything writes it.
   - **Actor:** [AI agent](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-ai-agent.md)
   - **Actor:** [Merge authoriser](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-merge-authoriser.md)
     - Have a reviewer other than their writer check a change's answers, so no merge I authorise rests on an answer that does not hold.
 - **From project-management at 2.0.0:** its terms of reviewing a pull request and merging it. No release holds project-management's analysis yet, so the links name the next release, 2.0.0, rather than software-engineering's floor of project-management, 0.54.0.
+  - **Term:** [authorisation](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-authorisation--authorisation)
+  - **Term:** [bypass](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-bypass--bypass)
+  - **Term:** [issue](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-issue--issue)
   - **Term:** [merge gate](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-merge-gate--merge-gate)
   - **Term:** [required reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-required-reviewer--required-reviewer)
   - **Term:** [verdict](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/project-management/glossary.md#term-verdict--verdict)
