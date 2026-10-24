@@ -1,6 +1,6 @@
 # Overview of the analysis of core
 
-<!-- pkit:overview reads=4 fingerprint=sha256:cdff483519743e5eef00453626b760f8306a97a18330f169889f180d8562b2ef -->
+<!-- pkit:overview reads=4 fingerprint=sha256:9a4dcc94dc78fe2303af4241356a2edc8c4d18df9112b58be2c796bde8e84b3e -->
 
 [project-kit exists so a way of working with AI agents is written once and kept current in every project that installs it](../../../../.pkit/decisions/project/PRJ-011-project-kit-purpose.md).
 
@@ -38,7 +38,7 @@ Set up a project once, so its people and AI agents work with the same backbone c
 
 - [REQ-011 · Constraint · A suggestion of what to install never uses the network](../requirements/constraints/020-set-up/REQ-011-suggestion-offline.md)
 - [REQ-013 · Functional · Where an allow and a deny conflict, the deny wins](../requirements/functional/020-set-up/REQ-013-deny-wins.md)
-- [REQ-014 · Functional · A later change of documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
+- [REQ-014 · Functional · A later edit of a documentation root moves no document](../requirements/functional/020-set-up/REQ-014-root-change-moves-nothing.md)
 - [REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library](../requirements/constraints/020-set-up/REQ-016-permissions-standard-library.md)
 
 **Its use cases:**
@@ -122,7 +122,7 @@ Put the system on a machine and into another project, run each project at the ve
 
 - [UC-012 — Report a problem with the system, and follow the report](../use-case-model/use-cases/050-adopt/UC-012-report-problem.md)
 - [UC-013 — Receive adopters' reports, and link each to its fix](../use-case-model/use-cases/050-adopt/UC-013-link-reports.md) ([not built yet](#not-built-yet): step 5, step 7)
-- [UC-048 — Put the system's tool on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
+- [UC-048 — Put the system's CLI on my machine at a release](../use-case-model/use-cases/050-adopt/UC-048-install-cli.md)
 - [UC-049 — Install the system into my project with one command](../use-case-model/use-cases/050-adopt/UC-049-install-system.md) ([not built yet](#not-built-yet): step 2, variant 12f)
 - [UC-050 — Get a fresh clone ready to work with one sync](../use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md) ([not built yet](#not-built-yet): step 2)
 - [UC-051 — Upgrade the system like a dependency](../use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md) ([not built yet](#not-built-yet): step 2)
@@ -164,7 +164,7 @@ Each view of the domain model explains a group of related concepts:
 
 - [REQ-002 · Functional · Project-owned content is written only by the writers records name](../requirements/functional/REQ-002-project-owned-writers.md)
 - [REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later](../requirements/constraints/REQ-003-python-floor.md)
-- [REQ-004 · Quality · A check never reads a missing answer as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
+- [REQ-004 · Quality · A check never reads a missing result as one that found nothing](../requirements/quality/REQ-004-missing-answer-never-clean.md)
 - [REQ-005 · Quality · A command that only reads or validates changes nothing in the project](../requirements/quality/REQ-005-reading-writes-nothing.md)
 - [REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds](../requirements/quality/REQ-006-command-time-bound.md)
 - [REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic](../requirements/constraints/REQ-007-offline-same-answer.md)
@@ -187,7 +187,7 @@ flowchart LR
   step_3(["3. UC-023 — Add or remove a capability, and be told of a name collision"])
   step_4(["4. UC-006 — Make my merges wait on the system's checks"])
   subgraph relies_on["Relied on, outside the journey"]
-    UC_048(["UC-048 — Put the system's tool on my machine at a release"])
+    UC_048(["UC-048 — Put the system's CLI on my machine at a release"])
   end
   ACT_adopter --> step_1
   step_1 --> step_2
@@ -208,7 +208,7 @@ flowchart LR
     UC_008(["UC-008 — Release the backbone so adopters can upgrade and pin to it"])
     UC_023(["UC-023 — Add or remove a capability, and be told of a name collision"])
     UC_038(["UC-038 — Author and extend my project's own rule sets"])
-    UC_048(["UC-048 — Put the system's tool on my machine at a release"])
+    UC_048(["UC-048 — Put the system's CLI on my machine at a release"])
     UC_049(["UC-049 — Install the system into my project with one command"])
   end
   ACT_adopter --> step_1

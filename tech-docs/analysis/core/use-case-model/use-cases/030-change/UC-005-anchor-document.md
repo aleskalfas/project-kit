@@ -39,9 +39,8 @@ pkit:
         - REQ-015
         - REQ-020
     revalidated:
-      at: 2026-10-24T04:58:24Z
-      outcome: unchanged
-      unchanged-because: Friction's reading of derived links now holds when forms clash or a placed file is renamed. How a writer says what a document rests on is unchanged.
+      at: 2026-10-24T20:57:02Z
+      outcome: updated
 ---
 
 # UC-005 — Say what my document rests on
@@ -75,7 +74,7 @@ pkit:
 - **1b.** Nothing the repository holds makes the document true, such as a person's part in the work. A person accepts a reason for having no anchors, word for word, before it is written as `unanchored-because` (COR-050 points 1 and 3). The use case ends.
 - **1c.** The document already carries anchors, and the developer changes the list. The [change check](../../../glossary.md#term-change-check--change-check) asks the document for a revalidation in the same [change](../../../glossary.md#term-change--change) (COR-050 [point](../../../glossary.md#term-point--point) 6), and the path goes on at step 2.
 - **1d.** A [stamp](../../../glossary.md#term-stamp--stamp) writes the anchors, such as the command an installed [capability](../../../glossary.md#term-capability--capability) offers to create an [artefact](../../../glossary.md#term-artefact--artefact) of its kind. The path goes on at step 2.
-- **1e.** An [anchor](../../../glossary.md#term-anchor--anchor) names a kind a capability registers, with the command that resolves it. The check asks that command which files the anchor stands on, offline and within thirty seconds (COR-050 point 2, REQ-006 and REQ-007). A command that gives no [answer](../../../glossary.md#term-answer--answer) leaves the anchor `no-answer`, never read as unchanged (REQ-004). The path goes on at step 2.
+- **1e.** An [anchor](../../../glossary.md#term-anchor--anchor) names a kind a capability registers, with the command that resolves it. The check asks that command which files the anchor stands on, offline and within thirty seconds (COR-050 point 2, REQ-006 and REQ-007). A command that gives no result leaves the anchor `no-answer`, never read as unchanged (REQ-004). The path goes on at step 2.
 - **2a.** [Validation](../../../glossary.md#term-validation--validation) finds a fault in the block, and fails, naming it. The path rejoins at step 1. The faults it fails on are these:
   - a malformed block, or `unanchored-because` beside anchors
   - a cycle between artefacts

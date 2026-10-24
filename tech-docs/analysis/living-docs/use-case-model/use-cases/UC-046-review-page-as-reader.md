@@ -53,7 +53,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in [place](../../../core/glossary.md#term-place--place) where living-docs is developed, and the [adapter](../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) (COR-013, COR-017 and COR-031).
+- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed, and the [adapter](../../../core/glossary.md#term-adapter--adapter) deploys its `living-docs` [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) (COR-013, COR-017 and COR-031).
 - The [backbone](../../../core/glossary.md#term-backbone--backbone) resolves the [readers](../../glossary.md#term-reader--reader) [data point](../../../core/glossary.md#term-data-point--data-point) from its default, the project's file and each [capability](../../../core/glossary.md#term-capability--capability) that fills it (COR-052). It answers where each [rule](../../../core/glossary.md#term-rule--rule) binds (COR-051 point 7).
 - Nothing at run time confines the agent to the [agent workspace](../../../core/glossary.md#term-agent-workspace--agent-workspace). Its definition grants no tool that edits a file in place and owns no path, but its Write and its Bash reach any file (COR-013).
 

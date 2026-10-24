@@ -71,9 +71,8 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T12:57:09Z
-      outcome: unchanged
-      unchanged-because: "Its steps hold: a compound runs unasked where grants allow each segment, and the read-only filters and uv run are now among them; 10d reads a redirection that writes no file as harmless."
+      at: 2026-10-24T20:59:42Z
+      outcome: updated
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
@@ -99,7 +98,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit permissions setup autonomy`.
-2. At its entry, before it reads anything, the command checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the command checks that the repository it would write in is the session's own. Where it is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit permissions setup autonomy` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -138,15 +137,15 @@ pkit:
 - **4c.** The permission hook cannot start, such as where its script is missing. The system reports that enforcement is not running, and never ends `goal reached` while the fault stands (ADR-002 point 4).
 
 > [!WARNING]
-> **Not built yet:** `setup autonomy` does not [report](../../../glossary.md#term-report--report) the fault. Its probes call the permission code directly, so it can end `goal reached` with a hook that cannot start. `pkit permissions overview` reports some of the fault's causes. ADR-002 point 4 decides that this fault fails loud, and #1764 tracks it.
+> **Not built yet:** `setup autonomy` does not name the fault. Its probes call the permission code directly, so it can end `goal reached` with a hook that cannot start. `pkit permissions overview` reports some of the fault's causes. ADR-002 point 4 decides that this fault fails loud, and #1764 tracks it.
 
-- **5a.** The host runs macOS. The system turns the [sandbox](../../../glossary.md#term-sandbox--sandbox) on, and excludes from it each command the platform requires outside it (ADR-014 point 2). Those are `uv` until a fixed [release](../../../glossary.md#term-release--release) is installed, and `gh` where the [project](../../../glossary.md#term-project--project) holds `.github/` (ADR-014 point 4, ADR-027 and ADR-030). Every other shell command stays confined, and the system reports the commands that run outside the sandbox (ADR-014 point 3).
+- **5a.** The host runs macOS. The system turns the [sandbox](../../../glossary.md#term-sandbox--sandbox) on, and excludes from it each command the platform requires outside it (ADR-014 point 2). Those are `uv` until a fixed `uv` is installed, and `gh` where the [project](../../../glossary.md#term-project--project) holds `.github/` (ADR-014 point 4, ADR-027 and ADR-030). Every other shell command stays confined, and the system reports the commands that run outside the sandbox (ADR-014 point 3).
 
 > [!WARNING]
 > **Not built yet:** on macOS the system leaves the sandbox off, and says `OS sandbox NOT enabled — unsupported on macOS (Seatbelt)`. So no command is confined there. The run ends `Result: intent + enforcement armed and proven. OS confinement is skipped on macOS (see above).` ADR-014 point 3 decides that every other shell command stays confined, and #1765 tracks it.
 
 - **5b.** An attribute of the per-machine settings fights what step 5 sets, such as `sandbox.allowUnsandboxedCommands: true`. The system warns, naming each such attribute, and step 5 turns the sandbox on and seals it all the same. The system never removes such an attribute without a yes at a terminal, or `--remove-overrides`.
-- **6a.** `$SSH_AUTH_SOCK` names a socket under the credential floor, or one that does not [answer](../../../glossary.md#term-answer--answer). The system allows nothing for it, and names the command that allows it: `pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent` (ADR-010 points 5 and 7).
+- **6a.** `$SSH_AUTH_SOCK` names a socket under the credential floor, or one that does not respond. The system allows nothing for it, and names the command that allows it: `pkit permissions sandbox accommodate --socket "$SSH_AUTH_SOCK" --name ssh-agent` (ADR-010 points 5 and 7).
 - **9a.** A probe finds a verdict that differs from what the model declares. Or it finds a [guardrail](../../../glossary.md#term-guardrail--guardrail)'s native deny missing while the permission hook is registered. The system ends `Result: BROKEN — fix the decision layer before relying on autonomy.`, and exits non-zero.
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`

@@ -56,9 +56,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T05:04:54Z
+      at: 2026-10-24T21:03:47Z
       outcome: unchanged
-      unchanged-because: REQ-042 now names a close through a merged pull request among the closes its tests find held. The batch plan still files its issues through create-issue once the planner approves it, so the use case holds.
+      unchanged-because: ACT-planner's note names the planner where it said the role, and REQ-041 says what a check reports where it said a report. What each asks is the same, so this use case holds.
 ---
 
 # UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan

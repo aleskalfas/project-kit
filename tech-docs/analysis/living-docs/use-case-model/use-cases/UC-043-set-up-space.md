@@ -49,8 +49,9 @@ pkit:
         - REQ-023
         - REQ-024
     revalidated:
-      at: 2026-10-24T03:53:30Z
-      outcome: updated
+      at: 2026-10-24T21:20:23Z
+      outcome: unchanged
+      unchanged-because: REQ-024 now calls the unreadable answer of where the rules bind the backbone's one answer, for the same error. Its steps still meet it, so this use case holds.
 ---
 
 # UC-043 — Set up a documentation space for one audience
@@ -66,8 +67,8 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in [place](../../../core/glossary.md#term-place--place) where living-docs is developed (COR-017 and COR-031). The CLI registers `pkit living-docs new` and `validate` from its [package metadata](../../../core/glossary.md#term-package-metadata--package-metadata) (COR-021). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `docs-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
-- The [backbone configuration](../../../core/glossary.md#term-backbone-configuration--backbone-configuration) names the two [documentation roots](../../../core/glossary.md#term-documentation-root--documentation-root), and declares in `friction.places` each place outside them that holds the space's pages (COR-050 point 1). Such a place gives the [page](../../glossary.md#term-page--page) type where a [space definition](../../glossary.md#term-space-definition--space-definition) selects by type (COR-056 point 2).
+- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed (COR-017 and COR-031). The CLI registers `pkit living-docs new` and `validate` from its [package metadata](../../../core/glossary.md#term-package-metadata--package-metadata) (COR-021). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `docs-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
+- The [backbone configuration](../../../core/glossary.md#term-backbone-configuration--backbone-configuration) names the two [documentation roots](../../../core/glossary.md#term-documentation-root--documentation-root), and declares in `friction.places` each [place](../../../core/glossary.md#term-place--place) outside them that holds the space's pages (COR-050 point 1). Such a place gives the [page](../../glossary.md#term-page--page) type where a [space definition](../../glossary.md#term-space-definition--space-definition) selects by type (COR-056 point 2).
 - The [backbone](../../../core/glossary.md#term-backbone--backbone) answers which documents each place holds, with their types and the scopes over them (COR-056 point 6). It answers where each [rule](../../../core/glossary.md#term-rule--rule) binds (COR-051 point 7). living-docs reads those answers, and ranks no place itself.
 - The backbone records a documentation location when a [component](../../../core/glossary.md#term-component--component) first uses it, and a later change of root moves nothing it recorded (COR-049 point 5).
 - The review of the change that carries a space definition accepts each rule the definition writes as accepted (COR-051 point 4).

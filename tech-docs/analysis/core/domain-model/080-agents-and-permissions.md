@@ -40,9 +40,8 @@ pkit:
         - TERM-agent-workspace
         - TERM-session-anchor
     revalidated:
-      at: 2026-10-24T12:57:02Z
-      outcome: unchanged
-      unchanged-because: The view's account of agents, grants and the workspace holds. The profiles now grant read-only filters too, and ADR-060 point 4 names a redirect into the folder, neither of which changes the view's concepts.
+      at: 2026-10-24T21:03:31Z
+      outcome: updated
 ---
 
 # VIEW-agents-and-permissions — Agents and permissions
@@ -315,9 +314,9 @@ The agent workspace is the folder `.agent-workspace/` at the root of a checkout,
 
 Defined in [TERM-session-anchor](../glossary.md#term-session-anchor--session-anchor).
 
-**Why:** A session carries the governance of the one repository it started in. So a [change](../glossary.md#term-change--change) it makes in another repository runs under the wrong governance (COR-039). A command can be pointed at any directory, so the [system](../glossary.md#term-system--system) needs something fixed to compare with (ADR-034 [point](../glossary.md#term-point--point) 1).
+**Why:** A session carries the governance of the one repository it started in. So a write it makes in another repository runs under the wrong governance (COR-039). A command can be pointed at any directory, so the [system](../glossary.md#term-system--system) needs something fixed to compare with (ADR-034 [point](../glossary.md#term-point--point) 1).
 
-A session anchor is the directory the [harness](../glossary.md#term-harness--harness) records as an agent's session starts. It stays put when the working directory changes, as under `cd`. The cross-repository guard compares its repository with the repository a change would land in.
+A session anchor is the directory the [harness](../glossary.md#term-harness--harness) records as an agent's session starts. It stays put when the working directory changes, as under `cd`. The cross-repository guard compares its repository with the repository a command would write in.
 
 **Attributes:**
 
@@ -325,12 +324,12 @@ A session anchor is the directory the [harness](../glossary.md#term-harness--har
 
 **Relations:**
 
-- The cross-repository guard compares the session anchor's repository with the target's, the repository a change would land in (ADR-034 point 1).
+- The cross-repository guard compares the session anchor's repository with the target's, the repository a command would write in (ADR-034 point 1).
 
 **States:** None.
 
 **Always true:**
 
 - The session anchor is only compared, and never used to find the [project](../glossary.md#term-project--project)'s root (ADR-034 point 1).
-- On a difference, the system asks, or refuses where nobody is there to ask, and never blocks a change that was confirmed (COR-039 point 1).
+- On a difference, the system asks, or refuses where nobody is there to ask, and never blocks a write that was confirmed (COR-039 point 1).
 - The guard is an interlock against a mistake, not a security boundary (COR-039 point 3).

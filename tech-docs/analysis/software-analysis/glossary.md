@@ -440,7 +440,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 **Distinctions:**
 
 - **A relabel:** a new label, [hint](#term-hint--hint) or example for a shipped part. It tightens nothing, so it needs no rule (DEC-001 point 1).
-- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is a [change](../core/glossary.md#term-change--change) it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
+- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is an edit it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
 
 ## TERM-use-case — use case
 

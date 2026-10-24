@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T19:00:36Z
+      at: 2026-10-24T20:51:14Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the capability tests gain cases that refuse a collision answer piped in. The tests of an interrupted transition, and what they find, are unchanged."
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it

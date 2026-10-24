@@ -41,4 +41,4 @@ The person who adopts the methodology for a project and keeps its setup.
   - at each upgrade
   - when the [project](../../glossary.md#term-project--project) needs a discipline
 - **Context:** their [project](../../glossary.md#term-project--project), its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
-- **Core:** the split between methodology-owned and project-owned files, and the [install](../../glossary.md#term-install--install) and upgrade lifecycle, exist for this [role](../../glossary.md#term-role--role). Installing a [capability](../../glossary.md#term-capability--capability) is itself a core act.
+- **Core:** the split between methodology-owned and project-owned files, and the [install](../../glossary.md#term-install--install) and upgrade lifecycle, exist for the adopter. Installing a [capability](../../glossary.md#term-capability--capability) is itself a core act.

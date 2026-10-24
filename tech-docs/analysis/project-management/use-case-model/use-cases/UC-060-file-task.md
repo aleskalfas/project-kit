@@ -67,7 +67,7 @@ pkit:
         - REQ-040
         - REQ-041
     revalidated:
-      at: 2026-10-24T10:37:25Z
+      at: 2026-10-24T20:58:42Z
       outcome: updated
 ---
 
@@ -97,7 +97,7 @@ pkit:
 1. The developer chooses the [Task](../../glossary.md#term-task--task)'s parent, its title, its kind of work, its priority and its [workstream](../../glossary.md#term-workstream--workstream) (DEC-004 and DEC-012).
 2. The developer writes the body in a file, opening with the [parent reference](../../glossary.md#term-parent-reference--parent-reference), or leaves the body to the Task's template (DEC-010).
 3. The developer runs `pkit pm create-issue --type task --title "<title>" --parent <N>`, with `--kind`, `--priority`, `--workstream` and, where they wrote one, `--body-file`.
-4. At its entry, the system checks the [project](../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would [change](../../../core/glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
+4. At its entry, the system checks the [project](../../../core/glossary.md#term-project--project)'s prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
 5. The system composes the title from the kind's prefix and `<title>`, such as `[Bug] <title>`, and checks it against the title formats the [capability](../../../core/glossary.md#term-capability--capability) declares (DEC-011).
 6. The system reads the parent's type, and checks that a Task may sit under it: a [Feature](../../glossary.md#term-feature--feature), an [Umbrella](../../glossary.md#term-umbrella--umbrella) or an [EPIC](../../glossary.md#term-epic--epic) (DEC-005).
 
@@ -122,7 +122,7 @@ pkit:
 - **1a.** An AI agent files the [Task](../../glossary.md#term-task--task) for the developer, through the `pm` [skill](../../../core/glossary.md#term-skill--skill)'s `create-issue.md`. It infers the kind and the [workstream](../../glossary.md#term-workstream--workstream) from the request, and asks where it is unsure (DEC-012). The path goes on at step 3.
 - **3a.** The developer passes `--dry-run`. The system makes the checks of steps 4 to 10, prints the Task as step 11 does, and writes nothing. The use case ends.
 - **4a.** The [project](../../../core/glossary.md#term-project--project) does not meet the prerequisites, or the developer is no member of a team that keeps a list. The system refuses, names the cause, and writes nothing (REQ-041). The use case ends.
-- **4b.** The repository is another, and the operator declines, or nobody can [answer](../../../core/glossary.md#term-answer--answer) and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
+- **4b.** The repository is another, and the operator declines, or nobody can reply and the developer passed no `--allow-foreign-repo`. The system refuses and writes nothing. The use case ends.
 - **5a.** The composed title fails a check that blocks, such as one on a conventional-commits prefix. The system refuses, naming the check, and writes nothing (DEC-011). A check that only warns, such as one on a short title, is printed, and the path goes on.
 - **6a.** No parent is given. The system refuses, naming the types a Task may sit under, and writes nothing (DEC-004). The use case ends.
 - **6b.** The developer passes `--milestone <M>` in place of a parent, since the project skips the [EPIC](../../glossary.md#term-epic--epic) for that [Milestone](../../glossary.md#term-milestone--milestone) (DEC-004). The [parent reference](../../glossary.md#term-parent-reference--parent-reference) names the Milestone, as `Milestone: [#<M>](../milestone/<M>)`, and the Task is filed in it. The path goes on at step 7.

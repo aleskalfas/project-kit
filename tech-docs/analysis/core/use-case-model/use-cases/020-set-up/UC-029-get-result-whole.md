@@ -21,6 +21,9 @@ pkit:
       artefact:
         - ACT-ai-agent
         - ACT-operator
+    revalidated:
+      at: 2026-10-24T20:56:05Z
+      outcome: updated
 ---
 
 # UC-029 — Get a delegated agent's result back whole
@@ -38,19 +41,19 @@ pkit:
 - Where the agent meets the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names, the [harness](../../../glossary.md#term-harness--harness) delivers the delegated agent's whole result, with no further exchange needed. The [methodology](../../../glossary.md#term-methodology--methodology) states this as the harness requirement `delegated-result-complete`, whose truth only an agent inside a session can see (COR-047 [point](../../../glossary.md#term-point--point) 4).
 - No [operational rule](../../../glossary.md#term-operational-rule--operational-rule) of the core tells the agent that cost, and nothing at run time holds the agent to it (COR-047 point 2).
 
-**Trigger:** The agent's work calls for another [role](../../../glossary.md#term-role--role)'s judgement, such as a review of its draft.
+**Trigger:** The agent's work calls for another agent's judgement, such as a review of its draft.
 
 **Main path:**
 
-1. The agent dispatches a delegated agent for that [role](../../../glossary.md#term-role--role) through the [harness](../../../glossary.md#term-harness--harness)'s delegation tool, at the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names. Claude Code's declaration, for one, grades `delegated-result-complete` as `at-cost`. The result arrives whole while the harness's agent teams are off, or for a delegated agent given no `name`.
+1. The agent dispatches a delegated agent for that judgement through the [harness](../../../glossary.md#term-harness--harness)'s delegation tool, at the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names. Claude Code's declaration, for one, grades `delegated-result-complete` as `at-cost`. The result arrives whole while the harness's agent teams are off, or for a delegated agent given no `name`.
 2. The harness runs the delegated agent, which does its work and ends with its result.
 3. The harness hands the whole result to the agent that delegated, uncut.
 4. The agent acts on the whole result, such as fixing each [finding](../../../glossary.md#term-finding--finding) that a review marked blocking.
 
 **Variants:**
 
-- **1a.** The agent dispatches the delegated agent without meeting the cost, such as with a `name` while Claude Code's agent teams are on. The [harness](../../../glossary.md#term-harness--harness) cuts the result, at 4064 characters in the measurement the requirement cites (`.pkit/schemas/harness-requirements.yaml`). The part that arrives reads as a complete [answer](../../../glossary.md#term-answer--answer), and nothing in the [system](../../../glossary.md#term-system--system) detects the cut.
-- **3a.** The support declaration grades the requirement `not-achievable` for every [version](../../../glossary.md#term-version--version). No delegation brings the whole result back, and `pkit harness report` resolves the requirement `unsatisfied`, `computed` (COR-047 [point](../../../glossary.md#term-point--point) 2).
+- **1a.** The agent dispatches the delegated agent without meeting the cost, such as with a `name` while Claude Code's agent teams are on. The [harness](../../../glossary.md#term-harness--harness) cuts the result, at 4064 characters in the measurement the requirement cites (`.pkit/schemas/harness-requirements.yaml`). The part that arrives reads as a complete result, and nothing in the [system](../../../glossary.md#term-system--system) detects the cut.
+- **3a.** The support declaration grades the requirement `not-achievable`, with `harness_versions: unbounded`. No delegation brings the whole result back, and `pkit harness report` resolves the requirement `unsatisfied`, `computed` (COR-047 [point](../../../glossary.md#term-point--point) 2).
 
 **Postconditions:** The agent holds the delegated agent's whole result, and acts on all of it.
 
