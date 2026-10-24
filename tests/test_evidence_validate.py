@@ -88,3 +88,256 @@ def test_markdown_fence_is_still_stripped(tmp_path: Path) -> None:
     result = _run(scope)
     # `example-only` is inside a fence → ignored → no unresolved-citation error.
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _evidence(records: list[str]) -> str:
+    """An evidence.yaml body holding one well-formed record per slug."""
+    if not records:
+        return "schema_version: 1\nrecords: []\n"
+    body = "\n".join(
+        f"  - id: {r}\n"
+        f"    source_url: https://example.com\n"
+        f"    fetched_at: 2026-01-01\n"
+        f"    excerpt: grounding text"
+        for r in records
+    )
+    return f"schema_version: 1\nrecords:\n{body}\n"
+
+
+def _output(result: subprocess.CompletedProcess[str]) -> str:
+    return result.stdout + result.stderr
+
+
+# --- each scope is checked on its own (DEC-002, DEC-003) -------------------
+
+
+def test_nested_scope_is_left_out_of_the_outer_run(tmp_path: Path) -> None:
+    """A directory with an evidence.yaml of its own is its own scope. The outer
+    run neither checks its citations against the outer records nor reads its
+    evidence.yaml as citing text."""
+    scope = _scope(tmp_path, records=["outer-fact"], files={"doc.md": "A [ev:outer-fact].\n"})
+    inner = scope / "inner"
+    inner.mkdir()
+    (inner / "evidence.yaml").write_text(
+        "schema_version: 1\n"
+        "records:\n"
+        "  - id: inner-fact\n"
+        "    source_url: https://example.com\n"
+        "    fetched_at: 2026-01-01\n"
+        "    excerpt: A quoted token [ev:quoted-token] from the source.\n",
+        encoding="utf-8",
+    )
+    (inner / "doc.md").write_text("B [ev:inner-fact].\n", encoding="utf-8")
+    result = _run(scope)
+    assert result.returncode == 0, _output(result)
+    assert "1 citation(s) validated" in _output(result)
+
+
+def test_nested_scope_citation_leaves_the_outer_record_an_orphan(tmp_path: Path) -> None:
+    """A citation in a nested scope never names a record of the outer scope."""
+    scope = _scope(tmp_path, records=["shared"], files={})
+    inner = scope / "inner"
+    inner.mkdir()
+    (inner / "evidence.yaml").write_text(_evidence(["shared"]), encoding="utf-8")
+    (inner / "doc.md").write_text("B [ev:shared].\n", encoding="utf-8")
+    result = _run(scope, "--strict")
+    assert result.returncode == 1, _output(result)
+    assert "orphan record 'shared'" in _output(result)
+
+
+def test_directory_above_a_nested_scope_stays_in_the_outer_scope(tmp_path: Path) -> None:
+    """Only the directory holding the nested evidence.yaml is left out; a
+    directory between the two scopes still belongs to the outer one."""
+    scope = _scope(tmp_path, records=[], files={})
+    middle = scope / "middle"
+    inner = middle / "inner"
+    inner.mkdir(parents=True)
+    (inner / "evidence.yaml").write_text(_evidence([]), encoding="utf-8")
+    (middle / "doc.md").write_text("A [ev:missing-fact].\n", encoding="utf-8")
+    result = _run(scope)
+    assert result.returncode == 1, _output(result)
+    assert "middle/doc.md:1 — cited slug 'missing-fact' has no record." in _output(result)
+
+
+# --- fenced code is skipped (DEC-003) ---------------------------------------
+
+
+def test_fence_indented_in_a_list_item_is_skipped(tmp_path: Path) -> None:
+    md = (
+        "- A real claim [ev:real].\n"
+        "- An example:\n"
+        "\n"
+        "  ```md\n"
+        "  The token form [ev:example-only].\n"
+        "  ```\n"
+        "\n"
+        "  ~~~\n"
+        "  Another [ev:tilde-example].\n"
+        "  ~~~\n"
+    )
+    scope = _scope(tmp_path, records=["real"], files={"doc.md": md})
+    result = _run(scope)
+    assert result.returncode == 0, _output(result)
+
+
+def test_fence_in_a_block_quote_is_skipped(tmp_path: Path) -> None:
+    md = "A real claim [ev:real].\n\n> ```\n> [ev:quoted-example]\n> ```\n"
+    scope = _scope(tmp_path, records=["real"], files={"doc.md": md})
+    result = _run(scope)
+    assert result.returncode == 0, _output(result)
+
+
+def test_citation_after_an_indented_fence_counts(tmp_path: Path) -> None:
+    md = "- Item:\n\n  ```\n  code\n  ```\n\n  After it [ev:missing-after].\n"
+    scope = _scope(tmp_path, records=[], files={"doc.md": md})
+    result = _run(scope)
+    assert result.returncode == 1, _output(result)
+    assert "doc.md:7 — cited slug 'missing-after' has no record." in _output(result)
+
+
+def test_fence_closes_only_on_a_run_as_long_as_its_opening(tmp_path: Path) -> None:
+    """A four-backtick fence holding a three-backtick line closes on four."""
+    md = "````md\n```\n[ev:inside-example]\n```\n````\nOutside [ev:missing-outside].\n"
+    scope = _scope(tmp_path, records=[], files={"doc.md": md})
+    result = _run(scope)
+    assert result.returncode == 1, _output(result)
+    assert "inside-example" not in _output(result)
+    assert "doc.md:6 — cited slug 'missing-outside' has no record." in _output(result)
+
+
+def test_unclosed_fence_drops_no_citation(tmp_path: Path) -> None:
+    md = "```\nA claim after a stray fence [ev:missing-fact].\n"
+    scope = _scope(tmp_path, records=[], files={"doc.md": md})
+    assert _run(scope).returncode == 1
+
+
+# --- a missing required field is a finding (DEC-003) ------------------------
+
+
+def test_record_with_no_id_is_a_finding_not_a_crash(tmp_path: Path) -> None:
+    scope = tmp_path / "scope"
+    scope.mkdir()
+    (scope / "evidence.yaml").write_text(
+        "schema_version: 1\n"
+        "records:\n"
+        "  - source_url: https://example.com\n"
+        "    fetched_at: 2026-01-01\n"
+        "    excerpt: grounding text\n"
+        "  - id: real\n"
+        "    source_url: https://example.com\n"
+        "    fetched_at: 2026-01-01\n"
+        "    excerpt: grounding text\n",
+        encoding="utf-8",
+    )
+    (scope / "doc.md").write_text("A [ev:real] and [ev:missing-fact].\n", encoding="utf-8")
+    result = _run(scope)
+    out = _output(result)
+    assert result.returncode == 1, out
+    assert "Traceback" not in out
+    assert "evidence.yaml#records[1] — record missing required field 'id'." in out
+    # The path goes on: the citations are still checked.
+    assert "cited slug 'missing-fact' has no record." in out
+    assert "cited slug 'real'" not in out
+
+
+def test_record_id_that_is_no_string_is_a_finding(tmp_path: Path) -> None:
+    scope = tmp_path / "scope"
+    scope.mkdir()
+    (scope / "evidence.yaml").write_text(
+        "schema_version: 1\n"
+        "records:\n"
+        "  - id: [a, b]\n"
+        "    source_url: https://example.com\n"
+        "    fetched_at: 2026-01-01\n"
+        "    excerpt: grounding text\n",
+        encoding="utf-8",
+    )
+    result = _run(scope)
+    out = _output(result)
+    assert result.returncode == 1, out
+    assert "Traceback" not in out
+    assert "evidence.yaml#records[1] — record id ['a', 'b'] is not kebab-case" in out
+
+
+# --- the slug's form (DEC-001) ----------------------------------------------
+
+
+def test_record_id_may_start_with_a_digit(tmp_path: Path) -> None:
+    scope = _scope(tmp_path, records=["2fa-window"], files={"doc.md": "A [ev:2fa-window].\n"})
+    result = _run(scope)
+    assert result.returncode == 0, _output(result)
+
+
+def test_record_id_with_a_capital_is_a_finding(tmp_path: Path) -> None:
+    scope = _scope(tmp_path, records=["Api-limit"], files={})
+    result = _run(scope)
+    assert result.returncode == 1, _output(result)
+    assert "record id 'Api-limit' is not kebab-case" in _output(result)
+
+
+# --- a missing top-level `records` is a fault (DEC-002, DEC-003) ------------
+
+
+def test_missing_records_key_fails_the_check(tmp_path: Path) -> None:
+    scope = tmp_path / "scope"
+    scope.mkdir()
+    (scope / "evidence.yaml").write_text("schema_version: 1\n", encoding="utf-8")
+    result = _run(scope)
+    assert result.returncode == 1, _output(result)
+    assert "no top-level 'records' list." in _output(result)
+
+
+def test_records_with_no_value_fails_the_check(tmp_path: Path) -> None:
+    scope = tmp_path / "scope"
+    scope.mkdir()
+    (scope / "evidence.yaml").write_text("schema_version: 1\nrecords:\n", encoding="utf-8")
+    result = _run(scope)
+    assert result.returncode == 1, _output(result)
+    assert "'records' must be a list." in _output(result)
+
+
+# --- a directory that holds no evidence.yaml (DEC-003's failure table) ------
+
+
+def test_directory_in_an_ancestor_scope_checks_that_scope(tmp_path: Path) -> None:
+    """Run on a directory that holds no evidence.yaml, the check resolves its
+    citations against the scope it lies in."""
+    scope = _scope(tmp_path, records=["fact"], files={})
+    sub = scope / "sub"
+    sub.mkdir()
+    (sub / "doc.md").write_text("A [ev:fact].\n", encoding="utf-8")
+    result = _run(sub)
+    out = _output(result)
+    assert result.returncode == 0, out
+    assert "checking the scope it lies in" in out
+    assert "1 citation(s) validated against scope/evidence.yaml" in out
+
+
+def test_directory_in_an_ancestor_scope_reports_its_unresolved_citation(
+    tmp_path: Path,
+) -> None:
+    scope = _scope(tmp_path, records=["fact"], files={})
+    sub = scope / "sub"
+    sub.mkdir()
+    (sub / "doc.md").write_text("A [ev:fact] and [ev:missing-fact].\n", encoding="utf-8")
+    result = _run(sub)
+    assert result.returncode == 1, _output(result)
+    assert "sub/doc.md:1 — cited slug 'missing-fact' has no record." in _output(result)
+
+
+def test_no_evidence_yaml_in_any_ancestor_is_an_error(tmp_path: Path) -> None:
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    (bare / "doc.md").write_text("A [ev:fact].\n", encoding="utf-8")
+    result = _run(bare)
+    assert result.returncode == 1, _output(result)
+    assert "nowhere to resolve" in _output(result)
+
+
+def test_no_evidence_yaml_and_no_citation_passes(tmp_path: Path) -> None:
+    bare = tmp_path / "bare"
+    bare.mkdir()
+    (bare / "doc.md").write_text("No outside fact here.\n", encoding="utf-8")
+    result = _run(bare)
+    assert result.returncode == 0, _output(result)
+    assert "nothing to validate" in _output(result)

@@ -11,9 +11,8 @@ pkit:
         - .pkit/capabilities/evidence/decisions/**
       record: [COR-007, COR-017, COR-020, COR-021]
     revalidated:
-      at: 2026-10-17T15:21:43Z
-      outcome: unchanged
-      unchanged-because: COR-017 now lets a capability declare one project rule set that its install creates. evidence declares none, so what its install copies and does, as this page lists it, is unchanged.
+      at: 2026-10-24T01:21:49Z
+      outcome: updated
 ---
 
 # evidence capability
@@ -61,7 +60,9 @@ pkit evidence validate <scope-dir>
 
 The validator also remains invocable by direct path (`.pkit/capabilities/evidence/scripts/validate.py <scope-dir>`) for adopters whose kit predates COR-021's dispatcher; the `pkit evidence validate` form is the canonical invocation from v0.3.0 onward.
 
-Wire the validator into a pre-commit hook or CI job once the discipline lands.
+Each run checks one scope. A sub-directory with an `evidence.yaml` of its own is a scope of its own: the run leaves it out, and its citations never resolve against the outer scope's records. Named a directory that holds no `evidence.yaml`, the validator checks the scope that directory lies in. The missing file is an error only where no directory above holds one either, and a citation stands under the directory named.
+
+Wire the validator into a pre-commit hook or CI job once the discipline lands. With several scopes, run it once per `evidence.yaml`.
 
 ## Citing this capability's decisions
 

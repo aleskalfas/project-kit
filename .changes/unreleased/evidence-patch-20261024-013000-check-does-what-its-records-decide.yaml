@@ -1,0 +1,15 @@
+component: evidence
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The evidence check does what DEC-002 and DEC-003 decide (#1910). Run on
+  a scope, it leaves out each directory below that holds an `evidence.yaml`
+  of its own, so a nested scope's citations no longer resolve against the
+  outer records. It skips a fenced code block whose fence stands indented in
+  a list item or set in a block quote. A record with no `id` is a finding
+  rather than a crash, and an `evidence.yaml` with no top-level `records`
+  list fails the check. Named a directory that holds no `evidence.yaml`, it
+  checks the scope that directory lies in, and errors only where no directory
+  above holds one. The schema's `id` pattern now lets an id start with a
+  digit, as DEC-001's slug does. The skills and the README say the same.
