@@ -1,6 +1,6 @@
 ---
 id: ADR-025
-title: "Bash commands are read conservatively: grants as written, denies in listed forms, doubt abstains"
+title: "Bash commands are read conservatively: grants as written, denies in listed forms, doubt never allows"
 status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
@@ -18,22 +18,22 @@ already-granted intent, **never a new grant**. The core inherits
 [ADR-004](ADR-004-autonomy-intent-confinement.md)'s fail-closed-on-uncertainty
 stance: a segment it cannot read as the shell reads it, such as one holding an
 expansion, a redirection or an assignment that changes which program runs, or
-whose command no grant recognizes, makes it **abstain (prompt)**, never allow
-(point 2). A deny also binds on the forms point 5 lists, such as a long flag
-cut to a prefix. Where a pathname pattern or a configuration assignment may
-make the command one a deny names, the core cannot tell, and abstains
-(point 2). A configuration git reads, or one `git -c` sets, stays the grant's
-breadth, and a program behind a wrapper such as `env` is read as the wrapper
-(point 5). The code lives in the neutral core both the hook and the CLI
+whose command no privilege recognizes, makes it **abstain (prompt)**, never
+allow, unless a deny binds on the words it reads (point 2). A deny also binds
+on the forms point 5 lists, such as a long flag cut to a prefix. Where a
+pathname pattern or a configuration assignment may make the command one a deny
+names, the core cannot tell, and abstains (point 2). A configuration git reads,
+or one `git -c` sets, stays the grant's breadth, and a program behind a
+wrapper such as `env` is read as the wrapper (point 5). The code lives in the neutral core both the hook and the CLI
 import (point 4).
 
 **Decision in one line:** the core allows a Bash command only where a grant
 covers every segment as written, after stripping one leading `cd`; a deny
 binds on the command and on the forms point 5 lists; and where the core cannot
 read the command as the shell does, or cannot tell whether a deny binds, it
-abstains, never allows. Allowing a compound because each segment looks safe on
-its own, blind to how the segments compose, is **rejected as unsound**, and
-any widening beyond the `cd` strip is **deferred** under
+never allows. A compound allowed because each segment looks safe on its own,
+blind to how the segments compose, is **rejected as unsound**, and any
+widening beyond the `cd` strip is **deferred** under
 [COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md) until a
 demonstrated residual-prompt need earns it.
 
@@ -78,9 +78,7 @@ core.md rule 15 — *issue the narrowest action the layer can vet*: a single
 is the rule's intent applied to the hot path.
 
 As project-kit's own architecture-decision record, harness and code-home
-specifics are in scope here, unlike the harness-neutral COR. Because it refines
-foundational ADR-004, it binds only once accepted, and no implementation cites
-it before then.
+specifics are in scope here, unlike the harness-neutral COR.
 
 ## Decision
 
@@ -89,7 +87,7 @@ every segment as written, after one leading `cd <path>` is stripped, and a deny
 binds on the forms point 5 lists. Stripping the `cd` is a prompt-reduction over
 already-granted intent, never a new grant. Every uncertainty fails closed
 (abstain / prompt), never to auto-allow. A rule blind to how segments compose
-is rejected as unsound, and any wider widening is deferred.**
+is rejected as unsound, and any other widening is deferred.**
 
 ### 1. Phase 1 — strip a leading `cd`, decide on the remainder
 
@@ -272,8 +270,7 @@ and changes no prior decision.
 
 - **The change lands in `.pkit/permissions/decide.py`** (the `segments()` /
   classification path), the shared neutral core, and is covered by the existing
-  conformance fixtures proving hook and CLI decide identically. Implementation is
-  the issue-#240 follow-on, not this ADR.
+  conformance fixtures proving hook and CLI decide identically.
 
 - **Deny mechanism kept; speed-bump posture preserved.** Guardrail denies,
   the fail-open hook + fail-closed native double-lock, and the
@@ -291,11 +288,10 @@ and changes no prior decision.
   refines ADR-004's intent-axis classification and inherits its fail-closed,
   double-lock, and speed-bump invariants intact.
 
-- **No migration.** No file/directory rename or removal in a kit-owned tree, no
+- **No migration.** The decision changes verdicts, never a file an installed
+  project holds: no file/directory rename or removal in a kit-owned tree, no
   `schema_version` bump, no breaking CLI signature change, no capability-subtree
-  restructure — `pkit migrations check-diff --include-working-tree --base main`
-  is expected clean. This change authors the ADR file only; the code that
-  realizes it changes verdicts, never a file an installed project holds.
+  restructure.
 
 - **No version bump of the record's own.** Like the sibling permission ADRs,
   the record changes no component's surface: each change to the code that
