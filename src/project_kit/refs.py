@@ -436,6 +436,67 @@ def _unbracket(text: str) -> str:
     return text[1:-1] if text.startswith("[") and text.endswith("]") else text
 
 
+#: The version of the document `pkit refs lookup --json` prints.
+LOOKUP_VERSION = 1
+
+
+@dataclass(frozen=True)
+class Lookup:
+    """What `pkit refs lookup` answers for one id: where it lies, each location
+    repository-relative — a record's file, a rule's place in its rule set, or where an
+    installed capability declares a role or a point — or why it does not resolve."""
+
+    id: str
+    locations: tuple[str, ...] = ()
+    problem: str | None = None
+
+    @property
+    def resolved(self) -> bool:
+        return self.problem is None
+
+
+def lookup(target_root: Path, record_id: str) -> Lookup:
+    """Resolve a record id, a rule citation, or a role or point address, as `pkit refs
+    lookup` does: an address to where it is declared, a rule to its place in its rule
+    set, anything else to a record's file."""
+    if is_address_citation(record_id):
+        address = resolve_address(target_root, record_id)
+        if address.malformed:
+            return Lookup(record_id, problem=f"{record_id!r} is {address.problem}")
+        if not address.resolved:
+            return Lookup(record_id, problem=f"{record_id!r} does not resolve: {address.problem}")
+        return Lookup(record_id, address.locations)
+    if rule_sets.is_rule_citation(record_id):
+        resolution = resolve_rule_citation(target_root, record_id)
+        if not resolution.resolved:
+            return Lookup(
+                record_id, problem=f"{record_id!r} does not resolve: {resolution.problem}"
+            )
+        location = resolution.location
+        return Lookup(record_id, (location,) if location is not None else ())
+    path = resolve_record(target_root, record_id)
+    if path is None:
+        return Lookup(record_id, problem=f"no record matches {record_id!r}")
+    return Lookup(record_id, (path.relative_to(target_root).as_posix(),))
+
+
+def lookup_document(target_root: Path, record_ids: Collection[str]) -> dict[str, Any]:
+    """The document `pkit refs lookup --json` prints: each id's answer, in the order the
+    ids are given, so a script reads every record it needs from one run."""
+    return {
+        "schema_version": LOOKUP_VERSION,
+        "lookups": [
+            {
+                "id": found.id,
+                "resolved": found.resolved,
+                "locations": list(found.locations),
+                "problem": found.problem,
+            }
+            for found in (lookup(target_root, record_id) for record_id in record_ids)
+        ],
+    }
+
+
 def resolve_record(
     target_root: Path, record_id: str, *, files: Collection[str] | None = None
 ) -> Path | None:
