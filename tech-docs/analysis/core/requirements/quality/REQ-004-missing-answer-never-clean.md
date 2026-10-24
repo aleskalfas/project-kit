@@ -29,9 +29,64 @@ pkit:
         - ACT-ci-pipeline
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T10:39:24Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      at: 2026-10-24T20:54:52Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/command_runner.py
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: path
+          value: tests/test_command_runner.py
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: path
+          value: tests/test_default_branch.py
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: record
+          value: COR-050#12
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: record
+          value: COR-054#4
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
+      - anchor:
+          kind: record
+          value: COR-055#6
+        outcome: unchanged
+        reason: The title, statement and measure say a missing result where they said a missing answer, for the same output. This target still backs the requirement as written.
 ---
 
 # REQ-004 · Quality · A check never reads a missing result as one that found nothing
@@ -51,4 +106,4 @@ Each is reported as giving no result, and tests find that:
 - a [data point](../../glossary.md#term-data-point--data-point) declared `fail` stays unresolved when its command gives no result
 - a [default branch](../../glossary.md#term-default-branch--default-branch) the clone cannot read is reported, never guessed
 
-**Rationale:** A missing result never reads as one that names nothing (COR-050 [point](../../glossary.md#term-point--point) 2). COR-055 gives the reason: "Silence must not read as health". A pass nobody earned means that "the gate reports the [project](../../glossary.md#term-project--project) in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.
+**Rationale:** A missing result never reads as one that names nothing (COR-050 [point](../../glossary.md#term-point--point) 2). COR-055 gives the reason, under "Why no <!-- pkit:not-the-term -->answer fails": "Silence must not read as health". A pass nobody earned means that "the gate reports the [project](../../glossary.md#term-project--project) in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.

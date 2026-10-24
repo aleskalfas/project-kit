@@ -63,9 +63,8 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:02:02Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:57:35Z
+      outcome: updated
 ---
 
 # UC-037 — Record my decision beside the methodology's

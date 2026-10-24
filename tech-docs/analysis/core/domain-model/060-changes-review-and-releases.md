@@ -41,9 +41,9 @@ pkit:
         - TERM-changeset
         - TERM-release-step
     revalidated:
-      at: 2026-10-23T08:13:46Z
+      at: 2026-10-24T21:03:29Z
       outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. A check still compares a change from its base to its head, as the view says.
+      unchanged-because: TERM-head lists head branch, and TERM-report lists whole-repository report, as phrases their distinctions already told apart. Neither definition changed, so the sections on head and report hold.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

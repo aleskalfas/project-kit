@@ -61,6 +61,9 @@ pkit:
         - REQ-023
         - REQ-024
         - REQ-025
+    revalidated:
+      at: 2026-10-24T20:58:34Z
+      outcome: updated
 ---
 
 # UC-044 — Write a page for the reader it names

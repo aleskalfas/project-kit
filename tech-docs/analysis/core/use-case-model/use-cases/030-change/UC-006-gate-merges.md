@@ -69,9 +69,8 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-24T19:01:24Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, confirmations now refuse an answer piped in off a terminal. The checks the pipeline runs ask nothing, so the steps hold."
+      at: 2026-10-24T20:57:08Z
+      outcome: updated
 ---
 
 # UC-006 — Make my merges wait on the system's checks

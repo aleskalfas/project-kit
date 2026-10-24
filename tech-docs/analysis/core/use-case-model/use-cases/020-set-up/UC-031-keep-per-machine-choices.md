@@ -50,6 +50,9 @@ pkit:
         - REQ-002
         - REQ-009
         - REQ-012
+    revalidated:
+      at: 2026-10-24T20:56:23Z
+      outcome: updated
 ---
 
 # UC-031 — Keep my per-machine choices out of what the project commits

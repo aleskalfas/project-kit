@@ -23,9 +23,8 @@ pkit:
         - ACT-adopter
         - REQ-005
     revalidated:
-      at: 2026-10-24T19:01:30Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:58:28Z
+      outcome: updated
 ---
 
 # UC-053 — Re-pin an inherited rule set once I have reviewed its new major

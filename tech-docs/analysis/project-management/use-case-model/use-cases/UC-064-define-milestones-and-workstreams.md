@@ -52,9 +52,8 @@ pkit:
         - REQ-040
         - REQ-041
     revalidated:
-      at: 2026-10-24T10:37:37Z
-      outcome: unchanged
-      unchanged-because: The library gains the reading of the workstreams file that filing makes, which UC-060 describes. Defining, renaming, merging, splitting and removing a workstream are unchanged.
+      at: 2026-10-24T20:58:51Z
+      outcome: updated
 ---
 
 # UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward

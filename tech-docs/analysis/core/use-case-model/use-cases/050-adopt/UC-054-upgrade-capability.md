@@ -55,9 +55,8 @@ pkit:
         - REQ-029
         - REQ-030
     revalidated:
-      at: 2026-10-24T19:01:20Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, --interactive now asks about a collision only at a terminal, and refuses off one before any write. Variants 6a and 6b hold."
+      at: 2026-10-24T20:58:31Z
+      outcome: updated
 ---
 
 # UC-054 — Upgrade one capability on its own

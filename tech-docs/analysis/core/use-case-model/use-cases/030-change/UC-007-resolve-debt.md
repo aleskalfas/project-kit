@@ -71,9 +71,8 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-24T04:58:26Z
-      outcome: unchanged
-      unchanged-because: A renamed placed file whose derived links alone moved is no longer listed behind a deferral. How a person resolves debt is unchanged.
+      at: 2026-10-24T20:57:14Z
+      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date

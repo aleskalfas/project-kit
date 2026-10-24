@@ -51,9 +51,8 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T05:22:43Z
-      outcome: unchanged
-      unchanged-because: "The derived links' fix changes how friction reads links, and #1953's refusals touch stamps outside the journey's path. Its steps and seams hold."
+      at: 2026-10-24T20:55:04Z
+      outcome: updated
 ---
 
 # JRN-003 — Deliver a change
@@ -77,7 +76,7 @@ pkit:
    - **Needs from step 3 (UC-003):** the changesets, which the CI pipeline checks before the landing. With `--admin` on a [base](../../glossary.md#term-base--base) with no merge queue, the landing merges past every failing required check, the changeset guard included (ADR-061 point 5). The `skip-changeset` label waives the guard's surface check too (UC-003 variant 7a).
    - **Needs from UC-006 (outside this journey):** the project's merges made to wait on the system's checks. Where the change check runs in `warning` mode, or the CI job is no required status, unanswered friction holds no merge (COR-050 point 12). That friction then lands as [debt](../../glossary.md#term-debt--debt) for step 5.
 5. UC-007 — Resolve what the default branch left out of date
-   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered, is debt on the [default branch](../../glossary.md#term-default-branch--default-branch) (COR-050 point 9). Unless the CI pipeline runs the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check), nothing brings that debt to the developer, who lists it with `pkit friction debt` (ADR-055 point 5).
+   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered, is debt on the [default branch](../../glossary.md#term-default-branch--default-branch) (COR-050 point 9). Unless the CI pipeline runs the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check), no whole-repository report brings that debt to the developer, who lists it with `pkit friction debt` (ADR-055 point 5).
 
 **Variants:**
 

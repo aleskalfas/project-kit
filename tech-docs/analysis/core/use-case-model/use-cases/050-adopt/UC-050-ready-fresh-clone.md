@@ -45,9 +45,8 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:02:08Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:58:18Z
+      outcome: updated
 ---
 
 # UC-050 — Get a fresh clone ready to work with one sync

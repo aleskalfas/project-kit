@@ -46,9 +46,8 @@ pkit:
         - UC-006
         - UC-048
     revalidated:
-      at: 2026-10-24T19:01:22Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, collision prompts now refuse an answer piped in, so with nobody at a terminal nothing is copied. The journey's guarantee holds."
+      at: 2026-10-24T20:54:57Z
+      outcome: updated
 ---
 
 # JRN-001 — Adopt the system

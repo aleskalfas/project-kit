@@ -35,9 +35,8 @@ pkit:
         - REQ-021
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-24T19:02:04Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:57:52Z
+      outcome: updated
 ---
 
 # UC-041 — Keep each core record true for any project that adopts it

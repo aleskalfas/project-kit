@@ -27,9 +27,64 @@ pkit:
       artefact:
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-22T23:47:21Z
-      outcome: unchanged
-      unchanged-because: The actors whose needs it meets each gain a summary, the first sentence of their opening, and nothing else of theirs changes. What it asks still holds.
+      at: 2026-10-24T20:54:54Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/command_runner.py
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: path
+          value: tests/test_command_runner.py
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: record
+          value: ADR-057#3
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: record
+          value: ADR-057#5
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: record
+          value: ADR-058#4
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
+      - anchor:
+          kind: record
+          value: COR-055#3
+        outcome: unchanged
+        reason: The measure says a command gives no result where it said no answer, for the same output. This target still backs the bound as written.
 ---
 
 # REQ-006 · Quality · The backbone stops a command it runs for an anchor, a data point, validation or a process after thirty seconds

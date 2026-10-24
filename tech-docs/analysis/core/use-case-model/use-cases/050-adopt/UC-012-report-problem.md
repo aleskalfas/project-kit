@@ -34,9 +34,8 @@ pkit:
         - REQ-002
         - REQ-005
     revalidated:
-      at: 2026-10-24T19:01:06Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, off a terminal the post is now refused and no name asked. The steps run at a terminal, and an agent's --yes still stages, as variant 1b says."
+      at: 2026-10-24T20:58:06Z
+      outcome: updated
 ---
 
 # UC-012 — Report a problem with the system, and follow the report

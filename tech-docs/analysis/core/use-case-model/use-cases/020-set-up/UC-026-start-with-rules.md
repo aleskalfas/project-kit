@@ -43,9 +43,8 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T10:39:42Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      at: 2026-10-24T20:55:38Z
+      outcome: updated
 ---
 
 # UC-026 — Start every session with the project's rules loaded

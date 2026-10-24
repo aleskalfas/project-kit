@@ -49,8 +49,9 @@ pkit:
         - REQ-023
         - REQ-024
     revalidated:
-      at: 2026-10-24T03:53:30Z
-      outcome: updated
+      at: 2026-10-24T20:51:50Z
+      outcome: unchanged
+      unchanged-because: REQ-024 says an unreadable result where it said an unreadable answer, for the same error. Its steps still meet it, so this use case holds.
 ---
 
 # UC-043 — Set up a documentation space for one audience

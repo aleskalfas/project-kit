@@ -57,9 +57,8 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T19:01:51Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:55:43Z
+      outcome: updated
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

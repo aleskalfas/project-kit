@@ -43,9 +43,9 @@ pkit:
         - TERM-install
         - TERM-project
     revalidated:
-      at: 2026-10-21T21:57:51Z
+      at: 2026-10-24T20:50:16Z
       outcome: unchanged
-      unchanged-because: The view cites COR-004 only for first install refusing to run again. The refinement changes which commands offer `--dry-run`, which the view does not describe.
+      unchanged-because: TERM-version adds schema version to the phrases it tells apart, as its distinctions already did. Its definition is the same, so the section on version holds.
 ---
 
 # VIEW-parts-of-the-system — Parts of the system, and projects

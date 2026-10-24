@@ -40,9 +40,8 @@ pkit:
         - REQ-022
         - REQ-025
     revalidated:
-      at: 2026-10-24T03:53:20Z
-      outcome: unchanged
-      unchanged-because: The agent and its storyboard changed only how reader-review falls back to a space's audience. Proposing a stale page's fix is as it was.
+      at: 2026-10-24T20:58:37Z
+      outcome: updated
 ---
 
 # UC-045 — Have the fix for a stale page proposed, and review it before it is applied

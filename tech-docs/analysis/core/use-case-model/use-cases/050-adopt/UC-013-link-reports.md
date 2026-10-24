@@ -36,9 +36,8 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:01:08Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, off a terminal without --yes the close is now refused after the listing. Step 7 asks at a terminal, and variant 6b still lists only."
+      at: 2026-10-24T20:58:09Z
+      outcome: updated
 ---
 
 # UC-013 — Receive adopters' reports, and link each to its fix

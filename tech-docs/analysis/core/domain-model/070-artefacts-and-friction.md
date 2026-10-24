@@ -40,9 +40,8 @@ pkit:
         - TERM-artefact-type
         - TERM-package-metadata
     revalidated:
-      at: 2026-10-23T08:13:47Z
-      outcome: unchanged
-      unchanged-because: "COR-050 point 5 reads derived links as their words alone, a detail of what an edit to a target is. The view's account of anchors, friction and answers holds, and its deferrals name #1779."
+      at: 2026-10-24T20:54:31Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record

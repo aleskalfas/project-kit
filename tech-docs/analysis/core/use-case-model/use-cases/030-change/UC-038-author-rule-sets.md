@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-24T19:01:26Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the uninstall's confirmations now refuse an answer piped in off a terminal. Uninstall still never writes a project rule set."
+      at: 2026-10-24T20:57:39Z
+      outcome: updated
 ---
 
 # UC-038 — Author and extend my project's own rule sets

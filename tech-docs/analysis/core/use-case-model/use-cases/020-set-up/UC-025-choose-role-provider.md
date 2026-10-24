@@ -34,9 +34,8 @@ pkit:
         - REQ-002
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:00:47Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, an install's collision is now refused off a terminal before any write. Choosing a role provider, and its consent, are as the steps say."
+      at: 2026-10-24T20:55:34Z
+      outcome: updated
 ---
 
 # UC-025 — Choose which installed capability provides a role

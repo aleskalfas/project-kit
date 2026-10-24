@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-24T19:01:34Z
+      at: 2026-10-24T20:52:01Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: Its actors name a remit, a new version and the author where they said role or release, and REQ-006 says a command gives no result. What each asks is the same, so this use case holds.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

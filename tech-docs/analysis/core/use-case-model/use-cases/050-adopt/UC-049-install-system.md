@@ -53,9 +53,8 @@ pkit:
         - REQ-026
         - REQ-031
     revalidated:
-      at: 2026-10-24T19:01:12Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, pkit visibility private and untrack now refuse an answer piped in off a terminal. Each step and variant still holds as written."
+      at: 2026-10-24T20:58:15Z
+      outcome: updated
 ---
 
 # UC-049 — Install the system into my project with one command

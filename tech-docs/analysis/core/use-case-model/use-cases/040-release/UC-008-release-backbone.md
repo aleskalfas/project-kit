@@ -52,9 +52,8 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:01:02Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal. The pipeline passes --yes, and a maintainer confirms at a terminal, as variant 1a says."
+      at: 2026-10-24T20:57:59Z
+      outcome: updated
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
@@ -98,9 +97,9 @@ pkit:
    - the new changelog entry
 7. The CI pipeline runs the [project](../../../glossary.md#term-project--project)'s checks on the release pull request. The changeset guard reads the release pull request's diff as only what `pkit release apply` writes, and exempts that diff from the surface check (UC-003).
 8. The maintainer reviews the new versions and the changelog entry.
-9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` branch under a `chore(release):` title.
+9. The maintainer runs `pkit release merge <pr>`. The system checks that the pull request is a release pull request: a `release/` head branch under a `chore(release):` title.
 14. At its entry, before it reads the pull request, `pkit release merge` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012 and ADR-061 [point](../../../glossary.md#term-point--point) 6).
-10. The system also checks that the release pull request is open, mergeable and green in every check it shows. The system lands the release pull request as one squash commit whose subject is the pull request's title, and deletes its branch.
+10. The system also checks that the release pull request is open, mergeable and green in every check it shows. The system lands the release pull request as one squash commit whose subject is the pull request's title, and deletes the head branch.
 11. On the push to the default branch, the CI pipeline runs `release-tag.yml`. That workflow finds no tag for the version in `.pkit/VERSION`, and runs `pkit version tag --push`.
 12. The system tags the release commit `v<version>` with an annotated tag, and pushes the tag (PRJ-004). The CI pipeline runs in no [harness](../../../glossary.md#term-harness--harness) session, so the cross-repository guard has nothing to compare with and does not fire. Nobody is asked to confirm the push (ADR-061 point 6).
 13. The CI pipeline runs `pkit release publish-notes <version>`. The system publishes a GitHub release for the tag. The GitHub release's notes are that version's section of `CHANGELOG.md`.
@@ -125,7 +124,7 @@ pkit:
 - **2e.** A [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration)'s folder names a version above the current backbone's version, and the release step does not compute that version. The system warns that the folder `does not match the computed backbone release`, and goes on. The release pull request's body shows the warning (UC-010).
 - **3a.** A release pull request is already open, on a `release/` branch. `release-pr.yml` opens no second one, and the use case ends.
 - **7a.** The [project](../../../glossary.md#term-project--project) gave `release-pr.yml` no token of its own, so the release pull request starts no checks. The maintainer starts them by hand, and the path goes on at step 7. Where nobody starts them, the release pull request shows no check, and step 10 reads that as green.
-- **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
+- **9a.** The pull request is no release pull request. The system refuses it, saying that `pkit release merge` merges only release pull requests. Where the pull request's head branch is no `release/` branch, the refusal names `pkit pull-request land`, the backbone's own command for landing any other pull request. The use case ends.
 - **10a.** The release pull request has a conflict, or a check that is red or still running. The system refuses with the reason, and merges nothing. The path rejoins at step 8.
 - **10b.** Where merges into the [default branch](../../../glossary.md#term-default-branch--default-branch) go through a queue, the system enqueues the release pull request at the [head](../../../glossary.md#term-head--head) commit whose checks it read. The system then waits for the queue to merge the pull request. Where the wait ends with the release pull request still queued, the system exits 4 and deletes nothing. A later run deletes the head branch once the release pull request merges.
 - **10c.** The queue does not squash, or its squash defaults are not the pull request's title and body. The system refuses, enqueues nothing, and the use case ends.

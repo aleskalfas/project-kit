@@ -41,9 +41,8 @@ pkit:
         - REQ-012
         - REQ-016
     revalidated:
-      at: 2026-10-24T11:48:32Z
-      outcome: unchanged
-      unchanged-because: The diagnostic loop logs and reports deferred calls as before. The core defers fewer calls, since a redirection that writes no file no longer counts as untrusted, and that changes no step of the report.
+      at: 2026-10-24T20:59:44Z
+      outcome: updated
 ---
 
 # UC-033 — Find out why a command prompted me or was blocked
@@ -92,12 +91,12 @@ pkit:
 - **1c.** A native deny of the [harness](../../../glossary.md#term-harness--harness)'s settings blocks the command, such as `Bash(sudo:*)` in Claude Code's. The harness gives its own message, and nothing is logged. The use case ends.
 - **1d.** The [sandbox](../../../glossary.md#term-sandbox--sandbox) stopped the command from reaching a file or a host. The command fails with the operating system's error, and the hook gives no reason. Nothing is logged. The use case ends.
 - **1e.** The operator sets the diagnostic session's length with `--ttl <seconds>`, or logs whole commands with `--no-redact`. The path goes on at step 2.
-- **4a.** The permission hook is not registered, so nothing logs a call. The [report](../../../glossary.md#term-report--report) finds nothing, and says to arm a diagnostic session and work. It does not say that the hook is off.
+- **4a.** The permission hook is not registered, so nothing logs a call. `diagnose report` finds nothing, and says to arm a diagnostic session and work. It does not say that the hook is off.
 - **4b.** The diagnostic session's time runs out. The hook stops logging, and `pkit permissions diagnose status` shows `EXPIRED` (PRJ-006 [point](../../../glossary.md#term-point--point) 5).
 - **4c.** The log reaches its cap, 2000 entries. The [system](../../../glossary.md#term-system--system) drops the oldest entries first (PRJ-006 point 5 and `diagnose_capture.py`).
 - **4d.** Logging a call fails. The hook's decision stands, and nothing is logged for that call (PRJ-006 point 2).
-- **4e.** The hook asks the operator about a file write outside the [session anchor](../../../glossary.md#term-session-anchor--session-anchor), as Claude Code's does (UC-032). Claude Code's hook also asks about a deferred Bash call that may hide a guardrail's form, outside auto and bypass mode (`permission-hook.py`). The log holds each such call as a deferral. Where the harness's settings allow the call, as they allow the file tools and `git`, the report counts it as never prompted (#1764).
-- **7a.** A file tool was deferred on a target in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace). The report puts that deferral first, in its `workspace` group in the band of defects (ADR-060 point 7). Every agent is granted the `workspace` privilege, so the remediation is to check the active [profile](../../../glossary.md#term-profile--profile) and enforcement, or to report a bug.
+- **4e.** The hook asks the operator about a file write outside the [session anchor](../../../glossary.md#term-session-anchor--session-anchor), as Claude Code's does (UC-032). Claude Code's hook also asks about a deferred Bash call that may hide a guardrail's form, outside auto and bypass mode (`permission-hook.py`). The log holds each such call as a deferral. Where the harness's settings allow the call, as they allow the file tools and `git`, `diagnose report` counts it as never prompted (#1764).
+- **7a.** A file tool was deferred on a target in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace). `diagnose report` puts that deferral first, in its `workspace` group in the band of defects (ADR-060 point 7). Every agent is granted the `workspace` privilege, so the remediation is to check the active [profile](../../../glossary.md#term-profile--profile) and enforcement, or to [report](../../../glossary.md#term-report--report) a bug.
 - **9a.** A remediation needs a privilege the catalog lacks. Defining a privilege is the operator's own task, which no fix may ever do unattended (PRJ-006 point 4).
 
 **Postconditions:** The operator knows which calls the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) deferred and how often, and which edit of the operator's own would stop each group of prompts.

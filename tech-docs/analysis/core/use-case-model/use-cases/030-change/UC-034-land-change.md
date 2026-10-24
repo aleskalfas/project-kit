@@ -41,9 +41,8 @@ pkit:
         - ACT-operator
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:02:00Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:57:31Z
+      outcome: updated
 ---
 
 # UC-034 — Land my change on the default branch
@@ -108,7 +107,7 @@ pkit:
 **Postconditions:**
 
 - The [change](../../../glossary.md#term-change--change) is on the [default branch](../../../glossary.md#term-default-branch--default-branch), with every [answer](../../../glossary.md#term-answer--answer) it wrote, its deferrals included.
-- Through a [pull request](../../../glossary.md#term-pull-request--pull-request), the change is one squash commit, whose subject is the pull request's title and whose body is the pull request's body. The pull request's branch is gone.
+- Through a [pull request](../../../glossary.md#term-pull-request--pull-request), the change is one squash commit, whose subject is the pull request's title and whose body is the pull request's body. The pull request's head branch is gone.
 - Worked alone, the change is one commit made straight on the default branch.
 - What the change left without an answer or deferred stays on the default branch as [debt](../../../glossary.md#term-debt--debt) (COR-050 [point](../../../glossary.md#term-point--point) 9). So does an [artefact](../../../glossary.md#term-artefact--artefact) the change revalidated apart from another change (COR-062 point 7).
 

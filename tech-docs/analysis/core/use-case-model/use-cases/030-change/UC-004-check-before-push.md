@@ -49,9 +49,8 @@ pkit:
         - REQ-018
         - REQ-019
     revalidated:
-      at: 2026-10-24T18:58:10Z
-      outcome: unchanged
-      unchanged-because: The aggregator gains a line that runs the pages' console fences. Each step names the aggregator's checks as a whole, and each still holds, the short check's included.
+      at: 2026-10-24T20:56:57Z
+      outcome: updated
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

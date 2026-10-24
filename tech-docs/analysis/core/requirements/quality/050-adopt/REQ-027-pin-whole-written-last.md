@@ -21,6 +21,10 @@ pkit:
         - ADR-064#1
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-10-24T20:51:27Z
+      outcome: unchanged
+      unchanged-because: ACT-operator's needs say the system's CLI for its tool, and its opening names the operator where it said role. What it needs is the same, so this requirement holds.
 ---
 
 # REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last

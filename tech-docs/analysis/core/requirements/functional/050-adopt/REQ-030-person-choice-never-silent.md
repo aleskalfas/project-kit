@@ -21,9 +21,8 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T19:00:34Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, tests now find that a collision answer piped in off a terminal is refused before any write. The measure holds as written."
+      at: 2026-10-24T20:54:45Z
+      outcome: updated
 ---
 
 # REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently

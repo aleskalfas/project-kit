@@ -39,9 +39,8 @@ pkit:
         - UC-023
         - UC-038
     revalidated:
-      at: 2026-10-24T10:39:50Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's need and UC-051's goal name the system for "it". UC-053 says "a new major" for "one", and UC-048 says "the system's tool" for "the system's CLI". Each keeps its claim, so this journey holds.
+      at: 2026-10-24T20:55:00Z
+      outcome: updated
 ---
 
 # JRN-002 — Upgrade the system

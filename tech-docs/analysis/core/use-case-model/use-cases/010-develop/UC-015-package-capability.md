@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-24T19:01:28Z
+      at: 2026-10-24T20:51:55Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: ACT-ai-agent says one remit and another actor's work where it said role, and ACT-component-author names a new version and the author. Their needs are the same, so this use case holds.
 ---
 
 # UC-015 — Package a recurring discipline as a capability

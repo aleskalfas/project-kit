@@ -49,9 +49,8 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:01:10Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the report post that stamps a note now confirms only at a terminal. The note's steps, and the stamp, are unchanged."
+      at: 2026-10-24T20:57:42Z
+      outcome: updated
 ---
 
 # UC-039 — Think a question through in a scratchpad note, and retire it

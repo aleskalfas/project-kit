@@ -47,9 +47,8 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:01:04Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal, and refuses off one without --yes. The author confirms at a terminal, as step 3 says."
+      at: 2026-10-24T20:58:03Z
+      outcome: updated
 ---
 
 # UC-009 — Release my component on its own version

@@ -52,9 +52,8 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:00:49Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, an answer piped in never settles a collision, and the install refuses before any write, as variant 7d says. The uninstall's confirmations hold as written."
+      at: 2026-10-24T20:55:21Z
+      outcome: updated
 ---
 
 # UC-023 — Add or remove a capability, and be told of a name collision

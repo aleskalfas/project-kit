@@ -28,9 +28,59 @@ pkit:
         - ACT-ci-pipeline
         - ACT-developer
     revalidated:
-      at: 2026-10-23T08:53:56Z
-      outcome: unchanged
-      unchanged-because: The developer's needs that only a capability meets moved to its analysis, with the records behind them. A command that resolves an anchor or joins validation still needs no network and changes nothing.
+      at: 2026-10-24T20:54:35Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: path
+          value: tests/test_package_validate.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: ADR-057#3
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: ADR-057#4
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: ADR-058#4
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: COR-055#3
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
 ---
 
 # REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic

@@ -21,9 +21,8 @@ pkit:
       artefact:
         - ACT-ci-pipeline
     revalidated:
-      at: 2026-10-24T04:58:14Z
-      outcome: unchanged
-      unchanged-because: The tests of the whole-repository check gain one for derived links across a rename. The tests of each reading document's version are as they were.
+      at: 2026-10-24T20:54:41Z
+      outcome: updated
 ---
 
 # REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know
@@ -32,6 +31,6 @@ pkit:
 
 **Rationale:** No record decides it. The requirement is its own home, and merging the [change](../../../glossary.md#term-change--change) that adds it approves it (software-analysis DEC-002 [point](../../../glossary.md#term-point--point) 8).
 
-A [component](../../../glossary.md#term-component--component) reads these documents, never the human view, so a key whose meaning changed would be misread silently. A raised schema version tells such a reader to stop instead. A key added keeps the schema version, so a reader that knows it still reads the document.
+A [component](../../../glossary.md#term-component--component) reads these documents, never the human view, so a key whose meaning changed would be misread silently. A raised schema version tells such a reader to stop instead. A key added keeps the schema version, so a reader that knows the schema version still reads the document.
 
 Four of these commands gained `schema_version` after they first shipped. So a document of theirs without it comes from an older [backbone](../../../glossary.md#term-backbone--backbone), and reads as schema version 1, as the CLI reference says.

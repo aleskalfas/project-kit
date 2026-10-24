@@ -44,9 +44,8 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:54:20Z
-      outcome: unchanged
-      unchanged-because: The aggregator gains a line that runs the pages' console fences, and the migration check still runs in it, as the steps say. The confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal, and no step here asks one of them.
+      at: 2026-10-24T20:57:26Z
+      outcome: updated
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

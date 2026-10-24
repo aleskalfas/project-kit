@@ -29,9 +29,8 @@ pkit:
         - REQ-004
         - REQ-005
     revalidated:
-      at: 2026-10-24T19:00:30Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal, and refuses off one without --yes. The changeset guard this use case describes asks nothing."
+      at: 2026-10-24T20:56:49Z
+      outcome: updated
 ---
 
 # UC-003 — Declare what my change means for the next release

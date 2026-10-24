@@ -80,9 +80,9 @@ pkit:
         - REQ-020
         - REQ-021
     revalidated:
-      at: 2026-10-23T14:50:29Z
+      at: 2026-10-24T20:52:05Z
       outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
+      unchanged-because: Its actors and requirements reword only words a glossary link sat on in another sense, such as a reply, a result, a write and an actor's own name. What each asks is the same, so this use case holds.
 ---
 
 # UC-002 — Answer what my change made stale

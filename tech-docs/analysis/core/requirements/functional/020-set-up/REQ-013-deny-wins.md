@@ -21,9 +21,8 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T12:57:06Z
-      outcome: unchanged
-      unchanged-because: A deny still wins over every grant, the new text-filter and uv-run grants included, and it binds on a program behind a redirection that writes no file.
+      at: 2026-10-24T20:54:37Z
+      outcome: updated
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

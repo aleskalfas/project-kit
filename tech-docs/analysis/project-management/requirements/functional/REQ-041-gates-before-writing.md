@@ -22,6 +22,9 @@ pkit:
         - project-management:DEC-021
       artefact:
         - ACT-planner
+    revalidated:
+      at: 2026-10-24T20:58:39Z
+      outcome: updated
 ---
 
 # REQ-041 · Functional · A command that writes checks the project's prerequisites and the person's membership first

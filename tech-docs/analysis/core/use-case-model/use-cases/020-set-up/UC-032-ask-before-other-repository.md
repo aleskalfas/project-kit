@@ -38,9 +38,8 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:01:00Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, a report's post is now confirmed only at a terminal, and refused off one without --yes. Variant 1e holds, and the guard's steps are unchanged."
+      at: 2026-10-24T20:56:40Z
+      outcome: updated
 ---
 
 # UC-032 — Be asked before an agent changes another repository

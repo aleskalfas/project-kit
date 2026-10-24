@@ -50,9 +50,8 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T19:01:49Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:55:18Z
+      outcome: updated
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's
@@ -71,7 +70,7 @@ pkit:
 
 **Assumptions:** None.
 
-**Trigger:** The [project](../../../glossary.md#term-project--project) needs rules, settings, grants or paths of its own that the [methodology](../../../glossary.md#term-methodology--methodology) does not ship, such as an [operational rule](../../../glossary.md#term-operational-rule--operational-rule) on its tooling.
+**Trigger:** The [project](../../../glossary.md#term-project--project) needs rules, settings, grants or paths of its own that the [methodology](../../../glossary.md#term-methodology--methodology) does not ship. An example is an [operational rule](../../../glossary.md#term-operational-rule--operational-rule) on its own tooling.
 
 **Main path:**
 

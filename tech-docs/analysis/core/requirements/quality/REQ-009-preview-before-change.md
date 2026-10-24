@@ -27,9 +27,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T19:00:28Z
+      at: 2026-10-24T20:51:19Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the tests gain cases that refuse an answer piped in off a terminal. Their dry runs still write nothing, as the measure says."
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

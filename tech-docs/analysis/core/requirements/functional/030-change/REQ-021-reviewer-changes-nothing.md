@@ -21,6 +21,9 @@ pkit:
       artefact:
         - ACT-developer
         - ACT-merge-authoriser
+    revalidated:
+      at: 2026-10-24T20:54:43Z
+      outcome: updated
 ---
 
 # REQ-021 · Functional · A reviewer agent never changes the work it judges

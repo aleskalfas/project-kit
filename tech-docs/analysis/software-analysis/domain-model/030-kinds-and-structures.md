@@ -23,6 +23,9 @@ pkit:
         - TERM-hint
         - TERM-tightening
         - TERM-candidate
+    revalidated:
+      at: 2026-10-24T20:58:53Z
+      outcome: updated
 ---
 
 # VIEW-kinds-and-structures — Kinds and their structures

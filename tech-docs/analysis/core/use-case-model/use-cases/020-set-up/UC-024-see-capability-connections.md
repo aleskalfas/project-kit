@@ -28,9 +28,8 @@ pkit:
         - REQ-010
         - REQ-011
     revalidated:
-      at: 2026-10-24T19:00:51Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the collision prompts now refuse an answer piped in off a terminal. Showing a capability's connections asks nothing, so the steps hold."
+      at: 2026-10-24T20:55:28Z
+      outcome: updated
 ---
 
 # UC-024 — See what a capability would connect to before I install it

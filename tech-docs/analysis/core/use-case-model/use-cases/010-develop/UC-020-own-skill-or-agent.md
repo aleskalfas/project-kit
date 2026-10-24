@@ -38,9 +38,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T19:01:47Z
+      at: 2026-10-24T20:52:03Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: ACT-ai-agent says one remit and another actor's work where it said role, and ACT-developer names the developer. Their needs are the same, so this use case holds.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

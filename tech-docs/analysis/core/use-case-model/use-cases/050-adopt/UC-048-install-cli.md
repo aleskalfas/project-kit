@@ -30,9 +30,8 @@ pkit:
         - REQ-009
         - REQ-031
     revalidated:
-      at: 2026-10-24T19:02:06Z
-      outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      at: 2026-10-24T20:58:12Z
+      outcome: updated
 ---
 
 # UC-048 — Put the system's CLI on my machine at a release
