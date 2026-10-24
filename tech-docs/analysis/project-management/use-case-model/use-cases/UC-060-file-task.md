@@ -162,7 +162,12 @@ pkit:
 - **13a.** The link to the parent fails. The system warns that the Task is filed under its parent by its body alone, and names `pkit pm link-parent <n>`, which makes the link (DEC-005). The use case ends with the Task filed.
 - **13b.** The project keeps containment as text, where its GitHub has no sub-issues. The system makes no link, and rewrites the comment on the parent that lists its children (DEC-039).
 
-**Postconditions:** The Task is open, under its parent as a GitHub sub-issue and in its body's first line, wherever the project's hierarchy is not advisory. Its title carries its kind's prefix, it takes a value on each classification axis, and its body holds each section a Task requires.
+**Postconditions:**
+
+- The Task is open, under its parent as a GitHub sub-issue and in its body's first line, wherever the project's hierarchy is not advisory.
+- The Task's title carries its kind's prefix.
+- The Task takes a value on each classification axis.
+- The Task's body holds each section a Task requires.
 
 **Minimal guarantees:**
 

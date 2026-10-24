@@ -278,7 +278,11 @@ Defined in [TERM-task](../glossary.md#term-task--task).
 
 **Why:** The lowest structural level of planning is the unit of work that lands as one [change](../../core/glossary.md#term-change--change). A Task is that unit (DEC-004).
 
-A Task is an [issue](../glossary.md#term-issue--issue) for one unit of implementation work, which one [pull request](../../core/glossary.md#term-pull-request--pull-request) delivers. Its body says what changes, how the change is checked, and which documents change with it.
+A Task is an [issue](../glossary.md#term-issue--issue) for one unit of implementation work, which one [pull request](../../core/glossary.md#term-pull-request--pull-request) delivers. Its body says these:
+
+- what changes
+- how the change is checked
+- which documents change with it
 
 **Attributes:**
 

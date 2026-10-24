@@ -23,7 +23,11 @@ pkit:
 
 # VIEW-reviews-and-the-merge — Reviews and the merge
 
-In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. The signal must say whose review it is, what stops self-approval, and when it goes stale (DEC-028).
+In the `agent` review mode, no person is assigned to review, so an agent's review needs a signal that counts as approval. The signal must say these (DEC-028):
+
+- whose review it is
+- what stops self-approval
+- when it goes stale
 
 A [verdict](../glossary.md#term-verdict--verdict) is that signal. A [required reviewer](../glossary.md#term-required-reviewer--required-reviewer) is an agent whose verdict the [change](../../core/glossary.md#term-change--change) needs. The [merge gate](../glossary.md#term-merge-gate--merge-gate) holds the [pull request](../../core/glossary.md#term-pull-request--pull-request) to their verdicts before it lands.
 
