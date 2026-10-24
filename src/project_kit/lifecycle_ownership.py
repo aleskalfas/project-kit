@@ -8,6 +8,11 @@ adapter's deploy resolver runs in the adopter's tree, where `project_kit` is not
 importable. So the backbone reads *the target tree's* copy, by path, rather than
 keeping its own — one definition for the tool and every harness — and every
 backbone reader loads it through here.
+
+Every `pkit new` command that writes into a tree a sync may write asks the
+third question of its target before it writes anything
+(`synced_copy_refusal`): what a project writes into a synced copy, the next
+sync overwrites (core rule 1).
 """
 
 from __future__ import annotations
@@ -45,3 +50,30 @@ def load_ownership(target_root: Path) -> ModuleType | None:
     finally:
         sys.dont_write_bytecode = previous
     return module
+
+
+def synced_copy_refusal(target_root: Path, folder: Path, subject: str, instead: str) -> str | None:
+    """Why a stamp may not write into *folder*, or None where the project authors it.
+
+    The question is the tree's own predicate, `is_synced_copy`, keyed on origin
+    and on the repository: a backbone tree, or a kit-shipped capability's, in a
+    project that is not the methodology's source, and an externally-sourced
+    capability's in any project. The next sync overwrites what a project writes
+    there (core rule 1). *folder* need not exist yet. *subject* names what
+    arrives as a copy, and *instead* where the project's own artefact goes. A
+    tree without the module has no synced copy, as for validation.
+    """
+    ownership = load_ownership(target_root)
+    if ownership is None:
+        return None
+    try:
+        where = folder.relative_to(target_root).as_posix()
+    except ValueError:
+        where = folder.as_posix()
+    if not ownership.is_synced_copy(target_root, where):
+        return None
+    return (
+        f"{subject} arrives in this project as a synced copy: {where}/ is not the "
+        "project's, and the next sync overwrites what is written there (the "
+        f"no-shared-files invariant). {instead}"
+    )
