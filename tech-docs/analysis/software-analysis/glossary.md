@@ -108,6 +108,10 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
+      revalidated:
+        at: 2026-10-24T10:39:51Z
+        outcome: unchanged
+        unchanged-because: structure.py gains a reading of where a body's parts open, which the term links use. The declared structure, and how a body is held to it, are as they were.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]

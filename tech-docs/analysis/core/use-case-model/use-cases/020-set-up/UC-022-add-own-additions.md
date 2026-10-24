@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T04:45:26Z
+      at: 2026-10-24T10:39:38Z
       outcome: unchanged
-      unchanged-because: The project grants and denies still apply as before, and a project deny the core cannot tell still defers. Only a guardrail it cannot tell makes the Claude Code hook ask.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

@@ -43,9 +43,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-23T14:50:25Z
+      at: 2026-10-24T10:39:42Z
       outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # UC-026 — Start every session with the project's rules loaded

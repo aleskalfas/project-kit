@@ -29,9 +29,9 @@ pkit:
         - ACT-ci-pipeline
         - ACT-adopter
     revalidated:
-      at: 2026-10-23T08:53:53Z
+      at: 2026-10-24T10:39:24Z
       outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A check still never reads a missing answer as one that found nothing.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-004 · Quality · A check never reads a missing answer as one that found nothing

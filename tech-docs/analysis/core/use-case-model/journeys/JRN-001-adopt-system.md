@@ -45,6 +45,9 @@ pkit:
         - UC-023
         - UC-006
         - UC-048
+    revalidated:
+      at: 2026-10-24T10:40:09Z
+      outcome: updated
 ---
 
 # JRN-001 — Adopt the system

@@ -25,6 +25,10 @@ pkit:
       artefact:
         - REQ-050
         - REQ-051
+    revalidated:
+      at: 2026-10-24T10:39:55Z
+      outcome: unchanged
+      unchanged-because: The authoring skill gains a step that runs `pkit analysis link` after stamping. Freeing the ids nothing cites is as it was.
 ---
 
 # UC-074 — Free the ids of artefacts nothing cites

@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T04:45:24Z
+      at: 2026-10-24T10:39:33Z
       outcome: unchanged
-      unchanged-because: Every deny still binds before any allow, and decide() returns the verdicts it did. The hook asks only where the core abstained, so an ask never stands in for a deny or an allow.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

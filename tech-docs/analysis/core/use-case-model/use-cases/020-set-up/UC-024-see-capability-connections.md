@@ -28,9 +28,9 @@ pkit:
         - REQ-010
         - REQ-011
     revalidated:
-      at: 2026-10-24T03:44:39Z
+      at: 2026-10-24T10:39:35Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # UC-024 — See what a capability would connect to before I install it

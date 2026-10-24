@@ -48,9 +48,9 @@ pkit:
         - REQ-014
         - REQ-015
     revalidated:
-      at: 2026-10-24T03:44:48Z
+      at: 2026-10-24T10:39:36Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # UC-021 — Declare my project's backbone configuration once, and have it validated

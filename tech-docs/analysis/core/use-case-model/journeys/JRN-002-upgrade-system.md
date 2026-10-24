@@ -39,9 +39,9 @@ pkit:
         - UC-023
         - UC-038
     revalidated:
-      at: 2026-10-24T03:45:15Z
+      at: 2026-10-24T10:39:50Z
       outcome: unchanged
-      unchanged-because: UC-008 changed only in variant 9a, the refusal of a pull request that is no release pull request. This journey needs from UC-008 only the tagged release.
+      unchanged-because: ACT-adopter's need and UC-051's goal name the system for "it". UC-053 says "a new major" for "one", and UC-048 says "the system's tool" for "the system's CLI". Each keeps its claim, so this journey holds.
 ---
 
 # JRN-002 — Upgrade the system

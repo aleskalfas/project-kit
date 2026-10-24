@@ -55,7 +55,7 @@ pkit:
         - REQ-051
         - REQ-053
     revalidated:
-      at: 2026-10-24T01:59:09Z
+      at: 2026-10-24T10:40:11Z
       outcome: updated
 ---
 
@@ -100,7 +100,7 @@ pkit:
 **Variants:**
 
 - **3a.** Two words name one concept, or one word names two. The agent proposes one term for each concept, and gives two concepts of one word qualified names (DEC-001 point 1).
-- **3b.** The [analysis](../../glossary.md#term-analysis--analysis) keeps a domain model. After each term and each view, the agent runs `pkit analysis link`. The [system](../../../core/glossary.md#term-system--system) writes the links between terms and views, in each file where one changes (DEC-004 point 7). At its entry, the command checks the repository as step 5 does (core:REQ-012).
+- **3b.** The [analysis](../../glossary.md#term-analysis--analysis) keeps a domain model. After each [artefact](../../../core/glossary.md#term-artefact--artefact) it stamps, the agent runs `pkit analysis link`. The [system](../../../core/glossary.md#term-system--system) writes the links to the terms each artefact mentions, and between terms and views, in each file where one changes (DEC-004 point 7). At its entry, the command checks the repository as step 5 does (core:REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit analysis link` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -119,7 +119,7 @@ pkit:
 - **6a.** The stamp refuses, such as for an id already held, an actor or a requirement not in force, or a title still holding a placeholder. It writes nothing, and says why (`stamp.py`). The agent mends the request, and the path rejoins at step 4.
 - **6b.** The overview cannot be drawn in full. The stamp warns, naming `pkit analysis overview`, and writes the candidate all the same.
 - **8a.** The developer rejects a candidate, or corrects it. The agent revises the candidate, or deletes it before it is committed, so a deleted one takes no id.
-- **11a.** Declared surface stays uncovered, or an [artefact](../../../core/glossary.md#term-artefact--artefact) has neither anchors nor an accepted reason. The path rejoins at step 3, for what the measures name.
+- **11a.** Declared surface stays uncovered, or an artefact has neither anchors nor an accepted reason. The path rejoins at step 3, for what the measures name.
 
 **Postconditions:** The [analysis](../../glossary.md#term-analysis--analysis) describes the [project](../../../core/glossary.md#term-project--project) from its concepts up, each [artefact](../../../core/glossary.md#term-artefact--artefact) confirmed by the developer. The declared surface is covered, and every artefact is anchored or carries a reason a person accepted (DEC-001 point 9).
 

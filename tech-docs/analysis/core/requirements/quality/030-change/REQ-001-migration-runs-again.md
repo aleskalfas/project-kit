@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-23T08:53:51Z
+      at: 2026-10-24T10:39:19Z
       outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A migration run again still changes nothing in the adopter's project.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-001 · Quality · A migration run again changes nothing

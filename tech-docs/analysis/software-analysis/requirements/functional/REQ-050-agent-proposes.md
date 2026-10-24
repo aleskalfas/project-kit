@@ -25,9 +25,9 @@ pkit:
         - software-analysis:DEC-001#9
         - COR-050#3
     revalidated:
-      at: 2026-10-24T03:40:39Z
+      at: 2026-10-24T10:39:54Z
       outcome: unchanged
-      unchanged-because: The proposal now gives a regressed step a record decides its box and the updated answer, and onboarding starts from the declared surface. An agent still proposes each outcome and candidate, and a person decides each, as the requirement states.
+      unchanged-because: The authoring skill gains a step that runs `pkit analysis link` after stamping. The links are no proposal, and an agent still proposes what a person decides.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it

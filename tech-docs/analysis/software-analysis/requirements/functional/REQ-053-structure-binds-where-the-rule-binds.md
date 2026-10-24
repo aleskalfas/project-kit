@@ -19,9 +19,9 @@ pkit:
         - software-analysis:DEC-001#1
         - COR-051#7
     revalidated:
-      at: 2026-10-24T02:12:43Z
+      at: 2026-10-24T10:39:53Z
       outcome: unchanged
-      unchanged-because: The change moves the read of a record's status into backbone.record_status, its behaviour kept. Where an artefact's structure binds, which REQ-053 states, is untouched.
+      unchanged-because: check.py also holds the term links in each part of an actor, a use case, a journey and a requirement. Where a body is held to its declared structure is as it was.
 ---
 
 # REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always

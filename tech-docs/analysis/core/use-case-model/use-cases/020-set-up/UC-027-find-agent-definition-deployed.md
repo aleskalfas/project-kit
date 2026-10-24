@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:45:28Z
+      at: 2026-10-24T10:39:43Z
       outcome: unchanged
-      unchanged-because: The decision code still decides each call of an agent as before. The change adds an ask in the Claude Code hook on a deferred command that may hide a guardrail, which this use case does not describe.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

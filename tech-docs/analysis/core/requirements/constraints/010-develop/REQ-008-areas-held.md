@@ -18,9 +18,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-23T08:53:54Z
+      at: 2026-10-24T10:39:25Z
       outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. The hold on adding or removing an area or an adapter a release ships stands as written.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships

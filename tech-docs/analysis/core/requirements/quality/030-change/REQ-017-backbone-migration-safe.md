@@ -22,9 +22,9 @@ pkit:
         - ACT-adopter
         - REQ-001
     revalidated:
-      at: 2026-10-23T14:50:24Z
+      at: 2026-10-24T10:39:21Z
       outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this requirement rests on in the rules holds.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-017 · Quality · A backbone migration is safe over any state

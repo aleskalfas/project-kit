@@ -20,6 +20,10 @@ pkit:
         - ADR-065#6
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-24T10:39:28Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently

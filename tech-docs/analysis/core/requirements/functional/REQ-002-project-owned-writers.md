@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-23T08:53:52Z
+      at: 2026-10-24T10:39:29Z
       outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. Project-owned content is still written only by the writers records name.
+      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
 ---
 
 # REQ-002 · Functional · Project-owned content is written only by the writers records name

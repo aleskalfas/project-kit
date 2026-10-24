@@ -47,8 +47,9 @@ pkit:
         - REQ-050
         - REQ-052
     revalidated:
-      at: 2026-10-24T02:12:48Z
-      outcome: updated
+      at: 2026-10-24T10:39:57Z
+      outcome: unchanged
+      unchanged-because: package.yaml declares the term links' form on the places of the actors, the use cases, the journeys and the requirements. A revalidation after a change runs as this use case says.
 ---
 
 # UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes
