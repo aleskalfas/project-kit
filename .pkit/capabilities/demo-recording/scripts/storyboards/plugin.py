@@ -46,6 +46,8 @@ with a warning).
 
 Unknown fence languages are reported as warnings during validate/dispatch, not
 fatal errors — this lets storyboards be read without all plugins present.
+``validate_fence`` returns no error for one; ``fence_warnings`` returns its
+warning, and ``actions_for_fence`` a ``warn_unknown_directive`` action.
 """
 
 from __future__ import annotations
@@ -125,16 +127,31 @@ class PluginRegistry:
         return sorted(self._plugins.keys())
 
     def validate_fence(self, lang: str, content: str, step_num: int, fence_line: int) -> list[str]:
-        """Validate one fence; return list of error strings (with context prefix)."""
+        """Validate one fence; return list of error strings (with context prefix).
+
+        A fence whose language no loaded plugin owns has no errors: it is a
+        warning, which ``fence_warnings`` returns.
+        """
         plugin = self.get(lang)
         if plugin is None:
-            return [
-                f"step {step_num} line {fence_line}: unrecognised directive "
-                f"{lang!r} — is the providing plugin loaded?"
-            ]
+            return []
         raw_errors = plugin.validate(lang, content)
         prefix = f"step {step_num} line {fence_line} [{plugin.name}/{lang}]"
         return [f"{prefix}: {e}" for e in raw_errors]
+
+    def fence_warnings(self, lang: str, step_num: int, fence_line: int) -> list[str]:
+        """Return the warning strings for one fence (with context prefix).
+
+        A fence whose language no loaded plugin owns is a warning, not an
+        error, so a storyboard stays readable when its plugin is missing
+        ([demo-recording:DEC-001-storyboard-as-executable-format]).
+        """
+        if self.get(lang) is not None:
+            return []
+        return [
+            f"step {step_num} line {fence_line}: unrecognised directive "
+            f"{lang!r} — is the providing plugin loaded?"
+        ]
 
     def describe_fence(
         self,
