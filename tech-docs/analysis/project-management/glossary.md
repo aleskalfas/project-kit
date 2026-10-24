@@ -125,6 +125,10 @@ TERM-checkbox:
         record:
           - project-management:DEC-007
           - project-management:DEC-038
+      revalidated:
+        at: 2026-10-24T01:41:56Z
+        outcome: unchanged
+        unchanged-because: The checkbox rules of body-format.yaml are untouched. The change gives three universal body rules an id, so the body check reads each one's severity from the schema.
 TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]

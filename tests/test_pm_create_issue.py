@@ -2889,3 +2889,152 @@ def test_body_first_line_parent_in_textual_mode_skips_link_and_refreshes_view(
     assert rc == 0
     assert link_calls == [], "native link must not fire under containment: textual"
     assert refreshed == [{"parent": 77, "mode": "textual"}]
+
+
+# --- the body rules, checked before anything is written (DEC-010, #1932) -----
+# create-issue checks a body against `body-format.yaml` as validate-issue does,
+# through the one reader they share (`_lib/body_rules`): a missing required
+# section or a heading of the first level refuses, before any write and under
+# --dry-run too; a rule that only warns is printed, and filing goes on.
+
+_COMPLETE_TASK_BODY = (
+    "Feature: #77\n\n"
+    "## What\n\nthe work\n\n"
+    "## Acceptance criteria\n\n- [ ] it holds\n\n"
+    "## Doc impact\n\nNo doc impact: internal only.\n"
+)
+_PARENT = ["--parent", "77"]
+
+
+def _stage_shipped_body_tree(tmp_path: Path) -> Path:
+    """The real-schema tree, with the shipped body-format.yaml and templates."""
+    root = _stage_real_schema_tree(tmp_path)
+    shipped = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+    (root / "schemas" / "body-format.yaml").write_text(
+        (shipped / "schemas" / "body-format.yaml").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    for name in ("EPIC.md", "Feature.md", "Umbrella.md", "Task.md"):
+        (root / "templates" / name).write_text(
+            (shipped / "templates" / name).read_text(encoding="utf-8"), encoding="utf-8"
+        )
+    return root
+
+
+def test_a_body_missing_a_required_section_is_refused_and_nothing_written(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body = _COMPLETE_TASK_BODY.replace("## Doc impact\n\nNo doc impact: internal only.\n", "")
+    rc, link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 2
+    assert created == {}, "nothing may be filed"
+    assert link_calls == []
+    err = capsys.readouterr().err
+    assert "body.required-section" in err
+    assert "'## Doc impact'" in err
+
+
+def test_the_refusal_holds_under_dry_run(ci, tmp_path, monkeypatch, capsys) -> None:
+    """The failing example of #1932: a --dry-run of a body with no `## Doc impact`
+    exited 0 and printed its summary."""
+    body = _COMPLETE_TASK_BODY.replace("## Doc impact\n\nNo doc impact: internal only.\n", "")
+    rc, _link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=body,
+        extra=[*_PARENT, "--dry-run"],
+        root=_stage_shipped_body_tree(tmp_path),
+    )
+    assert rc == 2
+    assert created == {}
+    out, err = capsys.readouterr()
+    assert "about to create issue" not in out
+    assert "'## Doc impact'" in err
+
+
+def test_a_heading_of_the_first_level_is_refused(ci, tmp_path, monkeypatch, capsys) -> None:
+    body = _COMPLETE_TASK_BODY.replace("## What", "# The task\n\n## What")
+    rc, _link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 2
+    assert created == {}
+    assert "body.h1" in capsys.readouterr().err
+
+
+def test_each_rule_that_only_warns_is_printed_and_the_task_filed(
+    ci, tmp_path, monkeypatch, capsys
+) -> None:
+    body = _COMPLETE_TASK_BODY + "\nSee foo/bar.py:42.\n\n## Implementation\n\nstep one\n"
+    rc, _link_calls, created = _file_from_body(
+        ci, tmp_path, monkeypatch, body=body, extra=_PARENT, root=_stage_shipped_body_tree(tmp_path)
+    )
+    assert rc == 0
+    assert created["body"].startswith("Feature: #77")
+    err = capsys.readouterr().err
+    assert "[warning] body.file-line-refs" in err
+    assert "[warning] body.implementation-recipe" in err
+
+
+def test_a_complete_body_raises_no_body_rule(ci, tmp_path, monkeypatch, capsys) -> None:
+    rc, _link_calls, created = _file_from_body(
+        ci,
+        tmp_path,
+        monkeypatch,
+        body=_COMPLETE_TASK_BODY,
+        extra=_PARENT,
+        root=_stage_shipped_body_tree(tmp_path),
+    )
+    assert rc == 0
+    assert created
+    err = capsys.readouterr().err
+    for label in ("body.required-section", "body.h1", "body.file-line-refs"):
+        assert label not in err
+
+
+@pytest.mark.parametrize(
+    ("issue_type", "parent"),
+    [
+        ("epic", []),
+        ("feature", ["--parent", "9"]),
+        ("umbrella", ["--parent", "9"]),
+        ("task", ["--parent", "9"]),
+    ],
+)
+def test_each_shipped_template_composes_a_body_the_rules_accept(
+    ci, tmp_path, monkeypatch, capsys, issue_type, parent
+) -> None:
+    """A body stamped from a type's shipped template holds each section the type
+    requires, so the check refuses no filing that names no body file."""
+    root = _stage_shipped_body_tree(tmp_path)
+    monkeypatch.setattr(
+        ci.subprocess,
+        "run",
+        _dispatcher_with_milestone("https://github.com/acme/repo/issues/400"),
+    )
+    monkeypatch.setenv("PM_INVOKER_LOGIN", "filer-login")
+    monkeypatch.setattr(ci, "link_sub_issue", lambda *a, **k: _FakeLink("ok", ok=True))
+    monkeypatch.setattr(
+        ci.sys,
+        "argv",
+        [
+            "create-issue.py",
+            "--type",
+            issue_type,
+            "--title",
+            "a stamped body filed from the template",
+            "--workstream",
+            "spyre",
+            "--capability-root",
+            str(root),
+            "--dry-run",
+            *parent,
+        ],
+    )
+    assert ci.main() == 0
+    err = capsys.readouterr().err
+    assert "body.required-section" not in err
+    assert "body.h1" not in err

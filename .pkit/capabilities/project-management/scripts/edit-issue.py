@@ -76,6 +76,7 @@ import contextlib
 from _lib import (
     axis_labels,
     body_parent_ref,
+    body_rules,
     bootstrap_gate,
     provenance,
     session_guard,
@@ -754,23 +755,11 @@ def _validate(
         ):
             findings.append(Finding(severity, label, detail))
 
-    # Per-type required body sections.
+    # Per-type required body sections, read by the reader validate-issue and
+    # create-issue share (DEC-010).
     if structural_type is not None:
-        bodies = body_format.get("bodies") or {}
-        type_body = bodies.get(structural_type) or {}
-        for section in type_body.get("required_sections") or []:
-            if not isinstance(section, dict):
-                continue
-            heading = str(section.get("heading", ""))
-            if heading and heading not in body:
-                severity = _severity_from_token(section.get("severity"))
-                findings.append(
-                    Finding(
-                        severity,
-                        "body.required-section",
-                        f"missing required section {heading!r}.",
-                    )
-                )
+        for sev, label, detail in body_rules.required_sections(body, structural_type, body_format):
+            findings.append(Finding(sev, label, detail))
 
         # DEC-013 marker form (#763 AC3), parity with validate-issue. A first line
         # that attempts an integration marker but is malformed hard-rejects here
@@ -837,23 +826,10 @@ def _validate(
                         )
                     )
 
-    # Universal body rules.
-    if re.search(r"^# [^#]", body, flags=re.MULTILINE):
-        findings.append(
-            Finding(
-                SEVERITY_HARD_REJECT,
-                "body.h1",
-                "body contains an h1 (`# ...`) heading; use `## Title`.",
-            )
-        )
-    if re.search(r"[A-Za-z0-9_/\.\-]+\.[a-z]+:\d+\b", body):
-        findings.append(
-            Finding(
-                SEVERITY_WARNING,
-                "body.file-line-refs",
-                "body contains file:line references; line numbers go stale.",
-            )
-        )
+    # The universal body rules the shared reader checks (DEC-010), each at the
+    # severity body-format.yaml gives it.
+    for sev, label, detail in body_rules.universal(body, body_format):
+        findings.append(Finding(sev, label, detail))
     # The use cases a Feature or Task body cites (DEC-054), as validate-issue
     # reads them, at the severity the body-format schema gives the rule.
     # `use_cases` reads the point, and only for a body that cites; None reads

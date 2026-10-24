@@ -265,6 +265,38 @@ def test_validate_warns_on_file_line_refs(ei, issue_types, titles, body_format) 
     assert any(f.label == "body.file-line-refs" for f in warns)
 
 
+def test_validate_reads_no_h1_in_a_fenced_block(ei, issue_types, titles, body_format) -> None:
+    """The body rules edit-issue shares with create-issue and validate-issue
+    (#1932): a `# ` line in a fenced code block is no heading."""
+    findings = ei._validate(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Feature: #1\n\n"
+            "## What\n```sh\n# a comment\n```\n"
+            "## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+    )
+    assert findings == []
+
+
+def test_validate_warns_on_an_implementation_recipe(ei, issue_types, titles, body_format) -> None:
+    findings = ei._validate(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.\n"
+            "## Implementation\nstep one\n"
+        ),
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+    )
+    assert [(f.severity, f.label) for f in findings] == [("warning", "body.implementation-recipe")]
+
+
 def test_validate_epic_passes_without_parent_ref(ei, issue_types, titles, body_format) -> None:
     findings = ei._validate(
         title="[EPIC] Migrate the legacy work-tracker into Projects v2",
