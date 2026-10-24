@@ -591,11 +591,22 @@ def test_check_parent_eligibility_already_closed(ci, monkeypatch) -> None:
 # reject when the authorisation is missing. close-issue used to ask only at a
 # terminal, so with no terminal and no --yes it closed in both modes and nobody
 # was asked. It now refuses there, as move-issue refuses a user-held move, and
-# writes nothing.
+# writes nothing. A leaf's close through a merged PR named with --pr closed with
+# no terminal and no --yes too, and is held the same way since #1968.
 
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 
-#: The two closes DEC-006 holds for the person: (mode argv, issue, write it makes).
+#: A merged PR from #42's branch, the one the pr-merge close below names.
+MERGED_FROM_42 = {
+    "number": 1042,
+    "state": "MERGED",
+    "mergedAt": "2026-10-24T10:00:00Z",
+    "url": "u",
+    "headRefName": "fix/42-landed",
+    "body": "## Summary\n",
+}
+
+#: The closes DEC-006 holds for the person: (mode argv, issue, write it makes).
 HELD_CLOSES = [
     pytest.param(
         ["--reason", "superseded by #99"],
@@ -608,6 +619,12 @@ HELD_CLOSES = [
         {"title": "[EPIC] all done", "labels": [{"name": "state:in-progress"}]},
         ["gh", "issue", "close", "42", "--reason", "completed"],
         id="cascade-eligibility-close",
+    ),
+    pytest.param(
+        ["--mode", "pr-merge", "--pr", "1042"],
+        {"title": "[Task] landed", "labels": [{"name": "state:review"}]},
+        ["gh", "issue", "close", "42", "--reason", "completed"],
+        id="pr-merge-through-a-pr",
     ),
 ]
 
@@ -653,6 +670,7 @@ def _close(
     monkeypatch.setattr(ci, "journal_move", lambda *a, **k: journaled.append(a))
     record = {"body": "## What\nx\n", "state": "OPEN", "milestone": None, **issue}
     monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: record if n == 42 else None)
+    monkeypatch.setattr(ci, "_gh_get_pr", lambda n, _config: MERGED_FROM_42 if n == 1042 else None)
     calls: list[list[str]] = []
 
     def fake_gh_run(cmd, config, **kwargs):

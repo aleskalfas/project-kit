@@ -234,22 +234,44 @@ def test_a_rerun_records_nothing_more(
     assert world.history(number) == 0
 
 
-def test_a_close_through_a_pr_that_did_not_name_the_issue_is_journaled(
+def test_a_close_through_a_pr_merged_from_the_issue_s_branch_is_journaled(
     world: World, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    """`--pr` closes an open leaf whose work landed in a pull request that
-    closed another issue; the close is recorded from where the leaf was."""
-    landed_elsewhere = _backlog_task(world)
-    world.tracker.merge(PR, [_task_in_review(world)])
+    """`--pr` closes an open leaf whose work landed in a pull request merged
+    from its branch, which closed another issue and did not name the leaf; the
+    close is recorded from where the leaf was."""
+    landed = _backlog_task(world)
+    world.tracker.merge(PR, [_task_in_review(world)], branch=f"fix/{landed}-a-task")
     capsys.readouterr()
 
-    assert world.close(landed_elsewhere, "--mode", "pr-merge", "--pr", str(PR)) == 0
+    assert world.close(landed, "--mode", "pr-merge", "--pr", str(PR)) == 0
     assert ENGINE_WARNING not in capsys.readouterr().err
-    assert world.moves(landed_elsewhere)[-1] == ("backlog", "done", "close-issue")
-    assert world.journal(landed_elsewhere)[-1]["reason"] == (
-        f"pr-merge close: completed by merged PR #{PR}"
+    assert world.moves(landed)[-1] == ("backlog", "done", "close-issue")
+    assert world.journal(landed)[-1]["reason"] == (f"pr-merge close: completed by merged PR #{PR}")
+    assert world.history(landed) == 0
+
+
+def test_a_close_through_a_pr_that_does_not_relate_to_the_issue_records_nothing(
+    world: World, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """A merged pull request that neither closes the leaf nor was merged from its
+    branch is refused as the evidence of its close (#1968): the leaf stays open
+    where it was, and nothing is journaled."""
+    elsewhere = _backlog_task(world)
+    world.tracker.merge(PR, [_task_in_review(world)])
+    before = world.journal(elsewhere)
+    capsys.readouterr()
+
+    rc, calls = _engine_calls_during(
+        world, lambda: world.close(elsewhere, "--mode", "pr-merge", "--pr", str(PR))
     )
-    assert world.history(landed_elsewhere) == 0
+
+    assert rc == 1
+    assert calls == []
+    assert f"nothing in it relates it to #{elsewhere}" in capsys.readouterr().err
+    assert world.tracker.issues[elsewhere]["state"] == "OPEN"
+    assert world.views(elsewhere) == ("backlog", "backlog")
+    assert world.journal(elsewhere) == before
 
 
 # --- a close that is not recorded ---------------------------------------------
