@@ -40,9 +40,9 @@ pkit:
         - TERM-agent-workspace
         - TERM-session-anchor
     revalidated:
-      at: 2026-10-24T11:48:16Z
+      at: 2026-10-24T12:57:02Z
       outcome: unchanged
-      unchanged-because: ADR-060 point 4 now names a redirect into the folder where it named any redirect, behind a leading cd. The view's account of the workspace, its grant to the file tools and a shell write judged like any other holds.
+      unchanged-because: The view's account of agents, grants and the workspace holds. The profiles now grant read-only filters too, and ADR-060 point 4 names a redirect into the folder, neither of which changes the view's concepts.
 ---
 
 # VIEW-agents-and-permissions — Agents and permissions

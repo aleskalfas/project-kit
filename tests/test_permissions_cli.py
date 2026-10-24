@@ -3035,77 +3035,8 @@ def test_decide_verdict_path_byte_identical_to_main():
     # deleted (#1973): main then carries the new text, and the guard compares
     # main as it stands.
     #
-    # Pending (#2002): a redirection that writes no file is removed before the
-    # command is split, before every other doubt is found, and before a deny
-    # reads it (ADR-025 point 2). `segments`, `_doubts` and `_deny_forms` each
-    # read the command through `_without_harmless_redirections`, and `decide`
-    # looks for a leading `cd` in the command it leaves. `_PROGRAM_VAR` names
-    # zsh's `NULLCMD` and `READNULLCMD`, which pick the program a command of
-    # redirections alone runs.
-    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {
-        "_PROGRAM_VAR": (
-            (
-                '    r"|BASH_ENV|ENV|ZDOTDIR|PYTHON[A-Za-z0-9_]*|PERL[A-Za-z0-9_]*"\n',
-                '    r"|BASH_ENV|ENV|ZDOTDIR|NULLCMD|READNULLCMD|PYTHON[A-Za-z0-9_]*'
-                '|PERL[A-Za-z0-9_]*"\n',
-            ),
-        ),
-        "decide": (
-            (
-                "    # grant a directory-scoped privilege the un-stripped command lacked.\n",
-                "    # grant a directory-scoped privilege the un-stripped command lacked.\n"
-                "    # A redirection that writes no file is removed first, as every reading of\n"
-                "    # the command removes it (#2002), so `cd /x 2>/dev/null && git status`\n"
-                "    # strips its `cd` as `cd /x && git status` does.\n",
-            ),
-            (
-                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
-                "        remainder = _strip_leading_cd(\n"
-                '            _without_harmless_redirections(request.get("command", ""))\n'
-                "        )\n",
-            ),
-        ),
-        "segments": (
-            (
-                '    command still binds, as on `X=$(true) rm -rf ~`."""\n'
-                "    out: list[list[str]] = []\n"
-                "    for raw in _SEP.split(command.strip()):\n",
-                "    command still binds, as on `X=$(true) rm -rf ~`.\n"
-                "\n"
-                "    A redirection that writes no file, such as `2>&1` or `>/dev/null`, is\n"
-                "    removed before the split (#2002), so `uv run pytest 2>&1 | tail` is the\n"
-                '    segments `uv run pytest` and `tail`."""\n'
-                "    out: list[list[str]] = []\n"
-                "    for raw in _SEP.split(_without_harmless_redirections(command).strip()):\n",
-            ),
-        ),
-        "_doubts": (
-            (
-                '    text, since `decide()` gives them in its reason."""\n',
-                "    text, since `decide()` gives them in its reason.\n"
-                "\n"
-                "    A redirection that writes no file is no such construct (#2002): it is\n"
-                '    removed first, and every doubt is found in the rest exactly as before."""\n'
-                "    command = _without_harmless_redirections(command)\n",
-            ),
-        ),
-        "_deny_forms": (
-            (
-                '    segments after it."""\n',
-                "    segments after it.\n"
-                "\n"
-                "    It reads the command with each redirection that writes no file removed\n"
-                "    (#2002), so a program behind one, as in `2>/dev/null rm -rf ~`, is the\n"
-                '    program a deny reads."""\n',
-            ),
-            (
-                '    for raw in _SEP.split(request.get("command", "").strip()):\n',
-                "    for raw in _SEP.split("
-                '_without_harmless_redirections(request.get("command", "")).strip()):\n',
-            ),
-        ),
-    }
-    introduced = ("_without_harmless_redirections", "_HARMLESS_REDIRECTION", "_SHELL_KEYWORDS")
+    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {}
+    introduced: tuple[str, ...] = ()
     for fn in frozen:
         if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
             continue  # compared once main defines it

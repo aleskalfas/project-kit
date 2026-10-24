@@ -15,10 +15,11 @@ pkit:
         - src/project_kit/workspace.py
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
-      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+        - .pkit/permissions/project/grants.yaml
+      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy]
     revalidated:
-      at: 2026-10-24T12:25:01Z
+      at: 2026-10-24T13:52:38Z
       outcome: updated
 ---
 
@@ -113,6 +114,19 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 **Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
+
+**The read-only text filters and `uv run`** ([#2000](https://github.com/aleskalfas/project-kit/issues/2000)). Two catalog privileges cover the programs a compound most often pipes into or runs. A compound of these programs and other granted ones is then allowed, each segment still needing a grant of its own:
+
+- **`text-filter`** recognizes programs whose only effect is their standard output: they write no file, reach no network, run no other program and change no shell state. These are `cat`, `head`, `tail`, `wc`, `cut`, `tr`, `grep`, `egrep`, `fgrep`, `ls`, `cmp`, `comm`, `paste`, `basename`, `dirname`, `realpath`, `pwd`, `true`, `false`, `seq`, `sleep`, `stat`, `du` and `which`. It also recognizes `sort`, `uniq` and `diff` in a form that writes no file and runs no other program, holding no pathname pattern that could expand to one (the catalog's comments list the forms). Every shipped profile grants it to `all`, and it carries no path scope (ADR-005 point 5)
+- **`uv-run`** recognizes `uv run`, which runs any program it is given in the project's environment and confines nothing. A grant allows whatever that program does, and a deny reads the command as the wrapper `uv`, never as the program behind it (ADR-025 point 5), so no guardrail reaches `uv run rm -rf ~` ([#1990](https://github.com/aleskalfas/project-kit/issues/1990)). No shipped profile grants it, so a project that wants it grants it in its own `grants.yaml`
+
+Each recognizer of the two is a `pattern` or names a subcommand, so a grant of either writes no native allow rule: only the hook realizes them.
+
+Neither recognizes a program that writes a file or runs another, such as `sed`, `awk`, `find`, `xargs`, `tee` or `rg`. Nor does either recognize `echo`, the usual way to answer a confirmation from a pipe (`echo y | pkit …`), or `printf`, whose `-v` sets a shell variable. `jq` stays out too: its filters hold a `|`, and some of its options read files no check sees. So under a shipped profile, `grep x f | head` is allowed for every agent, and `grep x f | sed s/a/b/` defers.
+
+Leaving `echo` out does not close that path. What a granted program reads from a pipe is within its own grant, as its arguments are, so `basename y | pkit …` answers a confirmation too. Keeping a confirmation meant for a person from taking its answer from a pipe is [#2003](https://github.com/aleskalfas/project-kit/issues/2003)'s.
+
+Recognition goes by the program's name, as for every privilege. A shell alias or function under one of these names runs what it names, unasked. The privilege is sound only where its names reach the system's own programs.
 
 **An untrusted construct keeps every grant from allowing** (ADR-025 point 2). Where a Bash command holds a construct the dumb splitter cannot be trusted on, its segments may not be the commands the shell runs. These are a backtick, a `<` / `>` redirection other than one that writes no file (below), and a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code. A `$` is one too, since it opens every expansion. Its value is one the core never sees, and some forms, such as `${X@P}` and `$[…]`, evaluate it as code. The scan finds each of them inside quotes as well. Such a command, with or without a leading `cd`, makes the core abstain, and a strict posture denies it instead.
 

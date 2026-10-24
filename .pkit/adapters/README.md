@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T12:25:02Z
+      at: 2026-10-24T12:56:57Z
       outcome: unchanged
-      unchanged-because: The Claude Code README now says its hook does not ask in auto or bypass mode, and that a redirection writing no file no longer makes the core defer. What every adapter provides, and the list of adapters, are as before.
+      unchanged-because: The Claude Code README now says its hook allows a compound of granted programs, read-only filters included, and a redirection that writes no file. What every adapter provides, and the list of adapters, are as before.
 ---
 
 # Adapters
