@@ -5,7 +5,7 @@
 #
 # Platform-neutral by design (per [demo-recording:DEC-004-platform-coupling
 # -and-gate-placement]): it touches only the parser + runner (Layers 1+2),
-# never the macOS recording machinery, so it runs anywhere Python 3 runs.
+# never the macOS recording machinery, so it runs anywhere Python 3.9+ runs.
 #
 # Usage:
 #   validate.sh <path-to-storyboard.md>

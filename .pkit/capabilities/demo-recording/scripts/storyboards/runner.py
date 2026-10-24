@@ -6,6 +6,8 @@ with the loaded plugin(s), and either:
 
   --validate   pretty-print the resolved step plan (with plugin names and
                directive summaries) then exit 0 (clean) / 1 (errors).
+               A fence no loaded plugin owns is a warning, printed with
+               its step and line, and leaves the exit at 0.
 
   (default)    emit tab-separated dispatch lines for the bash runner to
                consume.  One tuple per line, fields tab-separated.
@@ -74,10 +76,15 @@ def _emit_validate(
     tree: dict,
     errors: list[str],
     plugin_errors: list[str],
+    warnings: list[str],
     registry: PluginRegistry,
     path: str,
 ) -> int:
-    """Pretty-print the resolved step plan.  Returns exit code."""
+    """Pretty-print the resolved step plan.  Returns exit code.
+
+    Warnings (a fence no loaded plugin owns) are printed but leave the exit
+    code at 0; only errors make it 1.
+    """
 
     print(f"Storyboard: {path}")
     print()
@@ -97,6 +104,11 @@ def _emit_validate(
         else:
             print("  (no directives)")
         print()
+
+    if warnings:
+        print(f"⚠ {len(warnings)} warning(s):", file=sys.stderr)
+        for w in warnings:
+            print(f"  - {w}", file=sys.stderr)
 
     all_errors = errors + plugin_errors
     if all_errors:
@@ -128,8 +140,10 @@ def main() -> int:
     tree, struct_errors = parse(text)
     registry = _build_registry()
 
-    # Run plugin validation on every fence.
+    # Run plugin validation on every fence.  A fence no loaded plugin owns
+    # is a warning, not an error (per DEC-001).
     plugin_errors: list[str] = []
+    warnings: list[str] = []
     for step in tree["steps"]:
         for fence in step["fences"]:
             errs = registry.validate_fence(
@@ -139,11 +153,14 @@ def main() -> int:
                 fence["line"],
             )
             plugin_errors.extend(errs)
+            warnings.extend(registry.fence_warnings(fence["lang"], step["number"], fence["line"]))
 
     if validate:
-        return _emit_validate(tree, struct_errors, plugin_errors, registry, path)
+        return _emit_validate(tree, struct_errors, plugin_errors, warnings, registry, path)
 
-    # Dispatch mode: fail fast if there are errors.
+    # Dispatch mode: fail fast if there are errors.  Warnings do not stop
+    # the run: each unknown fence dispatches a warn_unknown_directive
+    # action, which the bash runner prints as it skips the fence.
     all_errors = struct_errors + plugin_errors
     if all_errors:
         for e in all_errors:

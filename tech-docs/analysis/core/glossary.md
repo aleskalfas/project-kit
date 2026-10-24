@@ -547,9 +547,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-23T22:29:10Z
+        at: 2026-10-24T00:58:01Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change only keeps an allow from carrying a command that holds a construct the splitter cannot trust.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The code reads a command's words as the shell does before a grant matches them, which leaves what a grant is as it was.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-23T22:29:12Z
+        at: 2026-10-24T00:58:03Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The code checks the denies before it looks for an untrusted construct, so a guardrail still wins.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. Its quoted and escaped forms are denied too, and the code still checks the denies before an untrusted construct.
 TERM-harness:
   name: harness
   status: active
@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-23T22:29:08Z
+        at: 2026-10-24T00:57:54Z
         outcome: unchanged
-        unchanged-because: The decision code now defers a command holding a quote, a substitution, a backtick or a redirection, and splits at a newline and a background &. The hook still has that code allow, deny or defer each call.
+        unchanged-because: The decision code reads each word as the shell does, and defers a command whose words, expansions or program it cannot be sure of. The hook still has that code allow, deny or defer each call.
 TERM-place:
   name: place
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-23T22:29:15Z
+        at: 2026-10-24T00:58:05Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. The splitter now also splits at a newline and a background &, which leaves what a privilege is as it was.
+        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. Each word is matched with its quotes removed, as the shell passes it on, which leaves what a privilege is as it was.
 TERM-process:
   name: process
   noun-forms: [processes]

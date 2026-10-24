@@ -15,6 +15,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 REPO = Path(__file__).resolve().parent.parent
 HOOK = REPO / ".pkit" / "adapters" / "claude-code" / "permission-hook.py"
 
@@ -701,7 +703,7 @@ def test_hook_denies_a_compound_with_an_uncovered_segment_under_strict(tmp_path)
 # ---- a construct the splitter cannot trust, anywhere (#1917) ----------------
 #
 # The live hook, end to end: where the operator is granted git and gh, a command
-# holding a quote, a command substitution, a backtick or a `<` / `>`
+# holding a command substitution, a backtick or a `<` / `>`
 # redirection is not allowed, with or without a leading `cd`, and nor is a
 # command that runs a second one after a newline or a background `&`. A lenient
 # posture defers to the harness (no stdout), a strict one denies (ADR-025
@@ -715,7 +717,6 @@ _UNTRUSTED_HOOK_COMMANDS = (
     "gh pr list & python3 x.py",
     "gh pr list && X=$(python3 x.py)",
     "gh pr list && X=$(./x.sh)",
-    'git commit -m "fix: x"',
 )
 
 
@@ -738,3 +739,77 @@ def test_hook_allows_a_granted_command_with_no_untrusted_construct(tmp_path):
     for command in ("gh pr list", "git status\ngh pr list", f"cd {root} && gh pr list"):
         _, parsed = _invoke(root, _bash_payload(root, command))
         assert _decision(parsed) == "allow", command
+
+
+# ---- the hook reads a command's words as the shell does (#1942) -------------
+#
+# The live hook, end to end: the core removes quotes and backslashes as the
+# shell does before it matches, so a quoted `--force` is denied as `--force`
+# is, and a quoted argument with no other construct is allowed where git is
+# granted. A command whose words, expansions or program the core cannot be sure
+# of is not allowed: a lenient posture defers, a strict one denies (ADR-025
+# point 2).
+
+_UNSURE_HOOK_COMMANDS = (
+    "PATH=/tmp/x:$PATH gh pr list",
+    "PATH=/tmp/x gh pr list",
+    "export PATH=/tmp/x && gh pr list",
+    "gh\u00a0pr list",
+    "gh pr list ${X@P}",
+    "gh pr list $[X]",
+    'git commit -m "$(cat msg.txt)"',
+    'git commit -m "a `id` b"',
+    'git commit -m "a > b"',
+)
+
+
+def test_hook_denies_a_quoted_force_push(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in ('git push origin main "--force"', "git push origin main '--force'"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_allows_a_quoted_argument_with_no_other_construct(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in ('git commit -m "fix: x"', f"cd {root} && git commit -m 'fix: x'"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "allow", command
+
+
+def test_hook_defers_on_words_it_cannot_be_sure_of(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _UNSURE_HOOK_COMMANDS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+
+
+def test_hook_denies_words_it_cannot_be_sure_of_under_strict(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n")
+    for command in _UNSURE_HOOK_COMMANDS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_reads_quoted_words_under_the_system_python3(tmp_path):
+    # The hook runs under the system `python3` (REQ-016, ADR-014), so the
+    # standard library's quoting rules it reads words by must hold there too.
+    system = Path("/usr/bin/python3")
+    if not system.is_file():
+        pytest.skip("no system python3 at /usr/bin/python3")
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command, expected in (
+        ('git push origin main "--force"', "deny"),
+        ('git commit -m "fix: x"', "allow"),
+        ("PATH=/tmp/x gh pr list", None),
+    ):
+        proc = subprocess.run(
+            [str(system), str(HOOK)],
+            input=json.dumps(_bash_payload(root, command)),
+            capture_output=True,
+            text=True,
+            env={"CLAUDE_PROJECT_DIR": str(root), "PATH": "/usr/bin:/bin"},
+        )
+        assert proc.returncode == 0, proc.stderr
+        out = proc.stdout.strip()
+        assert _decision(json.loads(out) if out else None) == expected, (command, out)

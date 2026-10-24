@@ -16,9 +16,13 @@ an otherwise-already-granted command (`gh pr list`) from auto-approving — a
 `cd <path> &&` / `cd <path> ;` and decides on the remainder. It is a
 prompt-reduction over already-granted intent, **never a new grant**, and it
 inherits [ADR-004](ADR-004-autonomy-intent-confinement.md)'s
-fail-closed-on-uncertainty stance wholesale: any segment the dumb splitter
-cannot trust — a quote, `$()`, a backtick, a redirection (`<` / `>`), or an
-unrecognized command — makes the core **abstain (prompt)**, never auto-allow.
+fail-closed-on-uncertainty stance wholesale: any segment the core cannot read
+as the shell reads it — an expansion (`$`, `$()`, a backtick), a redirection
+(`<` / `>`), a word the shell splits, drops or brace-expands otherwise than
+the core reads it, or an assignment that changes which program runs — or
+whose command no grant recognizes makes the core **abstain (prompt)**, never
+auto-allow. A quote alone does not: the core removes quotes as the shell does
+before it matches.
 
 **Decision in one line:** the core auto-approves a compound only by stripping a
 leading `cd` and matching the remainder against existing grants; a general
@@ -92,11 +96,31 @@ the *only* widening this ADR makes.
 
 ### 2. Inherited fail-closed-on-uncertainty (ADR-004 decision point 4), non-negotiable
 
-Any segment the dumb splitter cannot trust — a quote, a `$()`
-command substitution, a backtick, a `<` / `>` / redirection, or an unrecognized
-command — makes the core **abstain (prompt)**. It NEVER auto-allows under
-uncertainty. The splitter stays dumb; the conservatism lives in the
-classification, not in smarter parsing.
+Any segment the core cannot read as the shell reads it makes the core
+**abstain (prompt)**: an expansion opened by a `$` or a backtick, a
+substitution opened by a `(`, a `<` / `>` redirection, a word the shell
+splits, drops as a comment or brace-expands otherwise than the core reads it,
+a leading assignment to a variable that changes which program runs or loads
+code into it ahead of its own, such as `PATH` or `LD_PRELOAD`, a leading
+assignment written with a quote or a backslash, an operand of `export` other
+than a plain name or assignment, which the shell expands before `export` reads
+it, a program name holding whitespace, which a recognizer's pattern would read
+as two words, or an unrecognized command. It
+NEVER auto-allows under uncertainty; a deny on the words it reads wins over any
+such construct. The core looks for such a construct in the whole command, a
+leading `cd` included, and strips no `cd` from a command that holds one
+(point 1). A quote in an argument is no such construct. Before it matches a
+grant or a deny, the core removes a word's quotes and backslashes as the shell
+removes them, by the POSIX quoting rules of Python's standard library, so a
+quoted word is matched as the word the shell runs, and `"--force"` is denied as
+`--force` is. Outside an operand of `export`, a pathname pattern is matched as
+written: it changes only arguments, from the names of files, never the program
+a grant names. An
+assignment to a program's own setting, such as `GIT_PAGER`, is stripped like
+any other: what a granted program is told to run is the grant's breadth, and a
+`git` grant already lets `git -c core.fsmonitor=…` run any program. The segment
+splitter stays dumb; the conservatism lives in the classification, not in
+parsing the shell's grammar.
 
 ### 3. No shell parser
 
@@ -105,8 +129,16 @@ shell parser is **rejected on altitude grounds**: the hook runs bare `python3`
 in-sandbox ([ADR-014](ADR-014-macos-sandbox-platform-stance.md)), and importing
 an adversarial-input parser into a fail-open, security-adjacent component trades
 a bounded, auditable splitter for parsing fragility in the worst place to host
-it. Conservatism is achieved by abstaining on anything the dumb splitter cannot
-trust, not by parsing harder.
+it. Removing a word's quotes by the POSIX quoting rules of Python's standard
+library (point 2) is no such parser: it reads the words of one segment the
+splitter found, never the shell's grammar. Where those rules read a word
+otherwise than bash or zsh does by default — a `$` or a backtick inside double
+quotes, `$'…'`, a backslash before a newline, a comment, a brace — the
+construct is untrusted and no grant allows the command; a quote that does not
+close is such a construct, and a fault abstains like any other. A shell option
+that changes how quotes are read, such as zsh's `RC_QUOTES`, changes only the
+text of an argument. Conservatism is achieved by abstaining on anything the
+dumb splitter cannot trust, not by parsing harder.
 
 ### 4. Code home — the shared neutral core, not the adapter hook
 
@@ -118,10 +150,10 @@ the [ADR-002](ADR-002-permission-realizer-ownership.md) /
 `decide()`, identical decisions — and is covered by the existing conformance
 fixtures.
 
-### 5. The deny side is unchanged and remains porous
+### 5. The deny side remains porous
 
-This ADR touches only the
-*allow* path's prompt-reduction. The deny side — guardrail denies, the fail-open
+This ADR touches the deny side only by matching a deny on the words the shell
+runs (point 2). The deny side's mechanism — guardrail denies, the fail-open
 hook + fail-closed native double-lock — is untouched, and the merge layer / hook
 remains a **speed-bump, not a boundary**
 ([ADR-004](ADR-004-autonomy-intent-confinement.md),
@@ -164,7 +196,10 @@ parser; hosting one in a fail-open, security-adjacent, dependency-constrained
 component imports parsing fragility exactly where a parse bug becomes a silent
 auto-allow. The dumb splitter's failure mode is the *safe* one — it abstains on
 anything it does not understand. Keeping it dumb and pushing all conservatism
-into "abstain when unsure" is the honest stance at this altitude.
+into "abstain when unsure" is the honest stance at this altitude. Reading one
+segment's words by the quoting rules Python ships keeps that failure mode: a
+quote that does not close, or any construct those rules read otherwise than the
+shell, abstains.
 
 **Why this is a refinement of ADR-004, not a supersession.** ADR-004's model —
 intent × confinement, the double-lock, the speed-bump-not-boundary posture, and
@@ -207,11 +242,11 @@ new ownership tier and changes no prior decision.
   conformance fixtures proving hook and CLI decide identically. Implementation is
   the issue-#240 follow-on, not this ADR.
 
-- **Deny side untouched; speed-bump posture preserved.** Guardrail denies, the
-  fail-open hook + fail-closed native double-lock, and the
+- **Deny mechanism untouched; speed-bump posture preserved.** Guardrail denies,
+  the fail-open hook + fail-closed native double-lock, and the
   speed-bump-not-boundary framing of ADR-004 / ADR-019 are unchanged. The deny
-  side remains porous by design; this ADR narrows only the allow path's false
-  prompts.
+  side remains porous by design; this ADR narrows the allow path's false
+  prompts and matches a deny on the words the shell runs.
 
 - **The broader widening is gated, not scheduled.** Any auto-approve beyond the
   leading-`cd` strip requires a demonstrated residual-prompt need (COR-007), and
@@ -225,8 +260,8 @@ new ownership tier and changes no prior decision.
 - **No migration.** No file/directory rename or removal in a kit-owned tree, no
   `schema_version` bump, no breaking CLI signature change, no capability-subtree
   restructure — `pkit migrations check-diff --include-working-tree --base main`
-  is expected clean. This change authors the ADR file only; the eventual code
-  change is behaviour-preserving-for-deny and additive-for-allow.
+  is expected clean. This change authors the ADR file only; the code that
+  realizes it changes verdicts, never a file an installed project holds.
 
 - **No version bump in this change-set.** Like the sibling permission ADRs, this
   authors the ADR file at `status: proposed`; the acceptance-gate flip and the
