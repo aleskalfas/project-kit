@@ -13,9 +13,6 @@ shortfalls:
   - at: "1b"
     issue: "#1922"
     record: living-docs:DEC-001#1
-  - at: 2
-    issue: "#1922"
-    record: living-docs:DEC-001#1
   - at: 6
     issue: "#1765"
     record: ADR-034#1
@@ -81,11 +78,7 @@ pkit:
 **Main path:**
 
 1. The adopter assigns each place outside every documentation root that holds the space's pages to the space, under `places` in `.pkit/capabilities/living-docs/project/config.yaml` (DEC-001 point 1).
-2. The adopter names the space's audience in the space's entry under `spaces` in that file (DEC-001 point 1).
-
-> [!WARNING]
-> **Not built yet:** the configuration holds no audience, and `pkit validate` refuses one as an unknown key. DEC-001 point 1 decides that the configuration holds each space's audience, and #1922 tracks it.
-
+2. The adopter names the space's audience in words, as `audience` in the space's entry under `spaces` in that file (DEC-001 point 1).
 3. The adopter runs `pkit living-docs new space <space> --dry-run`.
 4. The system makes the checks it makes before the write, prints the space definition and the configuration as it would write them, and writes nothing. So the adopter previews each edit, as core:REQ-009 asks.
 5. The adopter reads the scope it would write, and runs `pkit living-docs new space <space>`.
