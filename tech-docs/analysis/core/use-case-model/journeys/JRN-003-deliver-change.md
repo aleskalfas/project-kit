@@ -12,6 +12,7 @@ steps:
 relies-on:
   - UC-049
   - UC-040
+  - UC-006
 requirements: []
 pkit:
   friction:
@@ -26,11 +27,13 @@ pkit:
       record:
         - COR-008
         - COR-009
+        - COR-017
         - COR-025
         - COR-050#1
         - COR-050#3
         - COR-050#5
         - COR-050#9
+        - COR-050#12
         - COR-051#4
         - COR-051#5
         - PRJ-002
@@ -46,6 +49,7 @@ pkit:
         - UC-007
         - UC-049
         - UC-040
+        - UC-006
 ---
 
 # JRN-003 — Deliver a change
@@ -56,19 +60,20 @@ pkit:
 
 1. UC-037 — Record my decision beside the methodology's
    - **Needs from UC-049 (outside this journey):** the system installed in the project and committed for the team. Where the adopter keeps the system out of the shared repository, `.pkit/` is excluded whole. Git then ignores each record of the project's own stamped under `.pkit/decisions/project/` (ADR-009 point 3).
-   - **Assumed:** the change is planned before the record, by the developer or by an installed capability that plans work, such as `project-management`. The change's branch names the issue that plans it, and no step of this journey reads that plan (COR-008).
-   - **Assumed:** artefacts saying what the change must do are revised before the record is written, where an installed capability keeps them, such as `software-analysis`. The backbone reads them only as artefacts in the places that capability declares (COR-050 point 1).
+   - **Assumed:** the change is planned before the record, by the developer or by an installed capability that plans work, such as `project-management` (COR-017). No step of this journey reads the plan, which the change's branch names by its issue (COR-008).
 2. UC-002 — Answer what my change made stale
-   - **Needs from step 1 (UC-037):** the record the change adds or refines. The change check reports friction on each artefact anchored to that record, or to a point the change altered (COR-050 point 5). A new record raises none, since no artefact anchors it yet.
-   - **Needs from UC-040 (outside this journey):** the record accepted before the change builds on it. No check reads what a change builds on, save a rule's origin (COR-051 point 5). Elsewhere, a change built on a proposed record passes every check (core rule 2).
-   - **Assumed:** the change is built, with each document it makes untrue revised in the same change, where an installed capability keeps documents, such as `living-docs`. The change check reads such a document only as an artefact in its place (COR-050 point 1).
+   - **Needs from step 1 (UC-037):** the record the change adds or refines. The change check reports friction on each artefact anchored to that record, or to a point the change altered (COR-050 point 5). An artefact that a new record makes untrue raises none, since nothing anchors the new record yet. The dependants of a record it supersedes are flagged only once an edit marks that record `superseded` (UC-037 variant 1d).
+   - **Needs from UC-040 (outside this journey):** the record accepted before the change builds on it. No check of the backbone reads what a change builds on, save a rule's origin (COR-051 point 5). A change built on a proposed record passes those checks, though the acceptance gate forbids it (core rule 2).
+   - **Assumed:** artefacts saying what the change must do are revised before the change is built, where an installed capability keeps them, such as `software-analysis` (COR-017). The change check reads them only as artefacts in their places (COR-050 point 1).
+   - **Assumed:** the change is built, and each document it makes untrue is revised in the same change. An installed capability may carry either part, such as `software-engineering` for the build and `living-docs` for its documents (COR-017). The change check reads such a document as any artefact in a place, as UC-005 anchors one (COR-050 point 1).
 3. UC-003 — Declare what my change means for the next release
-   - **Needs from step 1 (UC-037):** the record, whose meaning for the next release the developer judges. A record whose text changes what adopters do declares `patch` or above. One recording a feature that a later change ships declares `none` (PRJ-002). The changeset guard reads only paths, so it cannot tell the two apart.
+   - **Needs from step 1 (UC-037):** the record, where it lies in a path the changeset guard reads, such as a core record or a capability's decision (`release.py`). One whose text changes what adopters do declares `patch` or above. One recording a feature that a later change ships declares `none` (PRJ-002). The guard reads only paths, so it cannot tell the two apart.
 4. UC-034 — Land my change on the default branch
-   - **Needs from step 2 (UC-002):** the change check's list of answers, at the head the merge authoriser authorises. The landing pins that head and merges nothing else, but derives no list and runs no check there (ADR-061 point 5). A list read at an earlier head can pass for this one, unless the caller that runs the landing derives it again.
-   - **Needs from step 3 (UC-003):** the changesets, which the CI pipeline checks before the landing. On a base with no merge queue, the landing passes an administrator merge through, past a failing changeset guard (ADR-061 point 5). The `skip-changeset` label waives the guard's surface check too (UC-003 variant 7a).
+   - **Needs from step 2 (UC-002):** the change check's list of answers, at the head the merge authoriser authorises. The landing pins that head and merges nothing else, but derives no list and runs no check there (ADR-061 point 5). A list read at an earlier head can pass for this one, unless the developer derives it again at that head.
+   - **Needs from step 3 (UC-003):** the changesets, which the CI pipeline checks before the landing. With `--admin` on a base with no merge queue, the landing merges past every failing required check, the changeset guard included (ADR-061 point 5). The `skip-changeset` label waives the guard's surface check too (UC-003 variant 7a).
+   - **Needs from UC-006 (outside this journey):** the project's merges made to wait on the system's checks. Where the change check runs in `warning` mode, or the job is no required status, unanswered friction holds no merge (COR-050 point 12). That friction then lands as debt for step 5.
 5. UC-007 — Resolve what the default branch left out of date
-   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered in `warning` mode, is debt on the default branch (COR-050 point 9). Unless the project's own CI runs the whole-repository check, no report brings that debt to the developer, who lists it with `pkit friction debt` (ADR-055 point 5).
+   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered, is debt on the default branch (COR-050 point 9). Unless the project's own CI runs the whole-repository check, no report brings that debt to the developer, who lists it with `pkit friction debt` (ADR-055 point 5).
 
 **Variants:**
 
@@ -82,5 +87,5 @@ pkit:
 
 **Minimal guarantees:**
 
-- Friction that a stopped path leaves on the default branch is never lost. The whole-repository check derives the debt from git at each run, never from a ledger (COR-050 point 9 and `friction_repository.py`).
-- The landing merges nothing but the head the merge authoriser authorised (ADR-061 point 5).
+- The whole-repository check derives the debt that a stopped path leaves from git at each run, never from a ledger (COR-050 point 9 and `friction_repository.py`).
+- The landing merges nothing but the head the developer names (ADR-061 point 5).
