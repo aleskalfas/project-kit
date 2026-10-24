@@ -16,7 +16,7 @@ Run the validator:
 
 ### 1. Pick the scope
 
-The scope is the directory containing the `evidence.yaml` to validate against. The validator walks **that directory and its sub-tree** (per [evidence:DEC-002-evidence-record-schema]):
+The scope is the directory containing the `evidence.yaml` to validate against. The validator walks **that directory and its sub-tree**, less any sub-directory that holds an `evidence.yaml` of its own (per [evidence:DEC-002-evidence-record-schema]):
 
 ```sh
 .pkit/capabilities/evidence/scripts/validate.py <scope-dir>
@@ -28,7 +28,7 @@ Example: validating a research scope rooted at `research/api-survey/`:
 .pkit/capabilities/evidence/scripts/validate.py research/api-survey/
 ```
 
-If no `evidence.yaml` exists at the scope root, the validator surfaces the absence as an error — see [evidence:DEC-003-validation-model]'s "What counts as a failure" table.
+If the directory you name holds no `evidence.yaml`, the validator checks the scope it lies in: the nearest directory above it that holds one. Only where no directory above holds one, and a citation stands under it, is the absence an error — see [evidence:DEC-003-validation-model]'s "What counts as a failure" table.
 
 ### 2. Read the output
 
@@ -37,7 +37,7 @@ The validator prints to stderr. Two shapes:
 **Clean run:**
 
 ```
-evidence: 12 citations validated against research/api-survey/evidence.yaml — all resolved.
+evidence: 12 citation(s) validated against api-survey/evidence.yaml — all resolved.
 ```
 
 Exit code: `0`.
@@ -45,8 +45,8 @@ Exit code: `0`.
 **Violations:**
 
 ```
-research/api-survey/overview.md:14 — cited slug 'auth-token-ttl' has no record
-research/api-survey/overview.md:23 — cited slug 'webhook-retry-policy' has no record
+overview.md:14 — cited slug 'auth-token-ttl' has no record.
+overview.md:23 — cited slug 'webhook-retry-policy' has no record.
 
 evidence: 2 violation(s); see above.
 ```
@@ -87,9 +87,9 @@ Use this in mature scopes where orphans are unexpected. In active authoring, orp
 
 ## Common pitfalls
 
-- **Citation inside a fenced code block is missed.** Intentional — the validator strips fenced blocks before scanning per [evidence:DEC-003-validation-model]. If you want a code block to be validated, the prose around it should carry the citation.
-- **Citation inside an `excerpt:` field is missed.** Intentional. Excerpts may quote citation-shaped tokens from upstream content; the validator strips them.
-- **`evidence.yaml` parse error.** The validator can't proceed against a malformed file. Fix the YAML syntax first — the error message points at the line.
+- **Citation inside a fenced code block is missed.** Intentional — the validator strips fenced blocks of a markdown file before scanning per [evidence:DEC-003-validation-model], a fence indented in a list item or set in a block quote included. If you want a code block to be validated, the prose around it should carry the citation.
+- **Citation inside an `excerpt:` field is missed.** Intentional. Excerpts may quote citation-shaped tokens from upstream content, so the validator skips the scope's `evidence.yaml` wholesale.
+- **`evidence.yaml` malformed.** The validator can't proceed against a file that does not parse, has no top-level `records` list, or has a `schema_version` other than `1`. Fix it first — a parse error points at the line. A record missing a required field, or with an `id` not of the slug form, is reported as a finding while the citations are still checked.
 - **Mixed scopes in one validation run.** If your scope-dir contains a sub-directory with its own `evidence.yaml`, the validator does not descend into it (the sub-directory is its own scope). Validate each scope separately.
 
 ## Variations

@@ -21,7 +21,7 @@ Skip it for:
 
 The record lands in the **nearest `evidence.yaml` walking up the directory tree from the file you're writing.** If no `evidence.yaml` exists in any ancestor, create one at the right level — the level that scopes the work the record belongs to.
 
-For any directory containing prose that makes external-fact claims, the file lives at `<scope-dir>/evidence.yaml`. Each scope is independent; sibling directories with their own `evidence.yaml` files are validated separately. The placement *is* the scope declaration (per [evidence:DEC-002-evidence-record-schema]).
+For any directory containing prose that makes external-fact claims, the file lives at `<scope-dir>/evidence.yaml`. Each scope is independent; sibling or nested directories with their own `evidence.yaml` files are validated separately, and a citation resolves only against its own scope's records. The placement *is* the scope declaration (per [evidence:DEC-002-evidence-record-schema]).
 
 If the file doesn't exist:
 
