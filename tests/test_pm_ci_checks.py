@@ -349,7 +349,8 @@ def test_an_empty_rollup_is_pending_where_the_required_checks_cannot_be_read(ci)
     required = ci.RequiredChecks("main", problem="HTTP 403: Forbidden")
     result = ci.evaluate_ci_gate([], required=required)
     assert result.passing is False
-    assert result.failing_checks == ("none reported",)
+    # The label carries the cause, so a bypass audit that names it keeps it.
+    assert result.failing_checks == ("none reported (required checks unread: HTTP 403: Forbidden)",)
     assert result.failed == ()
     assert result.state == ci.NO_RUN
     assert result.cause == (
@@ -444,6 +445,33 @@ def test_protection_that_enforces_no_check_requires_none(ci) -> None:
     assert ci.read_required_checks("main", {}, run) == ci.RequiredChecks("main")
 
 
+def test_protection_not_enabled_that_states_no_requirement_requires_none(ci) -> None:
+    run, _ = _gh(
+        {_BRANCH: json.dumps({"protected": True, "protection": {"enabled": False}}), _RULES: "[]"}
+    )
+    assert ci.read_required_checks("main", {}, run) == ci.RequiredChecks("main")
+
+
+def test_rules_that_require_workflows_or_code_scanning_require_checks(ci) -> None:
+    """A workflow a ruleset requires, and a code scanning tool, report as checks
+    the merge waits for, so each counts as a check the base requires."""
+    rules = [
+        {
+            "type": "workflows",
+            "parameters": {"workflows": [{"path": ".github/workflows/ci.yml", "repository_id": 1}]},
+        },
+        {
+            "type": "code_scanning",
+            "parameters": {
+                "code_scanning_tools": [{"tool": "CodeQL", "alerts_threshold": "errors"}]
+            },
+        },
+    ]
+    run, _ = _gh({_BRANCH: _UNPROTECTED, _RULES: json.dumps(rules)})
+    reading = ci.read_required_checks("main", {}, run)
+    assert reading == ci.RequiredChecks("main", (".github/workflows/ci.yml", "CodeQL"))
+
+
 def test_every_page_of_the_rules_is_read(ci) -> None:
     pages = json.dumps([_rule("a")]) + json.dumps([_rule("b")])
     run, _ = _gh({_BRANCH: _UNPROTECTED, _RULES: pages})
@@ -482,9 +510,46 @@ _NO_RULES = "GitHub's rules for main are not a list of rules"
             },
             _NO_PROTECTION,
         ),
+        # Enabled protection that states no requirement, a null one, and a
+        # level that enforces with no list of checks are no answer either.
+        (
+            {
+                _BRANCH: json.dumps({"protected": True, "protection": {"enabled": True}}),
+                _RULES: "[]",
+            },
+            _NO_PROTECTION,
+        ),
+        (
+            {
+                _BRANCH: json.dumps(
+                    {"protected": True, "protection": {"required_status_checks": None}}
+                ),
+                _RULES: "[]",
+            },
+            _NO_PROTECTION,
+        ),
+        (
+            {
+                _BRANCH: json.dumps(
+                    {
+                        "protected": True,
+                        "protection": {
+                            "enabled": True,
+                            "required_status_checks": {"enforcement_level": "non_admins"},
+                        },
+                    }
+                ),
+                _RULES: "[]",
+            },
+            _NO_PROTECTION,
+        ),
         ({_BRANCH: _UNPROTECTED, _RULES: "{}"}, _NO_RULES),
         (
             {_BRANCH: _UNPROTECTED, _RULES: json.dumps([{"type": "required_status_checks"}])},
+            _NO_RULES,
+        ),
+        (
+            {_BRANCH: _UNPROTECTED, _RULES: json.dumps([{"type": "workflows", "parameters": {}}])},
             _NO_RULES,
         ),
     ],

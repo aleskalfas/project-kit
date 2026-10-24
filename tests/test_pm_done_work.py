@@ -1414,7 +1414,7 @@ def test_a_rollup_with_checks_reads_no_requirement(dw, monkeypatch) -> None:
         ),
         (
             "HTTP 403: Forbidden",
-            "none reported",
+            "none reported (required checks unread: HTTP 403: Forbidden)",
             "the checks the base branch requires could not be read (HTTP 403: Forbidden), so "
             "the gate cannot tell that it requires none",
         ),

@@ -225,9 +225,11 @@ def evaluate_ci_gate(
     if not rollup and required is not None and (required.names or required.problem):
         base = required.branch or "the base branch"
         if required.problem:
+            # The label carries the cause, so a `--bypass-ci` audit that names
+            # it records why no required check could be named.
             return CiGateResult(
                 passing=False,
-                failing_checks=("none reported",),
+                failing_checks=(f"none reported (required checks unread: {required.problem})",),
                 no_checks=True,
                 cause=(
                     "no check has been reported on the PR's head, and the checks "
@@ -271,25 +273,24 @@ def evaluate_ci_gate(
 GhRunner = Callable[..., subprocess.CompletedProcess]
 
 
-def _contexts(entries: Any) -> list[str] | None:
-    """The `context` of each entry of a list of required checks, or None when
-    the list is not one."""
+def _named(entries: Any, key: str) -> list[str] | None:
+    """The *key* of each entry of a list of required checks, or None when the
+    list is not one."""
     if not isinstance(entries, list):
         return None
-    if not all(
-        isinstance(entry, dict) and isinstance(entry.get("context"), str) for entry in entries
-    ):
+    if not all(isinstance(entry, dict) and isinstance(entry.get(key), str) for entry in entries):
         return None
-    return [entry["context"] for entry in entries]
+    return [entry[key] for entry in entries]
 
 
 def _protection_requires(answer: Any) -> list[str] | None:
     """The checks a branch's classic protection requires, from GitHub's answer
     for the branch; None when the answer does not say.
 
-    An unprotected branch requires none, and so does protection whose
-    `enforcement_level` is `off`. Any other level enforces the checks listed,
-    by name (`contexts`) and by app (`checks`).
+    An unprotected branch requires none, and so does protection that is not
+    enabled and states no requirement, or whose `enforcement_level` is `off`.
+    Any other level enforces the checks listed, by name (`contexts`) and by
+    app (`checks`). Any other shape is no answer.
     """
     if not isinstance(answer, dict):
         return None
@@ -300,18 +301,28 @@ def _protection_requires(answer: Any) -> list[str] | None:
         return None
     status = protection.get("required_status_checks")
     if status is None:
-        return []
-    if not isinstance(status, dict):
+        return [] if protection.get("enabled") is False else None
+    if not isinstance(status, dict) or not isinstance(status.get("enforcement_level"), str):
         return None
-    if status.get("enforcement_level") == "off":
+    if status["enforcement_level"] == "off":
         return []
-    contexts = status.get("contexts", [])
-    checks = _contexts(status.get("checks", []))
+    contexts = status.get("contexts")
+    checks = _named(status.get("checks", []), "context")
     if not isinstance(contexts, list) or not all(isinstance(c, str) for c in contexts):
         return None
     if checks is None:
         return None
     return [*contexts, *checks]
+
+
+#: The ruleset rules that require checks to pass before a merge, each with the
+#: list in its parameters that names them and the key that names each entry:
+#: status checks by context, workflows by path, code scanning by tool.
+_RULES_THAT_REQUIRE = {
+    "required_status_checks": ("required_status_checks", "context"),
+    "workflows": ("workflows", "path"),
+    "code_scanning": ("code_scanning_tools", "tool"),
+}
 
 
 def _rules_require(rules: Any) -> list[str] | None:
@@ -321,17 +332,15 @@ def _rules_require(rules: Any) -> list[str] | None:
         return None
     names: list[str] = []
     for rule in rules:
-        if rule.get("type") != "required_status_checks":
+        requirement = _RULES_THAT_REQUIRE.get(rule.get("type"))
+        if requirement is None:
             continue
+        listed, key = requirement
         parameters = rule.get("parameters")
-        contexts = (
-            _contexts(parameters.get("required_status_checks"))
-            if isinstance(parameters, dict)
-            else None
-        )
-        if contexts is None:
+        named = _named(parameters.get(listed), key) if isinstance(parameters, dict) else None
+        if named is None:
             return None
-        names.extend(contexts)
+        names.extend(named)
     return names
 
 

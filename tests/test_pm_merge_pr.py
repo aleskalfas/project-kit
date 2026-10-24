@@ -595,7 +595,7 @@ def test_a_rollup_with_checks_reads_no_requirement(mp, monkeypatch):
         ),
         (
             "HTTP 403: Forbidden",
-            "none reported",
+            "none reported (required checks unread: HTTP 403: Forbidden)",
             "the checks main requires could not be read (HTTP 403: Forbidden), so the gate "
             "cannot tell that it requires none",
         ),
