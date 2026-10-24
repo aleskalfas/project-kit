@@ -2644,7 +2644,7 @@ def test_uncovered_compound_hook_and_decide_parity(decide_mod, catalog):
 
 # ---- a construct the splitter cannot trust, anywhere in the command (#1917) --
 #
-# ADR-025 point 2, inherited from ADR-004 decision point 4: a quote, a command
+# ADR-025 point 2, inherited from ADR-004 decision point 4: a command
 # substitution, a backtick or a `<` / `>` redirection is a construct the dumb
 # splitter cannot be trusted on, so a grant never allows a command holding one,
 # with or without a leading `cd`. A lenient posture abstains, a strict one
@@ -2663,7 +2663,6 @@ _UNTRUSTED_COMMANDS = [
     "gh pr list && X=$(python3 x.py)",
     "gh pr list && X=$(./x.sh)",
     "gh pr list =(python3 x.py)",  # zsh process substitution
-    'git commit -m "fix: x"',
 ]
 
 
@@ -2777,3 +2776,249 @@ def test_untrusted_construct_hook_and_decide_parity(decide_mod, catalog):
     payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
     d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
     assert d_decide == d_hook == "abstain"
+
+
+# ---- the core reads a command's words as the shell does (#1942) -------------
+#
+# ADR-025 point 2: before it matches a grant or a deny, the core removes quotes
+# and backslashes from each word as the shell removes them, so a quoted or
+# escaped word is matched as the word the shell runs. A deny on it binds, and a
+# quoted argument with no other untrusted construct is allowed where a grant
+# covers its segment. A command whose words the core cannot read as the shell
+# does is never allowed by a grant: a quote that does not close, whitespace the
+# shell does not split on, a comment, a brace expansion, an expansion opened by
+# `$`, an assignment to a variable that changes which program runs, or a
+# leading assignment written with a quote or a backslash. A lenient posture
+# abstains, a strict one denies, and a deny still wins.
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'git push origin main "--force"',
+        "git push origin main '--force'",
+        "git push origin main \\--force",
+        'git push origin main --for"ce"',
+        '"git" push -f origin main',
+        'git "push" origin main -f',
+        "cd /x && git push origin main '--force'",
+    ],
+)
+def test_a_quoted_or_escaped_force_push_is_denied(decide_mod, catalog, command):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert "vcs-history-rewrite" in why, why
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("rm '-rf' build", "destructive-fs"),
+        ("r\\m -r build", "destructive-fs"),
+        ('"sudo" whoami', "privilege-escalation"),
+    ],
+)
+def test_a_quoted_or_escaped_guardrail_is_denied(decide_mod, catalog, command, privilege):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert privilege in why, why
+
+
+def test_segments_removes_quotes_and_backslashes_as_the_shell_does(decide_mod):
+    assert decide_mod.segments('git commit -m "fix: x"') == [["git", "commit", "-m", "fix: x"]]
+    assert decide_mod.segments("git commit -m 'it''s'") == [["git", "commit", "-m", "its"]]
+    assert decide_mod.segments("gh pr list --search a\\ b") == [
+        ["gh", "pr", "list", "--search", "a b"]
+    ]
+    assert decide_mod.segments('git log --grep "a \\"b\\" \\x"') == [
+        ["git", "log", "--grep", 'a "b" \\x']
+    ]
+    assert decide_mod.segments('git commit -m ""') == [["git", "commit", "-m", ""]]
+    # An assignment is one only where its name is written unquoted, as the
+    # shell reads it: `"GH_HOST=x"` is the name of the program it runs.
+    assert decide_mod.segments('GH_HOST="a b" gh pr list') == [["gh", "pr", "list"]]
+    assert decide_mod.segments('"GH_HOST=x" gh pr list') == [["GH_HOST=x", "gh", "pr", "list"]]
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'git commit -m "fix: x"',
+        "git commit -m 'fix: x'",
+        'gh pr list --search "is:open label:bug"',
+        "gh pr list --search is:open\\ label:bug",
+        '"gh" pr list',
+        "cd /x && git commit -m 'fix: x' && git push origin main",
+        "git commit -m '#12 fix'",  # a quoted `#` opens no comment
+        # one word, `a --force`, which the shell passes on as it is: no flag
+        "git push origin a\\ --force",
+    ],
+)
+def test_a_quoted_argument_with_no_other_construct_is_allowed(decide_mod, catalog, command):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "allow", f"{command!r}: {why}"
+
+
+_QUOTED_UNTRUSTED = [
+    'git commit -m "$(cat msg.txt)"',
+    "git commit -m '$(cat msg.txt)'",
+    'git commit -m "a `id` b"',
+    'git commit -m "a > b"',
+    "git commit -m 'a < b'",
+]
+
+# Words the core cannot read as the shell does.
+_UNREADABLE = [
+    'gh pr list "x',  # a quote that does not close
+    "gh pr list \\",  # a backslash with nothing after it
+    'git log --format="%h;%s"',  # the splitter cuts the quoted `;`
+    "gh\u00a0pr list",  # a no-break space: the shell runs a program named `gh pr`
+    "gh pr list\u2003x",
+    "gh pr list\rx",
+    "gh pr list\vx",
+    "gh pr list # x",  # a comment: the shell drops it
+    "gh pr list --label {a,b}",  # a brace expansion: the shell makes two words
+    "gh pr list --label x{1..3}",
+    "git push origin {main,--force}",
+    # behind a leading `cd`: the shell runs the word after a newline as a
+    # command, and reads `cd<no-break space>x` as one word
+    "cd\n{rm,-rf,~};git status",
+    "cd {a,b} && git status",
+    "cd #x && git status",
+    "cd\u00a0sub/x;git status",
+]
+
+# An expansion opened by `$`: a value the core never sees, and some forms
+# evaluate it as code.
+_EXPANSIONS = [
+    "gh pr list ${X@P}",  # bash prompt expansion runs the value's substitutions
+    "gh pr list $[X]",  # arithmetic, which evaluates the value
+    "gh pr list ${X:$Y}",  # an arithmetic offset
+    "gh pr list $X",
+    "gh pr list $~X",  # zsh globs the value, whose qualifiers run code
+    "git push origin main $'\\x2d\\x2dforce'",  # a quote the core cannot remove
+]
+
+# A leading assignment to a variable that changes which program runs.
+_PROGRAM_PATH_ASSIGNMENTS = [
+    "PATH=/tmp/x gh pr list",
+    "PATH=/tmp/x:$PATH gh pr list",
+    "export PATH=/tmp/x && gh pr list",
+    "PATH=/tmp/x; gh pr list",
+    "path=/tmp/x gh pr list",  # zsh's array tied to PATH
+    "GIT_EXEC_PATH=/tmp/x git status",
+    "LD_PRELOAD=/tmp/x.so git status",
+    "DYLD_INSERT_LIBRARIES=/tmp/x.dylib gh pr list",
+    "PYTHONPATH=/tmp/x pkit status",
+    "BASH_ENV=/tmp/x.sh pkit status",
+    "PATH+=:/tmp/x gh pr list",
+    "JAVA_TOOL_OPTIONS=-javaagent:/tmp/x.jar pkit status",
+    "GH_HOST=x \t PATH=/tmp/x gh pr list",
+    "cd /x && PATH=/tmp/x gh pr list",
+    # `export` takes every word as a name or an assignment, and runs no program
+    "export git PATH=/tmp/x; git status",
+    "export gh LD_PRELOAD=/tmp/x.so && gh pr list",
+    "export pkit PYTHONPATH=/tmp/x; pkit status",
+    # an assignment written with a quote or a backslash: its value may name a
+    # command the grant never sees
+    'GH_HOST="github.example.com" gh pr list',
+    "GIT_SSH_COMMAND=sh\\ x.sh git fetch",
+    "export GIT_SSH_COMMAND='sh x.sh' && git fetch",
+]
+
+
+@pytest.mark.parametrize(
+    "command", _QUOTED_UNTRUSTED + _UNREADABLE + _EXPANSIONS + _PROGRAM_PATH_ASSIGNMENTS
+)
+def test_a_command_whose_words_the_core_cannot_read_is_not_allowed(decide_mod, catalog, command):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "abstain", f"{command!r} must not be allowed by the grant: {why}"
+    assert "untrusted construct" in why, why
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture="strict")
+    assert d == "deny", f"{command!r} must deny under a strict posture: {why}"
+
+
+@pytest.mark.parametrize(
+    "command,kind",
+    [
+        ('gh pr list "x', "unclosed quote"),
+        ("gh\u00a0pr list", "whitespace"),
+        ("gh pr list # x", "comment"),
+        ("gh pr list {a,b}", "brace expansion"),
+        ("gh pr list ${X@P}", "expansion"),
+        ("PATH=/tmp/x gh pr list", "PATH"),
+        ("GH_HOST='x' gh pr list", "assignment written with a quote"),
+        ("gh pr list > secret-out.txt", "redirection"),
+    ],
+)
+def test_the_reason_names_the_kind_of_construct_not_the_command(decide_mod, catalog, command, kind):
+    for posture in ("lenient", "strict"):
+        _, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert "untrusted construct" in why and kind in why, why
+        assert "/tmp/x" not in why and "secret-out" not in why, why
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "GH_HOST=x gh pr list",
+        "export GH_HOST=x && gh pr list",
+        "GIT_PAGER=cat git log",
+        "GH_HOST+=x gh pr list",
+    ],
+)
+def test_an_assignment_that_leaves_the_program_alone_is_still_stripped(
+    decide_mod, catalog, command
+):
+    d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"))
+    assert d == "allow", f"{command!r}: {why}"
+
+
+def test_an_export_segment_runs_no_program(decide_mod):
+    # `export` takes each word after it as a name or an assignment, so no
+    # grant on a program covers the segment, and nothing of it is matched.
+    assert decide_mod.segments("export git PATH=/tmp/x; git status") == [["git", "status"]]
+    assert decide_mod.segments("export GH_HOST=x && gh pr list") == [["gh", "pr", "list"]]
+
+
+def test_a_quoted_assignment_name_is_the_program_the_shell_runs(decide_mod, catalog):
+    d, why = decide_mod.decide(MODEL, catalog, _bash('"GH_HOST=x" gh pr list', "operator"))
+    assert d == "abstain", why
+
+
+@pytest.mark.parametrize(
+    "command,privilege",
+    [
+        ("PATH=/tmp/x sudo whoami", "privilege-escalation"),
+        ("PATH+=:/tmp/x sudo whoami", "privilege-escalation"),
+        ("PATH=/tmp/x git push --force", "vcs-history-rewrite"),
+        ("git push {a,b} --force", "vcs-history-rewrite"),
+        ("git push $X --force", "vcs-history-rewrite"),
+        ('git push origin main "--force" # x', "vcs-history-rewrite"),
+        ("gh pr list # x ; rm -rf ~", "destructive-fs"),
+    ],
+)
+def test_a_deny_still_wins_over_a_word_the_core_cannot_read(
+    decide_mod, catalog, command, privilege
+):
+    for posture in ("lenient", "strict"):
+        d, why = decide_mod.decide(MODEL, catalog, _bash(command, "operator"), posture)
+        assert d == "deny", f"{command!r}: {why}"
+        assert privilege in why, why
+
+
+def test_reading_words_hook_and_decide_parity(decide_mod, catalog):
+    """The reading lives in the shared core, so hook_decide and decide agree
+    on a quoted command (ADR-002 / ADR-003)."""
+    for cmd, expected in (
+        ('git push origin main "--force"', "deny"),
+        ('git commit -m "fix: x"', "allow"),
+        ("PATH=/tmp/x gh pr list", "abstain"),
+    ):
+        d_decide, _ = decide_mod.decide(MODEL, catalog, _bash(cmd, "operator"))
+        payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+        d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
+        assert d_decide == d_hook == expected, cmd

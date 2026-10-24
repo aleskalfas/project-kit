@@ -20,6 +20,7 @@ from __future__ import annotations
 import fnmatch
 import os
 import re
+import shlex
 import stat
 from typing import Any
 
@@ -46,7 +47,10 @@ _TOKEN = re.compile(r"^\[privilege-catalog:([a-z][a-z0-9-]*(?::[a-z][a-z0-9-]*)?
 # the one after `;`, so each starts a segment that needs a grant of its own.
 # `&&` and `||` come before `&` and `|` so a double one is never read as two.
 _SEP = re.compile(r"\s*(?:&&|\|\||\||;|&|\n)\s*")
-_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+# An assignment word, `NAME=value` or `NAME+=value`, as the shell reads one in
+# front of a command (#1942): the `+=` form appends, and is stripped like the
+# other, so a deny on the command behind it binds.
+_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\+?=")
 
 # The leading-`cd` strip (ADR-025 Phase 1). A bare `cd <path>` prefix changes
 # only the cwd — which the intent layer never confines — so stripping it reveals
@@ -58,14 +62,21 @@ _ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 # `cd src | gh …` makes no shell sense, so `|` / `||` are deliberately excluded).
 _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # Constructs the dumb splitter cannot be trusted on (ADR-004 dp-4 / ADR-025
-# decision 2): a quote, a backtick, a `<` / `>` redirection, and a `(`. The `(`
+# decision 2): a `$`, a backtick, a `<` / `>` redirection, and a `(`. The `(`
 # opens every substitution the shells offer: `$(…)`, `<(…)` / `>(…)`, zsh's
 # `=(…)`, and zsh's glob qualifiers and parameter flags, such as `*(e:…:)` and
-# `${(e)…}`, which run code. A command holding any of them ANYWHERE, with or
-# without a leading `cd`, is never allowed by a grant (#1917): `decide()`
-# abstains, or denies under a strict posture, because a per-segment matcher is
-# structurally blind to what these compose into. A deny still wins. It stays a
-# plain scan of the command string, not a parse (ADR-025 point 3).
+# `${(e)…}`, which run code. The `$` opens every expansion (#1942): a
+# variable's value, which the core never sees and which some forms evaluate as
+# code, such as bash's `${X@P}`, `$[…]` and an arithmetic offset `${X:$Y}`, or
+# zsh's `$~X`, and the quotes `$'…'` and `$"…"`, which the shell reads
+# otherwise than the core does. A command holding any of them ANYWHERE, even
+# inside quotes, with or without a leading `cd`, is never allowed by a grant
+# (#1917): `decide()` abstains, or denies under a strict posture, because a
+# per-segment matcher is structurally blind to what these compose into. A deny
+# still wins. It stays a plain scan of the command string, not a parse
+# (ADR-025 point 3). A quote is not in the set: the core removes quotes as the
+# shell does before it matches (`_words()`), so a quoted word is the word the
+# shell runs.
 #
 # `|`, like `&&`, `||` and `;`, is not in this set because the splitter
 # separates on it: each side of a pipe is a segment of its own, and `decide()`
@@ -75,12 +86,59 @@ _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # `cd`, and `gh … | jq` abstains too unless a grant covers `jq`. A pipe whose
 # every side is granted, such as `git diff | git apply`, still allows: that is
 # no new widening, since each segment carries its own grant (ADR-025 point 6).
-_UNTRUSTED = re.compile(r"""['"`<>(]""")
+_UNTRUSTED = re.compile(r"""[$`<>(]""")
+# What each untrusted character opens, for the reason `decide()` gives.
+_UNTRUSTED_KIND = {
+    "$": "expansion",
+    "`": "backtick",
+    "<": "redirection",
+    ">": "redirection",
+    "(": "substitution",
+}
+# Whitespace the shell reads as part of a word, though Python's `str.split()`
+# splits on it: anything but a space, a tab or a newline, such as a carriage
+# return or a no-break space (#1942). `gh<no-break space>pr list` runs a
+# program named `gh pr`, not `gh`, so a command holding one is not trusted.
+_ODD_SPACE = re.compile(r"[^\S \t\n]")
+# A brace expansion, which the shell turns into several words: `{a,b}` or
+# `{1..3}` in a word (#1942). `git push origin {main,--force}` runs
+# `git push origin main --force`. The scan ignores quoting, so a quoted brace
+# with a comma in it is not trusted either.
+_BRACE = re.compile(r"\{.*(?:,|\.\.).*\}")
+# An assignment to a variable that changes which program runs, or the code
+# loaded into it before its own (#1942): the shell's search path (`PATH`, and
+# zsh's `path`) and any other search path, such as `LD_LIBRARY_PATH`,
+# `GIT_EXEC_PATH` or `PYTHONPATH`; the dynamic loader's `LD_*` and `DYLD_*`;
+# the startup files a shell reads first (`BASH_ENV`, `ENV`, `ZDOTDIR`); and
+# the variables of the interpreters and runtimes that run programs, Python's,
+# Perl's, Ruby's, Node's and Java's options, which load code ahead of the
+# program's own. `PATH=/tmp/x gh pr list` runs whichever `gh` the new path
+# finds first. The list names a family of variables and cannot be complete: a
+# variable outside it that changes which program runs is a hole on the allow
+# side, to be added here when found. The program's own settings, such as
+# `GIT_PAGER`, are not here: what a granted program is told to run is the
+# grant's breadth, as with `git -c core.fsmonitor=…`, which a `git` grant
+# already lets run any program.
+_PROGRAM_VAR = re.compile(
+    r"^(?:[A-Za-z0-9_]*(?:PATH|path)|LD_[A-Za-z0-9_]*|DYLD_[A-Za-z0-9_]*"
+    r"|BASH_ENV|ENV|ZDOTDIR|PYTHON[A-Za-z0-9_]*|PERL[A-Za-z0-9_]*"
+    r"|RUBY[A-Za-z0-9_]*|NODE_OPTIONS|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS"
+    r"|JDK_JAVA_OPTIONS)\+?="
+)
+# A leading assignment written with a quote or a backslash (#1942). The core
+# never matches an assignment's value, so removing its quotes makes no match
+# more accurate: only a quoted argument is matched as the shell passes it on.
+# So such an assignment keeps every grant from allowing, and a deny behind it
+# still binds.
+_QUOTED = re.compile(r"""['"\\]""")
 # A bare `cd <path>` first segment: literally `cd` then exactly one path token
 # with no shell metacharacter and not a flag. The token is intentionally
 # restrictive — the moment it carries anything the splitter can't trust, we do
-# not strip.
-_BARE_CD = re.compile(r"""^cd\s+([^\s'"`$<>|&;()]+)$""")
+# not strip. Only a space or a tab parts `cd` from its path (#1942): after a
+# newline the shell runs the next word as a command of its own, as it runs
+# `{rm,-rf,~}` in `cd`, a newline, then `{rm,-rf,~};git status`, and inside
+# any other whitespace it reads one word.
+_BARE_CD = re.compile(r"""^cd[ \t]+([^\s'"`$<>|&;()]+)$""")
 # A program name a reason may show (#1908): letters, digits and `.`, `_`, `+`,
 # `-` only, so never a path, an assignment or a quoted fragment.
 _BARE_WORD = re.compile(r"^[A-Za-z0-9._+-]+$")
@@ -92,10 +150,71 @@ _BARE_WORD = re.compile(r"^[A-Za-z0-9._+-]+$")
 
 # The verdict path; the formatter leaves it alone (see the note after the imports).
 # fmt: off
+def _words(text: str) -> list[tuple[str, str]] | None:
+    """The words of one segment as the shell reads them, each as (its text as
+    written, the word the shell passes on), or None where the core cannot read
+    them so (#1942).
+
+    Words split at spaces and tabs, and quotes and backslashes are removed as
+    the shell removes them, by the standard library's POSIX quoting rules. That
+    is a tokenizer of words, not a parser of the shell's grammar (ADR-025
+    point 3): the splitter still finds the segments, and the constructs these
+    rules read otherwise than the shell does are untrusted before any word
+    counts (`_UNTRUSTED`, `_ODD_SPACE`). None where a quote or a backslash does
+    not close, as where the splitter cut a quoted `;`: the shell reads that
+    text otherwise than the splitter does."""
+    lexer = shlex.shlex(text, posix=True)
+    lexer.whitespace = " \t"
+    lexer.whitespace_split = True
+    lexer.commenters = ""
+    words: list[tuple[str, str]] = []
+    start = 0
+    try:
+        while True:
+            word = lexer.get_token()
+            if word is None:
+                return words
+            end = lexer.instream.tell()
+            words.append((text[start:end].lstrip(" \t"), word))
+            start = end
+    except ValueError:
+        return None
+
+
+def _segment_words(raw: str) -> list[tuple[str, str]]:
+    """`_words()` of one segment, or, where the core cannot read them, the
+    segment split at whitespace with each word as written, so a deny on it
+    still binds. `decide()` never allows such a segment (`_doubts()`)."""
+    words = _words(raw)
+    return words if words is not None else [(tok, tok) for tok in raw.split()]
+
+
+def _assignments(words: list[tuple[str, str]]) -> int:
+    """How many words at the front of a segment are assignments. An assignment
+    is one where its name is written unquoted, as the shell reads it, so
+    `"X=1" gh` runs a program named `X=1`.
+
+    A segment led by `export` runs no program (#1942): `export` takes every
+    word after it as a name or an assignment, so `export git PATH=/tmp/x`
+    sets `PATH` and runs no `git`. All its words count, and no grant on a
+    program covers it."""
+    if words and words[0][1] == "export":
+        return len(words)
+    count = 0
+    for text, _ in words:
+        if not _ENVVAR.match(text):
+            break
+        count += 1
+    return count
+
+
 def segments(command: str) -> list[list[str]]:
     """Split a compound command into segments, each tokenized, with env-var
     prefixes (and a leading `export`) stripped. Fixes the `export X=1 && gh …`
     false-prompt that the flat settings matcher couldn't catch.
+
+    Each word is the word the shell passes on, with its quotes and backslashes
+    removed (#1942), so a grant or a deny matches `"--force"` as `--force`.
 
     A segment that only assigns is not dropped where a token of it holds an
     untrusted construct, such as `X=$(./x.sh)` (#1917): the value may run a
@@ -104,15 +223,38 @@ def segments(command: str) -> list[list[str]]:
     command still binds, as on `X=$(true) rm -rf ~`."""
     out: list[list[str]] = []
     for raw in _SEP.split(command.strip()):
-        toks = raw.split()
-        rest = toks
-        while rest and (rest[0] == "export" or _ENVVAR.match(rest[0])):
-            rest = rest[1:]
+        words = _segment_words(raw)
+        rest = words[_assignments(words):]
         if rest:
-            out.append(rest)
-        elif any(_UNTRUSTED.search(tok) for tok in toks):
-            out.append(toks)
+            out.append([word for _, word in rest])
+        elif any(_UNTRUSTED.search(text) for text, _ in words):
+            out.append([word for _, word in words])
     return out
+
+
+def _doubts(command: str) -> list[str]:
+    """The kinds of construct in a Bash command that keep the core from reading
+    its words, or the program it runs, as the shell does: empty when there is
+    none (ADR-025 point 2). Each kind is a fixed phrase, never the command's
+    text, since `decide()` gives them in its reason."""
+    kinds = {_UNTRUSTED_KIND[char] for char in _UNTRUSTED.findall(command)}
+    if _ODD_SPACE.search(command):
+        kinds.add("whitespace other than a space or a tab")
+    for raw in _SEP.split(command.strip()):
+        words = _words(raw)
+        if words is None:
+            kinds.add("unclosed quote")
+            continue
+        if any(text.startswith("#") for text, _ in words):
+            kinds.add("comment")
+        if any(_BRACE.search(text) for text, _ in words):
+            kinds.add("brace expansion")
+        leading = [text for text, word in words[: _assignments(words)] if word != "export"]
+        if any(_PROGRAM_VAR.match(text) for text in leading):
+            kinds.add("assignment to PATH or another variable that picks the program")
+        if any(_QUOTED.search(text) for text in leading):
+            kinds.add("assignment written with a quote or a backslash")
+    return sorted(kinds)
 
 
 def _strip_leading_cd(command: str) -> str | None:
@@ -530,11 +672,15 @@ def decide(
     # `cd "/x; rm -rf ~" && …` falls through to the full-command path, where it
     # is decided whole and at worst abstains — never silently allowed). The
     # remainder is decided like any command, so the check for an untrusted
-    # construct below covers it as it covers a command with no `cd` (#1917);
-    # the bare `cd` it strips cannot hold one.
+    # construct below covers it as it covers a command with no `cd` (#1917).
+    # A command holding such a construct anywhere, its `cd` included, is not
+    # stripped at all (#1942): it is decided whole, where every deny still
+    # binds on each segment and the construct then keeps every grant from
+    # allowing, so a `cd` whose word the shell reads otherwise, such as
+    # `cd {a,b}`, never hides what it runs.
     # The remainder is decided at the ORIGINAL cwd: stripping `cd` can never
     # grant a directory-scoped privilege the un-stripped command lacked.
-    if request.get("type") == "bash":
+    if request.get("type") == "bash" and not _doubts(request.get("command", "")):
         remainder = _strip_leading_cd(request.get("command", ""))
         if remainder is not None:
             return decide(model, catalog, {**request, "command": remainder}, posture)
@@ -579,18 +725,20 @@ def decide(
     # A construct the dumb splitter cannot be trusted on, anywhere in a Bash
     # command, keeps every grant from allowing it (#1917, ADR-025 point 2 from
     # ADR-004 decision point 4): the segments the splitter yields may not be the
-    # commands the shell runs. It is checked after the grants, so a deny still
-    # wins. The reason lists the kinds of construct, never the command's text.
-    if request.get("type") == "bash" and _UNTRUSTED.search(request.get("command", "")):
+    # commands the shell runs. So does a word the core cannot read as the shell
+    # does, or an assignment that changes which program runs (#1942): the
+    # words matched may not be the words the shell passes on, or the program
+    # not the one the grant names. It is checked after the grants, so a deny
+    # still wins. The reason lists the kinds of construct, never the command's
+    # text.
+    doubts = _doubts(request.get("command", "")) if request.get("type") == "bash" else []
+    if doubts:
+        kinds = " / ".join(doubts)
         if posture == "strict":
-            return "deny", (
-                "strict posture: an untrusted construct (quote / substitution / "
-                "backtick / redirection) in the command"
-            )
+            return "deny", f"strict posture: an untrusted construct ({kinds}) in the command"
         return "abstain", (
-            "an untrusted construct (quote / substitution / backtick / "
-            "redirection) in the command — fail closed, defer to the harness's "
-            "normal flow"
+            f"an untrusted construct ({kinds}) in the command — fail closed, "
+            f"defer to the harness's normal flow"
         )
     if allowed:
         # A grant on one segment of a compound never carries another (#1908):

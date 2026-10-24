@@ -2934,9 +2934,14 @@ def test_decide_verdict_path_byte_identical_to_main():
     # Transitive call graph (verified against decide.py):
     #   decide        → _strip_leading_cd, recognized_privileges,
     #                   _effective_grants, _privilege_ids, _scope_ok,
-    #                   _uncovered_segments, _shown_program  (+ _UNTRUSTED)
+    #                   _uncovered_segments, _shown_program, _doubts
     #   hook_decide   → _read_default_agent, decide
-    #   recognized_privileges → segments (+ _SEP/_ENVVAR/_UNTRUSTED), _segment_privileges
+    #   recognized_privileges → segments, _segment_privileges
+    #   segments      → _segment_words, _assignments (+ _SEP/_UNTRUSTED)
+    #   _segment_words        → _words
+    #   _assignments          → (+ _ENVVAR)
+    #   _doubts       → _words, _assignments (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/
+    #                   _ODD_SPACE/_BRACE/_PROGRAM_VAR/_QUOTED)
     #   _uncovered_segments   → segments, _segment_privileges
     #   _segment_privileges   → _matches_bash
     #   _shown_program        → (+ _BARE_WORD)
@@ -2969,12 +2974,21 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_extract_host",
         "_effective_grants",
         "_read_default_agent",
+        "_words",
+        "_segment_words",
+        "_assignments",
+        "_doubts",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
         "_ENVVAR",
         "_CD_SEP",
         "_UNTRUSTED",
+        "_UNTRUSTED_KIND",
+        "_ODD_SPACE",
+        "_BRACE",
+        "_PROGRAM_VAR",
+        "_QUOTED",
         "_BARE_CD",
         "_BARE_WORD",
     )
@@ -3001,45 +3015,48 @@ def test_decide_verdict_path_byte_identical_to_main():
                 "            f'natively enforced…\"); use positive allow-list globs only'",
             ),
         ),
-        # Deliberate, reviewed verdict change (#1917): a Bash command holding a
-        # construct the splitter cannot trust is never allowed by a grant,
-        # anywhere in it, with or without a leading `cd` (ADR-025 point 2). The
-        # splitter also separates at a background `&` and a newline, and keeps
-        # an assignment holding such a construct in its segment. `_UNTRUSTED`
-        # gains `(`, which opens every substitution. `decide` checks the
-        # construct after the grants, so a deny still wins, where it used to
-        # check only the rest of a command after a leading `cd`. These rewrites
-        # apply exactly that change to main's side, and the rest of each is
-        # compared byte for byte. Once this is on main, the rewrites find
-        # nothing to replace, and these entries may be deleted.
-        "_SEP": (
-            (
-                r'_SEP = re.compile(r"\s*(?:&&|\|\||\||;)\s*")',
-                r'_SEP = re.compile(r"\s*(?:&&|\|\||\||;|&|\n)\s*")',
-            ),
-        ),
+        # Deliberate, reviewed verdict change (#1942): the core reads each word
+        # of a Bash command as the shell does before it matches, removing quotes
+        # and backslashes (`_words`), so a quote alone no longer keeps a grant
+        # from allowing, and a deny binds on `"--force"` as on `--force`. A
+        # word it cannot read so, an expansion opened by `$`, or a leading
+        # assignment that changes which program runs, or is written with a
+        # quote or a backslash, keeps every grant from
+        # allowing (`_doubts`), and `decide` names each kind in its reason
+        # (ADR-025 point 2). `_ENVVAR` reads `NAME+=value` as an assignment
+        # too, as the shell does. `decide` strips no leading `cd` from a
+        # command holding such a construct, and `_BARE_CD` parts `cd` from its
+        # path with a space or a tab alone. These rewrites apply exactly that change to main's
+        # side, and the rest of each is compared byte for byte. Once this is on
+        # main, the rewrites find nothing to replace, and these entries may be
+        # deleted.
         "_UNTRUSTED": (
             (
-                '_UNTRUSTED = re.compile(r"""[\'"`<>]|\\$\\(""")',
                 '_UNTRUSTED = re.compile(r"""[\'"`<>(]""")',
+                '_UNTRUSTED = re.compile(r"""[$`<>(]""")',
+            ),
+        ),
+        "_ENVVAR": (
+            (
+                '_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")',
+                '_ENVVAR = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*\\+?=")',
+            ),
+        ),
+        "_BARE_CD": (
+            (
+                '_BARE_CD = re.compile(r"""^cd\\s+([^\\s\'"`$<>|&;()]+)$""")',
+                '_BARE_CD = re.compile(r"""^cd[ \\t]+([^\\s\'"`$<>|&;()]+)$""")',
             ),
         ),
         "segments": (
             (
-                '    false-prompt that the flat settings matcher couldn\'t catch."""\n',
-                "    false-prompt that the flat settings matcher couldn't catch.\n"
-                "\n"
-                "    A segment that only assigns is not dropped where a token of it holds an\n"
-                "    untrusted construct, such as `X=$(./x.sh)` (#1917): the value may run a\n"
-                "    command, so the segment stays whole, and no grant covers it. Where a command\n"
-                "    follows the assignments, they are stripped as before, so a deny on that\n"
-                '    command still binds, as on `X=$(true) rm -rf ~`."""\n',
+                "    false-prompt that the flat settings matcher couldn't catch.\n\n",
+                "    false-prompt that the flat settings matcher couldn't catch.\n\n"
+                "    Each word is the word the shell passes on, with its quotes and backslashes\n"
+                '    removed (#1942), so a grant or a deny matches `"--force"` as `--force`.\n\n',
             ),
             (
-                '        while toks and (toks[0] == "export" or _ENVVAR.match(toks[0])):\n'
-                "            toks = toks[1:]\n"
-                "        if toks:\n"
-                "            out.append(toks)\n",
+                "        toks = raw.split()\n"
                 "        rest = toks\n"
                 '        while rest and (rest[0] == "export" or _ENVVAR.match(rest[0])):\n'
                 "            rest = rest[1:]\n"
@@ -3047,50 +3064,33 @@ def test_decide_verdict_path_byte_identical_to_main():
                 "            out.append(rest)\n"
                 "        elif any(_UNTRUSTED.search(tok) for tok in toks):\n"
                 "            out.append(toks)\n",
+                "        words = _segment_words(raw)\n"
+                "        rest = words[_assignments(words):]\n"
+                "        if rest:\n"
+                "            out.append([word for _, word in rest])\n"
+                "        elif any(_UNTRUSTED.search(text) for text, _ in words):\n"
+                "            out.append([word for _, word in words])\n",
             ),
         ),
         "decide": (
             (
-                "    covers every segment of it (ADR-025 point 2).\n",
-                "    covers every segment of it, and a Bash command holding a construct the\n"
-                "    splitter cannot trust never is (ADR-025 point 2).\n",
-            ),
-            (
-                "    # auto-approves exactly as `gh pr list` would. Conservative on two axes:\n"
-                "    #   - it strips ONLY a bare `cd` (`_strip_leading_cd` "
-                "returns None otherwise,\n"
-                '    #     so a tricky `cd "/x; rm -rf ~" && …` falls '
-                "through to the full-command\n"
-                "    #     path, where it is decided whole and at worst abstains — never silently\n"
-                "    #     allowed); and\n"
-                "    #   - if the remainder carries anything the dumb "
-                "splitter can't be trusted on\n"
-                "    #     (a quote, `$()`, a backtick, a `<` / `>` redirection), it ABSTAINS\n"
-                "    #     rather than auto-allowing (ADR-004 dp-4, fail-closed-on-uncertainty).\n",
-                "    # auto-approves exactly as `gh pr list` would. It strips ONLY a bare `cd`\n"
-                "    # (`_strip_leading_cd` returns None otherwise, so a tricky\n"
-                '    # `cd "/x; rm -rf ~" && …` falls through to the '
-                "full-command path, where it\n"
-                "    # is decided whole and at worst abstains — never silently allowed). The\n"
-                "    # remainder is decided like any command, so the check for an untrusted\n"
                 "    # construct below covers it as it covers a command with no `cd` (#1917);\n"
                 "    # the bare `cd` it strips cannot hold one.\n",
+                "    # construct below covers it as it covers a command with no `cd` (#1917).\n"
+                "    # A command holding such a construct anywhere, its `cd` included, is not\n"
+                "    # stripped at all (#1942): it is decided whole, where every deny still\n"
+                "    # binds on each segment and the construct then keeps every grant from\n"
+                "    # allowing, so a `cd` whose word the shell reads otherwise, such as\n"
+                "    # `cd {a,b}`, never hides what it runs.\n",
             ),
             (
-                "            if _UNTRUSTED.search(remainder):\n"
-                '                return "abstain", (\n'
-                '                    "leading-cd strip: remainder carries an '
-                'untrusted construct "\n'
-                '                    "(quote / $() / backtick / redirection) — fail closed"\n'
-                "                )\n",
-                "",
+                '    if request.get("type") == "bash":\n'
+                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
+                '    if request.get("type") == "bash" and '
+                'not _doubts(request.get("command", "")):\n'
+                '        remainder = _strip_leading_cd(request.get("command", ""))\n',
             ),
             (
-                '            return "deny", deny_msg\n    if allowed:\n',
-                '            return "deny", deny_msg\n'
-                "    # A construct the dumb splitter cannot be trusted on, anywhere in a Bash\n"
-                "    # command, keeps every grant from allowing it (#1917, ADR-025 point 2 from\n"
-                "    # ADR-004 decision point 4): the segments the splitter yields may not be the\n"
                 "    # commands the shell runs. It is checked after the grants, so a deny still\n"
                 "    # wins. The reason lists the kinds of construct, never the command's text.\n"
                 '    if request.get("type") == "bash" and '
@@ -3106,15 +3106,45 @@ def test_decide_verdict_path_byte_identical_to_main():
                 '            "redirection) in the command — fail closed, '
                 "defer to the harness's \"\n"
                 '            "normal flow"\n'
-                "        )\n"
-                "    if allowed:\n",
+                "        )\n",
+                "    # commands the shell runs. So does a word the core cannot read as the shell\n"
+                "    # does, or an assignment that changes which program runs (#1942): the\n"
+                "    # words matched may not be the words the shell passes on, or the program\n"
+                "    # not the one the grant names. It is checked after the grants, so a deny\n"
+                "    # still wins. The reason lists the kinds of construct, never the command's\n"
+                "    # text.\n"
+                '    doubts = _doubts(request.get("command", "")) '
+                'if request.get("type") == "bash" else []\n'
+                "    if doubts:\n"
+                '        kinds = " / ".join(doubts)\n'
+                '        if posture == "strict":\n'
+                '            return "deny", f"strict posture: an untrusted construct '
+                '({kinds}) in the command"\n'
+                '        return "abstain", (\n'
+                '            f"an untrusted construct ({kinds}) in the command — fail closed, "\n'
+                '            f"defer to the harness\'s normal flow"\n'
+                "        )\n",
             ),
         ),
     }
-    introduced = ("_segment_privileges", "_uncovered_segments", "_shown_program", "_BARE_WORD")
+    introduced = (
+        "_segment_privileges",
+        "_uncovered_segments",
+        "_shown_program",
+        "_BARE_WORD",
+        "_words",
+        "_segment_words",
+        "_assignments",
+        "_doubts",
+        "_UNTRUSTED_KIND",
+        "_ODD_SPACE",
+        "_BRACE",
+        "_PROGRAM_VAR",
+        "_QUOTED",
+    )
     for fn in frozen:
         if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
-            continue  # #1908: compared once main defines it
+            continue  # #1908, #1942: compared once main defines it
         base_source = _extract_func_source(base, fn)
         for old, new in sanctioned.get(fn, ()):
             base_source = base_source.replace(old, new)

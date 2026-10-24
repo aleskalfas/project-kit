@@ -266,14 +266,15 @@ def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, postur
     payload = _bash(command, root)
     ours = dm.hook_decide(model, catalog, payload, project_root=str(root))
     mains = main_dm.hook_decide(model, catalog, payload, project_root=str(root))
-    # Deliberate, reviewed verdict change (#1917): a command holding a
-    # construct the splitter cannot trust is never allowed by a grant, with or
+    # Deliberate, reviewed verdict change (#1942): a command whose words the
+    # core cannot read as the shell does is never allowed by a grant, with or
     # without a leading `cd`, so a lenient posture abstains and a strict one
-    # denies, with a reason naming the construct (ADR-025 point 2). Where main
-    # decides such a command otherwise, ours is that verdict, and a deny of
-    # main's stays a deny: a deny still wins. Once this is on main, ours
-    # equals main's again, and this branch may be deleted.
-    if ours != mains and dm._UNTRUSTED.search(command):
+    # denies, with a reason naming each kind of construct (ADR-025 point 2).
+    # Where main decides such a command otherwise, or gives another reason,
+    # ours is that verdict, and a deny of main's stays a deny: a deny still
+    # wins. Once this is on main, ours equals main's again, and this branch may
+    # be deleted.
+    if ours != mains and dm._doubts(command):
         assert ours[0] == ("deny" if posture == "strict" else "abstain"), ours
         assert mains[0] != "deny" or ours[0] == "deny", (ours, mains)
         assert "untrusted construct" in ours[1], ours
