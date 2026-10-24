@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T10:54:22Z
+        at: 2026-10-24T12:39:06Z
         outcome: unchanged
-        unchanged-because: The catalog gains two allow-shaped privileges, read-filter and python-runner, and no guardrail. A guardrail is still denied to every subject whatever any grant allows, on each segment of a compound.
+        unchanged-because: The catalog gains two allow-shaped privileges, text-filter and uv-run, and no guardrail. A guardrail is still denied to every subject whatever any grant allows, on each segment of a compound.
 TERM-harness:
   name: harness
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T10:54:24Z
+        at: 2026-10-24T12:39:10Z
         outcome: unchanged
-        unchanged-because: The catalog gains read-filter and python-runner, each recognised from a command by its program or a regex over its words, and a grant allows or denies each as before.
+        unchanged-because: The catalog gains text-filter and uv-run, each recognised from a command by a regex over its words or by its program and subcommand, and a grant allows or denies each as before.
 TERM-process:
   name: process
   noun-forms: [processes]
@@ -825,9 +825,9 @@ TERM-profile:
           - ADR-005#2
           - ADR-032
       revalidated:
-        at: 2026-10-24T10:54:27Z
+        at: 2026-10-24T12:39:08Z
         outcome: unchanged
-        unchanged-because: Every shipped profile now grants read-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
+        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active

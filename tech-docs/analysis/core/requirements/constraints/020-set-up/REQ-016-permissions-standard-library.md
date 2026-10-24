@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-24T10:54:31Z
+      at: 2026-10-24T12:39:19Z
       outcome: unchanged
-      unchanged-because: The new privileges are catalog data, read by the same stdlib-only loader, and the tests that parse every shipped file with and without ruamel.yaml cover the new catalog and profiles.
+      unchanged-because: The new privileges are catalog data, read by the same stdlib-only loader, which the tests parse with and without ruamel.yaml, and the projection's change to note each grant once imports nothing new.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library

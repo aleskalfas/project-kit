@@ -40,9 +40,9 @@ pkit:
         - TERM-agent-workspace
         - TERM-session-anchor
     revalidated:
-      at: 2026-10-24T00:58:16Z
+      at: 2026-10-24T12:39:12Z
       outcome: unchanged
-      unchanged-because: ADR-060 point 4 names any untrusted construct where it named a quote, in a shell write behind a leading cd. The view's account of the workspace, its grant to the file tools and the hook's decision holds.
+      unchanged-because: ADR-005 point 5 now has every shipped profile grant text-filter, which only the hook realises, and lets a project grant a program runner such as uv-run. The view's account of a profile, its grants over catalog privileges beneath the project's own, and the workspace grant holds.
 ---
 
 # VIEW-agents-and-permissions — Agents and permissions
