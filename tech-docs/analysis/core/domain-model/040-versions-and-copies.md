@@ -342,7 +342,7 @@ A source repository is the versioned tree where the [backbone](../glossary.md#te
 
 Defined in [TERM-distribution](../glossary.md#term-distribution--distribution).
 
-**Why:** Whoever sets up the [system](../glossary.md#term-system--system) must know where it comes from, and through which channel (PRJ-004). The ref an [install](../glossary.md#term-install--install) names there decides whether a [project](../glossary.md#term-project--project)'s [recorded version](../glossary.md#term-recorded-version--recorded-version) names one content (PRJ-004).
+**Why:** Whoever sets up the [system](../glossary.md#term-system--system) must know where it comes from, and through which channel (PRJ-004). The ref the CLI is installed from there decides whether a [project](../glossary.md#term-project--project)'s [recorded version](../glossary.md#term-recorded-version--recorded-version) names one content (PRJ-004).
 
 A distribution is one edition of the [methodology](../glossary.md#term-methodology--methodology) and of the system that carries it, released from one [source repository](../glossary.md#term-source-repository--source-repository) through one channel. project-kit is one, and a fork that releases from its own repository is another.
 

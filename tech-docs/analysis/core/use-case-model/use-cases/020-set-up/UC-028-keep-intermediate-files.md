@@ -37,9 +37,8 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T12:57:07Z
-      outcome: unchanged
-      unchanged-because: The workspace grant still covers the file tools alone, and a redirect into the folder is judged like any other shell write. The read-only filters write no file, so they change no step here.
+      at: 2026-10-24T20:55:51Z
+      outcome: updated
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries
@@ -80,7 +79,7 @@ pkit:
 - **2a.** The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) is not registered. The harness decides the write by its own settings. Claude Code's [adapter](../../../glossary.md#term-adapter--adapter), for one, allows its file tools for the whole session, so nobody is asked.
 - **3a.** No [profile](../../../glossary.md#term-profile--profile) is active, or the active one is the [project](../../../glossary.md#term-project--project)'s own and grants no `workspace` privilege. The code decides the write as it would without the privilege. Under the `lenient` posture it defers the write to the harness, and under `strict` it denies it.
 - **3b.** The `read-only` profile is active, whose posture is `strict`. The code denies a file tool's write anywhere else, and allows it in the agent workspace under the `workspace` privilege (ADR-060 point 5).
-- **3c.** The hook defers the write to the harness all the same. Where a diagnostic session is on, its [report](../../../glossary.md#term-report--report) lists the deferral in its `workspace` group (UC-033). The group is a defect, never a gap to allow around (ADR-060 point 7).
+- **3c.** The hook defers the write to the harness all the same. Where a diagnostic session is on, `pkit permissions diagnose report` lists the deferral in its `workspace` group (UC-033). The group is a defect, never a gap to allow around (ADR-060 point 7).
 - **5a.** The clone has run none of `pkit init`, `pkit sync` and `pkit upgrade`, and the project's committed `.gitignore` lacks `/.agent-workspace/`. Git does not ignore the folder, so `git add -A` would stage its files. `pkit status` reports the folder `NOT excluded from git`, and `pkit init` recommends the `.gitignore` line (ADR-060 point 9).
 - **5b.** The project lies in no git repository. No commit carries anything, and `pkit sync` reports that there is nothing to exclude the folder from (`workspace.py`).
 - **6a.** The agent removes the files with a shell command, such as `rm`. The `workspace` privilege covers no shell command, so the code decides it on the command's own grants, and the harness may ask (ADR-060 point 4).
@@ -91,5 +90,5 @@ pkit:
 
 - The `workspace` [privilege](../../../glossary.md#term-privilege--privilege) reaches no file outside the folder, and has no opinion there (ADR-060 [point](../../../glossary.md#term-point--point) 1 and `decide.py`).
 - Another repository's [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace) never counts as this checkout's (ADR-060 point 3).
-- `pkit init`, `pkit sync` and `pkit upgrade` add the exclude entry once, with a comment line above it, and [change](../../../glossary.md#term-change--change) no other line of the exclude file (`workspace.py`).
-- A symlink in the folder's [place](../../../glossary.md#term-place--place) is never adopted as the agent workspace (ADR-060 point 2 and `workspace.py`).
+- `pkit init`, `pkit sync` and `pkit upgrade` add the exclude entry once, with a comment line above it, and edit no other line of the exclude file (`workspace.py`).
+- A symlink at the folder's path is never adopted as the agent workspace (ADR-060 point 2 and `workspace.py`).

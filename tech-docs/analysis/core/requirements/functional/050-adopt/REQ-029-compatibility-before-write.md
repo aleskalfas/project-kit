@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T19:00:32Z
+      at: 2026-10-24T20:50:37Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the capability tests gain cases that refuse a collision answer piped in. The tests of the compatibility gates, and what they find, are unchanged."
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything

@@ -61,6 +61,9 @@ pkit:
         - REQ-023
         - REQ-024
         - REQ-025
+    revalidated:
+      at: 2026-10-24T20:58:34Z
+      outcome: updated
 ---
 
 # UC-044 — Write a page for the reader it names
@@ -76,7 +79,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in [place](../../../core/glossary.md#term-place--place) where living-docs is developed (COR-017 and COR-031). The CLI registers `pkit living-docs new` and `validate` from its [package metadata](../../../core/glossary.md#term-package-metadata--package-metadata) (COR-021). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `docs-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
+- The [project](../../../core/glossary.md#term-project--project) has living-docs installed, or registered in place where living-docs is developed (COR-017 and COR-031). The CLI registers `pkit living-docs new` and `validate` from its [package metadata](../../../core/glossary.md#term-package-metadata--package-metadata) (COR-021). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `docs-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
 - The [backbone](../../../core/glossary.md#term-backbone--backbone) reads the [page](../../glossary.md#term-page--page)'s anchors, and its [change check](../../../core/glossary.md#term-change-check--change-check) asks the page for an [answer](../../../core/glossary.md#term-answer--answer) whenever what an [anchor](../../../core/glossary.md#term-anchor--anchor) names changes (COR-050 point 6). It resolves a `source` anchor through living-docs' resolver, `pkit living-docs resolve-source` (COR-050 point 2).
 - A `source` anchor that no captured file answers is a dead anchor. The core's checks report it, and fail it where a change adds it (COR-050 point 7 and core:REQ-020).
 - The backbone resolves the [readers](../../glossary.md#term-reader--reader) [data point](../../../core/glossary.md#term-data-point--data-point) from its default, the project's file and each [capability](../../../core/glossary.md#term-capability--capability) that fills it (COR-052). It answers where each [rule](../../../core/glossary.md#term-rule--rule) binds (COR-051 point 7).
@@ -136,7 +139,7 @@ pkit:
   - a `kind` that is not a word
   - where `RS-LDOC-003` binds, a reader the page lacks, one that is not a word, or one the readers data point does not hold
   - where `RS-LDOC-004` binds, a section the structure declares that the body lacks or carries out of order
-- **12b.** The readers data point does not resolve. Validation reports one error, "readers unresolved", and checks no page's reader until the data point resolves. It never reads the missing [answer](../../../core/glossary.md#term-answer--answer) as one that holds no reader (DEC-001 point 7 and core:REQ-004).
+- **12b.** The readers data point does not resolve. Validation reports one error, "readers unresolved", and checks no page's reader until the data point resolves. It never reads the missing result as one that holds no reader (DEC-001 point 7 and core:REQ-004).
 - **12c.** The page's kind declares no structure, such as a kind the project adds. Validation reports the page with its kind, and never fails it (DEC-001 point 3).
 - **12d.** `RS-LDOC-008` is proposed, so it binds on no page, and the summary says so. Where it binds, validation fails a `mermaid` fence of the page that lacks an `accTitle` or an `accDescr` (DEC-002 points 8 and 10).
 - **12e.** A `source` anchor of the page names no captured file. Validation reports it, and never fails it (DEC-001 point 4).
@@ -147,5 +150,5 @@ pkit:
 
 - A refused [stamp](../../../core/glossary.md#term-stamp--stamp) puts back every file it wrote, or names each it could not (REQ-023).
 - The stamp never writes over a file that exists (`stamp.py`).
-- [Validation](../../../core/glossary.md#term-validation--validation) and the resolver of a `source` [anchor](../../../core/glossary.md#term-anchor--anchor) change no file, need no network and [answer](../../../core/glossary.md#term-answer--answer) the same for the same state. So they meet core:REQ-005 and core:REQ-007 (`validate.py` and `resolve-source.py`).
+- [Validation](../../../core/glossary.md#term-validation--validation) and the resolver of a `source` [anchor](../../../core/glossary.md#term-anchor--anchor) change no file, need no network and give the same result for the same state. So they meet core:REQ-005 and core:REQ-007 (`validate.py` and `resolve-source.py`).
 - A [readers](../../glossary.md#term-reader--reader) [data point](../../../core/glossary.md#term-data-point--data-point) that does not resolve fails validation, and never passes a [page](../../glossary.md#term-page--page) on fewer readers (DEC-001 point 7).

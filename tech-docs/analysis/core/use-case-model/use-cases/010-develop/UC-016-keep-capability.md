@@ -27,9 +27,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T19:00:41Z
+      at: 2026-10-24T20:51:57Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, --purge and the unregister now ask only at a terminal, and refuse off one without --yes. A reply at a terminal, or --yes, still confirms."
+      unchanged-because: ACT-component-author says each new version of their component where it said release, and names the author where it said role. Its needs are the same, so this use case holds.
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository

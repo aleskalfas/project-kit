@@ -3,7 +3,7 @@ id: REQ-007
 title: A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic
 status: active
 statement: A command that resolves an anchor, fills a data point or joins validation needs no network, changes nothing in the project and is deterministic.
-measure: Once the checkout is provisioned, the command gives an answer with the network cut off, and leaves each file the project tracks as it was. Run twice over the same state of the repository, and the same anchor where it resolves one, it prints the same output.
+measure: Once the checkout is provisioned, the command gives a result with the network cut off, and leaves each file the project tracks as it was. Run twice over the same state of the repository, and the same anchor where it resolves one, it prints the same output.
 applies-to: Every command a component registers to resolve an anchor, fill a data point or join validation, whichever command of the backbone runs it.
 actors:
   - ACT-ci-pipeline
@@ -28,9 +28,59 @@ pkit:
         - ACT-ci-pipeline
         - ACT-developer
     revalidated:
-      at: 2026-10-23T08:53:56Z
-      outcome: unchanged
-      unchanged-because: The developer's needs that only a capability meets moved to its analysis, with the records behind them. A command that resolves an anchor or joins validation still needs no network and changes nothing.
+      at: 2026-10-24T20:54:35Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: tests/test_data_points.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: path
+          value: tests/test_friction_anchor_kinds.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: path
+          value: tests/test_package_validate.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: path
+          value: tests/test_validators.py
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: ADR-057#3
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: ADR-057#4
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: ADR-058#4
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: COR-050#2
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: COR-052#6
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
+      - anchor:
+          kind: record
+          value: COR-055#3
+        outcome: unchanged
+        reason: The measure says the command gives a result where it said an answer, for the same output. This target still backs the obligations as written.
 ---
 
 # REQ-007 · Constraint · A command that resolves an anchor, fills a data point or joins validation is offline, read-only and deterministic
@@ -43,4 +93,4 @@ Nothing holds a running command to the obligations. No layer stops its use of th
 
 Each such command is code a [component](../../glossary.md#term-component--component) ships, which the [backbone](../../glossary.md#term-backbone--backbone) runs but cannot confine. So the backbone requires the component to declare the obligations, and trusts the declaration (ADR-057 point 4).
 
-The obligations exist so that a check gives the same [answer](../../glossary.md#term-answer--answer) wherever and whenever it runs (COR-050 point 2). Once its checkout is provisioned, the CI pipeline runs the checks offline. A developer who runs them before pushing gets the answer the CI pipeline will. The backbone cannot enforce the obligations, so they are a constraint it takes as given, unlike the time bound of REQ-006, which it enforces.
+The obligations exist so that a check gives the same result wherever and whenever it runs (COR-050 point 2). Once its checkout is provisioned, the CI pipeline runs the checks offline. A developer who runs them before pushing gets the result the CI pipeline will. The backbone cannot enforce the obligations, so they are a constraint it takes as given, unlike the time bound of REQ-006, which it enforces.
