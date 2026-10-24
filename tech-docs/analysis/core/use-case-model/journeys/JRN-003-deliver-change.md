@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T04:46:24Z
+      at: 2026-10-24T05:22:43Z
       outcome: unchanged
-      unchanged-because: UC-037 now refuses the core namespace outside the methodology's source repository too. The journey records a project's own decision, which still stamps.
+      unchanged-because: "The derived links' fix changes how friction reads links, and #1953's refusals touch stamps outside the journey's path. Its steps and seams hold."
 ---
 
 # JRN-003 — Deliver a change
