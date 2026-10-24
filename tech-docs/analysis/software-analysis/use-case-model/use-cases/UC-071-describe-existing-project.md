@@ -81,7 +81,7 @@ pkit:
 **Main path:**
 
 1. The developer asks an AI agent to describe the project, following the `analysis-author` skill's `build-analysis.md`.
-2. The agent runs the whole-repository check, and reads the surface the project declares its analysis ought to cover. The project declares it in the friction key of its backbone configuration. Where none is declared, the agent asks the developer for one, and derives no candidate until it is declared (DEC-001 point 9).
+2. The agent runs the whole-repository check, and reads the surface the project declares its analysis ought to cover. The project declares the surface in the friction key of its backbone configuration. Where none is declared, the agent asks the developer for one, and derives no candidate until the project declares one (DEC-001 point 9).
 3. The agent derives candidates from the code, the existing documents and the project's decisions, in the order of DEC-001 point 12. It starts with the terms, then the domain-model views where the analysis keeps them, then the actors.
 4. The agent stamps each candidate with `pkit analysis new`, anchored with `--path` and `--record` to what it is drawn from.
 5. At its entry, before it writes, the system checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (core:REQ-012).
@@ -94,7 +94,7 @@ pkit:
 8. The agent shows the developer each candidate, with the code, the document or the record it is drawn from. The developer confirms it, and only a confirmed candidate is committed (DEC-001 point 9 and REQ-050).
 9. The agent goes on with the requirements that bind the whole system, then the use cases, then the journeys (DEC-001 point 12). It stamps each as in step 4, and shows it to the developer as in step 8.
 10. Where an accepted decision record decides behaviour the code lacks, the candidate use case describes it as the decision record decides. The step takes its box and its entry in `shortfalls`, naming that record and the issue that tracks building it (DEC-001 points 1 and 9).
-11. The agent runs the whole-repository check again, and ends onboarding only once it measures the declared surface covered (DEC-001 point 9). Every artefact of the analysis is then anchored, or carries a reason a person accepted.
+11. The agent runs the whole-repository check again, and ends onboarding only once the check measures the declared surface covered (DEC-001 point 9). Every artefact of the analysis is then anchored, or carries a reason a person accepted.
 12. The developer runs `pkit analysis check-numbers`, which passes, and commits the confirmed candidates.
 
 **Variants:**
