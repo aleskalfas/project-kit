@@ -407,8 +407,9 @@ class DerivedLink:
 @dataclass(frozen=True)
 class SetAside:
     """The derived links read as their words alone in a body (COR-050 point 5): the
-    targets of every form the places matching a file declare, sorted, each once. Empty,
-    it sets nothing aside, and a body reads as written."""
+    targets of every form the places matching a file declare, sorted, each once. A link
+    is set aside where its target matches any one form whole, each form matched on its
+    own. Empty, it sets nothing aside, and a body reads as written."""
 
     targets: tuple[str, ...] = ()
 
@@ -433,13 +434,18 @@ NOTHING_SET_ASIDE = SetAside()
 def _set_aside(targets: tuple[str, ...], text: str) -> str:
     """`SetAside.body`, read once per targets and text for the run: the checks read one
     body at many comparisons."""
-    pattern = _targets_pattern(targets)
-    return links_set_aside(text, lambda target: pattern.fullmatch(target) is not None)
+    patterns = _targets_patterns(targets)
+    return links_set_aside(
+        text, lambda target: any(pattern.fullmatch(target) for pattern in patterns)
+    )
 
 
 @functools.lru_cache(maxsize=64)
-def _targets_pattern(targets: tuple[str, ...]) -> re.Pattern[str]:
-    return re.compile("|".join(f"(?:{target})" for target in targets))
+def _targets_patterns(targets: tuple[str, ...]) -> tuple[re.Pattern[str], ...]:
+    """Each form's pattern compiled on its own, never joined into one: forms that each
+    compile may clash when joined, by a group's name, a numbered back-reference or a flag
+    set for the whole pattern, so each means what it means alone."""
+    return tuple(re.compile(target) for target in targets)
 
 
 def compiles(target: str) -> str | None:

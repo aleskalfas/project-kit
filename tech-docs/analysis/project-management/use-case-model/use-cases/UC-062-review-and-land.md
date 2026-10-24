@@ -78,9 +78,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T05:04:52Z
+      at: 2026-10-24T04:52:49Z
       outcome: unchanged
-      unchanged-because: REQ-042 now names a close through a merged pull request among the closes its tests find held. Step 14 still closes each issue the pull request closes once the developer authorised the merge.
+      unchanged-because: "done-work now works out the required reviewers before it refuses, and refuses a set that holds none. The use case's gate still merges on the required verdicts, as review-pr runs them since #1934, so its steps hold."
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it

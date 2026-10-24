@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T03:46:19Z
+      at: 2026-10-24T05:22:43Z
       outcome: unchanged
-      unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
+      unchanged-because: "The derived links' fix changes how friction reads links, and #1953's refusals touch stamps outside the journey's path. Its steps and seams hold."
 ---
 
 # JRN-003 — Deliver a change

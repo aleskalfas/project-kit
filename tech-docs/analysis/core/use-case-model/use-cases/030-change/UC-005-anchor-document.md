@@ -39,8 +39,9 @@ pkit:
         - REQ-015
         - REQ-020
     revalidated:
-      at: 2026-10-23T09:50:16Z
-      outcome: updated
+      at: 2026-10-24T04:58:24Z
+      outcome: unchanged
+      unchanged-because: Friction's reading of derived links now holds when forms clash or a placed file is renamed. How a writer says what a document rests on is unchanged.
 ---
 
 # UC-005 — Say what my document rests on
