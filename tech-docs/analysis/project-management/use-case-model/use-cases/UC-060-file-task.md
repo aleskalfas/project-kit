@@ -16,9 +16,6 @@ shortfalls:
   - at: 6
     issue: "#1313"
     record: project-management:DEC-005
-  - at: 7
-    issue: "#1933"
-    record: project-management:DEC-012
   - at: 8
     issue: "#1314"
     record: project-management:DEC-005
@@ -70,7 +67,7 @@ pkit:
         - REQ-040
         - REQ-041
     revalidated:
-      at: 2026-10-24T01:41:45Z
+      at: 2026-10-24T10:37:25Z
       outcome: updated
 ---
 
@@ -107,11 +104,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `create-issue` reads the parent's type only to label the body's first line, and checks no containment. DEC-005 decides that a filing that breaks the containment graph is refused, and #1313 tracks it.
 
-7. The system checks that the Task takes a value on each classification axis, from the values the project allows. Its workstream must be one that the project's workstreams file declares (DEC-012 and DEC-018).
-
-> [!WARNING]
-> **Not built yet:** `create-issue` checks `--workstream` only against the legacy `workstreams:` key of the capability's settings. Where that key is empty, any value passes. DEC-012 decides that a value outside the project's allowed set is refused, and #1933 tracks it.
-
+7. The system checks that the Task takes a value on each classification axis, from the values the project allows. Its workstream must be one that the project's workstreams file holds as active (DEC-012 and DEC-018).
 8. The system composes the body: its first line the parent reference, such as `Feature: #12`, then the Task's sections (DEC-010). Where the developer gave a file, the system checks that the file's first line is a Task's parent reference, naming the parent of `--parent` (DEC-005).
 
 > [!WARNING]
@@ -145,6 +138,7 @@ pkit:
 > **Not built yet:** `create-issue` writes the Milestone into the body's first line, while it links the Task under `<N>`. DEC-005 decides that the first line names the parent, and #1314 tracks it.
 
 - **7a.** A label carries the workstream, none is given, and the project's settings give no default. The system refuses, and writes nothing (DEC-012). The use case ends.
+- **7b.** The workstreams file lacks the given workstream, or holds it as deprecated. The system refuses, naming the active workstreams, and writes nothing (DEC-012 and DEC-018). The use case ends.
 - **8a.** The file's first line is no parent reference of a Task's forms, or it names a parent other than `--parent`. The system refuses, quoting the forms, and writes nothing (DEC-005). The use case ends.
 - **9a.** The body lacks a section a Task requires, or holds a heading of the first level. The system refuses, naming what is wrong, and writes nothing (DEC-010). The use case ends.
 

@@ -17,8 +17,11 @@ Naming rules (DEC-018 + workstreams.schema.json):
 
 The library is dependency-free at import time so it can be imported
 from any PEP 723 script regardless of its declared dependencies.
-YAML loading is the caller's responsibility — scripts load the file
-themselves and pass the parsed dict to `parse_workstreams()`.
+YAML loading is mostly the caller's responsibility — scripts load the
+file themselves and pass the parsed dict to `parse_workstreams()`.
+`read_declared()` is the exception: it loads the file with ruamel.yaml,
+imported when it is called, so only a script that declares ruamel.yaml
+calls it.
 """
 
 from __future__ import annotations
@@ -279,6 +282,82 @@ def _parse_mapping_form(mapping: dict) -> WorkstreamsParse:
 
 def find_active(parse: WorkstreamsParse) -> tuple[Workstream, ...]:
     return tuple(w for w in parse.entries if w.status == "active")
+
+
+@dataclass(frozen=True)
+class Declared:
+    """The workstreams a project declares, and where it declares them."""
+
+    source: str  # the file, as a message names it
+    parse: WorkstreamsParse
+
+
+def read_declared(capability_root: Path) -> Declared | None:
+    """The project's declared workstreams, or None when it declares none.
+
+    `project/workstreams.yaml` is authoritative wherever it exists (DEC-018),
+    an empty one included. Without it, the legacy `workstreams:` key of
+    `project/config.yaml` is read, and an empty or missing key declares none.
+    A file that cannot be read declares no entry, and its parse says why.
+    """
+    from ruamel.yaml import YAML
+    from ruamel.yaml.error import YAMLError
+
+    def load(path: Path) -> object:
+        return YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+
+    path = workstreams_path(capability_root)
+    if path.is_file():
+        try:
+            data = load(path)
+        except (OSError, YAMLError) as exc:
+            reason = "it cannot be read: " + " ".join(str(exc).split())
+            return Declared(WORKSTREAMS_RELATIVE, WorkstreamsParse((), "empty", (reason,)))
+        return Declared(WORKSTREAMS_RELATIVE, parse_workstreams(data))
+
+    legacy_path = config_path(capability_root)
+    try:
+        config = load(legacy_path) if legacy_path.is_file() else None
+    except (OSError, YAMLError):
+        config = None
+    legacy = config.get("workstreams") if isinstance(config, dict) else None
+    if not legacy or not isinstance(legacy, (list, dict)):
+        return None
+    return Declared(
+        f"the `workstreams:` key of {CONFIG_RELATIVE}",
+        parse_workstreams({"workstreams": legacy}),
+    )
+
+
+def filing_refusal(slug: str, declared: Declared | None) -> str | None:
+    """Why an issue may not take workstream ``slug``, or None when it may.
+
+    DEC-012 refuses a value outside the project's allowed set, and DEC-018
+    makes the workstreams file that set: an issue takes a workstream the file
+    holds as active. Where the project declares none, nothing is checked.
+    """
+    if declared is None:
+        return None
+    entry = next((w for w in declared.parse.entries if w.slug == slug), None)
+    if entry is not None and entry.status == "active":
+        return None
+    active = sorted(w.slug for w in find_active(declared.parse))
+    if entry is not None:
+        reason = f": {entry.deprecated_reason}" if entry.deprecated_reason else ""
+        message = f"workstream {slug!r} is deprecated in {declared.source}{reason}."
+    elif active:
+        message = f"workstream {slug!r} is not in {declared.source}."
+    else:
+        message = (
+            f"workstream {slug!r} is not in {declared.source}, which holds no active workstream."
+        )
+    if active:
+        message += f" Its active workstreams: {', '.join(active)}."
+    if declared.parse.errors:
+        message += " Problems in the file: " + "; ".join(declared.parse.errors) + "."
+    if entry is None:
+        message += " Add the workstream with `pkit pm add-workstream <slug>` first."
+    return message
 
 
 def slug_set(parse: WorkstreamsParse) -> set[str]:

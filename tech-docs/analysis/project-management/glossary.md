@@ -336,9 +336,9 @@ TERM-workstream:
           - project-management:DEC-018
           - project-management:DEC-012
       revalidated:
-        at: 2026-10-24T05:49:52Z
+        at: 2026-10-24T10:37:33Z
         outcome: unchanged
-        unchanged-because: The library gains the checks of DEC-018's rules that the workstream commands now run, and the rewriting of a typed reference. What a workstream is, and the file that declares it, are unchanged.
+        unchanged-because: The library gains the reading of the workstreams file that filing makes, to refuse a workstream the file does not hold as active. What a workstream is, and the file that declares it, are unchanged.
 ---
 
 # Glossary
