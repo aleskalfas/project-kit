@@ -1,7 +1,7 @@
 ---
 id: DEC-003
 title: software-engineering exists so code that agents write follows a project's own conventions, and code is reviewed before it merges
-status: proposed
+status: accepted
 date: 2026-10-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
 ---
