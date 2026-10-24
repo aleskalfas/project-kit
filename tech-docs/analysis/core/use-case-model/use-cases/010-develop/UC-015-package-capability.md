@@ -6,7 +6,7 @@ actor: ACT-component-author
 other-actors:
   - ACT-ai-agent
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 requirements:
   - REQ-009
 pkit:
@@ -42,7 +42,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:** None.
 

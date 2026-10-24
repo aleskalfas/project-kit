@@ -7,8 +7,8 @@ other-actors:
   - ACT-operator
   - ACT-adopter
 after:
-  - [UC-014]
-  - [UC-014, UC-019]
+  - [UC-014, UC-049]
+  - [UC-014, UC-019, UC-049]
   - [UC-022]
 requirements:
   - REQ-002
@@ -73,8 +73,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
-- **From UC-014 or UC-019:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-014, UC-019 or UC-049:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
 - **From UC-022:** The overlay, `.pkit/agents/project/overlay.yaml`, holds the project's own paths for the categories it sets. The project's own grants lie beside the methodology's.
 
 **Assumptions:**

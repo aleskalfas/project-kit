@@ -22,7 +22,7 @@ analyses:
       020-set-up: "Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits."
       030-change: "Record a project's decisions and rules, and check, answer and land each change to it, so what the project states stays true as it changes."
       040-release: "Release the backbone and each component on its own version, so projects can move to it and pin it."
-      050-adopt: "Take the system into another project, keep it current, and report what goes wrong with it."
+      050-adopt: "Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix."
   - component: project-management
     folder: project-management
     builds-on:

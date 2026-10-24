@@ -15,7 +15,7 @@ requirements:
   - REQ-009
   - REQ-012
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 shortfalls:
   - at: 3
     issue: "#1765"
@@ -74,7 +74,7 @@ pkit:
 - **Merge authoriser** (`ACT-merge-authoriser`): accepts the record by their own review, before any work builds on it (UC-040).
 - **Operator** (`ACT-operator`): is asked before the stamp writes in another repository than the session's own. So no such write happens silently (REQ-012).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

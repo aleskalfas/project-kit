@@ -5,8 +5,8 @@ status: active
 actor: ACT-adopter
 other-actors: []
 after:
-  - [UC-014]
-  - [UC-015, environment]
+  - [UC-014, UC-049]
+  - [UC-015, UC-048, environment]
 requirements:
   - REQ-005
   - REQ-010
@@ -37,8 +37,8 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
-- **From UC-015, or Environment:** The capability's package metadata is on the machine. The project authors the capability, or the distribution of the running CLI ships it (COR-053 point 8).
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-015 or UC-048, or Environment:** The capability's package metadata is on the machine. The project authors the capability, or the distribution of the running CLI ships it (COR-053 point 8).
 
 **Assumptions:** None.
 
