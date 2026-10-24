@@ -291,8 +291,6 @@ def _pass_gates(monkeypatch: pytest.MonkeyPatch, mod: ModuleType, verb: str) -> 
         monkeypatch.setattr(mod, "_gh_get_issue", lambda _n, _config: _ISSUE)
     if hasattr(mod, "_derive_branch_prefix"):
         monkeypatch.setattr(mod, "_derive_branch_prefix", lambda *a: "fix")
-    if hasattr(mod, "_get_local_registered"):
-        monkeypatch.setattr(mod, "_get_local_registered", lambda _config: [{"name": "r"}])
     if hasattr(mod, "axis_labels"):
         monkeypatch.setattr(mod.axis_labels, "load_substrate_map", lambda _r: None)
 

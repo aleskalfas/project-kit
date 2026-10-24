@@ -21,7 +21,7 @@ import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import ModuleType
+from types import MappingProxyType, ModuleType
 from typing import Any
 
 import pytest
@@ -414,13 +414,15 @@ class _Run:
         return self.run("--yes", "--expect-head", self.github.head, *argv, capsys=capsys)
 
 
-def _stage_project(work: Path, *, mode: str, remote: tuple[str, ...] = ()) -> Path:
+def _stage_project(
+    work: Path, *, mode: str, remote: tuple[str, ...] = (), local: tuple[str, ...] = PANEL
+) -> Path:
     capability = work / ".pkit" / "capabilities" / "project-management"
     project = capability / "project"
     project.mkdir(parents=True)
     shutil.copytree(CAPABILITY / "schemas", capability / "schemas")
     shutil.copytree(CAPABILITY / "templates", capability / "templates")
-    reviewers = "".join(f"      - name: {name}\n" for name in PANEL)
+    reviewers = "".join(f"      - name: {name}\n" for name in local)
     remotes = "".join(f"      - github_login: {login}\n" for login in remote)
     (project / "config.yaml").write_text(
         "schema_version: 1\n"
@@ -430,8 +432,7 @@ def _stage_project(work: Path, *, mode: str, remote: tuple[str, ...] = ()) -> Pa
         f"  mode: {mode}\n"
         "  agents:\n"
         + (f"    remote_registered:\n{remotes}" if remote else "")
-        + "    local_registered:\n"
-        + reviewers,
+        + (f"    local_registered:\n{reviewers}" if local else ""),
         encoding="utf-8",
     )
     (project / "bootstrap-stamp.yaml").write_text(
@@ -492,10 +493,11 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         mode: str = "agent",
         checks: list[list[dict[str, Any]]] | None = None,
         remote: tuple[str, ...] = (),
+        local: tuple[str, ...] = PANEL,
     ) -> _Run:
         shutil.copytree(clone.root, tmp_path / "clone", symlinks=True)
         work = tmp_path / "clone" / "work"
-        _stage_project(work, mode=mode, remote=remote)
+        _stage_project(work, mode=mode, remote=remote, local=local)
         monkeypatch.chdir(work)
         monkeypatch.setenv("PM_INVOKER_LOGIN", "octocat")
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
@@ -910,6 +912,60 @@ def test_human_review_mode_runs_no_reviewer_and_done_work_gates(world, capsys) -
         "approval is done-work's gate"
     )
     assert steps[4] == f"merge: refused — [refused] approval gate not satisfied for PR #{PR}."
+
+
+# ---- no local reviewer of the project's own (#1934) ---------------------------
+
+
+def _contribute(run: _Run, monkeypatch: pytest.MonkeyPatch, reviewer: str) -> None:
+    """An installed capability contributes `reviewer` to a PR that closes an
+    issue in the `design` workstream (DEC-032 point D2), and the agent is
+    deployed. review-pr and done-work collect it alike."""
+    rc = sys.modules["_lib.review_contributions"]
+    rule = rc.ContributionRule(
+        capability="ux-ui-design",
+        predicate=MappingProxyType({"workstream": ("design",)}),
+        reviewer=reviewer,
+    )
+    collection = rc.ContributionCollection(rules=(rule,))
+    for module in (run.land.review_pr, run.land.done_work):
+        monkeypatch.setattr(module, "collect_contributions", lambda _root: collection)
+    (run.work / ".claude" / "agents" / f"{reviewer}.md").write_text(
+        f"# {reviewer}\n", encoding="utf-8"
+    )
+    run.github.labels.append("workstream:design")
+
+
+def test_a_contributed_reviewer_reviews_where_the_project_registers_none_of_its_own(
+    world, capsys, monkeypatch
+) -> None:
+    """Only a remote reviewer is registered, and a capability contributes one the
+    PR requires: the review step runs it, and the PR lands on its approval and
+    the remote one (DEC-032 point D4). It used to skip the review."""
+    run = world(remote=("review-bot",), local=())
+    _contribute(run, monkeypatch, "design-reviewer")
+    head = run.github.head
+    run.github.comments.append(_remote_verdict(run, "review-bot", "Fine.", sha=head))
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == [("design-reviewer", head)]
+    assert "review: 0 kept fresh, 1 re-run — all approved" in _steps(out)
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_pr_that_requires_no_local_reviewer_leaves_the_approval_to_the_gate(
+    world, capsys
+) -> None:
+    """Only a remote reviewer is registered, and no capability contributes one:
+    the review step runs nothing, says so, and the gate reads the remote verdict."""
+    run = world(remote=("review-bot",), local=())
+    head = run.github.head
+    run.github.comments.append(_remote_verdict(run, "review-bot", "Fine.", sha=head))
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == []
+    assert "review: no local reviewer is required — the approval is done-work's gate" in _steps(out)
+    assert [merge[-1] for merge in run.github.merges] == [head]
 
 
 # ---- the merge ----------------------------------------------------------------
