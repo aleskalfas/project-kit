@@ -40,29 +40,35 @@ runs it. This is project-kit's runner, the design note's decision 7, option A
   together as a terminal shows them, with the page's output. The exit status
   is not compared. The spaces that end a line and the blank lines that end an
   output are left out on both sides.
-- **Output that varies:** before comparing, the run writes `<project>`, `<home>`,
-  `<tmp>` and `<repository>` for those folders' paths, and `<version>` for
-  project-kit's version. In the page's output, `<any>` stands for any text within
-  one line.
+- **Output that varies:** before comparing, the run writes `<project>`, `<home>`
+  and `<tmp>` for the fence's folders, `<scratch>` for the run's scratch area,
+  which holds those folders, uv's cache and the project each fence copies,
+  `<repository>` for the repository, and `<version>` for project-kit's version.
+  In the page's output, `<any>` stands for any text within one line.
 - **`--update`:** writes each command's output into its page where they differ,
   keeping each line of the page's that still matches, `<any>` included. A person
   reviews the new output like any change to the page (DEC-002 point 6). Output
   with a line that would read as a command or close the fence is never written,
-  so nothing a command prints becomes a command of the next run.
+  so nothing a command prints becomes a command of the next run. Nor is output
+  with a line that holds `<any>`, which the next run would read as any text. No
+  page is written until every page's commands have run with no write in the
+  repository.
 - **A write outside the scratch area:** the run lists every file in the
   repository, with its size, times, mode and inode, and every folder, with its
   mode, before and after each command. A path added, removed or changed fails
-  the test, and stops the run. The git index is left out, since any `git status`
-  rewrites it. A folder that holds a repository of its own, such as a linked
-  worktree, is not listed.
+  the test, and stops the run. The git directory, `.git`, is left out, since
+  any `git status` rewrites its index, and every session sharing the repository
+  writes in it at any time. A folder that holds a repository of its own, such as
+  a linked worktree, is not listed.
 
 What it cannot detect: a write anywhere but the repository, such as in the
 caller's home or the system's temporary folder by an absolute path, or in the
 git directory a linked worktree shares, which lies outside the worktree. Nor a
-change to the git index alone, a write undone before the command ends, a
-process that leaves its process group and writes later, or anything the network
-does. A write by another process at the same time it takes for the command's.
-Nothing confines a command: the run detects, it does not prevent.
+write in the repository's own git directory, a write undone before the command
+ends, a process that leaves its process group and writes later, or anything the
+network does. A write by another process elsewhere in the repository during a
+command is taken for the command's. Nothing confines a command: the run
+detects, it does not prevent.
 
 From the repository root:
 
@@ -112,8 +118,11 @@ DEFAULT_TIMEOUT = 60.0
 OUTPUT_LIMIT = 1 << 20
 #: Seconds each step of building the scratch project may run.
 BUILD_TIMEOUT = 600.0
-#: Paths in the repository that change without a write of the command's.
-UNWATCHED = frozenset({".git/index"})
+#: The repository's git directory, left out of the listing: any `git status` rewrites
+#: its index, and every session that shares the repository writes in it at any time.
+GIT_DIR = ".git"
+#: In compared and written output, the run's scratch area.
+SCRATCH = "<scratch>"
 
 GITCONFIG = """\
 [user]
@@ -176,6 +185,15 @@ class Fence:
         if line.startswith(PROMPT) or line.rstrip() == PROMPT.rstrip():
             return True
         return _closing(self.mark).match(line) is not None
+
+    def unwritable(self, lines: Sequence[str]) -> str | None:
+        """Why `--update` cannot write `lines` as output in this fence, or None when it
+        can: a line would read as a command or close the fence, or holds `<any>`."""
+        if any(self.reads_as_markup(line) for line in lines):
+            return "a line of it would read as a command or close the fence"
+        if any(ANY in line for line in lines):
+            return f"a line of it holds `{ANY}`, which the next run would read as any text"
+        return None
 
 
 def _closing(mark: str) -> re.Pattern[str]:
@@ -497,17 +515,18 @@ Listing = dict[str, tuple[int, ...]]
 
 def listing(root: Path) -> Listing:
     """Every path under `root` with what a write changes: a file's or a link's mode,
-    size, modification and change times and inode, a folder's mode. A folder holding a
-    `.git` of its own is another repository, and is left out with what it holds."""
+    size, modification and change times and inode, a folder's mode. The git directory
+    is left out with what it holds, and so is a folder holding a `.git` of its own,
+    another repository. A linked worktree's `.git` file is listed."""
     found: Listing = {}
     for folder, folders, files in os.walk(root):
         here = Path(folder)
-        folders[:] = [name for name in folders if not (here / name / ".git").exists()]
+        folders[:] = [
+            name for name in folders if name != GIT_DIR and not (here / name / GIT_DIR).exists()
+        ]
         for name in (*folders, *files):
             path = here / name
             relative = path.relative_to(root).as_posix()
-            if relative in UNWATCHED:
-                continue
             try:
                 status = path.lstat()
             except FileNotFoundError:
@@ -617,7 +636,8 @@ def run_pages(
     scratch_parent: Path | None = None,
 ) -> Report:
     """Run every `console` fence of the pages at `paths`, relative to `root`, and with
-    `update` write the new output of each command whose output differs into its page.
+    `update` write the new output of each command whose output differs into its page,
+    once every page's commands have run with no write in the repository.
     The scratch area is made under `scratch_parent`, the system's temporary folder by
     default, and the scratch project built in it by `build` only when a fence can run."""
     report = Report(pages=len(paths))
@@ -638,6 +658,9 @@ def run_pages(
     if not runnable:
         return report
     bin_dir = bin_dir if bin_dir is not None else Path(sys.executable).parent
+    # Each page's new lines, written only once no command of the run wrote in the
+    # repository.
+    written: dict[str, list[str]] = {}
     run_dir = Path(tempfile.mkdtemp(prefix="pkit-console-fences-", dir=scratch_parent))
     try:
         if _inside(run_dir, root):
@@ -653,6 +676,7 @@ def run_pages(
                 shutil.copytree(template.project, scratch.project, symlinks=True)
                 placeholders = {
                     "<repository>": root,
+                    SCRATCH: run_dir,
                     "<project>": scratch.project,
                     "<home>": scratch.home,
                     "<tmp>": scratch.tmp,
@@ -673,11 +697,13 @@ def run_pages(
                 lines = texts[path].split("\n")
                 for fence, outputs in reversed(ran):
                     lines = _rewritten(lines, fence, outputs)
-                (root / path).write_text("\n".join(lines), encoding="utf-8")
-                report.updated.append(path)
-        return report
+                written[path] = lines
     finally:
         shutil.rmtree(run_dir, ignore_errors=True)
+    for path, lines in written.items():
+        (root / path).write_text("\n".join(lines), encoding="utf-8")
+        report.updated.append(path)
+    return report
 
 
 def _run_fence(
@@ -734,13 +760,11 @@ def _run_fence(
         if output_matches(expected, actual):
             continue
         diff = difflib.unified_diff(expected, actual, "the page", "the run", lineterm="", n=2)
-        rewritable = not any(fence.reads_as_markup(row) for row in actual)
+        unwritable = fence.unwritable(actual)
+        rewritable = unwritable is None
         message = f"`{command.text}` printed other output than the page shows"
-        if not rewritable:
-            message += (
-                "; `--update` leaves it, since a line of it would read as a command "
-                "or close the fence"
-            )
+        if unwritable is not None:
+            message += f"; `--update` leaves it, since {unwritable}"
         report.findings.append(
             Finding(
                 fence.path,
@@ -763,7 +787,10 @@ def render(report: Report) -> str:
     out = [finding.render() for finding in findings]
     out.extend(f"updated {path}: review its new output" for path in report.updated)
     if report.stopped:
-        out.append("stopped: a command wrote in the repository, and no later fence ran")
+        out.append(
+            "stopped: a command wrote in the repository, no later fence ran, "
+            "and no page was updated"
+        )
     out.append(
         f"{report.commands} command(s) run, in {report.fences} fence(s) of "
         f"{report.pages} page(s): {len(report.findings) or 'no'} finding(s)"

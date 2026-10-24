@@ -8,17 +8,18 @@
 - **Where a command runs:** in a copy of the scratch project, from its root, with
   a home and a temporary folder of its own and none of the caller's environment.
   A fence's commands share its copy, and no fence sees another's.
-- **What is compared:** the output, with the scratch folders, the repository and
-  the version written as placeholders, and `<any>` in the page matching any text
-  within a line.
+- **What is compared:** the output, with the scratch folders, the run's scratch
+  area, the repository and the version written as placeholders, and `<any>` in
+  the page matching any text within a line.
 - **`--update`:** writes the new output, keeping the page's lines that still
   match and the output of the commands that matched, and never an output with a
-  line that would read as a command or close the fence.
-- **Safety:** a write in the repository fails the test and stops the run; a
-  command past its time or output limit fails its fence, and so does one whose
-  escaped process holds its output; what a command leaves running is stopped,
-  an interrupted run included; the scratch area lies outside the repository and
-  is removed after.
+  line that would read as a command, close the fence or hold `<any>`. It writes
+  no page when a command of the run wrote in the repository.
+- **Safety:** a write in the repository fails the test and stops the run, and a
+  write in its git directory does neither; a command past its time or output
+  limit fails its fence, and so does one whose escaped process holds its output;
+  what a command leaves running is stopped, an interrupted run included; the
+  scratch area lies outside the repository and is removed after.
 - **The scratch project:** built only when a fence can run, by `git init`,
   `pkit init` and a commit that is not signed; git there allows no SSH.
 
@@ -280,6 +281,45 @@ def test_any_stands_for_any_text_within_a_line(expected: str, actual: str, match
     assert cf.line_matches(expected, actual) is matches
 
 
+def _recording_project(project: Path, env: Mapping[str, str]) -> None:
+    _empty_project(project, env)
+    (project / "built.txt").write_text(f"{project}\n", encoding="utf-8")
+
+
+def test_the_run_s_scratch_area_and_the_paths_under_it_are_written_as_placeholders(
+    pages: Pages,
+) -> None:
+    pages.write(
+        "guide.md",
+        "```console",
+        "$ cat built.txt",
+        "old",
+        '$ echo "$UV_CACHE_DIR"',
+        "old",
+        FENCE,
+    )
+
+    def run(update: bool = False) -> cf.Report:
+        return cf.run_pages(
+            pages.root,
+            ["guide.md"],
+            update=update,
+            build=_recording_project,
+            scratch_parent=pages.scratch,
+        )
+
+    assert cf.exit_status(run(update=True), update=True) == 0
+    assert pages.read("guide.md") == _page(
+        "```console",
+        "$ cat built.txt",
+        "<scratch>/build/project",
+        '$ echo "$UV_CACHE_DIR"',
+        "<scratch>/uv-cache",
+        FENCE,
+    )
+    assert run().findings == []
+
+
 def test_the_version_and_the_paths_are_written_as_placeholders(tmp_path: Path) -> None:
     replace = cf.substitutions(
         {"<project>": tmp_path / "p", "<home>": tmp_path / "p-home"}, "1.2.3"
@@ -369,6 +409,41 @@ def test_update_never_writes_output_that_would_read_as_markup(pages: Pages, prin
     assert cf.exit_status(report, update=True) == 1
 
 
+def test_update_never_writes_output_that_holds_the_wildcard_text(pages: Pages) -> None:
+    pages.write("guide.md", "```console", "$ echo 'took <any> seconds'", "old", FENCE)
+    before = pages.read("guide.md")
+
+    report = pages.run(update=True)
+
+    (finding,) = report.findings
+    assert not finding.rewritable
+    assert finding.message.endswith(
+        "; `--update` leaves it, since a line of it holds `<any>`, "
+        "which the next run would read as any text"
+    )
+    assert report.updated == []
+    assert pages.read("guide.md") == before
+    assert cf.exit_status(report, update=True) == 1
+
+
+def test_update_writes_no_page_when_a_later_command_wrote_in_the_repository(
+    pages: Pages,
+) -> None:
+    pages.write("first.md", "```console", "$ echo new", "old", FENCE)
+    pages.write("later.md", "```console", f"$ touch {pages.root}/stray.txt", FENCE)
+    before = pages.read("first.md")
+
+    report = pages.run("first.md", "later.md", update=True)
+
+    assert report.stopped
+    assert [finding.path for finding in report.findings] == ["first.md", "later.md"]
+    assert report.findings[0].rewritable
+    assert report.updated == []
+    assert pages.read("first.md") == before
+    assert "no page was updated" in cf.render(report)
+    assert cf.exit_status(report, update=True) == 1
+
+
 def test_the_longest_run_of_matching_lines_is_kept() -> None:
     expected = ["header", "x <any>", "gone", "footer"]
     actual = ["header", "new", "x 1", "footer", "tail"]
@@ -401,6 +476,31 @@ def test_a_write_in_the_repository_fails_and_stops_the_run(pages: Pages) -> None
     assert report.updated == []
     assert "stopped: a command wrote in the repository" in cf.render(report)
     assert cf.exit_status(report, update=True) == 1
+
+
+def test_a_write_in_the_git_directory_passes_and_one_elsewhere_still_fails(
+    pages: Pages,
+) -> None:
+    git_dir = pages.root / ".git"
+    (git_dir / "objects").mkdir(parents=True)
+    (git_dir / "HEAD").write_text("ref: refs/heads/main\n", encoding="utf-8")
+    pages.write(
+        "guide.md",
+        "```console",
+        f"$ touch {git_dir}/objects/fetched {git_dir}/index && echo x >> {git_dir}/HEAD",
+        f"$ mkdir {git_dir}/worktrees && echo written",
+        "written",
+        f"$ touch {pages.root}/stray.txt",
+        FENCE,
+    )
+
+    report = pages.run()
+
+    (finding,) = report.findings
+    assert finding.line == 12
+    assert "wrote outside the scratch project, in the repository" in finding.message
+    assert finding.detail == ("  stray.txt",)
+    assert report.commands == 3
 
 
 def test_a_command_past_its_time_limit_fails_its_fence_only(pages: Pages) -> None:
@@ -495,9 +595,11 @@ def test_the_scratch_area_lies_outside_the_repository_and_is_removed(pages: Page
     assert [path.name for path in pages.root.iterdir()] == ["guide.md"]
 
 
-def test_the_listing_leaves_out_the_git_index_and_a_repository_inside(tmp_path: Path) -> None:
+def test_the_listing_leaves_out_the_git_directory_and_a_repository_inside(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "repo"
-    (root / ".git").mkdir(parents=True)
+    (root / ".git" / "objects").mkdir(parents=True)
     (root / ".git" / "index").write_text("one", encoding="utf-8")
     (root / ".git" / "HEAD").write_text("ref", encoding="utf-8")
     (root / "worktree").mkdir()
@@ -506,13 +608,25 @@ def test_the_listing_leaves_out_the_git_index_and_a_repository_inside(tmp_path: 
     before = cf.listing(root)
 
     (root / ".git" / "index").write_text("two, refreshed", encoding="utf-8")
+    (root / ".git" / "HEAD").write_text("another ref", encoding="utf-8")
+    (root / ".git" / "objects" / "ab").write_text("another session's fetch", encoding="utf-8")
     (root / "worktree" / "new").write_text("another repository's", encoding="utf-8")
     unchanged = cf.changed(before, cf.listing(root))
-    (root / ".git" / "HEAD").write_text("another ref", encoding="utf-8")
+    (root / "a.txt").write_text("changed", encoding="utf-8")
 
-    assert sorted(before) == [".git", ".git/HEAD", "a.txt"]
+    assert sorted(before) == ["a.txt"]
     assert unchanged == []
-    assert cf.changed(before, cf.listing(root)) == [".git/HEAD"]
+    assert cf.changed(before, cf.listing(root)) == ["a.txt"]
+
+
+def test_the_listing_keeps_a_linked_worktree_s_git_file(tmp_path: Path) -> None:
+    (tmp_path / ".git").write_text("gitdir: elsewhere", encoding="utf-8")
+    before = cf.listing(tmp_path)
+
+    (tmp_path / ".git").write_text("gitdir: somewhere else", encoding="utf-8")
+
+    assert sorted(before) == [".git"]
+    assert cf.changed(before, cf.listing(tmp_path)) == [".git"]
 
 
 # --- the scratch project --------------------------------------------------------------------
