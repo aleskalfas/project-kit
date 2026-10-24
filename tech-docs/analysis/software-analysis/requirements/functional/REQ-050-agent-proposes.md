@@ -24,6 +24,10 @@ pkit:
         - software-analysis:DEC-001#5
         - software-analysis:DEC-001#9
         - COR-050#3
+    revalidated:
+      at: 2026-10-24T02:12:42Z
+      outcome: unchanged
+      unchanged-because: The agent still grants no tool that edits a file in place, owns no path and hands each writer to a person. The change adds how it tells the two regressions apart, and tests of that.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it

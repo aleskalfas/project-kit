@@ -18,6 +18,10 @@ pkit:
       record:
         - software-analysis:DEC-001#1
         - COR-051#7
+    revalidated:
+      at: 2026-10-24T02:12:43Z
+      outcome: unchanged
+      unchanged-because: The change moves the read of a record's status into backbone.record_status, its behaviour kept. Where an artefact's structure binds, which REQ-053 states, is untouched.
 ---
 
 # REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always

@@ -165,6 +165,10 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
+      revalidated:
+        at: 2026-10-24T02:12:38Z
+        outcome: unchanged
+        unchanged-because: The term still names the four outcomes and how they map onto the two answers. The change makes pkit analysis propose answer a boxed regression updated, as its distinctions already say.
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -177,6 +181,10 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
+      revalidated:
+        at: 2026-10-24T02:12:40Z
+        outcome: unchanged
+        unchanged-because: The term still names what the agent drafts for a person to record. The change adds how the agent tells a boxed regression from one no record decides, which the term does not describe.
 TERM-revalidation-record:
   name: revalidation record
   status: active
