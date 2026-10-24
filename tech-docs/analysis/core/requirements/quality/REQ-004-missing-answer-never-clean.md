@@ -36,7 +36,7 @@ pkit:
 
 # REQ-004 · Quality · A check never reads a missing answer as one that found nothing
 
-**Verified by:** Tests run commands that give no answer in each way the command runner recognises:
+**Verified by:** Tests run commands that give no [answer](../../glossary.md#term-answer--answer) in each way the command runner recognises:
 
 - it cannot start
 - it ends abnormally
@@ -45,10 +45,10 @@ pkit:
 
 Each is reported as giving no answer, and tests find that:
 
-- validation fails on such a command
-- the change check fails on it where the project enforces the check
-- the whole-repository check never reports its artefact `current`
-- a data point declared `fail` stays unresolved when its command gives no answer
-- a default branch the clone cannot read is reported, never guessed
+- [validation](../../glossary.md#term-validation--validation) fails on such a command
+- the [change check](../../glossary.md#term-change-check--change-check) fails on it where the [project](../../glossary.md#term-project--project) enforces the check
+- the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check) never reports its [artefact](../../glossary.md#term-artefact--artefact) `current`
+- a [data point](../../glossary.md#term-data-point--data-point) declared `fail` stays unresolved when its command gives no answer
+- a [default branch](../../glossary.md#term-default-branch--default-branch) the clone cannot read is reported, never guessed
 
-**Rationale:** A missing answer "is never an answer naming nothing" (COR-050 point 2). COR-055 gives the reason, under "Why no answer fails": "Silence must not read as health". A pass nobody earned means that "the gate reports the project in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.
+**Rationale:** A missing [answer](../../glossary.md#term-answer--answer) "is never an answer naming nothing" (COR-050 [point](../../glossary.md#term-point--point) 2). COR-055 gives the reason, under "Why no answer fails": "Silence must not read as health". A pass nobody earned means that "the gate reports the [project](../../glossary.md#term-project--project) in order when a check never ran, and nothing prompts anyone to look". So the CI pipeline can gate a merge on a check's exit status, and an adopter's merges wait on checks that ran.

@@ -26,6 +26,6 @@ pkit:
 
 # REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always
 
-**Verified by:** Tests find that an artefact outside every scope is not held to its structure, and that the check reports where no rule of `SAN` binds. They find that a record is held to its structure while the format rule is proposed, and that a preview never changes the exit status.
+**Verified by:** Tests find that an [artefact](../../../core/glossary.md#term-artefact--artefact) outside every scope is not held to its structure, and that the check reports where no [rule](../../../core/glossary.md#term-rule--rule) of `SAN` binds. They find that a record is held to its structure while the format rule is proposed, and that a preview never changes the exit status.
 
-**Rationale:** A shipped rule binds only through a rule set of the project's own, which decides where it binds (DEC-001 point 1 and COR-051 point 7). No route leads from a held document, so the capability checks a record's structure itself (DEC-001 point 1).
+**Rationale:** A shipped [rule](../../../core/glossary.md#term-rule--rule) binds only through a [rule set](../../../core/glossary.md#term-rule-set--rule-set) of the [project](../../../core/glossary.md#term-project--project)'s own, which decides where it binds (DEC-001 point 1 and COR-051 point 7). No route leads from a held document, so the [capability](../../../core/glossary.md#term-capability--capability) checks a record's structure itself (DEC-001 point 1).

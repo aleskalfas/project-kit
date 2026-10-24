@@ -24,8 +24,8 @@ pkit:
 
 An AI agent working under the methodology, acting on the system from outside.
 
-- **Role holders:** the main session acting for a person, or an agent that session dispatches for one role (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, rule-set-reviewer, process-author).
+- **Role holders:** the main session acting for a person, or an agent that session dispatches for one [role](../../glossary.md#term-role--role) (in the core: critic, architect, methodology-reviewer, convention-compliance-reviewer, rule-set-reviewer, process-author).
 - **Occasions:** whenever work is done. It keeps no memory between sessions beyond what the repository holds.
 - **Context:** None.
-- **Place in the model:** when it does a role's work, it appears as a step in that role's use cases.
-- **Core:** the agent architecture, the rules loaded into every session and the adapter's deployment make this actor exist. The core's reviewer agents advise, and no core gate counts their verdict.
+- **Place in the model:** when it does a [role](../../glossary.md#term-role--role)'s work, it appears as a step in that role's use cases.
+- **Core:** the agent architecture, the rules loaded into every session and the [adapter](../../glossary.md#term-adapter--adapter)'s deployment make this actor exist. The core's [reviewer](../../glossary.md#term-reviewer--reviewer) agents advise, and no core gate counts their verdict.

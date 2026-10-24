@@ -23,4 +23,4 @@ pkit:
 
 **Verified by:** A test declares a root whose folder is missing, and finds a warning and no error. Another pins the warning's words. A third finds that `pkit validate` exits 0 with the warning, and exits 1 once the configuration holds an error.
 
-**Rationale:** The adopter may declare the roots before the project holds any document. COR-049 point 7 decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
+**Rationale:** The adopter may declare the roots before the [project](../../glossary.md#term-project--project) holds any document. COR-049 [point](../../glossary.md#term-point--point) 7 decides that such a root "produces a warning, not a failure, since a fresh project may have no documentation folder".
