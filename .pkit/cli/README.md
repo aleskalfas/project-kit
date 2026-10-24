@@ -369,6 +369,7 @@ Removes redundant permission allow entries from `.claude/settings.json` and `.cl
 - **What counts as redundant.** An entry a broader rule in *either* file covers, removed from whichever file holds it. The comparison is deliberately narrow: `Bash(<prefix>:*)` covers `Bash(<prefix>)`, `Bash(<prefix> <args>)` and `Bash(<prefix>:<args>)`, and nothing else — no other tool's rules, no path globs.
 - **What it leaves alone.** Only `permissions.allow` is consolidated; denies stay explicit, for audit.
 - **Consent.** It prints the plan grouped by file and asks once before writing. `--dry-run` prints the plan only; `--yes` writes without asking.
+- **Off a terminal.** Without `--yes` it refuses and writes nothing, whatever is piped into stdin. It names `--dry-run` and `--yes`.
 
 ### `upgrade`
 
@@ -491,6 +492,7 @@ Exit `0` when answered, a capability that declares no set included. Exit `1` whe
 
 - **Its checks:** sync's guard first, so it stops wherever `sync` stops ("Capabilities — two ways in", above), then compatibility, its dependencies and mandatory process connections (below), and the collision flow.
 - **`--interactive`:** a new collision is asked about only under this flag, as `capabilities install` asks: `override`, `skip` or `inspect`. Without it the command refuses and names the flag ([the lifecycle README, "A new collision"](../lifecycle/README.md#a-new-collision)).
+- **Off a terminal:** the collision question is never asked, under `--interactive` too, and an answer piped into stdin is never read. The command names each collision and refuses before it writes anything, as `capabilities install` does (#2003).
 - **`--force`:** overrides the warning for an installed dependent the new version leaves out of range, or with a mandatory connection unmet, and nothing else ([the lifecycle README, "Per-component upgrade"](../lifecycle/README.md#per-component-upgrade)).
 - **`--dry-run`:** names the move, the migrations and the questions, and writes nothing.
 - **The questions:** last, once the capability is moved, the questions of the points it defines and of the points its contributions reach ("The questions a capability's points declare", above).
@@ -1887,6 +1889,11 @@ default whenever `gh` is authenticated. `--on-behalf-of @login` files under the
 invoker's identity with a "Reported for @login" attribution so the beneficiary
 still tracks it.
 
+**Off a terminal (#2003).** The post's confirmation and the redaction prompt
+before it are asked only at a terminal, and so is the project name. Off one, an
+answer piped into stdin is never read. The post is refused, and the refusal
+names `--yes`, which stages the report.
+
 **Project + workstream context** (per [pkit:ADR-050]) rides every composed
 report, drafts included: a human context line right under the title
 (`Project: <name> · Workstream: <ws>`, missing halves omitted), `project=` /
@@ -1967,6 +1974,9 @@ draft for retry; an issue created whose overflow comment failed keeps the
 draft **only** as the source of the full text and says not to resubmit (the
 issue already exists — retry the comment instead).
 
+Off a terminal, `report submit <id>` refuses and keeps the draft, whatever is
+piped into stdin (#2003).
+
 ### `report` (= `report list`) / `report show <N>`
 
 `report` lists the invoker's reports (authored by *or* attributed to them) + states,
@@ -2022,11 +2032,15 @@ filing a fix (per [project-management:DEC-048-from-report-auto-link]), so the
 manual `report link` remains the universal fallback, never a parallel
 implementation.
 
+Off a terminal without `--yes`, `report inbox --resolved` lists the reports,
+then refuses to close any, whatever is piped into stdin (#2003).
+
 ## Standard flags
 
 - **`--help`** on every command, including the root.
 - **`--version`** on the root, equivalent to running the `version` subcommand.
 - **`--dry-run`** on each command that changes or removes content that already exists, beyond the one value or entry you name (per COR-004). A command outside that class may offer it too. Among the commands that offer it: `init`, `sync`, `merge`, `upgrade`, `capabilities install`, `capabilities register`, `capabilities uninstall`, `capabilities upgrade`, `capabilities refresh`, `process new`, `process couple`, `process hand-off`, `friction revalidate`, `friction defer`, `friction revisit`, `friction record-status`. Some commands of the class do not offer it. Shows the plan without applying any changes. On the process stamps it runs every check a real run runs, including the shape lint of the would-be definition, and reports the stubs it would scaffold.
+- **`--yes`** answers for a run with no person at a terminal. A question that guards a person's decision is asked only when stdin is a terminal. Off one, as with `echo y | pkit …`, the command reads no answer, and without `--yes` it refuses and names the command to run (#2003). A command with no `--yes`, such as `visibility untrack`, refuses there too, and a `report` verb's `--yes` stages the report and never posts it.
 - **`--color {auto,always,never}`** on the root (default `auto`). Colourizes human output via the semantic styling layer (per ADR-011); resolved once at the command boundary. Honours `NO_COLOR`; styling is never load-bearing (plain text carries all structure), so this never changes machine output or piped/redirected output.
 
 ## Command output conventions
