@@ -156,17 +156,16 @@ def main() -> int:
                 hidden = decide.hook_hidden_guardrails(
                     model, catalog, payload, project_root=str(root)
                 )
+            if hidden:
+                kinds = " / ".join(sorted({kind for found in hidden.values() for kind in found}))
+                decision, reason = (
+                    "ask",
+                    f"the guardrail {sorted(hidden)} may bind on what the shell runs ({kinds}), "
+                    f"which the permission code cannot see: confirm the command "
+                    f"(ADR-025 point 2: the core defers, and the harness's own rules may allow it)",
+                )
         except Exception as exc:  # the ask must never break fail-open
             _debug(f"hidden-guardrail check fault → ignore: {exc!r}")
-            hidden = {}
-        if hidden:
-            kinds = " / ".join(sorted({kind for found in hidden.values() for kind in found}))
-            decision, reason = (
-                "ask",
-                f"the guardrail {sorted(hidden)} may bind on what the shell runs ({kinds}), "
-                f"which the permission code cannot see: confirm the command "
-                f"(ADR-025 point 2: the core defers, and the harness's own rules may allow it)",
-            )
 
     # Additive foreign-repo corner (ADR-034 point 2): when the decision core
     # abstained (deferred), an Edit/Write to an absolute foreign path is

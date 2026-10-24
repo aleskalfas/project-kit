@@ -954,6 +954,8 @@ def test_hook_keeps_the_abstain_when_the_check_faults(tmp_path):
     for tail in (
         "\ndel hook_hidden_guardrails\n",
         "\ndef hook_hidden_guardrails(*a, **k):\n    raise RuntimeError('boom')\n",
+        # an answer of another shape, as from a mismatched decision core
+        "\ndef hook_hidden_guardrails(*a, **k):\n    return {'x': 1}\n",
     ):
         decide_py.write_text(original + tail, encoding="utf-8")
         _, parsed = _invoke(root, _bash_payload(root, "git push origin --forc[e]"))
