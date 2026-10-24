@@ -414,9 +414,9 @@ TERM-decision-record:
           - COR-025
           - COR-058#1
       revalidated:
-        at: 2026-10-20T01:37:26Z
+        at: 2026-10-24T00:20:32Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The stamp now refuses a capability whose folder the project receives as a synced copy. A record is still numbered in its namespace and binds once accepted, so the definition holds.
 TERM-default-branch:
   name: default branch
   status: active

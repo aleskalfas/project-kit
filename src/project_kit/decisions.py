@@ -24,6 +24,10 @@ name** (Feature #162): `pkit new decision <capability> <slug>` stamps a
 `DEC-NNN` record under `.pkit/capabilities/<capability>/decisions/`, with
 the next number scoped to that capability (each capability is its own
 DEC id-space). The capability must exist; the command refuses otherwise.
+It refuses too, writing nothing, where that folder arrives in the project as
+a synced copy, as the tree's ownership predicate answers (`is_synced_copy`):
+the next sync would overwrite the record (core rule 1). The refusal names the
+`project` and `adr` namespaces, where the project's own decision goes.
 
 **The number** is one past the highest that the namespace's folder holds, in
 the working tree or on the default branch, each read from a record's file name
@@ -57,7 +61,7 @@ from typing import Any, Literal
 import click
 from ruamel.yaml import YAML
 
-from project_kit import agents_overlay, default_branch, docs_roots
+from project_kit import agents_overlay, default_branch, docs_roots, lifecycle_ownership
 from project_kit.capability_namespace import resolve_capability_dir
 from project_kit.friction_git import SHORT, CommitTree, run_git
 
@@ -125,7 +129,8 @@ def stamp_decision(
     takes over a folder already holding documents). Any other `namespace` value
     is treated as a **capability name** (Feature #162): the record stamps under
     `.pkit/capabilities/<namespace>/decisions/` with the `DEC` prefix, numbered
-    independently within that capability.
+    independently within that capability. A capability whose folder arrives in the
+    project as a synced copy is refused (`_refuse_synced_copy`).
 
     The number is one past the highest the namespace's folder holds in the working
     tree or on the default branch (`_next_number`). What the stamp says of the
@@ -137,9 +142,10 @@ def stamp_decision(
 
     Returns the stamped file path. Raises `click.ClickException` for any
     user-facing precondition failure (invalid slug, missing decisions dir,
-    duplicate slug, overlay misconfiguration, unknown capability, no consent to
-    the recording), and `click.Abort` when the recording is declined at the
-    prompt. Writes the file synchronously.
+    duplicate slug, overlay misconfiguration, unknown capability, a capability
+    the project receives as a synced copy, no consent to the recording), and
+    `click.Abort` when the recording is declined at the prompt. Writes the file
+    synchronously.
     """
     if not _SLUG_RE.match(slug):
         raise click.ClickException(
@@ -157,7 +163,7 @@ def stamp_decision(
             raise click.ClickException(f"{decisions_dir} does not exist.")
     else:
         prefix = "DEC"
-        decisions_dir = _resolve_capability_decisions_dir(target_root, namespace)
+        decisions_dir = _resolve_capability_decisions_dir(target_root, namespace, slug)
 
     if any(decisions_dir.glob(f"{prefix}-*-{slug}.md")):
         raise click.ClickException(
@@ -331,19 +337,49 @@ def _record_derived_adr_records(target_root: Path, rel: str, slug: str, *, yes: 
     return docs_roots.recording_notice(target_root, docs_roots.BACKBONE, _ADR_CATEGORY, rel)
 
 
-def _resolve_capability_decisions_dir(target_root: Path, capability: str) -> Path:
-    """Resolve a capability's `decisions/` directory, refusing if the capability is absent.
+def _resolve_capability_decisions_dir(target_root: Path, capability: str, slug: str) -> Path:
+    """Resolve a capability's `decisions/` directory, refusing if the capability is absent
+    or the folder arrives here as a synced copy.
 
     The existence contract and the refusal are the shared capability-namespace
-    ones (`capability_namespace.resolve_capability_dir`). The `decisions/`
-    subdirectory is created if the capability exists but hasn't held a DEC
-    record yet — stamping the first DEC into a capability is a normal first
-    step, not an error.
+    ones (`capability_namespace.resolve_capability_dir`). A folder that arrives as
+    a synced copy is the methodology's, or its external source's, and the next sync
+    overwrites what is written there (core rule 1), so the stamp refuses it before
+    it writes anything (`_refuse_synced_copy`). The `decisions/` subdirectory is
+    created if the capability exists but hasn't held a DEC record yet — stamping
+    the first DEC into a capability is a normal first step, not an error.
     """
     cap_dir = resolve_capability_dir(target_root, capability, _FIXED_NAMESPACES)
     decisions_dir = cap_dir / "decisions"
+    _refuse_synced_copy(target_root, capability, decisions_dir, slug)
     decisions_dir.mkdir(parents=True, exist_ok=True)
     return decisions_dir
+
+
+def _refuse_synced_copy(target_root: Path, capability: str, folder: Path, slug: str) -> None:
+    """Refuse to stamp into *folder* when it arrives in this project as a synced copy.
+
+    The question is the tree's own predicate, `is_synced_copy` of
+    `.pkit/lifecycle/ownership.py`, keyed on the capability's origin: a kit-shipped
+    capability's folder in a project that is not the methodology's source, or an
+    externally-sourced one's in any project, the methodology's source included.
+    An incubated capability, and a kit-shipped one in the methodology's source,
+    is authored where it stands, so it stamps. A tree without that module has no
+    synced copy, as for validation.
+    """
+    ownership = lifecycle_ownership.load_ownership(target_root)
+    if ownership is None:
+        return
+    if not ownership.is_synced_copy(target_root, folder.relative_to(target_root).as_posix()):
+        return
+    raise click.ClickException(
+        f"capability {capability!r} arrives in this project as a synced copy: its "
+        "decisions/ folder is not the project's, and the next sync overwrites what is "
+        "written there (the no-shared-files invariant). Record the project's own decision "
+        f"with `pkit new decision project {slug}`, or with `pkit new decision adr {slug}` "
+        "for one about what the project builds. A decision of the capability itself is "
+        "recorded where the capability is authored."
+    )
 
 
 def _next_number(decisions_dir: Path, prefix: str, settled: Iterable[str] = ()) -> int:
