@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T01:34:37Z
+      at: 2026-10-24T02:06:56Z
       outcome: updated
       deferred:
         - anchor:
@@ -608,6 +608,8 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
 | `close-issue <N> --mode=cascade-eligibility-close` | Closes a container (epic/feature/umbrella) once all its children are closed and its own checkboxes are ticked (a non-skippable DEC-007 gate). Whether every child has closed is the process engine's fold (`pkit process cascade`). A container the fold holds is refused, with what the refusal's own read of the children found: open children, each named with what releases the container; a read that failed, with the engine's reason and what the predicate it could not evaluate said on standard error, under `the predicate said:`; both, each with its remedy (see "What holds a container open" below). |
 | `reopen-issue <N> [--reason "<R>"]` | Reopens a closed issue and puts it back into the lifecycle: its state label is removed, so it reads as `backlog` when it has a milestone and `todo` otherwise, and `start-work` (or `promote-issue`) takes it on from there. An open issue still labelled done is repaired the same way. |
 | `edit-issue <N> [--title T] [--body B \| --body-file F \| --append A] [--milestone <M> \| --clear-milestone --reason "<R>"]` | Title / body edit, validated against the title and body rules for the fields edited (see above). `--milestone` attaches the issue to an OPEN milestone or moves it to another — its number or exact title, validated as `create-issue --milestone` validates it, for an issue whose type may carry one; `--clear-milestone` detaches it. A milestone change needs `--reason` and posts an audit comment. See "Attaching an issue to a Milestone" below. |
+
+**A won't-do close and a container's close are the person's.** [project-management:DEC-006-state-machine-and-cascade] makes both moves the person authorises, a hard reject where that authorisation is missing. `close-issue` holds them as `move-issue` holds such a move: `--yes` authorises the close, and at a terminal the person is asked. With neither, `close-issue` refuses with exit code 1 and writes nothing. A dry run writes nothing, so it needs no authorisation.
 
 **The closure cascade reports; it never closes.** Every `close-issue` mode ends with the closure cascade (skip it with `--no-cascade`): each parent issue the close gate counts the closed issue under is checked for close eligibility — its native parent and the parent its first line names, as the containment seam resolves them (see "Reading an issue's parent" above), so the report and the gate cannot disagree — and so is each Milestone the issue sits in — see "The closure cascade says when a Milestone became closeable" under the Milestone lifecycle below. A container closes through `--mode=cascade-eligibility-close`, a Milestone through `close-milestone`. Where the two records of the closed issue's parent do not agree, the cascade says so after the checks:
 
