@@ -75,7 +75,7 @@ pkit:
 
 - **1a.** The developer asks the agent to review a change for documentation it left missing or contradicted. That is change review, which belongs to code review, and the agent says so (DEC-001 point 6). The use case ends.
 - **2a.** No rule binds on the page. No space definition's scope selects it, or it is reached only through a pin behind `LDOC`'s major. The agent says so, names what validation reports of it, and judges it against no rule.
-- **3a.** The readers data point is not available yet. The agent says so, and reads the page as the `audience` its space's entry names in the capability's configuration (DEC-001 point 1). Where the entry names none, it reads a user page as users and a technical page as maintainers. For a space the project adds that names none, it names the entry that lacks an audience, and stops.
+- **3a.** The readers data point is not available yet. The agent says so, and reads the page as the `audience` its space's entry names in the capability's configuration (DEC-001 point 1). Where the entry names none, it reads a user page as users and a technical page as maintainers. For a space the project adds whose entry names none, it names that entry, and stops.
 - **3b.** `RS-LDOC-003` binds on the page, and the readers data point holds no reader of the page's id. That is validation's finding, so the agent names `pkit living-docs validate`, and stops.
 - **4a.** The page shows a diagram, an image or a recording. The agent judges whether each that carries meaning has a text alternative, and a decorative image an empty one (DEC-002 point 8). An image's alt text is judged here alone, since no check tells a decorative image from one that carries meaning.
 

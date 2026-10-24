@@ -207,7 +207,7 @@ places:                                        # place → space, the place writ
   CONTRIBUTING.md: technical
 ```
 
-A space's `audience` says, in words, who the space serves. DEC-001 gives the user space users and the technical space maintainers, and a space you add serves an audience neither serves, such as `integrators who call the HTTP API`. Until the readers point resolves, the living-docs agent reads a page as its space's audience, so name it for each space you add. `pkit validate` refuses one that is not text.
+A space's `audience` says, in words, who the space serves. DEC-001 gives the user space users and the technical space maintainers, and a space you add serves an audience neither serves, such as `integrators who call the HTTP API`. Until the readers point resolves, the living-docs agent reads a page as its space's audience, so name the audience of each space you add. `pkit validate` refuses an audience that is not text, or is blank.
 
 A place inside a root belongs to that root's space; list it under `places` only to assign it elsewhere. A place outside every root must be listed, unless it is declared to hold rule sets and gives no type. Such a place gives no space until you list it. A document only it holds, such as its `README.md`, is then neither a page nor an unclassified document (DEC-001 point 1). A place of rule sets you give a type must be listed as any other. Each place names exactly one space. A project place never equals or encloses a root. The file's shape is `schemas/config.schema.json`, which `pkit validate` applies. Trees a sync copies into your repository are never places; in a repository where those trees are the authored source, they may be (the lifecycle README, "The ownership predicates"). The backbone's friction validation enforces this for every declared place, yours or a capability's, as its `synced-place` finding (the schemas README, "The friction block"), and this capability's place validation relies on that finding rather than checking a second time.
 
@@ -367,7 +367,7 @@ What it will not do:
 
 Nothing is applied until you accept it.
 
-Until the readers point resolves, the agent reads a page as its space's `audience` ([Declaring your spaces](#declaring-your-spaces)), and says so. Where the entry names none, it reads a user page as users and a technical page as maintainers, as DEC-001 gives them. For a space you added that names none, it reads no page, and names the entry that lacks an audience. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source, a fixer run a command started) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
+Until the readers point resolves, the agent reads a page as its space's `audience` ([Declaring your spaces](#declaring-your-spaces)), and says so. Where the space's entry names none, it reads a user page as users and a technical page as maintainers, as DEC-001 gives them. For a space you added whose entry names none, it reads no page, and names that entry. Its scripted flows (a fix proposed, a reader-review that finds nothing, an onboarding plan rejected and revised, a page stale on a source, a fixer run a command started) are in [`agents/living-docs/storyboard.md`](agents/living-docs/storyboard.md); the agent itself is [`agents/living-docs/living-docs.md`](agents/living-docs/living-docs.md).
 
 ## Onboarding an existing project
 

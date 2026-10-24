@@ -11,4 +11,4 @@ body: >
   resolves, the `living-docs` agent's reader-review reads a page as the
   audience its space's entry names. Where the entry names none, it reads a user
   page as users and a technical page as maintainers. For a space the project
-  adds with none, it names the entry that lacks one, and stops.
+  adds whose entry names none, it names that entry, and stops.
