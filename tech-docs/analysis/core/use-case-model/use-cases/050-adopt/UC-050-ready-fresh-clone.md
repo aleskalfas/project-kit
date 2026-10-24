@@ -44,6 +44,10 @@ pkit:
         - REQ-009
         - REQ-010
         - REQ-012
+    revalidated:
+      at: 2026-10-24T03:45:13Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-050 — Get a fresh clone ready to work with one sync

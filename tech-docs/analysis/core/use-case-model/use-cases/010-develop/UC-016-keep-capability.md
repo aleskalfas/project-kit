@@ -27,9 +27,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-22T23:47:02Z
+      at: 2026-10-24T03:44:35Z
       outcome: unchanged
-      unchanged-because: The actors it names each gain a summary, the first sentence of their opening, and nothing else of theirs changes. Its goal, its steps and who takes part hold.
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository

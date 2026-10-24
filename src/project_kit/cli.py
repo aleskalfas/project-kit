@@ -2929,10 +2929,10 @@ def release_merge(
 ) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
-    A release PR closes no issue, so the issue-PR merge gate (`pkit
-    project-management merge-pr`) legitimately refuses it. This verb is the
-    release flow's own merge: it is guarded to `release/*` heads (a non-release
-    PR is refused, pointing at the issue-PR gate), merges only when the PR is
+    A release PR closes no issue, so a merge gate that requires one refuses
+    it. This verb is the release flow's own merge: it is guarded to
+    `release/*` heads (a PR on another head is refused, pointing at
+    `pkit pull-request land`), merges only when the PR is
     open, mergeable, and its required checks are green, and lands it as one
     squash commit whose subject is the PR title — through the base's merge queue
     where it has one — deleting the head branch once GitHub reports the PR

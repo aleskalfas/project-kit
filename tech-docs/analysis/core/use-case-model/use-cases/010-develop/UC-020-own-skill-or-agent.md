@@ -38,8 +38,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:53:44Z
-      outcome: updated
+      at: 2026-10-24T03:44:38Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

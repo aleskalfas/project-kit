@@ -33,6 +33,10 @@ pkit:
         - ACT-operator
         - REQ-002
         - REQ-012
+    revalidated:
+      at: 2026-10-24T03:44:52Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-025 — Choose which installed capability provides a role

@@ -1059,6 +1059,54 @@ def test_h1_heading_in_body_is_hard_reject(
     assert "body.h1" in _labels(findings)
 
 
+def test_h1_check_reads_no_line_in_a_fenced_block(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """A shell comment in a fenced code block is no heading (#1932): the check
+    create-issue now refuses on reads the body as validate-issue does."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n```sh\n# a comment\n```\n"
+            "## Acceptance criteria\n- [ ] x\n## Doc impact\nnone."
+        ),
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    assert "body.h1" not in _labels(findings)
+
+
+def test_implementation_recipe_section_warns(
+    vi, issue_types, titles, body_format, label_fallback_config
+) -> None:
+    """DEC-010: no `## Implementation` or `## How` recipe — a warning (#1932)."""
+    issue = _make_issue(
+        title="[Task] Install the Claude Code CLI inside the sandbox",
+        body=(
+            "Feature: #1\n\n"
+            "## What\nx\n## Acceptance criteria\n- [ ] x\n## Doc impact\nnone.\n"
+            "## How\nstep one\n"
+        ),
+        labels=["type:feature", "priority:Medium", "workstream:cli"],
+    )
+    findings = vi._validate_issue(
+        issue=issue,
+        issue_types=issue_types,
+        titles=titles,
+        body_format=body_format,
+        config=label_fallback_config,
+    )
+    recipe = [f for f in findings if f.label == "body.implementation-recipe"]
+    assert [f.severity for f in recipe] == ["warning"]
+
+
 # --- severity token parsing ------------------------------------------
 
 
