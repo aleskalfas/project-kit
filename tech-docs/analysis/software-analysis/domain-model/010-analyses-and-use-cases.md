@@ -60,7 +60,7 @@ Defined in [TERM-analysis](../glossary.md#term-analysis--analysis).
 **Why:** An account of what the software must do decays silently, in three steps:
 
 - the code changes
-- the account does not
+- the account does not [change](../../core/glossary.md#term-change--change)
 - nobody notices until a reader is misled
 
 A [component](../../core/glossary.md#term-component--component) owns what describes it, so its account changes with it and at its pace (DEC-001).

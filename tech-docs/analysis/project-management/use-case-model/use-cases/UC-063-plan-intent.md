@@ -67,57 +67,57 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`core:ACT-ai-agent`): the `project-manager` agent, which drafts the batch plan, has it reviewed and files it. It files nothing before the planner approves the plan (DEC-029).
+- **AI agent** (`core:ACT-ai-agent`): the `project-manager` agent, which drafts the [batch plan](../../glossary.md#term-batch-plan--batch-plan), has it reviewed and files it. It files nothing before the planner approves the plan (DEC-029).
 - **Operator** (`core:ACT-operator`): is asked before a filing changes a repository other than the session's own, so no such write happens silently (core:REQ-012).
 
-**Preconditions:** **From UC-064:** The project declares the workstreams its work falls into (DEC-012).
+**Preconditions:** **From UC-064:** The [project](../../../core/glossary.md#term-project--project) declares the [workstreams](../../glossary.md#term-workstream--workstream) its work falls into (DEC-012).
 
 **Assumptions:**
 
-- The project has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` skill (COR-013 and COR-017).
-- Where a component fills the use-case data point, the backbone resolves it, with the use-case entries settled on the default branch (COR-052 and COR-053). Which component fills it, and how, is that component's.
+- The [project](../../../core/glossary.md#term-project--project) has project-management installed, and the adapter deploys the `project-manager` agent and the `pm` [skill](../../../core/glossary.md#term-skill--skill) (COR-013 and COR-017).
+- Where a [component](../../../core/glossary.md#term-component--component) fills the use-case [data point](../../../core/glossary.md#term-data-point--data-point), the backbone resolves it, with the [use-case entries](../../glossary.md#term-use-case-entry--use-case-entry) settled on the [default branch](../../../core/glossary.md#term-default-branch--default-branch) (COR-052 and COR-053). Which component fills it, and how, is that component's.
 - The harness lets the agent hand the plan to the critic and the architect for review (COR-024).
 
 **Trigger:** The planner gives the agent an intent, with the reference material that frames it.
 
 **Main path:**
 
-1. The planner gives the `project-manager` agent an intent, such as "let a project rename a workstream", with its reference material.
+1. The planner gives the `project-manager` agent an intent, such as "let a [project](../../../core/glossary.md#term-project--project) rename a [workstream](../../glossary.md#term-workstream--workstream)", with its reference material.
 2. The agent reads the intent and each reference. Where the intent is unclear, it asks at most two questions, in one message (`batch-plan.md`).
-3. The agent reads the use-case entries with `pkit connections resolve pkit::work-tracking:use-cases --json` (DEC-054 point 3). It walks the active entries against the intent, reading each one's document where its path is given (DEC-054 point 5).
-4. The agent slices the intent into an EPIC, Features, Umbrellas and Tasks. It gives each its parent, its value on each classification axis, and the use-case entries it serves (DEC-004, DEC-012 and DEC-054 point 5).
-5. Where the plan holds three issues or more, the agent has the critic review it. Where its work crosses three components or more, or brings in a new abstraction, the architect reviews it too (DEC-029).
-6. The agent shows the batch plan: its rows, the order of the work, the reviewers' findings and the use-case entries each issue serves. It names the active entries the intent touches that no issue names, and the work that no entry describes (DEC-054 point 5).
+3. The agent reads the [use-case entries](../../glossary.md#term-use-case-entry--use-case-entry) with `pkit connections resolve pkit::work-tracking:use-cases --json` (DEC-054 point 3). It walks the active entries against the intent, reading each one's document where its path is given (DEC-054 point 5).
+4. The agent slices the intent into an [EPIC](../../glossary.md#term-epic--epic), Features, Umbrellas and Tasks. It gives each its parent, its value on each [classification axis](../../glossary.md#term-classification-axis--classification-axis), and the use-case entries it serves (DEC-004, DEC-012 and DEC-054 point 5).
+5. Where the plan holds three issues or more, the agent has the critic review it. Where its work crosses three [components](../../../core/glossary.md#term-component--component) or more, or brings in a new abstraction, the architect reviews it too (DEC-029).
+6. The agent shows the [batch plan](../../glossary.md#term-batch-plan--batch-plan): its rows, the order of the work, the [reviewers](../../../core/glossary.md#term-reviewer--reviewer)' [findings](../../../core/glossary.md#term-finding--finding) and the use-case entries each [issue](../../glossary.md#term-issue--issue) serves. It names the active entries the intent touches that no issue names, and the work that no entry describes (DEC-054 point 5).
 7. The planner approves the plan (DEC-029).
 8. The agent files the issues, parents before children, each with `pkit pm create-issue`. It then writes each body with `pkit pm edit-issue`, which checks the body (DEC-029).
 
 > [!WARNING]
 > **Not built yet:** filing an issue and writing its body are two calls. A body refused after its issue is filed leaves the template's body there. DEC-014 decides that no issue is left half filed, and #1761 tracks it.
 
-9. The agent attaches each issue the plan schedules to its Milestone with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval its reason (DEC-006 and DEC-029).
+9. The agent attaches each issue the plan schedules to its [Milestone](../../glossary.md#term-milestone--milestone) with `pkit pm promote-issue <n> --milestone <M>`, the planner's approval being its reason (DEC-006 and DEC-029).
 
 > [!WARNING]
-> **Not built yet:** the `batch-plan` procedure attaches the Milestone with a raw `gh issue edit`. That leaves no audit comment and no journal entry, and checks no repository. DEC-029 decides that the agent files through the capability's own commands, and #1761 tracks it.
+> **Not built yet:** the `batch-plan` procedure attaches the Milestone with a raw `gh issue edit`. That leaves no [audit comment](../../glossary.md#term-audit-comment--audit-comment) and no journal entry, and checks no repository. DEC-029 decides that the agent files through the [capability](../../../core/glossary.md#term-capability--capability)'s own commands, and #1761 tracks it.
 
 10. The agent reports each issue it filed, with its number and its link.
 
 **Variants:**
 
-- **3a.** Nothing fills the data point. The agent skips the step, and the plan names no use-case entry (DEC-054 point 3).
-- **3b.** The data point cannot be read, such as in a clone that never fetched the default branch. The agent says why, and plans without the step. It never takes that outcome for an empty set (DEC-054 point 3).
+- **3a.** Nothing fills the [data point](../../../core/glossary.md#term-data-point--data-point). The agent skips the step, and the plan names no [use-case entry](../../glossary.md#term-use-case-entry--use-case-entry) (DEC-054 point 3).
+- **3b.** The data point cannot be read, such as in a clone that never fetched the [default branch](../../../core/glossary.md#term-default-branch--default-branch). The agent says why, and plans without the step. It never takes that outcome for an empty set (DEC-054 point 3).
 - **3c.** Only part of the data point resolved. The agent walks what the data point holds, and names the filler that gave nothing. The gaps it finds are shown as possible ones (DEC-054 point 3).
-- **4a.** The data point holds no entry, and the plan builds work that touches what users do. The plan opens with a Task to describe what users do with the software, and only that work depends on it (DEC-054 point 5).
+- **4a.** The data point holds no entry, and the plan builds work that touches what users do. The plan opens with a [Task](../../glossary.md#term-task--task) to describe what users do with the software, and only that work depends on it (DEC-054 point 5).
 - **4b.** The planner declined that Task earlier the same day, in this checkout. The agent leaves it out, and says when it was declined (DEC-054 point 5).
-- **7a.** The planner asks for changes. The agent drafts the plan again, and runs the reviewers again where the revision is not trivial. The path rejoins at step 6.
+- **7a.** The planner asks for changes. The agent drafts the plan again, and runs the [reviewers](../../../core/glossary.md#term-reviewer--reviewer) again where the revision is not trivial. The path rejoins at step 6.
 - **7b.** The planner revises the Task of variant 4a away. Once the plan is approved, the agent keeps the decline with `pkit pm decline-use-case-task`, until the next day (DEC-054 point 5). The path goes on at step 8.
 - **7c.** The planner cancels the plan. The agent files nothing, and the use case ends (DEC-029).
-- **8a.** A filing is refused. The agent stops, says which issue failed and why, and proposes a fix to the planner. What it filed before stays filed (`batch-plan.md`).
+- **8a.** A filing is refused. The agent stops, says which [issue](../../glossary.md#term-issue--issue) failed and why, and proposes a fix to the planner. What it filed before stays filed (`batch-plan.md`).
 - **8b.** A body cites a use-case entry the data point does not hold. The system warns, and the agent mends the body and writes it again (DEC-054 point 4).
 
-**Postconditions:** Each issue of the approved plan is filed under its parent, with its value on each classification axis and the use-case entries it serves. The planner saw every issue of the plan before any was filed.
+**Postconditions:** Each [issue](../../glossary.md#term-issue--issue) of the approved plan is filed under its parent, with its value on each [classification axis](../../glossary.md#term-classification-axis--classification-axis) and the [use-case entries](../../glossary.md#term-use-case-entry--use-case-entry) it serves. The planner saw every issue of the plan before any was filed.
 
 **Minimal guarantees:**
 
-- No issue is filed before the planner approves the whole plan (DEC-029).
-- A plan never cites an id the data point does not hold, and never suggests one (DEC-054 point 5).
+- No [issue](../../glossary.md#term-issue--issue) is filed before the planner approves the whole plan (DEC-029).
+- A plan never cites an id the [data point](../../../core/glossary.md#term-data-point--data-point) does not hold, and never suggests one (DEC-054 point 5).
 - A data point that cannot be read is never taken for an empty set (DEC-054 point 3).

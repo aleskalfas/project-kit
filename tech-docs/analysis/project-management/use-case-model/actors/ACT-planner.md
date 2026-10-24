@@ -23,12 +23,12 @@ pkit:
 
 # ACT-planner — Planner
 
-The person who plans a project's work at the level of its outcomes. An EPIC is filed only on their authority.
+The person who plans a project's work at the level of its outcomes. An [EPIC](../../glossary.md#term-epic--epic) is filed only on their authority.
 
-- **Human role:** only a person may commit the project to an outcome. The project-manager agent plans and files on their direction, and files a whole plan only once they approve it (project-management DEC-008 and DEC-029).
+- **Human role:** only a person may commit the [project](../../../core/glossary.md#term-project--project) to an outcome. The project-manager agent plans and files on their direction, and files a whole plan only once they approve it (project-management DEC-008 and DEC-029).
 - **Occasions:**
   - when an outcome is framed
   - when work is scheduled
-  - as a date-based Milestone nears its due date
-- **Context:** an intent, and the reference material that frames it, such as a scratchpad note or a related issue.
-- **Note:** the role comes with project-management, which calls it the PM (DEC-008). Its id and name are not "project manager", which is also the name of project-management's agent. That agent acts for this role and for the developer (DEC-029). An actor's id is permanent once stamped, so this one names the role alone.
+  - as a date-based [Milestone](../../glossary.md#term-milestone--milestone) nears its due date
+- **Context:** an intent, and the reference material that frames it, such as a scratchpad note or a related [issue](../../glossary.md#term-issue--issue).
+- **Note:** the [role](../../../core/glossary.md#term-role--role) comes with project-management, which calls it the PM (DEC-008). Its id and name are not "[project](../../../core/glossary.md#term-project--project) manager", which is also the name of project-management's agent. That agent acts for this role and for the developer (DEC-029). An actor's id is permanent once stamped, so this one names the role alone.

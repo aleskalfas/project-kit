@@ -62,9 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-23T08:13:39Z
+          at: 2026-10-24T10:40:01Z
           outcome: unchanged
-          unchanged-because: COR-050 point 5 reads derived links as their words alone when it compares a body. What an artefact's anchors must name is unchanged, so the rule holds.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 5 reads as it did, so what a view anchors holds as this rule says.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -107,9 +107,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-22T16:24:59Z
+          at: 2026-10-24T10:40:02Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, which repeats the first sentence of its opening. So it uses no concept the opening does not, and the rule holds.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 3 reads as it did, and point 7 says an actor's name uses no concept, as this rule does.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -146,9 +146,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
         revalidated:
-          at: 2026-10-20T21:11:17Z
+          at: 2026-10-24T10:40:04Z
           outcome: unchanged
-          unchanged-because: The change adds a flow to a view's opening, and changes nothing of the views' order or their numbers. The flow's labels are diagram labels, which this rule already reads.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Points 4 and 6 read as they did, so the order of the views holds as this rule says.
   RS-SAN-012:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
