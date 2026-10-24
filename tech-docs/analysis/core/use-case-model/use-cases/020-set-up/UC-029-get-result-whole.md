@@ -6,7 +6,7 @@ actor: ACT-ai-agent
 other-actors:
   - ACT-operator
 after:
-  - [UC-014, UC-019]
+  - [UC-014, UC-019, UC-049]
 pkit:
   friction:
     anchors:
@@ -31,7 +31,7 @@ pkit:
 
 - **Operator** (`ACT-operator`): keeps the harness's settings under which the adapter's support declaration says the requirement holds. The operator's `pkit harness report` reads only the support declarations. So it resolves the requirement `indeterminate`, with the adapter's grade and cost, and never as met (COR-047 points 3 and 4).
 
-**Preconditions:** **From UC-014 or UC-019:** An adapter for the project's harness answers the harness requirement `delegated-result-complete` with a grade and any cost (COR-047 point 2).
+**Preconditions:** **From UC-014, UC-019 or UC-049:** An adapter for the project's harness answers the harness requirement `delegated-result-complete` with a grade and any cost (COR-047 point 2).
 
 **Assumptions:**
 

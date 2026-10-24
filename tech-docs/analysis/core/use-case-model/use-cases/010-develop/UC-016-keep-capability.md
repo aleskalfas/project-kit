@@ -6,7 +6,7 @@ actor: ACT-component-author
 other-actors: []
 after:
   - [UC-015, UC-023]
-  - [UC-014, UC-019]
+  - [UC-014, UC-019, UC-049]
 requirements:
   - REQ-002
   - REQ-009
@@ -41,7 +41,7 @@ pkit:
 **Preconditions:**
 
 - **From UC-015 or UC-023:** The project holds the capability's subtree, `.pkit/capabilities/<name>/`, with package metadata that gives its version and its range on the backbone.
-- **From UC-014 or UC-019:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
+- **From UC-014, UC-019 or UC-049:** An adapter for the project's harness deploys skills and agent definitions where that harness reads them.
 
 **Assumptions:** None.
 
