@@ -168,12 +168,13 @@ _CONFIG_VAR = re.compile(
 # (#1960), as `projection._pattern_command` reads one. A pattern that names
 # none may match any program.
 _PATTERN_PROGRAM = re.compile(
-    r"^\^([A-Za-z0-9._+-]+)(?=\\s|\(\?=\\s|\(\\s|\(\?:\\s|\\b| |$)"
+    r"^\^([A-Za-z0-9._+-]+)(?=\\s|\(\?=\\s|\(\\s|\(\?:\\s|\\b|\s|$)"
 )
 # What keeps a deny from telling a form, for the reason `decide()` gives.
 _UNSEEN_KIND = {
     "glob": "a pathname pattern",
     "config": "an assignment to a variable that changes the program's configuration",
+    "options": "more options before a subcommand than the core reads",
 }
 # fmt: on
 
@@ -523,9 +524,11 @@ def _pattern_form(pattern: str, words: list[tuple[str, str]], configured: bool) 
     (first, program), rest = words[0], words[1:]
     name = _program_name(program)
     toks = [w for _, w in rest]
+    places = _subcommand_candidates(rest)
     # The first 64 places only: each is a search over the rest of the segment,
-    # and a crafted run of options must not stall the hook.
-    for start in (0, *_subcommand_candidates(rest)[:64]):
+    # and a crafted run of options must not stall the hook. Past them the core
+    # cannot tell, so it defers.
+    for start in (0, *places[:64]):
         if re.search(pattern, " ".join([name, *toks[start:]])):
             return "sure"
     if _globbed(first):
@@ -537,6 +540,8 @@ def _pattern_form(pattern: str, words: list[tuple[str, str]], configured: bool) 
         return "config"
     if any(_globbed(text) for text, _ in rest):
         return "glob"
+    if len(places) > 64:
+        return "options"
     return None
 
 

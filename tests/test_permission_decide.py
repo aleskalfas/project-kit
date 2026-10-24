@@ -3367,6 +3367,12 @@ def test_a_regex_names_its_program_before_a_space(decide_mod, catalog):
     assert d == "allow", why
     d, why = decide_mod.decide(model, wide, _bash("git log -- x*", "operator"))
     assert d == "abstain" and "push-unverified" in why, why
+    # The core reads the subcommand behind 64 options with values at most: past
+    # them it cannot tell, and defers rather than allows.
+    for count, verdict in ((63, "deny"), (64, "abstain"), (500, "abstain")):
+        command = "git " + "-C . " * count + "push origin main --no-verify"
+        d, why = decide_mod.decide(model, wide, _bash(command, "operator"))
+        assert d == verdict, (count, why)
 
 
 def test_a_pattern_deny_holds_against_a_program_named_by_its_path(decide_mod, catalog):
