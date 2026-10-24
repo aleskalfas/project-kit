@@ -66,7 +66,7 @@ pkit project-management close-issue <N> --mode wont-do --reason "<text>" \
 pkit project-management close-issue <N> --mode pr-merge [--no-cascade]
 ```
 
-**Close a leaf its merged PR did not close** (merged into a base GitHub does not close issues on, or from the leaf's branch with a body that does not name it). PR `M` must be merged and relate to the leaf: its body closes the leaf, or it was merged from the leaf's branch. The relation found is named, and the close is checkbox-gated, commented and made as completed. The close is the person's, so off a terminal it needs `--yes`:
+**Close a leaf its merged PR did not close** (merged into a base GitHub does not close issues on, or from the leaf's branch with a body that does not name it). PR `M` must be merged and relate to the leaf: its body closes the leaf, or its head branch is named for the leaf, `<type>/<N>-<slug>`. The relation found is named, and the close is checkbox-gated, commented and made as completed. The close is the person's, so off a terminal it needs `--yes`:
 ```
 pkit project-management close-issue <N> --mode pr-merge --pr <M> [--dry-run] [--yes]
 ```
