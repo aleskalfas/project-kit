@@ -46,7 +46,7 @@ The permission model lets your agents do their regular work without asking you, 
 - **What you deny is refused, where the model can tell.** A deny wins over every allow, so the commands it names are refused, and nobody is asked. It is a speed bump, not a security boundary. A command behind a wrapper, such as `uv run` or `find -exec`, can slip past it ("A deny holds against the forms of its command" below).
 - **The guardrails hold for everyone.** Recursive deletion, `sudo` and rewriting published history are denied to every agent and to you, in each form the model can see. No grant lifts that deny.
 - **The rest is Claude Code's.** A call the model does not decide goes to Claude Code, which decides it by its own rules and may ask you.
-- **Unwatched runs keep your denies.** A command that starts agents with nobody watching may confine each run to rules of its own. The denies you set for every agent, or for that run's agent, hold there too.
+- **Agent runs keep your denies.** A command that starts agents with nobody watching may confine each run to rules of its own. The denies you set for every agent, or for that run's agent, hold there too.
 
 ## How a tool call is decided
 
@@ -88,7 +88,7 @@ Two steps turn the model on: a profile supplies the grants, and registering the 
 
 - **A profile** is a named set of grants and a posture. Three ship, each granting more than the one before: `read-only`, `non-destructive` and `autonomous`. `pkit permissions profile list` describes each.
 - **Activating one** sets its posture, layers its grants under your own, and writes the native rules it can. It does not register the hook.
-- **Per machine.** The active profile is your machine's own choice, kept in a file git ignores. Its posture goes into `.pkit/permissions/project/config.yaml`, which the project shares. So another clone takes the posture from that file, and the profile's grants only once it activates the profile too.
+- **Per machine.** The active profile is your machine's own choice, kept in a file git ignores. Its posture goes into `.pkit/permissions/project/config.yaml`, which the project shares. So another clone takes the posture from that file, and it takes the profile's grants only once it activates the profile too.
 - **`enable`** registers the hook, and makes sure Claude Code's settings deny the guardrails natively.
 - **`explain`** shows the posture, and who may or may not use each privilege.
 
@@ -280,7 +280,7 @@ Two prefix-strips reduce false prompts over already-granted intent:
 
 - **Env-prefix strip:** a leading `export` or `VAR=value` on a segment is dropped before matching, so `export GH_HOST=x && gh pr list` matches `gh pr list`. An assignment counts only where its name is written unquoted, as the shell reads it. A segment that only assigns, with an untrusted construct (below) in it, such as `X=$(./x.sh)`, is not dropped. The assigned value may run a command, so the segment stays, and no grant covers it.
 - **Leading-`cd` strip.** When the first segment is a bare `cd <path>` followed by `&&` or `;`, the core drops that segment. The core decides on the remainder against the unchanged grant model, so `cd src && gh pr list` auto-approves exactly as `gh pr list` would. The strip is deliberately conservative, and fails closed:
-  - **Never a new grant.** The strip reduces prompts over already-granted intent, since `cd` only changes the working directory, which the intent layer does not confine. The remainder is decided at the original working directory. So the strip can never grant a directory-scoped privilege that the un-stripped command lacked.
+  - **Never a new grant.** The strip reduces prompts over already-granted intent, since `cd` only changes the working directory, which the permission model does not confine. The remainder is decided at the original working directory. So the strip can never grant a directory-scoped privilege that the un-stripped command lacked.
   - **Only a bare `cd` is stripped:** a single path argument, parted from `cd` by a space or a tab, with:
     - no quotes
     - no `$()`
@@ -300,7 +300,7 @@ Two prefix-strips reduce false prompts over already-granted intent:
 
 The broader widening, to auto-approve any compound whose every segment is independently safe, is rejected as unsound, since a per-segment matcher is blind to composition. Any other widening is not built yet (COR-007). The widenings taken are the leading-`cd` strip and the removal of a redirection that writes no file (below).
 
-**Every segment needs its own allow.** The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
+**Every segment needs its own allow.** The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own rules, and a strict posture denies it instead.
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
 
@@ -313,13 +313,13 @@ Two catalog privileges cover the programs a compound most often pipes into or ru
   - **`sort`, `uniq` and `diff`,** each in a form that writes no file and runs no other program. The form holds no pathname pattern that could expand to such a form. The catalog's comments list the forms.
 - **`uv-run`** recognizes `uv run`, which runs any program it is given in the project's environment and confines nothing. A grant allows whatever that program does. A deny reads the command as the wrapper `uv`, never as the program behind it, so no guardrail reaches `uv run rm -rf ~`. No shipped profile grants it, so a project that wants it grants it in its own `grants.yaml`.
 
-Each recognizer of the two is a `pattern` or names a subcommand. So a grant of either writes no native allow rule, and only the hook realizes them.
+Each recognizer of the two is a `pattern` or names a subcommand. So a grant of either writes no native allow rule, and only the hook realizes the grant.
 
 Neither recognizes a program that writes a file or runs another, such as `sed`, `awk`, `find`, `xargs`, `tee` or `rg`. Nor does either recognize `echo`, the usual way to answer a confirmation from a pipe (`echo y | pkit …`), or `printf`, whose `-v` sets a shell variable. `jq` stays out too: its filters hold a `|`, and some of its options read files no check sees. So under a shipped profile, `grep x f | head` is allowed for every agent, and `grep x f | sed s/a/b/` abstains.
 
 What a granted program reads from a pipe is within its own grant, as its arguments are. So leaving `echo` out does not keep a pipe from feeding `pkit`, as in `basename y | pkit …`. A `pkit` confirmation that guards a person's decision reads no answer from a pipe all the same ([the CLI README, "Standard flags"](../cli/README.md#standard-flags)).
 
-Recognition goes by the program's name, as for every privilege. A shell alias or function under one of these names runs what it names, unasked. The privilege is sound only where its names reach the system's own programs.
+Recognition goes by the program's name, as for every privilege. A shell alias or function under one of these names runs what it names, unasked. Each of the two privileges is sound only where its names reach the system's own programs.
 
 #### What keeps a grant from allowing
 
@@ -362,7 +362,7 @@ A segment led by `export` runs no program. `export` takes each word after it as 
 
 Each word after `export` must be a plain name or assignment, since the shell expands any other first. So `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory. Such a word keeps every grant from allowing.
 
-So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is.
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own rules decide each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is.
 
 For a grant, outside an `export`, a glob is read as written. A glob changes only arguments, from the names of files, never the program a grant names.
 
@@ -485,7 +485,8 @@ Every checkout of a project has one agent workspace: `.agent-workspace/` at its 
   - **A repository or worktree nested inside the folder is not the folder.** When any directory from the folder down to the target holds a `.git` entry, the target is another checkout's.
   - **An existing file with more than one link is not inside either.** A hard link planted in the folder would carry a write to its other name.
 - **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included ("Compound commands" above). A remainder with a redirect into the folder still abstains. Write intermediate files with the file tools.
-- **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing. [The Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does. It also says that the adapter's enforcement declaration names the dimension `path-scoped-allow`.
+- **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, never as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers, and one whose harness does emits nothing.
+- **In Claude Code:** [the Claude Code adapter's README, "The agent workspace"](../adapters/claude-code/README.md#the-agent-workspace), says which of the two Claude Code does. It also says that the adapter's enforcement declaration names the dimension `path-scoped-allow`.
 - **A prompt there is a defect** ("A prompt for the agent workspace is a defect" below).
 
 <a id="surgical-deny-blocking-raw-gh-mutations-for-project-manager"></a>
@@ -592,7 +593,7 @@ Since the log is a superset, the report adds two static axes that turn raw count
   - **A Bash command** matches where its leading words are exactly a `Bash(<prefix>:*)` pattern. A command of shell shape, such as one holding `&&`, `|`, `;` or `$(…)`, never matches one pattern, so it always counts as a real prompt.
   - **Another tool's call,** such as `Read` or `Edit`, matches where its tool is allowlisted.
   - **The headline** gives the real prompts apart from the auto-allowed rest: `outcome: N real prompt(s) of M captured (M−N auto-allowed by the live settings.json flat matcher — NOT prompts).`
-- **Allowlisted-but-compound vs genuinely-missing.** Of the real prompts, the report splits each command on its shell operators. It tests every segment against the same matcher, except a bare `cd <path>`, which changes the working directory and is never an intent target.
+- **Allowlisted-but-compound vs genuinely-missing.** Of the real prompts, the report splits each command on its shell operators. It tests every segment against the same matcher, except a bare `cd <path>`. Such a `cd` changes only the working directory, which the permission model does not confine.
   - **Allowlisted-but-compound:** a command of shell shape whose every segment matches alone. It is an allowlisted command defeated only by compounding. The report recommends eliminating it at its source, by a decomposition or a butter verb. A butter verb is one clean command for the job, as `pkit project-management show-issue` replaces a piped `gh issue view`.
   - **Genuinely-missing:** a real allowlist gap: an uncovered segment head, a bare uncovered command, or an un-allowed tool.
   - **The headline** carries the split, and the line of the shell-shape group is tagged with it.
