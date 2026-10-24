@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T10:39:33Z
+      at: 2026-10-24T12:25:04Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: A deny still wins over every grant. The core now removes a redirection that writes no file before it matches, so a deny binds on a program behind one too.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

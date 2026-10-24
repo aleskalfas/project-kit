@@ -964,6 +964,84 @@ def test_hook_keeps_the_abstain_when_the_check_faults(tmp_path):
         assert _decision(parsed) == "deny"
 
 
+# ---- the hook reads a redirection that writes no file (#2002) ---------------
+#
+# The live hook, end to end, where git and gh are granted: an fd duplicated or
+# closed, or output discarded to `/dev/null`, is decided as the command without
+# it, so a granted command with one is allowed and a deny behind one binds.
+# Every other redirection, and each lookalike of one, still defers, and a
+# strict posture denies it (ADR-025 point 2). The system `python3` decides
+# them as the interpreter of the tests does.
+
+_HARMLESS_HOOK_ALLOWS = (
+    "git status 2>&1",
+    "gh pr list 2>/dev/null",
+    "git status 2>&1 | gh pr list",
+    "git fetch &>/dev/null && git status",
+)
+_HARMLESS_HOOK_DEFERS = (
+    "git status > out.txt",
+    "git status 2>&1t",
+    "gi2>&1t status",
+    "git status >/dev/null2",
+    "git status {fd}>/dev/null",
+    "git status &>/dev/null gh pr list",
+)
+_HARMLESS_HOOK_DENIES = (
+    "2>/dev/null git push -f origin main",
+    "git push 2>&1 --force origin main",
+)
+
+
+def test_hook_allows_a_granted_command_with_a_harmless_redirection(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in (*_HARMLESS_HOOK_ALLOWS, f"cd {root} && git log >/dev/null"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "allow", command
+
+
+def test_hook_defers_on_any_other_redirection(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _HARMLESS_HOOK_DEFERS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+    strict = _tree(
+        tmp_path / "strict", grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n"
+    )
+    for command in _HARMLESS_HOOK_DEFERS:
+        _, parsed = _invoke(strict, _bash_payload(strict, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_denies_behind_a_harmless_redirection(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _HARMLESS_HOOK_DENIES:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_reads_harmless_redirections_under_the_system_python3(tmp_path):
+    system = Path("/usr/bin/python3")
+    if not system.is_file():
+        pytest.skip("no system python3 at /usr/bin/python3")
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command, expected in (
+        *((command, "allow") for command in _HARMLESS_HOOK_ALLOWS),
+        *((command, None) for command in _HARMLESS_HOOK_DEFERS),
+        *((command, "deny") for command in _HARMLESS_HOOK_DENIES),
+    ):
+        proc = subprocess.run(
+            [str(system), str(HOOK)],
+            input=json.dumps(_bash_payload(root, command)),
+            capture_output=True,
+            text=True,
+            env={"CLAUDE_PROJECT_DIR": str(root), "PATH": "/usr/bin:/bin"},
+        )
+        assert proc.returncode == 0, proc.stderr
+        out = proc.stdout.strip()
+        assert _decision(json.loads(out) if out else None) == expected, (command, out)
+
+
 # ---- the hook never asks where the person chose not to be asked (#2004) -----
 #
 # The live hook, end to end: Claude Code names the session's permission mode in

@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:45:30Z
+      at: 2026-10-24T11:48:28Z
       outcome: unchanged
-      unchanged-because: The workspace grant still covers the file tools alone, and a shell write into the workspace is judged like any other. The new ask concerns only a deferred Bash call that may hide a guardrail.
+      unchanged-because: The workspace grant still covers the file tools alone, and a redirect or here-document into the folder is judged like any other shell write. ADR-060 point 4 now names a redirect into the folder, which is what variant 1b says.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

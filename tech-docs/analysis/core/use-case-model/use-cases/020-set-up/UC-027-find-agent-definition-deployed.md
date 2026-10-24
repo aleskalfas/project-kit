@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T10:39:43Z
+      at: 2026-10-24T12:25:06Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: The core still resolves an agent from its deployed definition as before. It now removes a redirection that writes no file before it reads a Bash command, which changes no step of this use case.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

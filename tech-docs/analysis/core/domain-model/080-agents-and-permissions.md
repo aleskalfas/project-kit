@@ -40,9 +40,9 @@ pkit:
         - TERM-agent-workspace
         - TERM-session-anchor
     revalidated:
-      at: 2026-10-24T00:58:16Z
+      at: 2026-10-24T11:48:16Z
       outcome: unchanged
-      unchanged-because: ADR-060 point 4 names any untrusted construct where it named a quote, in a shell write behind a leading cd. The view's account of the workspace, its grant to the file tools and the hook's decision holds.
+      unchanged-because: ADR-060 point 4 now names a redirect into the folder where it named any redirect, behind a leading cd. The view's account of the workspace, its grant to the file tools and a shell write judged like any other holds.
 ---
 
 # VIEW-agents-and-permissions — Agents and permissions
