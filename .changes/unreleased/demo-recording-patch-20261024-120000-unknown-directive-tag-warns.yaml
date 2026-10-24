@@ -1,0 +1,14 @@
+component: demo-recording
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A fenced block whose tag no loaded plugin provides is a warning, not an
+  error, as DEC-001 decides (#1904). `pkit demo-recording validate` lists it
+  with its step and line under the warnings and exits 0, and `run` and
+  `record` go on past it, skipping that block with a warning. A block whose
+  directive content is wrong is still an error. The README and the
+  `hook-author` skill now say that a `--no-recording` run runs no
+  after-record hook, so `DCR_VIDEO_PATH` always names the saved video. The
+  README names Python 3.9 as the floor, and says that a `ready` directive
+  that times out warns and goes on.

@@ -73,8 +73,9 @@ Directive vocabulary
         pattern: HUMAN
         timeout: 60          # seconds; default 30
 
-    Default timeout is 30 seconds.  On timeout the storyboard halts with
-    an error.
+    Default timeout is 30 seconds.  On timeout the storyboard does not
+    halt: lib.sh's ``ready_wait`` prints a warning and returns 1, and
+    run-storyboard.sh logs that exit and goes on with the next directive.
 
 Execution boundary
 ------------------

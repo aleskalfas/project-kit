@@ -498,6 +498,27 @@ records:
     assert any("fetched_at" in i.message for i in issues)
 
 
+def test_evidence_record_accepts_id_starting_with_a_digit(kit_target: Path) -> None:
+    """The schema's id pattern is the slug form evidence DEC-001 fixes,
+    `^[a-z0-9][a-z0-9-]*$`, so an id may start with a digit."""
+    _install_evidence_capability(kit_target)
+    data_path = kit_target / "evidence.yaml"
+    data_path.write_text(
+        """\
+schema_version: 1
+records:
+  - id: 2fa-window
+    source_url: https://example.com
+    fetched_at: 2026-05-18
+    excerpt: |
+      Some excerpt.
+""",
+        encoding="utf-8",
+    )
+    issues = dv.validate_data_file(data_path, kit_target)
+    assert issues == [], [i.message for i in issues]
+
+
 def test_evidence_record_bad_id_pattern(kit_target: Path) -> None:
     """An id violating the kebab-case pattern surfaces a finding."""
     _install_evidence_capability(kit_target)
