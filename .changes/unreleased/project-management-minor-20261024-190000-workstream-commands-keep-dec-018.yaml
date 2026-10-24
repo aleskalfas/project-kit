@@ -1,0 +1,24 @@
+component: project-management
+kind: minor
+custom:
+  category: Changed
+body: >
+  The workstream commands do what DEC-018 decides for each of them.
+  `add-workstream` and `edit-workstream` refuse a name, a description or a
+  deprecation reason outside DEC-018's rules, and `rename-workstream` and
+  `split-workstream` refuse a slug with consecutive hyphens or over 40
+  characters. Where a board carries the workstream axis, `add-workstream`,
+  `rename-workstream`, `merge-workstream` and `split-workstream` keep the
+  board's `Workstream` field in step with `workstreams.yaml`.
+  `rename-workstream` checks the old and the new label first, and refuses
+  where both exist. `merge-workstream` now rewrites the typed references to
+  each loser, in the tracked files and in issue, pull-request and comment
+  bodies, by default: `--skip-references` leaves them. `split-workstream`
+  asks of each issue which new workstream it moves to, takes
+  `--assign <issue>=<slug>` and `--default`, and refuses before any change
+  while an issue has no answer and no shell can ask. Its
+  `--include-github-bodies` opts into rewriting the references.
+  `remove-workstream` refuses while any issue carries the workstream,
+  whatever carries the axis, and with `--skip-label` too. Each command changes
+  the label or the board before the file, so a re-run after a failure finishes
+  it.
