@@ -51,6 +51,10 @@ pkit:
       artefact:
         - REQ-023
         - REQ-024
+    revalidated:
+      at: 2026-10-24T00:22:03Z
+      outcome: unchanged
+      unchanged-because: The package changed only in what the readers point's description says an entry holds. Setting up a space is as it was.
 ---
 
 # UC-043 — Set up a documentation space for one audience

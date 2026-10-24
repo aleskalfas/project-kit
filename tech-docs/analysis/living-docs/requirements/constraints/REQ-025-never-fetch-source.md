@@ -19,6 +19,10 @@ pkit:
       record:
         - living-docs:DEC-001#4
         - COR-050#2
+    revalidated:
+      at: 2026-10-24T00:21:55Z
+      outcome: unchanged
+      unchanged-because: The agent changed only where a reader-review takes the reader's paths from the readers point. It still fetches no captured source.
 ---
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names

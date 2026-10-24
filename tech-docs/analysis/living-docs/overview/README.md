@@ -1,6 +1,6 @@
 # Overview of the analysis of living-docs
 
-<!-- pkit:overview reads=4 fingerprint=sha256:ef69cc04ce4e82f964b6e5cf77ba94f9c309a167cf842b0adb52d1767dbe07bb -->
+<!-- pkit:overview reads=4 fingerprint=sha256:c665347bbba873b2792ce07cb5016ad33cd494bd98386b0be56581fd17dccadc -->
 
 [Living documentation keeps each documentation space true for its readers](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md).
 
@@ -11,7 +11,7 @@ This analysis describes what living-docs does: who uses it, what they do with it
 - [UC-043 — Set up a documentation space for one audience](../use-case-model/use-cases/UC-043-set-up-space.md) ([not built yet](#not-built-yet): variant 1b, step 2, step 6)
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md) ([not built yet](#not-built-yet): step 5, variant 10a)
 - [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md) ([not built yet](#not-built-yet): variant 4c, variant 4e)
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md) ([not built yet](#not-built-yet): step 3, variant 4a)
+- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md) ([not built yet](#not-built-yet): variant 4a)
 - [UC-047 — Bring my existing documents into documentation spaces](../use-case-model/use-cases/UC-047-onboard-documents.md)
 
 ## Reference
@@ -52,7 +52,6 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-044 — Write a page for the reader it names](../use-case-model/use-cases/UC-044-write-page.md): variant 10a, decided by `living-docs:DEC-002`, tracked in `#1803`
 - [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md): variant 4c, decided by `living-docs:DEC-002#5`, tracked in `#1812`
 - [UC-045 — Have the fix for a stale page proposed, and review it before it is applied](../use-case-model/use-cases/UC-045-propose-page-fix.md): variant 4e, decided by `living-docs:DEC-002#6`, tracked in `#1812`
-- [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): step 3, decided by `living-docs:DEC-001#7`, tracked in `#1921`
 - [UC-046 — Have a page read as its declared reader would read it](../use-case-model/use-cases/UC-046-review-page-as-reader.md): variant 4a, decided by `living-docs:DEC-002#8`, tracked in `#1812`
 
 ### Diagrams
