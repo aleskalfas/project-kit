@@ -47,8 +47,8 @@
       "properties": {
         "id": {
           "type": "string",
-          "pattern": "^[a-z][a-z0-9-]*$",
-          "description": "Kebab-case stable identifier; cited via `[ev:<id>]` in adopter prose."
+          "pattern": "^[a-z0-9][a-z0-9-]*$",
+          "description": "Kebab-case stable identifier, the slug form of [evidence:DEC-001-citation-discipline]: a letter or digit first. Cited via `[ev:<id>]` in adopter prose."
         },
         "source_url": {
           "type": "string",

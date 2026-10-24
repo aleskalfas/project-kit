@@ -46,8 +46,8 @@ Halt if any is `proposed` or `superseded`.
 ### Conventions both operations respect
 
 - **Citation token form.** Every cite is `[ev:<slug>]` where `<slug>` matches a record in the nearest enclosing `evidence.yaml` (per [evidence:DEC-001-citation-discipline]).
-- **Per-scope `evidence.yaml`.** Each directory's evidence records live in its own `evidence.yaml`; nested scopes inherit + override per [evidence:DEC-002-evidence-record-schema].
-- **Validator's contract.** `.pkit/capabilities/evidence/scripts/validate.py` is the source of truth for what counts as a valid citation; per [evidence:DEC-003-validation-model] the validator scans a scope, parses every token, resolves against the scope's `evidence.yaml`, and reports unresolved tokens.
+- **Per-scope `evidence.yaml`.** Each directory's evidence records live in its own `evidence.yaml`. A directory below it with an `evidence.yaml` of its own is a scope of its own, which shadows the outer scope there: its citations resolve only against its own records, never the outer ones, and each scope is checked on its own (per [evidence:DEC-002-evidence-record-schema]).
+- **Validator's contract.** `.pkit/capabilities/evidence/scripts/validate.py` is the source of truth for what counts as a valid citation; per [evidence:DEC-003-validation-model] the validator scans a scope, less any nested scope, parses every token, resolves against the scope's `evidence.yaml`, and reports unresolved tokens.
 
 ### Routing to the sub-procedure
 
