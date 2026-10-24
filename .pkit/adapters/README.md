@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T22:54:19Z
+      at: 2026-10-24T23:35:33Z
       outcome: unchanged
-      unchanged-because: The lifecycle README's table of reading commands gains pkit refs lookup --json. What this README says of the commands an adapter runs is untouched.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. What this README says of the commands an adapter runs is untouched."
 ---
 
 # Adapters
