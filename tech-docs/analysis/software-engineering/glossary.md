@@ -138,7 +138,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 **Distinctions:**
 
 - **The core's reviewers:** the `critic`, the `architect` and the other reviewer agents the core ships. They judge a draft or a diff against the methodology's disciplines and rules, and none judges a change's correctness or its security (COR-024).
-- **The `pm-reviewer`:** project-management's reviewer, which judges a pull request against project-management's conventions, never its code (software-engineering DEC-002).
+- **The `pm-reviewer`:** project-management's reviewer, which judges a pull request against project-management's conventions, never the pull request's code (software-engineering DEC-002).
 - **The `software-engineer` agent:** it writes the code the panel judges, and posts no verdict (software-engineering DEC-001 point 1).
 
 ## TERM-conventions-corpus — conventions corpus
@@ -152,9 +152,9 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 ## TERM-hand-off — hand-off
 
-**Example:** the `software-engineer` agent's hand-off says that the change wrote answers. It also names a revalidation of a document the change check did not flag, with its words, for the developer to decide.
+**Example:** the `software-engineer` agent's hand-off says that the change wrote answers. The hand-off also names, for the developer to decide, a revalidation of a document the change check did not ask about.
 
 **Distinctions:**
 
-- **A process's hand-off:** the point where one process's subject passes to another process, which a connection may declare checkable (COR-042). It is no report to a person.
-- **The pull request's description:** what the change's author writes for its reviewers and for the person who authorises the merge. A hand-off goes to the person the agent works for.
+- **A process's hand-off:** the point where one process's subject passes to another process. A connection may declare that point checkable (COR-042). A process's hand-off is no report to a person.
+- **The pull request's description:** what the change's author writes for its reviewers and for the merge authoriser. A hand-off goes to the person the agent works for.

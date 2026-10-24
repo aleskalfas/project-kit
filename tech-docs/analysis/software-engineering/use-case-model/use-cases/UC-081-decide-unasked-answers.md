@@ -37,7 +37,7 @@ pkit:
 
 **Assumptions:**
 
-- The project has software-engineering installed, or registered in place where it is developed (COR-017 and COR-031). The adapter deploys its `software-engineer` and `docs-reviewer` agent definitions (COR-013).
+- The project has software-engineering installed, or registered in place where software-engineering is developed (COR-017 and COR-031). The adapter deploys software-engineering's `software-engineer` and `docs-reviewer` agent definitions (COR-013).
 - The change check flags each answer the change was not asked for, "not asked for by this change". The whole-repository check reports each debt (COR-050 points 6 and 12).
 - A dispatched agent's hand-off reaches the agent that dispatched it whole, as `core:UC-029` describes (COR-047).
 - The `software-engineer` agent keeps to its definition. Nothing at run time stops an agent writing an answer the change does not owe (COR-050 point 3).
@@ -48,7 +48,7 @@ pkit:
 **Main path:**
 
 1. The agent finds an answer the change check did not ask of the change (COR-050 points 3 and 16). It may be:
-   - an answer on an artefact the change did not flag, or for a debt the whole-repository check reports
+   - an answer on an artefact the change check did not ask about, or for a debt the whole-repository check reports
    - a revisit entry for a target the change asks no revisit of, or one whose outcome alone changed
    - a reason for having no anchors
 2. The agent writes none of these answers (`software-engineer.md`).

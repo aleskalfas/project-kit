@@ -40,15 +40,15 @@ pkit:
 **Other actors:**
 
 - **Developer** (`core:ACT-developer`): the person whose pull request it is. They, or the agent making the change for them, mend each answer a `[block]` finding names.
-- **AI agent** (`core:ACT-ai-agent`): the `docs-reviewer` of the code-review panel, which checks the answers and gives its verdict. It writes no answer, and changes nothing it reviews (core:REQ-021). The agent that wrote the answers, such as the `software-engineer`, never reviews them (COR-050 point 3).
+- **AI agent** (`core:ACT-ai-agent`): the code-review panel's `docs-reviewer`, which checks the answers and gives a verdict. The reviewer writes no answer, and changes nothing it reviews (core:REQ-021). The agent that wrote the answers, such as the `software-engineer`, never reviews them (COR-050 point 3).
 
 **Preconditions:** None.
 
 **Assumptions:**
 
-- The project has software-engineering installed, or registered in place where it is developed, and the adapter deploys its `docs-reviewer` agent definition (COR-013, COR-017 and COR-031).
+- The project has software-engineering installed, or registered in place where software-engineering is developed, and the adapter deploys software-engineering's `docs-reviewer` agent definition (COR-013, COR-017 and COR-031).
 - The change carries the answers it owes, written by the agent making it or by the developer, as `core:UC-002` describes (COR-050 point 3).
-- The merge gate requires the `docs-reviewer` where a pull request's diff touches code, or its closing issue has a `type` (project-management DEC-032 point D1). project-management runs the reviewer on the pull request's head, posts its verdict and counts it, as `project-management:UC-062` describes (project-management DEC-028). Where the project registers no local reviewer of its own, project-management runs none yet (project-management DEC-032 point D4, #1934).
+- The merge gate requires the `docs-reviewer` where a pull request's diff touches code, or its closing issue has a `type` (project-management DEC-032 point D1). project-management runs the reviewer on the pull request's head, posts the reviewer's verdict and counts it, as `project-management:UC-062` describes (project-management DEC-028). Where the project registers no local reviewer of its own, project-management does not yet run the reviewers a capability contributes (project-management DEC-032 point D4, #1934).
 - Where the project opts out of the `docs-reviewer`, and chooses no other reviewer of the answers, the answers stand checked by their writer alone. COR-050 point 3 accepts that limit.
 - Where the merge gate does not require the `docs-reviewer`, as for an unclassified pull request changing only documents, the panel checks no answer. COR-050 point 3 does not name that case, and #1732 asks a record to decide it.
 - The backbone's change check lists every answer the change wrote, in plain words, in its last section, "Answers written in this change". It flags each answer the change was not asked for (COR-050 points 3 and 12).
@@ -58,7 +58,7 @@ pkit:
 
 **Main path:**
 
-1. The `docs-reviewer` runs the change check, `pkit friction check --base <base> --head <head>`, with the pull request's base branch and its head (software-engineering DEC-002 point 1).
+1. The `docs-reviewer` runs the change check, `pkit friction check --base <base> --head <head>`, with the pull request's base branch and the pull request's head (software-engineering DEC-002 point 1).
 2. The reviewer reads the answers from the check's last section, "Answers written in this change", never from an account the change's author wrote. The artefacts the check asked about are those its findings name above the list.
 3. For each `unchanged` answer the check asked for, the reviewer reads the artefact and the diff of each anchor the list names as modified. It judges whether the reason holds against the change.
 4. Next come the deferrals the change writes or rewords on an artefact the check asked about. For each, the reviewer judges whether its reason says truly why the artefact is left out of date. It reads the state of the follow-up issue the reason names, which must be open.
@@ -80,7 +80,8 @@ pkit:
 
 - **2a.** The list says `none`, or the check reports itself dormant in the project. Nothing is left to check, and the path goes on at step 7.
 - **2b.** The list flags as "not asked for by this change" an answer that is the developer's decision, as UC-081 describes:
-  - an answer on an artefact the check asked nothing about, or a reason for having no anchors
+  - an answer on an artefact the check asked nothing about
+  - a reason for having no anchors
   - a revisit entry the check did not ask for
 
   The reviewer names each in an `[advisory]` finding. It blocks on none of them, but for the sentence of one that is `updated`, which it checks as at step 5.
@@ -95,7 +96,7 @@ pkit:
 - **7a.** The developer edits a sentence in the description after the verdict. An edit of the description makes no verdict stale, so nobody checks the edited sentence (project-management DEC-055 point 5).
 - **7b.** The verdict requests changes, and a person bypasses the `docs-reviewer` on record, with a reason. The answers then stand checked by their writer alone, a limit COR-050 point 3 accepts (project-management DEC-055 point 5).
 
-**Postconditions:** Each answer the change owed, and each revisit it owed, was checked against the change by a reviewer other than its writer. The verdict approves the change only where each holds.
+**Postconditions:** A reviewer other than their writer checked each answer and each revisit the change owed against the change. The verdict approves the change only where each holds.
 
 **Minimal guarantees:**
 
