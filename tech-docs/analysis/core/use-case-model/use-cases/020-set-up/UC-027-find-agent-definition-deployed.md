@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-23T22:29:26Z
+      at: 2026-10-24T00:58:30Z
       outcome: unchanged
-      unchanged-because: Each of the agent's calls is still decided under its own grants and those to all, and a deny still wins. The change only stops a grant from allowing a command that holds a quote, a substitution, a backtick or a redirection.
+      unchanged-because: Each of the agent's calls is still decided under its own grants and those to all, and a deny still wins. The change reads a command's words as the shell does, which this use case does not describe.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants
