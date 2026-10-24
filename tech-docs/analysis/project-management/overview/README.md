@@ -1,6 +1,6 @@
 # Overview of the analysis of project-management
 
-<!-- pkit:overview reads=4 fingerprint=sha256:677278c92fa20ff07fb49e98f9f6d08d0cfccc758e34ccab33fca52dda3f57b9 -->
+<!-- pkit:overview reads=4 fingerprint=sha256:6daad9d66d9e3c87b6ec758e4baab319c4739408419f2bd74e1a84482edcfd46 -->
 
 [project-management exists so a team runs its projects' work on GitHub by one rulebook, which agents carry out on a person's authority](../../../../.pkit/capabilities/project-management/decisions/DEC-057-purpose.md).
 
@@ -12,7 +12,7 @@ This analysis describes what project-management does: who uses it, what they do 
 - [UC-061 — Move my issue through its lifecycle, each move checked](../use-case-model/use-cases/UC-061-move-issue.md) ([not built yet](#not-built-yet): step 4, step 7, variant 1a, variant 1f, variant 7a)
 - [UC-062 — Have the reviewers my change requires review my pull request, and land it](../use-case-model/use-cases/UC-062-review-and-land.md) ([not built yet](#not-built-yet): step 9, variant 1b, variant 6b, variant 12a, variant 13a)
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md) ([not built yet](#not-built-yet): step 8, step 9)
-- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md) ([not built yet](#not-built-yet): step 4, step 7, step 9, variant 7b, variant 7c, variant 7d, variant 7e, variant 11a)
+- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md) ([not built yet](#not-built-yet): step 4, step 9, variant 11a)
 
 ## Reference
 
@@ -67,12 +67,7 @@ What the use cases describe and the system does not do yet, each with the record
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md): step 8, decided by `project-management:DEC-014`, tracked in `#1761`
 - [UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan](../use-case-model/use-cases/UC-063-plan-intent.md): step 9, decided by `project-management:DEC-029`, tracked in `#1761`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): step 4, decided by `project-management:DEC-016`, tracked in `#1939`
-- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): step 7, decided by `project-management:DEC-018`, tracked in `#1940`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): step 9, decided by `project-management:DEC-016`, tracked in `#1939`
-- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): variant 7b, decided by `project-management:DEC-018`, tracked in `#1940`
-- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): variant 7c, decided by `project-management:DEC-018`, tracked in `#1940`
-- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): variant 7d, decided by `project-management:DEC-018`, tracked in `#1940`
-- [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): variant 7e, decided by `project-management:DEC-018`, tracked in `#1940`
 - [UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward](../use-case-model/use-cases/UC-064-define-milestones-and-workstreams.md): variant 11a, decided by `project-management:DEC-016`, tracked in `#1939`
 
 ### Diagrams

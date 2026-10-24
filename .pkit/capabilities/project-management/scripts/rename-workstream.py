@@ -11,7 +11,16 @@ Renames a workstream's slug. Per DEC-018, this is a label-rename
 operation: the workstreams.yaml entry's mapping key changes, the
 GitHub `workstream:<old>` label is renamed to `workstream:<new>`,
 issues using the old label are re-tagged automatically by gh's
-rename behaviour.
+rename behaviour. Where a board carries the axis, the option `<old>`
+of its `Workstream` field is renamed instead, keeping each card's value.
+
+Before it changes anything it checks the new slug against DEC-018's
+rules, and the old and the new label (or board option). It refuses
+where both exist, since the issues would then sit under two values:
+`merge-workstream` consolidates them. Where only the new one exists,
+there is nothing to rename. Where neither does, the new one is created.
+The label or the board is changed before the file, so a re-run after a
+failure finds the substrate renamed and writes the file.
 
 Per-change confirmation: the script narrates the plan and prompts
 unless `--yes` is set.
@@ -26,9 +35,9 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  renamed (or dry-run reported)
-  1  membership refusal / validation refusal
+  1  membership refusal / validation refusal / both old and new exist
   2  usage error
-  3  gh failure
+  3  gh failure (labels or board unreadable; label or board not changed)
 """
 
 from __future__ import annotations
@@ -49,7 +58,7 @@ sys.path.insert(0, str(_HERE))
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard
+from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard, workstream_sync
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -58,8 +67,8 @@ from _lib.membership import (
     resolve_invoker_identity,
 )
 from _lib.workstreams import (
-    SLUG_PATTERN,
     parse_workstreams,
+    validate_slug,
     workstreams_path,
 )
 
@@ -79,11 +88,9 @@ def main() -> int:
     session_guard.add_override_argument(parser)
     args = parser.parse_args()
 
-    if not SLUG_PATTERN.match(args.new):
-        print(
-            f"[refused] new slug {args.new!r} does not match the slug pattern.",
-            file=sys.stderr,
-        )
+    err = validate_slug(args.new)
+    if err:
+        print(f"[refused] new {err}", file=sys.stderr)
         return 1
     if args.old == args.new:
         print("[noop] new slug equals old slug.")
@@ -164,16 +171,63 @@ def main() -> int:
     substrate_map = axis_labels.load_substrate_map(capability_root)
     kit_label_note = axis_carriage.kit_label_mutation_note("workstream", config, substrate_map)
     kit_labels = kit_label_note is None
+    on_board = axis_carriage.is_board_carried("workstream", config, substrate_map)
+    old_label = axis_labels.label("workstream", args.old)
+    new_label = axis_labels.label("workstream", args.new)
+
+    # Check the old and the new label before anything changes (DEC-018).
+    label_step = None
+    if kit_labels and not args.skip_label:
+        names, error = workstream_sync.label_names(config, gh_call=gh_run)
+        if names is None:
+            print(
+                f"[error] could not read the repository's labels, so nothing was changed: {error}",
+                file=sys.stderr,
+            )
+            return 3
+        label_step = _step(old_label.lower() in names, new_label.lower() in names)
+        if label_step == "refuse":
+            print(
+                f"[refused] both `{old_label}` and `{new_label}` exist, so the issues "
+                "would sit under two labels. Use merge-workstream to consolidate "
+                "them. Nothing was changed.",
+                file=sys.stderr,
+            )
+            return 1
+
+    # The same check on the board's `Workstream` field, where a board carries it.
+    board = None
+    board_step = None
+    if on_board:
+        read = workstream_sync.read_board_field(config)
+        if read.error is not None:
+            print(f"[error] could not read the board: {read.error}", file=sys.stderr)
+            return 3
+        if read.field is None:
+            print(f"[refused] {read.problem}", file=sys.stderr)
+            return 1
+        board = read.field
+        board_step = _step(
+            workstream_sync.find_option(board, args.old) is not None,
+            workstream_sync.find_option(board, args.new) is not None,
+        )
+        if board_step == "refuse":
+            print(
+                f"[refused] the board's `Workstream` field offers both `{args.old}` and "
+                f"`{args.new}`. Use merge-workstream to consolidate them. Nothing was "
+                "changed.",
+                file=sys.stderr,
+            )
+            return 1
 
     print(f"rename-workstream: {args.old} → {args.new}")
     print(f"  file:        {path}")
-    if kit_labels and not args.skip_label:
-        print(
-            f"  label:       rename `{axis_labels.label('workstream', args.old)}` → "
-            f"`{axis_labels.label('workstream', args.new)}`"
-        )
+    if label_step is not None:
+        print(f"  label:       {_describe(label_step, f'`{old_label}`', f'`{new_label}`')}")
     elif kit_label_note is not None:
         print(f"  label:       none — {kit_label_note}")
+    if board_step is not None:
+        print(f"  board:       {_describe(board_step, f'option `{args.old}`', f'`{args.new}`')}")
 
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
@@ -184,19 +238,58 @@ def main() -> int:
             print("aborted.", file=sys.stderr)
             return 0
 
+    # The substrate first, then the file: a failure here leaves the file as it
+    # was, and a re-run finds the renamed substrate and only writes the file.
+    if board is not None and board_step in ("rename", "create"):
+        options = (
+            workstream_sync.options_renaming(board, args.old, args.new)
+            if board_step == "rename"
+            else workstream_sync.options_adding(board, args.new)
+        )
+        result = workstream_sync.write_options(config, board, options)
+        if not result.ok:
+            print(
+                f"[error] the board's `Workstream` field was not changed, and the file "
+                f"was not written: {result.error}",
+                file=sys.stderr,
+            )
+            return 3
+
+    if label_step == "rename" and not _gh_label_rename(args.old, args.new, config):
+        print("[error] the label was not renamed, and the file was not written.", file=sys.stderr)
+        return 3
+    if label_step == "create" and not _gh_label_create(args.new, config):
+        print("[error] the label was not created, and the file was not written.", file=sys.stderr)
+        return 3
+
     if not _rename_in_file(yaml, data, args.old, args.new, path):
         return 2
 
-    if kit_labels and not args.skip_label:
-        ok = _gh_label_rename(args.old, args.new, config)
-        if not ok:
-            print(
-                "[warn] workstreams.yaml updated but gh label rename failed.",
-                file=sys.stderr,
-            )
-
     print(f"\n[ok] renamed workstream {args.old!r} → {args.new!r}.")
     return 0
+
+
+def _step(old_exists: bool, new_exists: bool) -> str:
+    """What a rename does to a substrate that holds these values.
+
+    Both held: refuse, since the issues would sit under two values. The old one
+    only: rename it. The new one only: nothing to do. Neither: create the new one.
+    """
+    if old_exists and new_exists:
+        return "refuse"
+    if old_exists:
+        return "rename"
+    if new_exists:
+        return "none"
+    return "create"
+
+
+def _describe(step: str, old: str, new: str) -> str:
+    if step == "rename":
+        return f"rename {old} → {new}"
+    if step == "create":
+        return f"create {new} ({old} does not exist)"
+    return f"none — {new} exists already and {old} does not"
 
 
 def _rename_in_file(yaml: YAML, data: dict, old: str, new: str, path: Path) -> bool:
@@ -224,6 +317,31 @@ def _rename_in_file(yaml: YAML, data: dict, old: str, new: str, path: Path) -> b
         print(f"error: failed to write {path}: {exc}", file=sys.stderr)
         return False
     return True
+
+
+def _gh_label_create(slug: str, config: dict) -> bool:
+    """Create `workstream:<slug>`; an existing label counts as created."""
+    try:
+        proc = gh_run(
+            [
+                "gh",
+                "label",
+                "create",
+                axis_labels.label("workstream", slug),
+                "--color",
+                "0e8a16",
+                "--description",
+                f"Workstream `{slug}` (per project-management:DEC-018).",
+            ],
+            config,
+            check=False,
+        )
+    except FileNotFoundError:
+        return False
+    if proc.returncode == 0 or "already exists" in (proc.stderr or ""):
+        return True
+    print(f"error: gh label create failed: {(proc.stderr or '').strip()}", file=sys.stderr)
+    return False
 
 
 def _gh_label_rename(old: str, new: str, config: dict) -> bool:
