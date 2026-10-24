@@ -32,6 +32,10 @@ pkit:
         - src/project_kit/scaffolds.py
         - src/project_kit/migrations.py
         - src/project_kit/decisions.py
+        - src/project_kit/agents.py
+        - src/project_kit/storyboards.py
+        - src/project_kit/schemas_authoring.py
+        - src/project_kit/lifecycle_ownership.py
         - .pkit/lifecycle/ownership.py
         - src/project_kit/capability_namespace.py
         - src/project_kit/scratchpads.py
@@ -77,6 +81,7 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#what-sync-writes
         - .pkit/lifecycle/README.md#the-ownership-predicates-ownershippy
+        - .pkit/lifecycle/README.md#an-adapters-manifest
         - .pkit/lifecycle/README.md#the-steps-of-a-transition
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#a-new-collision
@@ -95,9 +100,8 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-24T04:58:37Z
-      outcome: unchanged
-      unchanged-because: Each derived-link form is matched on its own, a renamed placed file is read under HEAD's forms, and a code span ends within its paragraph. The friction checks hold as written.
+      at: 2026-10-24T04:46:20Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -186,10 +190,10 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `new area <name>` | scaffold a new area (per COR-011) | yes | no — refuses if area already exists |
 | `new adapter <name>` | scaffold a new adapter (per COR-005) and register it; refuses the reserved name `backbone`, giving the reason (`init` refuses a source shipping it too): the backbone carries it where a component's carry the component's name, and two of those places read adapters — the component of the backbone's changesets and the owner of its validators — so an adapter of that name would have its changesets and validators read as the backbone's. The names reserved for capabilities alone (`core`, `project`, `adr`, see `new capability`) are free for an adapter: only a capability's name is read where they collide. `pkit validate` reports an adapter registered under `backbone` as an error naming the rename (its `packages` member). It refuses a name a capability holds too — registered in `.pkit/manifest.yaml`, or present at `.pkit/capabilities/<name>/` — as `new capability`, `capabilities install` and `capabilities register` refuse a name an adapter holds, giving the reason: an adapter and a capability cannot share a name, because the backbone reads a component by its name alone where it reads both kinds — the release keys every `package.yaml` under `.pkit/` by name, so a release would move only one of the two; every registered component's validators are owned by its name; and the wiring resolver reads the component registry by name. `pkit validate` reports an adapter and a capability registered under one name as an error at each, naming its rename (its `packages` member) | yes | no — refuses if adapter already exists |
 | `new capability <name>` | scaffold a new capability (per COR-017); refuses the reserved names, giving the reason (`install` and `register` refuse them too): `core`, the name core's own entries carry where a capability's carry the capability's name — the namespace of the core decision records and agents, the core schemas area wherever a schemas verb takes an owner — so a capability of that name could have no decision records or agents stamped, and its schemas would be unreachable; `project`, the name the project's own entries carry where a capability's carry the capability's name — the namespace of the project's decision records and agents, the opening name of the project's checks in an evidence point — so a capability of that name would be indistinguishable from the project itself; `adr`, the namespace of the project's architecture decision records, which `new decision` reads before any capability name, so a capability of that name could have no decision records stamped; and `backbone`, the name the backbone carries where a component's carry the component's name — the component of the backbone's changesets, the owner of its validators, the component its rule sets are cited with, the component its documentation locations are recorded under — so a capability of that name would have its changesets, validators, rule sets and documentation locations read as the backbone's. `pkit validate` reports a capability registered under any of them as an error naming the rename (its `packages` member). It refuses a backbone command's name too (`validate`, `status`, `sync`, … — read from the dispatcher when it runs), since every capability name yields to a backbone command and the capability could never surface its commands as `pkit <name> …`; `install` and `register` do not, because the backbone gains commands with its releases and an upgrade can take a name that was free — `pkit validate` reports an installed capability that ships a `commands:` block under one. It refuses a name an adapter holds too — registered, or present at `.pkit/adapters/<name>/` — as `install` and `register` do, since an adapter and a capability cannot share a name (see `new adapter`) | yes | no — refuses if capability already exists |
-| `new migration [...]` | scaffold a migration script in the `<major>.<minor>.0/` directory of the version it carries a project to, never one already released. Without `--version`, the next version past the one the default branch records for the tier, said with its reason. A `--version` at or below it is refused, naming the version to give (see [`new migration`](#new-migration---tier-tier---component-name---version-xy0---name-slug---scope-scope) below) | yes | no — emits a fresh, numbered file each call |
-| `new decision <namespace> <slug> [--yes]` | scaffold a new decision record stub (frontmatter + four sections + a first point heading + next number in namespace). For `adr` with `adr-records` unset, derives the folder from the internal documentation root and records it in the overlay first; over a folder already holding documents that takes consent — a terminal is asked, `--yes` consents, a non-interactive run refuses (COR-049 point 5; see "Authoring commands"). Refuses a capability whose files the project receives as synced copies, naming `project` and `adr` instead | yes | no — refuses if a record with that slug already exists |
-| `new agent <namespace> <name> [--with-storyboard]` | stamp an agent stub in `core`, `project` or a capability's `agents/` folder (per COR-013 + COR-015; see "Authoring commands") | yes | no — refuses a name already taken in core, project or any capability |
-| `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>]` | stamp a storyboard beside an agent, wherever it lives (per COR-016; see "Authoring commands") | yes | no — refuses if the storyboard already exists |
+| `new migration [...]` | scaffold a migration script in the `<major>.<minor>.0/` directory of the version it carries a project to, never one already released. Without `--version`, the next version past the one the default branch records for the tier, said with its reason. A `--version` at or below it is refused, naming the version to give (see [`new migration`](#new-migration---tier-tier---component-name---version-xy0---name-slug---scope-scope) below). Refuses the backbone, or a capability, whose files the project receives as synced copies (see "Authoring commands") | yes | no — emits a fresh, numbered file each call |
+| `new decision <namespace> <slug> [--yes]` | scaffold a new decision record stub (frontmatter + four sections + a first point heading + next number in namespace). For `adr` with `adr-records` unset, derives the folder from the internal documentation root and records it in the overlay first; over a folder already holding documents that takes consent — a terminal is asked, `--yes` consents, a non-interactive run refuses (COR-049 point 5; see "Authoring commands"). Refuses `core`, or a capability, whose files the project receives as synced copies, naming `project` and `adr` instead | yes | no — refuses if a record with that slug already exists |
+| `new agent <namespace> <name> [--with-storyboard]` | stamp an agent stub in `core`, `project` or a capability's `agents/` folder (per COR-013 + COR-015; see "Authoring commands"). Refuses `core`, or a capability, whose files the project receives as synced copies, naming `project` instead | yes | no — refuses a name already taken in core, project or any capability |
+| `new storyboard agent <name> [--namespace <ns>] [--scenario <slug>]` | stamp a storyboard beside an agent, wherever it lives (per COR-016; see "Authoring commands"). Refuses an agent whose files the project receives as synced copies | yes | no — refuses if the storyboard already exists |
 | `new scratchpad <slug>` | stamp a new active-state scratchpad note (per COR-012) | yes | no — refuses if the slug is already in use across any state |
 | `scratchpad done <slug> [--produced <ref>...]` | move a note from `active/` (or `reported/`, removing that lazy directory when it empties) to `done/`, append `retired`/`produced` to frontmatter | yes | no — refuses if no active or reported note matches |
 | `scratchpad drop <slug>` | move a note from `active/` (or `reported/`) to `dropped/`, append `retired` to frontmatter | yes | no — refuses if no active or reported note matches |
@@ -1001,6 +1005,24 @@ The `new` family scaffolds first-class methodology elements — areas, adapters,
 
 The shapes are stamped by the CLI's own scaffolding code (`src/project_kit/scaffolds.py`), which ships with the binary, so a kit upgrade that changes a contract also updates what gets stamped.
 
+### Folders a sync writes
+
+A `new` command never stamps into a folder whose files the project receives as [synced copies](../lifecycle/README.md#the-ownership-predicates-ownershippy). The next sync overwrites what the project writes there (the no-shared-files invariant). Outside the methodology's source repository, such a folder is the backbone's or a kit-shipped capability's. In any project, it is an externally-sourced capability's.
+
+Five commands ask before they write anything, and in a dry run too where they take one:
+
+- `new decision`, for `core` or a capability
+- `new agent`, for `core` or a capability
+- `new storyboard`, beside an agent of `core` or a capability
+- `new schema`, for `core` or a capability
+- `new migration`, for the backbone or a capability
+
+Where the folder holds synced copies, the command writes nothing and exits 1. It names the folder, and where the project's own artefact goes. That is the `project` or the `adr` namespace for a decision, and the `project` namespace for an agent or its storyboard. For a schema or a migration, it is a capability the project incubates.
+
+Each command stamps as before into a capability the project incubates. In the methodology's source repository, it stamps into every folder but an externally-sourced capability's.
+
+`new area`, `new adapter` and `new capability` make a folder no sync writes, and `new scratchpad` writes in the project's own tier, so none of them asks. Nor does `new migration --tier adapter`, since a project's copy of an adapter carries no `migrations/` folder ([the lifecycle README, "An adapter's manifest"](../lifecycle/README.md#an-adapters-manifest)).
+
 ### `new area <name> [--variant <variant>]`
 
 Scaffolds an adopter-owned area at `.pkit/<name>/` with the README skeleton appropriate to the chosen variant (per COR-011). The variant is one of:
@@ -1035,7 +1057,7 @@ Unlike `new adapter`, it registers nothing. `pkit capabilities register <name>` 
 
 Drops a numbered, executable script into the right `<major>.<minor>.0/` directory under the relevant tier's migrations tree (per COR-010 and `.pkit/lifecycle/README.md`).
 
-- **`--tier`** is one of `backbone`, `adapter`, `capability`. Determines the tree the migration lands in.
+- **`--tier`** is one of `backbone`, `adapter`, `capability`. Determines the tree the migration lands in. The command refuses the backbone, and a capability, whose files the project receives as synced copies ("Folders a sync writes" above).
 - **`--component <name>`** is required when `--tier` is `adapter` or `capability`; identifies the component the migration belongs to.
 - **`--version <X.Y.0>`** is the version the migration carries a project to. The patch segment is always `.0` (per the lifecycle spec — patches have no migrations). A version at or below the one the default branch records for the tier is refused, since a project already there never runs the script. The refusal names the version to give ([the lifecycle README, "Which version a migration targets"](../lifecycle/README.md#which-version-a-migration-targets)).
 - **Without `--version`,** the command picks the next version past the one the default branch records, as [the lifecycle README, "Which version a migration targets"](../lifecycle/README.md#which-version-a-migration-targets) sets out. It prints the version and its reason before the stamped path, such as `Version: 1.150.0, the next minor past backbone 1.149.0, which the default branch 'main' records.`
@@ -1061,7 +1083,7 @@ Scaffolds a new decision-record stub per the schema in `.pkit/decisions/README.m
 
   Numbering is independent per id-space. A `<namespace>` that is not `core`, `project`, or `adr` is interpreted as a capability name: the record stamps under that capability's `decisions/` directory with the `DEC` prefix, numbered independently within that capability (two different capabilities may both hold a `DEC-001`). The command refuses if no capability of that name exists under `.pkit/capabilities/` — a capability being a folder there that carries a `package.yaml` — naming the command's own namespaces and the capabilities that do exist; the `decisions/` subdirectory is created on first use.
 
-  The command also refuses a capability whose files the project receives as [synced copies](../lifecycle/README.md#the-ownership-predicates-ownershippy): a kit-shipped capability outside the methodology's source repository, or an externally-sourced one in any project. The next sync overwrites what the project writes in its `decisions/` folder (the no-shared-files invariant). So the command writes nothing, exits 1, and names `pkit new decision project <slug>` and `pkit new decision adr <slug>` as where the project's own decision goes. A capability incubated in the project stamps as above, and so does a kit-shipped one in the methodology's source repository.
+  The command also refuses `core`, and a capability, whose files the project receives as synced copies ("Folders a sync writes" above). It names `pkit new decision project <slug>` and `pkit new decision adr <slug>` as where the project's own decision goes.
 
 - **`<slug>`** is a kebab-case shorthand of the decision's title — short enough to keep listings self-documenting (e.g., `merge-delivery`, `pattern-extraction`).
 
@@ -1094,7 +1116,7 @@ The stamped file includes:
 - Frontmatter — `id` (auto-numbered), `title` (placeholder), `status: proposed`, `date` (today's date), `author` (read from `git config user.name` and `git config user.email`).
 - The four required section headers — `## Context`, `## Decision`, `## Rationale`, `## Implications` — empty, but for a first point heading under `## Decision`, `### 1. Point title`. A record's points are headings that keep their numbers ([COR-058](../decisions/core/COR-058-record-points.md) points 1 and 3). The decisions README's "Adding a record" says what the stamped heading fixes, and when to delete it.
 
-Refuses if a record with the same slug already exists in the id-space, or if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/`, or the project receives its files as synced copies.
+Refuses if a record with the same slug already exists in the id-space, if the namespace is invalid — for a capability namespace, "invalid" means no capability of that name exists under `.pkit/capabilities/` — or if the project receives the namespace's files as synced copies.
 
 **Coordination with the `decision-author` skill.** Per COR-006's discriminator: a command stamps deterministically, a skill drafts content conversationally. The `decision-author` skill (`.pkit/skills/core/decision-author.md`) calls `pkit new decision <namespace> <slug>` for the stub, then walks the author through filling the body — content drafting, discipline self-checks, and approval. Authors who don't need the conversational help can call the command directly.
 
@@ -1112,6 +1134,8 @@ Stamps an agent stub — the unified front matter (COR-013) and the canonical bo
 
   A `<namespace>` that is not `core` or `project` is interpreted as a capability name, as for `new decision`: the command refuses if no capability of that name exists under `.pkit/capabilities/`, naming the ones that do, and creates the capability's `agents/` folder on first use.
 
+  The command refuses `core`, and a capability, whose files the project receives as synced copies, naming `pkit new agent project <name>` instead ("Folders a sync writes" above).
+
 - **`<name>`** is kebab-case, naming the role. The command refuses a name already taken in core, project or any capability, in either layout — the deploy resolves one agent per name, so a second one would mask the first.
 
 - **`--with-storyboard`** stamps folder form (`<name>/<name>.md`) with a sibling `storyboard.md` scaffold (COR-016). Both sides of the pair are declared as stamped: the agent's `storyboards:` names `storyboard.md` and its body cites it, and the storyboard's `consumers:` names the agent, its `namespace` being the capability's name for a capability's agent — so the fresh pair passes `pkit refs validate`.
@@ -1126,7 +1150,7 @@ Stamps a storyboard (COR-016) beside an existing agent: `storyboard.md`, or `<sl
 - **`<name>`** is the agent's name. Without `--namespace`, the command looks wherever agents ship from, in the deploy's order — project, capabilities by name, then core — and stamps beside the first agent of that name, the one that deploys.
 - **`--namespace <ns>`** pins the lookup to one location: `core`, `project` or a capability name (an unknown capability gets the `new agent` refusal).
 
-Refuses if the storyboard already exists or no agent of that name is found. **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.
+Refuses if the storyboard already exists or no agent of that name is found. It also refuses an agent whose files the project receives as synced copies, leaving a flat agent flat ("Folders a sync writes" above). **Coordination with the `storyboard-author` skill**: the skill walks the framing, tone and scenario drafting after the stamp.
 
 ### `new scratchpad <slug>`
 

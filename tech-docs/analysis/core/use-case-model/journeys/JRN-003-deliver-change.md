@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T04:58:27Z
+      at: 2026-10-24T04:46:24Z
       outcome: unchanged
-      unchanged-because: The whole-repository check reads a renamed placed file under HEAD's derived links at both versions. The journey's steps are unchanged.
+      unchanged-because: UC-037 now refuses the core namespace outside the methodology's source repository too. The journey records a project's own decision, which still stamps.
 ---
 
 # JRN-003 — Deliver a change

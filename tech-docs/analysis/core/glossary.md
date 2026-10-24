@@ -47,9 +47,9 @@ TERM-agent-definition:
           - COR-013#2
           - COR-013#5
       revalidated:
-        at: 2026-10-23T08:53:45Z
+        at: 2026-10-24T04:34:09Z
         outcome: unchanged
-        unchanged-because: It anchors the core's agents code and its contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.
+        unchanged-because: The agent stamp now refuses a core or capability folder the project receives as synced copies. An agent definition is still a deployed document with one remit, so the definition holds.
 TERM-agent-workspace:
   name: agent workspace
   noun-forms: [agent workspaces]
@@ -414,9 +414,9 @@ TERM-decision-record:
           - COR-025
           - COR-058#1
       revalidated:
-        at: 2026-10-24T00:20:32Z
+        at: 2026-10-24T04:34:14Z
         outcome: unchanged
-        unchanged-because: The stamp now refuses a capability whose folder the project receives as a synced copy. A record is still numbered in its namespace and binds once accepted, so the definition holds.
+        unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. A record is still numbered in its namespace and binds once accepted, so the definition holds.
 TERM-default-branch:
   name: default branch
   status: active
@@ -1158,9 +1158,9 @@ TERM-stamp:
         record:
           - COR-005
       revalidated:
-        at: 2026-10-21T15:45:09Z
+        at: 2026-10-24T04:34:17Z
         outcome: unchanged
-        unchanged-because: COR-005 says the adapter stamp writes package.yaml, README.md and migrations/, and that templates live in the CLI's code. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
+        unchanged-because: The migration stamp now refuses a backbone or capability folder the project receives as synced copies. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
 TERM-storyboard:
   name: storyboard
   noun-forms: [storyboards]
@@ -1174,6 +1174,10 @@ TERM-storyboard:
           - src/project_kit/storyboards.py
         record:
           - COR-016
+      revalidated:
+        at: 2026-10-24T04:34:19Z
+        outcome: unchanged
+        unchanged-because: The storyboard stamp now refuses an agent whose files the project receives as synced copies. A storyboard still scripts a dialogue for the file that carries it out, so the definition holds.
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]

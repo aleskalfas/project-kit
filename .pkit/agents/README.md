@@ -19,9 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
     revalidated:
-      at: 2026-10-23T08:13:34Z
+      at: 2026-10-24T04:34:43Z
       outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone when it compares a body. Who writes an answer and who checks it, as this README says, is unchanged.
+      unchanged-because: The agent and storyboard stamps now refuse a core or capability folder the project receives as synced copies. The README says where each namespace stamps and which names it refuses, leaving that refusal to the CLI reference, so what it says holds.
       deferred:
         - anchor:
             kind: record

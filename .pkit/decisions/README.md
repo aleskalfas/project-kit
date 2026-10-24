@@ -19,9 +19,9 @@ pkit:
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
     revalidated:
-      at: 2026-10-24T00:20:35Z
+      at: 2026-10-24T04:34:45Z
       outcome: unchanged
-      unchanged-because: The stamp now refuses a capability the project receives as a synced copy. The README says the command stamps into a capability that exists and refuses an unknown one, which still holds, and the refusal names where the project's decision goes.
+      unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. The README names the namespaces the command stamps, leaving where it refuses to the CLI reference, so what it says holds.
 ---
 
 # Decision records

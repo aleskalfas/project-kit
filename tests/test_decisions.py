@@ -460,6 +460,52 @@ def test_new_decision_stamps_a_capability_incubated_in_an_adopter(
     assert f"Stamped: {stamped.relative_to(repo.root).as_posix()}" in output
 
 
+def test_new_decision_refuses_the_core_namespace_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """In a project that receives the methodology by sync, `.pkit/decisions/core/` is a
+    synced copy, and the next sync overwrites a core record written there (core rule 1).
+    The command writes nothing and names where the project's decision goes."""
+    repo = make_adopter_repo()
+    before = _tree(repo.root)
+
+    code, output = _new_dec("core")
+
+    assert code == 1, output
+    assert _tree(repo.root) == before
+    assert "the core namespace arrives in this project as a synced copy" in output
+    assert ".pkit/decisions/core/" in output
+    assert "`pkit new decision project ours`" in output
+    assert "`pkit new decision adr ours`" in output
+
+
+def test_new_decision_stamps_the_core_namespace_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, the core records are its source, so a core
+    record stamps as before."""
+    repo = make_adopter_repo()
+    _as_methodology_source(repo.root)
+
+    code, output = _new_dec("core")
+
+    assert code == 0, output
+    [stamped] = sorted((repo.root / ".pkit" / "decisions" / "core").glob("COR-*-ours.md"))
+    assert f"Stamped: {stamped.relative_to(repo.root).as_posix()}" in output
+
+
+def test_new_decision_stamps_the_project_namespace_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """The project's own records are never a synced copy."""
+    repo = make_adopter_repo()
+
+    code, output = _new_dec("project")
+
+    assert code == 0, output
+    assert sorted((repo.root / ".pkit" / "decisions" / "project").glob("PRJ-*-ours.md"))
+
+
 # ------------------------------------- `pkit new decision adr`: the documentation roots (COR-049)
 
 

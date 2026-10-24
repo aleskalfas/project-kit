@@ -24,9 +24,9 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-24T04:58:39Z
+      at: 2026-10-24T04:34:48Z
       outcome: unchanged
-      unchanged-because: "Discovery now matches each form of derived link on its own, as the passage on derived links reads: a link's target matches a form whole."
+      unchanged-because: The schema stamp now refuses the core schemas area or a capability the project receives as synced copies. The README says where the stamp writes, leaving that refusal to the CLI reference, so what it says holds.
       deferred:
         - anchor:
             kind: path
