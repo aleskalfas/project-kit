@@ -178,7 +178,7 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
   - a write by a process that left the command's process group
   - anything done over the network
 - **What the run confines:** nothing. A command runs as you, and can read whatever you can, such as your SSH keys. On Linux, that includes the environment of the processes that started the run. The run detects writes in the repository, and prevents none.
-- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output with a line that would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
+- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output in which a line the command printed would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
 
 Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`. The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
 
