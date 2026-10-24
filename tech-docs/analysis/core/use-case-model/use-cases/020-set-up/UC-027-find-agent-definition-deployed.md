@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:45:28Z
+      at: 2026-10-24T11:48:25Z
       outcome: unchanged
-      unchanged-because: The decision code still decides each call of an agent as before. The change adds an ask in the Claude Code hook on a deferred command that may hide a guardrail, which this use case does not describe.
+      unchanged-because: The decision code still decides each call of an agent from its grants. The change reads a Bash redirection that writes no file as harmless, which this use case does not describe.
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

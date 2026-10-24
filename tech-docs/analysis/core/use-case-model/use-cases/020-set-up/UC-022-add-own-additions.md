@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T04:45:26Z
+      at: 2026-10-24T11:48:24Z
       outcome: unchanged
-      unchanged-because: The project grants and denies still apply as before, and a project deny the core cannot tell still defers. Only a guardrail it cannot tell makes the Claude Code hook ask.
+      unchanged-because: The project grants and denies still apply as before. The core removes a redirection that writes no file before it matches them, which this use case does not describe.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T04:45:24Z
+      at: 2026-10-24T11:48:22Z
       outcome: unchanged
-      unchanged-because: Every deny still binds before any allow, and decide() returns the verdicts it did. The hook asks only where the core abstained, so an ask never stands in for a deny or an allow.
+      unchanged-because: Every deny still binds before any allow. The core reads a command with a redirection that writes no file removed, so a deny binds on a program behind one, and new tests find a force push and a recursive rm denied beside one.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

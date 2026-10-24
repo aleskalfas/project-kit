@@ -16,7 +16,7 @@ pkit:
         - src/project_kit/permissions.py
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-24T06:10:44Z
+      at: 2026-10-24T12:02:42Z
       outcome: updated
 ---
 
@@ -348,6 +348,8 @@ The hook **script** itself is a propagated adapter file — `pkit sync` owns its
 ### Prompt-free command shape under the sandbox
 
 This is the Claude Code realization of the universal "work with the permission layer, not around it" rule (`.pkit/rules/core.md`). With the sandbox on, `.claude/settings.json` carries `sandbox.autoAllowBashIfSandboxed: true` — so a **single, simple Bash command auto-allows** because it runs inside the box, no prompt. What still prompts is the command *shape* the parser can't statically vet: a leading `cd`, statements chained with `;`, pipelines (`| grep | head`), and command substitution. Those fall back to a confirmation even under the sandbox, and an allow-list entry for the inner tool does not help (the parser keys on the outer/first token). So the agent's discipline is: **one clean command per call; the harness's `Read` / `Grep` / `Glob` / `Write` tools for inspection and file I/O — not `cat`/`sed`/heredocs/pipelines.**
+
+With live enforcement on, the hook allows some of these shapes before the harness's parser sees them. It allows a compound whose every segment is granted, behind a bare leading `cd` or not (ADR-025 point 1). It allows a granted command whose only redirections write no file, such as `2>&1` or `>/dev/null` (ADR-025 point 2). Any other redirection, such as `> out.txt`, still defers to the harness's own flow.
 
 For a genuinely multi-step diagnostic, compose the complexity into a file and run it as one invocation: author the script with the `Write` tool in the agent workspace (prompt-free, and the call shows its contents), then run a single `bash .agent-workspace/<file>`. The parser sees only that one clean command; the box auto-allows it; the multi-step logic runs *inside* the sandbox.
 

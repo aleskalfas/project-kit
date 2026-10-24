@@ -41,8 +41,9 @@ pkit:
         - REQ-012
         - REQ-016
     revalidated:
-      at: 2026-10-24T04:49:22Z
-      outcome: updated
+      at: 2026-10-24T11:48:32Z
+      outcome: unchanged
+      unchanged-because: The diagnostic loop logs and reports deferred calls as before. The core defers fewer calls, since a redirection that writes no file no longer counts as untrusted, and that changes no step of the report.
 ---
 
 # UC-033 — Find out why a command prompted me or was blocked

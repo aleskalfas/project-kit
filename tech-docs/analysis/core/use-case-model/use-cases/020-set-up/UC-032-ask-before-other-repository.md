@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T04:45:32Z
+      at: 2026-10-24T11:48:30Z
       outcome: unchanged
-      unchanged-because: The guard before a change to another repository and the hook ask on a foreign file write are as before. The new ask concerns a deferred Bash call that may hide a guardrail, which is not about another repository.
+      unchanged-because: The guard before a change to another repository and the hook ask on a foreign file write are as before. ADR-025 now removes a redirection that writes no file before the leading cd strip, which is not about another repository.
 ---
 
 # UC-032 — Be asked before an agent changes another repository
