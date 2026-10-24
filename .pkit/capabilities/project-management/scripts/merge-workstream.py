@@ -23,7 +23,10 @@ DEC-018's lifecycle table:
     and `[workstream:<loser>]` becomes the survivor's, in the tracked
     files and in issue, pull-request and comment bodies. A comment by
     someone else is skipped, with a warning, without admin rights on the
-    repository. `--skip-references` leaves them.
+    repository. The `.pkit/` tree, the changelog and the pending
+    changesets are left. `--skip-references` leaves them all. Each file
+    and body is confirmed in turn, so a run with no interactive shell
+    refuses up front unless `--yes` batches the confirmations.
 
 The substrate is changed before the file. A loser whose issues did not
 all move stays in the file, with its label or option, so a re-run
@@ -156,6 +159,15 @@ def main() -> int:
     if args.survivor in args.losers:
         print(
             "[refused] survivor cannot also be a loser.",
+            file=sys.stderr,
+        )
+        return 1
+
+    if not args.skip_references and workstream_sync.references_need_yes(args.yes, args.dry_run):
+        print(
+            "[refused] a merge rewrites the references to each loser, asking before each "
+            "file and body, and no interactive shell is here to ask. Pass --yes to confirm "
+            "them all, or --skip-references to leave them. Nothing was changed.",
             file=sys.stderr,
         )
         return 1

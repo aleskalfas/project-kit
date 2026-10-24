@@ -363,6 +363,20 @@ def test_merge_rewrites_references_by_default(mw, tmp_path, monkeypatch) -> None
     assert "pkit-provenance:start" in body  # an issue body the script edits is stamped
 
 
+def test_merge_without_a_shell_or_yes_refuses_before_any_change(mw, tmp_path, monkeypatch) -> None:
+    """References are confirmed one by one by default; with no shell to ask and
+    no --yes, none could be, so the merge refuses up front."""
+    stage_project(tmp_path, TWO)
+    repo = FakeRepo(
+        labels={"workstream:cli", "workstream:old"}, issues={1: _issue("One", "workstream:old")}
+    )
+    monkeypatch.setattr(mw, "gh_run", repo)
+    rc = _run(mw, monkeypatch, tmp_path, *MERGE_OLD, yes=False)
+    assert rc == 1
+    assert repo.calls == []
+    assert "old:" in _file(tmp_path)
+
+
 def test_merge_skip_references_leaves_them(mw, tmp_path, monkeypatch) -> None:
     stage_project(tmp_path, TWO)
     _git(tmp_path, {"NOTES.md": "workstream:old\n"})
@@ -519,6 +533,21 @@ def test_split_include_github_bodies_rewrites_each_reference_to_its_answer(
     assert repo.patched["repos/{owner}/{repo}/issues/1"].startswith("Part of workstream:cli-tools.")
     # A file is on no issue, so it takes --default.
     assert (tmp_path / "NOTES.md").read_text(encoding="utf-8") == "workstream:cli-rendering\n"
+
+
+def test_split_include_github_bodies_without_a_shell_or_yes_refuses(
+    sw, tmp_path, monkeypatch
+) -> None:
+    stage_project(tmp_path, ONE)
+    repo = _split_repo()
+    monkeypatch.setattr(sw, "gh_run", repo)
+    rc = _run(
+        sw, monkeypatch, tmp_path, "split-workstream", "--source", "cli", "--into", "cli-tools",
+        "--into", "cli-rendering", "--default", "cli-rendering", "--include-github-bodies",
+        yes=False,
+    )  # fmt: skip
+    assert rc == 1
+    assert repo.calls == []
 
 
 def test_split_without_include_github_bodies_rewrites_nothing(sw, tmp_path, monkeypatch) -> None:

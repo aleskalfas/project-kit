@@ -385,11 +385,35 @@ def repo_root(capability_root: Path) -> Path | None:
     return Path(proc.stdout.strip())
 
 
+def _not_rewritten(relative: str) -> bool:
+    """Whether a tracked file is left out of a reference rewrite.
+
+    The methodology's `.pkit/` tree holds files the core owns, which a project
+    never edits (the no-shared-files invariant), and its own accepted records.
+    A changelog and the pending changesets record what happened, under the
+    names it happened under.
+    """
+    parts = Path(relative).parts
+    return bool(parts) and (
+        parts[0] in (".pkit", ".changes") or parts[-1].upper() == "CHANGELOG.MD"
+    )
+
+
+def _inside(path: Path, root: Path) -> bool:
+    """Whether `path`, every link in it followed, stays under `root`."""
+    try:
+        return path.resolve().is_relative_to(root.resolve())
+    except OSError:
+        return False
+
+
 def files_referencing(root: Path, old_label: str) -> tuple[list[Path], str | None]:
     """The tracked text files under `root` that hold a typed reference to `old_label`.
 
     Only files git tracks are read, so a virtual environment or a build output
-    is never rewritten. A file that is binary, not UTF-8, or a link is skipped.
+    is never rewritten, and the `.pkit/` tree and the changelog are left out
+    (`_not_rewritten`). A file that is binary, not UTF-8, a link, or reached
+    through a link out of `root` is skipped.
     """
     try:
         proc = subprocess.run(
@@ -405,8 +429,11 @@ def files_referencing(root: Path, old_label: str) -> tuple[list[Path], str | Non
     for raw in proc.stdout.split(b"\0"):
         if not raw:
             continue
-        path = root / raw.decode("utf-8", "surrogateescape")
-        if path.is_symlink() or not path.is_file():
+        relative = raw.decode("utf-8", "surrogateescape")
+        if _not_rewritten(relative):
+            continue
+        path = root / relative
+        if path.is_symlink() or not path.is_file() or not _inside(path, root):
             continue
         try:
             data = path.read_bytes()
@@ -552,16 +579,29 @@ def write_body(
     return error
 
 
+def references_need_yes(yes: bool, dry_run: bool) -> bool:
+    """Whether a run that would rewrite references must refuse before it starts.
+
+    DEC-018 confirms each file and body by default, and `--yes` batches them. A
+    run with no shell to ask and no `--yes` could confirm none of them, so it
+    is refused before anything changes, rather than left half done.
+    """
+    return not yes and not dry_run and not sys.stdin.isatty()
+
+
 def confirm_each(yes: bool) -> Callable[[str], bool]:
     """A per-object confirmation, the default DEC-018 sets for rewriting references.
 
-    It asks in an interactive shell. `--yes` opts into batch confirmation, and a
-    shell that cannot answer proceeds, as each mutator's own prompt does.
+    It asks in an interactive shell, and `--yes` opts into batch confirmation.
+    A shell that cannot answer declines: an edit of a body cannot be rolled
+    back, so the mutators refuse such a run up front (`references_need_yes`).
     """
 
     def confirm(question: str) -> bool:
-        if yes or not sys.stdin.isatty():
+        if yes:
             return True
+        if not sys.stdin.isatty():
+            return False
         return input(question).strip().lower() in ("y", "yes")
 
     return confirm
@@ -608,6 +648,9 @@ def rewrite_everywhere(
             new_label = target(None, where)
             if new_label is None:
                 outcome.skipped.append(f"{where}: no workstream chosen")
+                continue
+            if not _inside(path, root):
+                outcome.skipped.append(f"{where}: reached through a link out of the repository")
                 continue
             text = path.read_text(encoding="utf-8")
             new_text, count = rewrite_references(text, old_label, new_label)

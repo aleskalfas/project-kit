@@ -28,9 +28,13 @@ Splits one workstream into 2–5 new workstreams. Per DEC-018:
     option is deleted once every issue has moved.
   * `--include-github-bodies` opts into rewriting references: each typed
     `workstream:<source>` and `[workstream:<source>]`, in the tracked
-    files and in issue, pull-request and comment bodies. A body on a
+    files and in issue, pull-request and comment bodies, leaving what a
+    merge leaves (the `.pkit/` tree, the changelog, the pending changesets
+    and, without admin rights, someone else's comment). A body on a
     triaged issue takes that issue's answer; any other reference is
-    asked about, or takes `--default`, or is left with a warning.
+    asked about, or takes `--default`, or is left with a warning. A run
+    with no interactive shell to confirm each one refuses up front unless
+    `--yes` batches the confirmations.
 
 The substrate is changed before the file, and the file only once every
 issue has moved, so a re-run after a failure finishes the split.
@@ -165,6 +169,15 @@ def main() -> int:
     assigned, err = _parse_assignments(args.assign, args.into)
     if err:
         print(f"[refused] {err}", file=sys.stderr)
+        return 1
+
+    if args.include_github_bodies and workstream_sync.references_need_yes(args.yes, args.dry_run):
+        print(
+            "[refused] --include-github-bodies asks before each file and body it rewrites, "
+            "and no interactive shell is here to ask. Pass --yes to confirm them all. "
+            "Nothing was changed.",
+            file=sys.stderr,
+        )
         return 1
 
     capability_root = resolve_capability_root(args.capability_root)

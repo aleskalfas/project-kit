@@ -142,7 +142,7 @@ def rewrite_references(text: str, old_label: str, new_label: str) -> tuple[str, 
 
     Returns the new text and how many references it changed.
     """
-    pattern = re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(old_label) + r"(?![a-z0-9-])")
+    pattern = re.compile(r"(?<![A-Za-z0-9_-])" + re.escape(old_label) + r"(?![A-Za-z0-9_-])")
     return pattern.subn(lambda _match: new_label, text)
 
 

@@ -387,7 +387,7 @@ def read_field_options(
         "query($field: ID!) { node(id: $field) { ... on ProjectV2SingleSelectField "
         "{ options { id name color description } } } }"
     )
-    args = ["gh", "api", "graphql", "-f", f"query={query}", "-F", f"field={field_id}"]
+    args = ["gh", "api", "graphql", "-f", f"query={query}", "-f", f"field={field_id}"]
     proc, error = _invoke(args, config, owner=None, gh_call=gh_call)
     if proc is None:
         return FieldOptionsRead(ok=False, error=error)
@@ -449,7 +449,7 @@ def read_items_with_option(
             "graphql",
             "-f",
             f"query={query}",
-            "-F",
+            "-f",
             f"project={project_node_id}",
             "-f",
             f"field={field_name}",

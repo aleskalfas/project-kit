@@ -179,6 +179,50 @@ def test_files_referencing_reads_tracked_files_only(tmp_path) -> None:
     assert [p.name for p in paths] == ["a.md"]
 
 
+def test_files_referencing_leaves_the_pkit_tree_and_the_changelog(tmp_path) -> None:
+    """Core-owned files and history keep the names they were written under."""
+    (tmp_path / ".pkit" / "decisions").mkdir(parents=True)
+    (tmp_path / ".changes").mkdir()
+    _git_repo(
+        tmp_path,
+        {
+            ".pkit/decisions/DEC-001.md": "workstream:cli\n",
+            ".changes/a.yaml": "body: workstream:cli\n",
+            "CHANGELOG.md": "- workstream:cli\n",
+            "docs.md": "workstream:cli\n",
+        },
+    )
+    paths, _error = workstream_sync.files_referencing(tmp_path, "workstream:cli")
+    assert [p.name for p in paths] == ["docs.md"]
+
+
+def test_files_referencing_skips_a_file_reached_through_a_link_out(tmp_path) -> None:
+    root, outside = tmp_path / "repo", tmp_path / "outside"
+    (root / "docs").mkdir(parents=True)
+    outside.mkdir()
+    _git_repo(root, {"docs/a.md": "workstream:cli\n"})
+    # The tracked folder is replaced by a link to a folder outside the repository.
+    (outside / "a.md").write_text("workstream:cli\n", encoding="utf-8")
+    (root / "docs" / "a.md").unlink()
+    (root / "docs").rmdir()
+    (root / "docs").symlink_to(outside, target_is_directory=True)
+    paths, _error = workstream_sync.files_referencing(root, "workstream:cli")
+    assert paths == []
+
+
+def test_confirm_each_declines_without_a_shell_and_yes(monkeypatch) -> None:
+    class _NoShell:
+        def isatty(self) -> bool:
+            return False
+
+    monkeypatch.setattr(sys, "stdin", _NoShell())
+    assert workstream_sync.confirm_each(False)("Rewrite? ") is False
+    assert workstream_sync.confirm_each(True)("Rewrite? ") is True
+    assert workstream_sync.references_need_yes(False, False) is True
+    assert workstream_sync.references_need_yes(True, False) is False
+    assert workstream_sync.references_need_yes(False, True) is False
+
+
 def test_rewrite_everywhere_rewrites_files_bodies_and_own_comments(tmp_path) -> None:
     _git_repo(tmp_path, {"a.md": "Filed as [workstream:cli].\n", "b.md": "workstream:cli\n"})
     repo = FakeRepo(

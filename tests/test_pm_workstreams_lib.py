@@ -295,7 +295,10 @@ def test_rewrite_references_rewrites_both_typed_forms(ws) -> None:
 
 
 def test_rewrite_references_leaves_longer_slugs_and_bare_slugs(ws) -> None:
-    text = "workstream:cli-tools, myworkstream:cli, the cli workstream, workstream:clix"
+    text = (
+        "workstream:cli-tools, myworkstream:cli, the cli workstream, workstream:clix, "
+        "workstream:cliX, workstream:cli_x"
+    )
     new, count = ws.rewrite_references(text, "workstream:cli", "workstream:tools")
     assert count == 0
     assert new == text
