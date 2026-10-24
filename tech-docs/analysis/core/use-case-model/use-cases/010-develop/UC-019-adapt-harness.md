@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-24T04:34:24Z
+      at: 2026-10-24T03:44:37Z
       outcome: unchanged
-      unchanged-because: The migration stamp now refuses the backbone or a capability that arrives as synced copies, never the adapter tier. The adapter stamp asks nothing, so the adapter the use case authors still stamps.
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-019 — Adapt the system to another harness

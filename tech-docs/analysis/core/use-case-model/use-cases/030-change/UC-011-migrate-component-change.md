@@ -44,9 +44,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T04:34:30Z
+      at: 2026-10-24T03:44:57Z
       outcome: unchanged
-      unchanged-because: The capability migration stamp now refuses a capability the project receives as synced copies. The author stamps where the component is authored, which still stamps, so the steps hold.
+      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

@@ -46,9 +46,9 @@ pkit:
         - REQ-012
         - REQ-017
     revalidated:
-      at: 2026-10-24T04:34:28Z
+      at: 2026-10-24T03:44:56Z
       outcome: unchanged
-      unchanged-because: The backbone migration stamp now refuses a folder the project receives as synced copies. The use case runs in the methodology's source repository, where it still stamps.
+      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

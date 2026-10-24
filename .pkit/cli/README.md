@@ -100,8 +100,9 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-24T04:34:40Z
-      outcome: updated
+      at: 2026-10-24T03:46:20Z
+      outcome: unchanged
+      unchanged-because: The reference says `pkit release merge` is guarded to `release/*` heads, which still holds. The change rewords only that command's help and the pointer in its refusal.
       deferred:
         - anchor:
             kind: record

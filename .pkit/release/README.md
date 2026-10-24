@@ -17,7 +17,7 @@ pkit:
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
     revalidated:
-      at: 2026-10-19T06:39:17Z
+      at: 2026-10-24T03:44:42Z
       outcome: updated
 ---
 
@@ -773,8 +773,8 @@ into it (COR-014). Instead the release flow owns its own merge verb, beside the
   would ask. The guard and its residual gaps are the CLI reference's
   (`.pkit/cli/README.md`, "Pull-request commands").
 - **Guards to release PRs only.** It refuses unless the PR's head branch is
-  `release/*` **and** its title is a `chore(release):` one — a non-release PR is
-  refused with a pointer back to `pkit project-management merge-pr`. It is not a
+  `release/*` **and** its title is a `chore(release):` one — a PR on another
+  head branch is refused with a pointer to `pkit pull-request land`. It is not a
   general issue-PR-gate bypass.
 - **Checks preconditions.** The PR must be open, mergeable, and have all
   required checks green; a conflicting, red, or still-running PR is refused with

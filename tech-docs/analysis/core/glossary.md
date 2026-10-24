@@ -957,9 +957,9 @@ TERM-release-step:
           - PRJ-002#D4
           - PRJ-004
       revalidated:
-        at: 2026-10-20T01:37:56Z
+        at: 2026-10-24T03:44:23Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-report:
   name: report
   status: active
@@ -1193,9 +1193,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-21T14:25:54Z
+        at: 2026-10-24T03:44:24Z
         outcome: unchanged
-        unchanged-because: This change touches COR-050's preamble and points 6 and 9, and none says what a surface change is. The definition holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-sync:
   name: sync
   status: active

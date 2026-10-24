@@ -31,6 +31,10 @@ pkit:
         - ACT-developer
         - ACT-ai-agent
         - REQ-005
+    revalidated:
+      at: 2026-10-24T03:44:33Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-040 — Have a drafted record or rule become binding only through my own review

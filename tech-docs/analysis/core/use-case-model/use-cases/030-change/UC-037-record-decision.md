@@ -63,8 +63,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T04:34:33Z
-      outcome: updated
+      at: 2026-10-24T03:46:17Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-037 — Record my decision beside the methodology's

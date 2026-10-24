@@ -52,6 +52,10 @@ pkit:
         - REQ-012
         - REQ-026
         - REQ-031
+    revalidated:
+      at: 2026-10-24T03:45:11Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-049 — Install the system into my project with one command

@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-24T04:34:22Z
+      at: 2026-10-24T03:44:26Z
       outcome: unchanged
-      unchanged-because: The migration stamp now refuses a capability the project receives as synced copies. The use case packages a capability where it is authored, which still stamps, so its steps hold.
+      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
 ---
 
 # UC-015 — Package a recurring discipline as a capability
