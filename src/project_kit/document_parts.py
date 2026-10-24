@@ -72,9 +72,11 @@ _ID_CONTINUES = re.compile(r"\w|[-.]\w")
 # no space and no parenthesis.
 _INLINE_LINK = re.compile(r"(?<!!)\[(?P<words>[^\[\]]+)\]\((?P<target>[^()\s]+)\)")
 
-# What hides a run of running text, a line break included: a comment, and a code span.
+# What hides a run of running text, a line break included: a comment, and a code span. A code
+# span never reaches past its paragraph: it crosses a line break only where the next line is
+# not blank, so a lone backtick pairs with none paragraphs later.
 _COMMENT = re.compile(r"<!--.*?-->", re.S)
-_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`).+?(?<!`)\1(?!`)", re.S)
+_CODE_SPAN = re.compile(r"(?<!`)(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\1(?!`)")
 
 # ruamel.yaml is untyped; the loaded value is judged where it is read.
 _yaml: Any = YAML(typ="safe")
@@ -359,8 +361,10 @@ def links_set_aside(body: str, sets_aside: Callable[[str], bool]) -> str:
     as its words alone (COR-050 point 5).
 
     Running text is the body outside fenced code, as `_scan` reads it, code spans,
-    comments and headings. A link there is `[words](target)`, never an image, its
-    words holding no bracket and its target no space and no parenthesis. Every other
+    comments and headings. A code span never reaches past its paragraph, which a
+    blank line, a heading or fenced code ends. A link there is `[words](target)`,
+    never an image, its words holding no bracket and its target no space and no
+    parenthesis. Every other
     character stays as written, so a word beside a link still counts, as does a link
     of any other form. A link that only begins in running text, inside a code span or
     a comment say, is left as written.

@@ -1,0 +1,16 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `close-issue --mode=pr-merge` moves an issue to Done only through a merged
+  pull request that relates to it (#1968). Without `--pr` it wrote
+  `state:done` on an open issue, and with `--pr <M>` it closed an open Task
+  through any merged pull request. Now an open issue without `--pr` is refused
+  with exit 1, writing nothing, and the labels of an issue GitHub closed are
+  still reconciled. With `--pr <M>` the pull request must close the issue in
+  its body or come from the issue's branch, `<type>/<N>-<slug>`. The close
+  names the relation it found, in its output and its comment, and a pull
+  request with neither is refused with exit 1. Like a won't-do close, the
+  close through `--pr` is the person's: with no terminal and no `--yes` it
+  is refused, writing nothing. `done-work` passes `--yes` after the merge.

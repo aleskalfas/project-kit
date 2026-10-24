@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `done-work`'s agent-mode gate works out the reviewers a pull request
+  requires before it judges whether any is required (#1979), as DEC-032
+  point D3 decides. It used to refuse with `no agents configured` where the
+  project registers no remote or local reviewer, though a capability
+  contributes one the pull request requires. Now it merges on that
+  reviewer's approval. A required set with no reviewer in it refuses the
+  merge and never passes. Before, entries under `review.agents.*` that name
+  no reviewer, such as a `local_registered:` entry with no `name`, passed
+  the gate with no reviewer at all. The refusal names those entries, or
+  says that nothing is registered.
