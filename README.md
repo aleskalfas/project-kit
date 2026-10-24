@@ -31,7 +31,7 @@ pkit:
         - .pkit/schemas/privilege-catalog.yaml
         - .pkit/agents/core/critic.md
         - .pkit/agents/core/rule-set-reviewer.md
-      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-049, ADR-064, ADR-065]
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
         - ACT-adopter
         - ACT-ai-agent
@@ -44,6 +44,7 @@ pkit:
         - .pkit/decisions/README.md#the-acceptance-gate
         - .pkit/decisions/README.md#the-no-shared-files-invariant
         - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
+        - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
         - .pkit/lifecycle/README.md#a-new-collision
         - .pkit/lifecycle/README.md#a-data-points-question
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
@@ -104,7 +105,7 @@ One permission model says what each agent may do. project-kit's adapter for Clau
 
 - **How:** `pkit permissions setup autonomy` activates a profile and turns the hook on. Commands such as `git`, `gh` and `pkit` then run unasked. The guardrails, `sudo`, a recursive `rm` and `git push --force`, are denied to every agent, and a deny wins over an allow.
 - **Principle:** the methodology owns the permission model, and what the harness cannot enforce is reported, never dropped (COR-028).
-- **Gain:** fewer prompts, and the common forms of the dangerous commands refused. A deny is a speed bump, not a boundary: a wrapper such as `uv run` slips past it ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+- **Gain:** fewer prompts, and the common forms of the dangerous commands refused. A deny is a speed bump, not a boundary: a wrapper such as `uv run` slips past it ([the permissions README](.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)).
 
 With the profile active and the hook still off, the probe shows what the hook will decide. It asks as you, and agents get the same denies:
 
@@ -216,7 +217,7 @@ Answer in English.
 The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these other ways:
 
 - **Settings:** `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `Edit` and `Write`, and denies, and puts back a deny you removed.
-- **Elsewhere:** an upgrade's migrations and starter files ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant)), and a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares)). A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+- **Elsewhere:** an upgrade's migrations, the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant)), and a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares)). A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
 
 ## When it pays off
 
