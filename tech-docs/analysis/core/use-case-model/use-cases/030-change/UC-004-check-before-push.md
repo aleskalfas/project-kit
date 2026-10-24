@@ -14,7 +14,7 @@ requirements:
   - REQ-018
   - REQ-019
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 pkit:
   friction:
     anchors:
@@ -61,7 +61,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the same checks on the pull request with no person to answer. It names the base once, for every check (COR-054 point 3).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

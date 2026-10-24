@@ -7,7 +7,7 @@ other-actors:
   - ACT-merge-authoriser
   - ACT-operator
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 requirements:
   - REQ-012
 shortfalls:
@@ -55,7 +55,7 @@ pkit:
 - **Merge authoriser** (`ACT-merge-authoriser`): authorises the merge of one head. They read what the change updated in the pull request's sentences, and what it leaves out of date in the change check's list. Where an agent commits straight to the default branch, the person it works for is the merge authoriser. They are told the same before the commit (COR-050 point 3).
 - **Operator** (`ACT-operator`): is asked before the landing changes the hosting service for a repository other than the session's own. So no such change happens silently (REQ-012).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

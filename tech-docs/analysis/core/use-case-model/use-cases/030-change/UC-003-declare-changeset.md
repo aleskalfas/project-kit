@@ -9,7 +9,7 @@ requirements:
   - REQ-004
   - REQ-005
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 pkit:
   friction:
     anchors:
@@ -41,7 +41,7 @@ pkit:
 
 - **CI pipeline** (`ACT-ci-pipeline`): runs the changeset guard on the pull request with no person to answer. It reads the `skip-changeset` label as the guard's escape hatch.
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:**
 

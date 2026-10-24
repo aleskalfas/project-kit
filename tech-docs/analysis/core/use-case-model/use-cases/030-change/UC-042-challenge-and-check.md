@@ -9,7 +9,7 @@ requirements:
   - REQ-005
   - REQ-021
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
   - [UC-027]
 pkit:
   friction:
@@ -49,7 +49,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 - **From UC-027:** The agent definitions of the critic, the `convention-compliance-reviewer` and the `rule-set-reviewer` are deployed where the harness reads them.
 
 **Assumptions:**

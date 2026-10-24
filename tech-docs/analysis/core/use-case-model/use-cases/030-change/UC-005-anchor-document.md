@@ -12,7 +12,7 @@ requirements:
   - REQ-015
   - REQ-020
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
   - [UC-021, UC-023, UC-016]
 pkit:
   friction:
@@ -51,7 +51,7 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+- **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 - **From UC-021, UC-023 or UC-016:** Places that hold anchored artefacts are declared. They are the project's own, in its backbone configuration, or those of a capability the manifest records (COR-050 point 1).
 
 **Assumptions:**

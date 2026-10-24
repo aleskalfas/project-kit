@@ -6,7 +6,7 @@ actor: ACT-adopter
 other-actors:
   - ACT-operator
 after:
-  - [UC-014]
+  - [UC-014, UC-049]
 requirements:
   - REQ-002
   - REQ-005
@@ -57,7 +57,7 @@ pkit:
 
 - **Operator** (`ACT-operator`): is asked before `pkit config set` writes in a repository other than the session's own, so no such write happens silently (REQ-012).
 
-**Preconditions:** **From UC-014:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
+**Preconditions:** **From UC-014 or UC-049:** The project runs the system: it is the methodology's source repository, or the system is installed in it.
 
 **Assumptions:** None.
 
