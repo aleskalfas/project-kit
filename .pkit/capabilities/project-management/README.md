@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T09:45:19Z
+      at: 2026-10-24T10:37:29Z
       outcome: updated
       deferred:
         - anchor:
@@ -746,6 +746,8 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 | `remove-workstream <slug>` | Refuses while any issue carries the workstream, then asks you to type the slug. |
 
 **The checks.** A slug has 2 to 40 characters, matches `^[a-z][a-z0-9-]*[a-z0-9]$` and holds no consecutive hyphens. A name is one line of at most 64 characters. A description or a deprecation reason is one line of at most 200. Each command refuses a value outside these rules before it writes anything.
+
+**Filing.** `create-issue` and `set-field` take only a workstream that `project/workstreams.yaml` holds as active. They refuse any other, a deprecated one included, and name the active ones. A workstream that `add-workstream` adds is taken at the next filing. Where the file is absent, the two commands read the legacy `workstreams:` key of `config.yaml`, and check nothing where that key is empty.
 
 **The substrate before the file.** A command that changes a label or the board does so before it writes the file. When that change fails, the file keeps what the change did not finish, and the command exits 3. Running it again finishes the change. Where the board has no single-select `Workstream` field, the command refuses.
 
