@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 import threading
 import time
 from pathlib import Path
+from types import MappingProxyType
 
 import pytest
 
@@ -47,9 +49,6 @@ def rc():
             sys.path.remove(str(lib_dir))
 
 
-# ---- _get_local_registered ----------------------------------------
-
-
 def _mark_bootstrapped(cap_root: Path) -> None:
     """Make a staged tree look like the bootstrapped project it stands in for.
 
@@ -76,49 +75,6 @@ def _mark_bootstrapped(cap_root: Path) -> None:
         "  repo:\n",
         encoding="utf-8",
     )
-
-
-def test_local_registered_returns_list(rpr) -> None:
-    config = {
-        "review": {
-            "agents": {
-                "local_registered": [
-                    {"name": "critic"},
-                    {"name": "security-review"},
-                ]
-            }
-        }
-    }
-    result = rpr._get_local_registered(config)
-    assert len(result) == 2
-    assert result[0]["name"] == "critic"
-
-
-def test_local_registered_empty_when_absent(rpr) -> None:
-    assert rpr._get_local_registered({}) == []
-    assert rpr._get_local_registered({"review": {}}) == []
-    assert rpr._get_local_registered({"review": {"agents": {}}}) == []
-
-
-def test_local_registered_filters_entries_without_name(rpr) -> None:
-    config = {
-        "review": {
-            "agents": {
-                "local_registered": [
-                    {"name": "critic"},
-                    {"other_field": "x"},  # no name
-                    {"name": ""},  # empty name
-                    {"name": "code-review"},
-                ]
-            }
-        }
-    }
-    result = rpr._get_local_registered(config)
-    assert [e["name"] for e in result] == ["critic", "code-review"]
-
-
-def test_local_registered_handles_non_dict_review(rpr) -> None:
-    assert rpr._get_local_registered({"review": "lol"}) == []
 
 
 # ---- _format_verdict_comment ------------------------------------
@@ -559,6 +515,7 @@ def _wire_main(
     posted=None,
     native=None,
     verdicts_head="",
+    config=None,
 ):
     """Stub main()'s seams; record invoked names into `invoked`.
 
@@ -578,7 +535,9 @@ def _wire_main(
     the base `_BASE` (#1179); default the same head every time. `posted`, when given, collects
     each posted comment body. `native`, when given, enables the native review
     and collects the verdict of each one delivered. `verdicts_head` is the PR
-    head the verdict read reports judging the verdicts against.
+    head the verdict read reports judging the verdicts against. `config` is the
+    project's pm config; default one that registers the local reviewer
+    `reviewer`.
     """
     from types import SimpleNamespace
 
@@ -597,11 +556,9 @@ def _wire_main(
     for variable in (rpr.PARALLEL_ENV, rpr.AGENT_TIMEOUT_ENV, rpr.AGENT_EFFORT_ENV):
         monkeypatch.delenv(variable, raising=False)
     monkeypatch.setattr(rpr, "resolve_capability_root", lambda arg: cap_root)
-    monkeypatch.setattr(
-        rpr,
-        "load_adopter_config",
-        lambda root: {"review": {"agents": {"local_registered": [{"name": "reviewer"}]}}},
-    )
+    if config is None:
+        config = {"review": {"agents": {"local_registered": [{"name": "reviewer"}]}}}
+    monkeypatch.setattr(rpr, "load_adopter_config", lambda root: config)
     monkeypatch.setattr(rpr, "_read_members", lambda root, loader: [])
     monkeypatch.setattr(rpr, "resolve_invoker_identity", lambda config: "dev")
     monkeypatch.setattr(
@@ -810,6 +767,107 @@ def test_undeployed_contributed_agent_aborts(rpr, rc, monkeypatch, tmp_path) -> 
     rc_code = rpr.main()
     assert rc_code == 2
     assert invoked == []
+
+
+# ---- no local reviewer of the project's own (#1934) -------------------
+#
+# DEC-032 point D4: review-pr works out the required set first and runs each
+# reviewer in it, a contributed one included. A project that registers no
+# local reviewer, say one with only a remote reviewer, still has the
+# reviewers its installed capabilities contribute run.
+
+_REMOTE_ONLY = {"review": {"agents": {"remote_registered": [{"github_login": "review-bot"}]}}}
+
+
+def test_a_contributed_reviewer_runs_where_the_project_registers_no_local_reviewer(
+    rpr, rc, monkeypatch, tmp_path, capsys
+) -> None:
+    """The issue's failing example, through the real resolution: only a remote
+    reviewer registered, and software-engineering's `code-reviewer` required by
+    a change to `x.py`. review-pr used to refuse before it worked out the set."""
+    real_resolve = rpr._resolve_review
+    invoked: list[str] = []
+    # The resolution handed in only deploys `code-reviewer`'s agent file: the
+    # real one is put back below.
+    _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=("code-reviewer",)),
+        invoked=invoked,
+        config=_REMOTE_ONLY,
+    )
+    monkeypatch.setattr(rpr, "_resolve_review", real_resolve)
+    floor = rc.ContributionRule(
+        capability="software-engineering",
+        predicate=MappingProxyType({}),
+        reviewer="code-reviewer",
+        floor="touches-code",
+    )
+    monkeypatch.setattr(
+        rpr, "collect_contributions", lambda root: rc.ContributionCollection(rules=(floor,))
+    )
+    monkeypatch.setattr(
+        rpr, "gh_get_issue", lambda n, config, *, fields: {"labels": [{"name": "type:task"}]}
+    )
+
+    def gh(args, config, **kwargs):
+        joined = " ".join(args)
+        if "closingIssuesReferences" in joined:
+            out = '{"closingIssuesReferences": [{"number": 147}]}'
+        elif "/pulls/99/files" in joined:
+            out = '["x.py"]\n'
+        else:
+            return subprocess.CompletedProcess(args, 1, "", f"unexpected gh call: {joined}")
+        return subprocess.CompletedProcess(args, 0, out, "")
+
+    monkeypatch.setattr(rpr, "gh_run", gh)
+
+    assert rpr.main() == 0
+    assert invoked == ["code-reviewer"]
+    assert "  agents: code-reviewer" in capsys.readouterr().out
+
+
+def test_no_local_reviewer_required_runs_nothing_and_says_so(
+    rpr, monkeypatch, tmp_path, capsys
+) -> None:
+    """A PR that requires no local reviewer, registered or contributed: review-pr
+    says so, reads no verdicts, runs nothing and exits 0. The merge gate reads
+    the remote reviewers' verdicts."""
+    invoked: list[str] = []
+    reads = _wire_main(
+        rpr,
+        monkeypatch,
+        tmp_path,
+        resolution=rpr.Resolution(required_local=()),
+        invoked=invoked,
+        config=_REMOTE_ONLY,
+    )
+    run = rpr.review(["147", "--no-native"])
+    assert run.exit_code == 0
+    assert run.required == ()
+    assert invoked == []
+    assert reads == []
+    out = capsys.readouterr().out
+    assert "  agents: none — this PR requires no local reviewer" in out
+
+
+def test_review_reports_the_required_set(rpr, monkeypatch, tmp_path) -> None:
+    """`ReviewRun.required` is the set review-pr worked out, for a verb that
+    composes it (`land-work`) to tell a set with no local reviewer from one
+    whose every reviewer was kept or run."""
+    resolution = rpr.Resolution(
+        required_local=("code-reviewer",),
+        contributed_by={"code-reviewer": "software-engineering"},
+    )
+    invoked: list[str] = []
+    _wire_main(
+        rpr, monkeypatch, tmp_path, resolution=resolution, invoked=invoked, config=_REMOTE_ONLY
+    )
+    run = rpr.review(["147", "--no-native"])
+    assert run.exit_code == 0
+    assert run.required == ("code-reviewer",)
+    assert list(run.posted) == ["code-reviewer"]
 
 
 # ---- the head a reviewer reviewed (#1179) -----------------------------

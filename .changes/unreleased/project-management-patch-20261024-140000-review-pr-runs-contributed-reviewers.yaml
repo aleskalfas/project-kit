@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  `review-pr` runs the reviewers an installed capability contributes where
+  the project registers no local reviewer of its own (#1934), as DEC-032
+  point D4 decides. It used to exit 2 with `no agents configured in
+  review.agents.local_registered:` before it worked out the required set,
+  and `land-work`'s review step skipped the review. Now both work out the
+  set first and run each reviewer in it, so a project that registers only a
+  remote reviewer has software-engineering's reviewers run on a change to
+  code. Where the pull request requires no local reviewer at all,
+  `review-pr` says so, runs nothing and exits 0, and `land-work` leaves the
+  approval to `done-work`'s gate.

@@ -70,9 +70,11 @@ there instead, and changes nothing else.
           merge with the first line of each `[block]` finding; a reviewer
           that could not be run stops it too. The advisories of the approvals
           are printed (DEC-028's finding tags, read by
-          `_lib.agent_verdicts.findings`). In human mode, and with no local
-          reviewer registered, there is nothing to run: the approval is
-          `done-work`'s gate.
+          `_lib.agent_verdicts.findings`). `review-pr` works out the required
+          set, so a reviewer a capability contributes runs though the project
+          registers no local reviewer of its own (#1934). In human mode, and
+          where the PR requires no local reviewer, there is nothing to run:
+          the approval is `done-work`'s gate.
   findings to judge
           Each `[person]` finding, printed whole with the verdict's reviewer,
           from each reviewer's latest verdict as the merge gate selects it
@@ -1032,12 +1034,8 @@ def _review(
         )
         return _ReviewEnd(clear=True, approval="the PR is approved")
     agents = _ReviewEnd(clear=True, approval="all required verdicts approved")
-    if not review_pr._get_local_registered(config):
-        _say(
-            "review: no local reviewer is registered — done-work's gate reads the "
-            "remote reviewers' verdicts"
-        )
-        return agents
+    # review-pr works out the required set itself, a contributed reviewer
+    # included where the project registers no local reviewer of its own (#1934).
     argv = [str(issue), *_passed_through(args, review=True)]
     try:
         run = review_pr.review(argv, pinned_head=head.oid, branch_reading=reading)
@@ -1086,6 +1084,12 @@ def _review(
             EXIT_REVIEW_INCOMPLETE,
             f"review: stopped — review-pr exited {run.exit_code}, so the review is not complete",
         )
+    if not run.required:
+        _say(
+            "review: no local reviewer is required — done-work's gate reads the "
+            "remote reviewers' verdicts"
+        )
+        return agents
     kept, ran = len(run.kept), len(run.posted)
     if args.dry_run:
         would = f"run {', '.join(run.would_run)}" if run.would_run else "run none"
