@@ -3443,3 +3443,156 @@ def test_forms_hook_and_decide_parity(decide_mod, catalog):
         payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
         d_hook, _ = decide_mod.hook_decide(MODEL, catalog, payload)  # no agent_type → operator
         assert d_decide == d_hook == expected, cmd
+
+
+# ---- the guardrails a deferred command may hide (#1982) ---------------------
+#
+# Where the core abstains on a command that may hide a form of a guardrail, a
+# harness may still allow it by rules of its own. `hidden_guardrails` names
+# those guardrails among the subject's denies, each with what keeps the core
+# from seeing the form, so an adapter can ask the person (ADR-025 point 2).
+# It names no project's own deny, none where no guardrail may bind unseen, and
+# it changes no verdict of `decide()`.
+
+_AGENT_GUARDRAIL_MODEL = {
+    "posture": "lenient",
+    "grants": [
+        {
+            "subject": "agent:project-manager",
+            "privilege": _tok("vcs-history-rewrite"),
+            "effect": "deny",
+        },
+    ],
+}
+
+
+@pytest.mark.parametrize("command", _UNSEEN_FORMS)
+def test_hidden_guardrails_names_a_guardrail_the_core_cannot_tell(decide_mod, catalog, command):
+    request = _bash(command, "operator")
+    hidden = decide_mod.hidden_guardrails(MODEL, catalog, request)
+    # A pattern where the program stands, such as `gi?`, may name any program,
+    # and with it every guardrail.
+    assert "vcs-history-rewrite" in hidden, (command, hidden)
+    assert decide_mod.decide(MODEL, catalog, request)[0] == "abstain"
+
+
+@pytest.mark.parametrize(
+    "command,privilege,kind",
+    [
+        ("git push origin --forc[e]", "vcs-history-rewrite", "a pathname pattern"),
+        ("HOME=/tmp/x git push origin main", "vcs-history-rewrite", "configuration"),
+        ("rm -[r]f build", "destructive-fs", "a pathname pattern"),
+        ("rm " + "-v x " * 65 + "build", "destructive-fs", "options"),
+    ],
+)
+def test_hidden_guardrails_says_what_keeps_the_core_from_seeing(
+    decide_mod, catalog, command, privilege, kind
+):
+    hidden = decide_mod.hidden_guardrails(MODEL, catalog, _bash(command, "operator"))
+    assert list(hidden) == [privilege], hidden
+    assert any(kind in phrase for phrase in hidden[privilege]), hidden
+    assert all("/tmp/x" not in phrase and "[" not in phrase for phrase in hidden[privilege])
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        # deferred, but no guardrail may bind on it unseen
+        "gh pr list | sh",
+        "git log $X",
+        "git push origin main 2>&1",
+        "env git status",
+        "HOME=/tmp/x gh pr list",
+        "gh issue cre* --title x",
+        # allowed or denied by decide(), so never asked about
+        "git push origin main",
+        "git status",
+        "git push -uf origin main",
+        "sudo whoami",
+    ],
+)
+def test_hidden_guardrails_names_none_where_no_guardrail_may_bind_unseen(
+    decide_mod, catalog, command
+):
+    assert decide_mod.hidden_guardrails(MODEL, catalog, _bash(command, "operator")) == {}
+
+
+def test_hidden_guardrails_names_no_projects_own_deny(decide_mod, catalog):
+    # The project manager's `gh` deny may bind on a glob in a `gh` command, and
+    # keeps a grant from allowing it, but it is no guardrail, so it is not named.
+    pm = "agent:project-manager"
+    request = _bash("gh issue cre* --title x", pm)
+    assert decide_mod.decide(_PM_WITH_DENY_MODEL, catalog, request)[0] == "abstain"
+    assert decide_mod.hidden_guardrails(_PM_WITH_DENY_MODEL, catalog, request) == {}
+    request = _bash("git push origin --forc[e]", pm)
+    hidden = decide_mod.hidden_guardrails(_PM_WITH_DENY_MODEL, catalog, request)
+    assert list(hidden) == ["vcs-history-rewrite"], hidden
+
+
+def test_hidden_guardrails_reads_only_the_subjects_denies(decide_mod, catalog):
+    # A model without the guardrails' denies hides nothing, and one that denies
+    # a guardrail to one agent alone hides it from that agent only.
+    request = _bash("git push origin --forc[e]", "operator")
+    allow_only = {"posture": "lenient", "grants": [MODEL["grants"][3]]}
+    assert decide_mod.hidden_guardrails(allow_only, catalog, request) == {}
+    assert decide_mod.hidden_guardrails(_AGENT_GUARDRAIL_MODEL, catalog, request) == {}
+    request = _bash("git push origin --forc[e]", "agent:project-manager")
+    hidden = decide_mod.hidden_guardrails(_AGENT_GUARDRAIL_MODEL, catalog, request)
+    assert list(hidden) == ["vcs-history-rewrite"], hidden
+
+
+def test_hidden_guardrails_names_none_for_a_tool_request(decide_mod, catalog):
+    assert decide_mod.hidden_guardrails(MODEL, catalog, _tool("Read", "operator")) == {}
+
+
+def test_hook_hidden_guardrails_resolves_the_subject_as_hook_decide_does(
+    decide_mod, catalog, tmp_path
+):
+    payload = {
+        "tool_name": "Bash",
+        "tool_input": {"command": "git push origin --forc[e]"},
+        "cwd": "/r",
+        "agent_type": "project-manager",
+    }
+    hidden = decide_mod.hook_hidden_guardrails(_AGENT_GUARDRAIL_MODEL, catalog, payload)
+    assert list(hidden) == ["vcs-history-rewrite"], hidden
+    main = {k: v for k, v in payload.items() if k != "agent_type"}
+    assert decide_mod.hook_hidden_guardrails(_AGENT_GUARDRAIL_MODEL, catalog, main) == {}
+    # The main session runs as the configured default agent.
+    (tmp_path / ".claude").mkdir()
+    (tmp_path / ".claude" / "settings.json").write_text('{"agent": "project-manager"}')
+    hidden = decide_mod.hook_hidden_guardrails(
+        _AGENT_GUARDRAIL_MODEL, catalog, main, project_root=str(tmp_path)
+    )
+    assert list(hidden) == ["vcs-history-rewrite"], hidden
+    hidden = decide_mod.hook_hidden_guardrails(
+        _AGENT_GUARDRAIL_MODEL, catalog, main, project_root=str(tmp_path), as_subject="operator"
+    )
+    assert hidden == {}, hidden
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"tool_name": "Bash"},
+        {"tool_name": "Bash", "tool_input": "git push origin --forc[e]"},
+        {"tool_name": "Edit", "tool_input": {"file_path": "/x"}},
+    ],
+)
+def test_hook_hidden_guardrails_fails_open(decide_mod, catalog, payload):
+    assert decide_mod.hook_hidden_guardrails(MODEL, catalog, payload) == {}
+
+
+def test_hook_decide_still_decides_as_decide(decide_mod, catalog):
+    # Resolving a payload's request moved into a helper both hook entry
+    # points share, and hook_decide still returns decide()'s verdict.
+    for cmd, expected in (
+        ("git push origin --forc[e]", "abstain"),
+        ("git push -uf origin main", "deny"),
+        ("git status", "allow"),
+    ):
+        payload = {"tool_name": "Bash", "tool_input": {"command": cmd}, "cwd": "/r"}
+        assert decide_mod.hook_decide(MODEL, catalog, payload)[0] == expected, cmd
+    verdict, why = decide_mod.hook_decide(MODEL, catalog, {"tool_name": "Bash"})
+    assert verdict == "abstain" and "fail-open" in why

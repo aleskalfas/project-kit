@@ -71,9 +71,8 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T06:19:24Z
-      outcome: unchanged
-      unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. How agents work without confirmations, and where their confinement does not hold, is as it was.
+      at: 2026-10-24T04:49:20Z
+      outcome: updated
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
@@ -152,7 +151,7 @@ pkit:
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`
 - **10a.** A command chains segments, which the permission code splits at `&&`, `||`, `|`, `;`, a background `&` and a newline. The code strips a bare leading `cd <path>`, and decides the rest in the same working directory (ADR-025 point 1). A `$`, backtick, redirection, `(` or `PATH` assignment makes the code defer the call, as does a word the shell reads otherwise (ADR-025 point 2). So does a segment in which it recognises no privilege, and otherwise it allows the chain only where grants allow each segment and deny none.
 - **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (COR-028 point 2).
-- **10c.** A glob, or an assignment such as `HOME=…` that changes the program's configuration, may hide a form of a command a deny names. So the code defers `git push origin --forc[e]` whatever the grants allow (ADR-025 point 2). It denies the forms ADR-025 point 5 lists, such as `git push -uf`.
+- **10c.** A glob, or an assignment such as `HOME=…` that changes the program's configuration, may hide a form of a command a deny names. So the code defers `git push origin --forc[e]` whatever the grants allow (ADR-025 point 2). Where the deny is a guardrail, Claude Code's permission hook asks the operator rather than defers (`permission-hook.py`). The code denies the forms ADR-025 point 5 lists, such as `git push -uf`.
 
 **Postconditions:** The agents run each granted command, and each single command inside the sandbox, with nobody asked. The system has verified the permission code's verdicts and the credential floor. The operator knows where the confinement does not hold.
 

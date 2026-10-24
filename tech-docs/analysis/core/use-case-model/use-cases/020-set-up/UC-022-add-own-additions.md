@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-24T06:19:22Z
+      at: 2026-10-24T04:45:26Z
       outcome: unchanged
-      unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. This use case adds grants in the project's own files, never the methodology's, which the change leaves as they were.
+      unchanged-because: The project grants and denies still apply as before, and a project deny the core cannot tell still defers. Only a guardrail it cannot tell makes the Claude Code hook ask.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

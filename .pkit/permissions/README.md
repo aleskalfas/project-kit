@@ -10,14 +10,15 @@ pkit:
         - .pkit/schemas/privilege-catalog.yaml
         - .pkit/schemas/privilege-catalog.schema.json
         - .pkit/adapters/claude-code/permission-hook.py
+        - .pkit/adapters/claude-code/settings/core/settings.json
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
-      artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/cli/README.md#folders-a-sync-writes]
+      artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/cli/README.md#folders-a-sync-writes, .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy]
     revalidated:
-      at: 2026-10-24T06:19:02Z
+      at: 2026-10-24T06:10:04Z
       outcome: updated
 ---
 
@@ -32,7 +33,7 @@ This is **not** a COR-011 area — it has no content layout of its own. It is a 
 
 **Dependency direction (ADR-003):** the CLI and the hook import this; this imports neither `src/project_kit` nor any adapter. Recognizers arrive as catalog *data* (`../schemas/privilege-catalog.yaml`), never as adapter code.
 
-- `decide.py` — `decide(model, catalog, request, posture) → allow|deny|abstain` + the recognizer matcher + the path-scoped allow behind the agent workspace (see "The agent workspace") + `hook_decide()` (fail-open) + the **single model loader** `load_catalog()` / `load_model()` (both the hook and the CLI build the model through these, so they decide identically; `load_catalog()` also merges installed capabilities' privilege-catalog fragments per ADR-021 — additive-only, collision-rejecting, guardrail-forbidding) + `guardrail_denies()` (synthesizes the baseline `all`/`deny` grants from the privileges the catalog flags `guardrail: true` — the model half of ADR-002's double-lock). Also contains `_stdlib_load_yaml()` — a stdlib-only YAML-subset fallback invoked by `load_yaml()` when `ruamel.yaml` is not importable (e.g. inside macOS Seatbelt where `uv` panics, per ADR-014). **The fallback lives here, in the shared loader, not in the hook** — so the hook and CLI parse via the same code path (ADR-002/ADR-003 same-code invariant). Conformance fixtures live at `tests/test_permission_decide.py` (including parse-equality tests between ruamel and the stdlib fallback on all shipped files); the hook's end-to-end tests at `tests/test_permission_hook.py`.
+- `decide.py` — `decide(model, catalog, request, posture) → allow|deny|abstain` + the recognizer matcher + the path-scoped allow behind the agent workspace (see "The agent workspace") + `hook_decide()` (fail-open) + `hidden_guardrails()` / `hook_hidden_guardrails()` (the guardrails a deferred Bash command may hide, which an adapter may ask the person about, as "A deny holds against the forms of its command" says) + the **single model loader** `load_catalog()` / `load_model()` (both the hook and the CLI build the model through these, so they decide identically; `load_catalog()` also merges installed capabilities' privilege-catalog fragments per ADR-021 — additive-only, collision-rejecting, guardrail-forbidding) + `guardrail_denies()` (synthesizes the baseline `all`/`deny` grants from the privileges the catalog flags `guardrail: true` — the model half of ADR-002's double-lock). Also contains `_stdlib_load_yaml()` — a stdlib-only YAML-subset fallback invoked by `load_yaml()` when `ruamel.yaml` is not importable (e.g. inside macOS Seatbelt where `uv` panics, per ADR-014). **The fallback lives here, in the shared loader, not in the hook** — so the hook and CLI parse via the same code path (ADR-002/ADR-003 same-code invariant). Conformance fixtures live at `tests/test_permission_decide.py` (including parse-equality tests between ruamel and the stdlib fallback on all shipped files); the hook's end-to-end tests at `tests/test_permission_hook.py`.
 
 - `diagnose_capture.py` — the harness-side **capture** half of the permission-prompt diagnostic loop (per [PRJ-006](../decisions/project/PRJ-006-permission-prompt-diagnostics.md)). Propagated beside `decide.py` and imported by the PreToolUse hook *after* the decision is computed. It is deliberately **separate from `decide.py`** so the decision core stays pure: `capture()` is a side-effect (a "prompt" is a harness behaviour), gated on the deferred (`abstain`) verdict, active only while a TTL-bounded session is armed, and **inert on any failure** — its own internal `try` (plus the hook's outer `try`) guarantees a capture fault can never change a decision or break fail-open. Stdlib-only, same bare-`python3` runtime constraint as `decide.py` (ADR-014). End-to-end tests at `tests/test_permission_hook.py`; unit + redaction/size-cap/inert tests at `tests/test_permission_diagnose.py`.
 
@@ -107,7 +108,7 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   - **A pipe is decided segment by segment.** The cd-strip does not touch pipes, and `|` is not a cd-separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
-  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition) and deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
+  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition), and any other widening is deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
 
 **Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
@@ -156,9 +157,13 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
 - **A pathname pattern**, such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written. For a structured recognizer, the core cannot tell where such a pattern stands for the program or the subcommand, or may open with `-` or `+`. For a regex `pattern`, it cannot tell where one stands anywhere in a segment of the program the regex opens with, or of any program where it opens with none plainly.
 - **An assignment that changes the program's configuration**, which may set a forced refspec or an alias. These are `HOME`, the XDG base directories, any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`, and git's repository directories. Such an assignment counts in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it. It keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` defers.
 
-A deferred command goes to the harness's own rules, which may allow it: the deny side stays a speed bump (ADR-025 point 5). A glob form needs a file of its name planted where the command runs, so reading one pays off chiefly under a strict posture.
+**Where Claude Code may allow what the core defers on a guardrail, the person is asked.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form it cannot see (`hidden_guardrails()`). An adapter may use it to ask the person rather than defer.
 
-What the forms leave out stays unseen. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth (ADR-025 point 5). A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core defers, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
+The Claude Code hook asks the person on such a command ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it, and where it cannot tell the deny it defers. The deny side stays a speed bump all the same (ADR-025 point 5).
+
+What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth (ADR-025 point 5). A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core defers, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
+
+A command the core defers for a construct it cannot read, such as `git push origin $F`, names no guardrail either, so the harness's own rules decide it. So does a wrapper the harness allows, as Claude Code's baseline allows `find`, and with it `find . -exec rm -rf {} +`, which no native deny's prefix matches.
 
 ## Default-agent subject resolution
 

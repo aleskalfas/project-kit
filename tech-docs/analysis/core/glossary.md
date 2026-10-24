@@ -547,9 +547,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-24T03:17:55Z
+        at: 2026-10-24T04:45:15Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope, and an allow still matches a command as written. Only a deny also reads the other forms of the command it names.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change adds a query that names the guardrails a deferred command may hide, and no grant matches anything otherwise.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T03:17:56Z
+        at: 2026-10-24T04:45:17Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and an adapter still holds its native deny. Its deny now also binds on the forms ADR-025 point 5 lists, and vcs-history-rewrite names --mirror and a refspec opening with +.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and the adapter still holds its native deny. Where the core cannot tell one, the Claude Code hook asks the person, which adds a prompt and changes what a guardrail is in no way.
 TERM-harness:
   name: harness
   status: active
@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T06:19:10Z
+        at: 2026-10-24T04:45:10Z
         outcome: unchanged
-        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. The hook, and what it asks the backbone's decision code, are as they were.
+        unchanged-because: The backbone code still allows, denies or defers each call. Where it defers a Bash call that may hide a guardrail form, the Claude Code hook asks the person, as it asks on a foreign file write, which leaves what the hook is as it was.
 TERM-place:
   name: place
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T03:17:58Z
+        at: 2026-10-24T04:45:19Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, segment by segment. A Bash recognizer may now name the opening of a word through word_prefix_any, which leaves what a privilege is as it was.
+        unchanged-because: A privilege is still recognised from a tool call or a command, and the catalog flag guardrail is read as before. The new query only names which guardrails a deferred command may hide.
 TERM-process:
   name: process
   noun-forms: [processes]
