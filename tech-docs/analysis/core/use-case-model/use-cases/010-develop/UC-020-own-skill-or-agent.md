@@ -38,8 +38,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:53:44Z
-      outcome: updated
+      at: 2026-10-24T04:34:26Z
+      outcome: unchanged
+      unchanged-because: The agent and storyboard stamps now refuse a core or capability folder the project receives as synced copies. The use case stamps in the project namespace, which they never refuse, so its steps hold.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

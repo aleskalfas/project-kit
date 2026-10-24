@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-23T08:54:08Z
+      at: 2026-10-24T04:34:22Z
       outcome: unchanged
-      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
+      unchanged-because: The migration stamp now refuses a capability the project receives as synced copies. The use case packages a capability where it is authored, which still stamps, so its steps hold.
 ---
 
 # UC-015 — Package a recurring discipline as a capability

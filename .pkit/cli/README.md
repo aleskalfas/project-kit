@@ -99,7 +99,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-24T00:20:28Z
+      at: 2026-10-24T04:34:40Z
       outcome: updated
       deferred:
         - anchor:

@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-23T10:28:55Z
+      at: 2026-10-24T04:34:24Z
       outcome: unchanged
-      unchanged-because: The AI agent's need now says agent definition for role definition, the same thing by its term. It names the AI agent as another actor, and that actor's part in it holds.
+      unchanged-because: The migration stamp now refuses the backbone or a capability that arrives as synced copies, never the adapter tier. The adapter stamp asks nothing, so the adapter the use case authors still stamps.
 ---
 
 # UC-019 — Adapt the system to another harness

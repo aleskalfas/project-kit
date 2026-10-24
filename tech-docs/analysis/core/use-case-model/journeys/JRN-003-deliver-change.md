@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T02:01:54Z
+      at: 2026-10-24T04:34:35Z
       outcome: unchanged
-      unchanged-because: UC-037 gains a refusal for a capability whose folder arrives as a synced copy. The journey records a project's own decision, which still stamps, so its step and its seams hold.
+      unchanged-because: UC-037 now refuses the core namespace outside the methodology's source repository too. The journey records a project's own decision, which still stamps.
 ---
 
 # JRN-003 — Deliver a change
