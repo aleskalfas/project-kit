@@ -38,7 +38,7 @@ The project root, and another working tree of the same repository: the main one,
 
 ### 4. No Bash exception
 
-ADR-025 stands unchanged. A shell write into the workspace fails closed like any other: after a stripped leading `cd`, a redirect or any other untrusted construct in the remainder abstains (ADR-025 point 2); without a `cd`, the command is decided on its own grants, and nothing about the folder grants it.
+ADR-025 stands unchanged. A shell write into the workspace fails closed like any other: after a stripped leading `cd`, a redirect into the folder or any other untrusted construct in the remainder abstains (ADR-025 point 2); without a `cd`, the command is decided on its own grants, and nothing about the folder grants it.
 
 ### 5. Granted to `all` by every shipped profile
 

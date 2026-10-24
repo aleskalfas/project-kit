@@ -37,9 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T10:54:34Z
+      at: 2026-10-24T11:48:28Z
       outcome: unchanged
-      unchanged-because: The new privileges are recognised from shell commands, never from a file tool's target, so the workspace grant and how a shell write into the folder is judged do not change.
+      unchanged-because: The workspace grant still covers the file tools alone, and a redirect or here-document into the folder is judged like any other shell write. ADR-060 point 4 now names a redirect into the folder, which is what variant 1b says.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

@@ -547,9 +547,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-24T04:45:15Z
+        at: 2026-10-24T11:48:10Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change adds a query that names the guardrails a deferred command may hide, and no grant matches anything otherwise.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The core now removes a redirection that writes no file before it matches a grant, so a grant matches the words of the command it always matched.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +565,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T12:39:06Z
+        at: 2026-10-24T11:48:12Z
         outcome: unchanged
-        unchanged-because: The catalog gains two allow-shaped privileges, text-filter and uv-run, and no guardrail. A guardrail is still denied to every subject whatever any grant allows, on each segment of a compound.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and the adapter still holds its native deny. The core now reads a command with a redirection that writes no file removed, so a guardrail binds on a program behind one too.
 TERM-harness:
   name: harness
   status: active
@@ -740,9 +740,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T04:45:10Z
+        at: 2026-10-24T11:48:05Z
         outcome: unchanged
-        unchanged-because: The backbone code still allows, denies or defers each call. Where it defers a Bash call that may hide a guardrail form, the Claude Code hook asks the person, as it asks on a foreign file write, which leaves what the hook is as it was.
+        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
 TERM-place:
   name: place
   status: active
@@ -792,9 +792,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T12:39:10Z
+        at: 2026-10-24T11:48:14Z
         outcome: unchanged
-        unchanged-because: The catalog gains text-filter and uv-run, each recognised from a command by a regex over its words or by its program and subcommand, and a grant allows or denies each as before.
+        unchanged-because: A privilege is still recognised from a tool call or a command. The core removes a redirection that writes no file before it recognises one, which changes no privilege and no recogniser.
 TERM-process:
   name: process
   noun-forms: [processes]

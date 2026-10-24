@@ -71,9 +71,8 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T10:54:36Z
-      outcome: unchanged
-      unchanged-because: "The autonomous profile now grants the read-only filters too, which step 10 and variant 10a already cover: a chain runs unasked where grants allow each segment and deny none."
+      at: 2026-10-24T12:02:39Z
+      outcome: updated
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
@@ -150,9 +149,10 @@ pkit:
 - **9a.** A probe finds a verdict that differs from what the model declares. Or it finds a [guardrail](../../../glossary.md#term-guardrail--guardrail)'s native deny missing while the permission hook is registered. The system ends `Result: BROKEN — fix the decision layer before relying on autonomy.`, and exits non-zero.
 - **9b.** The run is outside the sandbox, such as from a terminal of its own, or in a session that started before the sandbox was on. The system verifies the permission code's verdicts, and says the credential floor cannot be proven from there. It asks for a restart, and the path rejoins at step 8.
 - **9c.** None of the four paths of the credential floor exists on the machine. The system cannot prove the floor, even inside the sandbox. It ends `Result: configured and decision-proven. One step left: restart the session, then re-run to prove the OS confinement floor.`
-- **10a.** A command chains segments, which the permission code splits at `&&`, `||`, `|`, `;`, a background `&` and a newline. The code strips a bare leading `cd <path>`, and decides the rest in the same working directory (ADR-025 point 1). A `$`, backtick, redirection, `(` or `PATH` assignment makes the code defer the call, as does a word the shell reads otherwise (ADR-025 point 2). So does a segment in which it recognises no [privilege](../../../glossary.md#term-privilege--privilege), and otherwise it allows the chain only where grants allow each segment and deny none.
+- **10a.** A command chains segments, which the permission code splits at `&&`, `||`, `|`, `;`, a background `&` and a newline. The code strips a bare leading `cd <path>`, and decides the rest in the same working directory (ADR-025 point 1). A `$`, backtick, redirection outside 10d, `(` or `PATH` assignment makes the code defer the call, as does a word the shell reads otherwise (ADR-025 point 2). So does a segment in which it recognises no [privilege](../../../glossary.md#term-privilege--privilege), and otherwise it allows the chain only where grants allow each segment and deny none.
 - **10b.** The permission hook meets a fault in a call, such as a payload it cannot read. It defers the call to the harness. The harness's settings still deny the guardrails' common forms (COR-028 point 2).
 - **10c.** A glob, or an assignment such as `HOME=…` that changes the program's configuration, may hide a form of a command a deny names. So the code defers `git push origin --forc[e]` whatever the grants allow (ADR-025 point 2). Where the deny is a guardrail, Claude Code's permission hook asks the operator rather than defers (`permission-hook.py`). The code denies the forms ADR-025 point 5 lists, such as `git push -uf`.
+- **10d.** The command holds a redirection that duplicates or closes a file descriptor, such as `2>&1`, or discards output to `/dev/null`, such as `>/dev/null`. The code removes such a redirection first, and decides what is left as it would decide that command typed alone (ADR-025 point 2). A deny binds on a program behind the redirection too. A lookalike such as `2>&1t`, which zsh reads as a write to a file, makes the code defer the call.
 
 **Postconditions:** The agents run each granted command, and each single command inside the [sandbox](../../../glossary.md#term-sandbox--sandbox), with nobody asked. The [system](../../../glossary.md#term-system--system) has verified the permission code's verdicts and the credential floor. The operator knows where the confinement does not hold.
 

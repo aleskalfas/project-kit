@@ -2938,13 +2938,17 @@ def test_decide_verdict_path_byte_identical_to_main():
     #                   (+ _UNSEEN_KIND)
     #   hook_decide   → _read_default_agent, decide
     #   recognized_privileges → segments, _segment_privileges
-    #   segments      → _segment_words, _assignments (+ _SEP/_UNTRUSTED)
+    #   segments      → _without_harmless_redirections, _segment_words,
+    #                   _assignments (+ _SEP/_UNTRUSTED)
+    #   _without_harmless_redirections → _segment_words, _assignments
+    #                   (+ _HARMLESS_REDIRECTION/_SEP/_SHELL_KEYWORDS)
     #   _segment_words        → _words
     #   _assignments          → (+ _ENVVAR)
-    #   _doubts       → _words, _assignments (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/
-    #                   _ODD_SPACE/_PROGRAM_VAR/_QUOTED/_EXPORT_OPERAND), _brace_expansion
-    #   _deny_forms   → _segment_words, _assignments, _export_prefix, _rule_form
-    #                   (+ _SEP/_CONFIG_VAR)
+    #   _doubts       → _without_harmless_redirections, _words, _assignments
+    #                   (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/_ODD_SPACE/_PROGRAM_VAR/
+    #                   _QUOTED/_EXPORT_OPERAND), _brace_expansion
+    #   _deny_forms   → _without_harmless_redirections, _segment_words, _assignments,
+    #                   _export_prefix, _rule_form (+ _SEP/_CONFIG_VAR)
     #   _rule_form    → _structured_form, _pattern_form
     #   _structured_form      → _program_name, _globbed, _glob_head, _may_open_flag,
     #                           _subcommand_candidates, _flag_form
@@ -3002,6 +3006,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_may_open_flag",
         "_globbed",
         "_glob_head",
+        "_without_harmless_redirections",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
@@ -3021,6 +3026,8 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_CONFIG_VAR",
         "_PATTERN_PROGRAM",
         "_UNSEEN_KIND",
+        "_HARMLESS_REDIRECTION",
+        "_SHELL_KEYWORDS",
     )
     # A deliberate, reviewed change to a function above names here the rewrite
     # that turns main's side into the change, as (old, new) pairs, so the rest
@@ -3028,110 +3035,11 @@ def test_decide_verdict_path_byte_identical_to_main():
     # deleted (#1973): main then carries the new text, and the guard compares
     # main as it stands.
     #
-    # Pending (#1960): a deny binds on the forms of the command it names
-    # (`_deny_forms` and the helpers it calls), and where a pathname pattern
-    # or a configuration assignment may make the command one a deny names,
-    # `decide` keeps every grant from allowing and names the kind in its
-    # reason (ADR-025 points 2 and 5). `_matches_bash` reads a recognizer's
-    # `word_prefix_any`.
-    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {
-        "_matches_bash": (
-            (
-                '            if not any(f in toks for f in rule["flag_any"]):\n'
-                "                return False\n"
-                "        return True\n",
-                '            if not any(f in toks for f in rule["flag_any"]):\n'
-                "                return False\n"
-                '        if "word_prefix_any" in rule:\n'
-                "            if not any(t.startswith(p) for t in toks[1:] "
-                'for p in rule["word_prefix_any"]):\n'
-                "                return False\n"
-                "        return True\n",
-            ),
-        ),
-        "decide": (
-            (
-                "    hits = recognized_privileges(catalog, request)\n"
-                '    privileges_catalog = catalog.get("privileges", {})\n'
-                "    allowed: set[str] = set()\n"
-                "    for g in _effective_grants(model, subject):\n"
-                '        privs = _privilege_ids(g.get("privilege"))\n'
-                "        overlap = hits & privs\n"
-                "        if not overlap:\n"
-                "            continue\n"
-                '        if g.get("effect", "allow") == "deny":\n'
-                '            return "deny", f"deny grant for {subject} on {sorted(overlap)}"\n',
-                "    hits = recognized_privileges(catalog, request)\n"
-                "    # A deny binds on the forms of the command it names (ADR-025 point 5), and\n"
-                "    # where a form may be one the core cannot see, the deny keeps every grant\n"
-                "    # from allowing (#1960, ADR-025 point 2). A grant still matches the command\n"
-                "    # as written.\n"
-                "    forms, unseen = _deny_forms(catalog, request)\n"
-                '    privileges_catalog = catalog.get("privileges", {})\n'
-                "    allowed: set[str] = set()\n"
-                "    undecided: set[str] = set()\n"
-                "    for g in _effective_grants(model, subject):\n"
-                '        privs = _privilege_ids(g.get("privilege"))\n'
-                '        if g.get("effect", "allow") == "deny":\n'
-                "            overlap = (hits | forms) & privs\n"
-                "            if overlap:\n"
-                '                return "deny", f"deny grant for {subject} on {sorted(overlap)}"\n'
-                "            undecided |= set(unseen) & privs\n"
-                "            continue\n"
-                "        overlap = hits & privs\n"
-                "        if not overlap:\n"
-                "            continue\n",
-            ),
-            (
-                '            f"defer to the harness\'s normal flow"\n        )\n    if allowed:\n',
-                '            f"defer to the harness\'s normal flow"\n'
-                "        )\n"
-                "    # A deny that may bind on a form the core cannot see keeps every grant from\n"
-                "    # allowing (#1960): a pathname pattern may expand to a flag the deny names,\n"
-                "    # and a configuration may set one. The reason names the privileges and the\n"
-                "    # kinds of form, never the command's text.\n"
-                "    if undecided:\n"
-                '        kinds = " / ".join(\n'
-                "            sorted({_UNSEEN_KIND[kind] for name in undecided "
-                "for kind in unseen[name]})\n"
-                "        )\n"
-                '        if posture == "strict":\n'
-                '            return "deny", (\n'
-                '                f"strict posture: a deny on {sorted(undecided)} '
-                'may bind on what the "\n'
-                '                f"shell runs ({kinds})"\n'
-                "            )\n"
-                '        return "abstain", (\n'
-                '            f"a deny on {sorted(undecided)} may bind on what the shell runs '
-                '({kinds}) "\n'
-                '            f"— fail closed, defer to the harness\'s normal flow"\n'
-                "        )\n"
-                "    if allowed:\n",
-            ),
-        ),
-    }
-    introduced = (
-        "_export_prefix",
-        "_deny_forms",
-        "_rule_form",
-        "_structured_form",
-        "_pattern_form",
-        "_program_name",
-        "_flag_form",
-        "_subcommand_candidates",
-        "_may_open_flag",
-        "_globbed",
-        "_glob_head",
-        "_GLOB",
-        "_FLAG_OPENERS",
-        "_BUNDLE",
-        "_CONFIG_VAR",
-        "_PATTERN_PROGRAM",
-        "_UNSEEN_KIND",
-    )
+    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {}
+    introduced: tuple[str, ...] = ()
     for fn in frozen:
         if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
-            continue  # #1960: compared once main defines it
+            continue  # compared once main defines it
         base_source = _extract_func_source(base, fn)
         for old, new in sanctioned.get(fn, ()):
             base_source = base_source.replace(old, new)

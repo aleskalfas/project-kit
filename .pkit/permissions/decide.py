@@ -86,7 +86,55 @@ _CD_SEP = re.compile(r"\s*(?:&&|;)\s*")
 # `cd`, and `gh … | jq` abstains too unless a grant covers `jq`. A pipe whose
 # every side is granted, such as `git diff | git apply`, still allows: that is
 # no new widening, since each segment carries its own grant (ADR-025 point 6).
+#
+# A redirection that writes no file is removed before this scan, and before
+# the command is split (`_HARMLESS_REDIRECTION`, #2002), so its `<` or `>`
+# is not counted here. Every other `<` or `>` still is.
 _UNTRUSTED = re.compile(r"""[$`<>(]""")
+# A redirection that writes no file and changes no program (#2002, ADR-025
+# point 2): an fd duplicated onto stdout or stderr or closed, `N>&M`, `N<&M`
+# or `N>&-`, and output discarded to `/dev/null`, `N>` or `N>>`, or `&>` or
+# `&>>`, with or without a space before `/dev/null`.
+# - N is one digit, or is left out, as in `>&2`. zsh reads a longer number
+#   before `>` as an argument of its own, and dash reads no longer fd.
+# - After `>&` or `<&` comes 1, 2 or `-` alone, so output goes only where the
+#   command's own stdout or stderr already goes. `>&word` with any other word
+#   writes to the file `word`, and another fd may be one the shell holds open
+#   on a file, such as after an earlier `exec 3>file` in a shell that lives
+#   on. The target is exactly `/dev/null`, unquoted.
+# - Each counts only as a whole word. Before it stands the start of the
+#   command, or a space, a tab or a newline with no backslash before it.
+#   After it stands the end, a space, a tab, a newline, `|`, `;` or `&`. So
+#   `gi2>&1t`, which zsh runs as `gi2` writing to a file named `1t`, is no
+#   such word. Nor is `{fd}>/dev/null`, which stores the new fd's number in
+#   the variable `fd`, nor `a\ 2>&1`, whose `2` the shell passes on in `a 2`.
+# - `&>` and `&>>` count only last in their segment. A shell without them,
+#   such as dash, reads the `&` as running the command in the background, and
+#   would run the words after `/dev/null` as a command of their own. bash 3.2
+#   rejects `&>>` outright.
+# - The scan ignores quoting. Inside quotes such a word is part of an
+#   argument, and removing it changes only that argument's text: the quotes
+#   stay, and whitespace stays on both sides, so no word joins another.
+_HARMLESS_REDIRECTION = re.compile(
+    r"(?:\A|(?<=[ \t\n]))(?<!\\[ \t\n])"
+    r"(?:[0-9]?[<>]&[12-](?=[ \t\n|;&]|\Z)"
+    r"|[0-9]?>>?[ \t]*/dev/null(?=[ \t\n|;&]|\Z)"
+    r"|&>>?[ \t]*/dev/null(?=[ \t]*(?:[\n|;&]|\Z)))"
+)
+# The words of bash and zsh that open, join or close a command rather than
+# name a program, and the modifiers that run the command after them (#2002).
+# In `{ 2>&1; }`, `! 2>&1` or `do 2>&1`, the command after such a word holds
+# redirections alone, which zsh runs as `$NULLCMD`. So a segment left with
+# only such words once a harmless redirection is removed keeps the command
+# whole (`_without_harmless_redirections`).
+_SHELL_KEYWORDS = frozenset(
+    {
+        "!", "{", "}", "[[", "]]", "if", "then", "elif", "else", "fi", "case",
+        "esac", "for", "foreach", "select", "while", "until", "do", "done",
+        "repeat", "function", "time", "coproc", "nocorrect", "noglob", "exec",
+        "command", "builtin", "-",
+    }
+)
 # What each untrusted character opens, for the reason `decide()` gives.
 _UNTRUSTED_KIND = {
     "$": "expansion",
@@ -109,19 +157,20 @@ _EXPORT_OPERAND = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*(?:\+?=|[ \t]*$)")
 # loaded into it before its own (#1942): the shell's search path (`PATH`, and
 # zsh's `path`) and any other search path, such as `LD_LIBRARY_PATH`,
 # `GIT_EXEC_PATH` or `PYTHONPATH`; the dynamic loader's `LD_*` and `DYLD_*`;
-# the startup files a shell reads first (`BASH_ENV`, `ENV`, `ZDOTDIR`); and
-# the variables of the interpreters and runtimes that run programs, Python's,
-# Perl's, Ruby's, Node's and Java's options, which load code ahead of the
-# program's own. `PATH=/tmp/x gh pr list` runs whichever `gh` the new path
-# finds first. The list names a family of variables and cannot be complete: a
-# variable outside it that changes which program runs is a hole on the allow
-# side, to be added here when found. The program's own settings, such as
-# `GIT_PAGER`, are not here: what a granted program is told to run is the
-# grant's breadth, as with `git -c core.fsmonitor=…`, which a `git` grant
-# already lets run any program.
+# the startup files a shell reads first (`BASH_ENV`, `ENV`, `ZDOTDIR`); zsh's
+# `NULLCMD` and `READNULLCMD`, which name the program a command of
+# redirections alone runs (#2002); and the variables of the interpreters and
+# runtimes that run programs, Python's, Perl's, Ruby's, Node's and Java's
+# options, which load code ahead of the program's own. `PATH=/tmp/x gh pr list`
+# runs whichever `gh` the new path finds first. The list names a family of
+# variables and cannot be complete: a variable outside it that changes which
+# program runs is a hole on the allow side, to be added here when found. The
+# program's own settings, such as `GIT_PAGER`, are not here: what a granted
+# program is told to run is the grant's breadth, as with
+# `git -c core.fsmonitor=…`, which a `git` grant already lets run any program.
 _PROGRAM_VAR = re.compile(
     r"^(?:[A-Za-z0-9_]*(?:PATH|path)|LD_[A-Za-z0-9_]*|DYLD_[A-Za-z0-9_]*"
-    r"|BASH_ENV|ENV|ZDOTDIR|PYTHON[A-Za-z0-9_]*|PERL[A-Za-z0-9_]*"
+    r"|BASH_ENV|ENV|ZDOTDIR|NULLCMD|READNULLCMD|PYTHON[A-Za-z0-9_]*|PERL[A-Za-z0-9_]*"
     r"|RUBY[A-Za-z0-9_]*|NODE_OPTIONS|JAVA_TOOL_OPTIONS|_JAVA_OPTIONS"
     r"|JDK_JAVA_OPTIONS)\+?="
 )
@@ -223,6 +272,39 @@ def _segment_words(raw: str) -> list[tuple[str, str]]:
     return words if words is not None else [(tok, tok) for tok in raw.split()]
 
 
+def _without_harmless_redirections(command: str) -> str:
+    """`command` with each redirection that writes no file removed: an fd
+    duplicated or closed, or output discarded to `/dev/null`
+    (`_HARMLESS_REDIRECTION`, #2002). The whitespace around each stays, so
+    the words left are read as before. The core then splits the rest, finds
+    every other doubt in it, and matches each grant and deny on it.
+
+    One pass over the command as written. Where the removal itself leaves a
+    form that a second pass would remove, as in `> 2>&1 /dev/null`, which
+    the shell rejects, the command is returned whole, so each of its
+    redirections stays untrusted. So reading the result again changes
+    nothing.
+
+    The command is returned whole too where a removal leaves its segment with
+    no program, as in `git status | 2>&1`, `X=1 >/dev/null` or `{ 2>&1; }`.
+    zsh runs a command of redirections and assignments alone as `$NULLCMD`, a
+    program the core never sees, and a word such as `{` or `do` opens a
+    command of its own (`_SHELL_KEYWORDS`). A NUL in the command, which the
+    removal marks its places with, keeps it whole as well."""
+    if "\0" in command:
+        return command
+    marked = _HARMLESS_REDIRECTION.sub("\0", command)
+    once = marked.replace("\0", "")
+    if _HARMLESS_REDIRECTION.sub("", once) != once:
+        return command
+    for raw in _SEP.split(marked.strip()):
+        if "\0" in raw:
+            words = _segment_words(raw.replace("\0", ""))
+            if all(word in _SHELL_KEYWORDS for _, word in words[_assignments(words):]):
+                return command
+    return once
+
+
 def _assignments(words: list[tuple[str, str]]) -> int:
     """How many words at the front of a segment are assignments. An assignment
     is one where its name is written unquoted, as the shell reads it, so
@@ -256,9 +338,13 @@ def segments(command: str) -> list[list[str]]:
     untrusted construct, such as `X=$(./x.sh)` (#1917): the value may run a
     command, so the segment stays whole, and no grant covers it. Where a command
     follows the assignments, they are stripped as before, so a deny on that
-    command still binds, as on `X=$(true) rm -rf ~`."""
+    command still binds, as on `X=$(true) rm -rf ~`.
+
+    A redirection that writes no file, such as `2>&1` or `>/dev/null`, is
+    removed before the split (#2002), so `uv run pytest 2>&1 | tail` is the
+    segments `uv run pytest` and `tail`."""
     out: list[list[str]] = []
-    for raw in _SEP.split(command.strip()):
+    for raw in _SEP.split(_without_harmless_redirections(command).strip()):
         words = _segment_words(raw)
         rest = words[_assignments(words):]
         if rest:
@@ -286,7 +372,11 @@ def _doubts(command: str) -> list[str]:
     """The kinds of construct in a Bash command that keep the core from reading
     its words, or the program it runs, as the shell does: empty when there is
     none (ADR-025 point 2). Each kind is a fixed phrase, never the command's
-    text, since `decide()` gives them in its reason."""
+    text, since `decide()` gives them in its reason.
+
+    A redirection that writes no file is no such construct (#2002): it is
+    removed first, and every doubt is found in the rest exactly as before."""
+    command = _without_harmless_redirections(command)
     kinds = {_UNTRUSTED_KIND[char] for char in _UNTRUSTED.findall(command)}
     if _ODD_SPACE.search(command):
         kinds.add("whitespace other than a space or a tab")
@@ -581,12 +671,16 @@ def _deny_forms(
     An assignment that changes the program's configuration counts where the
     shell hands it on: in front of a command, for that command, and in a
     segment that only assigns or exports, `builtin export` included, for the
-    segments after it."""
+    segments after it.
+
+    It reads the command with each redirection that writes no file removed
+    (#2002), so a program behind one, as in `2>/dev/null rm -rf ~`, is the
+    program a deny reads."""
     if request.get("type") != "bash":
         return set(), {}
     parts: list[tuple[list[tuple[str, str]], bool]] = []
     inherited = False
-    for raw in _SEP.split(request.get("command", "").strip()):
+    for raw in _SEP.split(_without_harmless_redirections(request.get("command", "")).strip()):
         words = _segment_words(raw)
         exported = _export_prefix(words)
         count = len(words) if exported else _assignments(words)
@@ -976,8 +1070,13 @@ def decide(
     # `cd {a,b}`, never hides what it runs.
     # The remainder is decided at the ORIGINAL cwd: stripping `cd` can never
     # grant a directory-scoped privilege the un-stripped command lacked.
+    # A redirection that writes no file is removed first, as every reading of
+    # the command removes it (#2002), so `cd /x 2>/dev/null && git status`
+    # strips its `cd` as `cd /x && git status` does.
     if request.get("type") == "bash" and not _doubts(request.get("command", "")):
-        remainder = _strip_leading_cd(request.get("command", ""))
+        remainder = _strip_leading_cd(
+            _without_harmless_redirections(request.get("command", ""))
+        )
         if remainder is not None:
             return decide(model, catalog, {**request, "command": remainder}, posture)
 

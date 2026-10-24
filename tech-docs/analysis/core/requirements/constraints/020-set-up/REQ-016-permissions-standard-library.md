@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-24T12:39:19Z
+      at: 2026-10-24T11:48:20Z
       outcome: unchanged
-      unchanged-because: The new privileges are catalog data, read by the same stdlib-only loader, which the tests parse with and without ruamel.yaml, and the projection's change to note each grant once imports nothing new.
+      unchanged-because: Removing a redirection that writes no file uses only the standard library's re module, and the hook tests decide those commands under the system python3 too.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library

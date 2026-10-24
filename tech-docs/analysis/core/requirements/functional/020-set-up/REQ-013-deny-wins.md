@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T12:39:31Z
+      at: 2026-10-24T12:25:04Z
       outcome: unchanged
-      unchanged-because: The new tests find a guardrail's deny and a capability's deny still winning over a compound of the read-only text filters and uv run, which every agent of project-kit is granted. ACT-adopter's need is the same need in its new words, so this artefact holds.
+      unchanged-because: A deny still wins over every grant. The core now removes a redirection that writes no file before it matches, so a deny binds on a program behind one too.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins
