@@ -3022,17 +3022,19 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_PATTERN_PROGRAM",
         "_UNSEEN_KIND",
     )
-    # Deliberate, reviewed verdict change (#1960): a deny binds on the forms of
-    # the command it names, as programs read them (`_deny_forms` and the
-    # helpers it calls), and where a pathname pattern or a configuration
-    # assignment may make the command one a deny names, `decide` keeps every
-    # grant from allowing and names the kind in its reason (ADR-025 point 2).
-    # `_matches_bash` reads a recognizer's `word_prefix_any`. These rewrites
-    # apply exactly that change to main's side, and the rest of each is
-    # compared byte for byte. Once this is on
-    # main, the rewrites find nothing to replace, and these entries may be
-    # deleted.
-    sanctioned = {
+    # A deliberate, reviewed change to a function above names here the rewrite
+    # that turns main's side into the change, as (old, new) pairs, so the rest
+    # is compared byte for byte. Once the change is on main, its entry is
+    # deleted (#1973): main then carries the new text, and the guard compares
+    # main as it stands.
+    #
+    # Pending (#1960): a deny binds on the forms of the command it names
+    # (`_deny_forms` and the helpers it calls), and where a pathname pattern
+    # or a configuration assignment may make the command one a deny names,
+    # `decide` keeps every grant from allowing and names the kind in its
+    # reason (ADR-025 points 2 and 5). `_matches_bash` reads a recognizer's
+    # `word_prefix_any`.
+    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {
         "_matches_bash": (
             (
                 '            if not any(f in toks for f in rule["flag_any"]):\n'
