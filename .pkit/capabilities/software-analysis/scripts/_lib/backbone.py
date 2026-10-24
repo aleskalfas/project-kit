@@ -381,7 +381,7 @@ def record_file(root: Path, record: str, run: Runner = subprocess.run) -> str | 
     it: a core, project or architecture record, or a capability's decision,
     `<capability>:DEC-NNN`; `None` where it names none. Raises Unreadable where `pkit`
     cannot be run."""
-    proc = _run(root, ["pkit", "refs", "lookup", record], run)
+    proc = _run(root, ["pkit", "refs", "lookup", "--", record], run)
     lines = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
     return lines[-1] if proc.returncode == 0 and lines else None
 
