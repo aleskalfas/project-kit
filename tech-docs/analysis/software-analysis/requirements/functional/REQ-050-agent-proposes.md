@@ -25,9 +25,9 @@ pkit:
         - software-analysis:DEC-001#9
         - COR-050#3
     revalidated:
-      at: 2026-10-24T02:12:42Z
+      at: 2026-10-24T01:59:08Z
       outcome: unchanged
-      unchanged-because: The agent still grants no tool that edits a file in place, owns no path and hands each writer to a person. The change adds how it tells the two regressions apart, and tests of that.
+      unchanged-because: The change has the build read the declared surface before any candidate, and the measures after the last step. A person still decides each candidate, and a reason for having no anchors is written only once a person accepts it.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
