@@ -1377,7 +1377,8 @@ def test_any_change_stales_a_floor_reviewers_rejection(dw, rc, monkeypatch) -> N
 
 def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> None:
     """review-pr skips a reviewer whose CHANGES_REQUESTED is fresh, so the
-    refusal names the way to have it re-review the PR as it stands."""
+    refusal names the way to have it re-review the PR as it stands: review-pr
+    with the issue's number, the number that command takes (DEC-028, #1935)."""
     _wire(
         dw,
         monkeypatch,
@@ -1386,14 +1387,47 @@ def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> No
         pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
     )
     _author_changed(dw, monkeypatch)
-    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT, issue_number=1712)
     assert result.passed is False
     assert "local agent (reviewer): CHANGES_REQUESTED" in result.refusal_message
     assert (
         "It skips a fresh CHANGES_REQUESTED (local agent (reviewer)): push the fix "
         "it asks for, or have it re-review the PR as it stands with "
-        "`review-pr 99 --force`."
+        "`review-pr 1712 --force`."
     ) in result.refusal_message
+
+
+def test_the_refusal_names_review_pr_with_the_issue_not_the_pr(dw, rc, monkeypatch) -> None:
+    """review-pr reads its argument as an issue's number, so the refusal names
+    it with the issue's number. The pull request's number would find no branch,
+    or another issue's (#1935)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_pinned_verdict_comment("reviewer", "CHANGES_REQUESTED")],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch)
+    result = dw._check_agent_gate(1801, {}, _config(), "resolved", CAP_ROOT, issue_number=1712)
+    assert result.passed is False
+    assert "b) Run `review-pr 1712` to re-invoke the local agent(s)." in result.refusal_message
+    assert "`review-pr 1712 --force`" in result.refusal_message
+    assert "review-pr 1801" not in result.refusal_message
+
+
+def test_the_refusal_without_an_issue_names_the_placeholder(dw) -> None:
+    """With no issue's number to give, the refusal names review-pr's argument as
+    `<N>` rather than another number."""
+    slot = dw._Slot(
+        reviewer="reviewer",
+        label="local agent (reviewer)",
+        approved=False,
+        overridden=False,
+        verdict=None,
+    )
+    message = dw._agent_gate_refusal(mode_source="resolved", slots=[slot])
+    assert "b) Run `review-pr <N>` to re-invoke the local agent(s)." in message
 
 
 def test_a_verdict_over_a_base_the_pr_left_is_stale(dw, rc, monkeypatch) -> None:

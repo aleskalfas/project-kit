@@ -923,6 +923,7 @@ def run(
             mode_resolution.source,
             capability_root,
             override_reviewers=override_reviewers,
+            issue_number=args.issue_number,
         )
 
     for warning in gate_result.warnings:
@@ -1997,6 +1998,7 @@ def _check_agent_gate(
     capability_root: Path,
     *,
     override_reviewers: tuple[str, ...] = (),
+    issue_number: int | None = None,
 ) -> _GateResult:
     """DEC-028's gate-checker, generalised by DEC-032 to a per-PR resolved set.
 
@@ -2055,6 +2057,10 @@ def _check_agent_gate(
     fresh APPROVED on a reviewer also named in `--bypass-reviewer` read APPROVED
     on the pass path and `satisfied-by-override` on the refusal path. A redundant
     override now reads as APPROVED on all three.
+
+    `issue_number` is the issue `done-work` was run for. The refusal names
+    `review-pr` with it, since that command reads its argument as an issue's
+    number (DEC-028's refusal template, #1935).
     """
     if pr_number is None:
         return _GateResult(
@@ -2253,7 +2259,7 @@ def _check_agent_gate(
         return refuse(
             head_oid=head_sha(data),
             message=_agent_gate_refusal(
-                pr_number=pr_number,
+                issue_number=issue_number,
                 mode_source=mode_source,
                 slots=slots,
                 opted_out=resolution.opted_out,
@@ -2807,7 +2813,7 @@ def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
 
 def _agent_gate_refusal(
     *,
-    pr_number: int | None = None,
+    issue_number: int | None = None,
     mode_source: str,
     slots: list[_Slot],
     opted_out: tuple = (),
@@ -2823,11 +2829,13 @@ def _agent_gate_refusal(
     the head it reviewed and what changed since (#1179). A local reviewer whose
     CHANGES_REQUESTED is still fresh is one `review-pr` skips, so the refusal
     names `review-pr <N> --force` as the way to have it re-review the PR as it
-    stands. Contributions the project opts out of (#148) are named after the
-    set with their reasons, so a reviewer missing from it reads as withdrawn,
-    not forgotten. `remote_uncounted` names the unsatisfied reviewers whose
-    remote verdict does not count because the PR's author could not be read
-    (#1485), so a remote approval the gate passed over is not a mystery.
+    stands. `<N>` is `issue_number`, the issue's number that `review-pr` takes,
+    never the PR's (DEC-028, #1935). Contributions the project opts out of
+    (#148) are named after the set with their reasons, so a reviewer missing
+    from it reads as withdrawn, not forgotten. `remote_uncounted` names the
+    unsatisfied reviewers whose remote verdict does not count because the PR's
+    author could not be read (#1485), so a remote approval the gate passed over
+    is not a mystery.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -2862,7 +2870,7 @@ def _agent_gate_refusal(
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
-    number = pr_number if pr_number is not None else "<N>"
+    number = issue_number if issue_number is not None else "<N>"
     lines.append("            Remediation:")
     lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
     lines.append(f"              b) Run `review-pr {number}` to re-invoke the local agent(s).")
