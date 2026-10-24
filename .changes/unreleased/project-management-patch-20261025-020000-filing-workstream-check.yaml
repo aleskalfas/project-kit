@@ -1,0 +1,13 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The commands `create-issue` and `set-field` check `--workstream` against the project's
+  workstreams file, `project/workstreams.yaml`, as DEC-012 and DEC-018 decide
+  (#1933). They read only the legacy `workstreams:` key of `project/config.yaml`,
+  so an empty key let any value through, and a list the 0.5.0 migration left
+  there refused a workstream `add-workstream` added since. They now take only a
+  workstream the file holds as active, and refuse any other, a deprecated one
+  included, naming the active ones. The legacy key is read only where the file
+  is absent, and where it is empty too nothing is checked.
