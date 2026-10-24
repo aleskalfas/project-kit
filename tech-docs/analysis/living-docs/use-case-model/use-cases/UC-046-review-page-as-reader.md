@@ -35,7 +35,7 @@ pkit:
       artefact:
         - REQ-022
     revalidated:
-      at: 2026-10-24T00:21:42Z
+      at: 2026-10-24T03:53:29Z
       outcome: updated
 ---
 
