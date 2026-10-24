@@ -161,7 +161,10 @@ def test_text_filter_and_uv_run_write_no_native_rule(projection, catalog):
     }
     out = projection.project(model, catalog)
     assert out["settings"]["allow"] == []
-    assert {u["privilege"] for u in out["unprojectable"]} == set(_NEW)
+    # One entry per grant, however many recognizers the privilege holds, so
+    # the gap report's count of grants no native layer expresses is a count
+    # of grants.
+    assert [u["privilege"] for u in out["unprojectable"]] == list(_NEW)
 
 
 @pytest.mark.parametrize("profile", _SHIPPED_PROFILES)

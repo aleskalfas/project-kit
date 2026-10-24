@@ -2,7 +2,8 @@
 # the read-only text filters, `text-filter`) + infra/network domain privileges
 # (docker, web-fetch). Scripting autonomy (bash/python without prompts) is
 # REFERENCED, not granted here: no shipped profile grants `uv-run`, which a
-# project grants in its own grants.yaml. It rides the OS sandbox — turn it on
+# project may grant in its own grants.yaml, where a guardrail's deny does not
+# reach the program behind `uv run` (#1990). It rides the OS sandbox — turn it on
 # with `pkit permissions sandbox enable` (#274; fail-closed per ADR-004) for
 # prompt-free scripting confined to the box. A profile still never WRITES the
 # sandbox block (ADR-005): confinement stays a separate, session-wide operator

@@ -3785,6 +3785,7 @@ _SORT_EXCLUDED = [
     "sort f?",
     "sort [a]b",
     "sort ~/f",
+    "sort {-}o out.txt f",
 ]
 _UNIQ_EXCLUDED = [
     "uniq in.txt out.txt",
@@ -3798,6 +3799,7 @@ _UNIQ_EXCLUDED = [
     "uniq -c *.txt",
     "uniq in?",
     "uniq -* in.txt",
+    "uniq {ab}",
 ]
 _DIFF_EXCLUDED = [
     "diff -l a b",
@@ -3810,6 +3812,7 @@ _DIFF_EXCLUDED = [
     "diff -u a*",
     "diff a b?",
     "diff -* a b",
+    "diff {-}l a b",
 ]
 _OTHER_EXCLUDED = [
     "sed -i s/a/b/ f",
@@ -3915,7 +3918,7 @@ def test_an_untrusted_construct_still_defers(decide_mod, catalog, command):
     ],
 )
 def test_a_pipe_into_an_ungranted_program_still_defers(decide_mod, catalog, command):
-    # `echo` is no text filter: `echo y | pkit …` would answer a confirmation.
+    # `echo` is no text filter, so a pipe from it into `pkit` defers.
     for profile, expected in (("autonomous", "abstain"), ("read-only", "deny")):
         model = _shipped_model(decide_mod, catalog, profile)
         for subject in _BUILDERS:
