@@ -43,7 +43,7 @@ The permission model decides your agents' tool calls: which run without asking y
 The permission model lets your agents do their regular work without asking you, and refuses the commands you deny them.
 
 - **Regular work runs unasked.** Once you turn the model on, each call your grants allow runs with no prompt, such as an agent's `git` and `gh` commands.
-- **What you deny is refused, where the model can tell.** A deny wins over every allow, so the commands it names are refused, and nobody is asked. It is a speed bump, not a security boundary. A command behind a wrapper, such as `bash -c`, can slip past it ("A deny holds against the forms of its command" below).
+- **What you deny is refused, where the model can tell.** A deny wins over every allow, so the commands it names are refused, and nobody is asked. It is a speed bump, not a security boundary. A command behind a wrapper, such as `uv run` or `find -exec`, can slip past it ("A deny holds against the forms of its command" below).
 - **The guardrails hold for everyone.** Recursive deletion, `sudo` and rewriting published history are denied to every agent and to you, in each form the model can see. No grant lifts that deny.
 - **The rest is Claude Code's.** A call the model does not decide goes to Claude Code, which decides it by its own rules and may ask you.
 - **Unwatched runs keep your denies.** A command that starts agents with nobody watching may confine each run to rules of its own. The denies you set for every agent, or for that run's agent, hold there too.
@@ -233,7 +233,7 @@ An allow's reason names every privilege the call matches, and a deny's names the
 
 ### Ship a capability's own privilege
 
-A capability can define a privilege of its own and deny it to its agents, with no edit to the backbone catalog. `pkit permissions scaffold` stamps the two files such a capability ships, and the model reads them once the manifest registers the capability:
+A capability can define a privilege of its own and deny it to its agents, with no edit to the backbone catalog. `pkit permissions scaffold` stamps the two files such a capability ships, and the model reads them once the manifest registers the capability. Below, `grep` keeps the one line of `register`'s output that names the capability:
 
 ```console
 $ pkit new capability my-cap
@@ -242,37 +242,8 @@ $ pkit permissions scaffold my-cap
 Stamped: .pkit/capabilities/my-cap/permissions/privilege-catalog.yaml
 Stamped: .pkit/capabilities/my-cap/permissions/grants.yaml
 Next: replace the illustrative entries with this capability's own privilege(s) and deny(ies) — keep fragment keys BARE and reference them with the scoped token `[privilege-catalog:my-cap:<name>]`. `pkit schemas validate` lints the grant tokens.
-$ pkit capabilities register my-cap
-
+$ pkit capabilities register my-cap | grep Registered
   Registered incubated capability 'my-cap' v0.1.0 (in-repo) at .pkit/capabilities/my-cap/
-  exists     .claude/settings.json
-  exists     CLAUDE.md (already includes @.pkit/rules/core.md)
-  exists     .claude/skills/adapter-author/SKILL.md
-  exists     .claude/skills/agent-author/SKILL.md
-  exists     .claude/skills/area-author/SKILL.md
-  exists     .claude/skills/capability-author/SKILL.md
-  exists     .claude/skills/decision-author/SKILL.md
-  exists     .claude/skills/migration-author/SKILL.md
-  exists     .claude/skills/process/SKILL.md
-  exists     .claude/skills/process/couple.md
-  exists     .claude/skills/process/hand-off.md
-  exists     .claude/skills/process/new.md
-  exists     .claude/skills/report-author/SKILL.md
-  exists     .claude/skills/schema/SKILL.md
-  exists     .claude/skills/schema/author.md
-  exists     .claude/skills/schema/distill.md
-  exists     .claude/skills/schema/extend.md
-  exists     .claude/skills/schema/rename.md
-  exists     .claude/skills/scratchpad-author/SKILL.md
-  exists     .claude/skills/storyboard-author/SKILL.md
-Done.
-  exists     .claude/agents/architect.md
-  exists     .claude/agents/convention-compliance-reviewer.md
-  exists     .claude/agents/critic.md
-  exists     .claude/agents/methodology-reviewer.md
-  exists     .claude/agents/process-author.md
-  exists     .claude/agents/rule-set-reviewer.md
-Done.
 $ pkit schemas validate
   Validated 8 schema(s) and 6 backbone file schema(s). All checks passed.
 ```
