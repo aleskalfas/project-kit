@@ -316,7 +316,7 @@ The realizer that makes declared permissions *bite* at runtime (per [COR-028](..
 
 Its reason names each such guardrail and what hides the form, never the command's text. It asks too on an `Edit` or `Write` to an absolute path outside the session's repository, in every permission mode (ADR-034 point 2). A fault in either check leaves the abstain. `pkit permissions probe` drives the core's `hook_decide()` alone, so where the hook asks, the probe reports the core's abstain.
 
-**In auto and bypass mode the hook does not ask on such a Bash call.** In these modes the person chose not to be asked, and a hook's `ask` would prompt them all the same. So the hook abstains there, and the harness's own mode decides the call. Its allow and its deny are the same in every mode, since the core never reads the mode.
+**In auto and bypass mode the hook does not ask where a Bash call may hide a guardrail's form.** In these modes the person chose not to be asked, and a hook's `ask` would prompt them all the same. So the hook abstains there, and the harness's own mode decides the call. The hook's allow and deny are the same in every mode, since the core never reads the mode.
 
 The hook reads the mode from the payload's `permission_mode` field. [Claude Code's hooks reference](https://code.claude.com/docs/en/hooks), "Common input fields", gives `auto` for auto mode and `bypassPermissions` for bypass mode. A missing field, or a value the hook does not know, keeps the ask.
 
