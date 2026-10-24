@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -271,16 +272,62 @@ def main_dm(tmp_path_factory):
 @pytest.mark.parametrize("posture", ["lenient", "strict"])
 def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, posture) -> None:
     model = _autonomous(dm, catalog, posture=posture)
-    payload = _bash(command, root)
-    ours = dm.hook_decide(model, catalog, payload, project_root=str(root))
-    # Deliberate, reviewed verdict change (#2002): a redirection that writes no
-    # file, such as `2>&1` or `>/dev/null`, is removed before the core reads
-    # the command (ADR-025 point 2), so ours is main's verdict on the command
-    # without it. A redirection into the workspace stays untrusted. Once this
-    # is on main, main reads each command as ours does.
-    stripped = dm._without_harmless_redirections(command)
-    mains = main_dm.hook_decide(model, catalog, _bash(stripped, root), project_root=str(root))
-    assert ours == mains
+    ours = dm.hook_decide(model, catalog, _bash(command, root), project_root=str(root))
+
+    def mains(read: str) -> Any:
+        return main_dm.hook_decide(model, catalog, _bash(read, root), project_root=str(root))
+
+    # A deliberate, reviewed verdict change names in `readings` how main must
+    # read a command for its verdict to be ours. #2002 named
+    # `dm._without_harmless_redirections`, which removes a redirection that
+    # writes no file. Main's verdict on the command as it stands is tried
+    # first, so a reading left in place once its change is on main does no
+    # harm (#2011). Delete it in any change after that one merges.
+    readings: tuple[Callable[[str], str], ...] = ()
+    assert _is_mains_judgment(ours, mains, command, readings), (ours, mains(command))
+
+
+def _is_mains_judgment(
+    ours: Any, mains: Callable[[str], Any], command: str, readings: tuple[Callable[[str], str], ...]
+) -> bool:
+    """Whether `ours` is main's verdict on `command`, as it stands or as the
+    sanctioned `readings`, applied in turn, have main read it."""
+    if ours == mains(command):
+        return True
+    read = command
+    for reading in readings:
+        read = reading(read)
+    return ours == mains(read)
+
+
+def test_the_judgment_guard_passes_a_reading_main_already_carries() -> None:
+    # Main already removes the `2>&1`, so its verdict on the command as it
+    # stands is ours: the reading does no harm, whatever it would make of it.
+    def mains(read: str) -> str:
+        return {"git status 2>&1": "allow", "git status": "allow"}.get(read, "abstain")
+
+    def stale(read: str) -> str:
+        return read + " (read again)"
+
+    assert _is_mains_judgment("allow", mains, "git status 2>&1", (stale,))
+    # It still lets no other verdict through.
+    assert not _is_mains_judgment("deny", mains, "git status 2>&1", (stale,))
+
+
+def test_the_judgment_guard_compares_a_pending_reading_as_before() -> None:
+    # Main does not yet remove the `2>&1`: ours is its verdict on the command
+    # without it, and on nothing else.
+    def mains(read: str) -> str:
+        return {"git status": "allow"}.get(read, "abstain")
+
+    def strip(read: str) -> str:
+        return read.replace(" 2>&1", "")
+
+    assert _is_mains_judgment("allow", mains, "git status 2>&1", (strip,))
+    assert _is_mains_judgment("abstain", mains, "git status > out", (strip,))
+    assert not _is_mains_judgment("allow", mains, "git status > out", (strip,))
+    assert not _is_mains_judgment("deny", mains, "git status 2>&1", (strip,))
+    assert not _is_mains_judgment("allow", mains, "git status 2>&1", ())
 
 
 # --- a worktree has its own workspace ----------------------------------------------
