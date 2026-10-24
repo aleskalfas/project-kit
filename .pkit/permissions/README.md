@@ -10,6 +10,7 @@ pkit:
         - .pkit/schemas/privilege-catalog.yaml
         - .pkit/schemas/privilege-catalog.schema.json
         - .pkit/adapters/claude-code/permission-hook.py
+        - .pkit/adapters/claude-code/settings/core/settings.json
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
         - src/project_kit/run_rules.py
@@ -17,7 +18,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
     revalidated:
-      at: 2026-10-24T04:49:16Z
+      at: 2026-10-24T05:28:17Z
       outcome: updated
 ---
 

@@ -12,9 +12,11 @@ pkit:
         - .pkit/adapters/claude-code/harness-support.yaml
         - .pkit/adapters/claude-code/permission-enforcement.yaml
         - src/project_kit/visibility.py
-      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
+        - .pkit/permissions/decide.py
+        - src/project_kit/permissions.py
+      record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-009, ADR-014, ADR-025, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
     revalidated:
-      at: 2026-10-24T04:49:18Z
+      at: 2026-10-24T05:28:18Z
       outcome: updated
 ---
 
