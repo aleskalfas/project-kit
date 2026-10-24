@@ -19,9 +19,9 @@ pkit:
       artefact:
         - ACT-operator
     revalidated:
-      at: 2026-10-24T03:18:06Z
+      at: 2026-10-24T04:45:22Z
       outcome: unchanged
-      unchanged-because: The change imports nothing new into the decision code, and the new hook tests decide the forms under the system python3. The code still needs only the standard library.
+      unchanged-because: The new query and the hook ask import nothing beyond the standard library, and the hook tests run the ask under the system python3 too.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library

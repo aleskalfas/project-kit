@@ -1,6 +1,6 @@
 ---
 id: ADR-025
-title: Segment-conservative compound Bash auto-approve
+title: "Bash commands are read conservatively: grants as written, denies in listed forms, doubt never allows"
 status: accepted
 date: 2026-06-24
 author: Aleš Kalfas <kalfas.ales@gmail.com>
@@ -8,28 +8,32 @@ author: Aleš Kalfas <kalfas.ales@gmail.com>
 
 ## Summary
 
-A compound Bash command (`cd src && gh pr list`) reaches the permission
-decision core as one string, and today the leading `cd src &&` prefix can keep
-an otherwise-already-granted command (`gh pr list`) from auto-approving — a
-*prompt over intent the model already grants*. This ADR makes the decision core
-**conservatively** reduce that prompt: Phase 1 strips a single leading
-`cd <path> &&` / `cd <path> ;` and decides on the remainder. It is a
-prompt-reduction over already-granted intent, **never a new grant**, and it
-inherits [ADR-004](ADR-004-autonomy-intent-confinement.md)'s
-fail-closed-on-uncertainty stance wholesale: any segment the core cannot read
-as the shell reads it — an expansion (`$`, `$()`, a backtick), a redirection
-(`<` / `>`), a word the shell splits, drops or brace-expands otherwise than
-the core reads it, or an assignment that changes which program runs — or
-whose command no grant recognizes makes the core **abstain (prompt)**, never
-auto-allow. A quote alone does not: the core removes quotes as the shell does
-before it matches. A deny is matched on the forms of its command point 5
-names, and where a pathname pattern or a configuration assignment may make a
-command one a deny names, the core abstains too.
+A Bash command reaches the permission decision core as one string, and this
+ADR decides how the core reads it. The core allows a command only where a
+grant covers every segment its dumb splitter yields, matched as written once
+quotes are removed as the shell removes them (point 2), with no shell parser
+(point 3). The one widening is a single leading `cd <path>`, stripped before
+the core decides on the rest (point 1): a prompt-reduction over
+already-granted intent, **never a new grant**. The core inherits
+[ADR-004](ADR-004-autonomy-intent-confinement.md)'s fail-closed-on-uncertainty
+stance: a segment it cannot read as the shell reads it, such as one holding an
+expansion, a redirection or an assignment that changes which program runs, or
+whose command no privilege recognizes, makes it **abstain (prompt)**, never
+allow, unless a deny binds on the words it reads (point 2). A deny also binds
+on the forms point 5 lists, such as a long flag cut to a prefix. Where a
+pathname pattern or a configuration assignment may make the command one a deny
+names, the core cannot tell, and abstains (point 2). A configuration git reads,
+or one `git -c` sets, stays the grant's breadth, and a program behind a
+wrapper such as `env` is read as the wrapper (point 5). The code lives in the neutral core both the hook and the CLI
+import (point 4).
 
-**Decision in one line:** the core auto-approves a compound only by stripping a
-leading `cd` and matching the remainder against existing grants; a general
-"auto-approve any all-segments-safe compound" widening is **rejected as unsound**
-and any broader widening is **deferred** under
+**Decision in one line:** the core allows a Bash command only where a grant
+covers every segment as written, after stripping one leading `cd`; a deny
+binds on the command and on the forms point 5 lists; and where the core cannot
+read the command as the shell does, or cannot tell whether a deny binds, it
+never allows. A compound allowed because each segment looks safe on its own,
+blind to how the segments compose, is **rejected as unsound**, and any
+widening beyond the `cd` strip is **deferred** under
 [COR-007](../../../.pkit/decisions/core/COR-007-pattern-extraction.md) until a
 demonstrated residual-prompt need earns it.
 
@@ -74,17 +78,16 @@ core.md rule 15 — *issue the narrowest action the layer can vet*: a single
 is the rule's intent applied to the hot path.
 
 As project-kit's own architecture-decision record, harness and code-home
-specifics are in scope here, unlike the harness-neutral COR. `status: proposed`
-is the acceptance-gate gesture; because this is a child of foundational ADR-004,
-accept it before any implementation cites it.
+specifics are in scope here, unlike the harness-neutral COR.
 
 ## Decision
 
-**The decision core auto-approves a compound Bash command *conservatively*: it
-strips a single leading `cd <path>` segment and decides on the remainder against
-the existing grant model. It is a prompt-reduction over already-granted intent,
-never a new grant. Every uncertainty fails closed (abstain / prompt), never to
-auto-allow. A general all-segments-allowed widening is deferred, not taken.**
+**The decision core reads a Bash command conservatively: a grant must cover
+every segment as written, after one leading `cd <path>` is stripped, and a deny
+binds on the forms point 5 lists. Stripping the `cd` is a prompt-reduction over
+already-granted intent, never a new grant. Every uncertainty fails closed
+(abstain / prompt), never to auto-allow. A rule blind to how segments compose
+is rejected as unsound, and any other widening is deferred.**
 
 ### 1. Phase 1 — strip a leading `cd`, decide on the remainder
 
@@ -267,8 +270,7 @@ and changes no prior decision.
 
 - **The change lands in `.pkit/permissions/decide.py`** (the `segments()` /
   classification path), the shared neutral core, and is covered by the existing
-  conformance fixtures proving hook and CLI decide identically. Implementation is
-  the issue-#240 follow-on, not this ADR.
+  conformance fixtures proving hook and CLI decide identically.
 
 - **Deny mechanism kept; speed-bump posture preserved.** Guardrail denies,
   the fail-open hook + fail-closed native double-lock, and the
@@ -286,12 +288,11 @@ and changes no prior decision.
   refines ADR-004's intent-axis classification and inherits its fail-closed,
   double-lock, and speed-bump invariants intact.
 
-- **No migration.** No file/directory rename or removal in a kit-owned tree, no
+- **No migration.** The decision changes verdicts, never a file an installed
+  project holds: no file/directory rename or removal in a kit-owned tree, no
   `schema_version` bump, no breaking CLI signature change, no capability-subtree
-  restructure — `pkit migrations check-diff --include-working-tree --base main`
-  is expected clean. This change authors the ADR file only; the code that
-  realizes it changes verdicts, never a file an installed project holds.
+  restructure.
 
-- **No version bump in this change-set.** Like the sibling permission ADRs, this
-  authors the ADR file at `status: proposed`; the acceptance-gate flip and the
-  eventual implementation's surface bump are separate lifecycle gestures.
+- **No version bump of the record's own.** Like the sibling permission ADRs,
+  the record changes no component's surface: each change to the code that
+  realizes it declares its own surface change.

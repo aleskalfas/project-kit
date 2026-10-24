@@ -6,6 +6,8 @@ top-level `hooks` key in `.claude/settings.json`. On every matched tool call
 Claude Code pipes a PreToolUse payload to this script's stdin; the script
 decides via the shared, harness-neutral decision core
 (`.pkit/permissions/decide.py`) and prints a `permissionDecision`, or abstains.
+Where the core abstains on a call that may hide a form of a deny, or on an
+Edit/Write to a foreign path, the hook asks the person instead.
 
 Runtime: bare system `python3` — NO uv, no PEP-723 metadata, no third-party
 deps at startup. Running under bare python3 is required so the hook can start
@@ -138,6 +140,32 @@ def main() -> int:
         diagnose_capture.capture(str(root), payload, decision, reason)
     except Exception as exc:  # inert: capture must never affect enforcement
         _debug(f"diagnostic capture fault (inert): {exc!r}")
+
+    # A guardrail the core cannot tell (ADR-025 point 2, #1982): where the core
+    # abstained on a Bash call that may hide a form of a guardrail, such as
+    # `git push origin --forc[e]`, Claude Code's own rules, such as the
+    # baseline's `Bash(git:*)`, would run it unasked. The core's abstain is a
+    # prompt, so the hook asks the person. A strict posture has denied such a
+    # call already. The reason names the guardrails and the kinds of form,
+    # never the command's text. A fault keeps the abstain. The `pkit
+    # permissions probe` drives `hook_decide` alone, so it reports the abstain.
+    if decision == "abstain":
+        try:
+            hidden = {}
+            if isinstance(payload, dict) and payload.get("tool_name") == "Bash":
+                hidden = decide.hook_hidden_guardrails(
+                    model, catalog, payload, project_root=str(root)
+                )
+            if hidden:
+                kinds = " / ".join(sorted({kind for found in hidden.values() for kind in found}))
+                decision, reason = (
+                    "ask",
+                    f"the guardrail {sorted(hidden)} may bind on what the shell runs ({kinds}), "
+                    f"which the permission code cannot see: confirm the command "
+                    f"(ADR-025 point 2: the core defers, and the harness's own rules may allow it)",
+                )
+        except Exception as exc:  # the ask must never break fail-open
+            _debug(f"hidden-guardrail check fault → ignore: {exc!r}")
 
     # Additive foreign-repo corner (ADR-034 point 2): when the decision core
     # abstained (deferred), an Edit/Write to an absolute foreign path is

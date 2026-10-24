@@ -27,9 +27,6 @@ shortfalls:
   - at: "12a"
     issue: "#1779"
     record: project-management:DEC-055#3
-  - at: "13a"
-    issue: "#1935"
-    record: project-management:DEC-028
 pkit:
   friction:
     anchors:
@@ -78,9 +75,8 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T05:56:29Z
-      outcome: unchanged
-      unchanged-because: close-issue's pr-merge mode now closes an issue only for a merged pull request that relates to it, and done-work works out the required reviewers first. The use case's landing still closes each issue the pull request closes, so its steps hold.
+      at: 2026-10-24T06:13:38Z
+      outcome: updated
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
@@ -155,10 +151,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the system reads the answers from the documents' own blocks, never from answer files. DEC-055 point 3 decides that a later head is covered where the developer's edits lie in the change's answer files, and #1779 tracks it.
 
-- **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N> --force`, with the Task's number, to run them again (DEC-028).
-
-> [!WARNING]
-> **Not built yet:** the refusal names `review-pr` with the pull request's number, which that command reads as an issue's. DEC-028 decides that it names the command with the issue's number, and #1935 tracks it.
+- **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N>`, with the Task's number, to run them again (DEC-028).
 
 - **13b.** A checkbox of an issue the pull request closes is unticked. The system refuses the merge, listing each one (DEC-007). The use case ends.
 - **13c.** The developer bypasses one required reviewer: `pkit pm done-work <N> --yes --bypass-reviewer <name> --bypass-reviewer-reason "<R>"`. The system posts the reason in an audit comment before the merge, and counts that reviewer as satisfied (DEC-050).

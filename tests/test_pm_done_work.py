@@ -1692,6 +1692,25 @@ def test_bypass_reviewer_name_is_stripped(dw, monkeypatch):
     assert seen["override_reviewers"] == ("design-reviewer",)
 
 
+def test_agent_gate_gets_the_issue_number_for_its_refusal(dw, monkeypatch, capsys):
+    """The agent gate's refusal names `review-pr` with the issue's number, the
+    number that command takes (DEC-028, #1935), so main() hands the gate the
+    issue's number beside the pull request's."""
+    seen: dict = {}
+
+    def fake_agent_gate(pr_number, pr, config, mode_source, cap_root, **kwargs):
+        seen["pr_number"] = pr_number
+        seen["issue_number"] = kwargs.get("issue_number")
+        return dw._GateResult(passed=False, refusal_message="[refused] agent gate")
+
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent")
+    monkeypatch.setattr(dw, "_check_agent_gate", fake_agent_gate)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert seen == {"pr_number": 496, "issue_number": 42}
+    assert "[refused] agent gate" in capsys.readouterr().err
+
+
 def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
     """Full agent-mode happy path across the main() seam: --bypass-reviewer with
     --bypass-reviewer-reason drives main() → _check_agent_gate (passing WITH an

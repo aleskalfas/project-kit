@@ -25,9 +25,9 @@ pkit:
       artefact:
         - ACT-planner
     revalidated:
-      at: 2026-10-24T06:23:40Z
+      at: 2026-10-24T06:13:41Z
       outcome: unchanged
-      unchanged-because: The tests of close-issue this change adds check the closure cascade's report on a parent, which moves nothing. The tests of the closes a person holds are as they were.
+      unchanged-because: A test of done-work now checks that the agent gate gets the issue's number for its refusal. No held move is made without the person's authorisation.
 ---
 
 # REQ-042 · Functional · A move a person holds is made only on that person's authorisation

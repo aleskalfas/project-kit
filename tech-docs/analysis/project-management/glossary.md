@@ -217,9 +217,9 @@ TERM-merge-gate:
           - project-management:DEC-007
           - project-management:DEC-026
       revalidated:
-        at: 2026-10-24T03:43:21Z
+        at: 2026-10-24T06:13:39Z
         outcome: unchanged
-        unchanged-because: done-work now works out the required reviewers before it refuses, and refuses a set with no reviewer in it. A pull request still lands only once each verdict it needs stands, its checks are green and its checkboxes are ticked.
+        unchanged-because: done-work's refusal now names review-pr with the issue's number. What a pull request must meet before it lands is the same.
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -335,6 +335,10 @@ TERM-workstream:
         record:
           - project-management:DEC-018
           - project-management:DEC-012
+      revalidated:
+        at: 2026-10-24T05:49:52Z
+        outcome: unchanged
+        unchanged-because: The library gains the checks of DEC-018's rules that the workstream commands now run, and the rewriting of a typed reference. What a workstream is, and the file that declares it, are unchanged.
 ---
 
 # Glossary

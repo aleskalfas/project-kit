@@ -237,3 +237,68 @@ def test_duplicate_names_ignores_deprecated(ws) -> None:
     }
     parse = ws.parse_workstreams(data)
     assert ws.duplicate_names(parse) == []
+
+
+# --- DEC-018's rules, checked by every mutator (#1940) ----------------
+
+
+def test_validate_slug_keeps_the_rule_in_full(ws) -> None:
+    assert ws.validate_slug("cli") is None
+    assert ws.validate_slug("a" * 40) is None
+    # The pattern alone accepts each of these; DEC-018's other rules do not.
+    assert "consecutive hyphens" in ws.validate_slug("a--b")
+    assert "2–40" in ws.validate_slug("a" * 41)
+    assert ws.validate_slug("A-b") is not None
+    assert ws.validate_slug("") is not None
+    assert ws.validate_slug(None) is not None
+
+
+def test_validate_attributes_accepts_values_within_the_rules(ws) -> None:
+    assert (
+        ws.validate_attributes(
+            name="Agent Platform",
+            description="d" * 200,
+            status="deprecated",
+            deprecated_reason="r" * 200,
+        )
+        == []
+    )
+    # An attribute not being set is not checked.
+    assert ws.validate_attributes() == []
+
+
+def test_validate_attributes_names_each_broken_rule(ws) -> None:
+    errors = ws.validate_attributes(
+        name="n" * 65,
+        description="d" * 250,
+        status="retired",
+        deprecated_reason="line one\nline two",
+    )
+    joined = "\n".join(errors)
+    assert "`name` is 65 chars" in joined
+    assert "`description` is 250 chars" in joined
+    assert "`status` must be" in joined
+    assert "`deprecated_reason` must be one line" in joined
+    assert len(errors) == 4
+
+
+def test_validate_attributes_refuses_an_empty_name_and_a_multiline_description(ws) -> None:
+    assert ws.validate_attributes(name="  ") == ["`name` must not be empty."]
+    assert ws.validate_attributes(description="a\r\nb") == ["`description` must be one line."]
+
+
+def test_rewrite_references_rewrites_both_typed_forms(ws) -> None:
+    text = "Filed under workstream:cli, see [workstream:cli] and `workstream:cli`."
+    new, count = ws.rewrite_references(text, "workstream:cli", "workstream:tools")
+    assert count == 3
+    assert new == "Filed under workstream:tools, see [workstream:tools] and `workstream:tools`."
+
+
+def test_rewrite_references_leaves_longer_slugs_and_bare_slugs(ws) -> None:
+    text = (
+        "workstream:cli-tools, myworkstream:cli, the cli workstream, workstream:clix, "
+        "workstream:cliX, workstream:cli_x"
+    )
+    new, count = ws.rewrite_references(text, "workstream:cli", "workstream:tools")
+    assert count == 0
+    assert new == text
