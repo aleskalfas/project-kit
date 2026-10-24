@@ -5,6 +5,8 @@ status: active
 actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
+requirements:
+  - REQ-060
 pkit:
   friction:
     anchors:
@@ -25,6 +27,8 @@ pkit:
         - COR-013
         - COR-017
         - COR-031
+      artefact:
+        - REQ-060
     revalidated:
       at: 2026-10-23T09:46:27Z
       outcome: unchanged
@@ -63,7 +67,7 @@ pkit:
 3. The agent writes the change's code, applying the corpus to each choice it settles, such as naming, layout and error handling.
 4. The agent reads its diff again against the corpus, and corrects what does not conform.
 5. The agent hands the change on for review, and invokes no reviewer itself (COR-024).
-6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032).
+6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032). Where the project runs the code-review panel, its `security-reviewer` is among them, and blocks a change whose code passes a secret on a command line (REQ-060).
 7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for that person (project-management DEC-028).
 
 **Variants:**
