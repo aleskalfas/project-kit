@@ -15,7 +15,7 @@ pkit:
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
-      artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json]
+      artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/cli/README.md#folders-a-sync-writes]
     revalidated:
       at: 2026-10-24T03:19:17Z
       outcome: updated
@@ -287,6 +287,8 @@ the correct shapes and inline footgun guidance, run `pkit permissions scaffold
 <cap>` (paired with the `capability-author` skill, step 6b). It stamps
 `privilege-catalog.yaml` + `grants.yaml` into the capability's `permissions/`
 dir, refuses an unknown capability, and refuses to clobber an existing fragment.
+It also refuses a capability whose files the project receives as synced copies
+([the CLI reference, "Folders a sync writes"](../cli/README.md#folders-a-sync-writes)).
 
 Two footguns the scaffold guidance captures: a fragment privilege key is authored
 **bare** (the loader applies the `<cap>:` scope), and a grant references it with
