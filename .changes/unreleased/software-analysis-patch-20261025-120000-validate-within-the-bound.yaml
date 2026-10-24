@@ -6,10 +6,11 @@ custom:
 body: >
   `pkit analysis validate` finishes well inside the 30 seconds `pkit validate`
   gives a component's command, with the same findings (#2025). On
-  project-kit's own analysis it took some 20 to 66 seconds while other work
-  ran, and now takes some 5 to 16. It asks the backbone where every record it
-  reads lies in one run of `pkit refs lookup --json`, not one run for each
-  record. It searches a text for a term only where the text holds a run of
-  the term's name, and reads the kinds' declaration and each component's
-  package metadata once. The lookup in one document is new in the backbone
-  this release ships, so the capability requires it.
+  project-kit's own analysis, with other work running, it takes about a
+  quarter of the time it did, some 7.5 seconds where it took 30. It asks the
+  backbone where every record it reads lies in one run of `pkit refs lookup
+  --json`, not one run for each record. It searches a text for a term only
+  where the text holds a run of the term's name, and reads the kinds'
+  declaration and each component's package metadata once. The lookup in one
+  document is new in the backbone this release ships, so the capability
+  requires it.
