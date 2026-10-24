@@ -1187,9 +1187,10 @@ def _hook_request(
 # rules of its own, as Claude Code's baseline `Bash(git:*)` allows a deferred
 # `git push origin --forc[e]`. ADR-025 point 2 makes that abstain a prompt, so
 # the core names the guardrails that may bind on the command in a form it
-# cannot see, and an adapter whose harness may allow it asks the person rather
-# than defers. Only a guardrail's deny is named: it is the non-negotiable one
-# (ADR-002 point 3), while a project's own deny rides the hook's speed bump.
+# cannot see, and an adapter may ask the person rather than defer, as the
+# Claude Code hook does. Only a guardrail's deny is named: it is the
+# non-negotiable one (ADR-002 point 3), while a project's own deny rides the
+# hook's speed bump.
 # Nothing here changes a verdict of `decide()`.
 
 
