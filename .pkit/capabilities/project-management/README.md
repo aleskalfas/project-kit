@@ -639,9 +639,9 @@ Setting the id touches no issue — the per-issue ownership *marker* is written 
   · parent #10 open; no open child left and checkboxes complete — eligible to close: run `pkit pm close-issue 10 --mode=cascade-eligibility-close`
 ```
 
-A parent with an open child is not eligible, and each open child is named: `· parent #10 open; not eligible — open child(ren): #12`. The open children are found by the read of the children the `--mode=cascade-eligibility-close` refusal makes, made once more for each parent the fold holds. A parent with no open child left but an unticked box is not eligible either.
+A parent with an open child is not eligible, and each open child is named: `· parent #10 open; not eligible — open child(ren): #12`. The open children are found by the read of the children the `--mode=cascade-eligibility-close` refusal makes. The report makes that read once more for each parent the fold holds, unless the fold stopped on a read. A parent with no open child left but an unticked box is not eligible either.
 
-Where the process engine could not fold the children, the report says that whether a child is open is not known. The report says the same, with the process engine's reason, where the fold held and no open child is found. Such a parent is never reported eligible.
+Where the process engine could not fold the children, the report says that whether a child is open is not known. The report says the same, with the process engine's reason, where the fold stopped on a read, or held with no open child found. Such a parent is never reported eligible.
 
 What holds a container open:
 
