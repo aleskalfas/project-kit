@@ -78,8 +78,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T04:20:10Z
-      outcome: updated
+      at: 2026-10-24T05:04:52Z
+      outcome: unchanged
+      unchanged-because: REQ-042 now names a close through a merged pull request among the closes its tests find held. Step 14 still closes each issue the pull request closes once the developer authorised the merge.
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
