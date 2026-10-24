@@ -21,9 +21,9 @@ pkit:
         - ACT-adopter
         - ACT-operator
     revalidated:
-      at: 2026-10-24T03:18:07Z
+      at: 2026-10-24T04:45:24Z
       outcome: unchanged
-      unchanged-because: The code still checks every deny grant before it allows, and a deny now also binds on the forms of a command ADR-025 point 5 lists, which only widens what a deny wins over. The order of the grants still changes no decision.
+      unchanged-because: Every deny still binds before any allow, and decide() returns the verdicts it did. The hook asks only where the core abstained, so an ask never stands in for a deny or an allow.
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

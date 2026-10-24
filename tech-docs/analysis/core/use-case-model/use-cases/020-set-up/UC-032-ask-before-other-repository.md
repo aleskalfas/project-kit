@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T04:16:22Z
+      at: 2026-10-24T04:45:32Z
       outcome: unchanged
-      unchanged-because: The guardrails now deny the forms of a command they name, and release merge's refusal names pkit pull-request land. The check before another repository runs as the use case says.
+      unchanged-because: The guard before a change to another repository and the hook ask on a foreign file write are as before. The new ask concerns a deferred Bash call that may hide a guardrail, which is not about another repository.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

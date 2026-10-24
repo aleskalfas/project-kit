@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T03:44:44Z
+      at: 2026-10-24T04:45:34Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` in cli.py, which this artefact does not describe.
+      unchanged-because: The Claude Code README gains when its hook asks, a detail of that adapter. What every adapter provides, and the list of adapters, are as before.
 ---
 
 # Adapters
