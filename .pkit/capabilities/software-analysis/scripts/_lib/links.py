@@ -281,6 +281,17 @@ class Vocabulary:
     def term(self, term_id: str) -> Term | None:
         return next((t for t in self.terms if t.id == term_id), None)
 
+    @functools.cached_property
+    def searched(self) -> tuple[tuple[str, str, str], ...]:
+        """Each name a term is matched by, with the term's id and the name's needle
+        (`_needle`), the terms in their order and each term's names in theirs: listed once
+        for every text the vocabulary reads."""
+        return tuple(
+            (term.id, name, _needle(name))
+            for term in self.terms
+            for name in self.matched.get(term.id, ())
+        )
+
 
 def vocabulary(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> Vocabulary:
     """The terms whose mentions the analysis in `folder` links: its own terms in force, and
@@ -528,19 +539,19 @@ def _chosen(
             )
     named = [(m.start(), m.end()) for a in vocabulary.actors for m in _found(a, text)]
     candidates: list[_Mention] = []
-    for term in vocabulary.terms:
-        for name in vocabulary.matched.get(term.id, ()):
-            for m in _found(name, text):
-                if _overlaps(m.start(), m.end(), skipped):
-                    continue
-                if any(s <= m.start() and m.end() <= e for s, e in blocked.get(term.id, ())):
-                    continue
-                if any(
-                    s <= m.start() and m.end() <= e and m.end() - m.start() < e - s
-                    for s, e in named
-                ):
-                    continue
-                candidates.append(_Mention(m.start(), m.end(), term.id))
+    for term_id, name, needle in vocabulary.searched:
+        if needle not in text:
+            continue  # no mention of the name, as `_found` reads it
+        for m in _pattern(name).finditer(text):
+            if _overlaps(m.start(), m.end(), skipped):
+                continue
+            if any(s <= m.start() and m.end() <= e for s, e in blocked.get(term_id, ())):
+                continue
+            if any(
+                s <= m.start() and m.end() <= e and m.end() - m.start() < e - s for s, e in named
+            ):
+                continue
+            candidates.append(_Mention(m.start(), m.end(), term_id))
     candidates.sort(key=lambda c: (c.start, -(c.end - c.start), c.term))
     chosen: list[_Mention] = []
     reached = 0
