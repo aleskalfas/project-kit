@@ -22,8 +22,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-23T08:53:43Z
-      outcome: updated
+      at: 2026-10-24T18:58:16Z
+      outcome: unchanged
+      unchanged-because: Running checks gains the pages' console fences, a line of the aggregator. The section still calls whoever holds the repository's settings the operator, as the note says.
 ---
 
 # ACT-operator — Operator
