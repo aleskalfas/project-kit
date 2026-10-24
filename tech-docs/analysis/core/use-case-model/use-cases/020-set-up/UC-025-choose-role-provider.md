@@ -51,26 +51,26 @@ pkit:
 
 **Assumptions:** None.
 
-**Trigger:** [Validation](../../../glossary.md#term-validation--validation) or the status [report](../../../glossary.md#term-report--report) names a [role](../../../glossary.md#term-role--role) that two installed [capabilities](../../../glossary.md#term-capability--capability) provide, or the adopter prefers another of its providers.
+**Trigger:** [Validation](../../../glossary.md#term-validation--validation) or `pkit status` names a [role](../../../glossary.md#term-role--role) that two installed [capabilities](../../../glossary.md#term-capability--capability) provide, or the adopter prefers another of its providers.
 
 **Main path:**
 
 1. The adopter runs `pkit status`. For the [role](../../../glossary.md#term-role--role), the [system](../../../glossary.md#term-system--system) prints `<role> — conflict: <providers> provide it and none is selected`, then `fix: pkit connections providers set <role> <capability>` for each provider.
 2. The adopter runs `pkit connections providers set <role> <capability>`.
-3. At its entry, before it reads anything, the system checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+3. At its entry, before it reads anything, the system checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit connections providers set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 4. The system checks that the [capability](../../../glossary.md#term-capability--capability) is installed, and that it provides the role (COR-053 point 7).
-5. The system shows the change it would make to the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration): the entry `connections.providers.<role>` in `.pkit/project/config.yaml`. It asks `Set connections.providers.<role> = '<capability>' in .pkit/project/config.yaml?` (COR-048 point 5).
+5. The system shows the edit it would make to the [backbone configuration](../../../glossary.md#term-backbone-configuration--backbone-configuration): the entry `connections.providers.<role>` in `.pkit/project/config.yaml`. It asks `Set connections.providers.<role> = '<capability>' in .pkit/project/config.yaml?` (COR-048 point 5).
 6. On a yes, the system writes the entry, and prints `set connections.providers.<role> = <capability>  (.pkit/project/config.yaml)`.
 7. The adopter runs `pkit validate`. The role has its provider, so [validation](../../../glossary.md#term-validation--validation) passes it, and the [backbone](../../../glossary.md#term-backbone--backbone) resolves the role's [connection points](../../../glossary.md#term-connection-point--connection-point) through the selected capability.
 
 **Variants:**
 
 - **1a.** The adopter runs `pkit validate` first. It fails with `role '<role>' is provided by <providers> and no provider is selected`, naming the command that writes the selection (COR-053 [point](../../../glossary.md#term-point--point) 1).
-- **2a.** The adopter passes `--dry-run`. The [system](../../../glossary.md#term-system--system) shows the [change](../../../glossary.md#term-change--change), prints `Dry run: nothing written.`, and writes nothing.
+- **2a.** The adopter passes `--dry-run`. The [system](../../../glossary.md#term-system--system) shows the edit it would make, prints `Dry run: nothing written.`, and writes nothing.
 - **2b.** The adopter passes `--yes` with `--dry-run`. The system refuses with `--yes and --dry-run exclude each other: one writes, the other never does.`, and writes nothing.
 - **4a.** The [capability](../../../glossary.md#term-capability--capability) is not installed. The system refuses, naming `pkit capabilities install <capability>` and the installed providers of the [role](../../../glossary.md#term-role--role), and writes nothing. The path rejoins at step 2.
 - **4b.** The capability does not provide the role. The system refuses, naming the roles it provides and the installed providers of the role, and writes nothing. The path rejoins at step 2.

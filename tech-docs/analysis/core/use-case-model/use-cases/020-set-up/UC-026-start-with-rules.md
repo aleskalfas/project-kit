@@ -71,7 +71,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit sync`.
-2. At its entry, before it reads anything, each writing command of this use case checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Those are `pkit sync`, and `pkit init` and `pkit upgrade` in variant 1a. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Those are `pkit sync`, and `pkit init` and `pkit upgrade` in variant 1a. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** none of those three commands runs such a check, and each writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.

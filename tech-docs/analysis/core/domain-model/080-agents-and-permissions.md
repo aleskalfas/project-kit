@@ -315,9 +315,9 @@ The agent workspace is the folder `.agent-workspace/` at the root of a checkout,
 
 Defined in [TERM-session-anchor](../glossary.md#term-session-anchor--session-anchor).
 
-**Why:** A session carries the governance of the one repository it started in. So a [change](../glossary.md#term-change--change) it makes in another repository runs under the wrong governance (COR-039). A command can be pointed at any directory, so the [system](../glossary.md#term-system--system) needs something fixed to compare with (ADR-034 [point](../glossary.md#term-point--point) 1).
+**Why:** A session carries the governance of the one repository it started in. So a write it makes in another repository runs under the wrong governance (COR-039). A command can be pointed at any directory, so the [system](../glossary.md#term-system--system) needs something fixed to compare with (ADR-034 [point](../glossary.md#term-point--point) 1).
 
-A session anchor is the directory the [harness](../glossary.md#term-harness--harness) records as an agent's session starts. It stays put when the working directory changes, as under `cd`. The cross-repository guard compares its repository with the repository a change would land in.
+A session anchor is the directory the [harness](../glossary.md#term-harness--harness) records as an agent's session starts. It stays put when the working directory changes, as under `cd`. The cross-repository guard compares its repository with the repository a [change](../glossary.md#term-change--change) would land in.
 
 **Attributes:**
 

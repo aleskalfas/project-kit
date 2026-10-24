@@ -40,7 +40,7 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): runs the [changeset](../../../glossary.md#term-changeset--changeset) guard on the [pull request](../../../glossary.md#term-pull-request--pull-request) with no person to [answer](../../../glossary.md#term-answer--answer). It reads the `skip-changeset` label as the guard's escape hatch.
+- **CI pipeline** (`ACT-ci-pipeline`): runs the [changeset](../../../glossary.md#term-changeset--changeset) guard on the [pull request](../../../glossary.md#term-pull-request--pull-request) with no person to reply. It reads the `skip-changeset` label as the guard's escape hatch.
 
 **Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 

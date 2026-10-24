@@ -47,14 +47,14 @@ pkit:
 - **AI agent** (`ACT-ai-agent`): composes the [report](../../../glossary.md#term-report--report) with the adopter through the `report-author` [skill](../../../glossary.md#term-skill--skill). Where the agent runs a report verb with `--yes`, the [system](../../../glossary.md#term-system--system) stages the report and posts nothing. So the adopter sees every word before the report leaves (ADR-047 [point](../../../glossary.md#term-point--point) 2).
 - **Methodology maintainer** (`ACT-methodology-maintainer`): receives the report, and links each tracked fix to it (UC-013).
 
-**Preconditions:** **From UC-048:** The adopter has the [system](../../../glossary.md#term-system--system)'s tool, `pkit`, on the machine.
+**Preconditions:** **From UC-048:** The adopter has the [system](../../../glossary.md#term-system--system)'s CLI, `pkit`, on the machine.
 
 **Assumptions:**
 
 - The adopter has a GitHub account, from which the [report](../../../glossary.md#term-report--report) is filed on project-kit's repository, through `gh` or a browser (PRJ-008).
 - The text the adopter writes holds nothing private. The [system](../../../glossary.md#term-system--system) builds the environment block without paths, and checks only an attached note for home paths (ADR-047 [point](../../../glossary.md#term-point--point) 2 and `report.py`).
 
-**Trigger:** The adopter hits a problem with the [system](../../../glossary.md#term-system--system), or wants the system to [change](../../../glossary.md#term-change--change).
+**Trigger:** The adopter hits a problem with the [system](../../../glossary.md#term-system--system), or wants the system altered.
 
 **Main path:**
 
@@ -74,12 +74,12 @@ pkit:
 
 **Variants:**
 
-- **1a.** The adopter wants a [change](../../../glossary.md#term-change--change), or gives free feedback. The adopter runs `pkit report change-request` or `pkit report feedback`, whose titles open with `[CR]` or `[Feedback]`. A change request's text gets the headings `Motivation`, `Desired behaviour` and `Current workaround`, unless it has them.
-- **1b.** An AI agent composes the [report](../../../glossary.md#term-report--report) with the adopter, through the `report-author` [skill](../../../glossary.md#term-skill--skill). The agent runs the verb with `--yes`, and the [system](../../../glossary.md#term-system--system) stages the report and prints `staged: pkit report submit <id>`. The adopter runs `pkit report submit <id>`, and the path goes on at step 3.
+- **1a.** The adopter wants the [system](../../../glossary.md#term-system--system) altered, or gives free feedback. The adopter runs `pkit report change-request` or `pkit report feedback`, whose titles open with `[CR]` or `[Feedback]`. The text of a `change-request` [report](../../../glossary.md#term-report--report) gets the headings `Motivation`, `Desired behaviour` and `Current workaround`, unless it has them.
+- **1b.** An AI agent composes the report with the adopter, through the `report-author` [skill](../../../glossary.md#term-skill--skill). The agent runs the verb with `--yes`, and the system stages the report and prints `staged: pkit report submit <id>`. The adopter runs `pkit report submit <id>`, and the path goes on at step 3.
 - **1c.** The adopter attaches a [scratchpad note](../../../glossary.md#term-scratchpad-note--scratchpad-note) with `--scratchpad <slug>`. The system checks the note for home paths, and asks before posting where the system finds one. After a complete post, the system moves the note to `reported/` (COR-043 [point](../../../glossary.md#term-point--point) 3).
 - **1d.** The adopter files for another person with `--on-behalf-of @<login>`. The report says it was filed for that person, and that person's `pkit report` lists it, marked `(filed for you)`.
 - **1e.** The adopter runs the verb outside a [project](../../../glossary.md#term-project--project). The system warns, and marks the project's half of the environment block `NOT COLLECTED`. The path goes on at step 3.
-- **2a.** The project declares no name, on the path that posts through `gh`. The system asks for one, offering the remote repository's name, and offers to save the [answer](../../../glossary.md#term-answer--answer) in the project's settings. Until the answer is saved, the system asks at each report (ADR-050 point 1). On any other path, the system takes the remote repository's name without asking.
+- **2a.** The project declares no name, on the path that posts through `gh`. The system asks for one, offering the remote repository's name, and offers to save the name in the project's settings. Until the name is saved, the system asks at each report (ADR-050 point 1). On any other path, the system takes the remote repository's name without asking.
 - **2b.** The project has [capabilities](../../../glossary.md#term-capability--capability) the system does not ship, such as the project's own. The environment block counts them, and leaves out their names unless `--include-private` asks for them.
 - **3a.** `gh` is not signed in, or the adopter passes `--url`. The system prints a prefilled link to a new issue, and warns that the browser's signed-in account files it. With a note attached, the output ends with `pkit scratchpad reported <slug> <issue-ref>`, the command that moves the note once the report is filed (COR-043 point 3). The adopter files the report in the browser, and the path goes on at step 5.
 - **3b.** On the path of 3a, the report is longer than a link can carry, 6000 characters. The system refuses the link, naming the ways that remain, and the use case ends.

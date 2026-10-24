@@ -68,7 +68,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit permissions diagnose on`.
-2. At its entry, before it reads anything, each writing command of this use case checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Those are `diagnose on`, `diagnose off` and `pkit permissions grant`. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Those are `diagnose on`, `diagnose off` and `pkit permissions grant`. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** none of those three commands runs such a check, and each writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -76,10 +76,10 @@ pkit:
 3. The system arms a diagnostic session for a bounded time, eight hours by default (PRJ-006 points 1 and 5, and `permissions.py`). It says that the log is local and ignored by git.
 4. The agents work as usual. The [permission hook](../../../glossary.md#term-permission-hook--permission-hook) defers some calls to the [harness](../../../glossary.md#term-harness--harness). For each, it has the [backbone](../../../glossary.md#term-backbone--backbone)'s capture code append the call to the log, its command's tail redacted (PRJ-006 point 2). That code needs only the system `python3` (REQ-016).
 5. The operator runs `pkit permissions diagnose report`, which writes nothing (REQ-005).
-6. The system matches each logged call against the allow rules of the harness's settings files, and splits the calls three ways:
-   - the calls an allow [rule](../../../glossary.md#term-rule--rule) matches whole, which the [report](../../../glossary.md#term-report--report) counts as never prompted
-   - the chained shell commands whose every segment an allow rule matches, which only their chaining made prompt
-   - the rest, which no allow rule covers
+6. The system matches each logged call against the allow entries of the harness's settings files, and splits the calls three ways:
+   - the calls an allow entry matches whole, which `diagnose report` counts as never prompted
+   - the chained shell commands whose every segment an allow entry matches, which only their chaining made prompt
+   - the rest, which no allow entry covers
 7. The system groups the logged calls, and ranks the groups by frequency within bands, in this order: defects, recommendations and judgement calls.
 8. For each group, the system names a remediation, such as granting a [privilege](../../../glossary.md#term-privilege--privilege) of the catalog, or narrowing a chain to single commands. It applies none of them (PRJ-006 point 3).
 9. The operator applies the chosen remediations, such as with `pkit permissions grant <subject> <privilege>` (UC-022).
@@ -100,11 +100,11 @@ pkit:
 - **7a.** A file tool was deferred on a target in the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace). The report puts that deferral first, in its `workspace` group in the band of defects (ADR-060 point 7). Every agent is granted the `workspace` privilege, so the remediation is to check the active [profile](../../../glossary.md#term-profile--profile) and enforcement, or to report a bug.
 - **9a.** A remediation needs a privilege the catalog lacks. Defining a privilege is the operator's own task, which no fix may ever do unattended (PRJ-006 point 4).
 
-**Postconditions:** The operator knows which calls the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) deferred and how often, and which [change](../../../glossary.md#term-change--change) of the operator's own would stop each group of prompts.
+**Postconditions:** The operator knows which calls the [permission hook](../../../glossary.md#term-permission-hook--permission-hook) deferred and how often, and which edit of the operator's own would stop each group of prompts.
 
 **Minimal guarantees:**
 
 - Logging never changes a decision, and a fault in it never blocks a call (PRJ-006 [point](../../../glossary.md#term-point--point) 2 and `diagnose_capture.py`).
 - A diagnostic session ends on its own once its time is up, so it never stays on unnoticed (PRJ-006 point 5).
-- The [report](../../../glossary.md#term-report--report) applies nothing (PRJ-006 point 3 and REQ-005).
+- `diagnose report` applies nothing (PRJ-006 point 3 and REQ-005).
 - The log stays local and ignored by git, and redacts each command's tail unless the operator asks otherwise (PRJ-006 point 5).

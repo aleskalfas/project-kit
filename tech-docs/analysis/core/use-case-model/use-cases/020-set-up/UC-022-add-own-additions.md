@@ -71,14 +71,14 @@ pkit:
 
 **Assumptions:** None.
 
-**Trigger:** The [project](../../../glossary.md#term-project--project) needs rules, settings, grants or paths of its own that the [methodology](../../../glossary.md#term-methodology--methodology) does not ship, such as a [rule](../../../glossary.md#term-rule--rule) on its own tooling.
+**Trigger:** The [project](../../../glossary.md#term-project--project) needs rules, settings, grants or paths of its own that the [methodology](../../../glossary.md#term-methodology--methodology) does not ship, such as an [operational rule](../../../glossary.md#term-operational-rule--operational-rule) on its tooling.
 
 **Main path:**
 
 1. The adopter writes the [project](../../../glossary.md#term-project--project)'s own [operational rules](../../../glossary.md#term-operational-rule--operational-rule) in `.pkit/rules/project.md`, beside the [methodology](../../../glossary.md#term-methodology--methodology)'s `.pkit/rules/core.md`. [Sync](../../../glossary.md#term-sync--sync) rewrites `core.md` at the [recorded version](../../../glossary.md#term-recorded-version--recorded-version), and never writes `project.md` (COR-001).
 2. The adopter writes the project's own settings for the [harness](../../../glossary.md#term-harness--harness) in the project side of an [adapter](../../../glossary.md#term-adapter--adapter)'s settings. An example is `claude-code`'s `.pkit/adapters/claude-code/settings/project/settings.json`, which first [install](../../../glossary.md#term-install--install) seeded empty.
 3. The adopter runs `pkit permissions grant <subject> <privilege>`, such as `pkit permissions grant agent:architect web-fetch`, with `--deny` for a deny [grant](../../../glossary.md#term-grant--grant).
-4. At its entry, before it reads anything, each writing command of this use case checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Those are `pkit permissions grant` and `revoke`, and later `pkit agents reconcile --write`, `pkit sync` and `pkit merge`. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+4. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Those are `pkit permissions grant` and `revoke`, and later `pkit agents reconcile --write`, `pkit sync` and `pkit merge`. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** none of those five commands runs such a check. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -98,7 +98,7 @@ pkit:
 - **5a.** The subject is none of the three forms, such as `agent:Architect`. The [system](../../../glossary.md#term-system--system) refuses, naming the three forms, and writes nothing. The path rejoins at step 3.
 - **5b.** The catalog holds no such [privilege](../../../glossary.md#term-privilege--privilege). The system refuses with ``privilege '<privilege>' is not in the catalog — run `pkit permissions catalog`.``, and writes nothing. The path rejoins at step 3.
 - **5c.** The adopter passes `--scope` for a privilege that takes no scope. The system refuses, and writes nothing. The path rejoins at step 3.
-- **6a.** The [project](../../../glossary.md#term-project--project)'s grants hold one for that subject and privilege already. The system changes it in [place](../../../glossary.md#term-place--place), and prints `updated: <subject> <effect> <privilege>`.
+- **6a.** The [project](../../../glossary.md#term-project--project)'s grants hold one for that subject and privilege already. The system changes it in place, and prints `updated: <subject> <effect> <privilege>`.
 - **6b.** The [grant](../../../glossary.md#term-grant--grant) allows what a [guardrail](../../../glossary.md#term-guardrail--guardrail) or a [capability](../../../glossary.md#term-capability--capability)'s grant denies. The grant is written, and each call that the deny covers stays denied (REQ-013).
 - **6c.** The adopter takes a grant back with `pkit permissions revoke <subject> <privilege>`. The system removes it, and prints `revoked: <subject> <privilege>`. Where no grant matches, it says there is nothing to revoke, and writes nothing.
 - **8a.** The adopter passes `--dry-run`, as to each command whose edit reaches past what the person named. The system shows the same list, and writes nothing (REQ-009).

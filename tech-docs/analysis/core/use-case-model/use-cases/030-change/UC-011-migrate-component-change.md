@@ -55,7 +55,7 @@ pkit:
 
 **Other actors:**
 
-- **CI pipeline** (`ACT-ci-pipeline`): runs the [migration](../../../glossary.md#term-migration--migration) check on every [pull request](../../../glossary.md#term-pull-request--pull-request), with no person to [answer](../../../glossary.md#term-answer--answer). It does so where the [component](../../../glossary.md#term-component--component)'s repository wires the check in, as project-kit's does (UC-006).
+- **CI pipeline** (`ACT-ci-pipeline`): runs the [migration](../../../glossary.md#term-migration--migration) check on every [pull request](../../../glossary.md#term-pull-request--pull-request), with no person to reply. It does so where the [component](../../../glossary.md#term-component--component)'s repository wires the check in, as project-kit's does (UC-006).
 - **AI agent** (`ACT-ai-agent`): writes the migration for the author through the `migration-author` [skill](../../../glossary.md#term-skill--skill), which pairs with the [stamp](../../../glossary.md#term-stamp--stamp) of step 2.
 - **Operator** (`ACT-operator`): is asked before the stamp writes in a repository other than the session's own. So no such write happens silently (REQ-012).
 
@@ -71,7 +71,7 @@ pkit:
 **Main path:**
 
 1. The author runs `pkit new migration --tier capability --component <name> --name <slug>` without `--version`, or has an AI agent run the command through the `migration-author` [skill](../../../glossary.md#term-skill--skill).
-9. At its entry, before it writes, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+9. At its entry, before it writes, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit new migration` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -80,7 +80,7 @@ pkit:
 3. The author writes the script to carry the projects across. The script is safe to run twice (COR-010 and REQ-001).
 4. The author runs `pkit migrations check-diff --include-working-tree` before committing.
 5. The system matches each rename and removal in the component's folder with a [migration](../../../glossary.md#term-migration--migration) of the same tier and component. It ends with `Verdict: COVERED (every tier:component with triggers has a matching migration).`
-6. The author commits the change with its migration and the component's [changeset](../../../glossary.md#term-changeset--changeset) (UC-003).
+6. The author commits the [change](../../../glossary.md#term-change--change) with its migration and the component's [changeset](../../../glossary.md#term-changeset--changeset) (UC-003).
 7. The CI pipeline runs `pkit migrations check-diff` on the [pull request](../../../glossary.md#term-pull-request--pull-request), and the check passes.
 8. The [release step](../../../glossary.md#term-release-step--release-step) that moves the component writes the version the migration's folder names (UC-009).
 

@@ -46,7 +46,7 @@ pkit:
 
 **Assumptions:** None.
 
-**Trigger:** The adopter considers a [capability](../../../glossary.md#term-capability--capability) for the [project](../../../glossary.md#term-project--project), by its name or from a suggestion the status [report](../../../glossary.md#term-report--report) gives.
+**Trigger:** The adopter considers a [capability](../../../glossary.md#term-capability--capability) for the [project](../../../glossary.md#term-project--project), by its name or from a suggestion `pkit status` gives.
 
 **Main path:**
 

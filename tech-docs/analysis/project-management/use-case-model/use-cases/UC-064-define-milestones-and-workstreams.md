@@ -78,7 +78,7 @@ pkit:
 
 1. The planner declares the [project](../../../core/glossary.md#term-project--project)'s [Milestone categories](../../glossary.md#term-milestone-category--milestone-category) in the [capability](../../../core/glossary.md#term-capability--capability)'s settings. Each has its title format, its default [close trigger](../../glossary.md#term-close-trigger--close-trigger) and what it means (DEC-016).
 2. The planner creates a [Milestone](../../glossary.md#term-milestone--milestone): `pkit pm create-milestone <category> --name "<name>" --due-on <date>`.
-3. At its entry, the system checks the project's prerequisites, and the planner's membership where the team keeps a list (REQ-041). It then checks that the repository it would [change](../../../core/glossary.md#term-change--change) is the session's own, and asks the operator where it is another (core:REQ-012).
+3. At its entry, the system checks the project's prerequisites, and the planner's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own, and asks the operator where it is another (core:REQ-012).
 4. The system checks that the category is declared, and builds the title from its format. Where the format holds a number, the system numbers the Milestone after the last of its category (DEC-016).
 
 > [!WARNING]
@@ -100,7 +100,7 @@ pkit:
 
 **Variants:**
 
-- **2a.** The planner passes `--dry-run` to any of these commands. The system makes its checks, prints what it would create, [change](../../../core/glossary.md#term-change--change) or move, and writes nothing. The use case ends.
+- **2a.** The planner passes `--dry-run` to any of these commands. The system makes its checks, prints what it would create, edit or move, and writes nothing. The use case ends.
 - **3a.** The [project](../../../core/glossary.md#term-project--project) does not meet the prerequisites, the planner is no member, or the operator declines a write in another repository. The system refuses and writes nothing (REQ-041 and core:REQ-012). The use case ends.
 - **4a.** The category is not declared, or the project declares none. The system refuses, names the declared categories, and creates nothing (DEC-016). The use case ends.
 - **4b.** A [Milestone](../../glossary.md#term-milestone--milestone) of that title exists. The system refuses, and asks for `--number` (`create-milestone.py`). The use case ends.

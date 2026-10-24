@@ -3,8 +3,8 @@ id: REQ-012
 title: The system asks the operator before its command changes another repository
 status: active
 statement: The system asks the operator before its command changes a repository other than the session's own, or its hosting service.
-measure: Run with the session anchor in one repository and its target in another, the command asks at a terminal before its first change. It changes something only on a yes, or on a confirmation passed with the call. With nobody to ask and no confirmation, it refuses and changes nothing.
-applies-to: "Every `pkit` command that writes, whether its change lands in files, in a repository's history or on the hosting service (ADR-034 point 1). A report is outside it, a write of another kind to the repository of the distribution (ADR-047 point 1). Where the harness gives no session anchor, such as in a pipeline, there is nothing to compare, and the check does not fire."
+measure: Run with the session anchor in one repository and its target in another, the command asks at a terminal before its first write. It changes something only on a yes, or on a confirmation passed with the call. With nobody to ask and no confirmation, it refuses and changes nothing.
+applies-to: "Every `pkit` command that writes, whether its write lands in files, in a repository's history or on the hosting service (ADR-034 point 1). A report is outside it, a write of another kind to the repository of the distribution (ADR-047 point 1). Where the harness gives no session anchor, such as in a pipeline, there is nothing to compare, and the check does not fire."
 actors:
   - ACT-operator
 refines: []
@@ -36,10 +36,10 @@ pkit:
 
 **Verified by:** Tests of the check find that the session's own repository passes silently. Another repository, with no terminal and no confirmation, is refused unasked. At a terminal the check asks on standard error, and only a yes passes. A dry run never asks.
 
-Tests run a [pull request](../../glossary.md#term-pull-request--pull-request)'s landing and its deletion of a branch from another repository. Tests run `pkit version tag --push`, `pkit release apply`, `release merge` and `release publish-notes` there too. Each refuses before its first [change](../../glossary.md#term-change--change), and a confirmation passed with the call lets it go on. No test covers any other command that writes, since none of them runs the check yet (#1765).
+Tests run a [pull request](../../glossary.md#term-pull-request--pull-request)'s landing and its deletion of a branch from another repository. Tests run `pkit version tag --push`, `pkit release apply`, `release merge` and `release publish-notes` there too. Each refuses before its first write, and a confirmation passed with the call lets it go on. No test covers any other command that writes, since none of them runs the check yet (#1765).
 
-**Rationale:** A session carries the governance of the repository it is rooted in. So a [change](../../glossary.md#term-change--change) it makes in another repository runs under the wrong [project](../../glossary.md#term-project--project)'s rules (COR-039). The operator confirms each such change, and none happens silently (COR-039 [point](../../glossary.md#term-point--point) 1).
+**Rationale:** A session carries the governance of the repository it is rooted in. So a write it makes in another repository runs under the wrong [project](../../glossary.md#term-project--project)'s rules (COR-039). The operator confirms each such write, and none happens silently (COR-039 [point](../../glossary.md#term-point--point) 1).
 
-ADR-034 point 1 puts the check in `pkit` itself. It compares the [session anchor](../../glossary.md#term-session-anchor--session-anchor), which does not move with `cd`, with the repository the change would land in. Today only the commands that change the hosting service run it, and #1765 tracks the rest.
+ADR-034 point 1 puts the check in `pkit` itself. It compares the [session anchor](../../glossary.md#term-session-anchor--session-anchor), which does not move with `cd`, with the repository the [change](../../glossary.md#term-change--change) would land in. Today only the commands that change the hosting service run it, and #1765 tracks the rest.
 
 The check is an interlock against an accidental change, not a security boundary (COR-039 point 3). A raw `git` or `gh` command, or an unset session anchor, routes around it.

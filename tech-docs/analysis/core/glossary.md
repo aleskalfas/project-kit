@@ -745,6 +745,7 @@ TERM-permission-hook:
         unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
 TERM-place:
   name: place
+  other-senses: [in place]
   status: active
   definition: path or glob the project or a component declares, within which the backbone looks for documents that carry anchors
   pkit:
@@ -1271,7 +1272,7 @@ TERM-validation:
 TERM-version:
   name: version
   noun-forms: [versions]
-  other-senses: ["data point's version"]
+  other-senses: ["data point's version", schema version, schema versions]
   status: active
   definition: "number of the form major.minor.patch that names one state of a top-level part of the system, as semantic versioning reads it"
   pkit:
@@ -1867,6 +1868,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Documentation root:** where a [project](#term-project--project) keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced copy:** a file that [propagation](#term-propagation--propagation) writes into the project, such as a core record. A folder of [synced copies](#term-synced-copy--synced-copy) is never a place, or each [sync](#term-sync--sync) would read as [friction](#term-friction--friction) (COR-050 [point](#term-point--point) 14).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents. No place reads a file in it as an [artefact](#term-artefact--artefact) (COR-050 point 1).
+- **In place:** where a file or an entry already stands, as in a record edited in place. In *in place of*, the phrase means instead of. It shares only the word.
 
 ## TERM-point — point
 

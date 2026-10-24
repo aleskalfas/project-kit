@@ -52,7 +52,7 @@ pkit:
 
 - An agent writes `accepted` on a record or a [rule](../../../glossary.md#term-rule--rule) only on the merge authoriser's word. Nothing at run time stops it writing the status unasked (COR-051 [point](../../../glossary.md#term-point--point) 4 and core rule 2).
 - Who accepts a [decision record](../../../glossary.md#term-decision-record--decision-record) is open. The [acceptance gate](../../../glossary.md#term-acceptance-gate--acceptance-gate) asks only for a reviewed status flip (core rule 2). COR-051 point 4 gives a rule's acceptance to a person's review, and #1674 tracks a record that says the same of a decision record.
-- Whoever accepts a rule gives its set the new major COR-051 point 7 asks for. No check compares a set's [version](../../../glossary.md#term-version--version) with the rules it accepts.
+- Whoever accepts a rule gives its set the new major COR-051 point 7 asks for. No check compares a set's `version` with the rules it accepts.
 
 **Trigger:** A drafted [decision record](../../../glossary.md#term-decision-record--decision-record) or [rule](../../../glossary.md#term-rule--rule) waits for acceptance.
 
