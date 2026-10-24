@@ -90,6 +90,10 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
+      revalidated:
+        at: 2026-10-24T01:59:05Z
+        outcome: unchanged
+        unchanged-because: The change adds where brownfield onboarding starts and ends to the build. A candidate is still an artefact or a record written but not yet committed, which a person confirms or discards.
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
