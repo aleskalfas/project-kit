@@ -964,14 +964,15 @@ def test_hook_keeps_the_abstain_when_the_check_faults(tmp_path):
         assert _decision(parsed) == "deny"
 
 
-# ---- read-only filters and the Python runner, end to end (#2000) -------------
+# ---- the read-only text filters and `uv run`, end to end (#2000) -------------
 #
 # The live hook, in a tree whose active profile is a shipped one and whose own
-# grants are project-kit's: a compound of read-only filters, `uv` and granted
+# grants are project-kit's: a compound of text filters, `uv run` and granted
 # programs is allowed for the project manager and for a builder. A program
-# that writes a file stays uncovered, a redirection still defers, and a
-# guardrail still denies. The `pkit permissions` CLI, which builds the model
-# and decides through the same loaders, reaches the same verdict on each.
+# that writes a file or runs another stays uncovered, a redirection still
+# defers, and a guardrail still denies. The `pkit permissions` CLI, which
+# builds the model and decides through the same loaders, reaches the same
+# verdict on each.
 
 _BUILDER_AGENTS = ("project-manager", "software-engineer")
 _FILTER_CASES = (
@@ -979,9 +980,12 @@ _FILTER_CASES = (
     ("cat f | grep x", "allow"),
     ("uv run pytest t.py -q | tail -3", "allow"),
     ("cd {root} && uv run pkit validate | tail -1", "allow"),
+    ("cat f | sort | uniq -c | head -5", "allow"),
     ("grep x f | sort -o out.txt", None),
     ("grep x f | uniq in.txt out.txt", None),
+    ("diff -l a b | head", None),
     ("grep x f | sed -i s/a/b/ g", None),
+    ("echo y | uv run pkit validate", None),
     ("grep x f > out.txt", None),
     ("cat f && sudo id", "deny"),
 )
@@ -1006,7 +1010,7 @@ def _profile_tree(tmp_path: Path, profile: str) -> Path:
 
 
 @pytest.mark.parametrize("profile", ["non-destructive", "read-only"])
-def test_hook_allows_filters_and_the_runner_as_the_cli_decides(tmp_path, profile):
+def test_hook_allows_text_filters_and_uv_run_as_the_cli_decides(tmp_path, profile):
     from project_kit import permissions as perm
 
     root = _profile_tree(tmp_path, profile)

@@ -78,57 +78,74 @@ privileges:
     recognize:
       bash:
         - cmd: pkit
-  read-filter:
+  text-filter:
     description: >-
-      Read-only filters: programs that read files or standard input, write
-      only to standard output and run no other program, so a pipe or chain of
-      them with other granted programs needs no prompt. `sort` and `uniq` are
-      recognized only in a form that writes no file and runs nothing else.
-      `diff` and `printf` are left out: `diff -l` runs `pr`, and the shell's
-      `printf -v` sets a variable, such as `PATH`.
+      The read-only part of the text-processing shell tier: programs that read
+      files or standard input, write only to standard output and run no other
+      program, so a pipe or chain of them with other granted programs needs no
+      prompt. Each is recognized by a pattern that names it, so a grant of it
+      is never written into a native allow list; only the hook realizes it
+      (ADR-005 point 5). It carries no path scope, since a scope on a shell
+      read confines nothing (ADR-004). `sort`, `uniq` and `diff` are recognized
+      only in a form that writes no file and runs no other program, holding no
+      pathname pattern that could expand to such a form.
     recognize:
       bash:
-        - cmd: cat
-        - cmd: head
-        - cmd: tail
-        - cmd: wc
-        - cmd: cut
-        - cmd: tr
-        - cmd: grep
-        - cmd: egrep
-        - cmd: fgrep
-        - cmd: jq
-        - cmd: ls
-        - cmd: cmp
-        - cmd: basename
-        - cmd: dirname
-        - cmd: realpath
-        - cmd: pwd
-        - cmd: echo
-        - cmd: 'true'
-        - cmd: 'false'
+        - pattern: '^cat(\s|$)'
+        - pattern: '^head(\s|$)'
+        - pattern: '^tail(\s|$)'
+        - pattern: '^wc(\s|$)'
+        - pattern: '^cut(\s|$)'
+        - pattern: '^tr(\s|$)'
+        - pattern: '^grep(\s|$)'
+        - pattern: '^egrep(\s|$)'
+        - pattern: '^fgrep(\s|$)'
+        - pattern: '^ls(\s|$)'
+        - pattern: '^cmp(\s|$)'
+        - pattern: '^comm(\s|$)'
+        - pattern: '^paste(\s|$)'
+        - pattern: '^basename(\s|$)'
+        - pattern: '^dirname(\s|$)'
+        - pattern: '^realpath(\s|$)'
+        - pattern: '^pwd(\s|$)'
+        - pattern: '^true(\s|$)'
+        - pattern: '^false(\s|$)'
+        - pattern: '^seq(\s|$)'
+        - pattern: '^sleep(\s|$)'
+        - pattern: '^stat(\s|$)'
+        - pattern: '^du(\s|$)'
+        - pattern: '^which(\s|$)'
         # `sort` with no word that opens an output file, a compress program or
         # a temporary directory, in any form GNU or BSD sort reads: `-o`, `-T`
         # or a short bundle holding either (`-ro`, `-oout`), and a long option
         # cut to a prefix of `--output`, `--compress-program` or
         # `--temporary-directory` (`--o`, `--co`, `--t`), with or without `=`.
-        # It errs narrow: `-to`, a separator `o`, and `--check` stay out too.
-        - pattern: '^sort(?=\s|$)(?!.*\s(?:-[^-\s]*[oT]|--[cot]))'
+        # It errs narrow: `-to`, `--check` and a pathname pattern, which the
+        # shell may expand to a file named `-ofile`, stay out too.
+        - pattern: '^sort(\s|$)(?!(?:.*\s)?(?:-[^-\s]*[oT]|--[cot]))(?!.*[*?\[^#~])'
         # `uniq` with its options first, then at most one operand, the input,
         # and nothing after it: a second operand is the output file. `-` and
-        # `--` are no options here, and an empty word leaves two spaces, so a
-        # form whose words the regex cannot count stays out.
-        - pattern: '^uniq(?:\s(?:-[^-\s]\S*|--\S+))*(?:\s[^-\s]\S*)?$'
-  python-runner:
+        # `--` are no options here, and a word holding a pathname pattern,
+        # which the shell may expand to two operands, matches no part, so a
+        # form whose operands the regex cannot count stays out.
+        - pattern: '^uniq(?:\s(?:-[^-\s*?\[^#~][^\s*?\[^#~]*|--[^\s*?\[^#~]+))*(?:\s[^-\s*?\[^#~][^\s*?\[^#~]*)?$'
+        # `diff` with no word that pipes its output through `pr`: `-l` or a
+        # short bundle holding it, and a long option cut to a prefix of
+        # `--paginate` (`--p`). It errs narrow: `--palette`, a label holding an
+        # `l` and a pathname pattern stay out too.
+        - pattern: '^diff(\s|$)(?!(?:.*\s)?(?:-[^-\s]*l|--p))(?!.*[*?\[^#~])'
+  uv-run:
     description: >-
-      Run the project's Python toolchain through `uv`, such as `uv run pytest`.
-      `uv run` runs whatever program it is given, so a grant allows what that
-      program does, and a guardrail's deny does not see past `uv` to it. No
-      shipped profile grants it (ADR-005): a project grants it in its own
-      grants.
+      Run a program in the project's Python environment through `uv run`, such
+      as `uv run pytest`. `uv run` runs any program it is given and confines
+      nothing, so a grant allows whatever that program does. A deny reads the
+      command as the wrapper, `uv`, never as the program behind it (ADR-025
+      point 5). No shipped profile grants it (ADR-005 point 5): a project
+      grants it in its own grants.
     recognize:
       bash:
         - cmd: uv
+          subcommand: [run]
   docker:
     description: Run docker / docker-compose.
     recognize:

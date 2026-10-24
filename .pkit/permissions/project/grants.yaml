@@ -1,13 +1,13 @@
 schema_version: 1
-# The agent:project-manager / issue-tracker-write deny has moved to the
+# Capability-derived grants (issue-tracker-write deny etc.) live in the
 # project-management capability fragment (.pkit/capabilities/project-management/
 # permissions/grants.yaml) per ADR-016. This file remains for project-specific
 # manual grants; no capability policy belongs here.
 grants:
-  # The Python runner (#2000): project-kit runs its toolchain through `uv`, as
-  # its native allow list already does for `uv` alone, so a compound such as
+  # `uv run` (#2000): project-kit runs its toolchain through it, and its native
+  # allow list already runs `uv` alone, so a compound such as
   # `uv run pytest t.py -q | tail -3` needs no prompt. No shipped profile
-  # grants it (ADR-005); `uv run` runs whatever program it is given.
+  # grants it (ADR-005 point 5): `uv run` runs any program it is given.
   - subject: all
-    privilege: "[privilege-catalog:python-runner]"
+    privilege: "[privilege-catalog:uv-run]"
     effect: allow

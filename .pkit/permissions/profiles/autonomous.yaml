@@ -1,8 +1,8 @@
 # Permission profile: autonomous (per ADR-005). Non-destructive (which grants
-# the read-only filters, #2000) + infra/network domain privileges (docker,
-# web-fetch). Scripting autonomy (bash/python without prompts) is REFERENCED,
-# not granted here: no profile grants the Python runner (`uv`), which a project
-# grants in its own grants.yaml. It rides the OS sandbox — turn it on
+# the read-only text filters, `text-filter`) + infra/network domain privileges
+# (docker, web-fetch). Scripting autonomy (bash/python without prompts) is
+# REFERENCED, not granted here: no shipped profile grants `uv-run`, which a
+# project grants in its own grants.yaml. It rides the OS sandbox — turn it on
 # with `pkit permissions sandbox enable` (#274; fail-closed per ADR-004) for
 # prompt-free scripting confined to the box. A profile still never WRITES the
 # sandbox block (ADR-005): confinement stays a separate, session-wide operator
@@ -19,7 +19,7 @@ grants:
       - "[privilege-catalog:issue-tracker]"
       - "[privilege-catalog:kit]"
       - "[privilege-catalog:repo-read]"
-      - "[privilege-catalog:read-filter]"
+      - "[privilege-catalog:text-filter]"
       - "[privilege-catalog:workspace]"
       - "[privilege-catalog:docker]"
       - "[privilege-catalog:web-fetch]"

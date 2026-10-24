@@ -3598,17 +3598,17 @@ def test_hook_decide_still_decides_as_decide(decide_mod, catalog):
     assert verdict == "abstain" and "fail-open" in why
 
 
-# ---- read-only filters and the Python runner in a compound (#2000) -----------
+# ---- the read-only text filters and `uv run` in a compound (#2000) -----------
 #
-# Every shipped profile grants the read-only filters to every agent, and
-# project-kit's own grants give every agent the Python runner, `uv`. ADR-025
-# point 2 already allows a compound whose every segment a grant covers, so a
-# pipe or chain of filters, `uv` and the programs a profile grants is allowed
-# for the project manager and for a builder alike. A program that writes a file
-# or runs another stays unrecognized, a deny still wins, and an untrusted
-# construct still defers. The model is built from the shipped files, as
-# `load_model` composes them: guardrails, the profile, the project-management
-# fragment, then project-kit's own grants.
+# Every shipped profile grants `text-filter` to every agent, and project-kit's
+# own grants give every agent `uv-run`. ADR-025 point 2 already allows a
+# compound whose every segment a grant covers, so a pipe or chain of filters,
+# `uv run` and the programs a profile grants is allowed for the project manager
+# and for a builder alike. A program that writes a file or runs another stays
+# unrecognized, a deny still wins, and an untrusted construct still defers. The
+# model is built from the shipped files, as `load_model` composes them:
+# guardrails, the profile, the project-management fragment, then project-kit's
+# own grants.
 
 _PROFILES = REPO_ROOT / ".pkit" / "permissions" / "profiles"
 _PROJECT_GRANTS = REPO_ROOT / ".pkit" / "permissions" / "project" / "grants.yaml"
@@ -3616,6 +3616,33 @@ _PM_FRAGMENT = (
     REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "permissions" / "grants.yaml"
 )
 _BUILDERS = ("agent:project-manager", "agent:software-engineer")
+_SHIPPED = ("read-only", "non-destructive", "autonomous")
+_TEXT_FILTERS = (
+    "cat",
+    "head",
+    "tail",
+    "wc",
+    "cut",
+    "tr",
+    "grep",
+    "egrep",
+    "fgrep",
+    "ls",
+    "cmp",
+    "comm",
+    "paste",
+    "basename",
+    "dirname",
+    "realpath",
+    "pwd",
+    "true",
+    "false",
+    "seq",
+    "sleep",
+    "stat",
+    "du",
+    "which",
+)
 
 
 def _shipped_model(decide_mod, catalog, profile: str) -> dict[str, Any]:
@@ -3631,24 +3658,35 @@ def _shipped_model(decide_mod, catalog, profile: str) -> dict[str, Any]:
     }
 
 
+# Filters and `uv run` alone: allowed under every shipped profile.
 _FILTER_COMPOUNDS = [
-    "grep x f | head",
+    "grep x f | head -5",
     "cat f | grep x",
+    "grep x f | head",
     "uv run pytest t.py -q | tail -3",
+    "cd /Users/x/wt && uv run pytest -q | tail -3",
     "cd /Users/x/proj && uv run pkit validate | tail -1",
-    "cat f | sort | uniq -c | head -5",
+    "cat f | sort | uniq -c | sort -rn | head -5",
     "ls docs | wc -l",
+    "diff -u a b | head",
+    "cut -d, -f1 f | tr a-z A-Z | paste -sd, -",
+    "seq 3 && sleep 1 && pwd",
+    "uv run pytest t.py -q || true",
+]
+# With the programs the two wider profiles grant, such as `git` and `pkit`.
+_GRANTED_COMPOUNDS = [
+    "git log | head",
     "git log --oneline | head -5",
-    "gh pr list | jq .",
-    "jq -r .name f | cut -d, -f1 | tr a-z A-Z",
-    "echo done && pwd",
+    "pkit validate | tail",
+    "pkit validate || true",
+    "cd /Users/x/wt && git diff --stat | tail -1",
 ]
 
 
-@pytest.mark.parametrize("profile", ["read-only", "non-destructive", "autonomous"])
+@pytest.mark.parametrize("profile", _SHIPPED)
 @pytest.mark.parametrize("subject", _BUILDERS)
-@pytest.mark.parametrize("command", _FILTER_COMPOUNDS[:4])
-def test_a_filter_or_runner_compound_is_allowed_under_every_profile(
+@pytest.mark.parametrize("command", _FILTER_COMPOUNDS)
+def test_a_filter_or_uv_run_compound_is_allowed_under_every_profile(
     decide_mod, catalog, profile, subject, command
 ):
     model = _shipped_model(decide_mod, catalog, profile)
@@ -3656,24 +3694,41 @@ def test_a_filter_or_runner_compound_is_allowed_under_every_profile(
     assert d == "allow", (profile, command, why)
 
 
+@pytest.mark.parametrize("profile", ["non-destructive", "autonomous"])
 @pytest.mark.parametrize("subject", _BUILDERS)
-@pytest.mark.parametrize("command", _FILTER_COMPOUNDS)
-def test_a_filter_compound_with_granted_programs_is_allowed(decide_mod, catalog, subject, command):
-    model = _shipped_model(decide_mod, catalog, "autonomous")
+@pytest.mark.parametrize("command", _GRANTED_COMPOUNDS)
+def test_a_filter_compound_with_granted_programs_is_allowed(
+    decide_mod, catalog, profile, subject, command
+):
+    model = _shipped_model(decide_mod, catalog, profile)
     d, why = decide_mod.decide(model, catalog, _bash(command, subject))
-    assert d == "allow", (command, why)
+    assert d == "allow", (profile, command, why)
 
 
-def test_the_runner_is_granted_by_the_project_not_by_a_profile(decide_mod, catalog):
-    # ADR-005: no shipped profile grants scripting; project-kit's grants do.
-    for profile in ("read-only", "non-destructive", "autonomous"):
+@pytest.mark.parametrize("program", _TEXT_FILTERS)
+def test_each_text_filter_is_recognized_by_its_name_alone(decide_mod, catalog, program):
+    for command in (program, f"{program} -x f", f'"{program}" f'):
+        assert "text-filter" in decide_mod.recognized_privileges(
+            catalog, _bash(command, "operator")
+        ), command
+    # A longer name that opens with it, or the program named by its path, is not.
+    for command in (f"{program}x f", f"/bin/{program} f"):
+        assert "text-filter" not in decide_mod.recognized_privileges(
+            catalog, _bash(command, "operator")
+        ), command
+
+
+def test_uv_run_is_granted_by_the_project_not_by_a_profile(decide_mod, catalog):
+    # ADR-005 point 5: every shipped profile grants text-filter, and none
+    # grants uv-run, which project-kit's own grants do.
+    for profile in _SHIPPED:
         shipped = decide_mod.load_yaml(str(_PROFILES / f"{profile}.yaml"))
         tokens = {
             token
             for grant in shipped["grants"]
             for token in decide_mod._privilege_ids(grant["privilege"])
         }
-        assert "read-filter" in tokens and "python-runner" not in tokens, profile
+        assert "text-filter" in tokens and "uv-run" not in tokens, profile
     profile_only = {
         "posture": "lenient",
         "grants": [
@@ -3686,37 +3741,96 @@ def test_the_runner_is_granted_by_the_project_not_by_a_profile(decide_mod, catal
 
 
 @pytest.mark.parametrize(
-    "command",
+    "command,recognized",
     [
-        "sed -i s/a/b/ f",
-        "awk -f prog.awk f",
-        "find . -name x",
-        "xargs rm",
-        "tee out.txt",
-        "rg x",
-        "diff -l a b",
-        "printf -v PATH /tmp/x",
-        "sort -o out.txt f",
-        "sort f -o out.txt",
-        "sort -ro out.txt f",
-        "sort -rnoout.txt f",
-        "sort --output=out.txt f",
-        "sort --output out.txt f",
-        "sort --out=out.txt f",
-        "sort --compress-program=sh f",
-        "sort --compress-prog sh f",
-        "sort -T /tmp/x f",
-        "sort --temporary-directory=/tmp/x f",
-        "uniq in.txt out.txt",
-        "uniq -c in.txt out.txt",
-        "uniq in.txt -c",
-        "uniq - out.txt",
-        "uniq -- in.txt out.txt",
-        "uniq '' out.txt",
+        ("uv run pytest -q", True),
+        ("uv run --with x pytest", True),
+        ("uv --quiet run pytest", True),
+        ("uv pip install x", False),
+        ("uv sync", False),
+        ("uv tool run x", False),
+        ("uv", False),
+        ("uvx pytest", False),
     ],
 )
+def test_uv_run_recognizes_the_run_subcommand_only(decide_mod, catalog, command, recognized):
+    found = decide_mod.recognized_privileges(catalog, _bash(command, "operator"))
+    assert ("uv-run" in found) is recognized, command
+
+
+# Each form of `sort`, `uniq` and `diff` that writes a file or runs another
+# program, as GNU and BSD read them, and a pathname pattern the shell may
+# expand to such a form.
+_SORT_EXCLUDED = [
+    "sort -o out.txt f",
+    "sort f -o out.txt",
+    "sort -oout.txt f",
+    "sort -ro out.txt f",
+    "sort -rnoout.txt f",
+    'sort "-o" out.txt f',
+    "sort --output=out.txt f",
+    "sort --output out.txt f",
+    "sort '--output=out.txt' f",
+    "sort --out=out.txt f",
+    "sort --o out.txt f",
+    "sort --compress-program=sh f",
+    "sort --compress-prog sh f",
+    "sort --co=sh f",
+    "sort -T /tmp/x f",
+    "sort -rT/tmp/x f",
+    "sort --temporary-directory=/tmp/x f",
+    "sort --temp /tmp/x f",
+    "sort *",
+    "sort -* f",
+    "sort f?",
+    "sort [a]b",
+    "sort ~/f",
+]
+_UNIQ_EXCLUDED = [
+    "uniq in.txt out.txt",
+    "uniq -c in.txt out.txt",
+    'uniq "in.txt" "out.txt"',
+    "uniq in.txt -c",
+    "uniq - out.txt",
+    "uniq -- in.txt out.txt",
+    "uniq '' out.txt",
+    "uniq *",
+    "uniq -c *.txt",
+    "uniq in?",
+    "uniq -* in.txt",
+]
+_DIFF_EXCLUDED = [
+    "diff -l a b",
+    "diff -ul a b",
+    "diff -lu a b",
+    "diff a b -l",
+    "diff --paginate a b",
+    "diff --pag a b",
+    "diff * b",
+    "diff -u a*",
+    "diff a b?",
+    "diff -* a b",
+]
+_OTHER_EXCLUDED = [
+    "sed -i s/a/b/ f",
+    "awk -f prog.awk f",
+    "find . -name x",
+    "xargs rm",
+    "tee out.txt",
+    "rg x",
+    "sh",
+    "echo x",
+    "printf -v PATH /tmp/x",
+    "date",
+    "jq .",
+]
+
+
+@pytest.mark.parametrize(
+    "command", [*_SORT_EXCLUDED, *_UNIQ_EXCLUDED, *_DIFF_EXCLUDED, *_OTHER_EXCLUDED]
+)
 def test_a_program_that_writes_or_runs_another_is_no_filter(decide_mod, catalog, command):
-    assert "read-filter" not in decide_mod.recognized_privileges(
+    assert "text-filter" not in decide_mod.recognized_privileges(
         catalog, _bash(command, "operator")
     )
     lenient = _shipped_model(decide_mod, catalog, "autonomous")
@@ -3730,16 +3844,24 @@ def test_a_program_that_writes_or_runs_another_is_no_filter(decide_mod, catalog,
 @pytest.mark.parametrize(
     "command",
     [
+        "sort",
+        "sort -",
         "sort f",
         "sort -u -t, -k2,2 f",
         "sort -rn --key=2 f",
+        "sort -t o -k1 f",
         "uniq",
+        "uniq -c",
         "uniq -c in.txt",
         "uniq --skip-fields=1 -d in.txt",
+        "diff a b",
+        "diff -u a b",
+        "diff -ru dir1 dir2",
+        "diff --brief a b",
     ],
 )
-def test_sort_and_uniq_are_filters_where_they_write_no_file(decide_mod, catalog, command):
-    assert "read-filter" in decide_mod.recognized_privileges(catalog, _bash(command, "operator"))
+def test_sort_uniq_and_diff_are_filters_where_they_write_no_file(decide_mod, catalog, command):
+    assert "text-filter" in decide_mod.recognized_privileges(catalog, _bash(command, "operator"))
 
 
 @pytest.mark.parametrize(
@@ -3752,7 +3874,7 @@ def test_sort_and_uniq_are_filters_where_they_write_no_file(decide_mod, catalog,
         ("gh pr view 1 | head", "issue-tracker-read-raw"),
     ],
 )
-def test_a_deny_still_wins_over_filters_and_the_runner(decide_mod, catalog, command, privilege):
+def test_a_deny_still_wins_over_filters_and_uv_run(decide_mod, catalog, command, privilege):
     model = _shipped_model(decide_mod, catalog, "autonomous")
     d, why = decide_mod.decide(model, catalog, _bash(command, "agent:project-manager"))
     assert d == "deny" and privilege in why, why
@@ -3764,8 +3886,10 @@ def test_a_deny_still_wins_over_filters_and_the_runner(decide_mod, catalog, comm
         "grep x f > out.txt",
         "cat f | head >> out.txt",
         "uv run pytest t.py -q 2>&1 | tail -3",
+        "pkit validate 2>&1 | tail",
         "cat < f | head",
         "cat <<EOF\nx\nEOF",
+        "echo x > f",
         "grep $X f | head",
         "cat f | head -n $(id -u)",
         "echo `id` | cat",
@@ -3780,16 +3904,39 @@ def test_an_untrusted_construct_still_defers(decide_mod, catalog, command):
             assert d == expected, (profile, command, why)
 
 
-def test_filter_and_runner_hook_and_decide_parity(decide_mod, catalog):
+@pytest.mark.parametrize(
+    "command",
+    [
+        "cat x | sh",
+        "cat x | xargs rm",
+        "echo y | pkit pm close-issue 1",
+        "grep x f | sed s/a/b/",
+        "gh pr list | jq .",
+    ],
+)
+def test_a_pipe_into_an_ungranted_program_still_defers(decide_mod, catalog, command):
+    # `echo` is no text filter: `echo y | pkit …` would answer a confirmation.
+    for profile, expected in (("autonomous", "abstain"), ("read-only", "deny")):
+        model = _shipped_model(decide_mod, catalog, profile)
+        for subject in _BUILDERS:
+            d, why = decide_mod.decide(model, catalog, _bash(command, subject))
+            assert d == expected, (profile, command, why)
+
+
+def test_filter_and_uv_run_hook_and_decide_parity(decide_mod, catalog):
     """The new privileges are catalog data read by the shared core, so
     hook_decide and decide agree on each new case (ADR-002 / ADR-003)."""
     model = _shipped_model(decide_mod, catalog, "autonomous")
     for cmd, expected in (
         ("grep x f | head", "allow"),
+        ("git log | head", "allow"),
         ("uv run pytest t.py -q | tail -3", "allow"),
         ("cd /x && uv run pkit validate | tail -1", "allow"),
+        ("pkit validate || true", "allow"),
         ("grep x f | sort -o out.txt", "abstain"),
         ("grep x f | uniq - out.txt", "abstain"),
+        ("diff -l a b | head", "abstain"),
+        ("echo y | pkit validate", "abstain"),
         ("grep x f > out.txt", "abstain"),
         ("cat f && rm -rf ~", "deny"),
     ):

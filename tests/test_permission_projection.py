@@ -127,60 +127,57 @@ def test_full_model_projection_routes_each_grant(projection, catalog):
     assert {u["privilege"] for u in out["unprojectable"]} == {"docker"}  # scoped
 
 
-# ---- the read-only filters and the Python runner (#2000) ---------------------
+# ---- the read-only text filters and `uv run` (#2000) -------------------------
 #
-# A `cmd`-only recognizer renders as a native prefix, so a profile's grant of
-# the read-only filters realizes one `Bash(<program>:*)` per program. The
-# `sort` and `uniq` recognizers are regexes that leave out the forms writing a
-# file, and no native prefix can say that, so none is written for them: a
-# `Bash(sort:*)` would allow `sort -o`. The runner renders as `Bash(uv:*)`.
+# Only the hook realizes `text-filter` and `uv-run` (ADR-005 point 5). Each of
+# their recognizers is a `pattern` or carries a `subcommand`, which no native
+# prefix can say, so a grant of either writes no `Bash(...)` rule: neither a
+# shipped profile nor project-kit's own grants put one in an adopter's
+# settings through `profile activate` or `apply`.
 
-_FILTER_PROGRAMS = {
-    "cat",
-    "head",
-    "tail",
-    "wc",
-    "cut",
-    "tr",
-    "grep",
-    "egrep",
-    "fgrep",
-    "jq",
-    "ls",
-    "cmp",
-    "basename",
-    "dirname",
-    "realpath",
-    "pwd",
-    "echo",
-    "true",
-    "false",
-}
+_NEW = ("text-filter", "uv-run")
+_SHIPPED_PROFILES = ("read-only", "non-destructive", "autonomous")
 
 
-def test_the_read_filter_projects_a_prefix_per_program_and_none_for_sort_or_uniq(
-    projection, catalog
-):
-    model = {"grants": [{"subject": "all", "privilege": _tok("read-filter"), "effect": "allow"}]}
+def _ids(value) -> list:
+    values = value if isinstance(value, list) else [value]
+    return [v.removeprefix("[privilege-catalog:").removesuffix("]") for v in values]
+
+
+def _without_new(grants: list) -> list:
+    out = []
+    for grant in grants:
+        kept = [t for t in _ids(grant["privilege"]) if t not in _NEW]
+        if kept:
+            out.append({**grant, "privilege": [_tok(t) for t in kept]})
+    return out
+
+
+def test_text_filter_and_uv_run_write_no_native_rule(projection, catalog):
+    model = {
+        "grants": [
+            {"subject": "all", "privilege": [_tok(p) for p in _NEW], "effect": "allow"},
+        ]
+    }
     out = projection.project(model, catalog)
-    assert set(out["settings"]["allow"]) == {f"Bash({p}:*)" for p in _FILTER_PROGRAMS}
-    assert [u["privilege"] for u in out["unprojectable"]] == ["read-filter", "read-filter"]
+    assert out["settings"]["allow"] == []
+    assert {u["privilege"] for u in out["unprojectable"]} == set(_NEW)
 
 
-def test_the_python_runner_projects_the_uv_prefix(projection, catalog):
-    model = {"grants": [{"subject": "all", "privilege": _tok("python-runner"), "effect": "allow"}]}
-    assert projection.project(model, catalog)["settings"]["allow"] == ["Bash(uv:*)"]
+@pytest.mark.parametrize("profile", _SHIPPED_PROFILES)
+def test_a_shipped_profile_projects_no_rule_for_text_filter(projection, catalog, profile):
+    grants = _load(DECIDE_PATH, "decide_for_profiles").load_yaml(
+        str(REPO / ".pkit" / "permissions" / "profiles" / f"{profile}.yaml")
+    )["grants"]
+    assert any("text-filter" in _ids(g["privilege"]) for g in grants)
+    ours = projection.project({"grants": grants}, catalog)["settings"]
+    assert ours == projection.project({"grants": _without_new(grants)}, catalog)["settings"]
 
 
-def test_project_kits_own_grants_project_nothing_its_settings_lack(projection, catalog):
-    # project-kit grants the runner in its own grants.yaml. Its committed
-    # settings already allow `uv` alone, so `apply` adds nothing to them.
-    import json
-
+def test_project_kits_own_grants_project_no_rule(projection, catalog):
     grants = _load(DECIDE_PATH, "decide_for_self_host").load_yaml(
         str(REPO / ".pkit" / "permissions" / "project" / "grants.yaml")
-    )
-    settings = json.loads((REPO / ".claude" / "settings.json").read_text())
-    out = projection.project({"grants": grants["grants"]}, catalog)
-    assert out["settings"]["allow"] == ["Bash(uv:*)"]
-    assert set(out["settings"]["allow"]) <= set(settings["permissions"]["allow"])
+    )["grants"]
+    assert any("uv-run" in _ids(g["privilege"]) for g in grants)
+    out = projection.project({"grants": grants}, catalog)
+    assert out["settings"]["allow"] == []
