@@ -11,9 +11,8 @@ pkit:
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
     revalidated:
-      at: 2026-10-21T13:41:42Z
-      outcome: unchanged
-      unchanged-because: COR-016's change is to how an agent declares its storyboards and where its stamp writes them. This page cites COR-016 only to tell its own storyboard-author sub-procedure apart from the core skill, so it holds.
+      at: 2026-10-24T01:18:27Z
+      outcome: updated
 ---
 
 # demo-recording capability
@@ -140,7 +139,7 @@ Notes on the subtler directives:
 
 - **`boot`** narrates into the bare recording shell (the only surface before tmux panes exist), pauses so the audience reads it, wipes the line with Ctrl-U, then types and submits the command. `narration:` accepts a single line or a YAML `|` block scalar.
 - **`panes`** is state-mutating: subsequent `narrate`/`chat`/`shell` directives use the most recent binding. Before typing into any of those targets, the engine sends `C-b q <N>` (tmux select-pane by number) automatically — no manual pane clicking.
-- **`ready`** polls the RECORDING session's visible text every 0.5s and advances when the pattern's occurrence count strictly **increases** beyond what was visible when polling started. This "wait for a new occurrence" rule handles the common cases uniformly — a tmux status marker appearing (0 → 1), or an assistant emitting a sentinel the chat request already contained (1 → 2). Recommended: append `"…say <SENTINEL> when done"` to a `chat` request and poll for a distinctive token like `STATS-READY`.
+- **`ready`** polls the RECORDING session's visible text every 0.5s and advances when the pattern's occurrence count strictly **increases** beyond what was visible when polling started. This "wait for a new occurrence" rule handles the common cases uniformly — a tmux status marker appearing (0 → 1), or an assistant emitting a sentinel the chat request already contained (1 → 2). Recommended: append `"…say <SENTINEL> when done"` to a `chat` request and poll for a distinctive token like `STATS-READY`. On a timeout, the engine prints a warning and goes on with the next directive, so the take does not halt.
 - **`wait` vs `sleep` vs `ready`** — `wait` is operator-driven (Enter to advance; needs a human, so avoid in autonomous/CI takes); `sleep` is a known fixed duration; `ready` is a programmatic completion signal.
 
 A storyboard runs **autonomously by default** (recording starts on dispatch, stops when the storyboard finishes) — the right default for AI/replay storyboards and CI. Pass `--interactive` for start/stop Enter gates when rehearsing.
@@ -158,6 +157,8 @@ hooks:
 
 Scripts run sequentially in array order; relative paths resolve against `record.yaml`'s directory; each must be executable.
 
+Hooks run only after a recorded take. A `--no-recording` run captures no video, so it runs no hook.
+
 ### Hook environment contract
 
 Every hook runs with its working directory at `DCR_REPO_ROOT` and these variables set:
@@ -166,7 +167,7 @@ Every hook runs with its working directory at `DCR_REPO_ROOT` and these variable
 |---|---|
 | `DCR_SCENARIO` | basename of the storyboard (e.g. `ai`, `human`, `replay`) |
 | `DCR_STORYBOARD` | absolute path to the storyboard `.md` |
-| `DCR_VIDEO_PATH` | absolute path to the final video — `.mp4` when ffmpeg ran, `.mov` otherwise; **empty string** when `--no-recording` was passed |
+| `DCR_VIDEO_PATH` | absolute path to the final video — `.mp4` when ffmpeg ran, `.mov` otherwise |
 | `DCR_CONFIG` | absolute path to `record.yaml` |
 | `DCR_REPO_ROOT` | directory containing `record.yaml`; also the hook's working directory |
 | `DCR_META_<KEY>` | one entry per scalar key in the storyboard's front-matter, key upcased |
@@ -201,9 +202,9 @@ The split is clean and load-bearing (per `DEC-001`):
 
 ## Dependencies
 
-- **macOS** (per `DEC-004`). The recording machinery uses `osascript` + System Events (keystroke injection), iTerm2 AppleScript (window control), and `screencapture`. Recording refuses cleanly off darwin; **storyboard validation is platform-neutral** and runs anywhere Python 3 runs.
+- **macOS** (per `DEC-004`). The recording machinery uses `osascript` + System Events (keystroke injection), iTerm2 AppleScript (window control), and `screencapture`. Recording refuses cleanly off darwin; **storyboard validation is platform-neutral**.
 - **iTerm2** — the window control is iTerm-specific.
-- **Python 3.8+** — stdlib only, no pip dependencies.
+- **Python 3.9+** — stdlib only, no pip dependencies.
 - **ffmpeg** (optional) — for `.mov` → smaller `.mp4` re-encode with corrected colour. Recording works without it (the `.mov` is kept).
 - **Accessibility + Screen Recording permission** for the controlling terminal app.
 

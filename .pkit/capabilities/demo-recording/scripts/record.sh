@@ -185,14 +185,15 @@ do_stop() {
     fi
 
     # Run after_record hooks.  These are project-specific scripts declared
-    # in record.yaml under `hooks.after_record`.  Each runs sequentially
+    # in record.yaml under `hooks.after_record`.  Hooks run only here, at
+    # the stop of a recorded take: --no-recording writes no state file and
+    # never reaches this stop, so it runs no hook.  Each runs sequentially
     # with these env vars:
     #
     #   DCR_SCENARIO       basename of the storyboard (e.g. "ai", "human")
     #   DCR_STORYBOARD     absolute path to the storyboard .md
-    #   DCR_VIDEO_PATH     final video path (.mp4 if ffmpeg ran, .mov otherwise);
-    #                      empty when --no-recording was passed
-    #   DCR_CONFIG         absolute path to record.yaml
+    #   DCR_VIDEO_PATH     final video path (.mp4 if ffmpeg ran, .mov otherwise)
+    #   DCR_CONFIG        absolute path to record.yaml
     #   DCR_REPO_ROOT      directory containing record.yaml (cwd for the hook)
     #   DCR_META_<KEY>     every scalar key from the storyboard's YAML
     #                      front-matter, upcased.  e.g.:

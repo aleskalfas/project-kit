@@ -13,6 +13,12 @@ verifies each cited slug resolves to a record. Hard-fail on cited-but-
 missing; soft on orphans unless `--strict`. Contract per the capability's
 DEC-003-validation-model.
 
+Each scope is checked on its own (DEC-002): a directory below the scope
+that holds an `evidence.yaml` of its own is a scope of its own, so the
+walk leaves it out. Run on a directory that holds no `evidence.yaml`, the
+validator checks the scope that directory lies in — the nearest directory
+above it holding one — and errors only where no directory above holds one.
+
 Self-contained via PEP 723 inline metadata: run via
 `uv run --script .pkit/capabilities/evidence/scripts/validate.py <scope>`.
 The first invocation installs the script's dependencies transparently;
@@ -27,6 +33,7 @@ Exit codes:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from dataclasses import dataclass
@@ -38,7 +45,10 @@ from ruamel.yaml.error import YAMLError
 
 CITATION_RE = re.compile(r"\[ev:([a-z0-9][a-z0-9-]*)\]")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
-FENCED_BLOCK_RE = re.compile(r"^(```|~~~).*?\n.*?^\1", re.MULTILINE | re.DOTALL)
+# What may precede a fence on its line: indentation, block-quote markers and
+# list markers, so a fence in a list item or a block quote is found too.
+_FENCE_PREFIX = r"(?:[ \t]*(?:>|(?:[-+*]|\d{1,9}[.)])(?=[ \t])))*[ \t]*"
+FENCE_OPEN_RE = re.compile(rf"^{_FENCE_PREFIX}(?P<fence>`{{3,}}|~{{3,}})(?P<info>.*)$")
 HTML_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 EVIDENCE_FILE_NAME = "evidence.yaml"
 IN_SCOPE_SUFFIXES = (".md", ".yaml", ".yml")
@@ -91,32 +101,41 @@ def main(argv: list[str] | None = None) -> int:
     return _run(scope, strict=args.strict)
 
 
-def _run(scope: Path, *, strict: bool) -> int:
-    evidence_file = scope / EVIDENCE_FILE_NAME
+def _run(directory: Path, *, strict: bool) -> int:
     findings: list[Finding] = []
 
-    # Step 1: read records from evidence.yaml.
-    if not evidence_file.is_file():
-        # Walk citations anyway so the author sees what's cited; report
-        # the missing evidence.yaml as the dominant error.
-        citations = _walk_citations(scope, evidence_file)
+    # Step 1: find the scope the directory lies in — the nearest directory,
+    # from the one named upwards, that holds an evidence.yaml (DEC-002).
+    evidence_file = _scope_evidence_file(directory)
+    if evidence_file is None:
+        # No scope holds the directory. Walk citations anyway so the author
+        # sees what's cited; report the missing evidence.yaml as the error
+        # (DEC-003: an error only where no ancestor holds one).
+        citations = _walk_citations(directory, None)
         if citations:
             findings.append(
                 Finding(
-                    location=str(evidence_file.relative_to(scope)),
-                    diagnosis=f"no evidence.yaml at scope root; "
+                    location=EVIDENCE_FILE_NAME,
+                    diagnosis=f"no evidence.yaml in this directory or any above it; "
                     f"{len(citations)} citation(s) in sub-tree have nowhere to resolve.",
                 )
             )
         else:
             print(
-                f"evidence: no evidence.yaml at {scope} and no citations in sub-tree — "
-                f"nothing to validate.",
+                f"evidence: no evidence.yaml at {directory} or above it, and no "
+                f"citations in sub-tree — nothing to validate.",
                 file=sys.stderr,
             )
             return 0
         _print_findings(findings)
         return 1
+
+    scope = evidence_file.parent
+    if scope != directory:
+        print(
+            f"evidence: no evidence.yaml at {directory}; checking the scope it lies in, {scope}.",
+            file=sys.stderr,
+        )
 
     try:
         records = _load_records(evidence_file)
@@ -127,7 +146,9 @@ def _run(scope: Path, *, strict: bool) -> int:
         )
         return 1
 
-    record_ids = {r["id"]: r for r in records}
+    # A record with no string `id` names nothing a citation can cite; step 2
+    # reports it as a finding rather than failing on it here (DEC-003).
+    record_ids = {r["id"]: r for r in records if isinstance(r.get("id"), str)}
 
     # Step 2: validate schema of each record (required fields, slug shape).
     for idx, record in enumerate(records, 1):
@@ -140,7 +161,9 @@ def _run(scope: Path, *, strict: bool) -> int:
                     )
                 )
         rec_id = record.get("id")
-        if isinstance(rec_id, str) and not SLUG_RE.match(rec_id):
+        if rec_id in (None, ""):
+            continue
+        if not isinstance(rec_id, str) or not SLUG_RE.match(rec_id):
             findings.append(
                 Finding(
                     location=f"{evidence_file.name}#records[{idx}]",
@@ -191,20 +214,48 @@ def _run(scope: Path, *, strict: bool) -> int:
     return 0
 
 
-def _walk_citations(scope: Path, evidence_file: Path) -> list[Citation]:
+def _scope_evidence_file(directory: Path) -> Path | None:
+    """The evidence.yaml of the scope `directory` lies in, or None.
+
+    That is the nearest one from `directory` upwards (DEC-002).
+    """
+    for candidate in (directory, *directory.parents):
+        evidence_file = candidate / EVIDENCE_FILE_NAME
+        if evidence_file.is_file():
+            return evidence_file
+    return None
+
+
+def _in_scope_files(root: Path, evidence_file: Path | None) -> list[Path]:
+    """The `.md` / `.yaml` / `.yml` files of the scope walked from `root`.
+
+    Leaves out the scope's evidence.yaml itself, and each directory below
+    `root` that holds an evidence.yaml of its own: that directory is a scope
+    of its own, checked on its own run (DEC-002, DEC-003).
+    """
+    skip = evidence_file.resolve() if evidence_file is not None else None
+    paths: list[Path] = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        here = Path(dirpath)
+        dirnames[:] = [d for d in dirnames if not (here / d / EVIDENCE_FILE_NAME).is_file()]
+        for name in filenames:
+            path = here / name
+            if path.suffix not in IN_SCOPE_SUFFIXES or not path.is_file():
+                continue
+            if skip is not None and path.resolve() == skip:
+                continue
+            paths.append(path)
+    return sorted(paths)
+
+
+def _walk_citations(scope: Path, evidence_file: Path | None) -> list[Citation]:
     """Find every [ev:slug] citation in scope's sub-tree, with line numbers.
 
-    Skips the scope's evidence.yaml itself (its `excerpt:` fields are
-    stripped, but the rest of the file is YAML schema, not citing prose).
+    Skips the scope's evidence.yaml itself — excerpts may quote
+    citation-shaped text from their source — and every nested scope.
     """
     citations: list[Citation] = []
-    for path in sorted(scope.rglob("*")):
-        if not path.is_file():
-            continue
-        if path.suffix not in IN_SCOPE_SUFFIXES:
-            continue
-        if path.resolve() == evidence_file.resolve():
-            continue
+    for path in _in_scope_files(scope, evidence_file):
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
@@ -242,18 +293,59 @@ def _strip_with_offsets(text: str, suffix: str) -> tuple[str, list[int]]:
     if suffix not in MARKDOWN_SUFFIXES:
         return text, line_offsets
 
-    stripped = FENCED_BLOCK_RE.sub(_blank_match, text)
+    stripped = _blank_fenced_blocks(text)
     stripped = HTML_COMMENT_RE.sub(_blank_match, stripped)
     return stripped, line_offsets
 
 
-def _blank_match(match: re.Match[str]) -> str:
-    """Replace a match with spaces of equal length, preserving newlines.
+def _blank_fenced_blocks(text: str) -> str:
+    """Blank each fenced code block of a markdown text, fences included.
+
+    A fence is a run of three or more backticks or tildes. It may stand
+    indented, or after block-quote and list markers, as in a list item. It
+    closes on a later line holding only a run of the same character at least
+    as long. A fence that never closes is left as it stands, so a stray fence
+    never hides the citations after it.
+    """
+    # Split on "\n" only, as the line offsets are counted.
+    lines = text.split("\n")
+    out: list[str] = []
+    i = 0
+    while i < len(lines):
+        opening = FENCE_OPEN_RE.match(lines[i].rstrip("\r"))
+        if opening is not None:
+            fence = opening.group("fence")
+            # A backtick fence's info string holds no backtick (CommonMark):
+            # "```a```" is inline code, not a fence.
+            if not (fence[0] == "`" and "`" in opening.group("info")):
+                closing = re.compile(
+                    rf"^{_FENCE_PREFIX}{re.escape(fence[0])}{{{len(fence)},}}[ \t]*$"
+                )
+                end = next(
+                    (j for j in range(i + 1, len(lines)) if closing.match(lines[j].rstrip("\r"))),
+                    None,
+                )
+                if end is not None:
+                    out.extend(_blank(line) for line in lines[i : end + 1])
+                    i = end + 1
+                    continue
+        out.append(lines[i])
+        i += 1
+    return "\n".join(out)
+
+
+def _blank(text: str) -> str:
+    """Replace text with spaces of equal length, preserving newlines.
 
     Keeps line offsets stable so line numbers in the original text
     survive stripping.
     """
-    return "".join(c if c == "\n" else " " for c in match.group(0))
+    return "".join(c if c in "\r\n" else " " for c in text)
+
+
+def _blank_match(match: re.Match[str]) -> str:
+    """Blank a regex match (see `_blank`)."""
+    return _blank(match.group(0))
 
 
 def _line_for_offset(line_offsets: list[int], offset: int) -> int:
@@ -276,7 +368,8 @@ def _load_records(evidence_file: Path) -> list[dict[str, Any]]:
     """Parse evidence.yaml; return the records list.
 
     Tolerates an empty `records: []` (zero records is valid, just unusual).
-    Raises _EvidenceParseError on malformed input.
+    A missing `records`, or one with no value, is no list, so it is malformed
+    (DEC-002's wrapped shape). Raises _EvidenceParseError on malformed input.
     """
     yaml = YAML(typ="safe")
     try:
@@ -294,9 +387,9 @@ def _load_records(evidence_file: Path) -> list[dict[str, Any]]:
         raise _EvidenceParseError(
             f"unsupported schema_version: {data.get('schema_version')!r} (expected 1)."
         )
-    records = data.get("records")
-    if records is None:
-        records = []
+    if "records" not in data:
+        raise _EvidenceParseError("no top-level 'records' list.")
+    records = data["records"]
     if not isinstance(records, list):
         raise _EvidenceParseError("'records' must be a list.")
     cleaned: list[dict[str, Any]] = []

@@ -1,0 +1,24 @@
+component: backbone
+kind: patch
+custom:
+  category: Security
+body: >
+  The permission decision core reads a Bash command's words as the shell does
+  before it matches a grant or a deny (ADR-025 point 2). It removes quotes and
+  backslashes by the standard library's POSIX quoting rules, so
+  `git push origin main "--force"` and `git push origin main \--force` are
+  denied as `--force` is, and a quoted argument with no other construct, such
+  as `git commit -m "fix: x"`, is allowed where a grant covers its segment. It
+  never allows a command whose words, expansions or program it cannot be sure
+  of: a `$`, which opens every expansion, a quote that does not close,
+  whitespace other than a space, a tab or a newline, a comment, a brace
+  expansion, a leading assignment that changes which program runs, such as
+  `PATH=/tmp/x gh pr list`, or one written with a quote or a backslash. A
+  segment led by `export` runs no program, so `export git PATH=/tmp/x` no
+  longer passes as `git`, and a `cd` parted from its path by a newline is no
+  longer stripped. It defers such a command to the harness, a strict posture
+  denies it, and a deny still wins. So where `git` and `gh` are granted,
+  `gh pr view $N`, `git checkout $BRANCH`, `git log $BASE..HEAD` and
+  `git status # note` are no longer allowed unasked. Claude Code's
+  adapter baseline allows `git`, `gh` and `pkit` by prefix, so a deferred
+  command led by one of them may still run unasked there.
