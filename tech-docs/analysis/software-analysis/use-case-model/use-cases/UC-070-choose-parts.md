@@ -89,7 +89,7 @@ pkit:
 - **3b.** The kind is one of the three kinds of requirement, which share their fields and every part but one. The agent shows the three together, and the path goes on at step 4 for each in turn.
 - **4a.** The kind needs another artefact first. A journey needs two use cases of its actor, and a domain-model view needs the terms it explains. The agent stamps those first.
 - **9a.** The adopter keeps the shipped parts. The agent writes nothing for the kind, and the path goes on at step 14.
-- **9b.** The adopter finds a shipped part wrong. It is a change to the capability, so the adopter files a change request with `pkit report change-request`, through the `report-author` skill. The project keeps the part meanwhile (DEC-001 point 1).
+- **9b.** The adopter finds a shipped part wrong. Mending the part is a change to the capability, so the adopter files a change request with `pkit report change-request`, through the `report-author` skill. The project keeps the part meanwhile (DEC-001 point 1).
 - **10a.** The adopter would drop, loosen or reorder a shipped part, or add a form or a kind. No entry can say so, and the agent proposes none (DEC-001 point 1).
 - **10b.** The tightening would add to the revalidation record's kind. The file's schema refuses it, since no rule binds on a record. The adopter may relabel the record's parts instead (DEC-001 point 1).
 - **11a.** The file breaks, such as by a key its schema does not take, or a part its kind does not hold. The system reports each fault as an error at its place, and applies none of the file. The stamp refuses while the fault stands. The adopter mends the file, and the path rejoins at step 11.

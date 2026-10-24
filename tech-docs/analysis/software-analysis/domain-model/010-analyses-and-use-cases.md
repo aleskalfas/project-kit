@@ -57,7 +57,13 @@ flowchart LR
 
 Defined in [TERM-analysis](../glossary.md#term-analysis--analysis).
 
-**Why:** An account of what the software must do decays silently: the code changes, the account does not, and nobody notices until a reader is misled. A [component](../../core/glossary.md#term-component--component) owns what describes it, so its account changes with it and at its pace (DEC-001).
+**Why:** An account of what the software must do decays silently, in three steps:
+
+- the code changes
+- the account does not
+- nobody notices until a reader is misled
+
+A [component](../../core/glossary.md#term-component--component) owns what describes it, so its account changes with it and at its pace (DEC-001).
 
 An analysis says what one component must do, and for whom: its actors, its [use cases](../glossary.md#term-use-case--use-case), its journeys, its terms and its requirements. It lies in the internal documentation of the repository where its component is developed. Where a [project](../../core/glossary.md#term-project--project) keeps several, each lies in a folder named after its component.
 
