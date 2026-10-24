@@ -39,12 +39,13 @@ backbone through its commands:
   `--preview`: where they would bind if every proposed rule were accepted,
   each marked when it binds only under the preview. The script never walks a
   rule set's scope or inheritance itself;
-- **where a record lies** — `pkit refs lookup <id>`: the file a core, project or
-  architecture record's id names, or a capability's decision's,
-  `<capability>:DEC-NNN`, whose status the check of a use case's shortfalls reads
-  (DEC-001 point 1; `record_file`), and the proposal reads of the records a
-  regressed use case anchors (`record_status`). The script never looks for a
-  record's file itself;
+- **where a record lies** — `pkit refs lookup --json <id>...`: the file a core,
+  project or architecture record's id names, or a capability's decision's,
+  `<capability>:DEC-NNN`, whose status the check of a use case's shortfalls and of
+  each analysis's purpose reads (DEC-001 point 1, DEC-003 point 8), and the proposal
+  reads of the records a regressed use case anchors. One run of `pkit` answers every
+  record the check names up front, and each record is asked once (`RecordFiles`). The
+  script never looks for a record's file itself;
 - **one data point as it resolves** — `pkit connections resolve <address>
   --json`: the check reads the evidence point the capability defines
   (DEC-001 point 7) through it. The command exits 1 on a point that does not
@@ -376,22 +377,82 @@ def location_recorded(root: Path, run: Runner = subprocess.run) -> bool:
     return proc.returncode == 0 and (proc.stdout or "").strip().endswith("(recorded already)")
 
 
-def record_file(root: Path, record: str, run: Runner = subprocess.run) -> str | None:
-    """The file a record's id names, repository-relative, as `pkit refs lookup` resolves
-    it: a core, project or architecture record, or a capability's decision,
-    `<capability>:DEC-NNN`; `None` where it names none. Raises Unreadable where `pkit`
-    cannot be run."""
-    proc = _run(root, ["pkit", "refs", "lookup", "--", record], run)
-    lines = [line.strip() for line in (proc.stdout or "").splitlines() if line.strip()]
-    return lines[-1] if proc.returncode == 0 and lines else None
+#: The version of `pkit refs lookup --json` this reading understands.
+LOOKUP_VERSION = 1
 
 
-def record_status(root: Path, record: str, run: Runner = subprocess.run) -> str | None:
-    """The status a record's front matter gives, as written, read in the working tree:
-    empty where it gives none, and `None` where the id names no record the repository
-    holds. Where the record lies is `record_file`'s answer. Raises Unreadable where
-    `pkit` cannot be run."""
-    rel = record_file(root, record, run)
+class RecordFiles:
+    """Where records lie, as `pkit refs lookup --json` resolves them, and the status each
+    gives, read once for a run. A record is a core, project or architecture record, or a
+    capability's decision, `<capability>:DEC-NNN`. Each id not answered yet is asked in
+    one run of `pkit`, those `wanted` named up front with it, so a reader that names first
+    the records it reads starts `pkit` once for all of them. Raises Unreadable, for each
+    id asked in a run that gives no document this reading understands, from a backbone
+    that predates the document too, saying so. Each of them is asked again when it is
+    read next."""
+
+    def __init__(
+        self, root: Path, wanted: Iterable[str] = (), run: Runner = subprocess.run
+    ) -> None:
+        self._root = root
+        self._run = run
+        self._wanted: dict[str, None] = dict.fromkeys(wanted)
+        self._files: dict[str, str | None] = {}
+        self._statuses: dict[str, str | None] = {}
+
+    def file(self, record: str) -> str | None:
+        """The file the id names, repository-relative; `None` where it names none."""
+        if record not in self._files:
+            self._wanted[record] = None
+            self._ask()
+        return self._files[record]
+
+    def status(self, record: str) -> str | None:
+        """The status the record's front matter gives, as written, read in the working
+        tree: empty where it gives none, and `None` where the id names no record the
+        repository holds."""
+        if record not in self._statuses:
+            self._statuses[record] = _status_of(self._root, self.file(record))
+        return self._statuses[record]
+
+    def _ask(self) -> None:
+        asked = [record for record in self._wanted if record not in self._files]
+        self._wanted.clear()
+        argv = ["pkit", "refs", "lookup", "--json", "--", *asked]
+        proc = _run(self._root, argv, self._run)
+        if proc.returncode != 0 and "No such option" in (proc.stderr or ""):
+            raise Unreadable(
+                "`pkit refs lookup --json` is not an option of the installed backbone, which "
+                "predates it — upgrade it (`pkit upgrade`)"
+            )
+        try:
+            document = json.loads(proc.stdout or "") if proc.returncode == 0 else None
+        except ValueError:
+            document = None
+        if not isinstance(document, Mapping):
+            raise Unreadable(_failed(argv, proc))
+        version = document.get("schema_version")
+        if version != LOOKUP_VERSION:
+            raise Unreadable(
+                f"`pkit refs lookup` answered schema_version {version!r}; this capability "
+                f"reads {LOOKUP_VERSION}"
+            )
+        answered: dict[str, str | None] = {}
+        for entry in document.get("lookups") or []:
+            if not isinstance(entry, Mapping) or not isinstance(entry.get("id"), str):
+                continue
+            locations = [p for p in entry.get("locations") or [] if isinstance(p, str) and p]
+            resolved = entry.get("resolved") is True and locations
+            answered[entry["id"]] = locations[-1] if resolved else None
+        unanswered = [record for record in asked if record not in answered]
+        if unanswered:
+            raise Unreadable(f"`pkit refs lookup --json` gave no answer for {unanswered[0]}")
+        self._files |= {record: answered[record] for record in asked}
+
+
+def _status_of(root: Path, rel: str | None) -> str | None:
+    """The status the front matter of the record at `rel` gives: empty where it gives
+    none, and `None` where there is no file to read."""
     if rel is None:
         return None
     try:
@@ -405,6 +466,20 @@ def record_status(root: Path, record: str, run: Runner = subprocess.run) -> str 
         front = None
     status = front.get("status") if isinstance(front, Mapping) else None
     return status if isinstance(status, str) else ""
+
+
+def record_file(root: Path, record: str, run: Runner = subprocess.run) -> str | None:
+    """The file a record's id names, repository-relative, as `pkit refs lookup` resolves
+    it (`RecordFiles`); `None` where it names none. Raises Unreadable where `pkit`
+    gives no answer."""
+    return RecordFiles(root, run=run).file(record)
+
+
+def record_status(root: Path, record: str, run: Runner = subprocess.run) -> str | None:
+    """The status a record's front matter gives, as written, read in the working tree:
+    empty where it gives none, and `None` where the id names no record the repository
+    holds (`RecordFiles`). Raises Unreadable where `pkit` gives no answer."""
+    return RecordFiles(root, run=run).status(record)
 
 
 def read_point(root: Path, address: str, run: Runner = subprocess.run) -> Mapping[str, Any]:

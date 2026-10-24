@@ -85,10 +85,11 @@ where it adds a section's link to its term, or takes out a line in that form.
 from __future__ import annotations
 
 import dataclasses
+import functools
 import posixpath
 import re
 from collections import Counter
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -199,8 +200,14 @@ class Term:
         """Where a link to its entry leads from the file at `from_path`."""
         if from_path == self.glossary:
             return f"#{self.anchor}"
-        rel = posixpath.relpath(self.glossary, posixpath.dirname(from_path) or ".")
-        return f"{rel}#{self.anchor}"
+        return f"{_relative(self.glossary, posixpath.dirname(from_path) or '.')}#{self.anchor}"
+
+
+@functools.cache
+def _relative(path: str, start: str) -> str:
+    """`path` from the folder `start`, both in the repository, worked out once for each
+    pair: the answer does not depend on the working directory."""
+    return posixpath.relpath(path, start)
 
 
 def names(artefact: Artefact) -> list[tuple[str, str]]:
@@ -357,9 +364,11 @@ class _Wanted:
     term: str
 
 
+@functools.cache
 def _pattern(phrase: str) -> re.Pattern[str]:
     """A phrase as a mention matches it: its words as written, any white space between
-    them, its first letter in either case and an apostrophe of either kind, whole."""
+    them, its first letter in either case and an apostrophe of either kind, whole. Built
+    once for each phrase."""
     words = phrase.split()
     parts: list[str] = []
     for i, word in enumerate(words):
@@ -368,10 +377,30 @@ def _pattern(phrase: str) -> re.Pattern[str]:
     return re.compile(f"(?<!{_JOINER}){body}(?!{_JOINER})")
 
 
+@functools.cache
+def _needle(phrase: str) -> str:
+    """The longest run of a phrase's characters that its pattern matches only as written:
+    within one word, past the phrase's first letter, and holding no apostrophe. Text that
+    lacks it holds no mention of the phrase, so it is not searched."""
+    runs: list[str] = []
+    for i, word in enumerate(phrase.split()):
+        written = word[1:] if i == 0 else word
+        runs += re.split(f"[{_APOSTROPHES}]", written)
+    return max(runs, key=len, default="")
+
+
+def _found(phrase: str, text: str) -> Iterator[re.Match[str]]:
+    """Each mention of `phrase` in `text`, as its pattern finds them: none, read at the
+    cost of one substring test, where `text` lacks its needle."""
+    if _needle(phrase) not in text:
+        return iter(())
+    return _pattern(phrase).finditer(text)
+
+
 def mentions(text: str, name: str) -> bool:
     """Whether `text` holds `name` as a mention reads it: whole, its first letter in either
     case."""
-    return _pattern(name).search(text) is not None
+    return next(_found(name, text), None) is not None
 
 
 #: Any white space between a phrase's words; and an apostrophe of either kind, the
@@ -495,13 +524,13 @@ def _chosen(
     for term in vocabulary.terms:
         for phrase in term.other_senses:
             blocked.setdefault(term.id, []).extend(
-                (m.start(), m.end()) for m in _pattern(phrase).finditer(text)
+                (m.start(), m.end()) for m in _found(phrase, text)
             )
-    named = [(m.start(), m.end()) for a in vocabulary.actors for m in _pattern(a).finditer(text)]
+    named = [(m.start(), m.end()) for a in vocabulary.actors for m in _found(a, text)]
     candidates: list[_Mention] = []
     for term in vocabulary.terms:
         for name in vocabulary.matched.get(term.id, ()):
-            for m in _pattern(name).finditer(text):
+            for m in _found(name, text):
                 if _overlaps(m.start(), m.end(), skipped):
                     continue
                 if any(s <= m.start() and m.end() <= e for s, e in blocked.get(term.id, ())):
