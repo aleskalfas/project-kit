@@ -1,6 +1,6 @@
 # Validate a storyboard
 
-Parse a storyboard markdown file, run structural + per-directive validation, and print the resolved step plan. Read-only; opens no windows and starts no recording. **Platform-neutral** — runs anywhere Python 3 runs (per [demo-recording:DEC-004-platform-coupling-and-gate-placement]).
+Parse a storyboard markdown file, run structural + per-directive validation, and print the resolved step plan. Read-only; opens no windows and starts no recording. **Platform-neutral** — runs anywhere Python 3.9 or later runs (per [demo-recording:DEC-004-platform-coupling-and-gate-placement]).
 
 ## When to use
 
@@ -34,7 +34,7 @@ Parse a storyboard markdown file, run structural + per-directive validation, and
    - A `boot` block missing `narration:` or `command:`.
    - A `panes` value that isn't an integer.
    - An unclosed fenced block.
-   - An unknown directive tag — printed as a **warning** (`[UNKNOWN 'xyz']`), not an error: a storyboard stays readable when a providing plugin is absent (per [demo-recording:DEC-001-storyboard-as-executable-format]).
+   - An unknown directive tag — printed as a **warning** (`[UNKNOWN 'xyz']` in the plan, and its step and line under `⚠ N warning(s):`), not an error, so validate still exits 0: a storyboard stays readable when a providing plugin is absent (per [demo-recording:DEC-001-storyboard-as-executable-format]).
 
    Fix the storyboard and re-run until clean.
 

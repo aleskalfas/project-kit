@@ -11,7 +11,7 @@ reads:
 
 # Authoring an after_record hook
 
-An **after_record hook** is an adopter-side script the recording engine runs **after** a successful take — after the storyboard exits, screen capture stops, and ffmpeg post-processing completes. Hooks are where post-record bookkeeping lives: link the video to a work-tracker issue, upload it to a CDN, stamp a replay session id. They are adopter content; the capability ships only the contract and the runner.
+An **after_record hook** is an adopter-side script the recording engine runs **after** a successful take — after the storyboard exits, screen capture stops, and ffmpeg post-processing completes. A `--no-recording` run captures no video, so it runs no hook. Hooks are where post-record bookkeeping lives: link the video to a work-tracker issue, upload it to a CDN, stamp a replay session id. They are adopter content; the capability ships only the contract and the runner.
 
 ## Acceptance gate
 
@@ -40,7 +40,7 @@ Every hook runs with these environment variables set, and with its **working dir
 |---|---|
 | `DCR_SCENARIO` | basename of the storyboard (e.g. `ai`, `human`, `replay`) |
 | `DCR_STORYBOARD` | absolute path to the storyboard `.md` |
-| `DCR_VIDEO_PATH` | absolute path to the final video — `.mp4` when ffmpeg ran, `.mov` otherwise; **empty string** when `--no-recording` was passed |
+| `DCR_VIDEO_PATH` | absolute path to the final video — `.mp4` when ffmpeg ran, `.mov` otherwise |
 | `DCR_CONFIG` | absolute path to `record.yaml` |
 | `DCR_REPO_ROOT` | directory containing `record.yaml`; also the hook's working directory |
 | `DCR_META_<KEY>` | one entry per scalar key in the storyboard's front-matter, key upcased (e.g. `mode: ai` → `DCR_META_MODE=ai`) |
@@ -74,7 +74,7 @@ case "${DCR_META_MODE:-}" in
 esac
 ```
 
-Guard against the `--no-recording` case (`DCR_VIDEO_PATH` empty) if the hook acts on the video.
+Hooks run only after a recorded take, so `DCR_VIDEO_PATH` always names the saved video.
 
 ### 3. Make it executable + wire it in
 
@@ -86,7 +86,7 @@ Add its path to `record.yaml`'s `hooks.after_record`. Re-validate the config (`p
 
 ### 4. Test
 
-Run a take (or a `--no-recording` dry run to exercise the hook against an empty `DCR_VIDEO_PATH`). Confirm the hook fires and its bookkeeping lands. Because failures are non-fatal, check the engine's stderr for any hook warning.
+Run a recorded take: `--no-recording` runs no hook, so it cannot exercise one. To try the hook without a take, run it by hand from `DCR_REPO_ROOT` with the `DCR_*` variables set. Confirm the hook fires and its bookkeeping lands. Because failures are non-fatal, check the engine's stderr for any hook warning.
 
 ## Notes
 

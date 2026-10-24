@@ -31,7 +31,11 @@ merge:
     the CI gate that posts the audit-comment template to the PR before
     merging. The CI override is deliberately its own flag, separate from
     any general `--bypass`, so overriding another gate never silently
-    clears a red CI.
+    clears a red CI. A rollup with no checks, which GitHub answers for a
+    project that runs none, passes. A rollup the PR's answer leaves out,
+    carries as null, or carries as anything but a list of checks is no
+    answer, never one of no checks: the gate refuses (exit 2), names why
+    and writes nothing, and `--bypass-ci` does not clear it (#1952).
   * The authorisation (#1760, DEC-055 point 3): `--yes`, or a yes to the
     question a run at a terminal asks, which names the PR and the head the
     merge is pinned to. A run with neither refuses once the gates have run
@@ -109,8 +113,9 @@ Exit codes:
      now or by an earlier run from this clone
   1  membership / merge-queue / checkbox / title / CI-status refusal; a PR
      someone else merged without a queue
-  2  usage error (PR not found); a run with no `--yes` and no terminal to ask
-     at, which merges nothing (#1760)
+  2  usage error (PR not found); the PR or its checks could not be read, which
+     merges nothing (#1952); a run with no `--yes` and no terminal to ask at,
+     which merges nothing (#1760)
   3  gh failure: the merge failed or the queue could not be read; the PR left
      the merge queue without merging, or was taken out of it because its head
      moved; or a merge or an enqueue got no answer and was not seen made on
@@ -376,8 +381,21 @@ def main() -> int:
     # deliberate override goes through the dedicated --bypass-ci flag
     # (bypassable-with-audit): the audit comment lands on the PR first, then
     # the merge proceeds. Only --bypass-ci clears a non-green CI — no other
-    # bypass silently lands a red check.
-    ci_gate = evaluate_ci_gate(pr.get("statusCheckRollup"))
+    # bypass silently lands a red check. Checks that cannot be read are no
+    # answer, never an answer of no checks: the gate refuses before anything
+    # is written, `--bypass-ci` or not (#1952).
+    rollup = _read_rollup(pr)
+    if rollup.problem:
+        print(
+            f"\n[refused] CI-status gate for PR #{args.pr_number}: its checks could not be "
+            f"read ({rollup.problem}). Nothing was posted or merged.\n"
+            "  → no answer is not an answer of no checks: the gate refuses rather than "
+            "merge a head whose checks it never saw. Run merge-pr again once GitHub "
+            "answers. --bypass-ci does not clear checks that were never read.",
+            file=sys.stderr,
+        )
+        return 2
+    ci_gate = evaluate_ci_gate(list(rollup.checks))
     if not ci_gate.passing:
         if not args.bypass_ci:
             print(
@@ -400,7 +418,7 @@ def main() -> int:
             f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
         )
     else:
-        print("  ci-status: green")
+        print(f"  ci-status: green{' (no checks configured)' if ci_gate.no_checks else ''}")
 
     head = str(pr.get("headRefOid") or "")
     if args.dry_run:
@@ -936,9 +954,41 @@ def _gh_get_pr(pr_number: int, config: dict) -> dict | None:
         )
         return None
     try:
-        return json.loads(proc.stdout)
+        pr = json.loads(proc.stdout)
     except json.JSONDecodeError:
+        pr = None
+    if not isinstance(pr, dict):
+        print(
+            f"error: gh pr view {pr_number} gave an answer that is not a PR's JSON. "
+            "Nothing was merged.",
+            file=sys.stderr,
+        )
         return None
+    return pr
+
+
+@dataclass(frozen=True)
+class _RollupReading:
+    """The PR's checks, as `gh pr view` answered them — none for a project that
+    runs no checks — or, in `problem`, why the answer carries none, which is
+    not an answer of no checks (#1952, as done-work's since #1946)."""
+
+    checks: tuple[dict, ...] = ()
+    problem: str = ""
+
+
+def _read_rollup(pr: dict) -> _RollupReading:
+    """Read the PR's `statusCheckRollup` for the CI-status gate (#498).
+
+    GitHub answers an empty rollup for a PR no check reported on, which the
+    gate passes as a project that runs no checks. A rollup the answer leaves
+    out, carries as null, or carries as anything but a list of checks is no
+    answer: `problem` names it, and the gate refuses on it (#1952).
+    """
+    rollup = pr.get("statusCheckRollup")
+    if not isinstance(rollup, list) or not all(isinstance(check, dict) for check in rollup):
+        return _RollupReading(problem="gh's answer carries no statusCheckRollup")
+    return _RollupReading(tuple(rollup))
 
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
