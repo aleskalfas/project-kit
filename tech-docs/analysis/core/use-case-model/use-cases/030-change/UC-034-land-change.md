@@ -41,9 +41,9 @@ pkit:
         - ACT-operator
         - REQ-012
     revalidated:
-      at: 2026-10-25T01:38:06Z
+      at: 2026-10-25T05:24:04Z
       outcome: unchanged
-      unchanged-because: Core rule 20 still has the reviewer check the answers of a direct commit and the person told first. The CLI gains a reading command, and pkit refs lookup takes several ids, which no step uses.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-034 — Land my change on the default branch

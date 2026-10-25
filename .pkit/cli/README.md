@@ -109,8 +109,9 @@ pkit:
         - .pkit/process/README.md#the-engine
         - .pkit/process/README.md#cascade--fold-one-child-processs-member-outcomes-core
     revalidated:
-      at: 2026-10-25T03:46:09Z
-      outcome: updated
+      at: 2026-10-25T05:23:11Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, which the process graph section already says. The four presets that name relations, a mode or a source add to an atomic filter of their kind, so the section holds.
       deferred:
         - anchor:
             kind: record

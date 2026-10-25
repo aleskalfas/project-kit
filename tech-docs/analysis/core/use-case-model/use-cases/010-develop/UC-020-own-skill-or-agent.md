@@ -38,9 +38,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-25T01:37:19Z
+      at: 2026-10-25T05:23:34Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. The refs member of pkit validate checks what an agent definition cites as before, so step 10 holds.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

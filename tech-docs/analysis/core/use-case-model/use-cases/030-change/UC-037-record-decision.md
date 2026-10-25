@@ -63,9 +63,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-25T01:38:13Z
+      at: 2026-10-25T05:24:06Z
       outcome: unchanged
-      unchanged-because: Core rule 20 changes only on answers, the CLI gains a reading command, and pkit refs lookup takes several ids. How a record is stamped, cited and accepted is as this use case says.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-037 — Record my decision beside the methodology's

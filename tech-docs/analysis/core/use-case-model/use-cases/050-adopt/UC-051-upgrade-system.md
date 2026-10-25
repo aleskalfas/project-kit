@@ -65,9 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-25T01:39:04Z
+      at: 2026-10-25T05:24:33Z
       outcome: unchanged
-      unchanged-because: This change adds pkit friction move-plan and a migration whose effect the release notes will name, and pkit refs lookup takes several ids. The upgrade this use case runs does what it says.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-051 — Upgrade the system like a dependency
