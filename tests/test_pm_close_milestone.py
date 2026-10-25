@@ -549,6 +549,79 @@ def test_main_already_closed_is_noop(cm, monkeypatch) -> None:
     close_mock.assert_not_called()
 
 
+# --- the close is the person's (#2015) -----------------------------------
+#
+# Off a terminal, without --yes, nobody is there to authorise the close, so it is
+# refused before anything is written; an answer piped in is never read.
+
+
+class _Terminal:
+    """A standard input a person types at."""
+
+    def isatty(self) -> bool:
+        return True
+
+
+class _Pipe:
+    """A standard input with an answer piped into it, as `echo y | …` gives."""
+
+    def isatty(self) -> bool:
+        return False
+
+
+def _never_asked(question: str) -> str:
+    raise AssertionError(f"asked off a terminal: {question!r}")
+
+
+def _closeable(monkeypatch, cm, *, yes: bool) -> MagicMock:
+    children = [{"number": 10, "title": "[EPIC] A", "state": "closed", "type": "epic"}]
+    close_mock = _prime_main(monkeypatch, cm, milestone=_ms(), children=children)
+    monkeypatch.setattr(cm.argparse.ArgumentParser, "parse_args", lambda self: _args(yes=yes))
+    monkeypatch.setattr(sys, "argv", ["close-milestone.py", "6", *(["--yes"] if yes else [])])
+    return close_mock
+
+
+def test_off_a_terminal_without_yes_the_close_is_refused(cm, monkeypatch, capsys) -> None:
+    close_mock = _closeable(monkeypatch, cm, yes=False)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert cm.main() == 1
+    close_mock.assert_not_called()
+    err = capsys.readouterr().err
+    assert "[refused] Closing milestone #6 is the person's to authorise" in err
+    assert "pkit pm close-milestone 6 --yes" in err
+
+
+def test_off_a_terminal_a_rolling_close_closes_and_moves_nothing(cm, monkeypatch) -> None:
+    repo = _repo()
+    moves = _wire(monkeypatch, cm, repo)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6"])
+    assert cm.main() == 1
+    assert repo.writes() == [] and moves == []
+    assert repo.milestones[6]["state"] == "open"
+
+
+def test_yes_closes_off_a_terminal_without_asking(cm, monkeypatch) -> None:
+    close_mock = _closeable(monkeypatch, cm, yes=True)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert cm.main() == 0
+    close_mock.assert_called_once()
+
+
+@pytest.mark.parametrize(("reply", "closed"), [("y", True), ("n", False)])
+def test_at_a_terminal_the_person_is_asked(cm, monkeypatch, reply, closed) -> None:
+    close_mock = _closeable(monkeypatch, cm, yes=False)
+    monkeypatch.setattr(sys, "stdin", _Terminal())
+    asked: list[str] = []
+    monkeypatch.setattr("builtins.input", lambda q: asked.append(q) or reply)
+    assert cm.main() == 0
+    assert asked == ["Close this milestone? [y/N] "]
+    assert close_mock.called is closed
+
+
 # --- the rollforward (#1175) -------------------------------------------
 #
 # An in-memory repository stands behind every gh seam a close and its moves go
@@ -1151,3 +1224,26 @@ def test_a_re_run_finishes_the_rollforward_without_repeating_a_move_or_a_comment
     ran.clear()
     assert _close(monkeypatch, cm) == 0
     assert ran == []
+
+
+def test_off_a_terminal_a_re_run_finishes_the_rollforward_without_yes(cm, monkeypatch) -> None:
+    """The person authorised the moves with the close, whose audit line records
+    their target, so finishing them asks nothing more of them (#2015)."""
+    repo = _repo()
+    _wire(monkeypatch, cm, repo)
+    attempts: list[int] = []
+
+    def flaky(issue, target, reason, **_kwargs):
+        attempts.append(issue)
+        return 3 if issue == 11 else 0
+
+    monkeypatch.setattr(cm, "_run_edit_issue", flaky)
+    assert _close(monkeypatch, cm) == cm.EXIT_ROLLFORWARD_INCOMPLETE
+
+    attempts.clear()
+    monkeypatch.setattr(cm, "_run_edit_issue", lambda issue, *a, **k: attempts.append(issue) or 0)
+    monkeypatch.setattr(sys, "stdin", _Pipe())
+    monkeypatch.setattr("builtins.input", _never_asked)
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6"])
+    assert cm.main() == 0
+    assert attempts == [11, 12]
