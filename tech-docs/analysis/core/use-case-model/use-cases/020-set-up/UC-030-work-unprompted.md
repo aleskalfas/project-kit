@@ -71,8 +71,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-24T20:59:42Z
-      outcome: updated
+      at: 2026-10-25T03:03:34Z
+      outcome: unchanged
+      unchanged-because: Its steps and variants say what main made the hook do, which does not ask in auto and bypass mode. Permissions scaffold now refuses a capability the project receives as a synced copy, and no step here scaffolds a fragment, so what it says holds.
 ---
 
 # UC-030 — Let agents work on their own without a stream of confirmations
