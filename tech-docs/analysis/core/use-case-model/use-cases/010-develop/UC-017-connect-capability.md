@@ -40,8 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-25T03:02:57Z
-      outcome: updated
+      at: 2026-10-25T03:45:40Z
+      outcome: unchanged
+      unchanged-because: The change has process couple and hand-off refuse a synced definition through the refusal process new uses. Extension 4b ends the use case before steps 6 and 7 edit the process step 4 stamped, so they hold.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

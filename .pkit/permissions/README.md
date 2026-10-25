@@ -19,8 +19,9 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/cli/README.md#folders-a-sync-writes, .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy]
     revalidated:
-      at: 2026-10-25T03:03:49Z
-      outcome: updated
+      at: 2026-10-25T03:46:19Z
+      outcome: unchanged
+      unchanged-because: Folders a sync writes now also says process couple and hand-off refuse a definition received by sync. This page points there only for the refusal of permissions scaffold, which the change leaves as it was, so it holds.
 ---
 
 # Permissions — decision core

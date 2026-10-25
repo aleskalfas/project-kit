@@ -109,7 +109,7 @@ pkit:
         - .pkit/process/README.md#the-engine
         - .pkit/process/README.md#cascade--fold-one-child-processs-member-outcomes-core
     revalidated:
-      at: 2026-10-25T03:03:44Z
+      at: 2026-10-25T03:46:09Z
       outcome: updated
       deferred:
         - anchor:
