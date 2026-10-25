@@ -28,8 +28,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-25T14:40:29Z
-      outcome: updated
+      at: 2026-10-25T15:23:06Z
+      outcome: unchanged
+      unchanged-because: The refinement per ADR-069 restates ADR-055 point 3's user space as guides in docs/ and references under .pkit/, and the reason for keeping the .pkit/ READMEs. It reads the anchors implication as shipped pages and settles the open question on links into the decision corpus. CONTRIBUTING cites only point 5, which the refinement leaves as it stood, so its account of the friction gate holds.
       deferred:
         - anchor:
             kind: record
