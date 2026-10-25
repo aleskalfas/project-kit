@@ -31,9 +31,9 @@ pkit:
       artefact:
         - REQ-022
     revalidated:
-      at: 2026-10-24T03:53:21Z
+      at: 2026-10-25T05:30:50Z
       outcome: unchanged
-      unchanged-because: The agent and its storyboard changed only how reader-review falls back to a space's audience. Onboarding existing documents is as it was.
+      unchanged-because: The agent and its storyboard changed only in reader-review, which now reads the reading-evidence point. Bringing existing documents into the spaces is as it was.
 ---
 
 # UC-047 — Bring my existing documents into documentation spaces

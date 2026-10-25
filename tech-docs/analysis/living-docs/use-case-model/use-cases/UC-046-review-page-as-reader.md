@@ -35,9 +35,8 @@ pkit:
       artefact:
         - REQ-022
     revalidated:
-      at: 2026-10-25T04:40:35Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 7 says the capability's validation reads none of the reading-evidence entries, and its agent reads them as advice in a reader-review. Variant 4b has the agent read them as evidence that never replaces its own reading, so it agrees.
+      at: 2026-10-25T05:30:55Z
+      outcome: updated
 ---
 
 # UC-046 — Have a page read as its declared reader would read it
@@ -83,7 +82,7 @@ pkit:
 > [!WARNING]
 > **Not built yet:** the agent reads none of DEC-002's forms, and judges a page's visual elements as any other text. DEC-002 point 8 leaves an image's text alternative to [reader-review](../../glossary.md#term-reader-review--reader-review), and #1812 tracks it.
 
-- **4b.** Results of executed checks that follow the page, such as a simulated reader running a guide, arrive through the reading-evidence data point. The agent reads them as evidence, which never replaces its own reading (DEC-001 points 6 and 7).
+- **4b.** The reading-evidence data point holds results of executed checks that followed the page, such as a simulated reader running a guide. Before step 4, the agent resolves the point with `pkit connections resolve pkit::documentation:reading-evidence --json`. The agent reads each result for the page as advice, which never replaces its own reading (DEC-001 points 6 and 7). The record of step 7, or the line of variant 7a, names each result the agent read, by its id.
 - **7a.** The agent finds nothing. It says so in one line, writes no file, and the use case ends (DEC-001 point 6).
 - **8a.** A passage is one a rule leaves to a person's judgement, such as a fact the page states twice in agreement. The agent lists it in the record as a question for the developer, not as a break (DEC-001 point 3).
 - **9a.** The developer asks for the findings as a pull-request comment, and names the [pull request](../../../core/glossary.md#term-pull-request--pull-request). The agent posts the record with `gh pr comment`, its one write outside the [agent workspace](../../../core/glossary.md#term-agent-workspace--agent-workspace) (REQ-022). Where it found nothing, it posts no comment.

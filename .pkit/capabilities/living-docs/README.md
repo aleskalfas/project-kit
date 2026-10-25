@@ -14,7 +14,7 @@ pkit:
       record: ["living-docs:DEC-001", "living-docs:DEC-002", COR-005, COR-023, COR-030, COR-049, COR-050, COR-051, "COR-052#4", COR-053, COR-056, COR-057, "project-management:DEC-032", "project-management:DEC-056", "software-analysis:DEC-001#10"]
       artefact: [RS-LDOC-001, RS-LDOC-002, RS-LDOC-003, RS-LDOC-004, RS-LDOC-005, RS-LDOC-006, RS-LDOC-007, RS-LDOC-008, ".pkit/schemas/README.md#the-friction-block", ".pkit/schemas/README.md#rule-set-files", ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-25T04:40:33Z
+      at: 2026-10-25T05:30:58Z
       outcome: updated
       deferred:
         - anchor:
@@ -346,7 +346,7 @@ The checks above tell you *that* a page drifted and *which* documents are not pa
 | Ask it to… | It reads | It gives you |
 |---|---|---|
 | **fix a stale or deferred page** | `pkit friction explain <page>`: the anchors that changed and the commits behind them; then those commits and the page | a diff of the page and a pull-request body, citing each commit and the anchor it changed, and naming the answer you give once it is applied (`pkit friction revalidate … --outcome updated`). An anchor it re-points or adds names the one part a statement rests on, where it rests on one. When nothing in the page needs to change, it proposes the `unchanged` answer with a draft reason for you to confirm. For a page `explain` reports `unresolved`, it says why from the anchor's finding and proposes nothing for the prose: for `no-answer`, run again, then `pkit sync`, or the resolver needs mending; for `unresolved-kind`, where the kind misspells a registered one (`pkit validate` names the nearest), a one-line anchor correction with the revalidation a changed anchor list needs, otherwise the capability to install or the registration to mend. |
-| **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`, with that reader's description and paths; the rules that bind on the page, `LDOC`'s and its space's own, from `pkit rule-sets reach` | a findings record, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage, and each passage a rule leaves to your judgement, such as a fact the page repeats, listed as a question — **only when something was found**. Nothing found: one line, no file. As a pull-request comment if you ask for one. |
+| **review a page as its reader** | the page's `reader`, resolved through `pkit::documentation:readers`, with that reader's description and paths; the rules that bind on the page, `LDOC`'s and its space's own, from `pkit rule-sets reach`; the results of executed checks that followed the page, from `pkit::documentation:reading-evidence`, as advice where there are any | a findings record, naming each reading-evidence entry it read, each finding citing the rule the page breaks (`RS-LDOC-003`, or the space's own rule) and quoting the passage, and each passage a rule leaves to your judgement, such as a fact the page repeats, listed as a question — **only when something was found**. Nothing found: one line, naming any reading-evidence entry it read, and no file. As a pull-request comment if you ask for one. |
 | **onboard existing documentation** | the validator's unclassified documents and findings, the friction check's measures, your code-to-doc mapping if you keep one | one plan behind one approval gate (below) |
 
 What it will not do:
