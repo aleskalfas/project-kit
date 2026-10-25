@@ -106,7 +106,7 @@ What the output proves, claim by claim:
 - **In one place.** `explain` lists the grants of every subject by privilege, the guardrails first.
 - **Three layers.** Each command checks one kind of fault:
   - **A wrong grant:** `explain` shows each grant as you wrote it.
-  - **A wrong translation:** `diff` checks that the settings hold the rules the model projects into them. `probe` has the decision core judge a fixed suite of calls, and checks each verdict against the model.
+  - **A grant applied in the wrong place:** `diff` checks that the settings hold the rules the model projects into them. `probe` has the decision core judge a fixed suite of calls, and checks each verdict against the model.
   - **Intent the harness cannot enforce:** `diff` names it.
 - **Reported gaps.** `diff` names network egress, which nothing in Claude Code enforces.
 - **Note:** `tail` keeps the end of the report of `diff`. Its head, left out here, lists each allow rule in the settings that the model does not justify, the baseline's own included.
