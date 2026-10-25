@@ -65,9 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-24T22:52:53Z
+      at: 2026-10-25T01:39:04Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
+      unchanged-because: This change adds pkit friction move-plan and a migration whose effect the release notes will name, and pkit refs lookup takes several ids. The upgrade this use case runs does what it says.
 ---
 
 # UC-051 — Upgrade the system like a dependency

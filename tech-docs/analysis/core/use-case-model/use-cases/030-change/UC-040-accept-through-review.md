@@ -32,9 +32,9 @@ pkit:
         - ACT-ai-agent
         - REQ-005
     revalidated:
-      at: 2026-10-24T22:53:34Z
+      at: 2026-10-25T01:38:24Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup takes several ids with --json, and the decisions README says so. How a record is reviewed and accepted is untouched, so the steps hold."
+      unchanged-because: Core rule 20 changes only on answers, the CLI gains a reading command, and pkit refs lookup takes several ids. Acceptance through review and rule 2 stay as this use case says.
 ---
 
 # UC-040 — Have a drafted record or rule become binding only through my own review

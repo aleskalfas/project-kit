@@ -102,9 +102,8 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
     revalidated:
-      at: 2026-10-24T23:35:35Z
-      outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup takes several ids with --json, answered in one document. The reference lists no refs command, and the commands it lists behave as before."
+      at: 2026-10-25T01:39:48Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
