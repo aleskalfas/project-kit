@@ -16,12 +16,13 @@ name: release-tag
 #
 # The moving tag `latest`: on every run, tag cut or not, `scripts/latest_tag.py`
 # points `latest` at the commit of the highest release tag (PRJ-004), so
-# `uv tool install …@latest` installs the newest release. It creates the tag
+# `uv tool install …@latest` installs the highest release. It creates the tag
 # where it is missing, moves it where it lags, and pushes nothing where it
 # already points there; a run that failed to move it is mended by the next push.
-# This step is the only writer of `latest`. Its push is forced, as git moves no
-# tag without force, and leased on the value the run read, so a run that read an
-# older state never moves it back.
+# It fails while a branch named `latest` exists, which uv can take first. By
+# design this step is the only writer of `latest`; nothing on the host enforces
+# it. Its push is forced, as git moves no tag without force, and leased on the
+# value the run read, so a run that read an older state never moves it back.
 #
 # Token note: pushing a tag with the default GITHUB_TOKEN does not trigger
 # `on: push: tags:` workflows (loop-prevention). There are none today; add a
@@ -63,8 +64,8 @@ jobs:
             echo "tag_needed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # On every run: the step that points `latest` needs it, tag cut or not.
       - name: Set up Python
+        if: steps.detect.outputs.tag_needed == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -85,11 +86,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           uv run pkit version tag --push
 
-      # On every run, after any tag this run cut: point `latest` at the newest
-      # release's commit (see the header). Standard library and git only, so
-      # nothing of the project is installed for it.
-      - name: Point the tag latest at the newest release
-        run: python scripts/latest_tag.py --push
+      # On every run, after any tag this run cut: point `latest` at the highest
+      # release's commit (see the header). Standard library and git only, on the
+      # runner's own python3, so nothing is installed for it.
+      - name: Point the tag latest at the highest release
+        run: python3 scripts/latest_tag.py --push
 
       # Only after a tag was just cut: publish a notes-only GitHub Release so
       # the release page shows what changed (body = this version's CHANGELOG.md

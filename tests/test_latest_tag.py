@@ -136,6 +136,47 @@ def test_the_highest_version_wins_whatever_order_it_was_tagged_in(
     assert _latest_on_origin(clone) == highest
 
 
+def test_a_branch_named_latest_fails_the_run_and_pushes_nothing(
+    clone: GitRepo, in_a_workflow: None, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """uv can take a branch before a tag of the same name, so a branch named
+    `latest` would turn every `@latest` install into that branch's head."""
+    _release(clone, "v1.0.0")
+    clone.git("push", "-q", "origin", "main:refs/heads/latest")
+
+    assert latest_tag.run(clone.root, push=True) == 1
+
+    assert "branch named `latest`" in capsys.readouterr().err
+    assert _latest_on_origin(clone) is None
+
+
+@pytest.mark.parametrize(
+    "lookalike",
+    [
+        pytest.param("v9.0.0" + chr(0xA0), id="trailing-no-break-space"),
+        pytest.param("v9.0.0 ", id="trailing-space"),
+        pytest.param("v9.0.0" + chr(0x2028) + "x", id="line-separator"),
+        pytest.param("v9.0.0" + chr(0x85) + "x", id="next-line"),
+        pytest.param("v" + chr(0x669) + ".0.0", id="non-ascii-digit"),
+    ],
+)
+def test_a_tag_that_only_looks_like_a_release_is_none(lookalike: str) -> None:
+    """A ref name is read as git prints it, untrimmed, in ASCII digits alone."""
+    sha = "a" * 40
+    listing = f"{'b' * 40}\trefs/tags/v1.0.0\n{sha}\trefs/tags/{lookalike}\n"
+
+    plan = latest_tag.plan_for(listing)
+
+    assert plan.release == "v1.0.0"
+    assert plan.target == "b" * 40
+
+
+def test_a_line_whose_object_id_is_no_object_id_is_skipped() -> None:
+    listing = f"{'b' * 40}\trefs/tags/v1.0.0\n-x\trefs/tags/v2.0.0\n"
+
+    assert latest_tag.plan_for(listing).release == "v1.0.0"
+
+
 def test_with_no_release_tag_it_pushes_nothing(
     clone: GitRepo, in_a_workflow: None, capsys: pytest.CaptureFixture[str]
 ) -> None:
@@ -279,19 +320,30 @@ def _index(steps: list[dict[str, Any]], runs: str) -> int:
     return index
 
 
+_STEP = "python3 scripts/latest_tag.py --push"
+
+
 def test_the_release_tag_workflow_points_latest_on_every_run() -> None:
     """The step has no condition, so a push that cut no tag still mends a
     `latest` an earlier run failed to move, and it comes after the tag is cut."""
     steps = _steps()
-    point = _index(steps, "python scripts/latest_tag.py --push")
+    point = _index(steps, _STEP)
 
     assert "if" not in steps[point]
     assert point > _index(steps, "pkit version tag --push")
 
 
-def test_the_python_the_step_runs_on_is_set_up_on_every_run() -> None:
+def test_the_step_runs_on_the_runners_own_python_with_nothing_installed() -> None:
+    """Python and the project are set up only where a tag is cut: the step that
+    runs on every push needs the runner's `python3` and git alone."""
     steps = _steps()
-    (setup,) = [s for s in steps if s.get("uses", "").startswith("actions/setup-python@")]
+    installs = [
+        s
+        for s in steps
+        if s.get("uses", "").startswith(("actions/setup-python@", "astral-sh/setup-uv@"))
+        or s.get("run") == "uv sync"
+    ]
 
-    assert "if" not in setup
-    assert steps.index(setup) < _index(steps, "python scripts/latest_tag.py --push")
+    assert len(installs) == 3
+    assert all("tag_needed" in s.get("if", "") for s in installs)
+    assert steps[_index(steps, _STEP)]["run"] == _STEP

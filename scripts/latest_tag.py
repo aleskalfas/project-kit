@@ -1,25 +1,31 @@
-"""Keep the tag `latest` on the newest release's commit (PRJ-004, #2052).
+"""Keep the tag `latest` on the highest release's commit (PRJ-004, #2052).
 
 `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`
-installs the newest release because this script keeps `latest` there. The
+installs the highest release because this script keeps `latest` there. The
 release-tag workflow (`.github/workflows/release-tag.yml`) runs it on every
 push to `main`, after it cut any tag the push needed:
 
-    python scripts/latest_tag.py --push
+    python3 scripts/latest_tag.py --push
 
-It reads `origin`'s tags (`git ls-remote --tags origin`), takes the highest
-release tag, and makes `latest` point at that tag's commit:
+It reads `origin`'s tags and branches (`git ls-remote --tags --heads origin`),
+takes the highest release tag, and makes `latest` point at that tag's commit:
 
 - **Missing:** where `origin` has no `latest`, it creates it.
 - **Lagging:** where `latest` points at another commit, it moves it.
 - **Current:** where `latest` already points there, it pushes nothing. So a run
   that failed to move it is mended by the next push to `main`.
+- **Shadowed:** where `origin` has a branch named `latest`, it refuses and
+  pushes nothing. uv can take a branch before a tag of the same name, so every
+  `@latest` install would get that branch's head.
 
-A release tag is `v<major>.<minor>.<patch>`, no part padded by a leading zero,
-judged as `pkit upgrade` judges one (`upgrade._max_released_tag`); a test holds
-the two equal. Pre-releases, dev releases and every other tag, `latest` itself
-among them, are skipped. The script needs nothing but the standard library and
-`git`, so the workflow runs it without installing the project.
+A release tag is `v<major>.<minor>.<patch>` in ASCII digits, no part padded by a
+leading zero, as `versioning.is_release_version` reads a release version and
+`pkit upgrade`'s `_max_released_tag` reads its tag; a test holds the two equal.
+Pre-releases, dev releases and every other tag, `latest` itself among them, are
+skipped. A ref name is read as git prints it, never trimmed, so a name that only
+looks like a release tag is no release tag. The script needs nothing but the
+standard library and `git`, so the workflow runs it on the runner's own
+`python3` without installing the project.
 
 `latest` is a lightweight tag on the commit itself. Its push is forced, since
 git moves no tag without force, and leased on the value this run read: it goes
@@ -29,9 +35,10 @@ move; it fails instead, and the next push mends it.
 
 Only the workflow pushes: outside GitHub Actions (`GITHUB_ACTIONS` is not
 `true`), `--push` refuses and pushes nothing. It guards against a run by hand;
-it is not a boundary. Without `--push` it says what it would do and changes
-nothing. Exit 0 when `latest` points at the newest release, or no release tag
-exists; 1, saying why, when `git` fails or the push is refused.
+it is not a boundary, and nothing on the host stops another writer of `latest`.
+Without `--push` it says what it would do and changes nothing. Exit 0 when
+`latest` points at the highest release, or no release tag exists; 1, saying
+why, when `git` fails, a branch shadows the tag, or the push is refused.
 """
 
 from __future__ import annotations
@@ -45,26 +52,32 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
 
-#: The tag this script keeps on the newest release's commit.
+#: The tag this script keeps on the highest release's commit.
 LATEST = "latest"
 
 #: The remote whose tags are read and written.
 REMOTE = "origin"
 
-_REF = f"refs/tags/{LATEST}"
+_TAG_REF = f"refs/tags/{LATEST}"
+_BRANCH_REF = f"refs/heads/{LATEST}"
 
 # A release tag: `v` and a release version, as `versioning.is_release_version`
-# reads one — `major.minor.patch`, no pre-release, no part padded by a zero.
-_RELEASE_TAG = re.compile(r"^v(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$")
+# reads one — `major.minor.patch`, no pre-release, no part padded by a zero —
+# in ASCII digits alone.
+_RELEASE_TAG = re.compile(r"v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)", re.ASCII)
+
+# An object id as git prints it: SHA-1 or SHA-256, in lowercase hex.
+_OBJECT_ID = re.compile(r"[0-9a-f]{40}|[0-9a-f]{64}", re.ASCII)
 
 
 class Refused(Exception):
-    """`git` failed, or the push was refused; nothing more is done."""
+    """`git` failed, a branch shadows the tag, or the push was refused; nothing
+    more is done."""
 
 
 def release_key(tag: str) -> tuple[int, int, int] | None:
     """The version `tag` names, where it is a release tag; None otherwise."""
-    match = _RELEASE_TAG.match(tag)
+    match = _RELEASE_TAG.fullmatch(tag)
     if match is None:
         return None
     major, minor, patch = (int(part) for part in match.groups())
@@ -81,7 +94,7 @@ def newest_release(tags: Iterable[str]) -> str | None:
 class Plan:
     """What a run read of `origin`, and what it does about it."""
 
-    #: The newest release tag on `origin`, or None where it has none.
+    #: The highest release tag on `origin`, or None where it has none.
     release: str | None
     #: The commit that release tag points at.
     target: str | None
@@ -89,6 +102,8 @@ class Plan:
     current: str | None
     #: The commit `origin`'s `latest` points at.
     current_commit: str | None
+    #: Whether `origin` has a branch named `latest`, which uv can take first.
+    shadowed: bool = False
 
     @property
     def needed(self) -> bool:
@@ -97,30 +112,36 @@ class Plan:
 
 
 def plan_for(ls_remote_output: str) -> Plan:
-    """The plan for the tags `git ls-remote --tags` lists.
+    """The plan for the refs `git ls-remote --tags --heads` lists.
 
-    Each line is `<sha>\\trefs/tags/<tag>`; an annotated tag adds a peel line,
-    `<tag>^{}`, naming the commit it points at. A tag without one names the
-    commit itself.
+    Each line is `<object id>\\t<ref>`. An annotated tag adds a peel line,
+    `refs/tags/<tag>^{}`, naming the commit it points at; a tag without one
+    names the commit itself. Lines are split on a newline alone and a ref is
+    never trimmed, and a line whose object id is no object id is skipped.
     """
     named: dict[str, str] = {}
     peeled: dict[str, str] = {}
-    for line in ls_remote_output.splitlines():
-        sha, _, ref = line.partition("\t")
-        tag = ref.strip().removeprefix("refs/tags/")
-        if tag == ref.strip():
+    shadowed = False
+    for line in ls_remote_output.split("\n"):
+        oid, tab, ref = line.removesuffix("\r").partition("\t")
+        if not tab or _OBJECT_ID.fullmatch(oid) is None:
             continue
-        if tag.endswith("^{}"):
-            peeled[tag.removesuffix("^{}")] = sha
-        else:
-            named[tag] = sha
-    commits = {tag: peeled.get(tag, sha) for tag, sha in named.items()}
+        if ref == _BRANCH_REF:
+            shadowed = True
+        elif ref.startswith("refs/tags/"):
+            tag = ref.removeprefix("refs/tags/")
+            if tag.endswith("^{}"):
+                peeled[tag.removesuffix("^{}")] = oid
+            else:
+                named[tag] = oid
+    commits = {tag: peeled.get(tag, oid) for tag, oid in named.items()}
     release = newest_release(commits)
     return Plan(
         release=release,
         target=None if release is None else commits[release],
         current=named.get(LATEST),
         current_commit=commits.get(LATEST),
+        shadowed=shadowed,
     )
 
 
@@ -138,8 +159,8 @@ def _git(repo: Path, *args: str) -> str:
 
 
 def read(repo: Path) -> Plan:
-    """The plan for `origin`'s tags, as the clone at `repo` reaches them."""
-    return plan_for(_git(repo, "ls-remote", "--tags", REMOTE))
+    """The plan for `origin`'s tags and branches, as the clone at `repo` reaches them."""
+    return plan_for(_git(repo, "ls-remote", "--tags", "--heads", REMOTE))
 
 
 def apply(repo: Path, plan: Plan) -> str:
@@ -147,16 +168,21 @@ def apply(repo: Path, plan: Plan) -> str:
     what was done. Raises Refused where the push fails."""
     if plan.target is None or not plan.needed:
         raise ValueError("the plan moves nothing")
-    lease = f"--force-with-lease={_REF}:{plan.current or ''}"
-    _git(repo, "push", lease, REMOTE, f"{plan.target}:{_REF}")
+    lease = f"--force-with-lease={_TAG_REF}:{plan.current or ''}"
+    _git(repo, "push", lease, REMOTE, f"{plan.target}:{_TAG_REF}")
     verb = "Created" if plan.current is None else "Moved"
     return f"{verb} `{LATEST}` on {REMOTE}: it points at {plan.release} ({plan.target[:12]})."
 
 
 def run(repo: Path, *, push: bool) -> int:
-    """Read `origin`'s tags and, with `push`, point `latest` at the newest release."""
+    """Read `origin`'s refs and, with `push`, point `latest` at the highest release."""
     try:
         found = read(repo)
+        if found.shadowed:
+            raise Refused(
+                f"{REMOTE} has a branch named `{LATEST}`, which uv can take before the tag, so "
+                f"every `@{LATEST}` install would get that branch's head. Delete the branch"
+            )
         if found.release is None or found.target is None:
             print(f"{REMOTE} has no release tag: nothing for `{LATEST}` to point at.")
             return 0
