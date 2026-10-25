@@ -16,9 +16,14 @@ This sets *which clone am I* only. It does not touch any issue — the per-issue
 ownership marker is written by the lifecycle commands (create-issue / start-work /
 handoff-issue), which read this id.
 
+A clone includes its linked git worktrees: a worktree with no id of its own
+reads the main working tree's. Setting and clearing act on the local file only,
+so a worktree can take a number of its own and clear it again.
+
 Usage:
   set-instance <N>       set this clone's instance id (positive integer)
-  set-instance --show    print the current id (or `unset`)
+  set-instance --show    print the current id (or `unset`), and where a
+                         worktree reads its clone's from
   set-instance --clear   unset (revert to the no-op default)
 
 Self-contained via PEP 723; runs via
@@ -41,6 +46,8 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, session_guard
 from _lib.instance_identity import (
     clear_instance_id,
+    identity_path,
+    identity_source,
     read_instance_id,
     write_instance_id,
 )
@@ -90,7 +97,14 @@ def main() -> int:
     if args.show:
         # Read-only — no mutation, so the foreign-repo guard does not apply.
         current = read_instance_id(capability_root)
-        print(f"instance: {current}" if current is not None else "instance: unset")
+        if current is None:
+            print("instance: unset")
+            return 0
+        source = identity_source(capability_root)
+        if source is not None and source != identity_path(capability_root):
+            print(f"instance: {current} (the clone's, read from the main working tree: {source})")
+        else:
+            print(f"instance: {current}")
         return 0
 
     # Validate arguments before any mutation.
@@ -114,11 +128,23 @@ def main() -> int:
 
     if args.clear:
         removed = clear_instance_id(capability_root)
-        print(
-            "cleared this clone's instance id (now a non-participating clone)."
-            if removed
-            else "no instance id was set — nothing to clear."
-        )
+        # A worktree that has no id of its own reads its clone's.
+        inherited = read_instance_id(capability_root)
+        if removed and inherited is None:
+            print("cleared this clone's instance id (now a non-participating clone).")
+        elif removed:
+            print(
+                "cleared this worktree's own instance id; it reads its clone's, "
+                f"instance {inherited}, from the main working tree."
+            )
+        elif inherited is None:
+            print("no instance id was set — nothing to clear.")
+        else:
+            print(
+                "this worktree has no instance id of its own — nothing to clear. "
+                f"It reads its clone's, instance {inherited}, from the main working "
+                "tree; clear it there."
+            )
         return 0
 
     path = write_instance_id(capability_root, args.instance)

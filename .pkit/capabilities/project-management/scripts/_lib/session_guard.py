@@ -342,6 +342,17 @@ def _repo_identity(start: Path | str) -> RepoIdentity | None:
     toplevel = _git_toplevel(start)
     if toplevel is None:
         return None
+    common = _common_dir(toplevel)
+    if common is None:
+        return None
+    return RepoIdentity(common_dir=common, origin_url=_origin_url(toplevel))
+
+
+def _common_dir(toplevel: Path) -> Path | None:
+    """The absolute, resolved git common-dir of the work-tree at *toplevel*, or None.
+
+    Raises :class:`_GitFault` when git could not run.
+    """
     proc = _run_git(["rev-parse", "--git-common-dir"], cwd=toplevel)
     if proc.returncode != 0:
         return None
@@ -355,10 +366,28 @@ def _repo_identity(start: Path | str) -> RepoIdentity | None:
         # the common-dir) resolve to the same absolute path.
         common = toplevel / common
     try:
-        common = common.resolve()
+        return common.resolve()
     except OSError:
         return None
-    return RepoIdentity(common_dir=common, origin_url=_origin_url(toplevel))
+
+
+def work_tree_and_common_dir(start: Path | str) -> tuple[Path, Path] | None:
+    """The git work-tree containing *start* and its common-dir, both absolute, or None.
+
+    The common-dir is the one :class:`RepoIdentity` compares: the linked
+    worktrees of one repo share it. A reader that only needs the layout gets
+    None both outside a work-tree and when git could not run, never a fault.
+    """
+    try:
+        toplevel = _git_toplevel(start)
+        if toplevel is None:
+            return None
+        common = _common_dir(toplevel)
+    except _GitFault:
+        return None
+    if common is None:
+        return None
+    return toplevel, common
 
 
 def _same_identity(anchor: RepoIdentity, target: RepoIdentity) -> bool:
