@@ -1091,7 +1091,7 @@ Stamps a YAML schema and its JSON Schema companion, `<name>.yaml` and `<name>.sc
 - **`--collection-name <key>`** names the collection's top-level key, `entries` by default.
 - **`--no-namespace`** stamps the schema of a single document instead, with no collection and no annotation. It ignores the two options above.
 
-It validates the pair as `schemas validate` does, and removes both files when the check fails. It refuses a schema that already exists and a capability that does not. It refuses an owner whose files the project receives as synced copies too ("Folders a sync writes" above).
+It validates the pair as `schemas validate` does, and removes both files when the check fails. It refuses a schema that already exists, and a capability that does not exist. It refuses an owner whose files the project receives as synced copies too ("Folders a sync writes" above).
 
 ### `new migration --tier <tier> [--component <name>] [--version <X.Y.0>] --name <slug> [--scope <scope>]`
 
