@@ -1789,18 +1789,33 @@ def test_a_sentence_the_list_must_not_hold_is_named(
 def test_the_backbone_says_a_later_head_of_answers_is_covered(
     fa: ModuleType, make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path
 ) -> None:
-    """The real `pkit friction since`: the head after a revalidation alone is covered;
-    the head after the code change is not, and the change outside is named."""
-    repo, head = _branch_with_an_answer(make_adopter_repo)
-    changed = repo.git("rev-parse", "HEAD~1").stdout.strip()
+    """The real `pkit friction since`: the head after a revalidation alone, in an answer
+    file the change adds, is covered; the head after the code change is not, and the
+    change outside is named. An answer written in the guide's block is not covered."""
+    repo = make_adopter_repo()
+    repo.write({CONFIG: friction_config(mode="enforcing"), **SOURCE, "docs/guide.md": guide()})
+    repo.commit("base", files=None)
+    repo.checkout("feature", create=True)
+    changed = repo.commit("change the CLI", {"src/cli/main.py": "print('cli v2')\n"})
+    answer = ".pkit/project/friction/answers/20261003T100000Z-0a1b2c3d.yaml"
+    text = (
+        "answers:\n  - artefact: docs/guide.md\n    revalidated:\n"
+        f"      at: 2026-10-03T10:00:00Z\n      outcome: unchanged\n"
+        f"      unchanged-because: {BECAUSE}\n"
+    )
+    head = repo.commit("revalidate the guide", {answer: text})
     found = fa.covers(changed[:9], head, "main")
     assert found == fa.Coverage(changed, head, True, inside=1)
     main = repo.git("rev-parse", "main").stdout.strip()
     found = fa.covers(main, head, "main")
     assert (found.covered, found.problem) == (False, None)
-    assert found.outside == (
-        f"src/cli/main.py ({changed[:7]}: not an artefact's file: no declared place holds it)",
+    assert found.outside == (f"src/cli/main.py ({changed[:7]}: not an answer file)",)
+    in_block = repo.commit(
+        "answer in the block",
+        {"docs/guide.md": guide(at="2026-10-04T10:00:00Z", because=BECAUSE)},
     )
+    found = fa.covers(head, in_block, "main")
+    assert found.outside == (f"docs/guide.md ({in_block[:7]}: not an answer file)",)
 
 
 def _answering(
@@ -1820,12 +1835,12 @@ def _answering(
 
 def _since_document(**fields: Any) -> str:
     document = {
-        "schema_version": 1,
+        "schema_version": 2,
         "since": MERGE_BASE,
         "head": HEAD,
         "all_inside": True,
         "reason": None,
-        "inside": ["docs/guide.md"],
+        "inside": [".pkit/project/friction/answers/one.yaml"],
         "outside": [],
         **fields,
     }
@@ -1847,8 +1862,8 @@ def test_the_backbone_is_asked_unrouted_with_the_base_named(
     [
         (1, "", "it exited 1: Error: boom"),
         (0, "not json", "its answer is not JSON"),
-        (0, '{"schema_version": 2}', "not a document of version 1"),
-        (0, '{"schema_version": 1, "since": "a", "head": "b"}', "lacks what an answer needs"),
+        (0, '{"schema_version": 1}', "not a document of version 2"),
+        (0, '{"schema_version": 2, "since": "a", "head": "b"}', "lacks what an answer needs"),
         (0, _since_document(all_inside="yes"), "lacks what an answer needs"),
         (0, _since_document(all_inside=False), "and the changes it names disagree"),
         (
