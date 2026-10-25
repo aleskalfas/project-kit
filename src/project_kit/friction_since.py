@@ -34,8 +34,10 @@ itself. It reads git and writes nothing.
   - *Any other commit* contributes its own diff against its first parent: a
     merge of anything but the base included.
 - **Inside the change's answer files.** A file that differs lies inside only
-  when it is an answer file (`answer_files.is_answer_file`) the base, where the
-  head left it, does not hold, and on the commit's side a regular file. An
+  when it is an answer file the base, where the head left it, does not hold, and
+  on the commit's side a regular file. Its path is judged as the tree writes it,
+  and a hidden name is none (`_is_answer_path`). A submodule's entry is always
+  read, whatever `.gitmodules` says, so a repointed submodule lies outside. An
   answer file removed lies outside, since it takes its answers away (COR-062
   point 8). So does one the base holds, which no change rewrites (point 3), and
   one whose mode changed. Any other file lies outside, with why. What an answer
@@ -242,8 +244,26 @@ def _base_answer_files(root: Path, head: str, tip: str) -> frozenset[str]:
     holds it."""
     done = run_git(root, "merge-base", "--all", head, tip, accept=(0, 1))
     bases = done.stdout.decode().split() if done.returncode == 0 else []
-    return frozenset(
-        answer_files.path_of(name) for base in bases for name in answer_files.head_names(root, base)
+    held: set[str] = set()
+    for base in bases:
+        # A listing git cannot give fails the run, never reads as a base holding nothing.
+        listed = run_git(
+            root, "ls-tree", "-z", "--name-only", base, "--", f"{answer_files.FOLDER}/"
+        )
+        held.update(rel for rel in nul_separated(listed.stdout) if _is_answer_path(rel))
+    return frozenset(held)
+
+
+def _is_answer_path(path: str) -> bool:
+    """Whether `path`, exactly as a tree writes it, is an answer file: a YAML file directly
+    in the answer folder whose name is no hidden file's. The path is compared as written, so
+    a tree entry such as `<folder>/./x.yaml` is no answer file."""
+    folder, slash, name = path.rpartition("/")
+    return (
+        bool(slash)
+        and folder == answer_files.FOLDER
+        and not name.startswith(".")
+        and answer_files.is_answer_file(path)
     )
 
 
@@ -338,8 +358,12 @@ _Entry = tuple[str, str]
 
 def _raw_diff(root: Path, before: str, after: str) -> Iterable[tuple[str, tuple[_Entry, _Entry]]]:
     """`git diff-tree -r --no-renames` between two tree-ishes: each path, with its mode
-    and object on each side."""
-    out = run_git(root, "diff-tree", "-r", "-z", "--no-renames", before, after).stdout
+    and object on each side. A submodule's entry is never left out, whatever the working
+    tree's `.gitmodules` says (`--ignore-submodules=none`): a repointed submodule is a
+    change outside."""
+    out = run_git(
+        root, "diff-tree", "-r", "-z", "--no-renames", "--ignore-submodules=none", before, after
+    ).stdout
     tokens = nul_separated(out)
     for meta, path in zip(tokens[0::2], tokens[1::2], strict=True):
         mode_b, mode_a, obj_b, obj_a, _status = meta.lstrip(":").split(" ")
@@ -350,7 +374,7 @@ def _judge(held: frozenset[str], path: str, before: _Entry, after: _Entry) -> st
     """Why the change to the file at `path`, from `before` to the commit's `after`, lies
     outside the answer files the change adds, or `None` where it lies inside them."""
     (mode_b, _obj_b), (mode_a, _obj_a) = before, after
-    if not answer_files.is_answer_file(path):
+    if not _is_answer_path(path):
         return "not an answer file"
     if mode_a == _ABSENT:
         return "an answer file removed, which takes its answers away"

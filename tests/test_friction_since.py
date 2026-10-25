@@ -174,6 +174,51 @@ def test_a_link_in_the_folder_lies_outside(repo: AdopterRepo) -> None:
     assert _whys(_since(repo, since)) == [(_answer("link"), head, "not a regular file")]
 
 
+def test_a_hidden_name_in_the_folder_is_no_answer_file(repo: AdopterRepo) -> None:
+    since = _authorised(repo)
+    head = repo.commit("a hidden file", {f"{af.FOLDER}/.one.yaml": _answers(T1)})
+    assert _whys(_since(repo, since)) == [(f"{af.FOLDER}/.one.yaml", head, "not an answer file")]
+
+
+def test_a_path_is_judged_as_the_tree_writes_it() -> None:
+    """A tree entry such as `<folder>/./x.yaml` reads as an answer file once cleaned up,
+    so the path is compared as written."""
+    assert fs._is_answer_path(f"{af.FOLDER}/x.yaml")
+    assert not fs._is_answer_path(f"{af.FOLDER}/./x.yaml")
+    assert not fs._is_answer_path(f"{af.FOLDER}//x.yaml")
+
+
+def test_a_submodule_repointed_lies_outside_whatever_gitmodules_says(repo: AdopterRepo) -> None:
+    """A `.gitmodules` that ignores a submodule's changes must not hide one: a submodule
+    repointed after the authorised head lies outside."""
+    repo.write(
+        {".gitmodules": '[submodule "vendor"]\n\tpath = vendor\n\turl = ./v\n\tignore = all\n'}
+    )
+    repo.git("update-index", "--add", "--cacheinfo", f"160000,{'1' * 40},vendor")
+    repo.commit(
+        "vendor a submodule", {".gitmodules": repo.root.joinpath(".gitmodules").read_text()}
+    )
+    since = _authorised(repo)
+    repo.git("update-index", "--cacheinfo", f"160000,{'3' * 40},vendor")
+    repo.write({_answer("one"): _answers(T1)})
+    repo.git("add", _answer("one"))
+    repo.git("commit", "-q", "-m", "answer, and repoint the submodule")
+    found = _since(repo, since)
+    assert not found.all_inside
+    assert [o.path for o in found.outside] == ["vendor"]
+
+
+def test_a_base_whose_answer_files_cannot_be_listed_gives_no_answer(repo: AdopterRepo) -> None:
+    """The answer files the base holds are what a change may not rewrite: a listing git
+    cannot give fails the run, never reads as a base holding none."""
+    tip = repo.head()
+    _authorised(repo)
+    head = repo.commit("answer", {_answer("one"): _answers(T1)})
+    repo.lose_object(repo.git("rev-parse", f"{tip}^{{tree}}").stdout.strip())
+    with pytest.raises(FrictionCheckError, match="ls-tree"):
+        fs._base_answer_files(repo.root, head, tip)
+
+
 def test_an_answer_file_whose_mode_changed_lies_outside(repo: AdopterRepo) -> None:
     since = _authorised(repo, {_answer("one"): _answers(T1)})
     (repo.root / _answer("one")).chmod(0o755)
