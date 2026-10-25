@@ -14,6 +14,18 @@ name: release-tag
 # Backbone tag only — per-component tags were dropped by design (PRJ-004 /
 # .pkit/release/README.md).
 #
+# The moving tag `latest`: on every run, tag cut or not, `scripts/latest_tag.py`
+# points `latest` at the commit of the highest release tag (PRJ-004), so
+# `uv tool install …@latest` installs the highest release. It creates the tag
+# where it is missing, moves it where it lags, and pushes nothing where it
+# already points there; a run that failed to move it is mended by the next push.
+# Its step runs last, after the tag and the notes, so its failure never skips
+# a release's notes. It fails while a branch named `latest` exists, which uv can
+# take first. By design this step is the only writer of `latest`; nothing on the
+# host enforces it. Its push is forced, as git moves no tag without force, and
+# leased on the value the run read, so a run that read an older state never
+# moves it back. A failed push passes where `latest` already points there.
+#
 # Token note: pushing a tag with the default GITHUB_TOKEN does not trigger
 # `on: push: tags:` workflows (loop-prevention). There are none today; add a
 # RELEASE_PAT secret (used below when present) if a tag-triggered release build
@@ -23,7 +35,7 @@ on:
   push:
     branches: [main]
 
-# Push the tag.
+# Push the release tag, and create or move `latest`.
 permissions:
   contents: write
 
@@ -90,3 +102,10 @@ jobs:
           set -euo pipefail
           version="$(cat .pkit/VERSION)"
           uv run pkit release publish-notes "$version"
+
+      # On every run, last: after any tag this run cut and its notes, so a
+      # failure here never skips a release's notes. Points `latest` at the highest
+      # release's commit (see the header). Standard library and git only, on the
+      # runner's own python3, so nothing is installed for it.
+      - name: Point the tag latest at the highest release
+        run: python3 scripts/latest_tag.py --push
