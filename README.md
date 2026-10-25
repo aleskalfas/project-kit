@@ -55,7 +55,7 @@ pkit:
         - .pkit/capabilities/evidence/README.md#
         - .pkit/adapters/README.md#currently-shipped
     revalidated:
-      at: 2026-10-25T14:05:53Z
+      at: 2026-10-25T14:13:05Z
       outcome: updated
 ---
 
@@ -67,7 +67,7 @@ project-kit installs a way of working with AI coding agents into your project, a
 
 ## Why
 
-Every project that works with AI coding agents builds a way of working for them. It says where decisions are written down, which rules the agents follow and what they may run. Built by hand in each project, it breaks in the same six places:
+Every project that works with AI coding agents builds a way of working for them. It says where decisions are written down, which rules the agents follow and what they may run. Built by hand in each project, it tends to break in six places:
 
 - **Your agent forgets what the project decided.** Each session starts from the project's files, and last week's chat is not among them.
 - **The agent asks about every harmless command, or may run one it never should.** You approve prompts without reading them, or turn them off.
@@ -82,10 +82,10 @@ project-kit writes the shared part once, as a methodology. Your project installs
 
 - **[Your rules load into every session](#your-rules-load-into-every-session),** and tell agents to build only on accepted decisions.
 - **[Routine commands run unasked, and dangerous ones are denied](#routine-commands-run-unasked-and-dangerous-ones-are-denied)** in their common forms.
-- **[No change leaves a document stale without saying so](#no-change-leaves-a-document-stale-without-saying-so),** once the document is anchored and your CI runs the check.
+- **[No change leaves a document stale without saying so](#no-change-leaves-a-document-stale-without-saying-so),** once it is anchored in a declared place and your CI runs the check.
 - **[Reviewer agents come ready to call](#reviewer-agents-come-ready-to-call),** defined never to change the work they judge.
 - **[The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency):** one command, then a pinned version.
-- **[Your files stay yours](#your-files-stay-yours):** a sync keeps what you wrote.
+- **[Your files stay yours](#your-files-stay-yours):** a sync keeps the lines you added.
 
 ## How project-kit answers each problem
 
@@ -193,7 +193,7 @@ Pinned project-kit to <version> (.pkit/version-pin).
 
 ### Your files stay yours
 
-**A sync refreshes the methodology's files and keeps what you wrote.** Every file has one owner, the methodology or you ([the decisions README, "The no-shared-files invariant"](.pkit/decisions/README.md#the-no-shared-files-invariant), COR-001). Into `CLAUDE.md` and `.claude/settings.json`, a sync only adds what is missing (COR-002). Here your own line in `CLAUDE.md` survives a sync:
+**A sync refreshes the methodology's files and keeps the lines you added.** Every file has one owner, the methodology or you ([the decisions README, "The no-shared-files invariant"](.pkit/decisions/README.md#the-no-shared-files-invariant), COR-001). Into `CLAUDE.md` and `.claude/settings.json`, a sync only adds what is missing (COR-002). Here your own line in `CLAUDE.md` survives a sync:
 
 ```console
 $ echo "Answer in English." >> CLAUDE.md
@@ -223,7 +223,7 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 | An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ at each project's next upgrade |
 | Taking an update keeps your own files | ❌ merged by hand | ✅ one owner per file, with listed exceptions |
 | A deny catches other forms of its command | ❌ the start of a command only | ✅ once the hook is on |
-| Stale documents flagged on the change | ❌ | ✅ once anchored |
+| Stale documents flagged on the change | ❌ | ✅ once anchored in a declared place |
 | Reviewer agents ready to call | ❌ written by you | ✅ four shipped |
 
 ## When not to use it
