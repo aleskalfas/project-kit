@@ -49,11 +49,23 @@ that term already carries two meanings: team membership in
 ### 1. Activation is per-clone and opt-in
 
 A clone sets its own identity with a
-`set-instance <N>` command that writes a clone-local **instance id** to a
+`set-instance <N>` command that writes a local **instance id** to a
 git-ignored runtime file (declared via the capability's `runtime_ignore:`
 key per [pkit:ADR-009] rule 7, so it is never committed). A clone with
 no instance id set behaves exactly as today — no marking, no guard, no
 signing. The presence of the id is the sole activation gate.
+
+A clone includes its linked git worktrees unless a worktree sets its own id.
+A worktree with no id of its own reads the id its clone's main working tree
+holds, so a session in a worktree acts as the clone. Where git locates no main
+working tree, as for a bare repository, only an id a worktree sets applies.
+Setting an id writes it in the worktree where it is set, and a worktree that
+sets one is an instance of its own, numbered from the same per-assignee pool
+(point 2).
+
+Sessions that read one id are one instance. The clash guard (point 6) does not
+stand between them, so a worktree whose work must be kept apart from its
+clone's sets a number of its own.
 
 > **Refined by [DEC-045](DEC-045-named-per-user-instances.md).** Opt-in and
 > additive on top of the numeric id: a clone's identity may also carry a
@@ -161,6 +173,15 @@ Clones coordinate through the GitHub labels (the shared substrate per DEC-003),
 so no committed registry is needed — the feature's entire persistent state is
 the per-clone id plus the labels.
 
+**Why a worktree acts as its clone.** A session in a linked worktree, such as a
+subagent's, does work its clone dispatched, so it is that clone, not a separate
+claimant. Reading no id, it would be non-participating: what it files would
+carry no owner, and the clash guard would not stop it acting on another clone's
+work. An id the worktree sets wins over the one it would read, as an explicit
+setting wins over an inherited one. The clone's id is kept once, in its main
+working tree, so where git locates no main working tree a worktree has only the
+id it sets.
+
 **Why a label paired with the assignee, not the assignee alone or a synthetic
 handle.** GitHub assignees must be real accounts, so a `user@instance` assignee
 is impossible. The instance number alone is ambiguous across people; pairing it
@@ -214,10 +235,13 @@ principle — noted so a future maintainer does not re-derive it as a COR.
 
 ## Implications
 
-- **New command `set-instance <N>`** writes the clone-local id; the capability's
+- **New command `set-instance <N>`** writes the local id; the capability's
   `package.yaml` declares that runtime file under `runtime_ignore:` so it is
   never committed (reuses the [pkit:ADR-009] rule 7 renderer; pure additive,
   trips no migration).
+- **A worktree that takes a number of its own** draws on the per-assignee pool,
+  and what it claims keeps that number after the worktree is removed, until the
+  clone reclaims it (point 4).
 - **`create-issue`, `start-work`, `done-work`, `close-issue`, `edit-issue`,
   `move-issue` gain ownership side-effects** (stamp / claim-commons / strip /
   guard) as wrapper-level behaviour — additive, the same class as branch-
