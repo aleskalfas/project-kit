@@ -20,10 +20,10 @@ rules:
         anchors: {record: ["ADR-069#4"], artefact: ["RS-USER-001"]}
   RS-REWORK-003:
     status: proposed
-    origin: {why: "ADR-069 point 4 decides what a user page cites. An adopter's agent cannot read a record or an issue that does not ship, so a citation of one leads it nowhere. The maintainer agreed on 24 October that a page cites only the records that ship (#1928). project-kit's own records live under tech-docs/, and a user page leads into no technical material (living-docs DEC-001 point 1)."}
+    origin: {why: "ADR-069 point 4 decides what a user page cites. An adopter's agent cannot read a record or an issue that does not ship, so a citation of one leads it nowhere. The maintainer agreed on 24 October that a page cites only the records that ship (#1928). project-kit's own records live under tech-docs/, which never ships."}
     pkit:
       friction:
-        anchors: {record: ["ADR-069#4", "living-docs:DEC-001#1"]}
+        anchors: {record: ["ADR-069#4"]}
   RS-REWORK-004:
     status: proposed
     origin: {why: "ADR-069 point 4 decides how a component's page reaches the backbone's. A capability or an adapter runs on a range of backbone versions, so a page it ships meets backbone pages it was not written against. A backbone page may be numbered anew or moved, while an area's README moves only with its folder (ADR-069 point 3)."}
@@ -32,10 +32,11 @@ rules:
         anchors: {record: ["ADR-069#3", "ADR-069#4"]}
   RS-REWORK-005:
     status: proposed
-    origin: {why: "The maintainer chose a contents list, written by a generator and checked fresh, for a page a reader moves around in (#2053). A list kept by hand drifts when a section is added or renamed. The pilot's reference has eleven second-level sections, and its reader looks one up rather than reading through (PR #2018)."}
+    origin: {why: "The maintainer chose a contents list for a page a reader moves around in, such as a long guide or a reference (#2053). A generator writes it, and a check fails it when stale. Four second-level sections is project-kit's choice of where a page becomes one. A list kept by hand drifts when a section is added or renamed."}
 # The part of a rule that project-kit's contents generator, scripts/page_contents.py,
-# checks (COR-051 point 2). Whoever judges the rest of the rule leaves that part to
-# it. The generator checks every page's contents list, whether this rule binds or not.
+# checks (COR-051 point 2). The generator checks every contents list a page holds, as
+# CONTRIBUTING.md says. It stands in for this rule's part only where the rule binds,
+# and whoever judges the rest of the rule there leaves that part to it.
 checks:
   RS-REWORK-005:
     - check: page-contents
@@ -44,14 +45,15 @@ checks:
 
 # The documentation rework's writing rules
 
-This set brings project-kit's general writing rules, `WRITE`, to each page the documentation rework has rewritten (EPIC #1928). It also holds the rules every user page follows by ADR-069 point 4, and the rule on a contents list.
+This set brings project-kit's general writing rules, `WRITE`, to each page the documentation rework has rewritten (EPIC #1928). It also holds the rules ADR-069 point 4 gives every user page, and the rule on a contents list.
 
 - **What it binds:** its own rules, and those of `WRITE` and of the shared method, `living-docs:LDOC`, on each page its scope selects. The scope selects by path and by living-docs' page type, as the space definitions do.
+- **Where its rules reach:** only the pages the scope lists, so a rule here reaches a user page once a slice of the rework adds it. ADR-069 point 4 scopes this set as `USER` is. Its scope lists the reworked pages instead, as the pilot set it up (#2012), so that accepting a rule costs only the pages already rewritten.
 - **Why it inherits `LDOC`:** a set that holds a project's documentation rules inherits `LDOC` (living-docs DEC-001 point 3). It pins major 1, as `GUIDE`, `USER` and `TECH` do. One page reached through two pins of a set at different majors fails validation (COR-051 point 7).
-- **How it grows:** each slice of the rework adds the pages it rewrites to the scope's paths. A page several slices rewrite joins with the last of them.
+- **How it grows:** each slice of the rework adds the pages it rewrites or creates to the scope's paths. A page several slices rewrite joins with the last of them.
 - **The guides' set:** `GUIDE` (`guide.md` beside this one) holds the rules that only the guides and the entry README follow. Its scope selects `docs/**` and `README.md`, and keeps it however this set grows.
 - **Proposed:** every rule here is proposed, and binds nothing until the maintainer accepts it (COR-051 point 4). Accepting one binds it on each page the scope lists, all at once. So the change that accepts it mends the pages that break it, or first leaves them out of the scope (COR-060 point 2).
-- **How a rule reads:** a statement, then *How*, then examples, as in `WRITE`. Its reason is the `why` of its origin, in the front matter. What binds is a rule's statement and its *How*, and the examples, a "such as" phrase and a *Note* only illustrate.
+- **How a rule reads:** a statement, then *How*, then examples, as in `WRITE`. Its reason is the `why` of its origin, in the front matter. What binds is a rule's statement and its *How*. The examples, a "such as" phrase, a sentence that starts "An instance is" and a *Note* only illustrate.
 - **The examples:** each quotes the page it names, as main holds it, unless it names a commit. An example on no branch says so.
 - **When it goes:** once the spaces' definitions, `TECH` and `USER`, inherit `WRITE` (#1350). `USER` then takes this set's rules (ADR-069), every page takes `WRITE` through its space, and this set is removed.
 
@@ -62,6 +64,7 @@ Name a page or a subfolder that its reader reads in order with a number in tens,
 - **How:**
   - The number opens the name, `010-`, `020-` and so on, in the order the reader reads. A gap of ten leaves room for a page between two others.
   - A lookup page, which a reader looks up rather than reads in order, takes its topic as its name, with no number, such as `glossary.md`.
+  - Every page but a README is read in order or looked up.
   - The folder's README lists its numbered pages and subfolders in number order. The README keeps its own name (ADR-069 point 3).
 - **Breaks the rule:** a guide folder on no branch holds `turning-it-on.md` and `common-tasks.md`, read in that order, and neither name says so.
 - **Keeps the rule:** the same pages on no branch, named `010-turning-it-on.md` and `020-common-tasks.md`, and a glossary beside them named `glossary.md`.
@@ -72,13 +75,13 @@ Name a page or a subfolder that its reader reads in order with a number in tens,
 When a page or a section moves, mend every link to it in the same change. Keep a moved section's old address on the page it left.
 
 - **How:**
-  - A move is a page moved or renamed, a section moved to another page, or a heading renamed, since a heading's text gives its address.
+  - A move is a page moved or renamed, a section moved to another page, or a heading renamed, since a heading's text gives its address. RS-WRITE-016 decides whether a heading that text points to may move. This rule adds what a move owes.
   - Mend each link in the repository that leads to what moved. Look for the old path, and for the old address after its `#`.
   - A renamed heading keeps its old address as an HTML id on the line before it, such as `<a id="old-address"></a>`.
   - A section that leaves a page keeps its old address there as an HTML id, before a sentence that links where the section went.
 - **Breaks the rule:** a rewrite on no branch drops the "(PRJ-006)" from the reference's heading "The permission-prompt diagnostic loop", with no HTML id. A link to `#the-permission-prompt-diagnostic-loop-prj-006` then lands at the page's top.
 - **Keeps the rule:** the permissions reference holds `<a id="the-permission-prompt-diagnostic-loop-prj-006"></a>` on the line before that heading.
-- **Note:** RS-USER-001 asks that readers' paths stay unbroken, and this rule says how a move keeps them. RS-WRITE-016 keeps a pointer by its words, and this rule keeps a link's address.
+- **Note:** RS-USER-001 asks that readers' paths stay unbroken, and this rule says what a move owes them. RS-WRITE-016 keeps a heading that a pointer outside the change leads to, such as a link from an adopter's repository. Where it keeps one, this rule leaves the heading as it is.
 
 ## RS-REWORK-003 — Cite only what ships
 
@@ -88,9 +91,10 @@ Cite on a user page only the records the core and the capabilities ship, cite no
   - A citation is the id of a record or an issue in what the page shows its reader, with a link or without. Headings count, and code blocks, command output, comments and front matter do not.
   - project-kit's own records are its ADRs and its PRJs. A statement that rests on one keeps it as an anchor in the front matter (RS-LDOC-001), and the page neither cites nor links it.
   - A heading that cited such a record or an issue drops the citation, and keeps its old address (RS-REWORK-002).
-  - A page that ships is one under `.pkit/`. It links its guide's README at the `latest` tag (ADR-069 point 2), and nothing else that does not ship.
+  - A page that ships is one under `.pkit/` other than the release guide, `.pkit/release/README.md`. It links its guide's README at the `latest` tag (ADR-069 point 2), and nothing else that does not ship.
 - **Breaks the rule:** the permissions README before the pilot, at commit `8f7ea252`, says "The design … is [ADR-060](../../tech-docs/architecture/decisions/ADR-060-path-scoped-workspace-allow.md)." It cites a record of project-kit's own, and links under `tech-docs/`, which never ships.
 - **Keeps the rule:** ADR-060 stands among the permissions reference's anchors, and its text states the design with no citation: "The workspace's design is a path-scoped allow …"
+- **Note:** RS-WRITE-016 keeps a heading that a link from outside the change leads to, which on a page that ships is every heading. Its *How* would have to count a kept old address as keeping the heading before such a heading can drop its citation.
 
 ## RS-REWORK-004 — A component's page reaches a backbone page through its area's README
 
@@ -100,18 +104,19 @@ On a page a capability or an adapter ships, link a backbone page only through it
   - A backbone page is a page under `.pkit/` that no capability or adapter ships, such as the CLI reference.
   - Through its area's README means the link leads to the README of the folder that holds the backbone page, such as `.pkit/cli/README.md`. A link to a section of that README counts, since where the installed version lacks the section, the link still lands on the README.
   - By its role means the page names the backbone page by what it is for, such as "the CLI reference", with no link.
+  - A decision record is no page, and RS-REWORK-003 says which a page may cite. A link to another capability's or adapter's page is outside this rule.
   - The rule does not reach a backbone page, nor a guide in `docs/`, whose links to the references all read one version.
 - **Breaks the rule:** a capability's README on no branch links `../../cli/020-friction.md`, a page the backbone may number anew or move in a later version.
 - **Keeps the rule:** the living-docs README links the schemas reference as `../../schemas/README.md#rule-set-files`, a section of the schemas area's README.
 
 ## RS-REWORK-005 — A long page opens with a generated contents list
 
-Open a page that a reader moves around in with a contents list of its second-level sections, written by the contents generator.
+Open a page of four or more second-level sections with a contents list of them, written by the contents generator.
 
 - **How:**
-  - A page a reader moves around in is one with four or more second-level sections, its contents section left out.
+  - The count leaves out the contents section itself.
   - The list stands right after the page's lead, under a second-level heading of its own, such as "Contents". It holds one item for each other second-level section, in the page's order.
   - The contents generator, `scripts/page_contents.py`, writes the list between the markers `<!-- pkit:contents -->` and `<!-- /pkit:contents -->` (`CONTRIBUTING.md`, "The pages' contents lists").
 - **Breaks the rule:** the first pass of the permissions README, at commit `fe244502` of PR #2018, has nine second-level sections and no contents list.
 - **Keeps the rule:** the permissions reference's "Contents" stands right after its one-line purpose, its list between the two markers.
-- **Note:** the contents generator checks every page's contents list, as the set's `checks` declare.
+- **Note:** the contents generator checks that the list is the one it writes, as the set's `checks` declare.
