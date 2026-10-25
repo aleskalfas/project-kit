@@ -439,11 +439,13 @@ class RecordFiles:
             )
         answered: dict[str, str | None] = {}
         for entry in document.get("lookups") or []:
-            if not isinstance(entry, Mapping) or not isinstance(entry.get("id"), str):
-                continue
-            locations = [p for p in entry.get("locations") or [] if isinstance(p, str) and p]
-            resolved = entry.get("resolved") is True and locations
-            answered[entry["id"]] = locations[-1] if resolved else None
+            # The backbone's answer for one id: a resolved record's file is the last
+            # place the answer gives.
+            match entry:
+                case {"id": str(record), "resolved": True, "locations": [*_, str(file)]} if file:
+                    answered[record] = file
+                case {"id": str(record)}:
+                    answered[record] = None
         unanswered = [record for record in asked if record not in answered]
         if unanswered:
             raise Unreadable(f"`pkit refs lookup --json` gave no answer for {unanswered[0]}")

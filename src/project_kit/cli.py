@@ -5348,7 +5348,7 @@ def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
     if as_json:
         click.echo(json.dumps(refs_mod.lookup_document(target_root, record_ids), indent=2))
         return
-    if len(record_ids) > 1:
+    if len(record_ids) != 1:
         raise click.UsageError("several ids are looked up with --json, in one document.")
     found = refs_mod.lookup(target_root, record_ids[0])
     if found.problem is not None:
