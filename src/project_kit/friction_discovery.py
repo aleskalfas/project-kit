@@ -2517,6 +2517,11 @@ class Artefact:
       every capability place matching its file declares at the state walked
       (`Discovery.aside_of`). An artefact read from history carries the aside of
       the artefact it stands for (`friction_history.Walker.artefact_in`).
+    - `received`: its file arrives in the project by sync, as a rule of a method
+      rule set does where the methodology is not authored (`synced_copy_test`).
+      It owes the project no answer, and neither check reports it stale, as for
+      an excluded path (COR-062 point 9). An artefact read from history carries
+      `False`.
     """
 
     id: str
@@ -2534,11 +2539,18 @@ class Artefact:
     span: SectionSpan | None = None
     body_line: int = 1
     aside: SetAside = NOTHING_SET_ASIDE
+    received: bool = False
 
     @property
     def excluded(self) -> bool:
         """Whether `friction.exclude` leaves it out (`excluded_by`)."""
         return self.excluded_by is not None
+
+    @property
+    def owes_no_answer(self) -> bool:
+        """Whether no check asks it for an answer or reports it stale: it lies under an
+        excluded path (COR-050 point 7), or arrives by sync (COR-062 point 9)."""
+        return self.excluded or self.received
 
     @property
     def location(self) -> str:
@@ -3064,6 +3076,10 @@ def discover_artefacts(
     unreadable: list[UnreadableFile] = []
     read: list[DiscoveredFile] = []
     texts = document_texts(listing, [rel for _place, rel in matched] + sorted(holder))
+    # A rule-set file is walked where a declared place would leave a synced copy out
+    # (COR-051 point 2); a rule in one arrives by sync, and owes no answer (COR-062
+    # point 9). Read on the working tree's install state, as the walk reads it.
+    is_synced_copy = synced_copy_test(target_root) if claimed else None
     for place, rel in matched:
         rule_set = claimed.get(rel)
         text = texts[rel]
@@ -3078,7 +3094,10 @@ def discover_artefacts(
             mixed = line_break(text) is None
             front_matter, found, reason = _read_artefacts(rel, place, text, rule_set=rule_set)
             aside = aside_of_places(matching[rel])
-            artefacts.extend(replace(a, excluded_by=excluded_by, aside=aside) for a in found)
+            received = rule_set is not None and is_synced_copy is not None and is_synced_copy(rel)
+            artefacts.extend(
+                replace(a, excluded_by=excluded_by, aside=aside, received=received) for a in found
+            )
         if reason is not None:
             unreadable.append(
                 UnreadableFile(path=rel, place=place, reason=reason, rule_set=rule_set)

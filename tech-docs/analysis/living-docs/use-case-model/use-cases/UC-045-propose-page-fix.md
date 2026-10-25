@@ -40,8 +40,9 @@ pkit:
         - REQ-022
         - REQ-025
     revalidated:
-      at: 2026-10-24T20:58:37Z
-      outcome: updated
+      at: 2026-10-25T05:30:46Z
+      outcome: unchanged
+      unchanged-because: The agent and its storyboard changed only in reader-review, which now reads the reading-evidence point. Proposing the fix for a stale page is as it was.
 ---
 
 # UC-045 — Have the fix for a stale page proposed, and review it before it is applied

@@ -9,7 +9,8 @@
 # not code:
 #
 #   count          at most `max` of a unit in a scope: `count` is `words` or
-#                  `sentences`, `in` is `sentence` or `paragraph`
+#                  `sentences`, `in` is `sentence` or `paragraph`, a list item
+#                  with every block of it counting as one paragraph
 #   forbid         a pattern that may not appear: `pattern` is a regular
 #                  expression, `name` says what a finding found, and `in` is
 #                  `prose`, the default, or `file`: every character of the
@@ -32,6 +33,13 @@ entries:
     count: words
     in: sentence
     max: 25
+  # A list item counts as one paragraph, with every block of it.
+  - rule: RS-WRITE-007
+    type: count
+    count: sentences
+    in: paragraph
+    max: 4
+    except: [cells]
   - rule: RS-WRITE-008
     type: forbid
     pattern: ";"

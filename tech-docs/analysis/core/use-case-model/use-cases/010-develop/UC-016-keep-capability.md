@@ -27,9 +27,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T20:51:57Z
+      at: 2026-10-25T05:23:26Z
       outcome: unchanged
-      unchanged-because: ACT-component-author says each new version of their component where it said release, and names the author where it said role. Its needs are the same, so this use case holds.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository

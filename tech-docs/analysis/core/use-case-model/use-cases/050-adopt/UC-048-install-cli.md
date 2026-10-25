@@ -30,8 +30,9 @@ pkit:
         - REQ-009
         - REQ-031
     revalidated:
-      at: 2026-10-24T20:58:12Z
-      outcome: updated
+      at: 2026-10-25T05:24:28Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-048 — Put the system's CLI on my machine at a release

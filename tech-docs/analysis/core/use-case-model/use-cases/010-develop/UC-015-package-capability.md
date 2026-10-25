@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-24T21:20:15Z
+      at: 2026-10-25T05:23:24Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent keeps its words and drops only its links on role, and ACT-component-author names a new version and the author. Their needs are the same, so this use case holds.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-015 — Package a recurring discipline as a capability

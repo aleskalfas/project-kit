@@ -1,0 +1,9 @@
+component: backbone
+kind: none
+body: >
+  The command reference, `.pkit/cli/README.md`, names every command and option
+  the backbone defines, each under its own command: the refs and hooks
+  families, the schemas verbs, `new schema`, the process engine's commands,
+  `version promote`, `unbump`, `tag` and `untag`, and the options it left out.
+  A test holds the reference and the backbone's commands to one list. No
+  command changes.

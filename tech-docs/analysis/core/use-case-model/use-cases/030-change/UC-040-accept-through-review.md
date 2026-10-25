@@ -32,8 +32,9 @@ pkit:
         - ACT-ai-agent
         - REQ-005
     revalidated:
-      at: 2026-10-24T20:57:47Z
-      outcome: updated
+      at: 2026-10-25T05:24:12Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-040 — Have a drafted record or rule become binding only through my own review

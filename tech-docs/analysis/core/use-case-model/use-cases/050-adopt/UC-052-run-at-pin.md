@@ -58,8 +58,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-24T20:58:26Z
-      outcome: updated
+      at: 2026-10-25T05:24:35Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-052 — Run each project at the version it pins

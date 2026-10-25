@@ -1,0 +1,11 @@
+answers:
+  - artefact: tech-docs/analysis/software-engineering/glossary.md#TERM-hand-off
+    revalidated:
+      at: 2026-10-25T00:36:21Z
+      outcome: unchanged
+      unchanged-because: The engineer's body now has it commit what the writers write. The hand-off still names the answers for the person to decide.
+  - artefact: tech-docs/analysis/software-engineering/use-case-model/use-cases/UC-081-decide-unasked-answers.md
+    revalidated:
+      at: 2026-10-25T00:36:34Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 and the engineer's body now say to commit what the writers write. The person still decides each answer the change was not asked for.

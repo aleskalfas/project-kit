@@ -39,8 +39,9 @@ pkit:
         - REQ-015
         - REQ-020
     revalidated:
-      at: 2026-10-24T20:57:02Z
-      outcome: updated
+      at: 2026-10-25T00:34:20Z
+      outcome: unchanged
+      unchanged-because: An artefact received by sync now owes no answer, as an excluded one does. Anchoring a document and the faults validation fails are as this use case says.
 ---
 
 # UC-005 — Say what my document rests on
