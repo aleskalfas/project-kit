@@ -126,7 +126,11 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 
 ### No change leaves a document stale without saying so
 
-**A change to what a document rests on asks for an answer, so no anchored page goes stale unnoticed.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. Here `docs/` holds documents, a page there rests on `app.py`, and the check fails (`enforcing`) where by default it warns:
+**A change to what a document rests on asks for an answer, so no anchored page goes stale unnoticed.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. In the example:
+
+- `docs/` holds documents
+- a page there rests on `app.py`
+- the check fails (`enforcing`) where by default it warns
 
 ```console
 $ mkdir -p .pkit/project && printf 'friction:\n  mode: enforcing\n  places: [docs/**]\n' >> .pkit/project/config.yaml
@@ -161,7 +165,7 @@ Result: passed   (enforcing)
 
 ### Reviewer agents come ready to call
 
-**Four reviewer agents ship with the methodology, each defined to judge the work, not to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as [project-management](.pkit/capabilities/project-management/README.md)'s, an optional capability. Their definitions say so, and only the critic is also held to it by its tools:
+**Four reviewer agents ship with the methodology, each defined to judge the work, not to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as the one in [project-management](.pkit/capabilities/project-management/README.md), an optional capability. Their definitions say so, and only the critic is also held to it by its tools:
 
 ```console
 $ grep -l -e "never change the work under review" -e "never modify any artifact" .claude/agents/*.md
@@ -258,6 +262,8 @@ pkit --help
 If that isn't found, run `uv tool update-shell` and reopen your shell (the command adds `uv`'s tool directory to your `PATH`). That's the whole install: `uv`, `jq` and one command. `pkit` is now on your PATH, shared across all your projects.
 
 ### Two things named "pkit"
+
+Two names look alike: the command `pkit`, and the methodology `.pkit/` that it installs.
 
 - **`pkit`** — the **command** you just installed, once, globally.
 - **`.pkit/`** — the **methodology** that command installs *into a project* (next step). The `pkit` command operates on it.
