@@ -78,6 +78,7 @@ from _lib import (
     body_parent_ref,
     body_rules,
     bootstrap_gate,
+    decision_ids,
     provenance,
     session_guard,
     title_rules,
@@ -392,6 +393,9 @@ def main() -> int:
             # The use-case point (DEC-054): read only for a body edit whose
             # Feature or Task body cites a use case.
             use_cases=use_case_citations.read_point if body_changed else None,
+            # The records (DEC-010): asked of the backbone only for a body
+            # edit whose body cites a decision id.
+            records=decision_ids.lookup if body_changed else None,
         )
         _print_findings(findings)
 
@@ -725,6 +729,7 @@ def _validate(
     check_title: bool = True,
     check_body: bool = True,
     use_cases: use_case_citations.Reader | None = None,
+    records: decision_ids.Reader | None = None,
 ) -> list[Finding]:
     """Apply the body + title validators used by validate-issue.py.
 
@@ -837,6 +842,11 @@ def _validate(
     for sev, label, detail in use_case_citations.findings(
         body, structural_type, body_format, use_cases
     ):
+        findings.append(Finding(sev, label, detail))
+    # The decision ids the body cites that no record holds (DEC-010), as
+    # validate-issue reads them. `records` asks the backbone, and only for a
+    # body that cites one; None asks nothing.
+    for sev, label, detail in decision_ids.findings(body, body_format, records):
         findings.append(Finding(sev, label, detail))
 
     # Scope to the fields being changed (#583). Findings are labelled
