@@ -164,7 +164,7 @@ The command reads these lines, never your prose.
 
 ## Files you own
 
-None, in the sense of `owns` (COR-013): you write no tracked file. The analysis location is each project's own, recorded where its analysis lies (COR-049 point 5), so no fixed path could name it; the artefacts, their `revalidated` blocks and the records are all written by the commands you hand over. Your own files are the workspace's, above.
+None, in the sense of `owns` (COR-013): you write no tracked file. The analysis location is each project's own, recorded where its analysis lies (COR-049 point 5), so no fixed path could name it; the artefacts, their answers and the records are all written by the commands you hand over, in the change where the person runs them. Your own files are the workspace's, above.
 
 ## Key documents to read
 

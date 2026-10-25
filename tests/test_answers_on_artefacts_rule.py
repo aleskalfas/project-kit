@@ -59,8 +59,10 @@ def test_rule_20_keeps_its_number_and_title():
 @pytest.mark.parametrize(
     "words",
     [
-        "the revalidation or the revisit entry you owe for a combined state after resolving"
-        " a conflict (COR-050 point 16), without asking first",
+        "asks of a change you are making, without asking first.",
+        "Commit what the writers write with your change, a new answer file among it"
+        " (COR-062 point 1).",
+        "make that revalidation's reason judge their combined state (COR-062 point 7).",
         "Name an open follow-up in the reason of each deferral, or `deferred` revisit"
         " entry, you write.",
         "told the sentences and what is left out of date, until which follow-up, as"
@@ -77,8 +79,10 @@ def test_rule_20_names_revisit_entries(words):
     "words",
     [
         "`pkit friction revalidate`, `pkit friction defer` and `pkit friction revisit`",
-        "the revalidation or the revisit entry it owes for a combined state after resolving"
-        " a conflict (COR-050 point 16)",
+        "those the change check (`pkit friction check`) asks of it. It asks nobody first.",
+        "One flag marks a revalidation that replaces revalidations answered apart, and the"
+        " reviewer checks that its reason judges their combined state (COR-062 point 7).",
+        "The agent commits what the writers write with its change, a new answer file among it.",
         "The reviewer also checks that each target the change revisited by changing it meets"
         " the change to the source (COR-050 point 16).",
         "Each deferral, and each `deferred` revisit entry, the agent writes names an open"
@@ -108,6 +112,9 @@ def test_the_readme_leaves_any_other_entry_to_a_person():
         (_change_bullet, "the revalidation of a combined state it owes"),
         (_change_bullet, "those sentences and the deferrals"),
         (_friction_writers, "on an artefact a change was not asked about"),
+        # COR-062 overturns COR-050's rule on an answer owed after a conflict (#1873).
+        (_rule_20, "after resolving a conflict"),
+        (_change_bullet, "after resolving a conflict"),
     ],
 )
 def test_neither_names_only_the_revalidation(text, stale):
