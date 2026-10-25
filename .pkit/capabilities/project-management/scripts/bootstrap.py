@@ -1051,7 +1051,9 @@ def _resolve_repo() -> RepoLookup:
     except FileNotFoundError:
         return RepoLookup(None, "`gh`, GitHub's command-line tool, is not on PATH", _FIX_GH)
     if proc.returncode != 0:
-        said = " ".join((proc.stderr or "").split()) or f"it exited {proc.returncode}"
+        # One line, and no control character reaches the terminal.
+        printable = "".join(c for c in proc.stderr or "" if c.isprintable() or c.isspace())
+        said = " ".join(printable.split()) or f"it exited {proc.returncode}"
         return RepoLookup(None, f"`gh repo view` says: {said}", _FIX_REMOTE)
     try:
         name = json.loads(proc.stdout).get("nameWithOwner")

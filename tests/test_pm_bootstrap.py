@@ -480,6 +480,12 @@ def test_resolve_repo_gives_gh_s_own_reason_when_none_resolves(bs, monkeypatch) 
     assert "git remote add origin" in lookup.fix
 
 
+def test_resolve_repo_quotes_gh_on_one_line_without_control_characters(bs, monkeypatch) -> None:
+    _fake_gh(bs, monkeypatch, _repo_view_fails("no git\x1b[31m remotes\r\n found\x07\n"))
+    lookup = bs._resolve_repo()
+    assert lookup.why == "`gh repo view` says: no git[31m remotes found"
+
+
 def test_resolve_repo_says_gh_is_missing(bs, monkeypatch) -> None:
     _fake_gh(bs, monkeypatch, _gh_not_on_path)
     lookup = bs._resolve_repo()
