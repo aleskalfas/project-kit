@@ -752,22 +752,22 @@ def test_cli_refs_lookup_json_answers_every_id_in_one_document(kit_target: Path)
             {
                 "id": "COR-001",
                 "resolved": True,
-                "locations": [".pkit/decisions/core/COR-001-thing.md"],
+                "paths": [".pkit/decisions/core/COR-001-thing.md"],
                 "problem": None,
             },
             {
                 "id": "widgets:DEC-004",
                 "resolved": True,
-                "locations": [".pkit/capabilities/widgets/decisions/DEC-004-thing.md"],
+                "paths": [".pkit/capabilities/widgets/decisions/DEC-004-thing.md"],
                 "problem": None,
             },
             {
                 "id": "COR-999",
                 "resolved": False,
-                "locations": [],
+                "paths": [],
                 "problem": "no record matches 'COR-999'",
             },
-            {"id": "-x", "resolved": False, "locations": [], "problem": "no record matches '-x'"},
+            {"id": "-x", "resolved": False, "paths": [], "problem": "no record matches '-x'"},
         ],
     }
     one = CliRunner().invoke(main, ["refs", "lookup", "--json", "COR-001"])
@@ -775,7 +775,7 @@ def test_cli_refs_lookup_json_answers_every_id_in_one_document(kit_target: Path)
 
 
 def test_cli_refs_lookup_takes_several_ids_only_with_json(kit_target: Path) -> None:
-    """Without `--json` it prints one id's locations, so several ids are refused rather
+    """Without `--json` it prints one id's paths, so several ids are refused rather
     than printed with nothing to tell whose line is whose."""
     _write_decision(kit_target, "core", "COR", "001", "thing")
     result = CliRunner().invoke(main, ["refs", "lookup", "COR-001", "COR-001"])

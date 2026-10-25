@@ -442,12 +442,12 @@ LOOKUP_VERSION = 1
 
 @dataclass(frozen=True)
 class Lookup:
-    """What `pkit refs lookup` answers for one id: where it lies, each location
+    """What `pkit refs lookup` answers for one id: where it lies, each path
     repository-relative — a record's file, a rule's place in its rule set, or where an
     installed capability declares a role or a point — or why it does not resolve."""
 
     id: str
-    locations: tuple[str, ...] = ()
+    paths: tuple[str, ...] = ()
     problem: str | None = None
 
     @property
@@ -489,7 +489,7 @@ def lookup_document(target_root: Path, record_ids: Collection[str]) -> dict[str,
             {
                 "id": found.id,
                 "resolved": found.resolved,
-                "locations": list(found.locations),
+                "paths": list(found.paths),
                 "problem": found.problem,
             }
             for found in (lookup(target_root, record_id) for record_id in record_ids)

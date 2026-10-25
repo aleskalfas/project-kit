@@ -446,7 +446,7 @@ def _looked_up(asked: list[list[str]]) -> Any:
             {
                 "id": named,
                 "resolved": named == "PRJ-001",
-                "locations": ["a.md"] if named == "PRJ-001" else [],
+                "paths": ["a.md"] if named == "PRJ-001" else [],
                 "problem": None if named == "PRJ-001" else f"no record matches {named!r}",
             }
             for named in argv[argv.index("--") + 1 :]

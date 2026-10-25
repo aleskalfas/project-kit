@@ -5353,8 +5353,8 @@ def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
     found = refs_mod.lookup(target_root, record_ids[0])
     if found.problem is not None:
         raise click.ClickException(f"{found.problem}.")
-    for location in found.locations:
-        click.echo(location)
+    for path in found.paths:
+        click.echo(path)
 
 
 @refs.command("rename")
