@@ -634,7 +634,7 @@ The owner is the assignee paired with an instance number. So a clone claims only
 
 **The marker is a comment unless you choose the label.** Each claim, withdrawal and release is then an event comment, and the issue's description shows the current owner. That owner line is derived from the comments, rewritten after each event, and kept above the provenance footer. Where your repository can create labels, `substrate: label` in the capability's `project/instance-ownership.yaml` selects the `instance:N` label instead, created on first use.
 
-**Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim, and `start-work` then stops before the move with exit code 2, naming the branch it cut. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and the owner line shows both.
+**Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim, and `start-work` stops before the move with exit code 2. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and both claims stay on the issue.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
