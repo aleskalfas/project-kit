@@ -73,7 +73,7 @@ Each kind of thing a record, an agent or a skill cites has one written form, and
 **Looking a citation up.** `pkit refs lookup` prints where a citation lies, and resolves a point of a record and a rule's heading too.
 - **A point of a record,** written as an anchor's value, prints its record's file and the anchor GitHub gives its heading: `pkit refs lookup COR-050#14`. A retired point gives its stub's heading. A record whose points are still a list gives a point no heading, so it prints the file alone. An id the record neither holds nor retires does not resolve.
 - **A rule** prints its place, and `--json` gives its heading's anchor too.
-- **With `--json`,** each answer in its document also gives the file, the anchor and whether the file arrives as a synced copy. A capability's script finds a record through it, never by looking in a folder itself.
+- **With `--json`,** each answer in its document also gives the file, the anchor and whether the file arrives as a synced copy.
 
 ## The no-shared-files invariant
 
