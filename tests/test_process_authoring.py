@@ -1725,9 +1725,8 @@ def _evidence_unit(make_adopter_repo: MakeAdopterRepo, origin: str, *, source: b
     """An adopter with the capability `evidence` registered at `origin`, holding the
     definition `evidence:unit`, whose state `building` couples to `design:screen`.
     The definition is stamped while the capability is incubated, as a capability's
-    own processes are authored where it is authored. With `source`, the package
-    source beside `.pkit/` makes the tree the methodology's source repository
-    (`is_methodology_source` of the lifecycle)."""
+    own processes are authored where it is authored. With `source`, the tree is the
+    methodology's source repository (`_as_methodology_source`)."""
     repo = make_adopter_repo(capabilities=("evidence",))
     caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
     pa.stamp_new_process(
@@ -1744,9 +1743,7 @@ def _evidence_unit(make_adopter_repo: MakeAdopterRepo, origin: str, *, source: b
     )
     caps.set_capability_origin(repo.root, "evidence", origin)
     if source:
-        package = repo.root / "src" / "project_kit" / "__init__.py"
-        package.parent.mkdir(parents=True)
-        package.write_text("", encoding="utf-8")
+        _as_methodology_source(repo.root)
     return repo.root
 
 
