@@ -95,9 +95,9 @@ TERM-onboarding-plan:
         record:
           - living-docs:DEC-001#8
       revalidated:
-        at: 2026-10-24T03:53:06Z
+        at: 2026-10-25T05:30:25Z
         outcome: unchanged
-        unchanged-because: The agent changed only how reader-review falls back to a space's audience. Its onboarding plan, and the gate before it, are as they were.
+        unchanged-because: The agent changed only its reader-review, which now reads the reading-evidence point. Its onboarding plan, and the gate before it, are as they were.
 TERM-page:
   name: page
   status: active
@@ -141,9 +141,9 @@ TERM-proposal:
         record:
           - living-docs:DEC-001#5
       revalidated:
-        at: 2026-10-24T03:53:07Z
+        at: 2026-10-25T05:30:29Z
         outcome: unchanged
-        unchanged-because: The agent changed only how reader-review falls back to a space's audience. What it proposes, and that a person reviews it, are as they were.
+        unchanged-because: The agent changed only its reader-review, which now reads the reading-evidence point and proposes nothing. What it proposes, and that a person reviews it, are as they were.
 TERM-reader:
   name: reader
   noun-forms: [readers]
@@ -174,9 +174,9 @@ TERM-reader-review:
         record:
           - living-docs:DEC-001#6
       revalidated:
-        at: 2026-10-24T03:53:09Z
+        at: 2026-10-25T05:30:31Z
         outcome: unchanged
-        unchanged-because: Reader-review now takes a space's audience from the configuration while the readers point is unavailable. It still judges one page as its readers would, against the binding rules.
+        unchanged-because: Reader-review now reads the results the reading-evidence point holds, as advice. It still judges one page as its readers would, against the binding rules, and runs no executed check.
 TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]

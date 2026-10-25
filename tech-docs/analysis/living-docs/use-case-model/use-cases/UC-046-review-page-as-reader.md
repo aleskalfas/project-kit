@@ -35,9 +35,8 @@ pkit:
       artefact:
         - REQ-022
     revalidated:
-      at: 2026-10-25T04:40:35Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 7 says the capability's validation reads none of the reading-evidence entries, and its agent reads them as advice in a reader-review. Variant 4b has the agent read them as evidence that never replaces its own reading, so it agrees.
+      at: 2026-10-25T05:30:55Z
+      outcome: updated
 ---
 
 # UC-046 — Have a page read as its declared reader would read it
