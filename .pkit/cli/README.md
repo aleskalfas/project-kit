@@ -105,9 +105,8 @@ pkit:
         - .pkit/lifecycle/README.md#naming
         - .pkit/process/README.md#the-engine
     revalidated:
-      at: 2026-10-24T23:35:35Z
-      outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup takes several ids with --json, answered in one document. The reference lists no refs command, and the commands it lists behave as before."
+      at: 2026-10-25T01:34:15Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -240,7 +239,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `refs validate` | run the checks of the `refs` member of `validate` on their own (see "Diagnostic commands", `validate`). Exits 1 on any finding, drift included, where the member only warns of drift | no | yes (read-only) |
 | `refs show <name>` | show the outgoing references of the agent or skill of that name, by kind | no | yes (read-only) |
 | `refs who-references <target>` | list the agents and skills that reference a path, a record id or a hook | no | yes (read-only) |
-| `refs lookup <id>` | resolve a record id (`COR-005`) to its file, a rule id (`RS-CMN-001`, `[living-docs:RS-LDOC-001]`) to its place in its rule set, or a role or point address (`[pkit::documentation]`) to where an installed capability declares it. Exits 1 when the id resolves nowhere | no | yes (read-only) |
+| `refs lookup <id> [--json]`, `refs lookup <id>... --json` | resolve a record id (`COR-005`) to its file, a rule id (`RS-CMN-001`, `[living-docs:RS-LDOC-001]`) to its place in its rule set, or a role or point address (`[pkit::documentation]`) to where an installed capability declares it. Exits 1 when the id resolves nowhere. With `--json` it takes several ids and prints one document that answers each, in order, with where it lies or why it does not resolve, and exits 0 either way | no | yes (read-only) |
 | `refs rename <old> <new> [--dry-run]` | rewrite one reference value across every agent and skill, front matter and body. `--dry-run` lists the files it would change and writes nothing | yes (`--dry-run`: no) | yes — a second run finds nothing to rename |
 | `refs rot` | list the references to superseded records, dropped scratchpad notes and missing files. It reports them and exits 0 | no | yes (read-only) |
 | `refs graph [--format <ascii\|text\|dot>]` | print the reference graph: a tree drawn in box characters (`ascii`, the default), a plain outline (`text`), or Graphviz input (`dot`) | no | yes (read-only) |
