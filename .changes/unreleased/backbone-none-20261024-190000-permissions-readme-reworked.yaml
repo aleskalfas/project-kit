@@ -2,9 +2,11 @@ component: backbone
 kind: none
 body: >
   The permissions README is rewritten for the people who run, set up and
-  extend the permission model. It opens with what the model does, a diagram
-  of how a tool call is decided, turning it on and common tasks, each shown
-  as commands with their real output, and keeps the reference last. It
+  extend the permission model. It opens with why the model exists, each
+  claim proved by commands with their real output, a comparison with the
+  harness's own settings and when the model is not needed. A diagram of how
+  a tool call is decided, turning it on and common tasks follow, and the
+  reference comes last. It
   cites only core records, its renamed headings keep their old link
   addresses, and it describes the issue-tracker-write privilege as the
   catalog defines it, ten raw gh mutations. Nothing the backbone ships or
