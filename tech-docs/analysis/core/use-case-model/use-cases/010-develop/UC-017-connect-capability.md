@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-25T01:37:09Z
+      at: 2026-10-25T02:54:21Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
+      unchanged-because: The change has process couple and hand-off refuse a definition whose capability the project receives as a synced copy. Steps 6 and 7 edit the process step 4 stamped, in the capability its author authors, so they hold.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
