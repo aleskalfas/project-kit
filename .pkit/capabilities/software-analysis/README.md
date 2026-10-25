@@ -192,7 +192,7 @@ The stamp reads the analysis through the core's reading command, `pkit friction 
 
 ## Linking terms: `pkit analysis link`
 
-Where an analysis keeps a domain model, `pkit analysis link` links its terms where they are mentioned, so each concept is a click from its definition (DEC-004 point 7). An analysis keeps a domain model once its `domain-model/` folder holds a view, in force or withdrawn. An analysis without one sees no link.
+Where an analysis keeps a domain model, `pkit analysis link` links its terms where they are mentioned, so each concept is a click from its definition (DEC-004 point 7). An analysis keeps a domain model once its `domain-model/` folder holds a view, in force or withdrawn. An analysis without one sees no link to a term.
 
 - **What it writes.** Each section of a view in force opens with `Defined in [<TERM-id>](<glossary>#<anchor>).`, right below its heading. The first mention of each term in each section links to the term's entry. A term is never linked in its own section, nor in its own entry.
 - **Where it writes them.** It writes them in a view's opening and its sections, and in each glossary entry below its heading. It writes them in each part of an actor, a use case, a journey and a requirement in force too. Front matter, such as a term's definition or a requirement's statement, and the glossary's head take no link.
@@ -213,6 +213,7 @@ Where an analysis keeps a domain model, `pkit analysis link` links its terms whe
 - **A moved link asks nothing.** Each place of the analysis's artefacts declares these links' form, a link to a glossary entry (DEC-004 point 7). The core's friction checks read each such link as its words alone (COR-050 point 5). So a change that only adds, removes or retargets links asks nothing of what anchors the linked artefact. A word you change beside a link still does.
 - **A revalidation of links alone is `unchanged`.** Friction reads a moved link as no change to content, so `outcome: updated` on such a change alone is a bump. Mark it `unchanged`, with why the artefact still holds.
 - **A link of that form you write by hand** is set aside too, as in the glossary of an analysis that keeps no domain model. Its words still count.
+- **A citation's link is not set aside.** Its form is not declared, so a moved one flags what anchors its artefact ([Linking citations](#linking-citations-pkit-analysis-link), below).
 
 A section of the example view below, linked:
 
@@ -242,7 +243,7 @@ In every analysis, with a domain model or without, `pkit analysis link` also lin
 - **Once in each section, for each target.** Only the first citation of each record cited whole, each point and each rule in a section is linked. A section is a view's opening or one of its sections, or a glossary entry. In another kind it is each part: a heading, or a bold label that opens a line or a list item at the top level, such as a use case's *Main path* or one of its variants.
 - **What it skips:** what the links to terms skip ([Linking terms](#linking-terms-pkit-analysis-link), above), front matter, the glossary's head, withdrawn artefacts and revalidation records. A term's link never sits inside a citation, so its word `point` never links the term `point`.
 - **An escape for one citation.** `<!-- pkit:not-a-citation -->` right before a citation marks it as none, such as one you quote from another project. It takes no link, and the next citation of its target counts as the first.
-- **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. A link into a file you write fails. A link missing or stale into a file you receive as a synced copy, such as a core record or a shipped capability's decision, is a warning: such a file changes at a version transition, which rewrites none of your text, so run the command after an upgrade. A citation that resolves to nothing is a warning too.
+- **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. A missing or stale link into a file you receive as a synced copy is a warning, and every other one fails. A synced copy, such as a core record or a shipped capability's decision, changes at a version transition, which rewrites none of your text, so run the command after an upgrade. A citation that resolves to nothing is a warning too.
 - **A reworded point heading.** A point's id is permanent, and its title is not. A reworded heading gives another anchor, so the check reports each link to it as stale, and the command rewrites them.
 - **Written, never by hand.** A link whose text is a citation, or a point's id inside one, and whose target is a path in the repository, is held as the command's, and rewritten or taken out. A link to a web address is yours.
 - **Its cost.** A moved link is part of the content that holds it, as a term's link is, so it flags whatever anchors that artefact.
@@ -250,7 +251,7 @@ In every analysis, with a domain model or without, `pkit analysis link` also lin
 A use case's variant, linked:
 
 ```markdown
-- **6c.** A changeset declares a floor for a component the change does not touch. The guard fails, and no escape hatch waives it ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
+- **2a.** The repository has no remote. The default branch is read from the local branch, and a `warning:` line says so ([COR-054 point 2](../../../../.pkit/decisions/core/COR-054-default-branch.md#2-resolved-one-way)).
 ```
 
 ## The artefacts
@@ -895,7 +896,7 @@ While any of these stands, none of the file applies: the check holds no body to 
 - **a view whose term anchors do not match its `explains`**, or that carries a path anchor (a view's anchors, in [The artefacts](#the-artefacts), above). The message names the anchors to write;
 - **a term's link that does not match the view that explains it** — missing, written otherwise, written twice, or left where no view in force explains the term. The message gives the line to write, word for word (DEC-004 point 7);
 - **a link between terms and views that `pkit analysis link` would write otherwise** — the message gives the line and names the command, which mends it ([Linking terms](#linking-terms-pkit-analysis-link), above);
-- **a link of a citation that `pkit analysis link` would write otherwise** — missing, extra or stale, in any analysis. It fails into a file you write, and is a warning into one you receive as a synced copy. A citation that resolves to nothing, and a `DEC-NNN` that names no capability, are warnings ([Linking citations](#linking-citations-pkit-analysis-link), above);
+- **a link of a citation that `pkit analysis link` would write otherwise** — missing, extra or stale, in any analysis. Which of them only warn is under "Held by the check" in [Linking citations](#linking-citations-pkit-analysis-link), above;
 - **a name two terms share** — see one name, one concept, under the glossary in [The artefacts](#the-artefacts), above. The later term in the glossary is named;
 - **a phrase in `other-senses` that holds none of its term's names, or is one of them alone**;
 - **a revalidation record** whose front matter does not fit its schema, or whose outcomes cite an id that is no artefact of the analysis (withdrawn ones are fine);
