@@ -758,13 +758,9 @@ def test_the_cli_reference_says_a_clone_holding_an_old_latest_must_force_fetch_i
     assert "git fetch --force origin tag latest" in section
 
 
-def test_the_readme_recommends_an_install_the_cli_reference_gives() -> None:
-    """The README's install line names a tag the CLI reference gives: `@latest`,
-    the recommended one, or `@v<version>`, a given release."""
-    assert _install_the_readme_recommends() in {
-        _install_the_cli_reference_recommends(),
-        _install_of_a_release_the_cli_reference_gives(),
-    }
+def test_the_readme_recommends_the_install_the_cli_reference_recommends() -> None:
+    """The README's install line names the tag `latest`, as the CLI reference does."""
+    assert _install_the_readme_recommends() == _install_the_cli_reference_recommends()
 
 
 def test_the_dispatchers_install_advice_names_the_latest_tag() -> None:
