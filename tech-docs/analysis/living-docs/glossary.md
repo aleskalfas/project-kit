@@ -266,7 +266,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#page).
 
-**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `user`, and anchors `.pkit/permissions/decide.py`, so a change to that code asks it whether it still holds.
+**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `act-ai-agent`, and anchors `.pkit/permissions/decide.py`, so a change to that code asks it whether it still holds.
 
 **Distinctions:**
 

@@ -9,6 +9,7 @@ needs:
   - Create a methodology artefact through its paired skill and stamp, so its id, place and front matter come out right.
   - Keep my intermediate files in a workspace that no commit carries and no confirmation guards.
   - Get a delegated agent's result back whole, never cut short while still reading as complete.
+  - Read the precise contract of each area, capability and adapter I use, for the installed version, in files beside what they describe.
 pkit:
   friction:
     anchors:
