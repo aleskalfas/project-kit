@@ -52,9 +52,8 @@ pkit:
         - REQ-040
         - REQ-041
     revalidated:
-      at: 2026-10-25T02:59:30Z
-      outcome: unchanged
-      unchanged-because: edit-issue now warns of a decision id that no record holds, on a body edit only. A milestone edit and its roll forward check no body text, so this use case holds.
+      at: 2026-10-25T08:01:37Z
+      outcome: updated
 ---
 
 # UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward

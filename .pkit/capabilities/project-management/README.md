@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-25T02:59:08Z
+      at: 2026-10-25T08:01:35Z
       outcome: updated
       deferred:
         - anchor:
