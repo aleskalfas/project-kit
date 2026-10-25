@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -184,7 +185,7 @@ def main() -> int:
     # against: refuse in plain words, a dry run included (#2087).
     lookup = _resolve_repo()
     if lookup.name is None:
-        print(_no_repository_message(lookup), file=sys.stderr)
+        print(f"error: {_no_repository_message(lookup)}", file=sys.stderr)
         return 2
     repo = lookup.name
     _print_context_header(repo, capability_root)
@@ -700,8 +701,8 @@ def _resolve_board_owner(config: dict[str, Any]) -> str | None:
         owner = gh_block.get("default_owner")
         if isinstance(owner, str) and owner:
             return owner
-    repo = _resolve_repo_name_with_owner()
-    if repo != "<unresolved>" and "/" in repo:
+    repo = _resolve_repo().name
+    if repo and "/" in repo:
         return repo.split("/", 1)[0]
     return None
 
@@ -864,8 +865,9 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     absence is equivalent to delegating to ambient state. When `gh.host`
     is configured, this function runs `gh auth status -h <host>` and
     fails fast with a `gh auth login -h <host>` remediation hint if the
-    host isn't authenticated. Returns None on success, or an error
-    message string on failure.
+    host isn't authenticated. `gh` missing from PATH gets the refusal the
+    repository lookup gives for it (#2087). Returns None on success, or an
+    error message string on failure.
     """
     raw = config.get("gh")
     if raw is None:
@@ -899,12 +901,15 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     if not isinstance(host, str) or not host:
         return None  # no host pinning; nothing further to verify
 
-    proc = subprocess.run(
-        ["gh", "auth", "status", "-h", host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            ["gh", "auth", "status", "-h", host],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return _no_repository_message(_GH_MISSING)
     if proc.returncode != 0:
         return (
             f"`gh auth status -h {host}` reports no active authentication. "
@@ -1031,6 +1036,11 @@ _FIX_GH = (
     "in (`gh auth login`) and give this checkout a remote on GitHub "
     "(`git remote add origin <url>`)"
 )
+_GH_MISSING = RepoLookup(None, "`gh`, GitHub's command-line tool, is not on PATH", _FIX_GH)
+
+# A terminal control sequence such as a colour change, dropped whole from what
+# `gh` says before it is quoted.
+_CONTROL_SEQUENCE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 
 def _resolve_repo() -> RepoLookup:
@@ -1049,10 +1059,11 @@ def _resolve_repo() -> RepoLookup:
             check=False,
         )
     except FileNotFoundError:
-        return RepoLookup(None, "`gh`, GitHub's command-line tool, is not on PATH", _FIX_GH)
+        return _GH_MISSING
     if proc.returncode != 0:
         # One line, and no control character reaches the terminal.
-        printable = "".join(c for c in proc.stderr or "" if c.isprintable() or c.isspace())
+        stderr = _CONTROL_SEQUENCE.sub("", proc.stderr or "")
+        printable = "".join(c for c in stderr if c.isprintable() or c.isspace())
         said = " ".join(printable.split()) or f"it exited {proc.returncode}"
         return RepoLookup(None, f"`gh repo view` says: {said}", _FIX_REMOTE)
     try:
@@ -1065,9 +1076,12 @@ def _resolve_repo() -> RepoLookup:
 
 
 def _no_repository_message(lookup: RepoLookup) -> str:
-    """The refusal when no GitHub repository resolves: what is missing, why, the fix."""
+    """The refusal when no GitHub repository resolves: what is missing, why, the fix.
+
+    Printed after `error: `, as every refusal of `main()` is.
+    """
     return (
-        "error: project-management needs a GitHub repository, and none resolves "
+        "project-management needs a GitHub repository, and none resolves "
         "for this checkout.\n"
         f"  Why: {lookup.why}\n"
         "  bootstrap creates the capability's labels in that repository, and the "
@@ -1076,11 +1090,6 @@ def _no_repository_message(lookup: RepoLookup) -> str:
         f"  To fix: {lookup.fix}, then run "
         f"`pkit {CAPABILITY_NAME} bootstrap --dry-run` again."
     )
-
-
-def _resolve_repo_name_with_owner() -> str:
-    """`<owner>/<repo>` for the current working tree, or `<unresolved>`."""
-    return _resolve_repo().name or "<unresolved>"
 
 
 def _read_capability_version(capability_root: Path) -> str:

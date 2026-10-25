@@ -397,18 +397,23 @@ class _FakeGh:
     """Stands in for `gh`, so no test reaches GitHub.
 
     Answers `gh repo view` as told, an empty label list, and refuses any other
-    `gh` call. Any other program runs as it would. Every `gh` call is recorded.
+    `gh` call. With `on_path=False` it is not installed, and every `gh` call
+    fails as a missing program does. Any other program runs as it would. Every
+    `gh` call is recorded.
     """
 
-    def __init__(self, real_run, *, repo_view) -> None:
+    def __init__(self, real_run, *, repo_view, on_path) -> None:
         self._real_run = real_run
         self._repo_view = repo_view
+        self._on_path = on_path
         self.calls: list[list[str]] = []
 
     def __call__(self, cmd, *args, **kwargs):
         if not cmd or cmd[0] != "gh":
             return self._real_run(cmd, *args, **kwargs)
         self.calls.append(list(cmd))
+        if not self._on_path:
+            raise FileNotFoundError(2, "No such file or directory", "gh")
         if cmd[1:3] == ["repo", "view"]:
             return self._repo_view(cmd)
         if cmd[1:3] == ["label", "list"]:
@@ -432,10 +437,6 @@ def _repo_view_resolves(name: str):
     return answer
 
 
-def _gh_not_on_path(cmd):
-    raise FileNotFoundError(2, "No such file or directory", "gh")
-
-
 @pytest.fixture
 def installed(tmp_path, monkeypatch) -> Path:
     """An installed capability with its real schemas and a valid config.
@@ -454,8 +455,8 @@ def installed(tmp_path, monkeypatch) -> Path:
     return cap
 
 
-def _fake_gh(bs, monkeypatch, repo_view) -> _FakeGh:
-    fake = _FakeGh(subprocess.run, repo_view=repo_view)
+def _fake_gh(bs, monkeypatch, repo_view=None, *, on_path: bool = True) -> _FakeGh:
+    fake = _FakeGh(subprocess.run, repo_view=repo_view, on_path=on_path)
     monkeypatch.setattr(bs.subprocess, "run", fake)
     return fake
 
@@ -483,15 +484,22 @@ def test_resolve_repo_gives_gh_s_own_reason_when_none_resolves(bs, monkeypatch) 
 def test_resolve_repo_quotes_gh_on_one_line_without_control_characters(bs, monkeypatch) -> None:
     _fake_gh(bs, monkeypatch, _repo_view_fails("no git\x1b[31m remotes\r\n found\x07\n"))
     lookup = bs._resolve_repo()
-    assert lookup.why == "`gh repo view` says: no git[31m remotes found"
+    assert lookup.why == "`gh repo view` says: no git remotes found"
 
 
 def test_resolve_repo_says_gh_is_missing(bs, monkeypatch) -> None:
-    _fake_gh(bs, monkeypatch, _gh_not_on_path)
+    _fake_gh(bs, monkeypatch, on_path=False)
     lookup = bs._resolve_repo()
     assert lookup.name is None
     assert "`gh`" in lookup.why and "not on PATH" in lookup.why
     assert "cli.github.com" in lookup.fix
+
+
+def test_board_owner_is_the_repository_s_owner_or_none(bs, monkeypatch) -> None:
+    _fake_gh(bs, monkeypatch, _repo_view_resolves("acme/widget"))
+    assert bs._resolve_board_owner({}) == "acme"
+    _fake_gh(bs, monkeypatch, _repo_view_fails(NO_REMOTES))
+    assert bs._resolve_board_owner({}) is None
 
 
 @pytest.mark.parametrize("mode", [["--dry-run"], ["--yes"], []])
@@ -512,14 +520,26 @@ def test_bootstrap_refuses_when_no_repository_resolves(
     assert [c[1:3] for c in fake.calls] == [["repo", "view"]]
 
 
-def test_bootstrap_refuses_when_gh_is_missing(bs, installed, monkeypatch, capsys) -> None:
-    _fake_gh(bs, monkeypatch, _gh_not_on_path)
+@pytest.mark.parametrize(
+    ("gh_block", "first_call"),
+    [("", ["repo", "view"]), ("gh:\n  host: github.example.com\n", ["auth", "status"])],
+    ids=["ambient-host", "pinned-host"],
+)
+def test_bootstrap_refuses_when_gh_is_missing(
+    bs, installed, monkeypatch, capsys, gh_block, first_call
+) -> None:
+    """A missing `gh` gets one plain refusal, a host pinned in the config included (DEC-023)."""
+    config = installed / "project" / "config.yaml"
+    config.write_text(config.read_text(encoding="utf-8") + gh_block, encoding="utf-8")
+    fake = _fake_gh(bs, monkeypatch, on_path=False)
     code = _main(bs, monkeypatch, installed, "--dry-run")
     out, err = capsys.readouterr()
     assert code == 2
+    assert err == f"error: {bs._no_repository_message(bs._GH_MISSING)}\n"
     assert "needs a GitHub repository" in err
     assert "not on PATH" in err
     assert "Plan:" not in out
+    assert [c[1:3] for c in fake.calls] == [first_call]
 
 
 def test_dry_run_plans_when_the_repository_resolves(bs, installed, monkeypatch, capsys) -> None:
