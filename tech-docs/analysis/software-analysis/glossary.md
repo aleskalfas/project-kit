@@ -109,9 +109,9 @@ TERM-declared-structure:
         record:
           - software-analysis:DEC-001#1
       revalidated:
-        at: 2026-10-24T10:39:51Z
+        at: 2026-10-24T22:53:59Z
         outcome: unchanged
-        unchanged-because: structure.py gains a reading of where a body's parts open, which the term links use. The declared structure, and how a body is held to it, are as they were.
+        unchanged-because: structure.py now parses the kinds' declaration once for each text of it. What a kind declares, and how a body is read against it, is untouched.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]

@@ -46,8 +46,9 @@ pkit:
         - REQ-012
         - REQ-017
     revalidated:
-      at: 2026-10-24T20:57:22Z
-      outcome: updated
+      at: 2026-10-24T22:51:08Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-24T21:20:15Z
+      at: 2026-10-24T22:47:51Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent keeps its words and drops only its links on role, and ACT-component-author names a new version and the author. Their needs are the same, so this use case holds.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-015 — Package a recurring discipline as a capability

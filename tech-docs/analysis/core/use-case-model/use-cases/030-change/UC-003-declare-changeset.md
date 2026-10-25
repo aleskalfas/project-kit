@@ -29,8 +29,9 @@ pkit:
         - REQ-004
         - REQ-005
     revalidated:
-      at: 2026-10-24T20:56:49Z
-      outcome: updated
+      at: 2026-10-24T22:48:47Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-003 — Declare what my change means for the next release

@@ -5326,36 +5326,35 @@ def refs_who_references(target: str) -> None:
 
 
 @refs.command("lookup")
-@click.argument("record_id")
-def refs_lookup(record_id: str) -> None:
+@click.argument("record_ids", metavar="RECORD_ID...", nargs=-1, required=True)
+@click.option(
+    "--json",
+    "as_json",
+    is_flag=True,
+    help="Print one document answering each id given, in order: where it lies, or why it "
+    "does not resolve. Exit 0 either way.",
+)
+def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
     """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a rule (`RS-CMN-001`,
     `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to its place in its rule set,
     or a role or point address (`[pkit::documentation]`, `[pkit::documentation:readers]`)
-    to where an installed capability declares it."""
-    from project_kit import rule_sets as rule_sets_mod
+    to where an installed capability declares it. With `--json`, several ids at once,
+    answered in one document."""
+    import json
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    if refs_mod.is_address_citation(record_id):
-        address = refs_mod.resolve_address(target_root, record_id)
-        if address.malformed:
-            raise click.ClickException(f"{record_id!r} is {address.problem}.")
-        if not address.resolved:
-            raise click.ClickException(f"{record_id!r} does not resolve: {address.problem}.")
-        for location in address.locations:
-            click.echo(location)
+    if as_json:
+        click.echo(json.dumps(refs_mod.lookup_document(target_root, record_ids), indent=2))
         return
-    if rule_sets_mod.is_rule_citation(record_id):
-        resolution = refs_mod.resolve_rule_citation(target_root, record_id)
-        if not resolution.resolved:
-            raise click.ClickException(f"{record_id!r} does not resolve: {resolution.problem}.")
-        click.echo(resolution.location)
-        return
-    path = refs_mod.resolve_record(target_root, record_id)
-    if path is None:
-        raise click.ClickException(f"no record matches {record_id!r}.")
-    click.echo(path.relative_to(target_root))
+    if len(record_ids) != 1:
+        raise click.UsageError("several ids are looked up with --json, in one document.")
+    found = refs_mod.lookup(target_root, record_ids[0])
+    if found.problem is not None:
+        raise click.ClickException(f"{found.problem}.")
+    for path in found.paths:
+        click.echo(path)
 
 
 @refs.command("rename")

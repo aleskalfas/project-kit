@@ -27,9 +27,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T20:51:19Z
+      at: 2026-10-24T22:53:50Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
+      unchanged-because: Two tests now hold pkit refs lookup --json. The lookup reads and writes nothing, so it needs no --dry-run, and the commands that change content offer one as before.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

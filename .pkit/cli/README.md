@@ -105,8 +105,9 @@ pkit:
         - .pkit/lifecycle/README.md#naming
         - .pkit/process/README.md#the-engine
     revalidated:
-      at: 2026-10-25T00:12:13Z
-      outcome: updated
+      at: 2026-10-24T23:35:35Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup takes several ids with --json, answered in one document. The reference lists no refs command, and the commands it lists behave as before."
       deferred:
         - anchor:
             kind: record

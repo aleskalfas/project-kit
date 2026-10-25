@@ -65,8 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-24T20:58:23Z
-      outcome: updated
+      at: 2026-10-24T22:52:53Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-051 — Upgrade the system like a dependency

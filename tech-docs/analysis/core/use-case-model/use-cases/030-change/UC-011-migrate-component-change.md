@@ -44,8 +44,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:57:26Z
-      outcome: updated
+      at: 2026-10-24T22:51:17Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it
