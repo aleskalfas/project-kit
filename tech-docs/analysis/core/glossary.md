@@ -757,9 +757,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T11:48:05Z
+        at: 2026-10-25T03:02:47Z
         outcome: unchanged
-        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
+        unchanged-because: The hook now removes a redirection that writes no file before it reads a Bash command, and permissions scaffold now refuses a capability the project receives as a synced copy. The backbone code still allows, denies or defers each call, so what the hook is holds.
 TERM-place:
   name: place
   other-senses: [in place]
@@ -843,9 +843,9 @@ TERM-profile:
           - ADR-005#2
           - ADR-032
       revalidated:
-        at: 2026-10-24T12:39:08Z
+        at: 2026-10-25T03:02:52Z
         outcome: unchanged
-        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
+        unchanged-because: Every shipped profile now grants text-filter, and permissions scaffold now refuses a capability the project receives as a synced copy. A profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active
@@ -1113,6 +1113,10 @@ TERM-sandbox:
           - ADR-004#2
           - ADR-004#5
           - ADR-008#4
+      revalidated:
+        at: 2026-10-24T06:19:12Z
+        outcome: unchanged
+        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. The sandbox, and what it bounds, are as they were.
 TERM-scratchpad-note:
   name: scratchpad note
   noun-forms: [scratchpad notes]

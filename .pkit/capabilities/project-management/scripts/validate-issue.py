@@ -12,8 +12,10 @@ shape: titles.yaml's title checks per type, per-type required sections,
 classification axes presence + uniqueness, parent-ref first line, and
 the use cases the body cites in its `## Use cases` section against the
 use-case point, read only for a Feature or Task body that cites one
-(DEC-054). Emits findings tagged by the severity tokens from
-validation-severity.yaml (hard-reject / bypassable-with-audit / warning).
+(DEC-054), and the decision ids the body cites, asked of the backbone
+only for a body that cites one (DEC-010). Emits findings tagged by the
+severity tokens from validation-severity.yaml (hard-reject /
+bypassable-with-audit / warning).
 The body's required sections and universal rules are read by
 `_lib/body_rules`, the reader create-issue and edit-issue share.
 
@@ -61,6 +63,7 @@ from _lib import (
     body_rules,
     bootstrap_gate,
     classification_rules,
+    decision_ids,
     title_rules,
     use_case_citations,
 )
@@ -203,6 +206,9 @@ def main() -> int:
         # The use-case point (DEC-054): read only for a Feature or Task body
         # that cites a use case.
         use_cases=use_case_citations.read_point,
+        # The records (DEC-010): asked of the backbone only for a body that
+        # cites a decision id.
+        records=decision_ids.lookup,
     )
 
     if args.json:
@@ -239,6 +245,7 @@ def _validate_issue(
     hierarchy: str = axis_labels.HIERARCHY_GATED,
     substrate_map: axis_labels.SubstrateMap | None = None,
     use_cases: use_case_citations.Reader | None = None,
+    records: decision_ids.Reader | None = None,
 ) -> list[Finding]:
     findings: list[Finding] = []
     title = str(issue.get("title", ""))
@@ -789,6 +796,11 @@ def _validate_issue(
     for sev, label, detail in use_case_citations.findings(
         body, structural_type, body_format, use_cases
     ):
+        findings.append(Finding(sev, label, detail))
+    # The decision ids the body cites that no record holds (DEC-010), or that
+    # they could not be checked. `records` asks the backbone, and only for a
+    # body that cites one; None asks nothing.
+    for sev, label, detail in decision_ids.findings(body, body_format, records):
         findings.append(Finding(sev, label, detail))
 
     return findings

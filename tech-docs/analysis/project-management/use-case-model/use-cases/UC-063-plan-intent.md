@@ -56,9 +56,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T21:03:47Z
+      at: 2026-10-25T02:59:28Z
       outcome: unchanged
-      unchanged-because: ACT-planner's note names the planner where it said the role, and REQ-041 says what a check reports where it said a report. What each asks is the same, so this use case holds.
+      unchanged-because: edit-issue now warns of a decision id that no record holds. Step 8 says only that edit-issue checks each body it writes, which still holds.
 ---
 
 # UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan

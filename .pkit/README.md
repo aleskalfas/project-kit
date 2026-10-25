@@ -19,9 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-25T00:12:22Z
+      at: 2026-10-25T03:03:54Z
       outcome: unchanged
-      unchanged-because: The CLI reference's Authoring commands gain a section on new schema. This index still points authors of an area, adapter, capability or migration to Authoring commands as a whole, so what it says holds.
+      unchanged-because: The CLI reference's Authoring commands now say process new and permissions scaffold refuse a synced capability too, beside main's new section on new schema. This index still points authors of an area, adapter, capability or migration to Authoring commands as a whole, so what it says holds.
 ---
 
 # project-kit

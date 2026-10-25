@@ -141,6 +141,14 @@ def test_a_universal_rule_takes_its_severity_from_the_schema() -> None:
     assert body_rules.blocking(findings) == findings
 
 
+def test_a_rule_another_module_checks_takes_the_default_it_gives(shipped) -> None:
+    """`rule_severity` reads a rule this module does not check, such as the one
+    `decision_ids` checks, from the schema, and else the default its caller gives."""
+    rule = "body.predicted-decision-id"
+    assert body_rules.rule_severity(shipped, rule, "hard-reject") == "warning"
+    assert body_rules.rule_severity({}, rule, "warning") == "warning"
+
+
 def test_a_schema_without_the_rule_gives_its_default() -> None:
     findings = body_rules.universal("# Title\n\nSee foo/bar.py:42.\n\n## How\n", {})
     assert [(s, label) for s, label, _ in findings] == [
