@@ -201,6 +201,54 @@ def test_a_worktree_of_a_bare_repository_reads_its_own_file_alone(
     assert ident.read_instance_id(worktree / CAPABILITY) == 4
 
 
+def _move_core_bare_to_config_worktree(repository: GitRepo, bare: str) -> None:
+    """Turn on `extensions.worktreeConfig` and move `core.bare` into the main
+    working tree's `config.worktree`, as git's documentation asks."""
+    repository.git("config", "core.repositoryformatversion", "1")
+    repository.git("config", "extensions.worktreeConfig", "true")
+    repository.git("config", "--unset", "core.bare")
+    repository.git("config", "--worktree", "core.bare", bare)
+
+
+def test_a_worktree_reads_the_clones_id_with_core_bare_in_config_worktree(
+    ident, tmp_path: Path
+) -> None:
+    clone = _clone(tmp_path / "clone")
+    _move_core_bare_to_config_worktree(clone, "false")
+    ident.write_instance_id(clone.root / CAPABILITY, 2)
+    worktree = _worktree(clone.root, tmp_path / "wt")
+
+    assert ident.read_instance_id(worktree / CAPABILITY) == 2
+
+
+def test_a_bare_repository_with_core_bare_in_config_worktree_is_still_bare(
+    ident, tmp_path: Path
+) -> None:
+    source = _clone(tmp_path / "source")
+    holder = tmp_path / "project"
+    GitRepo(tmp_path).git("clone", "-q", "--bare", str(source.root), str(holder / ".git"))
+    _move_core_bare_to_config_worktree(GitRepo(holder / ".git"), "true")
+    worktree = _worktree(holder / ".git", holder / "wt")
+    ident.write_instance_id(holder / CAPABILITY, 2)
+
+    assert ident.read_instance_id(worktree / CAPABILITY) is None
+
+
+def test_a_clone_with_its_git_directory_elsewhere_has_no_main_working_tree_to_read(
+    ident, tmp_path: Path
+) -> None:
+    """`--separate-git-dir`: git records no main working tree, so the local file alone."""
+    source = _clone(tmp_path / "source")
+    clone = tmp_path / "clone"
+    GitRepo(tmp_path).git(
+        "clone", "-q", "--separate-git-dir", str(tmp_path / "git-dir"), str(source.root), str(clone)
+    )
+    ident.write_instance_id(clone / CAPABILITY, 2)
+    worktree = _worktree(clone, tmp_path / "wt")
+
+    assert ident.read_instance_id(worktree / CAPABILITY) is None
+
+
 def test_a_worktree_where_git_cannot_run_reads_as_unset(
     ident, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -251,6 +299,24 @@ def test_show_names_the_main_working_tree_for_the_clones_id(
     set_instance.write_instance_id(worktree / CAPABILITY, 3)
     assert _run(set_instance, monkeypatch, worktree / CAPABILITY, "--show") == 0
     assert capsys.readouterr().out == "instance: 3\n"
+
+    set_instance.identity_path(worktree / CAPABILITY).write_text("{ not json", encoding="utf-8")
+    assert _run(set_instance, monkeypatch, worktree / CAPABILITY, "--show") == 0
+    out = capsys.readouterr().out
+    assert out.startswith("instance: unset (the id file cannot be read: ")
+
+
+def test_setting_an_id_in_a_worktree_says_the_number_is_its_own(
+    set_instance, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys
+) -> None:
+    clone = _clone(tmp_path / "clone")
+    worktree = _worktree(clone.root, tmp_path / "wt")
+
+    assert _run(set_instance, monkeypatch, worktree / CAPABILITY, "3") == 0
+    out = capsys.readouterr().out
+    assert out.startswith("this worktree is now instance 3, a number of its own.")
+    assert _run(set_instance, monkeypatch, clone.root / CAPABILITY, "2") == 0
+    assert capsys.readouterr().out.startswith("this clone is now instance 2.")
 
 
 def test_clear_in_a_worktree_says_it_reads_the_clones_id(

@@ -51,7 +51,10 @@ otherwise: nobody is asked twice, nothing is confirmed that the operator did
 not confirm, and when the two comparisons disagree with no confirmation, the
 backbone refuses. This copy of the comparison stays until the
 capability reads the backbone's by command (#1220); a test holds the two to one
-table of cases (`tests/test_session_guard_parity.py`).
+table of cases (`tests/test_session_guard_parity.py`). Its common-dir reader,
+:func:`work_tree_and_common_dir`, also serves the instance id's read
+(`_lib/instance_identity`), so it stays, or moves with that read, when the
+comparison goes.
 """
 
 from __future__ import annotations

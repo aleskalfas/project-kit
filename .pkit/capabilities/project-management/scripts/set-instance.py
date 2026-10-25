@@ -48,6 +48,7 @@ from _lib.instance_identity import (
     clear_instance_id,
     identity_path,
     identity_source,
+    main_work_tree_identity_path,
     read_instance_id,
     write_instance_id,
 )
@@ -56,18 +57,21 @@ from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Set this clone's instance id (opt-in, per-clone; DEC-035).",
+        description=("Set this clone's instance id, or a linked worktree's own (opt-in; DEC-035)."),
     )
     parser.add_argument(
         "instance",
         nargs="?",
         type=int,
-        help="Instance number to set for this clone (positive integer).",
+        help=(
+            "Instance number to set here (positive integer); in a linked worktree, "
+            "a number of the worktree's own."
+        ),
     )
     parser.add_argument(
         "--show", action="store_true", help="Print the current instance id and exit."
     )
-    parser.add_argument("--clear", action="store_true", help="Unset this clone's instance id.")
+    parser.add_argument("--clear", action="store_true", help="Unset the instance id set here.")
     parser.add_argument(
         "--capability-root",
         type=Path,
@@ -97,10 +101,14 @@ def main() -> int:
     if args.show:
         # Read-only — no mutation, so the foreign-repo guard does not apply.
         current = read_instance_id(capability_root)
+        source = identity_source(capability_root)
+        if current is None and source is not None:
+            # A file that cannot be read fails closed to unset; say which one.
+            print(f"instance: unset (the id file cannot be read: {source})")
+            return 0
         if current is None:
             print("instance: unset")
             return 0
-        source = identity_source(capability_root)
         if source is not None and source != identity_path(capability_root):
             print(f"instance: {current} (the clone's, read from the main working tree: {source})")
         else:
@@ -148,7 +156,10 @@ def main() -> int:
         return 0
 
     path = write_instance_id(capability_root, args.instance)
-    print(f"this clone is now instance {args.instance}.")
+    if main_work_tree_identity_path(capability_root) is not None:
+        print(f"this worktree is now instance {args.instance}, a number of its own.")
+    else:
+        print(f"this clone is now instance {args.instance}.")
     print(f"  written: {path} (git-ignored — never committed)")
     return 0
 

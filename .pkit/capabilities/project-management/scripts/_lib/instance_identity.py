@@ -12,9 +12,9 @@ A clone includes its linked git worktrees (DEC-035 point 1). A worktree with no
 id file of its own reads the main working tree's, found through git's common
 directory (:func:`_lib.session_guard.work_tree_and_common_dir`): a session in a
 worktree, such as a subagent's, acts as its clone. A worktree that sets its own
-id keeps it, and a worktree of a bare repository, which has no main working
-tree, reads its own file alone. Writing and clearing stay local, so a worktree
-can take a number of its own.
+id keeps it. Where git locates no main working tree, as for a bare repository,
+a worktree reads its own file alone. Writing and clearing stay local, so a
+worktree can take a number of its own.
 
 This is deliberately NOT the ownership marker. The marker is *per issue*, lives on
 GitHub, and is substrate-selectable (``_lib/instance_ownership`` / DEC-043). This
@@ -45,10 +45,11 @@ def main_work_tree_identity_path(capability_root: Path) -> Path | None:
     """The main working tree's identity file, for a capability root in a linked worktree.
 
     The main working tree is the parent of git's common directory when that
-    directory is a ``.git`` inside a repository that is not bare. None in the
-    main working tree itself, outside git, in a worktree of a bare repository,
-    where the common directory is not a ``.git`` directory, or when git could
-    not run: each reads the local file alone.
+    directory is a ``.git`` of a repository that is not bare. None in the main
+    working tree itself, outside git, in a worktree of a bare repository, where
+    the common directory is not a ``.git`` directory (a clone made with
+    ``--separate-git-dir``, whose main working tree git does not record), or
+    when git could not run: each reads the local file alone.
     """
     try:
         root = capability_root.resolve()
@@ -59,7 +60,7 @@ def main_work_tree_identity_path(capability_root: Path) -> Path | None:
         return None
     work_tree, common_dir = layout
     main = common_dir.parent
-    if common_dir.name != ".git" or main == work_tree or not _has_main_work_tree(work_tree):
+    if common_dir.name != ".git" or main == work_tree or _is_bare(common_dir):
         return None
     try:
         relative = root.relative_to(work_tree)
@@ -68,24 +69,28 @@ def main_work_tree_identity_path(capability_root: Path) -> Path | None:
     return identity_path(main / relative)
 
 
-def _has_main_work_tree(work_tree: Path) -> bool:
-    """Whether the repository of ``work_tree`` has a main working tree.
+def _is_bare(common_dir: Path) -> bool:
+    """Whether the repository whose common directory is ``common_dir`` is bare.
 
-    Only a ``core.bare`` that reads ``false`` says so. A bare repository, a
-    value git does not give, and a git that cannot run all read as no main
-    working tree, so the read falls back to the local file.
+    ``core.bare`` is read as the main working tree reads it, from its
+    ``config.worktree`` too where ``extensions.worktreeConfig`` moved it there.
+    An unset key is not bare, as git reads a ``.git`` directory. A git that
+    errs or cannot run reads as bare, so the read falls back to the local file.
     """
     try:
         proc = subprocess.run(
-            ["git", "-C", str(work_tree), "config", "--bool", "core.bare"],
+            ["git", "--git-dir", str(common_dir), "config", "--bool", "core.bare"],
             capture_output=True,
             text=True,
             check=False,
             timeout=5,
         )
     except (OSError, subprocess.TimeoutExpired):
+        return True
+    value = proc.stdout.strip()
+    if proc.returncode == 1 and not value:
         return False
-    return proc.returncode == 0 and proc.stdout.strip() == "false"
+    return proc.returncode != 0 or value != "false"
 
 
 def identity_source(capability_root: Path) -> Path | None:
