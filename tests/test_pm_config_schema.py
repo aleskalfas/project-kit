@@ -22,8 +22,10 @@ Two concerns here:
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import re
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -38,6 +40,10 @@ CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
 CONFIG_COMPANION = CAPABILITY / "schemas" / "config.schema.json"
 CONFIG_CARRIER = CAPABILITY / "schemas" / "config.yaml"
 ADOPTER_CONFIG = CAPABILITY / "project" / "config.yaml"
+WORKSTREAMS_COMPANION = CAPABILITY / "schemas" / "workstreams.schema.json"
+README = CAPABILITY / "README.md"
+PACKAGE = CAPABILITY / "package.yaml"
+SCRIPTS_DIR = CAPABILITY / "scripts"
 
 
 @pytest.fixture(scope="module")
@@ -45,6 +51,20 @@ def validator() -> Draft202012Validator:
     schema = json.loads(CONFIG_COMPANION.read_text(encoding="utf-8"))
     Draft202012Validator.check_schema(schema)
     return Draft202012Validator(schema)
+
+
+@pytest.fixture(scope="module")
+def pre_check():
+    sys.path.insert(0, str(SCRIPTS_DIR))
+    spec = importlib.util.spec_from_file_location(
+        "pm_pre_check_config_schema", SCRIPTS_DIR / "pre-check.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules["pm_pre_check_config_schema"] = module
+    spec.loader.exec_module(module)
+    yield module
+    sys.path.remove(str(SCRIPTS_DIR))
 
 
 def _errors(validator: Draft202012Validator, doc: Any) -> list[str]:
@@ -76,6 +96,65 @@ def test_shipped_adopter_config_validates(validator: Draft202012Validator) -> No
 
 def test_minimal_config_validates(validator: Draft202012Validator) -> None:
     assert _errors(validator, _minimal()) == []
+
+
+# --- the README's setup example and the reference's versions (#2087) -------
+
+
+def _setup_examples() -> dict[str, str]:
+    """The README setup's YAML examples, keyed by the file each names.
+
+    Each example opens with a comment naming its file, as `# project/config.yaml`.
+    """
+    text = README.read_text(encoding="utf-8")
+    start = text.index("### 2. Author the project-side config")
+    end = text.index("### 3. Bootstrap", start)
+    examples: dict[str, str] = {}
+    for block in re.findall(r"```yaml\n(.*?)```", text[start:end], re.S):
+        named = re.match(r"#\s*(project/[\w.-]+\.yaml)\s*$", block.splitlines()[0])
+        if named:
+            examples[named.group(1)] = block
+    return examples
+
+
+def test_readme_setup_example_is_one_pre_check_takes_as_current(
+    tmp_path: Path, validator: Draft202012Validator, pre_check
+) -> None:
+    """The trial of 25 October copied the README's config, and pre-check called
+    its `workstreams:` a legacy fallback. The example now declares the
+    workstreams in their own file, and pre-check passes both without that word."""
+    examples = _setup_examples()
+    assert set(examples) == {"project/config.yaml", "project/workstreams.yaml"}
+    cap = tmp_path / "project-management"
+    (cap / "project").mkdir(parents=True)
+    for name, body in examples.items():
+        (cap / name).write_text(body, encoding="utf-8")
+
+    config = YAML(typ="safe").load(examples["project/config.yaml"])
+    assert _errors(validator, config) == []
+    workstreams = YAML(typ="safe").load(examples["project/workstreams.yaml"])
+    schema = json.loads(WORKSTREAMS_COMPANION.read_text(encoding="utf-8"))
+    assert list(Draft202012Validator(schema).iter_errors(workstreams)) == []
+
+    _, config_result = pre_check._check_adopter_config(cap / "project" / "config.yaml")
+    workstreams_result = pre_check._check_workstreams_file(cap)
+    for result in (config_result, workstreams_result):
+        assert result.status == "ok", result
+        assert "legacy" not in result.detail, result
+
+
+def _version(text: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in text.split("."))
+
+
+@pytest.mark.parametrize("reference", [CONFIG_CARRIER, CONFIG_COMPANION], ids=lambda p: p.name)
+def test_the_config_reference_names_no_version_not_yet_shipped(reference: Path) -> None:
+    """A version the reference names is one an adopter can have installed. The
+    trial read "the 0.55.0 upgrade" under an installed 0.54.0."""
+    package = YAML(typ="safe").load(PACKAGE.read_text(encoding="utf-8"))
+    shipped = _version(str(package["component"]["version"]))
+    for named in re.findall(r"\b(\d+\.\d+\.\d+)\b", reference.read_text(encoding="utf-8")):
+        assert _version(named) <= shipped, f"{reference.name} names {named}, after {shipped}"
 
 
 def test_full_surface_config_validates(validator: Draft202012Validator) -> None:
