@@ -17,10 +17,13 @@ builds-on:
       - {id: TERM-default-branch, name: default branch}
       - {id: TERM-finding, name: finding}
       - {id: TERM-head, name: head}
+      - {id: TERM-link-target, name: link target}
       - {id: TERM-methodology, name: methodology}
       - {id: TERM-project, name: project}
       - {id: TERM-pull-request, name: pull request}
       - {id: TERM-reviewer, name: reviewer}
+      - {id: TERM-revisit, name: revisit}
+      - {id: TERM-trigger-field, name: trigger field}
       - {id: TERM-whole-repository-check, name: whole-repository check}
     actors:
       - id: ACT-developer
@@ -75,10 +78,6 @@ TERM-conventions-corpus:
           - ADR-013
           - COR-001
           - COR-010
-      revalidated:
-        at: 2026-10-25T00:36:44Z
-        outcome: unchanged
-        unchanged-because: The engineer's body changes only its friction answers paragraph. The conventions corpus it reads first is unchanged.
 TERM-hand-off:
   name: hand-off
   status: active
@@ -112,10 +111,13 @@ The words of the domain and what each means. A term's id is stable, and its name
   - **Term:** [default branch](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-default-branch--default-branch)
   - **Term:** [finding](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-finding--finding)
   - **Term:** [head](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-head--head)
+  - **Term:** [link target](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-link-target--link-target)
   - **Term:** [methodology](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-methodology--methodology)
   - **Term:** [project](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-project--project)
   - **Term:** [pull request](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-pull-request--pull-request)
   - **Term:** [reviewer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-reviewer--reviewer)
+  - **Term:** [revisit](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-revisit--revisit)
+  - **Term:** [trigger field](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-trigger-field--trigger-field)
   - **Term:** [whole-repository check](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/glossary.md#term-whole-repository-check--whole-repository-check)
   - **Actor:** [Developer](https://github.com/aleskalfas/project-kit/blob/v2.0.0/tech-docs/analysis/core/use-case-model/actors/ACT-developer.md)
     - Build my change with an agent that writes the change's code to my project's own conventions, read from wherever I keep them.

@@ -23,10 +23,6 @@ pkit:
         - TERM-hint
         - TERM-tightening
         - TERM-candidate
-    revalidated:
-      at: 2026-10-25T04:22:19Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. How a kind, its declared structure and its hints move together is untouched.
 ---
 
 # VIEW-kinds-and-structures — Kinds and their structures

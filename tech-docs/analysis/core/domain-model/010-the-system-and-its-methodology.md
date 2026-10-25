@@ -35,9 +35,6 @@ pkit:
         - TERM-acceptance-gate
         - TERM-operational-rule
         - TERM-methodology
-    revalidated:
-      at: 2026-10-23T08:53:38Z
-      outcome: updated
 ---
 
 # VIEW-the-system-and-its-methodology — The system and its methodology

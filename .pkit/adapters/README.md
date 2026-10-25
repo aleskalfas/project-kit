@@ -25,10 +25,6 @@ pkit:
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
-    revalidated:
-      at: 2026-10-25T04:20:03Z
-      outcome: unchanged
-      unchanged-because: cli.py changes only pkit refs lookup, which now also resolves a point of a record to its heading's anchor. What this README says of the commands an adapter runs holds.
 ---
 
 # Adapters

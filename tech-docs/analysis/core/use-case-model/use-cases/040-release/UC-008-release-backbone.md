@@ -34,6 +34,7 @@ pkit:
         - src/project_kit/session_guard.py
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
+        - scripts/latest_tag.py
       record:
         - PRJ-002#D2
         - PRJ-002#D3
@@ -51,10 +52,6 @@ pkit:
         - REQ-005
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-25T04:18:05Z
-      outcome: unchanged
-      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it
@@ -104,6 +101,7 @@ pkit:
 11. On the push to the default branch, the CI pipeline runs `release-tag.yml`. That workflow finds no tag for the version in `.pkit/VERSION`, and runs `pkit version tag --push`.
 12. The system tags the release commit `v<version>` with an annotated tag, and pushes the tag (PRJ-004). The CI pipeline runs in no [harness](../../../glossary.md#term-harness--harness) session, so the cross-repository guard has nothing to compare with and does not fire. Nobody is asked to confirm the push (ADR-061 point 6).
 13. The CI pipeline runs `pkit release publish-notes <version>`. The system publishes a GitHub release for the tag. The GitHub release's notes are that version's section of `CHANGELOG.md`.
+15. Last, the CI pipeline runs `python3 scripts/latest_tag.py --push`. The script reads the remote's tags, and points the tag `latest` at the commit of the highest release, the release commit. It force-pushes `latest`, leased on the value it read, so `uv tool install` with `@latest` gets the new release (PRJ-004).
 
 **Variants:**
 
@@ -130,12 +128,15 @@ pkit:
 - **10b.** Where merges into the [default branch](../../../glossary.md#term-default-branch--default-branch) go through a queue, the system enqueues the release pull request at the [head](../../../glossary.md#term-head--head) commit whose checks it read. The system then waits for the queue to merge the pull request. Where the wait ends with the release pull request still queued, the system exits 4 and deletes nothing. A later run deletes the head branch once the release pull request merges.
 - **10c.** The queue does not squash, or its squash defaults are not the pull request's title and body. The system refuses, enqueues nothing, and the use case ends.
 - **10d.** The queue drops the release pull request, or the release pull request's head commit moves after the checks were read. The system exits 3 and deletes nothing, and the path rejoins at step 7.
-- **11a.** The version in `.pkit/VERSION` already has its tag, as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes.
+- **11a.** The version in `.pkit/VERSION` already has its tag, as after any push that is no release. `release-tag.yml` cuts no tag and publishes no notes, and the path goes on at step 15.
 - **11b.** The run of `release-tag.yml` for the release push fails. The next push to the default branch finds the version untagged, and tags that push's commit instead of the release commit.
 - **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
+- **15a.** `latest` already points at that commit, as after a push that is no release. The script pushes nothing.
+- **15b.** Another run moved `latest` after this run read it, and the remote refuses the leased push. The script reads the remote's tags again. Where `latest` points at that commit, the run passes. Otherwise the run fails, `latest` stays where the other run put it, and the next push to the default branch runs step 15 again.
+- **15c.** The remote holds a branch named `latest`, which uv can take before the tag. The script refuses, pushes nothing, and the run fails until someone deletes the branch.
 - **14a.** The repository is another, and the operator declines. Or nobody can reply, and the maintainer passed no `--allow-foreign-repo`. The system refuses, merges nothing, and the use case ends.
 
-**Postconditions:** The [release](../../../glossary.md#term-release--release) commit on the [default branch](../../../glossary.md#term-default-branch--default-branch) carries the tag `v<version>`, which adopters <!-- pkit:not-the-term -->install, upgrade to and pin (PRJ-004). That [version](../../../glossary.md#term-version--version)'s changelog section, and the notes of its GitHub release, say what each [change](../../../glossary.md#term-change--change) the release carries means for adopters.
+**Postconditions:** The [release](../../../glossary.md#term-release--release) commit on the [default branch](../../../glossary.md#term-default-branch--default-branch) carries the tag `v<version>`, which adopters <!-- pkit:not-the-term -->install, upgrade to and pin (PRJ-004). The tag `latest` points at the same commit, so `uv tool install` with `@latest` gets this release. That [version](../../../glossary.md#term-version--version)'s changelog section, and the notes of its GitHub release, say what each [change](../../../glossary.md#term-change--change) the release carries means for adopters.
 
 **Minimal guarantees:**
 
@@ -143,4 +144,5 @@ pkit:
 - No workflow merges a [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request). A release pull request lands only when someone merges it (`release-pr.yml` and `release-tag.yml`).
 - A [version](../../../glossary.md#term-version--version) is tagged once. `release-tag.yml` tags only a version with no tag, locally or on the remote, and `pkit version tag` refuses a tag the clone already holds (`versioning.py`).
 - A GitHub release carries notes only, never a file to download (PRJ-004).
+- A run of `release-tag.yml` never moves `latest` back to an older release. Its push is leased on the value it read (`scripts/latest_tag.py`).
 - In a repository other than the session's own, `pkit release merge` changes nothing without the operator's yes or `--allow-foreign-repo` (REQ-012 and `session_guard.py`).

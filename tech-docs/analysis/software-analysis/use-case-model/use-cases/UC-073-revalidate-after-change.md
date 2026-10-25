@@ -46,9 +46,6 @@ pkit:
       artefact:
         - REQ-050
         - REQ-052
-    revalidated:
-      at: 2026-10-25T04:22:31Z
-      outcome: updated
 ---
 
 # UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes

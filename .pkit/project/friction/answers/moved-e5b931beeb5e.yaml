@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-008
+    revalidated:
+      at: 2026-10-24T10:40:02Z
+      outcome: unchanged
+      unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 3 reads as it did, and point 7 says an actor's name uses no concept, as this rule does.

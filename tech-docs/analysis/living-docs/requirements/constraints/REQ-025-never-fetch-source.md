@@ -19,10 +19,6 @@ pkit:
       record:
         - living-docs:DEC-001#4
         - COR-050#2
-    revalidated:
-      at: 2026-10-24T03:53:17Z
-      outcome: unchanged
-      unchanged-because: The agent changed only how reader-review falls back to a space's audience, read from a file of the repository. It still never fetches a source.
 ---
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names

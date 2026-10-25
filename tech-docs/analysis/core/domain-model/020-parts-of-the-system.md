@@ -42,10 +42,6 @@ pkit:
         - TERM-adapter
         - TERM-install
         - TERM-project
-    revalidated:
-      at: 2026-10-24T20:50:16Z
-      outcome: unchanged
-      unchanged-because: TERM-version adds schema version to the phrases it tells apart, as its distinctions already did. Its definition is the same, so the section on version holds.
 ---
 
 # VIEW-parts-of-the-system — Parts of the system, and projects

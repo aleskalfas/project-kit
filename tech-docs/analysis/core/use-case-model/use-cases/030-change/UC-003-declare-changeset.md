@@ -28,10 +28,6 @@ pkit:
         - ACT-ci-pipeline
         - REQ-004
         - REQ-005
-    revalidated:
-      at: 2026-10-25T04:17:59Z
-      outcome: unchanged
-      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-003 — Declare what my change means for the next release

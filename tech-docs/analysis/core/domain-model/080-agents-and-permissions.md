@@ -39,9 +39,6 @@ pkit:
         - TERM-sandbox
         - TERM-agent-workspace
         - TERM-session-anchor
-    revalidated:
-      at: 2026-10-24T21:03:31Z
-      outcome: updated
 ---
 
 # VIEW-agents-and-permissions — Agents and permissions

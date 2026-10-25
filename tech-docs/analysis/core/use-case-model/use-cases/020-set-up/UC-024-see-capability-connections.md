@@ -27,10 +27,6 @@ pkit:
         - REQ-005
         - REQ-010
         - REQ-011
-    revalidated:
-      at: 2026-10-25T04:18:59Z
-      outcome: unchanged
-      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-024 — See what a capability would connect to before I install it

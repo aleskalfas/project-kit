@@ -62,10 +62,6 @@ pkit:
         - REQ-005
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-25T04:19:14Z
-      outcome: unchanged
-      unchanged-because: The decisions README gains how pkit refs lookup resolves a point of a record, and cli.py changes only that command. This use case cites accepted records and names no lookup, so it holds.
 ---
 
 # UC-037 — Record my decision beside the methodology's

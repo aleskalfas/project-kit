@@ -18,10 +18,6 @@ pkit:
         - COR-031
         - COR-041
         - COR-047
-    revalidated:
-      at: 2026-10-20T01:36:54Z
-      outcome: unchanged
-      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/use-case-model/actors/, with no word changed, so the role and its needs still hold.
 ---
 
 # ACT-component-author — Component author

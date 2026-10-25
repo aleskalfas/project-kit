@@ -18,10 +18,6 @@ pkit:
         - .pkit/agents/core/rule-set-reviewer.md
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, COR-062, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths]
-    revalidated:
-      at: 2026-10-25T04:20:06Z
-      outcome: unchanged
-      unchanged-because: refs.py's lookup now also resolves a point of a record to its heading's anchor, in the --json document that answers several ids. How pkit refs validate reads an agent's or a skill's references is unchanged.
 ---
 
 # Agents

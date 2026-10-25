@@ -14,10 +14,6 @@ pkit:
         - src/project_kit/process_journal.py
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
-    revalidated:
-      at: 2026-10-24T06:19:21Z
-      outcome: unchanged
-      unchanged-because: The change has process new refuse a capability the project receives as a synced copy. This page leaves the stamps' refusals to the CLI reference, so what it says of the authoring layer holds.
 ---
 
 # Process

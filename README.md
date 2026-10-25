@@ -9,52 +9,241 @@ pkit:
         - src/project_kit/router.py
         - src/project_kit/install.py
         - src/project_kit/merge.py
+        - src/project_kit/sync.py
         - src/project_kit/upgrade.py
+        - src/project_kit/decisions.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/default_branch.py
         - src/project_kit/migrations.py
         - src/project_kit/refs.py
+        - src/project_kit/validate.py
+        - src/project_kit/friction_check.py
+        - src/project_kit/friction_write.py
+        - src/project_kit/permissions.py
+        - src/project_kit/report.py
+        - .pkit/rules/core.md
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
-      record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, PRJ-011, ADR-049, ADR-064]
+        - .pkit/adapters/claude-code/settings/core/settings.json
+        - .pkit/adapters/claude-code/permission-hook.py
+        - .pkit/permissions/decide.py
+        - .pkit/permissions/profiles/**
+        - .pkit/schemas/privilege-catalog.yaml
+        - .pkit/agents/core/critic.md
+        - .pkit/agents/core/rule-set-reviewer.md
+        - .pkit/agents/core/methodology-reviewer.md
+        - .pkit/agents/core/convention-compliance-reviewer.md
+      record: [COR-001, COR-002, COR-010, COR-017, COR-024, COR-028, COR-050, COR-051, COR-054, COR-057, COR-059, COR-061, "living-docs:DEC-001#5", "project-management:DEC-028", PRJ-001, PRJ-004, PRJ-008, PRJ-011, ADR-007, "ADR-025#5", ADR-049, ADR-064, ADR-065]
       artefact:
+        - ACT-adopter
+        - ACT-ai-agent
+        - ACT-developer
+        - ACT-operator
+        - JRN-001
+        - JRN-002
+        - JRN-003
+        - REQ-021
+        - .pkit/decisions/README.md#the-acceptance-gate
+        - .pkit/decisions/README.md#the-no-shared-files-invariant
+        - .pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command
+        - .pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip
+        - .pkit/lifecycle/README.md#a-new-collision
         - .pkit/lifecycle/README.md#a-data-points-question
-    revalidated:
-      at: 2026-10-25T04:20:01Z
-      outcome: unchanged
-      unchanged-because: refs.py's lookup now also resolves a point of a record to its heading's anchor, in the --json document that answers several ids. The README's account of the reference-graph checks is untouched.
+        - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
+        - .pkit/capabilities/project-management/README.md#
+        - .pkit/capabilities/software-engineering/README.md#
+        - .pkit/capabilities/evidence/README.md#
+        - .pkit/adapters/README.md#currently-shipped
 ---
 
 # project-kit
 
-> Install a working methodology into your AI-assisted project — and keep it maintained, like a dependency.
+project-kit installs a way of working with AI coding agents into your project, and keeps it current like a dependency. It is built for **[Claude Code](.pkit/adapters/README.md#currently-shipped)** today.
 
 <!-- TODO(c): add a "first win: the code-review gate catches a real defect" section once the comment + review format (#756/#757) lands. -->
 
 ## Why
 
-You've probably done this: you write your conventions into `CLAUDE.md`, have Claude generate a couple of agent files, and it works — until it **rots**. Nobody improves it, a fix you make in project A never reaches project B, and there's no safe way to pull updates. You end up owning a pile you now have to maintain by hand.
+Every project that works with AI coding agents builds a way of working for them. It says where decisions are written down, which rules the agents follow and what they may run. Built by hand in each project, it tends to break in six places:
 
-**project-kit is the missing piece: the maintained, versioned, *safe-to-update* home for your project's methodology** — the rules, decisions, agents, and disciplines your AI reads at the start of every session. It installs like a dependency and upgrades like one. And it **never touches the files you write**, except two it merges into rather than overwrites, on every `init`, `sync` and `upgrade`: `CLAUDE.md` (it adds two `@.pkit/rules/…` include lines if they're missing) and `.claude/settings.json` (it adds the kit's settings and keeps yours, though a kit deny rule you removed is put back; `init` backs the file up first, to `.claude/settings.json.pre-pkit`). A migration may also change a file of yours where a decision record allows it, such as adding a category your agents' overlay lacks. And `pkit upgrade` puts back a starter file you deleted, such as that overlay. Installing a capability may also create one new file of yours: the rule set the capability declares, where no rule set of yours already inherits its rules. Install never writes over a file, and nothing writes that set again while the capability stays installed. Where a capability ships a skill or an agent named like one of yours, `pkit capabilities install` and `pkit upgrade` ask you first: only your answer replaces yours, and git keeps it. A capability may also ask you a question when you install or upgrade it, at a terminal, and it records only the answer you give ([the lifecycle README, "A data point's question"](.pkit/lifecycle/README.md#a-data-points-question)). Every file has exactly one owner (the kit's, or yours), so an update structurally *cannot* clobber your work.
+- **Your agent forgets what the project decided.** Each session starts from the project's files, and last week's chat is not among them.
+- **The agent asks about every harmless command, or may run one it never should.** You approve prompts without reading them, or turn them off.
+- **Documentation goes stale silently.** The code changes, and the page that describes it still reads as true.
+- **Nobody but the agent checks the agent's work.** The project's rules live in someone's head, and a change merges unchecked.
+- **Each project's setup is a hand-made copy.** An improvement to the shared part has to be copied into every project by hand.
+- **Taking an update could overwrite your own edits.** So nobody takes one, and the copies drift apart.
 
-That's the honest pitch, including its limit:
+project-kit writes the shared part once, as a methodology. Your project installs it like a dependency and upgrades it like one.
 
-> **For a genuine one-off, just ask Claude — really.** project-kit earns its setup when your work **repeats**, must **survive a new session**, or spans **projects and people**. The payoff is real but it accrues over time; the setup cost is small and paid once (below).
+## Highlights
 
-Built for **Claude Code** today.
+- **[Your rules load into every session](#your-rules-load-into-every-session),** and tell agents to build only on accepted decisions.
+- **[Routine commands run unasked, and dangerous ones are denied](#routine-commands-run-unasked-and-dangerous-ones-are-denied)** in their common forms.
+- **[No change leaves a document stale without saying so](#no-change-leaves-a-document-stale-without-saying-so),** once it is anchored in a declared place and your CI runs the check.
+- **[Reviewer agents come ready to call](#reviewer-agents-come-ready-to-call),** defined never to change the work they judge.
+- **[The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency):** one command, then a pinned version.
+- **[Your files stay yours](#your-files-stay-yours):** a sync keeps the lines you added.
+
+## How project-kit answers each problem
+
+The examples run in a fresh repository after [Install](#install) and `pkit init`, with no remote, so some commands warn that they read the local branch. An id such as COR-028 names the record in `.pkit/decisions/` that decides the answer.
+
+### Your rules load into every session
+
+**Your decisions live in the repository, not in a chat that is gone.** `pkit init` adds two include lines to your `CLAUDE.md`, so Claude Code loads the methodology's rules and yours whenever a session starts. Those rules tell every agent to build only on accepted decisions, and an agent's draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
+
+```console
+$ grep @.pkit CLAUDE.md
+@.pkit/rules/core.md
+@.pkit/rules/project.md
+$ pkit new decision project use-postgres
+warning: the default branch 'main' is read from the local branch 'main': this repository has no remote to read the shared one from, and a local branch can lag it or carry work nobody pushed (COR-054 point 2)
+Stamped: .pkit/decisions/project/PRJ-001-use-postgres.md
+$ grep status: .pkit/decisions/project/PRJ-001-use-postgres.md
+status: proposed
+```
+
+### Routine commands run unasked, and dangerous ones are denied
+
+**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile, and turns on the hook that enforces it in Claude Code and, except on macOS, the OS sandbox (COR-028). Then `git`, `gh` and `pkit` run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. The example runs only its first step, activating the `autonomous` profile, and the probe shows what the hook will decide, asking as you, the operator:
+
+```console
+$ pkit permissions profile activate autonomous | grep "^profile"
+profile 'autonomous' active — posture lenient; its grants are layered under your own (manual grants untouched).
+$ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
+[ 1/19] privilege escalation — `sudo whoami`
+        REJECTED — deny grant for operator on ['privilege-escalation']
+[ 2/19] recursive deletion — `rm -rf build/`
+        REJECTED — deny grant for operator on ['destructive-fs']
+[ 3/19] rewriting published history — `git push --force`
+        REJECTED — deny grant for operator on ['vcs-history-rewrite']
+[ 4/19] version control — `git status`
+        ALLOWED — allow grant for operator on ['vcs']
+```
+
+> [!WARNING]
+> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command behind an allowed wrapper, such as `find . -exec rm -rf {} +`, still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
+
+### No change leaves a document stale without saying so
+
+**A change to what a document rests on asks for an answer, so no anchored page goes stale unnoticed.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. Here `docs/` holds documents, a page there rests on `app.py`, and the check fails (`enforcing`) where by default it warns:
+
+```console
+$ mkdir -p .pkit/project && printf 'friction:\n  mode: enforcing\n  places: [docs/**]\n' >> .pkit/project/config.yaml
+$ mkdir docs && printf -- '---\npkit:\n  friction:\n    anchors:\n      path: [app.py]\n---\n# Starting the app\n' > docs/start.md
+$ cat docs/start.md
+---
+pkit:
+  friction:
+    anchors:
+      path: [app.py]
+---
+# Starting the app
+$ echo 'print("hello")' > app.py && git add . && git commit -qm "Add the app and its page"
+$ echo 'print("hello, world")' > app.py
+$ pkit friction check | grep -A 4 FINDINGS
+warning: the default branch 'main' is read from the local branch 'main': this repository has no remote to read the shared one from, and a local branch can lag it or carry work nobody pushed (COR-054 point 2)
+FINDINGS — upstream first along the anchors between artefacts
+  docs/start.md
+    friction  path app.py  changed in this diff and carries no answer: revalidate the artefact, or defer the anchor
+
+Result: failed   (enforcing: 1 friction)
+$ pkit friction revalidate docs/start.md --outcome unchanged --because "It starts the same way." --yes | tail -n 1
+Wrote answers[docs/start.md].revalidated in .pkit/project/friction/answers/<any>.yaml.
+$ pkit friction check | grep -A 4 FINDINGS
+warning: the default branch 'main' is read from the local branch 'main': this repository has no remote to read the shared one from, and a local branch can lag it or carry work nobody pushed (COR-054 point 2)
+FINDINGS — upstream first along the anchors between artefacts
+  docs/start.md
+    answered  path app.py  changed in this diff; answered: unchanged — It starts the same way.
+
+Result: passed   (enforcing)
+```
+
+### Reviewer agents come ready to call
+
+**Four reviewer agents ship with the methodology, each defined to judge the work, not to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as the one in [project-management](.pkit/capabilities/project-management/README.md), a capability you can install on top. Their definitions say so, and only the critic is also held to it by its tools:
+
+```console
+$ grep -l -e "never change the work under review" -e "never modify any artifact" .claude/agents/*.md
+.claude/agents/convention-compliance-reviewer.md
+.claude/agents/critic.md
+.claude/agents/methodology-reviewer.md
+.claude/agents/rule-set-reviewer.md
+$ grep "^tools:" .claude/agents/critic.md .claude/agents/*-reviewer.md
+.claude/agents/critic.md:tools: [Read, Glob, Grep, WebFetch]
+.claude/agents/convention-compliance-reviewer.md:tools: [Read, Glob, Grep, Bash, Write]
+.claude/agents/methodology-reviewer.md:tools: [Read, Glob, Grep, Bash, WebFetch, Write]
+.claude/agents/rule-set-reviewer.md:tools: [Read, Glob, Grep, Bash, Write]
+```
+
+### The methodology upgrades like a dependency
+
+**Your project stays at the methodology version it records until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached, for every clone. At a terminal, when a newer `pkit` is out, it first installs it on your machine, where every project without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
+
+```console
+$ grep backbone_version .pkit/manifest.yaml
+backbone_version: <version>
+$ pkit upgrade
+Already at backbone v<version>; nothing to upgrade.
+Pinned project-kit to <version> (.pkit/version-pin).
+```
+
+### Your files stay yours
+
+**A sync refreshes the methodology's files and keeps the lines you added.** Every file has one owner, the methodology or you ([the decisions README, "The no-shared-files invariant"](.pkit/decisions/README.md#the-no-shared-files-invariant), COR-001). Into `CLAUDE.md` and `.claude/settings.json`, a sync only adds what is missing (COR-002). Here your own line in `CLAUDE.md` survives a sync:
+
+```console
+$ echo "Answer in English." >> CLAUDE.md
+$ pkit sync | grep -e rules/core.md -e CLAUDE.md
+  refreshed    .pkit/rules/core.md
+  exists     CLAUDE.md (already includes @.pkit/rules/core.md)
+$ tail -n 1 CLAUDE.md
+Answer in English.
+```
+
+> [!WARNING]
+> `pkit init` adds broad allows to `.claude/settings.json`, such as `Bash(ssh:*)`, `Bash(find:*)` and `Bash(mv:*)`, and each sync puts back one you delete.
+
+An upgrade's migrations may also write a file of yours, and a starter file you deleted comes back (COR-059). [The mental model](#the-mental-model) lists every such way. Put your own rules in `.pkit/rules/project.md`, since an edit to a methodology file is lost at the next sync.
+
+## Compared with a hand-kept setup
+
+Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep by hand and copy from project to project.
+
+| | Hand-kept `CLAUDE.md` and agent files | project-kit |
+|---|---|---|
+| Nothing to install or learn | ✅ | ❌ `uv`, `jq`, a CLI and its conventions |
+| No running cost on each change | ✅ | ❌ answers, acceptances and a CI job |
+| Works with other agent tools | ✅ you write each tool's files | ❌ [Claude Code only](.pkit/adapters/README.md#currently-shipped), today |
+| You choose every line and every allow | ✅ | ❌ its files are synced, and its allows return |
+| Rules load into every session | ✅ | ✅ |
+| An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ at each project's next upgrade |
+| Taking an update keeps your own files | ❌ merged by hand | ✅ one owner per file, with listed exceptions |
+| A deny catches other forms of its command | ❌ the start of a command only | ✅ once the hook is on |
+| Stale documents flagged on the change | ❌ | ✅ once anchored in a declared place |
+| Reviewer agents ready to call | ❌ written by you | ✅ four shipped |
+
+## When not to use it
+
+- **A one-off task.** Just ask Claude. project-kit pays off when work repeats, must survive a new session, or spans projects and people.
+- **Another agent tool.** project-kit works with [Claude Code only](.pkit/adapters/README.md#currently-shipped), today.
+- **No room for the running cost.** Each change answers the documents whose anchors it touches, each decision waits for acceptance, and someone keeps the CI job.
 
 ## Install
 
-**Prerequisite:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer).
+**Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` once, globally, from the git URL at a release tag:
+Then install `pkit` once, globally, from the git URL at the tag `latest`, which marks the highest release:
 
 ```
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
+uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 ```
 
-Replace `<version>` with the latest release, from the [releases page](https://github.com/aleskalfas/project-kit/releases). The tag ties the version your project records to the content it holds ([PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)).
+To install a given release instead, name its tag, `@v<version>`, from the [releases page](https://github.com/aleskalfas/project-kit/releases). Either tag ties the version your project records to the content it holds.
 
-*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git@v<version>`.)*
+uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
+
+*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`.)*
 
 Verify:
 
@@ -62,7 +251,7 @@ Verify:
 pkit --help
 ```
 
-If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole cost: `uv` + one command. `pkit` is now on your PATH, shared across all your projects.
+If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole install: `uv`, `jq` and one command. `pkit` is now on your PATH, shared across all your projects.
 
 ### Two things named "pkit"
 
@@ -80,7 +269,7 @@ cd your-project
 pkit init
 ```
 
-One command, and a `.pkit/` appears — a working methodology wired into your project: decision records, hard rules loaded into your `CLAUDE.md`, agents deployed into Claude Code. `init` announces where it will install before writing anything, and asks first if that target isn't your current folder. See how it's wired:
+One command, and a `.pkit/` appears: a working methodology wired into your project. It brings decision records, hard rules loaded into your `CLAUDE.md`, and agents deployed into Claude Code. `init` announces where it will install before writing anything, and asks first if that target isn't your current folder. See how it's wired:
 
 ```
 pkit status
@@ -94,8 +283,10 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
-3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the merges, migrations, starter files, a capability's rule set and the replacements you choose, above). That's *why* updates can't conflict, and why you keep everything you write.
-4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically — like upgrading a dependency — then pins the project to the version it reached, so the project keeps that version when the installed pkit moves on (`--no-pin` skips the pin).
+3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). That's *why* a sync can't conflict with your edits, and why you keep everything you write. The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
+   - **`CLAUDE.md` and settings:** they add what is missing, and put back a methodology entry you removed, an allow included. `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `ssh`, `find`, `Edit` and `Write`, and denies.
+   - **Elsewhere:** an upgrade's migrations, the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant)), and a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares)). A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
 
@@ -123,17 +314,17 @@ pkit capabilities install project-management
 
 **By role:**
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
-- **Developers** → `software-engineering`: an agent that writes code to *your* conventions, plus a code-review panel on your PRs. And when a pattern recurs, you can grow your own capability without re-erecting the framework — the primitives (decisions, schemas, skills, agents) are already there.
+- **Developers** → [`software-engineering`](.pkit/capabilities/software-engineering/README.md): an agent that writes code to *your* conventions, plus a code-review panel on your PRs. And when a pattern recurs, you can grow your own capability without re-erecting the framework — the primitives (decisions, schemas, skills, agents) are already there.
 
-**What actually gates on day one** (honestly — no more than this): structural checks your CI can run — decision-id uniqueness (`pkit decisions validate`), migration coverage (`pkit migrations check-diff`), reference-graph consistency (`pkit refs validate`), and permission-gated mutations. Install `project-management` and you additionally get a real PR merge gate.
+**What actually gates on day one,** with the defaults (honestly — no more than this): the structural checks your CI can run. They are decision-id uniqueness (`pkit decisions validate`), migration coverage (`pkit migrations check-diff`), reference-graph consistency (`pkit refs validate`), and permission-gated mutations. The friction check stays dormant until you declare where your documents live. Install `project-management` and you additionally get a real PR merge gate.
 
 ## Go deeper
 
-- **Adopting / navigating the kit:** [`.pkit/README.md`](.pkit/README.md) — maps every area; the foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
+- **Adopting / navigating the kit:** [`.pkit/README.md`](.pkit/README.md) — maps every area. The foundational pattern is in [`.pkit/decisions/README.md`](.pkit/decisions/README.md).
 - **The command surface:** [`.pkit/cli/README.md`](.pkit/cli/README.md).
 - **Working on project-kit itself:** [`CONTRIBUTING.md`](CONTRIBUTING.md).
 - **Session instructions for AI agents:** [`CLAUDE.md`](CLAUDE.md).
 
 ---
 
-*Not a library (nothing imports from it), not a registry package (installs from the git URL, per [PRJ-004](.pkit/decisions/project/PRJ-004-distribution-channel.md)), and not a substitute for thinking — it's opinionated scaffolding you still steer.*
+*Not a library (nothing imports from it), not a registry package (it installs from the git URL), and not a substitute for thinking. It's opinionated scaffolding you still steer.*

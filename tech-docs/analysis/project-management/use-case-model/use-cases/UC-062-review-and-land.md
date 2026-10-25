@@ -18,9 +18,6 @@ shortfalls:
   - at: "1b"
     issue: "#1938"
     record: COR-004
-  - at: "12a"
-    issue: "#1779"
-    record: project-management:DEC-055#3
 pkit:
   friction:
     anchors:
@@ -68,9 +65,6 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
-    revalidated:
-      at: 2026-10-24T22:00:52Z
-      outcome: updated
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it
@@ -133,10 +127,6 @@ pkit:
 - **7a.** A verdict requests changes. The system prints the first line of each `[block]` [finding](../../../core/glossary.md#term-finding--finding), and starts no merge (DEC-028). The developer changes the work, and the path rejoins at step 1.
 - **8a.** A `[person]` finding's verdict was posted while the run went on, or does not stand for the head. A run authorised up front stops ready, and merges nothing until the merge authoriser has seen the finding (DEC-055 point 3).
 - **12a.** The head is not the one the [authorisation](../../glossary.md#term-authorisation--authorisation) named. The system stops before it checks anything, unless each edit since that head lies in answer files the change adds. Then the authorisation covers the later head (DEC-055 point 3).
-
-> [!WARNING]
-> **Not built yet:** the system reads the answers from the documents' own blocks, never from answer files. DEC-055 point 3 decides that a later head is covered where the developer's edits lie in the change's answer files, and #1779 tracks it.
-
 - **13a.** A required reviewer's latest verdict is missing or stale. The system refuses the merge, and lists each reviewer it still needs. It names `pkit pm review-pr <N>`, with the [Task](../../glossary.md#term-task--task)'s number, to run them again (DEC-028).
 
 - **13b.** A [checkbox](../../glossary.md#term-checkbox--checkbox) of an [issue](../../glossary.md#term-issue--issue) the pull request closes is unticked. The system refuses the merge, listing each one (DEC-007). The use case ends.

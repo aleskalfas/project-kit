@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-profile
+    revalidated:
+      at: 2026-10-25T03:02:52Z
+      outcome: unchanged
+      unchanged-because: Every shipped profile now grants text-filter, and permissions scaffold now refuses a capability the project receives as a synced copy. A profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.

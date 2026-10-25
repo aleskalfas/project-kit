@@ -39,9 +39,6 @@ pkit:
       artefact:
         - REQ-022
         - REQ-025
-    revalidated:
-      at: 2026-10-24T20:58:37Z
-      outcome: updated
 ---
 
 # UC-045 — Have the fix for a stale page proposed, and review it before it is applied

@@ -52,10 +52,6 @@ pkit:
         - REQ-012
         - REQ-026
         - REQ-031
-    revalidated:
-      at: 2026-10-25T04:19:38Z
-      outcome: unchanged
-      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-049 — Install the system into my project with one command
@@ -87,7 +83,7 @@ pkit:
 7. The system creates each seed path, such as each area's `project/` folder and the agents' [overlay](../../../glossary.md#term-overlay--overlay) (COR-001 and ADR-065 point 11).
 8. The system registers each adapter it copied, at the version the adapter ships. Each adapter's scripts then merge the methodology's entries into the files its [harness](../../../glossary.md#term-harness--harness) reads, and deploy its [skills](../../../glossary.md#term-skill--skill) and [agent definitions](../../../glossary.md#term-agent-definition--agent-definition). For Claude Code those are `.claude/settings.json` and `CLAUDE.md` (COR-002 and REQ-002).
 9. The system renders `.pkit/.gitignore`, creates the [agent workspace](../../../glossary.md#term-agent-workspace--agent-workspace), and provisions each registered query command (ADR-009 point 7).
-10. The system records `completed_version` last, and prints `Install complete. Recommended next steps:`. The steps name the CLI's install at its own version (REQ-031), the project's settings files, lines for `.gitignore`, and `pkit visibility private`.
+10. The system records `completed_version` last, and prints `Install complete. Recommended next steps:`. The first step names the CLI's install of the highest [release](../../../glossary.md#term-release--release), through the tag `latest` (REQ-031). The others name the project's settings files, lines for `.gitignore`, and `pkit visibility private`.
 11. The adopter runs `pkit status`. The system shows how the methodology is wired into the project, and writes nothing (REQ-005). It shows the backbone's version, the agent workspace, the adapter, each [capability](../../../glossary.md#term-capability--capability), the [rule sets](../../../glossary.md#term-rule-set--rule-set) and the connections.
 12. The adopter commits `.pkit/` and the files the adapter deployed, so the team shares one methodology. The project's visibility stays `shared`, the default (ADR-009 point 2).
 

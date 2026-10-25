@@ -54,9 +54,6 @@ pkit:
         - REQ-050
         - REQ-051
         - REQ-053
-    revalidated:
-      at: 2026-10-25T04:22:28Z
-      outcome: updated
 ---
 
 # UC-071 — Describe my existing project from its code, documents and decisions

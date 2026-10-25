@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  Internal. DEC-001 point 7 says that the capability's validation reads
+  none of the reading-evidence point's entries, and that its agent reads
+  them as advice when it runs a reader-review, as point 6 has it. The
+  README says the same. Nothing you run changes.

@@ -26,10 +26,6 @@ pkit:
         - COR-004
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-25T04:19:58Z
-      outcome: unchanged
-      unchanged-because: tests/test_refs.py now also reads the file and the anchor each answer of pkit refs lookup --json gives. The previews this requirement asks for, and the tests that verify them, are untouched.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

@@ -18,9 +18,6 @@ pkit:
         - .pkit/lifecycle/README.md#seed-paths
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
         - .pkit/lifecycle/README.md#what-sync-writes
-    revalidated:
-      at: 2026-10-25T04:20:15Z
-      outcome: updated
 ---
 
 # Decision records

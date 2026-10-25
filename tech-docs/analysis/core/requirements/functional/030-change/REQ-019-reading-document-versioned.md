@@ -20,9 +20,6 @@ pkit:
         - tests/test_friction_report_body.py
       artefact:
         - ACT-ci-pipeline
-    revalidated:
-      at: 2026-10-24T20:54:41Z
-      outcome: updated
 ---
 
 # REQ-019 · Functional · Each reading document of the friction group carries its version, and a reader refuses one it does not know

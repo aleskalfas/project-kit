@@ -37,10 +37,6 @@ pkit:
         - ACT-ai-agent
         - REQ-002
         - REQ-009
-    revalidated:
-      at: 2026-10-25T04:18:45Z
-      outcome: unchanged
-      unchanged-because: refs.py gains the lookup of a point of a record and its heading's anchor, and cli.py changes only pkit refs lookup. The check this use case runs, the refs member of pkit validate, reads an agent's references as before.
 ---
 
 # UC-020 — Turn recurring work into my project's own skill or agent definition

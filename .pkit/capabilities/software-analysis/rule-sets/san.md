@@ -8,20 +8,12 @@ rules:
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
-        revalidated:
-          at: 2026-10-25T04:20:28Z
-          outcome: unchanged
-          unchanged-because: DEC-001 gains point 13, which links the analysis's citations of records, and point 1 says the link command reads a body to place them. The rule asks each artefact to carry its kind's structure, which neither changes.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#3"]}
-        revalidated:
-          at: 2026-10-19T19:00:00Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. A use case's steps and variants stay append-only, so this rule holds as written.
   RS-SAN-003:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -29,20 +21,12 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
-        revalidated:
-          at: 2026-10-25T04:20:43Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What this rule asks of an artefact's words is untouched.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
-        revalidated:
-          at: 2026-10-25T04:20:48Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What this rule asks of an artefact's words is untouched.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -61,10 +45,6 @@ rules:
             - "COR-050#1"
             - "COR-050#2"
             - "COR-050#5"
-        revalidated:
-          at: 2026-10-24T10:40:01Z
-          outcome: unchanged
-          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 5 reads as it did, so what a view anchors holds as this rule says.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -72,10 +52,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-002#4", "software-analysis:DEC-002#6", "software-analysis:DEC-002#8"]
-        revalidated:
-          at: 2026-10-19T14:38:33Z
-          outcome: unchanged
-          unchanged-because: DEC-002 point 6 lets a requirement's actors name another analysis's actor, anchoring the records behind it, and keeps refines within its own analysis. The statement, measure and applies-to this rule compares with the records a requirement rests on read as before, so the rule holds as written.
   RS-SAN-007:
     status: proposed
     origin: {date: 2026-10-17, by: "Aleš Kalfas"}
@@ -89,10 +65,6 @@ rules:
             - "software-analysis:DEC-002#4"
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
-        revalidated:
-          at: 2026-10-25T04:20:54Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. A source a goal or a guarantee names is still named in its words, so the rule holds.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -106,10 +78,6 @@ rules:
             - "software-analysis:DEC-002#4"
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
-        revalidated:
-          at: 2026-10-25T04:20:59Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the link command places a link at each citation a body makes too, and a citation is never read as a mention of a term. The rule judges how an artefact uses a concept, which this leaves as it was.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -120,10 +88,6 @@ rules:
             - "software-analysis:DEC-001#1"
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
-        revalidated:
-          at: 2026-10-25T04:21:04Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What a use case's preconditions must rest on is untouched.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -134,10 +98,6 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#4"
             - "COR-030"
-        revalidated:
-          at: 2026-10-20T22:11:37Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 2 calls the overview the reader's entry point, kept in each analysis's folder. Which analyses an analysis builds on, and what it names of them, are untouched.
   RS-SAN-011:
     status: proposed
     origin: {decision: "software-analysis:DEC-004"}
@@ -145,10 +105,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
-        revalidated:
-          at: 2026-10-24T10:40:04Z
-          outcome: unchanged
-          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Points 4 and 6 read as they did, so the order of the views holds as this rule says.
   RS-SAN-012:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -156,10 +112,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
-        revalidated:
-          at: 2026-10-25T04:21:10Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. One name still means one concept, and the rule asks the same of the glossary.
   RS-SAN-013:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -167,10 +119,6 @@ rules:
       friction:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
-        revalidated:
-          at: 2026-10-25T04:21:15Z
-          outcome: unchanged
-          unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. A step the system does not carry out still rests on an accepted record, as the rule asks.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only

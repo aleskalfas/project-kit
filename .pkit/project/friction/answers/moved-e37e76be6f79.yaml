@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/requirements/constraints/REQ-025-never-fetch-source.md
+    revalidated:
+      at: 2026-10-25T05:30:36Z
+      outcome: unchanged
+      unchanged-because: The agent's reader-review now reads the reading-evidence point through the backbone. Nothing in living-docs fetches a captured source's text, as before.

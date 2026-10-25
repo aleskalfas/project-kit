@@ -14,22 +14,6 @@ pkit:
         - .pkit/capabilities/software-analysis/package.yaml
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-004, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
-    revalidated:
-      at: 2026-10-25T04:20:20Z
-      outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "It keeps an artefact's revalidation in the core friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the README keeps them in the block. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: project-management:DEC-032
-          reason: "The README cites DEC-032 only for the ruled-artefact floor, which this change leaves as it was. Deferred beside COR-050, whose passages #1779 rewrites, since a revalidation would claim the whole README holds."
 ---
 
 # software-analysis capability

@@ -77,10 +77,6 @@ TERM-documentation-space:
           - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
         record:
           - living-docs:DEC-001#1
-      revalidated:
-        at: 2026-10-24T03:53:04Z
-        outcome: unchanged
-        unchanged-because: A space's entry may now name its audience in the configuration. A space is still a collection of pages for one audience, in the places declared for it.
 TERM-onboarding-plan:
   name: onboarding plan
   noun-forms: [onboarding plans]
@@ -94,10 +90,6 @@ TERM-onboarding-plan:
           - .pkit/capabilities/living-docs/agents/living-docs/storyboard.md
         record:
           - living-docs:DEC-001#8
-      revalidated:
-        at: 2026-10-24T03:53:06Z
-        outcome: unchanged
-        unchanged-because: The agent changed only how reader-review falls back to a space's audience. Its onboarding plan, and the gate before it, are as they were.
 TERM-page:
   name: page
   status: active
@@ -110,9 +102,6 @@ TERM-page:
         record:
           - living-docs:DEC-001#1
           - living-docs:DEC-001#4
-      revalidated:
-        at: 2026-10-23T21:35:27Z
-        outcome: updated
 TERM-page-kind:
   name: page kind
   noun-forms: [page kinds]
@@ -140,10 +129,6 @@ TERM-proposal:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#5
-      revalidated:
-        at: 2026-10-24T03:53:07Z
-        outcome: unchanged
-        unchanged-because: The agent changed only how reader-review falls back to a space's audience. What it proposes, and that a person reviews it, are as they were.
 TERM-reader:
   name: reader
   noun-forms: [readers]
@@ -157,10 +142,6 @@ TERM-reader:
           - .pkit/capabilities/living-docs/scripts/_lib/readers.py
         record:
           - living-docs:DEC-001#7
-      revalidated:
-        at: 2026-10-24T00:21:47Z
-        outcome: unchanged
-        unchanged-because: An entry of the readers point may now carry the paths its reader takes. The term names a reader's id and needs, and its view lists the paths, so it holds.
 TERM-reader-review:
   name: reader-review
   noun-forms: [reader-reviews]
@@ -173,10 +154,6 @@ TERM-reader-review:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#6
-      revalidated:
-        at: 2026-10-24T03:53:09Z
-        outcome: unchanged
-        unchanged-because: Reader-review now takes a space's audience from the configuration while the readers point is unavailable. It still judges one page as its readers would, against the binding rules.
 TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]
@@ -289,7 +266,7 @@ Explained in [VIEW-proposals-and-reviews](domain-model/020-proposals-and-reviews
 
 Explained in [VIEW-spaces-and-pages](domain-model/010-spaces-and-pages.md#page).
 
-**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `user`, and anchors `.pkit/permissions/decide.py`, so a change to that code asks it whether it still holds.
+**Example:** `.pkit/permissions/README.md` declares the kind `reference` and the [reader](#term-reader--reader) `act-ai-agent`, and anchors `.pkit/permissions/decide.py`, so a change to that code asks it whether it still holds.
 
 **Distinctions:**
 

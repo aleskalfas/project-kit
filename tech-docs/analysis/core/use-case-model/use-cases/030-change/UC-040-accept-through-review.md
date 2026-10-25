@@ -31,10 +31,6 @@ pkit:
         - ACT-developer
         - ACT-ai-agent
         - REQ-005
-    revalidated:
-      at: 2026-10-25T04:19:25Z
-      outcome: unchanged
-      unchanged-because: The decisions README gains how pkit refs lookup resolves a point of a record, and cli.py changes only that command. The review and the validation of a rule's origin this use case walks are untouched.
 ---
 
 # UC-040 — Have a drafted record or rule become binding only through my own review

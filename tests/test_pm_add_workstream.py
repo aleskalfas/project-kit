@@ -139,13 +139,14 @@ def test_add_to_file_upgrades_list_to_mapping(aw, tmp_path) -> None:
 WORKSTREAMS = "schema_version: 1\nworkstreams:\n  cli:\n    name: cli\n    status: active\n"
 
 
-def _run(aw, monkeypatch, cap_root: Path, *argv: str) -> int:
+def _run(aw, monkeypatch, cap_root: Path, *argv: str, yes: bool = True) -> int:
     # The invoker's login, without asking GitHub for it.
     monkeypatch.setenv("PM_INVOKER_LOGIN", "me")
     monkeypatch.setattr(
         sys,
         "argv",
-        ["add-workstream.py", *argv, "--capability-root", str(cap_root), "--yes"],
+        ["add-workstream.py", *argv, "--capability-root", str(cap_root)]
+        + (["--yes"] if yes else []),
     )
     return aw.main()
 
@@ -250,3 +251,47 @@ def test_main_writes_no_file_when_the_board_write_fails(aw, tmp_path, monkeypatc
     monkeypatch.setattr(aw, "gh_run", FakeRepo())
     assert _run(aw, monkeypatch, tmp_path, "docs") == 3
     assert "docs" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+
+
+# --- the addition is the person's (#2015) ------------------------------------
+
+
+class _Stdin:
+    """A standard input that is a terminal or, as `echo y | …` gives, a pipe."""
+
+    def __init__(self, terminal: bool) -> None:
+        self.terminal = terminal
+
+    def isatty(self) -> bool:
+        return self.terminal
+
+
+def _never_asked(question: str) -> str:
+    raise AssertionError(f"asked off a terminal: {question!r}")
+
+
+def test_off_a_terminal_without_yes_nothing_is_added(aw, tmp_path, monkeypatch, capsys) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo(labels={"workstream:cli"})
+    monkeypatch.setattr(aw, "gh_run", repo)
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=False))
+    monkeypatch.setattr("builtins.input", _never_asked)
+    assert _run(aw, monkeypatch, tmp_path, "docs", yes=False) == 1
+    assert repo.mutations() == []
+    assert (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8") == WORKSTREAMS
+    err = capsys.readouterr().err
+    assert "[refused] Adding workstream 'docs' is the person's to authorise" in err
+    assert "pkit pm add-workstream docs --capability-root" in err and "--yes" in err
+
+
+@pytest.mark.parametrize(("reply", "added"), [("y", True), ("n", False)])
+def test_at_a_terminal_the_addition_is_asked(aw, tmp_path, monkeypatch, reply, added) -> None:
+    stage_project(tmp_path, WORKSTREAMS)
+    repo = FakeRepo(labels={"workstream:cli"})
+    monkeypatch.setattr(aw, "gh_run", repo)
+    monkeypatch.setattr(sys, "stdin", _Stdin(terminal=True))
+    monkeypatch.setattr("builtins.input", lambda q: reply)
+    assert _run(aw, monkeypatch, tmp_path, "docs", yes=False) == 0
+    assert ("workstream:docs" in repo.labels) is added
+    text = (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")
+    assert ("docs" in text) is added

@@ -2324,17 +2324,17 @@ def friction_since_command(
     since_rev: str, head_rev: str | None, base_ref: str | None, as_json: bool
 ) -> None:
     """Whether every change from commit REV to the head, apart from merges of the base, lies
-    inside `revalidated` blocks and `revisited` lists (COR-050 points 3 and 16).
+    inside answer files the change adds (COR-062 point 3, ADR-068 point 5).
 
     The head must descend from REV along its own line of commits. A merge of
     the base counts only for what differs from git's clean merge of its two
-    parents, and any other commit for its own diff. A file lies inside the
-    blocks and lists only when it is an artefact's file, its two texts are
-    the same once every `revalidated` and `revisited` key is taken out, and
-    no block or list was removed or emptied. Each change outside is named
-    with its commit and why. Reads git only and writes nothing. Exit 0 when
-    answered, either way; 1 when it cannot answer: a shallow clone, a name that
-    is no commit, a base that does not resolve, a git too old for `merge-tree`.
+    parents, and any other commit for its own diff. A file lies inside only
+    when it is an answer file that the base, where the head left it, does not
+    hold. An answer file removed, or one the base holds, lies outside. Each
+    change outside is named with its commit and why. Reads git only and writes
+    nothing. Exit 0 when answered, either way; 1 when it cannot answer: a
+    shallow clone, a name that is no commit, a base that does not resolve, a git
+    too old for `merge-tree`.
     """
     target_root = find_target_root()
     if target_root is None:
@@ -9714,21 +9714,24 @@ def process_handoff(
     "--advisory",
     is_flag=True,
     default=False,
-    help="Preset = relation:informational,triggered-by (no runtime block).",
+    help="Preset = relation:informational,triggered-by (no runtime block), added to any "
+    "--relation.",
 )
 @click.option("--seams", is_flag=True, default=False, help="Preset = cross-capability edges only.")
-@click.option("--connectors", is_flag=True, default=False, help="Preset = mode:push.")
+@click.option(
+    "--connectors", is_flag=True, default=False, help="Preset = mode:push, added to any --mode."
+)
 @click.option(
     "--declared",
     is_flag=True,
     default=False,
-    help="Preset = source:annotated (the inert depends_on layer).",
+    help="Preset = source:annotated (the inert depends_on layer), added to any --source.",
 )
 @click.option(
     "--derived",
     is_flag=True,
     default=False,
-    help="Preset = source:derived (the composition/aggregation layer).",
+    help="Preset = source:derived (the composition/aggregation layer), added to any --source.",
 )
 @click.option(
     "--cycles", is_flag=True, default=False, help="Preset = edges lying on a dependency cycle."
@@ -9782,7 +9785,7 @@ def process_graph(
 
     \b
     Presets are documented EXPANSIONS of the atomic filters (a preset is a named
-    combo, not magic), and AND-combine with any atomic filters you also pass:
+    combo, not magic):
       --enforced      = source:derived ∪ relation:gates-on-readiness
       --advisory      = relation:informational,triggered-by
       --seams         = cross-capability edges only
@@ -9792,6 +9795,13 @@ def process_graph(
       --cycles        = edges on a dependency cycle
       --upstream-of   = transitive closure following dependency direction
       --downstream-of = transitive closure against dependency direction
+
+    \b
+    A preset combines with the atomic filters you also pass, and an edge is
+    kept only where all of them keep it. The exception is --advisory,
+    --connectors, --declared and --derived. Each ADDS the relations, mode or
+    source it names to those --relation, --mode, --source or another of them
+    names, so `--connectors --mode pull` keeps both modes.
 
     \b
     Composition order (defensible, pinned): when --enforced is combined with a

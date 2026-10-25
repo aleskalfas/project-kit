@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/process/README.md
+    revalidated:
+      at: 2026-10-25T05:23:13Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, and the command keeps the same edges. This page leaves the graph's filters and presets to the CLI reference, so what it says of the render holds.

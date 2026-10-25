@@ -90,10 +90,6 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
-      revalidated:
-        at: 2026-10-25T04:21:42Z
-        outcome: unchanged
-        unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What a candidate is, and who confirms it, is untouched.
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -108,10 +104,6 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
-      revalidated:
-        at: 2026-10-25T04:21:37Z
-        outcome: unchanged
-        unchanged-because: The kinds' declared structures change only their hints' examples, which now cite a project's own record such as PRJ-003. DEC-001 point 1 now says the link command also places a link at each citation. What a declared structure is holds.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -173,10 +165,6 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
-      revalidated:
-        at: 2026-10-24T02:12:38Z
-        outcome: unchanged
-        unchanged-because: The term still names the four outcomes and how they map onto the two answers. The change makes pkit analysis propose answer a boxed regression updated, as its distinctions already say.
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -189,10 +177,6 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
-      revalidated:
-        at: 2026-10-25T04:21:52Z
-        outcome: unchanged
-        unchanged-because: The analysis-resolver's list of commands now runs pkit analysis link before an updated answer in every analysis, for the links of citations. What a revalidation proposal is, and who applies it, holds.
 TERM-revalidation-record:
   name: revalidation record
   status: active

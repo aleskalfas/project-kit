@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/quality/030-change/REQ-001-migration-runs-again.md
+    revalidated:
+      at: 2026-10-24T20:51:02Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.

@@ -20,9 +20,6 @@ pkit:
         - ADR-065#6
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:54:45Z
-      outcome: updated
 ---
 
 # REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently

@@ -1,0 +1,19 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-answer
+    revalidated:
+      at: 2026-10-20T01:37:05Z
+      outcome: unchanged
+      unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+      deferred:
+        - anchor:
+            kind: path
+            value: src/project_kit/friction_write.py
+          reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
+        - anchor:
+            kind: record
+            value: COR-050#3
+          reason: "It defines an answer as a statement in the artefact's friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the definition."
+        - anchor:
+            kind: record
+            value: COR-050#4
+          reason: "A deferral moves from the block to an answer file under COR-062, so the definition's block is out of date. #1779 builds it and rewrites the definition."

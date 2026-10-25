@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/requirements/functional/REQ-022-agent-proposes-only.md
+    revalidated:
+      at: 2026-10-25T05:30:40Z
+      outcome: unchanged
+      unchanged-because: The agent's reader-review now reads the reading-evidence point, and its record still lands in the agent workspace. The agent still proposes each change, and applies none.

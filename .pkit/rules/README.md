@@ -10,10 +10,6 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
       record: [COR-001, COR-014]
-    revalidated:
-      at: 2026-10-25T00:33:44Z
-      outcome: unchanged
-      unchanged-because: Core rule 20 now says to commit what the friction writers write, and drops the answer owed after a conflict. The README's account of the rules files and their split holds.
 ---
 
 # Rules

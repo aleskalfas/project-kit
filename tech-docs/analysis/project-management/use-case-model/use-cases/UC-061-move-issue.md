@@ -65,9 +65,6 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
-    revalidated:
-      at: 2026-10-24T20:58:46Z
-      outcome: updated
 ---
 
 # UC-061 — Move my issue through its lifecycle, each move checked

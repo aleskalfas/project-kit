@@ -18,10 +18,6 @@ pkit:
       record:
         - software-analysis:DEC-001#1
         - COR-051#7
-    revalidated:
-      at: 2026-10-25T04:22:24Z
-      outcome: unchanged
-      unchanged-because: check.py now also holds the links of citations, whatever any rule's status, and DEC-001 point 1 says the link command places them. Where a kind's structure binds is untouched.
 ---
 
 # REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always

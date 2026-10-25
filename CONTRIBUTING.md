@@ -12,6 +12,7 @@ pkit:
         - tech-docs/rule-sets/writing.md
         - scripts/check_deployed_agents.py
         - scripts/console_fences.py
+        - scripts/page_contents.py
         - scripts/short_check.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
@@ -26,27 +27,6 @@ pkit:
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
-    revalidated:
-      at: 2026-10-25T04:20:09Z
-      outcome: unchanged
-      unchanged-because: The decisions README's Citing section gains how pkit refs lookup resolves a point of a record and what its --json answers give. CONTRIBUTING's guidance on authoring and citing records holds.
-      deferred:
-        - anchor:
-            kind: record
-            value: ADR-055
-          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-067
-          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: project-management:DEC-053
-          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
 ---
 
 # Contributing to project-kit
@@ -59,7 +39,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`) and the pages' console fences (`uv run python scripts/console_fences.py`), each described below. Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check, the pages' console fences and the pages' contents lists, each described below. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -74,7 +54,7 @@ The same aggregator runs in two places, so the gate can't drift:
 
 **When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` instead of the whole aggregator in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
-- **Only answers changed since.** `pkit friction since` says every change from that run's head lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
+- **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the change's answers to friction, as that command reads them. A merge of the base counts only for what differs from git's merge of it.
 
 The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 
@@ -188,6 +168,19 @@ To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what
 - **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output in which a line the command printed would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
 
 Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`. The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
+
+**The pages' contents lists** (#2053). A page a reader moves around in, such as a long guide or a reference, holds a contents list of its second-level sections near its top. The aggregator's `contents lists` line, `uv run python scripts/page_contents.py`, fails on a list that is stale. The line reads the same pages as the console fences' line.
+
+- **How a page opts in:** the page holds two markers, each alone on its line outside fenced code. They are `<!-- pkit:contents -->` and, below it, `<!-- /pkit:contents -->`. A host renders both as nothing, since each is an HTML comment.
+- **Where the markers go:** put them under a second-level heading of their own, such as `## Contents`, after the page's opening paragraph. A rename then changes only the Contents section, not the page's lead. Markers in the lead work too, and their list names every second-level section.
+- **What the list holds:** one item for each second-level heading, in the page's order, linked to the heading's address. The section that holds the markers is left out. A heading is an ATX heading outside fenced code, as the backbone reads one. The item shows the heading's text, with a link in it read as its words.
+- **The address:** the one GitHub renders for the heading. The heading's text loses its markup, and keeps a code span's text and a link's words. That text takes the backbone's slug, with its underscores kept. A second heading of any level with the same address takes `-1`, and a third takes `-2`.
+- **A section anchor's slug:** drops underscores and numbers no repeated heading (COR-050 point 2). So a section anchor's slug and the list's address for one heading can differ.
+- **An explicit anchor:** a page may keep an anchor for a section's old address, such as `<a id="old-address"></a>` on the line before the heading. Such an anchor changes no item: the item links the heading's own address.
+- **A refresh:** `uv run python scripts/page_contents.py --update` writes each stale list between its markers, and changes nothing else in the page. Commit the list with the change that adds, renames or moves a section.
+- **What fails:** a stale list, and markers that make no one pair. Examples are a marker alone, a closing marker above its opening one, and a second pair. `--update` writes no list in a page whose markers fail.
+
+Name pages to check only those, such as `uv run python scripts/page_contents.py README.md`. The script exits 0 when every list is fresh, when no page holds one, or when `--update` wrote every stale list. It exits 1 on any other finding, and 2 when it cannot start.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 

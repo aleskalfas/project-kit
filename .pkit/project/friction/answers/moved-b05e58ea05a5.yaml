@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-anchor
+    revalidated:
+      at: 2026-10-25T00:36:52Z
+      outcome: unchanged
+      unchanged-because: Discovery now marks a rule a synced copy holds as received. What an anchor declares and stands on is unchanged.

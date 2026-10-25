@@ -1,0 +1,5 @@
+answers:
+  - artefact: .pkit/capabilities/evidence/README.md
+    revalidated:
+      at: 2026-10-24T01:21:49Z
+      outcome: updated

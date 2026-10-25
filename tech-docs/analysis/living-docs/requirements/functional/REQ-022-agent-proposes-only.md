@@ -20,10 +20,6 @@ pkit:
         - living-docs:DEC-001#6
         - living-docs:DEC-001#8
         - COR-050#3
-    revalidated:
-      at: 2026-10-24T03:53:18Z
-      outcome: unchanged
-      unchanged-because: The agent changed only how reader-review falls back to a space's audience. It still proposes each change, and applies none.
 ---
 
 # REQ-022 · Functional · The living-docs agent proposes each change, and applies none

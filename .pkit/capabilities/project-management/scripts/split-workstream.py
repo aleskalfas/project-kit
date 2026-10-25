@@ -21,6 +21,9 @@ Splits one workstream into 2–5 new workstreams. Per DEC-018:
     otherwise answered (and is the answer an empty reply takes). A shell
     that cannot answer, or `--yes`, takes `--assign` and `--default`
     alone, and refuses before any change if an issue is left unanswered.
+  * The split itself is confirmed at a terminal, or by `--yes`. Off a
+    terminal, without `--yes`, nobody is there to confirm it, so it is
+    refused before any change, once the plan is shown (#2015).
   * The issues are read from the substrate that carries the axis: the
     `workstream:<source>` label, or the cards whose `Workstream` value is
     the source where a board carries it. Each moves to its answer, the
@@ -49,7 +52,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  split (or dry-run reported)
-  1  membership refusal / validation refusal / an issue left untriaged
+  1  membership refusal / validation refusal / an issue left untriaged / off
+     a terminal without --yes
   2  usage error
   3  gh failure (issues unreadable; a move, a delete or a rewrite failed)
 """  # noqa: E501 — a usage line is a command, kept whole
@@ -76,6 +80,7 @@ from _lib import (
     axis_carriage,
     axis_labels,
     bootstrap_gate,
+    consent,
     provenance,
     session_guard,
     workstream_sync,
@@ -350,11 +355,14 @@ def main() -> int:
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed with split? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    stop = consent.authorise(
+        "Proceed with split? [y/N] ",
+        yes=args.yes,
+        step=f"Splitting workstream {args.source!r}",
+        verb="split-workstream",
+    )
+    if stop is not None:
+        return stop
 
     failures: list[str] = []
 

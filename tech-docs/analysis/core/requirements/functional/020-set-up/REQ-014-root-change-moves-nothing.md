@@ -18,25 +18,6 @@ pkit:
         - COR-049#5
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:54:39Z
-      outcome: updated
-    revisited:
-      - anchor:
-          kind: path
-          value: tests/test_docs_roots.py
-        outcome: unchanged
-        reason: The title and statement say an edit of a documentation root where they said a change of one. This target still backs the requirement as written.
-      - anchor:
-          kind: record
-          value: COR-049#5
-        outcome: unchanged
-        reason: The title and statement say an edit of a documentation root where they said a change of one. This target still backs the requirement as written.
-      - anchor:
-          kind: record
-          value: COR-049#6
-        outcome: unchanged
-        reason: The title and statement say an edit of a documentation root where they said a change of one. This target still backs the requirement as written.
 ---
 
 # REQ-014 · Functional · A later edit of a documentation root moves no document
