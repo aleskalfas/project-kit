@@ -52,9 +52,8 @@ pkit:
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
     revalidated:
-      at: 2026-10-24T22:54:12Z
-      outcome: unchanged
-      unchanged-because: The refs module gains the lookup of several ids in one document. The README names only pkit refs validate, which is untouched.
+      at: 2026-10-25T13:22:25Z
+      outcome: updated
 ---
 
 # project-kit
