@@ -160,7 +160,7 @@ Two prefix-strips reduce false prompts over already-granted intent:
 
 The broader widening, to auto-approve any compound whose every segment is independently safe, is rejected as unsound, since a per-segment matcher is blind to composition. Any other widening is not built yet (COR-007). The widenings taken are the leading-`cd` strip and the removal of a redirection that writes no file (below).
 
-**Every segment needs its own allow.** The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own rules, and a strict posture denies it instead.
+**Every segment needs its own allow.** The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's native rules, and a strict posture denies it instead.
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
 
@@ -222,7 +222,7 @@ A segment led by `export` runs no program. `export` takes each word after it as 
 
 Each word after `export` must be a plain name or assignment, since the shell expands any other first. So `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory. Such a word keeps every grant from allowing.
 
-So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own rules decide each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is.
+So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's native rules decide each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is.
 
 For a grant, outside an `export`, a glob is read as written. A glob changes only arguments, from the names of files, never the program a grant names.
 
@@ -289,13 +289,13 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
     - git's repository directories
   - **Where such an assignment counts:** in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it.
 
-**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's own rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter may use those names to ask the operator rather than abstain.
+**Where Claude Code may allow what the core abstains on for a guardrail, the operator is asked, outside auto and bypass mode.** A harness's native rules may allow a command the core abstains on, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on such a command in a form the core cannot see. An adapter may use those names to ask the operator rather than abstain.
 
 [The Claude Code hook](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy) asks the operator on such a command, except in auto and bypass mode, where the operator chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it. Where the core cannot tell such a deny, it abstains. The deny side stays a speed bump all the same, not a security boundary.
 
 What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth. A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core abstains, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
 
-An abstain for a construct the core cannot read, such as `git push origin $F`, names no guardrail either, so the harness's own rules decide the command. So does a wrapper the harness allows, as Claude Code's baseline allows `find`, and with it `find . -exec rm -rf {} +`, which no native deny's prefix matches.
+An abstain for a construct the core cannot read, such as `git push origin $F`, names no guardrail either, so the harness's native rules decide the command. So does a wrapper the harness allows, as Claude Code's baseline allows `find`, and with it `find . -exec rm -rf {} +`, which no native deny's prefix matches.
 
 ## Scope enforcement
 
