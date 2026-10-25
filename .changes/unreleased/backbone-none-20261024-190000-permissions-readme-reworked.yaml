@@ -1,13 +1,12 @@
 component: backbone
 kind: none
 body: >
-  The permissions README is rewritten for the people who run, set up and
-  extend the permission model. It opens with why the model exists, each
-  claim proved by commands with their real output, a comparison with the
-  harness's own settings and when the model is not needed. A diagram of how
-  a tool call is decided, turning it on and common tasks follow, and the
-  reference comes last. It
-  cites only core records, its renamed headings keep their old link
-  addresses, and it describes the issue-tracker-write privilege as the
-  catalog defines it, ten raw gh mutations. Nothing the backbone ships or
-  runs changes.
+  The permissions README becomes a reference for the agents that act on the
+  permission model. It opens with a one-line purpose and a link to the
+  model's guide, then holds the contract: grants and verdicts, profiles,
+  privileges and how they are recognized, subject resolution, compound
+  commands, the forms a deny holds against, scopes, the agent workspace,
+  capability fragments, the rules of an agent run and the diagnostic loop.
+  Why the model exists and how people turn it on move to a guide that does
+  not ship. Every heading address other text names is kept. Nothing the
+  backbone ships or runs changes.

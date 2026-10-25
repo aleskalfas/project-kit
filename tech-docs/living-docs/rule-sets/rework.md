@@ -3,7 +3,7 @@ rule-set: REWORK
 version: 1.0.0
 inherits: [living-docs:LDOC@1, WRITE@2]
 scope:
-  paths: [.pkit/permissions/README.md]
+  paths: [.pkit/permissions/README.md, docs/permissions/README.md]
   types: [living-docs:page]
 rules: {}
 ---
