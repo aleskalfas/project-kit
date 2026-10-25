@@ -16,12 +16,14 @@ pkit:
         - .pkit/adapters/claude-code/settings/core/settings.json
         - src/project_kit/permissions.py
         - src/project_kit/workspace.py
+        - src/project_kit/visibility.py
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
         - .pkit/permissions/project/grants.yaml
         - .pkit/skills/core/capability-author.md
       record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-032, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact:
+        - .pkit/cli/README.md#surface
         - .pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json
         - .pkit/cli/README.md#folders-a-sync-writes
         - .pkit/cli/README.md#init
@@ -60,42 +62,49 @@ The permission model decides each tool call an agent makes, from grants of privi
 The model grants privileges to subjects, and the decision core gives each tool call one verdict from those grants (COR-028 point 1).
 
 - **A subject** is `all`, `operator` or `agent:<name>`. `all` is every agent and the operator, and `operator` is the person who drives the session. "Default-agent subject resolution" below says which subject a call is decided for.
-- **A grant** names a subject, one or more privileges by their tokens, `[privilege-catalog:<id>]`, and an effect, `allow` or `deny`. It may take a scope ("Scope enforcement" below). Its shape is `.pkit/schemas/permission-grants.schema.json`.
+- **A grant** holds these keys, in the shape `.pkit/schemas/permission-grants.schema.json` gives:
+  - `subject`
+  - `privilege`: one or more privilege tokens, `[privilege-catalog:<id>]`
+  - `effect`: `allow`, the default, or `deny`
+  - `scope`: optional ("Scope enforcement" below)
 - **A subject's grants** are its own and those of `all`.
 - **Where the grants come from.** The decision core reads the model at each call. The model holds:
   - the guardrails, each denied to `all` ("Privileges and how they are recognized" below)
   - the active profile's grants ("Profiles" below)
-  - the project's grants, in `.pkit/permissions/project/grants.yaml`, which `pkit permissions grant` and `revoke` write
+  - the project's grants, in `.pkit/permissions/project/grants.yaml`, which `pkit permissions grant` and `revoke` write ([the CLI reference, "Surface"](../cli/README.md#surface))
   - the grants and privileges of each capability the manifest registers ("Where the deny lives" and "Capability-contributed privilege *definitions*" below)
 - **The verdicts:**
-  - **`allow`:** an allow grant of the subject covers the call, and no deny does. The harness runs the call with no prompt. For a Bash command, "Compound commands" below says when a grant covers it.
-  - **`deny`:** a deny grant of the subject covers the call. A deny wins over every allow, whatever the order of the grants. The harness refuses the call, and asks nobody.
+  - **`allow`:** an allow grant of the subject covers the call within its scope, and no grant denies it. The harness runs the call with no prompt. For a Bash command, "Compound commands" below says when a grant covers it.
+  - **`deny`:** a deny grant of the subject covers the call, or an allow grant covers it outside the grant's scope ("Scope enforcement" below). A deny wins over every allow, whatever the order of the grants. The harness refuses the call, and asks nobody.
   - **`abstain`:** no grant decides the call. The harness's own rules decide it: the allows and denies in its settings. The adapter writes them from its baseline and the model (COR-028 point 2). A call they neither allow nor deny goes to the harness's permission mode, which may ask the operator.
 - **The posture** decides a call no grant covers. Under `lenient`, the default, the core abstains. Under `strict`, it denies. The posture is in `.pkit/permissions/project/config.yaml`.
 - **A fault** while the hook decides gives an abstain, never a deny, so the hook fails open. The harness's native denies of the guardrails still refuse the forms of the guardrails' commands they name. That is the double lock ([the Claude Code adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 - **What the harness cannot enforce** is reported, never dropped (COR-028 point 3). The adapter declares what its harness enforces, and `pkit permissions diff` names the model's intent beyond it, such as network egress in Claude Code.
 - **One loader, one core.** The hook and the `pkit permissions` commands build the model through the same loader. `pkit permissions probe` decides through the same core as the hook.
+- **Only while the hook is registered.** With the hook off, only the harness's native rules hold. A grant only the hook realizes, such as of `text-filter`, `uv-run` or `workspace`, then allows nothing. An adapter's hook may also ask the operator where the core abstains, as Claude Code's does in two cases ([its README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 
 ### Profiles
 
-- **A profile** is a named set of grants and a posture, in `.pkit/permissions/profiles/<name>.yaml`. Three ship, each granting more than the one before: `read-only`, `non-destructive` and `autonomous`. `read-only` is strict, and the other two are lenient.
-- **Activation:** `pkit permissions profile activate <name>` sets the posture, and layers the profile's grants under the project's own, which it never overwrites. It then writes the native rules it can, unless `--no-apply` is given. It registers no hook, which `pkit permissions enable` does.
+- **A profile** is a named set of grants and a posture. Three ship, in `.pkit/permissions/profiles/<name>.yaml`, each granting more than the one before: `read-only`, `non-destructive` and `autonomous`. `read-only` is strict, and the other two are lenient. A project's own profile, in `.pkit/permissions/project/profiles/<name>.yaml`, wins over a shipped one of the same name.
+- **Activation:** `pkit permissions profile activate <name>` sets the posture, and layers the profile's grants under the project's own, which it never overwrites. It then writes the native rules it can, unless `--no-apply` is given. It registers no hook, which `pkit permissions enable` does ([the CLI reference, "Surface"](../cli/README.md#surface)).
 - **Per machine:** the active profile is kept in `.pkit/permissions/project/active-profile.yaml`, which git ignores. Its posture goes into `.pkit/permissions/project/config.yaml`, which the project shares. So another clone takes the posture, and takes the profile's grants only once it activates the profile too.
 
 ## Privileges and how they are recognized
 
 A privilege is a named thing a subject may be granted. The privilege catalog, `.pkit/schemas/privilege-catalog.yaml`, defines each under `privileges` (COR-028 point 1). A grant names one by its token, `[privilege-catalog:<id>]` (COR-019). `pkit permissions catalog` lists the catalog, each capability's privileges merged in.
 
+The catalog's shape is `.pkit/schemas/privilege-catalog.schema.json`, and each privilege needs a `description` and a `recognize`. A project defines a privilege of its own only in a capability's catalog fragment ("Capability-contributed privilege *definitions*" below).
+
 A privilege's `recognize` says which calls are its, in one or more of three forms:
 
-- **`bash`:** a list of recognizers, each matched against one segment of a Bash command ("Compound commands" below). A recognizer with a `cmd` matches where each of its other keys matches too:
+- **`bash`:** a list of recognizers, each matched against one segment of a Bash command ("Compound commands" below). Each holds a `cmd` or a `pattern`. A `pattern` that matches recognizes the segment alone. Otherwise a recognizer with a `cmd` matches where each of the other keys it holds matches too:
   - `cmd`: the program, the segment's first word
   - `subcommand`: a list of words, one of which is the first word after the program that is no flag
   - `flag_any`: a list of flags, one of which the segment holds
   - `word_prefix_any`: a list of prefixes, one of which a word after the program opens with
   - `pattern`: a regular expression searched in the segment's words, joined by spaces, for a form the other keys cannot name
 - **`tool`:** a list of the harness's tools, each recognized whatever its input, such as `WebFetch`.
-- **`path`:** a list of file tools, and the folders inside which their target must lie ("The agent workspace" below).
+- **`path`:** `tools`, a list of file tools, and `folders`, the folders inside which their target must lie ("The agent workspace" below). A folder is relative, and opens with no `/` or `~`, and holds no `..`.
 
 The catalog's other keys:
 
@@ -115,7 +124,7 @@ The hook resolves the subject for every PreToolUse call, in this order:
 2. **`agent_type` absent, and `.claude/settings.json` has `agent: X`** → `agent:X`. The main session runs as that agent, so all of the agent's grants apply, allow and deny. A missing, unreadable or malformed `settings.json` silently falls back to rule 3.
 3. **`agent_type` absent, and no `agent` key in `settings.json`** → `operator`.
 
-**Implication:** in a session with a configured default agent, the operator's `!`-typed command is also bound to that agent's grants. That is consistent, because the session runs as the agent.
+**Implication:** in a session with a configured default agent, the operator's `!`-typed command is also bound to that agent's grants.
 
 **A session started with `--agent`:** the runs of project-management's `review-pr` name their agent on the command line, through the agent runner ([the adapters README, "The agent runner"](../adapters/README.md#the-agent-runner)). That sets the session's agent without changing `.claude/settings.json`, the file rule 2 reads. So the hook may judge such a run as the project's default agent, or as `operator`, rather than as the agent it names. No grant for one agent counts in those runs until the adapter's probe shows which subject the hook judges ([the adapter's README, "The probe"](../adapters/claude-code/README.md#the-probe-probe-confined-runpy)).
 
@@ -311,7 +320,7 @@ A scope confines a privilege: a scoped allow denies the privilege outside its sc
 
 ### Deny/negation scopes are intentionally unsupported
 
-A negation glob, such as `!*.ru`, in a grant's scope is rejected: each call the grant covers is denied, with a reason that says why. It is neither silently accepted nor partly enforced. A tool-layer denylist is a false boundary: an agent's raw `bash curl` bypasses it at the sandbox layer, which is agent-blind. Advertising negation enforcement would overstate fidelity, and violate COR-028's honesty discipline.
+A negation glob, such as `!*.ru`, in a grant's scope is rejected: each call the grant covers is denied, with a reason that says why. It is neither silently accepted nor partly enforced.
 
 Only positive allowlists are supported, so to deny a host, remove it from the allowlist rather than add a negation glob.
 
@@ -423,7 +432,7 @@ Where the projection cannot tell that two recognizers never match the same call,
 
 ## The permission-prompt diagnostic loop
 
-The diagnostic loop is opt-in and recommend-only. It turns the burden of confirmation prompts into a feedback loop you can measure and close. It has two halves, one in the hook and one in the CLI.
+The diagnostic loop is opt-in and recommend-only. It records each call the hook abstained on, and reports what would remove each prompt. It has two halves, one in the hook and one in the CLI.
 
 - **Capture, in the hook.** While the loop is off, the default, the hook does one cheap read of a marker and logs nothing. While it is armed, the hook appends each call it abstained on to a local log, after the decision is made. A fault in capture changes no decision and never breaks the hook's fail-open.
 - **What the log holds.** The hook observes only its own abstain, not whether the harness then prompted. So the log holds a superset of real prompts. The report states its coverage, never a predicted fall in the number of prompts.
@@ -438,7 +447,7 @@ The diagnostic loop is opt-in and recommend-only. It turns the burden of confirm
 
 ### Two sharpening axes on the report
 
-Since the log is a superset, the report adds two static axes that turn raw counts of abstains into counts you can act on. Both are computed over the logged command text, which is redacted, and both stay recommend-only.
+Since the log is a superset, the report adds two static axes. They turn raw counts of abstains into counts of real prompts, split by cause. Both are computed over the logged command text, which is redacted, and both stay recommend-only.
 
 - **Prompted vs auto-allowed.** Each logged record is an abstain of the hook's, to which the harness then applies its own allow patterns. Those are the `permissions.allow` patterns of the live `settings.json` and `settings.local.json`. The report matches each record against them, flat, and counts a record that matches none as a real prompt:
   - **A Bash command** matches where its leading words are exactly a `Bash(<prefix>:*)` pattern. A command of shell shape, such as one holding `&&`, `|`, `;` or `$(…)`, never matches one pattern, so it always counts as a real prompt.
