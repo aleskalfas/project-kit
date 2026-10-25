@@ -45,9 +45,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-25T05:24:32Z
+      at: 2026-10-25T14:35:05Z
       outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Readying a fresh clone with one sync is unchanged, so the use case holds.
 ---
 
 # UC-050 — Get a fresh clone ready to work with one sync

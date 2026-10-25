@@ -452,9 +452,9 @@ TERM-distribution:
           - PRJ-004
           - ADR-047#3
       revalidated:
-        at: 2026-10-20T01:37:29Z
+        at: 2026-10-25T14:34:24Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: PRJ-004 names the tag latest as the canonical install, from the same repository through the same git URL. A distribution still releases from one source repository through one channel, so the definition holds.
 TERM-documentation-root:
   name: documentation root
   noun-forms: [documentation roots]
@@ -616,9 +616,9 @@ TERM-install:
           - COR-017
           - COR-030
       revalidated:
-        at: 2026-10-20T01:37:36Z
+        at: 2026-10-25T14:34:15Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Adding the backbone or a component to a repository after checking name collisions is unchanged, so the definition holds.
 TERM-link-target:
   name: link target
   noun-forms: [link targets]
@@ -961,9 +961,9 @@ TERM-release:
           - COR-059#7
           - PRJ-004
       revalidated:
-        at: 2026-10-20T01:37:55Z
+        at: 2026-10-25T14:34:17Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: PRJ-004 makes the tag latest, on the highest release's commit, the canonical install. A release is still a set of versions named by its backbone version, with its own annotated tag, so the definition holds.
 TERM-release-step:
   name: release step
   noun-forms: [release steps]
@@ -979,9 +979,9 @@ TERM-release-step:
           - PRJ-002#D4
           - PRJ-004
       revalidated:
-        at: 2026-10-24T03:44:23Z
+        at: 2026-10-25T14:34:20Z
         outcome: unchanged
-        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
+        unchanged-because: PRJ-004 names the tag latest as the canonical install. The release step writes the same versions, floors, bounds and changelog entries, and the release-tag workflow moves latest, so the definition holds.
 TERM-report:
   name: report
   other-senses: [whole-repository report]
@@ -1146,9 +1146,9 @@ TERM-seeding:
           - COR-003
           - COR-059#8
       revalidated:
-        at: 2026-10-20T01:38:03Z
+        at: 2026-10-25T14:34:22Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change alters only the install command pkit init prints at its end. Seed paths and the templates they are created from are unchanged, so the definition holds.
 TERM-session-anchor:
   name: session anchor
   noun-forms: [session anchors]

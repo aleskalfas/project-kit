@@ -51,9 +51,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-25T03:03:37Z
+      at: 2026-10-25T14:34:59Z
       outcome: unchanged
-      unchanged-because: Main linked its terms to the glossary and reworded variant 3b, and permissions scaffold now refuses a capability the project receives as a synced copy. No step here scaffolds a fragment, and where per-machine choices are kept, out of what the project commits, is as it was.
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. What the install keeps out of the project's commits is unchanged, so the use case holds.
 ---
 
 # UC-031 — Keep my per-machine choices out of what the project commits

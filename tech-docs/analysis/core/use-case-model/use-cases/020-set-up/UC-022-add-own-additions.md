@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-25T05:23:38Z
+      at: 2026-10-25T14:34:51Z
       outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. The project's own rules, settings, grants and agent paths beside the methodology's are unchanged, so the use case holds.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

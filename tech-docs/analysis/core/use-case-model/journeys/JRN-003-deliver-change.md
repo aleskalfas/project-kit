@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-25T00:34:53Z
+      at: 2026-10-25T14:40:28Z
       outcome: unchanged
-      unchanged-because: UC-002 and UC-007 now say the writers write answer files, and core rule 20 says to commit them. The journey's steps through those use cases hold.
+      unchanged-because: UC-049's printed next steps name the install of the tag latest in place of the install at its own version. This journey needs from UC-049 only the system installed and committed for the team, so it holds.
 ---
 
 # JRN-003 — Deliver a change

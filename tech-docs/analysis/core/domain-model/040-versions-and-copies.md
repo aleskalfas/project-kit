@@ -41,9 +41,8 @@ pkit:
         - TERM-distribution
         - TERM-component-origin
     revalidated:
-      at: 2026-10-23T08:54:14Z
-      outcome: unchanged
-      unchanged-because: TERM-migration's example now names a backbone migration, and its definition is as it was. The view's section on migration holds.
+      at: 2026-10-25T14:39:38Z
+      outcome: updated
 ---
 
 # VIEW-versions-and-copies — Versions and copies
@@ -359,7 +358,7 @@ A distribution is one edition of the [methodology](../glossary.md#term-methodolo
 
 **Always true:**
 
-- Only a CLI taken from a release's tag has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
+- Only a CLI taken from a tag on a release's commit, the release's own or `latest`, has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
 
 ## Component origin
 

@@ -27,9 +27,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T22:53:50Z
+      at: 2026-10-25T14:34:29Z
       outcome: unchanged
-      unchanged-because: Two tests now hold pkit refs lookup --json. The lookup reads and writes nothing, so it needs no --dry-run, and the commands that change content offer one as before.
+      unchanged-because: The tests changed are those of the install pkit init prints, and a new one that upgrade's lookup of the latest release skips the tag latest. No test of a --dry-run preview changed, so the requirement holds.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

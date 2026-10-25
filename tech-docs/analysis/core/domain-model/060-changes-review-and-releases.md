@@ -41,9 +41,9 @@ pkit:
         - TERM-changeset
         - TERM-release-step
     revalidated:
-      at: 2026-10-25T04:04:00Z
+      at: 2026-10-25T14:34:31Z
       outcome: unchanged
-      unchanged-because: TERM-finding's example now names the link target, the glossary's term for what a revisit entry answers for. What a finding is, and the view's account of changes, reviews and releases, are as they were.
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. This view's statements on releases, such as a release step that moves only components making no release, are unchanged, so it holds.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

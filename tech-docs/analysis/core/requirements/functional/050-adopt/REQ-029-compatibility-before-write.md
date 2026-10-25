@@ -21,9 +21,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T20:50:37Z
+      at: 2026-10-25T14:34:33Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
+      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of compatibility resolved before a write changed, so the requirement holds.
 ---
 
 # REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything

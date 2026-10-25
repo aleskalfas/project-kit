@@ -43,9 +43,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-25T00:33:52Z
+      at: 2026-10-25T14:34:53Z
       outcome: unchanged
-      unchanged-because: Core rule 20 changes its words on answers. The rules a session starts with are loaded as this use case says.
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. The include lines the install writes into CLAUDE.md are unchanged, so the use case holds.
 ---
 
 # UC-026 — Start every session with the project's rules loaded

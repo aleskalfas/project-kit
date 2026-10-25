@@ -58,9 +58,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-25T05:24:35Z
+      at: 2026-10-25T14:35:07Z
       outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. The router runs a version pin through uvx at that release's own tag, which the change leaves alone, so the use case holds.
 ---
 
 # UC-052 — Run each project at the version it pins

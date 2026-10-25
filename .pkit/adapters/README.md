@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-25T05:23:15Z
+      at: 2026-10-25T14:35:15Z
       outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, and the command keeps the same edges. This page says nothing of that graph, so it holds.
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Registering adapters and running their primitives are unchanged, so the README holds.
 ---
 
 # Adapters

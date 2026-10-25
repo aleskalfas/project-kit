@@ -43,8 +43,9 @@ pkit:
         - hatch_build.py
       record: [COR-004, COR-010, COR-017, COR-027, COR-030, COR-031, COR-041, "COR-048#5", "COR-050#1", "COR-050#5", "COR-050#12", "COR-050#14", "COR-050#16", COR-052, COR-053, "COR-054#3", COR-055, "COR-056#2", "COR-059#2", "COR-059#3", "COR-059#8", COR-061, "COR-062#2", "COR-062#9", ADR-056, ADR-057, ADR-059, ADR-065, ADR-066]
     revalidated:
-      at: 2026-10-25T03:45:57Z
-      outcome: updated
+      at: 2026-10-25T14:40:57Z
+      outcome: unchanged
+      unchanged-because: pkit init prints the install of the tag latest, and ADR-065 says PRJ-004's canonical install names a tag kept on the highest release's commit. This README calls the recommended install a tagged one, which latest is, so it holds.
 ---
 
 # Lifecycle

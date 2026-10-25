@@ -37,9 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-25T05:23:32Z
+      at: 2026-10-25T14:34:45Z
       outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Registering an adapter and running its primitives are unchanged, so the use case holds.
 ---
 
 # UC-019 — Adapt the system to another harness
