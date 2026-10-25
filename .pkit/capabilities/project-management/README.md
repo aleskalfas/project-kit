@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T21:24:56Z
+      at: 2026-10-25T02:59:08Z
       outcome: updated
       deferred:
         - anchor:
@@ -300,11 +300,25 @@ pkit pm link-parent 1101 1102 --yes          # link two issues without the promp
 `create-issue` checks the body against `schemas/body-format.yaml` before it writes anything, `--dry-run` included. It checks a body file and a body stamped from the template alike, since the schema is the contract and the template is not.
 
 - **Refused:** a body that lacks a section its issue type requires, such as a Task's `## Doc impact`, or that holds a heading of the first level (`# ...`). The refusal names what is wrong, and nothing is filed.
-- **Warned of:** a `file:line` reference, and a `## Implementation` or `## How` section. The warning is printed, and filing goes on.
+- **Warned of:** a `file:line` reference, a `## Implementation` or `## How` section, and a predicted decision id. The warning is printed, and filing goes on.
 
-Each type's required sections, and their severity, come from its entry under `bodies`. Each universal rule's severity comes from the entry of `universal_body_rules` whose `id` is the finding's label. A `# ` line inside a fenced code block is no heading.
+Each type's required sections, and their severity, come from its entry under `bodies`. Each universal rule's severity comes from the entry of `universal_body_rules` whose `id` is the finding's label. The two lists above give the severities as shipped. A `# ` line inside a fenced code block is no heading.
 
-`validate-issue` and `edit-issue` run the same checks, through `scripts/_lib/body_rules.py`. No command checks a body for a predicted decision id yet.
+A predicted decision id is an id that no record holds, written as if one did. The check reads two forms of id, outside fenced code blocks, HTML comments and struck-through text:
+
+- a core, project or architecture record's id: `COR-NNN`, `PRJ-NNN` or `ADR-NNN`
+- a capability's decision named with its capability: `[<capability>:DEC-NNN-<slug>]` or `<capability>:DEC-NNN`, looked up by its capability and its number alone
+
+A bare `DEC-NNN` is not checked. Each capability numbers its own decisions, so a bare id names no record until its capability is named.
+
+Each id the check reads is looked up through `pkit`, and one that no record holds is reported as `body.predicted-decision-id`, naming it. Where `pkit` gives no answer for an id, one notice, `body.decision-ids-unchecked`, names the ids not checked and why, at the rule's severity:
+
+```
+[warning] body.predicted-decision-id: cites COR-064, which no record holds. Cite a decision only once its record exists, and describe one not yet written without an id.
+[warning] body.decision-ids-unchecked: decision ids not checked (COR-064): the records could not be read — `pkit` is not on PATH. None is reported as predicted on that ground.
+```
+
+`validate-issue` and `edit-issue` run the same checks.
 
 #### Issue body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 

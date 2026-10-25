@@ -35,6 +35,7 @@ pkit:
         - src/project_kit/agents.py
         - src/project_kit/storyboards.py
         - src/project_kit/schemas_authoring.py
+        - src/project_kit/process_authoring.py
         - src/project_kit/schemas_validate.py
         - src/project_kit/lifecycle_ownership.py
         - .pkit/lifecycle/ownership.py
@@ -108,7 +109,7 @@ pkit:
         - .pkit/process/README.md#the-engine
         - .pkit/process/README.md#cascade--fold-one-child-processs-member-outcomes-core
     revalidated:
-      at: 2026-10-25T02:08:56Z
+      at: 2026-10-25T03:03:44Z
       outcome: updated
       deferred:
         - anchor:
@@ -261,7 +262,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `permissions catalog` | list the privilege catalog (baseline + extensions); a path-scoped allow (the agent workspace) shows the folder it is recognized inside | no | yes (read-only) |
 | `permissions overview` | role-grouped catalog view — guardrails vs enablers, provenance, granted-to, live-enforcement status; a path-scoped allow is marked `[inside <folder>/]` | no | yes (read-only) |
 | `permissions grant <subject> <privilege> [--scope <glob>...] [--deny]` | add/update a grant in the project model, validated against the catalog | yes | no — idempotent (updates a matching grant) |
-| `permissions scaffold <cap>` | stamp a capability's `permissions/` fragment skeleton — `privilege-catalog.yaml` (definition, ADR-021) + `grants.yaml` (deny policy, ADR-016) — with correct shapes + inline footgun guidance (fragment keys are BARE; a grant references a fragment privilege with the SCOPED `[privilege-catalog:<cap>:<name>]` token; `guardrail: true` forbidden). Standalone (serves existing capabilities, not a `new capability` flag). Refuses an unknown capability; refuses to clobber an existing fragment file | yes | no — no-clobber (leaves an authored fragment untouched) |
+| `permissions scaffold <cap>` | stamp a capability's `permissions/` fragment skeleton — `privilege-catalog.yaml` (definition, ADR-021) + `grants.yaml` (deny policy, ADR-016) — with correct shapes + inline footgun guidance (fragment keys are BARE; a grant references a fragment privilege with the SCOPED `[privilege-catalog:<cap>:<name>]` token; `guardrail: true` forbidden). Standalone (serves existing capabilities, not a `new capability` flag). Refuses an unknown capability; refuses to clobber an existing fragment file. Refuses a capability whose files the project receives as synced copies (see "Authoring commands") | yes | no — no-clobber (leaves an authored fragment untouched) |
 | `permissions revoke <subject> <privilege>` | remove a grant from the project model | yes | no — no-ops when absent |
 | `permissions mode [additive\|managed]` | show (no arg) or set the ownership mode | yes (on set) | no |
 | `permissions enable` | turn on live enforcement: register the PreToolUse hook (opt-in) + ensure native guardrail denies (the double-lock) | yes | no — idempotent |
@@ -306,7 +307,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `process cascade <addr> [--subject <key>] [--json]` | resolve the cascade fold the process declares, outside any gated transition, and print it, narrative or `--json`. A wrapper reads it to combine the fold with gates of its own. Exits 1 when the fold is not open, or when the process declares none. The fold is specified in [the process README, "Cascade"](../process/README.md#cascade--fold-one-child-processs-member-outcomes-core) | no | yes (read-only) |
 | `process validate <addr> [--subject <key>] [--json]` | the engine's `validate` of one subject's invariants, specified in [the process README, "The engine"](../process/README.md#the-engine) | no | yes (read-only) |
 | `process health [--process <addr>] [--interpretation-only] [--json]` | walk every opt-in hand-off contract (COR-042) and report missed hand-offs; report-only, takes no subject; exits non-zero on any miss or indeterminate. A `--process` scope that matches nothing walked is itself indeterminate (never a clean empty run); a bare run over zero declared contracts stays clean. `--interpretation-only` re-renders the same walk as the COR-044 authoring check: indeterminates only, misses not counted, exit non-zero on any indeterminate | no | yes (read-only) |
-| `process new <capability>:<process-id> [...] [--dry-run]` | scaffold a lint-clean process definition into its NAMED owning capability + a fail-closed predicate stub per declared evaluable, registered in the capability's package.yaml (COR-044); errors cleanly with no owning capability, or one the project does not register as a component (`pkit capabilities register <name>`) | yes | no — one-shot, refuses an existing id |
+| `process new <capability>:<process-id> [...] [--dry-run]` | scaffold a lint-clean process definition into its NAMED owning capability + a fail-closed predicate stub per declared evaluable, registered in the capability's package.yaml (COR-044); errors cleanly with no owning capability, or one the project does not register as a component (`pkit capabilities register <name>`). Refuses a capability whose files the project receives as synced copies (see "Authoring commands") | yes | no — one-shot, refuses an existing id |
 | `process couple <addr> --state <s> --upstream <addr> --relation <r> --mode <m> --why <prose> [--version <n>] [--mandatory <reason>] [--dry-run]` | append a `depends_on` entry (COR-038) to the invoker-named definition; the upstream by implementation or by role (COR-053), with the targeted interface version and the mandatory mark when given; relation/mode validated against the closed vocabularies read from the shape contract; definition `version` NOT bumped; names `pkit capabilities refresh <capability>` when the generated `depends-on` list is left stale, never writing package metadata | yes | yes — identical entry is a clean no-op; the same `(upstream, relation, mode)` with a different `why`, version or mark refuses |
 | `process hand-off <addr> --upstream <addr> --trigger <state> --candidates <cmd> --resolve <cmd> [--state <s>] [--dry-run]` | add a COR-042 hand-off contract to an existing coupling; validates the trigger against the upstream where resolvable; scaffolds + registers the seam stubs when new; `version` NOT bumped | yes | yes — identical contract is a clean no-op; a different contract refuses |
 | `process graph [filters and presets] [--flow \| --mermaid \| --json] [--verbose]` | render the configured process topology (COR-038): the one wiring graph filtered to its process edges — derived, annotated, and the resolved `offers` edges — narrowed by atomic filters and presets. See "Connections commands", the graph relation, and `process graph` there | no | yes (read-only) |
@@ -1044,17 +1045,26 @@ The shapes are stamped by the CLI's own scaffolding code (`src/project_kit/scaff
 
 ### Folders a sync writes
 
-A `new` command never stamps into a folder whose files the project receives as [synced copies](../lifecycle/README.md#the-ownership-predicates-ownershippy). The next sync overwrites what the project writes there (the no-shared-files invariant). Outside the methodology's source repository, such a folder is the backbone's or a kit-shipped capability's. In any project, it is an externally-sourced capability's.
+A `new` command never stamps into a folder whose files the project receives as [synced copies](../lifecycle/README.md#the-ownership-predicates-ownershippy). Nor do `process new` and `permissions scaffold`, which stamp into a capability's folder. The next sync overwrites what the project writes into such a folder (the no-shared-files invariant).
 
-Five commands ask before they write anything, and in a dry run too where they take one:
+Outside the methodology's source repository, such a folder is the backbone's or a kit-shipped capability's. In any project, it is an externally-sourced capability's.
+
+Seven commands ask before they write anything, and in a dry run too where they take one:
 
 - `new decision`, for `core` or a capability
 - `new agent`, for `core` or a capability
 - `new storyboard`, beside an agent of `core` or a capability
 - `new schema`, for `core` or a capability
 - `new migration`, for the backbone or a capability
+- `process new`, for the capability that owns the process
+- `permissions scaffold`, for a capability's `permissions/` folder
 
-Where the folder holds synced copies, the command writes nothing and exits 1. It names the folder, and where the project's own artefact goes. That is the `project` or the `adr` namespace for a decision, and the `project` namespace for an agent or its storyboard. For a schema or a migration, it is a capability the project incubates.
+Where the folder holds synced copies, the command writes nothing and exits 1. It names the folder, and where the project's own artefact goes:
+
+- for a decision, the `project` or the `adr` namespace
+- for an agent or its storyboard, the `project` namespace
+- for a schema, a migration, a process definition or a permission fragment, a capability the project incubates
+- for a grant of the project's own, `permissions grant`
 
 Each command stamps as before into a capability the project incubates. In the methodology's source repository, it stamps into every folder but an externally-sourced capability's.
 
@@ -1919,6 +1929,7 @@ Offline and read-only apart from running the registered predicate scripts (which
 The deterministic stamp under the process-authoring skill's `new` operation (per [COR-044](../decisions/core/COR-044-process-authoring-layer.md); the COR-005 skill/command pairing). Scaffolds a **lint-clean** process definition at `.pkit/capabilities/<capability>/schemas/<process-id>.yaml` — validated against the shape contract (`.pkit/schemas/_defs/process.schema.json`) **before** writing — plus a **predicate stub for every evaluable the declared shape demands**, each registered in the owning capability's `package.yaml` commands tree.
 
 - **The owning capability is required, and must be registered.** A definition is a capability-instance artifact, so all three stamps refuse three distinct ways: an address with no `<capability>:` half, a capability with no directory on disk, and — the one that matters most — **a directory the project does not register as a component**, refused with `pkit capabilities register <name>` as the named remedy. That third gate exists because contract discovery walks only registered capabilities: a definition stamped into an unregistered one would be real, correct, and watched by nothing, with `process health` reporting no contracts and exiting `0` over it (#713). The gate shares discovery's own capability lookup, **fallback included** — with no backbone manifest, or one listing no capabilities, the installed set is the filesystem scan, so a pre-manifest install stays authorable. The command never routes a capability-less adopter through capability authoring or registration — that walkthrough is the skill's judgment (#685), not the stamp's.
+- **The command refuses a capability whose files the project receives as synced copies**, a dry run included, and names a capability the project incubates instead ("Folders a sync writes" under "Authoring commands").
 - **Shape flags.** `--cardinality <v>` (+ `--key <slug>` for keyed, COR-032); `--domain-ref <pointer>`; repeatable `--state "<id>=<meaning>"` (declaration order kept — it can be load-bearing for detection precedence); `--entry <id>` / `--guarded-entry <id>` / `--terminal <id>` marks; repeatable `--transition "<from>:<to>:<trigger>[:<authorisation>]"` (authorisation defaults to `user`, the safe floor); `--gate "<from>:<to>:<trigger>[:<kind>]"` on a declared transition (kind defaults `deterministic`; `authorisation-artifact` is the other stubbed kind — the engine-computed kinds ride the deferred subprocess/cascade block surface); repeatable `--invariant "<id>=<why>"` (COR-035); `--blocked <reason>` (COR-034). Every enum-valued flag is validated against the shape contract's vocabulary **read as data**.
 - **`--domain-ref <pointer>` records where the subject's *domain* data lives** — deliberately distinct from its process position, since the substrate tracks a position and not the thing itself. Optional on either cardinality: the shape requires only `cardinality`, and omitting the flag leaves the key out entirely, so a definition stamped without one is as valid and lint-clean as one with. **Free-form, and checked only for being non-empty** — the engine never interprets it and the contract fixes no form (a repo path, a tracker address, a URL are all admissible), so a stamp enforcing one shape would refuse pointers the contract accepts.
 - **A transition is addressed by its full key `(from, to, trigger)`** — by the gate flag and by the derived gate-stub command name alike. Two transitions between the same state pair are shape-legal when their triggers differ (an `approve` beside a `force-approve`), so a pair-keyed address would leave the second permanently ungateable and make two gate flags on that pair silently last-wins. Consequences: the stamp requires a **kebab-case trigger** (it is an id the command name is built from, and the colon-separated flag grammar cannot carry a colon anyway), refuses a duplicate `(from, to, trigger)`, and refuses a second `--gate` on an already-gated transition.

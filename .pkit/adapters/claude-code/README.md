@@ -17,8 +17,9 @@ pkit:
       record: [COR-002, COR-005, COR-028, COR-047, ADR-002, ADR-004, ADR-005, ADR-009, ADR-014, ADR-025, ADR-034, ADR-052, ADR-060, ADR-066, "project-management:DEC-029", "project-management:DEC-030"]
       source: [claude-code-hooks]
     revalidated:
-      at: 2026-10-24T13:52:36Z
-      outcome: updated
+      at: 2026-10-25T03:03:14Z
+      outcome: unchanged
+      unchanged-because: "The README says what main made the hook do: it does not ask in auto and bypass mode, reads a redirection that writes no file as harmless, and runs a compound of granted text filters and uv run unasked. Permissions scaffold now refuses a capability the project receives as a synced copy, which the README does not describe, so what it says holds."
 ---
 
 # Claude Code adapter
