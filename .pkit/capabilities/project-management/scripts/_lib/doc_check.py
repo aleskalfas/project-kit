@@ -6,7 +6,7 @@ documentation obligations a pull request may owe. Its value is a list of
 obligations with no diff in it — a data point takes no parameter (COR-052
 point 6) — and `check-doc-mapping` applies it to a pull request's diff.
 
-Three things live here, shared by the filler and the check:
+Four things live here, for the filler and the check:
 
 - **The mapping as obligations.** `mapping_obligations` turns the project's
   code-to-doc mapping (`code_path_to_doc_mapping.rules` in `project/config.yaml`,
@@ -24,13 +24,17 @@ Three things live here, shared by the filler and the check:
   capability's mapping obligations and whatever else fills the point (a
   documentation capability's contribution, the project's own filler file),
   after the project's removal overrides.
+- **A page's answer in the change.** `answer_files` reads, from the change
+  check's list of the answers a change adds, the pages an answer meets the
+  obligation of (DEC-053 point 2): one of the core record's three, which the
+  change check accepts.
 """
 
 from __future__ import annotations
 
 import json
 import subprocess
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -248,3 +252,24 @@ def removed(point: ResolvedPoint) -> list[tuple[str, str]]:
 def sources_of(obligations: Sequence[Mapping[str, Any]]) -> list[str]:
     """The sources the obligations come from, sorted, each once."""
     return sorted({str(o.get("source", "")) for o in obligations})
+
+
+# --- a page's answer in the change (DEC-053 point 2) ------------------------------------
+
+#: The answers that meet a page's obligation: the core record's three (COR-050 point 5),
+#: each one the change check accepts — `stands` in its list of the change's answers.
+PAGE_ANSWERS = frozenset({"updated", "unchanged", "deferred"})
+ACCEPTED = "stands"
+
+
+def answer_files(answers: Iterable[Mapping[str, Any]]) -> dict[str, str]:
+    """Each location the change check lists an answer on that meets a page's
+    obligation — updated, unchanged or deferred, and accepted — with the file that
+    holds it, the first listed (DEC-053 point 2). A bump, an answer written back, a
+    reason for having no anchors and a revisit entry meet none."""
+    found: dict[str, str] = {}
+    for answer in answers:
+        location = str(answer.get("location") or "")
+        if location and answer.get("answer") in PAGE_ANSWERS and answer.get("status") == ACCEPTED:
+            found.setdefault(location, str(answer.get("file") or location))
+    return found

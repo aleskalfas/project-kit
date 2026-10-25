@@ -16,6 +16,10 @@ updated document's sentence from the change's author:
   of the change, through the backbone's discovery (`settings_change`). It
   returns the check's document and the friction settings the change alters —
   or why they could not be read, which is never a pass.
+- `written(base)` runs the same check as the project's gate runs it, from the
+  working directory with no `--head` and nothing fetched: the answers the
+  documentation check reads, where a page's answer meets its obligation
+  (DEC-053 point 2).
 - `render(document, head, settings)` is the `## Documentation this change
   affects` section, between its markers; `lines(document, settings)` the same
   list for a terminal. Both speak to a reader who does not know the
@@ -70,10 +74,10 @@ updated document's sentence from the change's author:
   heading an earlier run of these commands wrote the section under, is read as
   the section's heading too, so a list it left is replaced whole.
 
-Which backbone derives the list: both runs of the change check — from the
-working directory, and from a temporary checkout of the head when the first
+Which backbone derives the list: each run of the change check — from the
+working directory, or from a temporary checkout of the head when the first
 meets the backbone's refusal to run an anchor's resolver away from the head —
-run the `pkit` first on PATH with routing off (`PKIT_NO_ROUTE=1`). That is the
+runs the `pkit` first on PATH with routing off (`PKIT_NO_ROUTE=1`). That is the
 backbone serving the command that runs this module: a source checkout's own
 environment (`uv run` puts its `pkit` first), a project's pinned version (the
 pin's run puts its `pkit` first), else the installed tool. Never routed again
@@ -404,11 +408,25 @@ class _NoDocument:
     elsewhere: bool = False
 
 
-def _run_check(head: str, base: str, *, cwd: Path | None) -> Mapping[str, Any] | _NoDocument:
-    """The check's document, or why there is none. Enforcing mode exits 1 on
-    friction and still prints its document, so exit 0 and 1 both carry one."""
-    argv = [*PKIT, "friction", "check", "--json", "--base", base, "--head", head]
-    command = f"`pkit friction check --json --base {base} --head {head}`"
+def written(base: str) -> Derivation:
+    """The change check's document for the change from the branch `base` to the head,
+    as the project's gate runs the check: from the working directory, with no
+    `--head`, so the backbone reads HEAD and `$PKIT_CHECK_HEAD` as that line does
+    (ADR-068 point 6). Nothing is fetched: the base is read as it stands. A failure
+    is kept as it is, never a pass; the head is named `HEAD`."""
+    found = _run_check(None, base, cwd=None)
+    if isinstance(found, _NoDocument):
+        return Derivation("HEAD", problem=found.why)
+    return Derivation("HEAD", document=found, answers=tuple(_entries(found)))
+
+
+def _run_check(head: str | None, base: str, *, cwd: Path | None) -> Mapping[str, Any] | _NoDocument:
+    """The check's document at `head` — the working directory's, where None — or why
+    there is none. Enforcing mode exits 1 on friction and still prints its document,
+    so exit 0 and 1 both carry one."""
+    named = [] if head is None else ["--head", head]
+    argv = [*PKIT, "friction", "check", "--json", "--base", base, *named]
+    command = f"`{' '.join(argv)}`"
     try:
         proc = subprocess.run(
             argv,

@@ -16,9 +16,10 @@ Three layers:
   an anchor leaves unjudged: on a kind nothing resolves the point still
   resolves, on a resolver that gave no answer it does not;
 - `check-doc-mapping` over that repository, reading the point through a `pkit`
-  that is the real CLI: a contributed obligation naming a page met only by
-  that page in the diff, one naming only a path unmet for as long as it is
-  given, neither by a `## Doc impact` line; each source enforced on its own
+  that is the real CLI: a contributed obligation naming a page met by that
+  page's change or its answer in the diff, read as the one squash commit the
+  pull request lands as (#2095), one naming only a path unmet for as long as it
+  is given, neither by a `## Doc impact` line; each source enforced on its own
   setting; an unresolved point failing the check, naming the filler and the fix.
 
 The filler's `uv run --script` shebang is pointed at this interpreter in the
@@ -48,7 +49,9 @@ from project_kit.manifest import (
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import register_kinds
+from tests.friction_documents import T2
 from tests.friction_documents import document as friction_document
+from tests.test_answer_files import answer_path, answers, entry
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPABILITY = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -264,6 +267,41 @@ def test_only_the_capability_s_own_filler_supplies_mapping_obligations() -> None
         "entry 'mapping:lib/**' from docs-test claims the `mapping` source, which only "
         "project-management's own filler supplies"
     ]
+
+
+def test_a_page_is_answered_by_one_of_the_three_answers_the_change_check_accepts() -> None:
+    """A page's answer in the change is one of COR-050's three that the change check
+    lists as standing (DEC-053 point 2), named with the file that holds it, the first
+    listed. A bump, an answer written back, a reason for having no anchors and a revisit
+    entry answer no page's friction."""
+
+    def listed(location: str, answer: str | None, status: str = "stands") -> dict[str, Any]:
+        return {
+            "location": location,
+            "answer": answer,
+            "status": status,
+            "file": f"answers/{location.removeprefix('docs/')}-{answer}.yaml",
+        }
+
+    found = doc_check.answer_files(
+        [
+            listed("docs/a.md", "unchanged"),
+            listed("docs/a.md", "deferred"),
+            listed("docs/b.md", "deferred"),
+            listed("docs/c.md", "updated"),
+            listed("docs/d.md", "updated", "bump"),
+            listed("docs/e.md", "unchanged", "written-back"),
+            listed("docs/f.md", "unchanged", "edited"),
+            listed("docs/g.md", "unanchored"),
+            listed("docs/h.md", "revisited"),
+            listed("docs/i.md", None),
+        ]
+    )
+    assert found == {
+        "docs/a.md": "answers/a.md-unchanged.yaml",
+        "docs/b.md": "answers/b.md-deferred.yaml",
+        "docs/c.md": "answers/c.md-updated.yaml",
+    }
 
 
 # --- the point through the backbone ------------------------------------------------------
@@ -495,8 +533,32 @@ def _pkit_on_path(tmp_path: Path) -> Path:
     return bin_dir
 
 
+def _pkit_refusing_the_change_check(tmp_path: Path) -> Path:
+    """A `pkit` that is the real CLI, but for the change check (`friction check --json`),
+    which gives no document: what a backbone that cannot read the change gives."""
+    bin_dir = tmp_path / "pkit-refusing-bin"
+    bin_dir.mkdir()
+    pkit = bin_dir / "pkit"
+    pkit.write_text(
+        "#!/bin/sh\n"
+        'if [ "$1 $2 $3" = "friction check --json" ]; then\n'
+        '  echo "Error: boom" >&2\n'
+        "  exit 2\n"
+        "fi\n"
+        f'exec "{sys.executable}" -m project_kit "$@"\n',
+        encoding="utf-8",
+    )
+    pkit.chmod(0o755)
+    return bin_dir
+
+
 def _check(
-    repo: AdopterRepo, tmp_path: Path, changes: dict[str, str], body: str = ""
+    repo: AdopterRepo,
+    tmp_path: Path,
+    changes: dict[str, str],
+    body: str = "",
+    *,
+    bin_dir: Path | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Commit the project as it stands as `base`, then `changes` as the head, and
     run the check from the repository with the real `pkit` first on PATH."""
@@ -504,12 +566,18 @@ def _check(
     repo.commit("base")
     repo.git("branch", "base")
     repo.commit("head", changes)
+    return _run(repo, tmp_path, body, bin_dir=bin_dir)
+
+
+def _run(
+    repo: AdopterRepo, tmp_path: Path, body: str = "", *, bin_dir: Path | None = None
+) -> subprocess.CompletedProcess[str]:
+    """Run the check against the branch `base` from the repository, with the real
+    `pkit` — or the one in `bin_dir` — first on PATH."""
     body_file = tmp_path / "body.md"
     body_file.write_text(body, encoding="utf-8")
-    env = {
-        **os.environ,
-        "PATH": f"{_pkit_on_path(tmp_path)}{os.pathsep}{os.environ.get('PATH', '')}",
-    }
+    first = _pkit_on_path(tmp_path) if bin_dir is None else bin_dir
+    env = {**os.environ, "PATH": f"{first}{os.pathsep}{os.environ.get('PATH', '')}"}
     env.pop("PKIT_OFFLINE", None)
     return subprocess.run(
         [
@@ -539,7 +607,7 @@ def test_without_a_documentation_capability_only_the_mapping_is_checked(
     )
 
 
-def test_a_contributed_obligation_is_met_only_by_its_page_in_the_diff(
+def test_a_contributed_obligation_is_not_met_by_a_doc_impact_line(
     project: AdopterRepo, tmp_path: Path
 ) -> None:
     _contribute(project, [STALE_GUIDE])
@@ -567,6 +635,103 @@ def test_the_page_changed_in_the_diff_answers_it(project: AdopterRepo, tmp_path:
         "  ✓ [friction] docs/guide.md → answered in the diff",
         "check-doc-mapping: every obligation met.",
     ]
+
+
+def test_a_change_check_that_gives_no_list_leaves_a_page_met_only_by_its_change(
+    project: AdopterRepo, tmp_path: Path
+) -> None:
+    """Where the change check gives no list of the change's answers, the check says
+    why and reads no answer: a page is met only by its change in the diff, never by
+    an answer it could not read."""
+    _contribute(project, [STALE_GUIDE])
+    refusing = _pkit_refusing_the_change_check(tmp_path)
+    run = _check(project, tmp_path, {"docs/lib.md": "# Lib 2\n"}, bin_dir=refusing)
+    assert run.stdout.splitlines()[-1] == (
+        "  ✗ [friction] docs/guide.md → no answer in the diff (page-stale)"
+    )
+    assert (run.returncode, run.stderr) == (
+        0,
+        "warn: the change check gives no list of the answers this change adds, so a page "
+        "is met only by its change in the diff: `pkit friction check --json --base "
+        "refs/heads/base`: it exited 2: Error: boom\n"
+        "\n[advisory] 1 friction obligation(s) unanswered. Set "
+        "doc_check.sources.friction: enforcing to block.\n",
+    )
+
+
+# --- a page's answer in a change read as the one squash commit it lands as (#2095) -------------
+
+PAGE = "docs/guide.md"
+ANSWER = answer_path("x")
+
+
+@pytest.fixture
+def paged(project: AdopterRepo, pkit_on_path: Path) -> AdopterRepo:
+    """The project with living-docs beside project-management, no mapping and its
+    friction obligations enforcing, and a page of the user space anchored on
+    `src/a.py`, committed on the branch `base`. Its block holds no answer, so its
+    answers are read from the answer files (COR-062 point 1)."""
+    project.install_capabilities("living-docs")
+    _under_this_interpreter(project.root / LD_REL / "scripts" / "fill-doc-check.py")
+    _configure(project, "", "doc_check:\n  sources:\n    friction: enforcing\n")
+    config = {"name": "adopter", "docs": {"user": "docs/"}, "friction": {"mode": "warning"}}
+    page = friction_document(None, anchors={"path": ["src/a.py"]}, reader="user", kind="signpost")
+    project.write(
+        {BACKBONE_CONFIG: json.dumps(config, indent=2) + "\n", "src/a.py": "A = 1\n", PAGE: page}
+    )
+    project.commit("base")
+    project.git("branch", "base")
+    return project
+
+
+def test_an_anchor_edited_after_its_answer_in_the_branch_is_met_by_the_answer(
+    paged: AdopterRepo, tmp_path: Path
+) -> None:
+    """A fix round edits the page's anchor after the commit that answered for it. The
+    whole-repository check reads the branch's commits and finds the page stale at the
+    head, so living-docs gives the obligation. The pull request lands as one squash
+    commit (DEC-013), and the change check, which compares the base with the head,
+    lists the answer the change adds: the obligation is met (DEC-053 point 2)."""
+    because = "the guide names no value of A"
+    paged.commit(
+        "change a, the guide holds",
+        {"src/a.py": "A = 2\n", ANSWER: answers(entry(PAGE, at=T2, because=because))},
+    )
+    paged.commit("a fix round changes a again", {"src/a.py": "A = 3\n"})
+    run = _run(paged, tmp_path)
+    assert (run.returncode, run.stderr) == (0, "")
+    assert run.stdout == (
+        "check-doc-mapping: 0 rule(s), 2 changed file(s), mode=advisory\n"
+        "check-doc-mapping: 1 contributed obligation(s) from friction\n"
+        f"  ✓ [friction] {PAGE} → answered in the diff ({ANSWER})\n"
+        "check-doc-mapping: every obligation met.\n"
+    )
+
+
+@pytest.mark.parametrize(
+    "answered",
+    [
+        pytest.param({}, id="no answer"),
+        # `updated` with the page as it was: the change check lists it as a bump.
+        pytest.param({ANSWER: answers(entry(PAGE, at=T2, outcome="updated"))}, id="a bump"),
+    ],
+)
+def test_a_page_the_change_gives_no_accepted_answer_stays_unmet(
+    paged: AdopterRepo, tmp_path: Path, answered: dict[str, str]
+) -> None:
+    """With no answer on the page that the change check accepts, the page the anchor's
+    change left stale owes its answer, as before."""
+    paged.commit("change a", {"src/a.py": "A = 2\n", **answered})
+    paged.commit("a fix round changes a again", {"src/a.py": "A = 3\n"})
+    run = _run(paged, tmp_path)
+    assert run.returncode == 1
+    assert run.stdout.splitlines()[-1] == (
+        f"  ✗ [friction] {PAGE} → no answer in the diff (page-stale)"
+    )
+    assert run.stderr == (
+        "\n[refused] 1 friction obligation(s) unanswered — answer each on its page in this "
+        "diff; a `## Doc impact` line does not meet them.\n"
+    )
 
 
 def test_each_source_is_enforced_on_its_own_setting(project: AdopterRepo, tmp_path: Path) -> None:
