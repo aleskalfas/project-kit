@@ -88,7 +88,7 @@ The capability's scripts and agent read the configured variant's schema at runti
 
 ### Code
 
-- **CLI commands removed**: `pkit bundle install`, `pkit bundle list`, `pkit bundle remove`, `pkit new bundle`. A breaking change, whose change-set ships the migration below ([COR-010](COR-010-resource-lifecycle.md)).
+- **CLI commands removed**: `pkit bundle install`, `pkit bundle list`, `pkit bundle remove`, `pkit new bundle`. Their removal is an adopter-breaking surface change, so its change-set ships a migration script at the backbone tier ([COR-010](COR-010-resource-lifecycle.md)). That script, under Migration below, removes the bundle directories under `.pkit/workflow/project/` and the `bundles:` registry entries an installed project holds.
 - **Python module retired**: `src/project_kit/bundles.py` and `stamp_bundle` from `scaffolds.py`.
 - **CLI command group `bundle`** removed from `cli.py`.
 
