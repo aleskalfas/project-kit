@@ -193,6 +193,18 @@ def new_name(now: datetime) -> str:
     return f"{now.astimezone(UTC).strftime(NAME_TIME)}-{secrets.token_hex(4)}{SUFFIX}"
 
 
+def name_time(name: str) -> datetime | None:
+    """The UTC time at the start of the name of a file a writer added (`new_name`), or
+    `None` for a name that starts with none, such as a moved file's."""
+    stamp, dash, _rest = name.partition("-")
+    if not dash:
+        return None
+    try:
+        return datetime.strptime(stamp, NAME_TIME).replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
 def moved_name(text: str) -> str:
     """The name of the answer file the move writes with `text`, which holds the artefact's
     location and the answers it moves (ADR-068 point 1): the first twelve hexadecimal
@@ -1522,6 +1534,7 @@ __all__ = [
     "moved",
     "moved_name",
     "name_of",
+    "name_time",
     "new_name",
     "path_of",
     "read_answer_file",

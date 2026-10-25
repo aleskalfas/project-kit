@@ -28,8 +28,8 @@ commands, each naming what it writes and writing only with consent (point 13):
 artefact whose block holds no answer — no `revalidated` block and no `revisited`
 list — gets `revalidate`'s, `defer`'s and `revisit`'s answer in an answer file of
 the change's own (`_OwnFile`): the one answer file in the working tree that no
-commit of the checkout holds, else a new one named for its UTC time and eight
-random hexadecimal digits. Its entry for the artefact names, in `read`, every
+commit of the checkout holds and the move did not write, else a new one named for
+its UTC time and eight random hexadecimal digits. Its entry for the artefact names, in `read`, every
 other answer file present that answers the artefact. Two such uncommitted files
 that each answer the artefact refuse the write, naming both. A revalidation
 re-states the deferrals it keeps in its own entry. An artefact whose block holds
@@ -942,9 +942,10 @@ def _plan(
 # as the reading of a state reads it from one home.
 
 #: The commits whose answer files a writer never writes into: HEAD's, and those of a
-#: merge, a cherry-pick or a revert in progress, which another line of work added
-#: (COR-062 point 10).
-_NOT_OWN = ("HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD")
+#: merge, a cherry-pick, a revert or a rebase in progress, which another line of work
+#: added (COR-062 point 10). A rebase stopped on a conflict has `REBASE_HEAD` name the
+#: commit it replays.
+_NOT_OWN = ("HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "REBASE_HEAD")
 
 # The keys of an entry, in the schema's order (ADR-068 point 2).
 _ENTRY_ORDER = (af.ARTEFACT_KEY, af.READ_KEY, REVALIDATED, REVISITED_KEY)
@@ -969,9 +970,11 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
     every other answer file present that answers the artefact, which the answer reads.
 
     The change's own file is one the working tree holds and no commit of `_NOT_OWN`
-    holds: the one of them that answers the artefact already, else the newest, else a
-    new one. Two that each answer the artefact refuse the write, naming both: each
-    would have to name the other (COR-062 point 10).
+    holds: the one of them that answers the artefact already, else the newest by the
+    time in its name (`_newest`), else a new one. Two that each answer the artefact
+    refuse the write, naming both: each would have to name the other (COR-062 point 10).
+    A file the move writes is never a writer's own, committed or not: its name is the
+    hash of its content (ADR-068 point 1), so the writer adds a file of its own beside it.
     """
     artefact = source.artefact
     present = af.working_tree_files(target_root)
@@ -984,8 +987,8 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
         return found is not None and found.location == artefact.location
 
     answering = sorted(n for n, f in present.items() if any(names_it(e) for e in f.entries))
-    uncommitted = sorted(n for n in present if n not in held)
-    own = [n for n in answering if n not in held]
+    candidates = {n for n in present if n not in held and not n.startswith(af.MOVED_PREFIX)}
+    own = [n for n in answering if n in candidates]
     if len(own) > 1:
         listed = ", ".join(af.path_of(n) for n in own)
         raise FrictionWriteError(
@@ -995,7 +998,7 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
             f"entries into one of them, or commit one, and run the command again. Nothing was "
             f"written."
         )
-    name = own[0] if own else (uncommitted[-1] if uncommitted else None)
+    name = own[0] if own else _newest(candidates)
     before = ""
     entries: list[dict[str, Any]] = []
     index: int | None = None
@@ -1023,6 +1026,14 @@ def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnF
         read=tuple(n for n in answering if n != name),
         judged=state.liveness(artefact, discovery),
     )
+
+
+def _newest(names: Collection[str]) -> str | None:
+    """The newest of `names` by the time a writer put in each (`af.name_time`), or `None`
+    where there is none. A name holding no time counts as older than one that does, and
+    names of one time are taken in name order."""
+    oldest = datetime.min.replace(tzinfo=UTC)
+    return max(names, key=lambda n: (af.name_time(n) or oldest, n), default=None)
 
 
 def _own_entries(

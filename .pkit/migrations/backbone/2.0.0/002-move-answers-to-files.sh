@@ -126,7 +126,12 @@ for file in document["files"]:
     if not inside(rel) or target.is_symlink() or not target.is_file():
         say(f"SKIP {rel}: not a file of the project's own")
         continue
-    if hashlib.sha256(target.read_bytes()).hexdigest() != file.get("sha256"):
+    try:
+        read = target.read_bytes()
+    except OSError as error:
+        say(f"SKIP {rel}: it cannot be read ({error}); run the migration again")
+        continue
+    if hashlib.sha256(read).hexdigest() != file.get("sha256"):
         say(f"SKIP {rel}: it changed since the plan read it; run the migration again")
         continue
     # Every answer file first: each created, or there already as the plan gives it.
@@ -148,8 +153,14 @@ for file in document["files"]:
             blocked = f"{FOLDER} is a link or a file, not a folder of the project's own"
             break
         if apath.is_symlink() or apath.exists():
-            if not apath.is_symlink() and apath.is_file() and apath.read_bytes() == data.encode("utf-8"):
-                continue
+            if not apath.is_symlink() and apath.is_file():
+                try:
+                    there = apath.read_bytes()
+                except OSError as error:
+                    blocked = f"{arel} cannot be read ({error}), and an answer file is never written over"
+                    break
+                if there == data.encode("utf-8"):
+                    continue
             blocked = f"{arel} holds other content, and an answer file is never written over"
             break
         pending.append((apath, data.encode("utf-8")))

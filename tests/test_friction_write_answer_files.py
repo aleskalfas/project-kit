@@ -169,11 +169,13 @@ def test_an_uncommitted_file_answering_other_artefacts_takes_the_entry(
     assert _errors(repo) == []
 
 
-def test_a_merge_in_progress_brings_files_that_are_not_the_writers_own(
-    repo: AdopterRepo,
+@pytest.mark.parametrize("ref", ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "REBASE_HEAD"])
+def test_a_merge_or_rebase_in_progress_brings_files_that_are_not_the_writers_own(
+    repo: AdopterRepo, ref: str
 ) -> None:
-    """A file the merged line added, staged by a merge not yet committed, is another
-    line's: the writer adds a file of its own (COR-062 point 10)."""
+    """A file another line added, staged by a merge, a cherry-pick, a revert or a rebase
+    stopped before its commit, is that line's: the writer adds a file of its own (COR-062
+    point 10)."""
     repo.commit("base", files=None)
     repo.checkout("other", create=True)
     theirs = answer_path("20261001T000000Z-dddddddd")
@@ -181,9 +183,28 @@ def test_a_merge_in_progress_brings_files_that_are_not_the_writers_own(
     other = repo.head()
     repo.checkout("main")
     repo.write({theirs: answers(entry("docs/notes.md", at=T1))})
-    (repo.root / ".git" / "MERGE_HEAD").write_text(f"{other}\n", encoding="utf-8")
+    (repo.root / ".git" / ref).write_text(f"{other}\n", encoding="utf-8")
     plan = fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW)
     assert plan.creates and plan.rel != theirs
+
+
+def test_a_file_the_move_wrote_is_never_the_writers_own(repo: AdopterRepo) -> None:
+    """A file the move writes is named for its content (ADR-068 point 1), and sorts after a
+    writer's by name. A writer run while it is uncommitted reads it and never writes into
+    it. The newest file of the writer's own, by the time in its name, takes the entry."""
+    moved, moved_text = answer_path("moved-0123456789ab"), answers(entry(at=T1))
+    notes = answers(entry("docs/notes.md", at=T1))
+    later = answer_path("20261002T000000Z-aaaaaaaa")
+    repo.write({"docs/notes.md": bare_guide().replace('"guide"', '"notes"'), moved: moved_text})
+    alone = fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because="a look", now=NOW)
+    assert alone.creates and NAME.match(af.name_of(alone.rel))
+    assert _entries(alone.after)[0]["read"] == ["moved-0123456789ab.yaml"]
+    repo.write({answer_path("20261001T000000Z-ffffffff"): notes, later: notes})
+    plan = fw.plan_revalidate(repo.root, "guide", outcome="unchanged", because="a look", now=NOW)
+    assert not plan.creates and plan.rel == later
+    fw.write(plan)
+    assert (repo.root / moved).read_text(encoding="utf-8") == moved_text
+    assert _entries(plan.after)[-1]["read"] == ["moved-0123456789ab.yaml"]
 
 
 # --- what an answer reads, keeps and refuses ------------------------------------------------

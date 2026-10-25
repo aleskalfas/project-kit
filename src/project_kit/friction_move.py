@@ -206,7 +206,9 @@ def _move_artefact(
 ) -> tuple[str, dict[str, Any], MovedAnswers | None] | str:
     """One artefact's answers moved out of `front_matter`: the edited text, the front matter
     it must read as, and the answer file its answers go to (`None` where its answer keys
-    hold nothing). Else why it is left."""
+    hold nothing). Else why it is left, and `expected` is as it was: the keys are taken out
+    of a copy, so an artefact left changes nothing the file's other artefacts are judged
+    against."""
     friction: Any = artefact.friction
     if not isinstance(friction, Mapping):
         return "its friction block is not a mapping"
@@ -247,6 +249,7 @@ def _move_artefact(
 
     keys = (*carrier_keys(artefact), bs.CONTAINER_KEY, FRICTION_KEY)
     edited = front_matter
+    expected = copy.deepcopy(expected)
     holder = _holder(expected, keys)
     if holder is None:
         return "its friction block is not written where the file's front matter reads it"

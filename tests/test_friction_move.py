@@ -210,6 +210,54 @@ def test_what_cannot_move_exactly_is_left_with_why(repo: AdopterRepo) -> None:
     assert "depart from the answer files' schema" in left["docs/odd.md"]
 
 
+def test_an_artefact_left_changes_nothing_its_file_s_other_artefacts_are_judged_against(
+    repo: AdopterRepo,
+) -> None:
+    """`TERM-a`'s `revalidated` comes out, then its `revisited` cannot, being the block's
+    only key: `TERM-a` is left whole, and `TERM-b` beside it still moves."""
+    terms = f"""\
+---
+TERM-a:
+  title: A
+  pkit:
+    friction:
+      revalidated:
+        at: {T1}
+        outcome: updated
+      revisited:
+        - anchor: {{kind: path, value: src/cli/**}}
+          outcome: unchanged
+          reason: the CLI is as it was
+TERM-b:
+  title: B
+  pkit:
+    friction:
+      anchors: {{path: [src/cli/**]}}
+      revalidated:
+        at: {T2}
+        outcome: updated
+---
+
+## TERM-a
+
+A.
+
+## TERM-b
+
+B.
+"""
+    repo.write({TERMS: terms})
+    plan = fm.plan_move(repo.root)
+    left = {x.artefact: x.reason for x in plan.left}
+    assert "the block's only key" in left[f"{TERMS}#TERM-a"]
+    assert f"{TERMS}#TERM-b" not in left
+    (moved,) = [f for f in plan.files if f.path == TERMS]
+    assert [a.artefact for a in moved.answers] == [f"{TERMS}#TERM-b"]
+    assert moved.text == terms.replace(
+        f"      revalidated:\n        at: {T2}\n        outcome: updated\n---", "---"
+    )
+
+
 def test_the_command_prints_the_plan(repo: AdopterRepo) -> None:
     result = CliRunner().invoke(main, ["friction", "move-plan", "--json"])
     assert result.exit_code == 0, result.output
@@ -277,6 +325,42 @@ def test_the_migration_finishes_a_move_an_earlier_run_left_halfway(
     result = _run(repo.root)
     assert result.returncode == 0, result.stderr
     assert (repo.root / GUIDE).read_bytes() == planned.files[0].text.encode("utf-8")
+
+
+@pytest.mark.parametrize("unreadable", ["artefact", "answer"])
+def test_an_unreadable_file_is_reported_and_the_rest_of_the_run_kept(
+    repo: AdopterRepo, tmp_path_factory: pytest.TempPathFactory, unreadable: str
+) -> None:
+    """The guide moves first. Then the terms' file, or an answer file already where the
+    terms' answers go, cannot be read: that file is reported and left, and the guide's
+    move is still reported."""
+    if os.geteuid() == 0:
+        pytest.skip("root reads a file whatever its mode")
+    planned = fm.plan_move(repo.root)
+    bin_dir = tmp_path_factory.mktemp("bin")
+    plan_file = bin_dir / "plan.json"
+    plan_file.write_text(fm.render_json(planned), encoding="utf-8")
+    fake = bin_dir / "pkit"
+    fake.write_text(f"#!/bin/sh\ncat '{plan_file}'\n", encoding="utf-8")
+    fake.chmod(0o755)
+    guide_file, terms_file = planned.files
+    locked = repo.root / terms_file.path
+    if unreadable == "answer":
+        locked = repo.root / terms_file.answers[0].path
+        locked.parent.mkdir(parents=True)
+        locked.write_text("answers: []\n", encoding="utf-8")
+    locked.chmod(0)
+    try:
+        result = _run(repo.root, f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    finally:
+        locked.chmod(0o644)
+    assert result.returncode == 0, result.stderr
+    assert "no answers moved" not in result.stdout
+    assert f"[ok] moved the answers out of {GUIDE}" in result.stdout
+    assert f"[warn] left as it is: {TERMS}: " in result.stdout
+    assert "cannot be read" in result.stdout
+    assert (repo.root / GUIDE).read_bytes() == guide_file.text.encode("utf-8")
+    assert (repo.root / TERMS).read_text(encoding="utf-8") == TERMS_TEXT
 
 
 def test_the_migration_escapes_the_project_s_text_in_its_report(
