@@ -1,8 +1,8 @@
 """Write and check the contents list of project-kit's pages (#2053).
 
-A page a reader moves around in, such as a long guide or a reference, opens with a
-contents list of its second-level sections. This script writes each list, and
-fails where one is stale, so nobody keeps a list by hand.
+A page a reader moves around in, such as a long guide or a reference, holds a
+contents list of its second-level sections near its top. This script writes each
+list, and fails where one is stale, so nobody keeps a list by hand.
 
 - **Which pages:** every artefact of living-docs' page type, `living-docs:page`, as
   the backbone's discovery types it, wherever it lies, as the console fences' run
@@ -11,8 +11,13 @@ fails where one is stale, so nobody keeps a list by hand.
   below it `<!-- /pkit:contents -->`, each alone on its line, outside fenced code.
   Both are HTML comments, which a host renders as nothing. A page holds one pair
   at most, and a page without them is left alone.
+- **Where the markers stand:** in the page's lead, or under a second-level heading
+  of their own, such as `## Contents`. Under their own heading, a section renamed
+  changes only that section, and the lead stays still.
 - **What the list holds:** one item for each second-level heading of the page, in
-  the page's order, `- [<text>](#<address>)`. A heading is read as the backbone
+  the page's order, `- [<text>](#<address>)`, but the one whose section holds the
+  markers: the nearest heading of level one or two above the opening marker, when
+  it is of level two. A heading is read as the backbone
   reads one (`project_kit.document_parts.body_headings`): an ATX heading outside
   fenced code. Where the host reads a page otherwise, as it does a heading in a
   block quote, or a fence's line with an info string, the list follows the backbone.
@@ -64,6 +69,7 @@ from pathlib import Path
 from project_kit import friction_discovery, validators
 from project_kit.document_parts import (
     Body,
+    Heading,
     body_first_line,
     heading_slug,
     split_front_matter,
@@ -327,15 +333,35 @@ class Contents:
         return self.written == self.expected
 
 
-def items(body: str) -> list[str]:
+def holder(headings: Sequence[Heading], at: int | None) -> int | None:
+    """The index of the second-level heading whose section holds the body's offset
+    `at`: the last heading of level two or above that starts before it, when that
+    heading is of level two. `None` when `at` lies in the lead or under a first-level
+    heading, or is `None`."""
+    if at is None:
+        return None
+    above = [
+        index
+        for index, heading in enumerate(headings)
+        if heading.start < at and heading.level <= LEVEL
+    ]
+    if not above or headings[above[-1]].level != LEVEL:
+        return None
+    return above[-1]
+
+
+def items(body: str, at: int | None = None) -> list[str]:
     """The items of a page body's contents list: one for each second-level heading, in
-    order, linked by its address."""
+    order, linked by its address. The section that holds the body's offset `at`, where
+    the list's opening marker stands, is left out: a list under its own heading names
+    every other section."""
     headings = Body.read(body).headings
     found = addresses([heading.title for heading in headings])
+    own = holder(headings, at)
     return [
         f"- [{shown(heading.title)}](#{where})"
-        for heading, where in zip(headings, found, strict=True)
-        if heading.level == LEVEL
+        for index, (heading, where) in enumerate(zip(headings, found, strict=True))
+        if heading.level == LEVEL and index != own
     ]
 
 
@@ -345,11 +371,14 @@ def contents(text: str) -> Contents:
     first = body_first_line(text, body) - 1
     openings: list[int] = []
     closings: list[int] = []
+    at: int | None = None  # where the first opening marker starts in the body
     for line in Body.read(body).lines():
         marker = line.text.strip()
         if marker in (OPENING, CLOSING):
             index = first + body.count("\n", 0, line.start)
             (openings if marker == OPENING else closings).append(index)
+            if marker == OPENING and at is None:
+                at = line.start
     if not openings and not closings:
         return Contents()
     opening = openings[0] if openings else None
@@ -376,7 +405,7 @@ def contents(text: str) -> Contents:
         )
     lines = text.split("\n")
     return Contents(
-        opening, closings[0], tuple(lines[opening + 1 : closings[0]]), tuple(items(body))
+        opening, closings[0], tuple(lines[opening + 1 : closings[0]]), tuple(items(body, at))
     )
 
 

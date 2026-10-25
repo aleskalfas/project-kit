@@ -4,8 +4,10 @@
   as the console fences' run chooses them; a page without the markers is left
   alone.
 - **What the list holds:** one item for each second-level heading, in the page's
-  order, outside fenced code; a heading of another level is none. The item shows
-  the heading's text, a link in it read as its words.
+  order, outside fenced code; a heading of another level is none. Markers under a
+  second-level heading of their own leave that section out, and markers in the
+  lead leave none out. The item shows the heading's text, a link in it read as its
+  words.
 - **The address:** the host's, built on the backbone's slug: a code span's text
   kept, punctuation dropped, underscores kept, a link read as its words, and a
   repeated title numbered `-1`, `-2` over headings of every level. An explicit
@@ -98,6 +100,46 @@ def test_update_writes_each_second_level_heading_in_order_and_the_list_is_then_f
     again = pages.run()
     assert again.findings == [] and again.lists == 1
     assert pc.exit_status(again, update=False) == 0
+
+
+def test_markers_under_their_own_heading_list_every_other_second_level_section(
+    pages: Pages,
+) -> None:
+    pages.write(
+        "guide.md",
+        "A guide to read in any order.",
+        "",
+        "## Installing",
+        "",
+        "## Contents",
+        "",
+        "### Every section",
+        "",
+        OPEN,
+        CLOSE,
+        "",
+        "## Using it",
+    )
+
+    report = pages.run(update=True)
+
+    assert report.updated == ["guide.md"]
+    assert _list(pages.read("guide.md")) == [
+        "- [Installing](#installing)",
+        "- [Using it](#using-it)",
+    ]
+    assert pages.run().findings == []
+
+
+def test_markers_in_the_lead_list_every_second_level_section() -> None:
+    body = "\n".join(
+        ["# Guide", "", "Lead.", "", OPEN, CLOSE, "", "## Contents", "", "## Using it"]
+    )
+
+    assert pc.contents(body).expected == (
+        "- [Contents](#contents)",
+        "- [Using it](#using-it)",
+    )
 
 
 def test_an_item_shows_the_heading_s_text_a_link_read_as_its_words() -> None:
