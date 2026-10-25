@@ -35,6 +35,7 @@ pkit:
         - src/project_kit/agents.py
         - src/project_kit/storyboards.py
         - src/project_kit/schemas_authoring.py
+        - src/project_kit/schemas_validate.py
         - src/project_kit/lifecycle_ownership.py
         - .pkit/lifecycle/ownership.py
         - src/project_kit/capability_namespace.py
@@ -60,6 +61,7 @@ pkit:
         - src/project_kit/friction_write.py
         - src/project_kit/connections_config.py
         - src/project_kit/wiring_graph.py
+        - src/project_kit/process_graph.py
         - src/project_kit/report.py
         - src/project_kit/report_context.py
         - src/project_kit/environment.py
@@ -67,6 +69,7 @@ pkit:
         - src/project_kit/session_guard.py
         - src/project_kit/rule_set_reading.py
         - src/project_kit/rule_sets.py
+        - src/project_kit/refs.py
         - src/project_kit/document_parts.py
         - src/project_kit/backbone_schemas.py
         - src/project_kit/artefact_parts.py
@@ -74,6 +77,7 @@ pkit:
       record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#6"]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
+        - .pkit/agents/README.md#provider-precedence
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
         - .pkit/adapters/README.md#the-agent-runner
         - .pkit/adapters/README.md#harness-requirements
@@ -1800,7 +1804,7 @@ Renders the process edges of the one wiring graph, as the graph relation above s
 - **`--mode <pull|push>`** keeps the edges of one mode.
 - **`--source <derived|annotated|resolved>`** keeps the edges of one source. `resolved` keeps the `offers` edges the wiring resolver adds.
 - **`--depth <n>`** keeps the edges within `<n>` hops of the focused process, in both directions unless `--direction` is given.
-- **`--direction <in|out>`** keeps only the focused process's in-edges or its out-edges.
+- **`--direction <in|out>`** keeps only the edges from what depends on the focused process (`in`), or to what it depends on (`out`), directly or through others.
 
 `--depth` and `--direction` need `--process`. Without it the command refuses, rather than ignore them.
 
@@ -1816,7 +1820,9 @@ Renders the process edges of the one wiring graph, as the graph relation above s
 - **`--upstream-of <addr>`**: what `<addr>` depends on, directly or through others.
 - **`--downstream-of <addr>`**: what depends on `<addr>`, directly or through others.
 
-A preset combines with the atomic filters given beside it, and an edge is kept only where all of them keep it. With `--enforced`, the presets `--upstream-of`, `--downstream-of` and `--cycles` walk only the edges `--enforced` keeps. So `--enforced --upstream-of <addr>` shows the blocking edges that gate `<addr>`, directly or through others.
+A preset combines with the atomic filters given beside it, and an edge is kept only where all of them keep it. The exception is `--advisory`, `--connectors`, `--declared` and `--derived`. Each adds the relations, mode or source it names to those an atomic filter or another of them names, so `--connectors --mode pull` keeps both modes.
+
+With `--enforced`, the presets `--upstream-of`, `--downstream-of` and `--cycles` walk only the edges `--enforced` keeps. So `--enforced --upstream-of <addr>` shows the blocking edges that gate `<addr>`, directly or through others.
 
 ### `connections providers set <role> <capability> [--yes | --dry-run]`
 
