@@ -71,7 +71,7 @@ pkit:
         - src/project_kit/backbone_schemas.py
         - src/project_kit/artefact_parts.py
         - .pkit/migrations/backbone/2.0.0/001-sync-force-ignored.sh
-      record: [COR-004, COR-012, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#6"]
+      record: [COR-004, COR-012, COR-029, COR-043, COR-047, COR-048, COR-049, COR-050, COR-051, COR-054, COR-055, COR-061, COR-062, PRJ-001, PRJ-002, PRJ-003, PRJ-004, ADR-027, ADR-029, ADR-030, ADR-033, ADR-039, ADR-049, ADR-057, ADR-058, ADR-059, ADR-061, ADR-063, ADR-064, ADR-066, "ADR-068#6"]
       artefact:
         - .pkit/agents/README.md#diagnosing--repairing-the-overlay
         - .pkit/adapters/README.md#primitives-the-lifecycle-calls
@@ -239,8 +239,8 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `refs rename <old> <new> [--dry-run]` | rewrite one reference value across every agent and skill, front matter and body. `--dry-run` lists the files it would change and writes nothing | yes (`--dry-run`: no) | yes — a second run finds nothing to rename |
 | `refs rot` | list the references to superseded records, dropped scratchpad notes and missing files. It reports them and exits 0 | no | yes (read-only) |
 | `refs graph [--format <ascii\|text\|dot>]` | print the reference graph: a tree drawn in box characters (`ascii`, the default), a plain outline (`text`), or Graphviz input (`dot`) | no | yes (read-only) |
-| `hooks list` | list every hook that is declared or needed, with the provider it binds to by precedence, or `(no provider)` ([the agents README, "Hooks"](../agents/README.md#hooks)) | no | yes (read-only) |
-| `hooks resolve <hook>` | show the provider a hook binds to by precedence, and its implementation. Exits 1 when no provider declares the hook | no | yes (read-only) |
+| `hooks list` | list every hook that is declared or needed, with the provider it binds to, or `(no provider)`. The provider is the first in the order of [the agents README, "Provider precedence"](../agents/README.md#provider-precedence) | no | yes (read-only) |
+| `hooks resolve <hook>` | show the provider a hook binds to, the first in that order, and its implementation. Exits 1 when no provider declares the hook | no | yes (read-only) |
 | `hooks who-needs <hook>` | list the agents and skills that declare `needs: <hook>` | no | yes (read-only) |
 | `hooks who-provides <hook>` | list every provider of a hook, skills and the `package.yaml` of adapters and capabilities, in the order of [the agents README, "Provider precedence"](../agents/README.md#provider-precedence) | no | yes (read-only) |
 | `config set <key> <value> [--yes]` | set one backbone-owned key of `.pkit/project/config.yaml` (dotted, e.g. `docs.internal`) through the consent-gated writer (COR-048 point 5): the key must exist in the configuration schema and hold a single value, the result is validated before anything is written, the reserved `project` block is refused. Setting `docs.internal` also declares the old root's `rule-sets/` as a place in `friction.places`, where a rule-set file there would go unfound under the new root (COR-051 point 6). Asks once on a terminal; `--yes` consents non-interactively; without either it refuses and names the command to run. See "Configuration file" | yes | yes — same value, same file |
@@ -282,7 +282,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `version` | show CLI version + project's recorded core-layer version | no | yes (read-only) |
 | `version bump <segment> [--pre <kind>]` | bump `.pkit/VERSION` (`segment` = `patch` / `minor` / `major` / `pre`); see PRJ-002. `--pre <kind>` starts a pre-release line, and `pre` steps its counter (see "Diagnostic commands") | yes | no — each call increments |
 | `version promote` | drop the pre-release suffix from `.pkit/VERSION`, `1.2.0rc3` to `1.2.0`. Refuses a version with no suffix (see "Diagnostic commands") | yes | no — refuses a stable version |
-| `version unbump` | undo the last `version bump <segment>` made without `--pre`: narrow the `requires_backbone` bounds it widened and write the prior version. Refuses while the version's tag exists locally (see "Diagnostic commands") | yes | no — each call steps one version down |
+| `version unbump` | undo the last `version bump patch`, `minor` or `major` made without `--pre`: narrow the `requires_backbone` bounds it widened and write the prior version. Refuses while the version's tag exists locally (see "Diagnostic commands") | yes | no — each call steps one version down |
 | `version tag [--push] [--allow-foreign-repo]` | tag HEAD `v<version>` from `.pkit/VERSION` (PRJ-004). `--push` pushes the tag to `origin`, after the cross-repository guard (see "Diagnostic commands") | yes | no — refuses a tag that exists |
 | `version untag [--push] [--allow-foreign-repo]` | delete the local tag `v<version>` that matches `.pkit/VERSION`. `--push` deletes it on `origin` too, after the cross-repository guard (see "Diagnostic commands") | yes | no — refuses a tag that does not exist |
 | `release plan [--json]` | preview the release computed from pending changesets (PRJ-002), with each declared `requires_backbone` and `requires_capabilities` floor raise and each declared upper bound on a capability under its component's bump. It refuses, as `apply` does, a release that would leave a range on a capability excluding the version the release writes or carries for it. `--json` emits a machine-readable summary for the release-PR automation, each release carrying its floor raises (`requires_backbone_floor`, or null, and `requires_capabilities_floors`, a list) and its upper bounds on capabilities (`requires_capabilities_bounds`, a list). See `.pkit/release/README.md` | no | yes (read-only) |
@@ -295,7 +295,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh   # or: brew install uv
 | `process status <addr> [--subject <key>] [--actor <login>] [--json]` | the engine's `status` of one subject of the process `<capability>:<process-id>`, specified in [the process README, "The engine"](../process/README.md#the-engine). `--subject` names the subject of a keyed process, and a singleton ignores it. `--actor` evaluates the gates as that actor, `operator` by default | no | yes (read-only) |
 | `process can-move <addr> --to <state> [--subject <key>] [--actor <login>]` | the engine's `can-move` to `<state>`, specified in [the process README, "The engine"](../process/README.md#the-engine). `--actor` is the actor the gates are checked for, `operator` by default. Exits 1 when the move is refused | no | yes (read-only) |
 | `process move <addr> --to <state> [--from <state>] [--subject <key>] [--actor <login>] [--reason <text>]` | the engine's `move` to `<state>`, with its `--from` and `--reason`, specified in [the process README, "The engine"](../process/README.md#the-engine). `--actor` defaults to the user's `gh` login. Exits 1 when the move is refused | yes (the journal, where kept) | no — each call is one move |
-| `process cascade <addr> [--subject <key>] [--json]` | resolve the cascade fold the process declares and report whether it is open (`opened`), outside any gated transition. A wrapper reads it to combine the fold with gates of its own. Exits 1 when the fold is not open, or when the process declares none. The fold is the process README's ("Cascade") | no | yes (read-only) |
+| `process cascade <addr> [--subject <key>] [--json]` | resolve the cascade fold the process declares, outside any gated transition, and print it, narrative or `--json`. A wrapper reads it to combine the fold with gates of its own. Exits 1 when the fold is not open, or when the process declares none. The fold is specified in [the process README, "Cascade"](../process/README.md#cascade--fold-one-child-processs-member-outcomes-core) | no | yes (read-only) |
 | `process validate <addr> [--subject <key>] [--json]` | the engine's `validate` of one subject's invariants, specified in [the process README, "The engine"](../process/README.md#the-engine) | no | yes (read-only) |
 | `process health [--process <addr>] [--interpretation-only] [--json]` | walk every opt-in hand-off contract (COR-042) and report missed hand-offs; report-only, takes no subject; exits non-zero on any miss or indeterminate. A `--process` scope that matches nothing walked is itself indeterminate (never a clean empty run); a bare run over zero declared contracts stays clean. `--interpretation-only` re-renders the same walk as the COR-044 authoring check: indeterminates only, misses not counted, exit non-zero on any indeterminate | no | yes (read-only) |
 | `process new <capability>:<process-id> [...] [--dry-run]` | scaffold a lint-clean process definition into its NAMED owning capability + a fail-closed predicate stub per declared evaluable, registered in the capability's package.yaml (COR-044); errors cleanly with no owning capability, or one the project does not register as a component (`pkit capabilities register <name>`) | yes | no — one-shot, refuses an existing id |
@@ -1341,7 +1341,7 @@ When neither resolves, the file is reported as unresolved. Schema-version mismat
 
 `<path>` is a file or directory; directories walk recursively for `*.yaml` (`.pkit/` subtrees are excluded — those are kit-managed, not adopter data).
 
-A second pass resolves cross-file typed references. A `[<namespace>:<id>]` token, at a field the schema marks `x-pkit-reference-namespace`, must name an id that a file under `<path>` bound to that namespace defines. A dangling or duplicate id is an error, and a namespace with no bound file under `<path>` is a warning. `--shape-only` skips this pass.
+A second pass resolves cross-file typed references (COR-029). A `[<namespace>:<id>]` token, at a field the schema marks `x-pkit-reference-namespace`, must name an id that a file under `<path>` bound to that namespace defines. A dangling or duplicate id is an error, and a namespace with no bound file under `<path>` is a warning. `--shape-only` skips this pass.
 
 `pkit data validate` is distinct from `pkit schemas validate`: the latter validates the *spec* (capability YAML + companion); the former validates *instance data* (adopter file + its bound schema).
 
@@ -1366,11 +1366,11 @@ Bumps `.pkit/VERSION` per the policy in PRJ-002. `<segment>` is `patch`, `minor`
 - **`patch`** — backward-compatible bug fix to existing surface.
 - **`minor`** — new surface added (new command, new principle, new area). Pre-1.0, this is the typical bump and may carry breaking changes per semver convention for `0.x` releases.
 - **`major`** — reserved for `1.0.0` and post-1.0 spec breakage. Pre-1.0 the command refuses major bumps.
-- **`pre`** — the next pre-release of the current line, `1.2.0rc1` to `1.2.0rc2`. It refuses a version with no pre-release suffix, and refuses `--pre` beside it.
+- **`pre`** — the next pre-release of the current line, `1.2.0rc1` to `1.2.0rc2`, printing `Bumped pre-release counter: <old> -> <new>`. It refuses a version with no pre-release suffix, and refuses `--pre` beside it.
 
 **`--pre <kind>`** starts a pre-release line. It appends `<kind>1` to the bumped version, where `<kind>` is `a`, `b` or `rc` (PEP 440). So `version bump minor --pre rc` on `1.1.0` writes `1.2.0rc1`. A pre-release bump broadens no `requires_backbone` bound.
 
-The command parses the current version, validates it as semver, computes the new version, writes it back, and prints `Bumped backbone: <old> -> <new>`.
+For `patch`, `minor` or `major`, the command parses the current version, validates it as PEP 440, computes the new version, writes it back, and prints `Bumped backbone: <old> -> <new>`.
 
 After writing the new backbone version, the command **auto-broadens** the `requires_backbone` upper bound on every kit-shipped `package.yaml` under the working-directory project's `.pkit/` (the project the command operates on) whose existing range no longer includes the new backbone version. The new upper bound is `<NEW_MAJOR.(NEW_MINOR+1).0`. Components whose range still covers the new version are untouched (so patch bumps that stay within the current minor line are no-ops on `requires_backbone`). Component authors who deliberately want a tighter range narrow it manually after the bump.
 
@@ -1380,11 +1380,11 @@ Like `version bump`, the four commands below work on the version by hand. Each r
 
 ### `version promote`
 
-Drops the pre-release suffix from `.pkit/VERSION`, `1.2.0rc3` to `1.2.0`, and prints `Promoted to stable: <old> -> <new>`. It refuses a version with no suffix, which is already stable. Like a pre-release bump, it broadens no `requires_backbone` bound. Only `version bump <segment>` without `--pre` broadens.
+Drops the pre-release suffix from `.pkit/VERSION`, `1.2.0rc3` to `1.2.0`, and prints `Promoted to stable: <old> -> <new>`. It refuses a version with no suffix, which is already stable. Like a pre-release bump, it broadens no `requires_backbone` bound. Of the `version` commands, only `version bump patch`, `minor` or `major` without `--pre` broadens.
 
 ### `version unbump`
 
-Undoes the last `version bump <segment>` made without `--pre`. It narrows each `requires_backbone` upper bound that the bump would have written, `<X.(Y+1).0` for version `X.Y.Z`, to the bound for the prior version. A bound set wider or narrower by hand stays as it is. Then it writes the prior version, `1.2.3` to `1.2.2` or `1.2.0` to `1.1.0`, and prints `Unbumped backbone: <old> -> <new>`.
+Undoes the last `version bump patch`, `minor` or `major` made without `--pre`. It narrows each `requires_backbone` upper bound that the bump would have written, `<X.(Y+1).0` for version `X.Y.Z`, to the bound for the prior version. A bound set wider or narrower by hand stays as it is. Then it writes the prior version, `1.2.3` to `1.2.2` or `1.2.0` to `1.1.0`, and prints `Unbumped backbone: <old> -> <new>`.
 
 It refuses, and changes nothing, in three cases:
 
@@ -1398,7 +1398,7 @@ It refuses, and changes nothing, in three cases:
 
 `version untag` deletes the local tag `v<version>` that matches `.pkit/VERSION`, and refuses when there is none. `--push` deletes the tag on `origin` too. Without it, the command prints the `git push` command that deletes the remote tag.
 
-A push changes the hosting service. So with `--push` both commands run the cross-repository guard first, before anything is tagged or deleted (see "Pull-request commands"). In another repository than the session's anchor's, the guard asks at a terminal and refuses without one, unless `--allow-foreign-repo` confirms it. A tag made or deleted only locally needs no guard.
+A push changes the hosting service. So with `--push` both commands run the cross-repository guard first, before anything is tagged or deleted, as "Pull-request commands" describes it. `--allow-foreign-repo` confirms a push to another repository than the session's anchor's. A tag made or deleted only locally needs no guard.
 
 ### `release plan` / `release apply` / `release merge` / `release publish-notes` / `release check` / `release lint`
 
@@ -1790,7 +1790,7 @@ Renders the **one wiring graph** (COR-053 point 7), read-only: the process graph
 
 ### `process graph [filters and presets] [--flow | --mermaid | --json] [--verbose]`
 
-Renders the process edges of the one wiring graph, as the graph relation above says. It takes the formats of `connections graph`, one at a time: the adjacency view by default, or `--flow`, `--mermaid` or `--json`. `--verbose` shows each edge's `why` in the text views. It reads declarations only: it resolves no subject's position, runs no predicate and moves nothing.
+Renders the process edges of the one wiring graph, as the graph relation above says. It takes one format at a time, as `connections graph` does: the adjacency view by default, an ASCII pipeline that flows downstream (`--flow`), a Mermaid flowchart (`--mermaid`) or the machine form (`--json`). In the flowchart a derived edge is `==>`, a declared pull `-->`, a push `-.->` and a resolved edge `--o`. `--verbose` shows each edge's `why` in the text views. It reads declarations only: it resolves no subject's position, runs no predicate and moves nothing.
 
 **Atomic filters**, each keeping the edges that match:
 
@@ -1806,12 +1806,12 @@ Renders the process edges of the one wiring graph, as the graph relation above s
 
 **Presets**, each a named combination of the atomic filters:
 
-- **`--enforced`**: the derived edges and the `gates-on-readiness` edges, the edges that block.
-- **`--advisory`**: the `informational` and `triggered-by` edges, which block nothing.
+- **`--enforced`**: the derived edges and the `gates-on-readiness` edges.
+- **`--advisory`**: the `informational` and `triggered-by` edges.
 - **`--seams`**: the edges between two capabilities.
 - **`--connectors`**: the edges of mode `push`.
-- **`--declared`**: the annotated edges, the inert `depends_on` layer.
-- **`--derived`**: the derived edges, the layer of composition and aggregation.
+- **`--declared`**: the annotated edges.
+- **`--derived`**: the derived edges.
 - **`--cycles`**: the edges on a dependency cycle.
 - **`--upstream-of <addr>`**: what `<addr>` depends on, directly or through others.
 - **`--downstream-of <addr>`**: what depends on `<addr>`, directly or through others.
