@@ -73,6 +73,9 @@ def test_a_rule_of_a_method_rule_set_is_read_as_received(repo: AdopterRepo) -> N
     assert not artefacts[GUIDE].received
 
 
+#: The checks read the project's own answers in answer files alone (COR-062 point 1), so
+#: the guide's are moved there; the rule's stay in its block, as the move leaves them.
+@pytest.mark.usefixtures("answers_in_files")
 def test_the_change_check_asks_a_received_artefact_nothing(repo: AdopterRepo) -> None:
     repo.checkout("feature", create=True)
     repo.commit("change the engine", {"src/core/engine.py": "ENGINE = 2\n"})
@@ -80,6 +83,7 @@ def test_the_change_check_asks_a_received_artefact_nothing(repo: AdopterRepo) ->
     assert [(f.kind, f.location) for f in result.findings] == [(fc.FindingKind.FRICTION, GUIDE)]
 
 
+@pytest.mark.usefixtures("answers_in_files")
 def test_the_whole_repository_check_never_reports_a_received_artefact_stale(
     repo: AdopterRepo,
 ) -> None:

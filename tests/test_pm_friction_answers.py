@@ -27,7 +27,15 @@ from ruamel.yaml import YAML
 
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import RESOLVING, register_kinds
-from tests.friction_documents import CONFIG, SOURCE, T1, document, friction_config, guide
+from tests.friction_documents import (
+    CONFIG,
+    SOURCE,
+    T1,
+    blocks_in_history,
+    document,
+    friction_config,
+    guide,
+)
 from tests.test_friction_revisit import (
     DECISION,
     SOURCE_DOC,
@@ -36,6 +44,10 @@ from tests.test_friction_revisit import (
     requirement,
 )
 from tests.test_friction_revisit import entry as revisit_entry
+
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAP_ROOT = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
@@ -1810,10 +1822,11 @@ def test_the_backbone_says_a_later_head_of_answers_is_covered(
     found = fa.covers(main, head, "main")
     assert (found.covered, found.problem) == (False, None)
     assert found.outside == (f"src/cli/main.py ({changed[:7]}: not an answer file)",)
-    in_block = repo.commit(
-        "answer in the block",
-        {"docs/guide.md": guide(at="2026-10-04T10:00:00Z", because=BECAUSE)},
-    )
+    with blocks_in_history():  # an answer left in the block, which validation fails
+        in_block = repo.commit(
+            "answer in the block",
+            {"docs/guide.md": guide(at="2026-10-04T10:00:00Z", because=BECAUSE)},
+        )
     found = fa.covers(head, in_block, "main")
     assert found.outside == (f"docs/guide.md ({in_block[:7]}: not an answer file)",)
 

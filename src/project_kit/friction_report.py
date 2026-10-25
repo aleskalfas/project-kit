@@ -496,7 +496,8 @@ class Explanation:
     report: fr.ArtefactReport | None  # `None`: nothing judged — no anchors, no deferrals, excluded
     anchors: tuple[ExplainedAnchor, ...]  # in written order
     findings: tuple[ExplainedFinding, ...]  # in the check's order
-    # Its answers at HEAD, from its block or its answer files (`answer_files`).
+    # Its answers at HEAD, from the answer files (`answer_files`); `None` where none can
+    # be live: no anchors and no answer file, or no `friction` block.
     answers: Answers | None = None
 
     @property
@@ -509,10 +510,10 @@ class Explanation:
 
     @property
     def deferred(self) -> tuple[Anchor, ...]:
-        """The anchors the artefact defers: its live deferrals, from its block or its
-        answer files, each anchor once."""
+        """The anchors the artefact defers: its live deferrals in the answer files, each
+        anchor once."""
         if self.answers is None:
-            return tuple(d.anchor for d in self.artefact.deferrals)
+            return ()
         return tuple(dict.fromkeys(d.anchor for d in self.answers.deferrals))
 
 

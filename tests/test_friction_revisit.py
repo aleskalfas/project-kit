@@ -33,10 +33,20 @@ from project_kit.manifest import (
     write_backbone_manifest,
 )
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config
+from tests.friction_documents import (
+    CONFIG,
+    SOURCE,
+    T1,
+    T2,
+    blocks_in_history,
+    document,
+    friction_config,
+    own_entry,
+)
 
-#: The fixtures here still write answers in blocks, until #2032 moves them.
-pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
 
 LINKER = "linker"
 SOURCE_DOC = "reqs/latency.md"
@@ -564,22 +574,25 @@ def _link_findings(repo: AdopterRepo) -> list[tuple[str, str, str]]:
 
 
 def test_validation_fails_a_dangling_and_a_repeated_revisit(repo: AdopterRepo) -> None:
-    repo.write(
-        {
-            CONFIG: friction_config(places=("docs",)),
-            **SOURCE,
-            TEST_FILE: "x\n",
-            DECISION: "y\n",
-            SOURCE_DOC: requirement(
-                verified_by=(TEST_FILE,),
-                revisited=[
-                    entry("unchanged", "listed"),
-                    entry("unchanged", "again"),
-                    entry("unchanged", "not listed", DECISION),
-                ],
-            ),
-        }
-    )
+    """Revisit entries left in a block, as history before the move holds them, are judged
+    there too, beside the block's own failure (COR-062 point 10)."""
+    with blocks_in_history():
+        repo.write(
+            {
+                CONFIG: friction_config(places=("docs",)),
+                **SOURCE,
+                TEST_FILE: "x\n",
+                DECISION: "y\n",
+                SOURCE_DOC: requirement(
+                    verified_by=(TEST_FILE,),
+                    revisited=[
+                        entry("unchanged", "listed"),
+                        entry("unchanged", "again"),
+                        entry("unchanged", "not listed", DECISION),
+                    ],
+                ),
+            }
+        )
     assert _link_findings(repo) == [
         ("duplicate-revisit", "error", "/pkit/friction/revisited/1/anchor"),
         ("dangling-revisit", "error", "/pkit/friction/revisited/2/anchor"),
@@ -617,32 +630,36 @@ def test_an_absent_link_field_lists_nothing(repo: AdopterRepo) -> None:
 
 
 def test_entries_where_no_place_declares_a_link_are_reported_only(repo: AdopterRepo) -> None:
-    repo.write(
-        {
-            CONFIG: friction_config(places=("docs",)),
-            **SOURCE,
-            TEST_FILE: "x\n",
-            DECISION: "y\n",
-            "docs/latency.md": requirement(
-                revisited=[entry("unchanged", "one"), entry("unchanged", "two")]
-            ),
-        }
-    )
+    with blocks_in_history():
+        repo.write(
+            {
+                CONFIG: friction_config(places=("docs",)),
+                **SOURCE,
+                TEST_FILE: "x\n",
+                DECISION: "y\n",
+                "docs/latency.md": requirement(
+                    revisited=[entry("unchanged", "one"), entry("unchanged", "two")]
+                ),
+            }
+        )
     assert _link_findings(repo) == [("orphaned-revisit", "report", "/pkit/friction/revisited")]
 
 
 def test_the_container_schema_refuses_a_malformed_entry(repo: AdopterRepo) -> None:
-    repo.write(
-        {
-            CONFIG: friction_config(places=("docs",)),
-            **SOURCE,
-            TEST_FILE: "x\n",
-            DECISION: "y\n",
-            SOURCE_DOC: requirement(
-                revisited=[{"anchor": {"kind": "path", "value": TEST_FILE}, "outcome": "updated"}]
-            ),
-        }
-    )
+    with blocks_in_history():
+        repo.write(
+            {
+                CONFIG: friction_config(places=("docs",)),
+                **SOURCE,
+                TEST_FILE: "x\n",
+                DECISION: "y\n",
+                SOURCE_DOC: requirement(
+                    revisited=[
+                        {"anchor": {"kind": "path", "value": TEST_FILE}, "outcome": "updated"}
+                    ]
+                ),
+            }
+        )
     malformed = [
         f.pointer
         for f in fv.validate_friction(repo.root).errors
@@ -668,9 +685,9 @@ def written(repo: AdopterRepo) -> AdopterRepo:
     return repo
 
 
-def _block(repo: AdopterRepo) -> Any:
-    (source,) = [a for a in fd.discover_artefacts(repo.root).artefacts if a.path == SOURCE_DOC]
-    return source.friction
+def _answers(repo: AdopterRepo) -> dict[str, Any]:
+    """The source's answers in the change's own answer file, as written (COR-062 point 1)."""
+    return own_entry(repo.root, SOURCE_DOC)
 
 
 def test_revisit_writes_one_entry_sorted_and_leaves_at(written: AdopterRepo) -> None:
@@ -688,33 +705,29 @@ def test_revisit_writes_one_entry_sorted_and_leaves_at(written: AdopterRepo) -> 
             reason="revisited in #9999",
         )
     )
-    block = _block(written)
-    assert block["revisited"] == [
+    answers = _answers(written)
+    assert answers["revisited"] == [
         entry("deferred", "revisited in #9999", DECISION),
         entry("unchanged", "still under 2 s"),
     ]
-    assert block["revalidated"]["at"] == T1
+    assert answers["revalidated"]["at"] == T1
     assert fv.validate_friction(written.root).errors == ()
 
 
-def test_defer_on_a_block_holding_only_revisit_entries_writes_deferred_alone(
-    written: AdopterRepo,
-) -> None:
-    """A block that holds an answer, here a `revisited` list, takes a deferral: a
-    `revalidated` block holding `deferred` alone, among the block's keys before
-    `revisited`. A block holding no answer gets it in an answer file instead (COR-062
-    point 1; `tests/test_friction_write_answer_files.py`)."""
+def test_defer_beside_only_revisit_entries_writes_deferred_alone(written: AdopterRepo) -> None:
+    """An entry holding only revisit entries takes a deferral: a `revalidated` holding
+    `deferred` alone, among the entry's keys before `revisited` (COR-062 point 1)."""
     revisited = [entry("unchanged", "still under 2 s")]
     written.write(
         {SOURCE_DOC: requirement(at=None, outcome=None, because=None, revisited=revisited)}
     )
     fw.write(fw.plan_defer(written.root, "REQ-1", anchor=f"path:{DECISION}", reason="later"))
-    block = _block(written)
-    assert list(block) == ["anchors", "revalidated", "revisited"]
-    assert block["revalidated"] == {
+    answers = _answers(written)
+    assert list(answers) == ["artefact", "revalidated", "revisited"]
+    assert answers["revalidated"] == {
         "deferred": [{"anchor": {"kind": "path", "value": DECISION}, "reason": "later"}]
     }
-    assert block["revisited"] == revisited
+    assert answers["revisited"] == revisited
     assert fv.validate_friction(written.root).errors == ()
 
 
@@ -725,7 +738,7 @@ def test_revisit_rewrites_the_entry_already_there(written: AdopterRepo) -> None:
                 written.root, "REQ-1", target=TEST_FILE, outcome="unchanged", reason=reason
             )
         )
-    assert _block(written)["revisited"] == [entry("unchanged", "second")]
+    assert _answers(written)["revisited"] == [entry("unchanged", "second")]
     again = fw.plan_revisit(
         written.root, "REQ-1", target=TEST_FILE, outcome="unchanged", reason=" second "
     )
@@ -765,8 +778,8 @@ def test_the_revisit_command_writes_with_consent(written: AdopterRepo) -> None:
     assert "`--yes` writes without asking" in refused.output
     done = CliRunner().invoke(main, [*args, "--reason", "still under 2 s", "--yes"])
     assert done.exit_code == 0, done.output
-    assert "Wrote pkit.friction.revisited" in done.output
-    assert _block(written)["revisited"] == [entry("unchanged", "still under 2 s")]
+    assert f"Wrote answers[{SOURCE_DOC}].revisited" in done.output
+    assert _answers(written)["revisited"] == [entry("unchanged", "still under 2 s")]
 
 
 # --- a link whose fields list what stays out ---------------------------------------------
@@ -975,18 +988,20 @@ def test_an_anchor_a_change_lets_in_owes_nothing(obligations: AdopterRepo) -> No
 
 def test_validation_of_a_link_by_what_stays_out(obligations: AdopterRepo) -> None:
     # A value no anchor has keeps nothing out, so it is not failed. An entry on the
-    # anchor the field keeps out names no target. A field in the wrong shape is failed.
-    obligations.write(
-        {
-            **_obligation_files(
-                obligation_doc=obligation(
-                    actors=("ACT-1", "ACT-9"),
-                    revisited=[entry("unchanged", "an actor", "ACT-1", kind="artefact")],
-                )
-            ),
-            "obls/other.md": obligation(actors="ACT-1").replace("OBL-1", "OBL-2"),
-        }
-    )
+    # anchor the field keeps out names no target, judged in a block history holds. A
+    # field in the wrong shape is failed.
+    with blocks_in_history():
+        obligations.write(
+            {
+                **_obligation_files(
+                    obligation_doc=obligation(
+                        actors=("ACT-1", "ACT-9"),
+                        revisited=[entry("unchanged", "an actor", "ACT-1", kind="artefact")],
+                    )
+                ),
+                "obls/other.md": obligation(actors="ACT-1").replace("OBL-1", "OBL-2"),
+            }
+        )
     assert _link_findings(obligations) == [
         ("dangling-revisit", "error", "/pkit/friction/revisited/0/anchor"),
         ("malformed-link-field", "error", "/actors"),
@@ -1011,5 +1026,4 @@ def test_revisit_refuses_an_anchor_a_field_keeps_out(obligations: AdopterRepo) -
             obligations.root, "OBL-1", target=TEST_FILE, outcome="unchanged", reason="still"
         )
     )
-    _discovery, source = _source(obligations)
-    assert source.friction["revisited"] == [entry("unchanged", "still")]
+    assert own_entry(obligations.root, OBLIGATION)["revisited"] == [entry("unchanged", "still")]

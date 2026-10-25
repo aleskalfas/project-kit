@@ -32,6 +32,10 @@ from project_kit import friction_repository as fr
 from tests.adopter_repo import HISTORY_EPOCH, Author, MakeAdopterRepo
 from tests.friction_documents import T1, Timeline, document, friction_config, guide
 
+#: The documents here say each artefact's answers beside its anchors, and each write
+#: takes them into answer files, as a change writes them (COR-062 point 1).
+pytestmark = pytest.mark.usefixtures("answers_in_files")
+
 REPO = Path(__file__).resolve().parent.parent
 SCRIPT = REPO / "scripts" / "friction_report_body.py"
 
