@@ -1020,8 +1020,8 @@ already points there, it pushes nothing.
   name. While such a branch exists on `origin`, the script refuses and the run
   fails.
 - **The readers:** a release tag is `v<major>.<minor>.<patch>`, judged as `pkit
-  upgrade` judges one, so the script and every reader of release tags skip
-  `latest`.
+  upgrade` judges every tag the release step cuts, so the script and every reader
+  of release tags skip `latest`.
 - **What it needs:** the standard library and git, on the runner's own
   `python3`. Nothing is installed for it.
 
