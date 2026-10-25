@@ -1387,7 +1387,7 @@ Bumps `.pkit/VERSION` per the policy in PRJ-002. `<segment>` is `patch`, `minor`
 
 - **`patch`** — backward-compatible bug fix to existing surface.
 - **`minor`** — new surface added (new command, new principle, new area). Pre-1.0, this is the typical bump and may carry breaking changes per semver convention for `0.x` releases.
-- **`major`** — reserved for `1.0.0` and post-1.0 spec breakage. Pre-1.0 the command refuses major bumps.
+- **`major`** — a breaking change to existing surface. It moves the version to the next major, before 1.0 as after it: `0.5.0` to `1.0.0`, `1.4.2` to `2.0.0`.
 - **`pre`** — the next pre-release of the current line, `1.2.0rc1` to `1.2.0rc2`, printing `Bumped pre-release counter: <old> -> <new>`. It refuses a version with no pre-release suffix, and refuses `--pre` beside it.
 
 **`--pre <kind>`** starts a pre-release line. It appends `<kind>1` to the bumped version, where `<kind>` is `a`, `b` or `rc` (PEP 440). So `version bump minor --pre rc` on `1.1.0` writes `1.2.0rc1`. A pre-release bump broadens no `requires_backbone` bound.
