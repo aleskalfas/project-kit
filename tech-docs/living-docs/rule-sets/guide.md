@@ -113,7 +113,7 @@ State each advantage a page claims as one sentence in bold, and give a proof its
     - a measured number, with how it was measured: what, on what, and how many times
   - A claim with no proof is cut, or proved. A record that decides the behaviour proves nothing, since it says what was decided, not what the software does.
   - Table cells are exempt, since a cell holds no sentence of its own.
-- **Breaks the rule:** the entry README's mental model says "That's *why* a sync can't conflict with your edits, and why you keep everything you write." The claim is not in bold, and neither proves it nor links to a proof.
+- **Breaks the rule:** the entry README at commit `26199137` of PR #2030. Its mental model says "That's *why* a sync can't conflict with your edits, and why you keep everything you write." The claim is not in bold, and neither proves it nor links to a proof.
 - **Keeps the rule:** the fence after the guide's list of claims runs two calls in bypass mode, and the hook denies one and allows the other. It proves the claim "**Each agent's denies hold in every mode, the harness's most permissive included.**"
 
 ## RS-GUIDE-003 — Compare with the alternative, and credit it
@@ -172,7 +172,7 @@ Show each command the page gives its reader to run with what it prints, in a `co
   - A command written with placeholders, such as `<cap>`, is shown run once with real values. Where its full output would bury what the reader needs, a filter in the command, such as `grep`, keeps the part that matters.
   - A command that cannot run as a test, such as one that needs the network or input, takes the form DEC-002 point 6 gives it. That form is a fence of its shell's language, such as `sh`, with no output. A command whose output differs from one operating system to another counts as one.
   - The rule does not reach a page with no command for its reader to run.
-- **Breaks the rule:** the entry README's "Install" gives `pkit --help` in a fence with no language and no output, though the command can run as a test.
+- **Breaks the rule:** the entry README at commit `26199137` of PR #2030. Its "Install" gives `pkit --help` in a fence with no language and no output, though the command can run as a test.
 - **Keeps the rule:** the guide's "Find out why a call prompted" runs `diagnose on`, two calls, `diagnose report` and `diagnose off` in one `console` fence, each followed by what it printed.
 - **Note:** the console-fence run checks the output part of this rule, as the set's `checks` declare (`CONTRIBUTING.md`, "The pages' console fences").
 
