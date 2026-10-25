@@ -77,10 +77,6 @@ TERM-documentation-space:
           - .pkit/capabilities/living-docs/scripts/_lib/spaces.py
         record:
           - living-docs:DEC-001#1
-      revalidated:
-        at: 2026-10-24T03:53:04Z
-        outcome: unchanged
-        unchanged-because: A space's entry may now name its audience in the configuration. A space is still a collection of pages for one audience, in the places declared for it.
 TERM-onboarding-plan:
   name: onboarding plan
   noun-forms: [onboarding plans]
@@ -94,10 +90,6 @@ TERM-onboarding-plan:
           - .pkit/capabilities/living-docs/agents/living-docs/storyboard.md
         record:
           - living-docs:DEC-001#8
-      revalidated:
-        at: 2026-10-25T05:30:25Z
-        outcome: unchanged
-        unchanged-because: The agent changed only its reader-review, which now reads the reading-evidence point. Its onboarding plan, and the gate before it, are as they were.
 TERM-page:
   name: page
   status: active
@@ -110,9 +102,6 @@ TERM-page:
         record:
           - living-docs:DEC-001#1
           - living-docs:DEC-001#4
-      revalidated:
-        at: 2026-10-23T21:35:27Z
-        outcome: updated
 TERM-page-kind:
   name: page kind
   noun-forms: [page kinds]
@@ -140,10 +129,6 @@ TERM-proposal:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#5
-      revalidated:
-        at: 2026-10-25T05:30:29Z
-        outcome: unchanged
-        unchanged-because: The agent changed only its reader-review, which now reads the reading-evidence point and proposes nothing. What it proposes, and that a person reviews it, are as they were.
 TERM-reader:
   name: reader
   noun-forms: [readers]
@@ -157,10 +142,6 @@ TERM-reader:
           - .pkit/capabilities/living-docs/scripts/_lib/readers.py
         record:
           - living-docs:DEC-001#7
-      revalidated:
-        at: 2026-10-25T04:40:42Z
-        outcome: unchanged
-        unchanged-because: DEC-001 point 7 changed only on who reads the reading-evidence entries, the capability's validation or its agent. The term defines a reader and what they need, which that leaves as it was.
 TERM-reader-review:
   name: reader-review
   noun-forms: [reader-reviews]
@@ -173,10 +154,6 @@ TERM-reader-review:
           - .pkit/capabilities/living-docs/agents/living-docs/living-docs.md
         record:
           - living-docs:DEC-001#6
-      revalidated:
-        at: 2026-10-25T05:30:31Z
-        outcome: unchanged
-        unchanged-because: Reader-review now reads the results the reading-evidence point holds, as advice. It still judges one page as its readers would, against the binding rules, and runs no executed check.
 TERM-space-definition:
   name: space definition
   noun-forms: [space definitions]

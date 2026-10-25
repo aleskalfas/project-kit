@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-onboarding-plan
+    revalidated:
+      at: 2026-10-25T05:30:25Z
+      outcome: unchanged
+      unchanged-because: The agent changed only its reader-review, which now reads the reading-evidence point. Its onboarding plan, and the gate before it, are as they were.

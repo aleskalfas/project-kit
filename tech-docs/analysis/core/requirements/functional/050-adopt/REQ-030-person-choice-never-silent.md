@@ -20,10 +20,6 @@ pkit:
         - ADR-065#6
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-25T14:34:35Z
-      outcome: unchanged
-      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of a choice that needs a person changed, so the requirement holds.
 ---
 
 # REQ-030 · Functional · A choice in a version transition that needs a person is never taken silently

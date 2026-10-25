@@ -24,10 +24,6 @@ pkit:
         - COR-059#6
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:51:02Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-001 · Quality · A migration run again changes nothing

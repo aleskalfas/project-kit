@@ -35,6 +35,9 @@ from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import HISTORY_EPOCH, AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, SOURCE, friction_config
 
+#: The fixtures here still write answers in blocks, until #2032 moves them.
+pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+
 NOW = datetime(2026, 10, 5, 10, 0, 0, tzinfo=UTC)
 
 GUIDE_PATH = "docs/guide.md"

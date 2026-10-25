@@ -24,10 +24,6 @@ pkit:
         - ADR-065#4
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-25T14:34:38Z
-      outcome: unchanged
-      unchanged-because: The tests changed are those of the install pkit init prints, and a new one that upgrade's lookup of the latest release skips the tag latest. No test of an interrupted transition changed, so the requirement holds.
 ---
 
 # REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it

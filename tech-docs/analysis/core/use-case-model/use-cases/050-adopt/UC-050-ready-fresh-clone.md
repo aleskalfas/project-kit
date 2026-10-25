@@ -44,10 +44,6 @@ pkit:
         - REQ-009
         - REQ-010
         - REQ-012
-    revalidated:
-      at: 2026-10-25T14:35:05Z
-      outcome: unchanged
-      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Readying a fresh clone with one sync is unchanged, so the use case holds.
 ---
 
 # UC-050 — Get a fresh clone ready to work with one sync

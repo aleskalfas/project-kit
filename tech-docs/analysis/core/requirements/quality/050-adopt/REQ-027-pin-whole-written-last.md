@@ -21,10 +21,6 @@ pkit:
         - ADR-064#1
       artefact:
         - ACT-operator
-    revalidated:
-      at: 2026-10-25T14:34:40Z
-      outcome: unchanged
-      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of how the version pin is written changed, so the requirement holds.
 ---
 
 # REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last

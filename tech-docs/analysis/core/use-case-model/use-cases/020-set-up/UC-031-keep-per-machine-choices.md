@@ -50,10 +50,6 @@ pkit:
         - REQ-002
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-25T14:34:59Z
-      outcome: unchanged
-      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. What the install keeps out of the project's commits is unchanged, so the use case holds.
 ---
 
 # UC-031 — Keep my per-machine choices out of what the project commits

@@ -45,10 +45,6 @@ pkit:
         - REQ-005
         - REQ-012
         - REQ-017
-    revalidated:
-      at: 2026-10-25T14:40:37Z
-      outcome: unchanged
-      unchanged-because: The aggregator gains a line that checks the pages' contents lists, and still runs the migration check. No step here reads the new line, so the use case holds.
 ---
 
 # UC-010 — Never ship a backbone change that breaks installed projects without the migration that carries them across

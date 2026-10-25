@@ -46,10 +46,6 @@ pkit:
         - REQ-005
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-25T14:35:03Z
-      outcome: unchanged
-      unchanged-because: PRJ-004 names the tag latest as the canonical install. A release step that moves only components cuts no tag, so the highest release tag and latest stay where they were, and the use case holds.
 ---
 
 # UC-009 — Release my component on its own version

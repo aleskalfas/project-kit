@@ -753,6 +753,39 @@ def test_validation_says_nothing_without_answer_files(timeline: Timeline) -> Non
     assert _validate(timeline) == []
 
 
+@pytest.mark.parametrize(
+    ("block", "pointer"),
+    [
+        ({"at": T1, "outcome": "unchanged", "because": "the block answers"}, "revalidated"),
+        ({}, None),
+    ],
+    ids=["revalidated", "none"],
+)
+def test_validation_fails_each_answer_left_in_a_block_once_answer_files_exist(
+    timeline: Timeline, block: dict[str, str], pointer: str | None
+) -> None:
+    """Answers live in answer files: one left in an artefact's block fails, naming the
+    move that takes it out (COR-062 points 1, 10 and 11). A block holding none passes."""
+    timeline.start({GUIDE: bare_guide(**block), "docs/plain.md": document("plain")})
+    timeline.adopter.write({answer_path("one"): answers(entry(at=T2))})
+    found = [
+        f
+        for f in fv.validate_friction(timeline.adopter.root).findings
+        if f.kind
+        in (fv.FrictionFindingKind.ANSWER_IN_BLOCK, fv.FrictionFindingKind.ANSWERS_NOT_MOVED)
+    ]
+    if pointer is None:
+        assert found == []
+        return
+    (finding,) = found
+    assert (finding.location, finding.pointer, finding.severity) == (
+        GUIDE,
+        f"/pkit/friction/{pointer}",
+        fv.Severity.ERROR,
+    )
+    assert f"`{pointer}`" in finding.message and af.MOVE_COMMAND in finding.message
+
+
 # --- the machine-readable outputs --------------------------------------------------------
 
 

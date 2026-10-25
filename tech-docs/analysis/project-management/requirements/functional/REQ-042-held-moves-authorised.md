@@ -24,10 +24,6 @@ pkit:
         - project-management:DEC-055#3
       artefact:
         - ACT-planner
-    revalidated:
-      at: 2026-10-24T21:03:45Z
-      outcome: unchanged
-      unchanged-because: ACT-planner's note names the planner where it said the role, and keeps why its name is not project manager. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-042 · Functional · A move a person holds is made only on that person's authorisation

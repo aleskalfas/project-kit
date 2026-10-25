@@ -25,10 +25,6 @@ pkit:
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
-    revalidated:
-      at: 2026-10-25T14:35:15Z
-      outcome: unchanged
-      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Registering adapters and running their primitives are unchanged, so the README holds.
 ---
 
 # Adapters

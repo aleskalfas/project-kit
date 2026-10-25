@@ -20,10 +20,6 @@ pkit:
         - ADR-065#6
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-25T14:34:33Z
-      outcome: unchanged
-      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of compatibility resolved before a write changed, so the requirement holds.
 ---
 
 # REQ-029 · Functional · A version transition resolves compatibility across components before it writes anything

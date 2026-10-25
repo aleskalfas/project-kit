@@ -29,9 +29,6 @@ pkit:
         - REQ-003
         - REQ-009
         - REQ-031
-    revalidated:
-      at: 2026-10-25T14:39:31Z
-      outcome: updated
 ---
 
 # UC-048 — Put the system's CLI on my machine at a release

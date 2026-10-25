@@ -67,9 +67,6 @@ pkit:
         - REQ-018
         - REQ-019
         - REQ-020
-    revalidated:
-      at: 2026-10-25T00:35:03Z
-      outcome: updated
 ---
 
 # UC-007 — Resolve what the default branch left out of date

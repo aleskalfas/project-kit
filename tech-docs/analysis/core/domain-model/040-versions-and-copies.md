@@ -40,9 +40,6 @@ pkit:
         - TERM-source-repository
         - TERM-distribution
         - TERM-component-origin
-    revalidated:
-      at: 2026-10-25T14:39:38Z
-      outcome: updated
 ---
 
 # VIEW-versions-and-copies — Versions and copies

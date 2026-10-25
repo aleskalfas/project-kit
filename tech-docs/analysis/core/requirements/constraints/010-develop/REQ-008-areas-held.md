@@ -17,10 +17,6 @@ pkit:
         - ADR-065#13
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:50:27Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-008 · Constraint · Until #1600 is done, no change adds or removes an area or an adapter a release ships

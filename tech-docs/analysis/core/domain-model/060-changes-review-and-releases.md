@@ -40,10 +40,6 @@ pkit:
         - TERM-surface-change
         - TERM-changeset
         - TERM-release-step
-    revalidated:
-      at: 2026-10-25T14:34:31Z
-      outcome: unchanged
-      unchanged-because: PRJ-004 names the tag latest as the canonical install. This view's statements on releases, such as a release step that moves only components making no release, are unchanged, so it holds.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

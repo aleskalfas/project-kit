@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-proposal
+    revalidated:
+      at: 2026-10-25T05:30:29Z
+      outcome: unchanged
+      unchanged-because: The agent changed only its reader-review, which now reads the reading-evidence point and proposes nothing. What it proposes, and that a person reviews it, are as they were.

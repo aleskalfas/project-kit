@@ -52,9 +52,6 @@ pkit:
         - REQ-012
         - REQ-026
         - REQ-031
-    revalidated:
-      at: 2026-10-25T14:39:33Z
-      outcome: updated
 ---
 
 # UC-049 — Install the system into my project with one command

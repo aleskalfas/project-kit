@@ -9,10 +9,6 @@ pkit:
         - .pkit/skills/core/**
         - .pkit/adapters/claude-code/deploy-skills.sh
       record: [COR-003, COR-005, COR-006, COR-013, COR-015, COR-020]
-    revalidated:
-      at: 2026-10-21T18:38:47Z
-      outcome: unchanged
-      unchanged-because: The adapter-author skill gains the contract of the scripts the lifecycle calls, and COR-005 says what pkit new adapter stamps and keeps its pairing table without a status column. This page names adapter-author, its paired command and what it walks the author through, none of which changed, so it holds.
 ---
 
 # Skills

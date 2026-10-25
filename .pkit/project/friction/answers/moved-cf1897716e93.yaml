@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-005
+    revalidated:
+      at: 2026-10-24T10:40:01Z
+      outcome: unchanged
+      unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 5 reads as it did, so what a view anchors holds as this rule says.

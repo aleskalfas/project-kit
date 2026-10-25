@@ -21,10 +21,6 @@ pkit:
         - ADR-059
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-25T14:34:37Z
-      outcome: unchanged
-      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of the stop under another version changed, so the requirement holds.
 ---
 
 # REQ-010 · Functional · A command that propagates content under another version than the project records stops

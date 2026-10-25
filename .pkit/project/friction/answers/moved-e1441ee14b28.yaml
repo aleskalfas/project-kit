@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-skill
+    revalidated:
+      at: 2026-10-23T08:53:48Z
+      outcome: unchanged
+      unchanged-because: It anchors the skills area and the core's contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.

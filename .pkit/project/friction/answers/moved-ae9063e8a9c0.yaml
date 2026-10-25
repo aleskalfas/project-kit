@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-011-migrate-component-change.md
+    revalidated:
+      at: 2026-10-25T14:40:39Z
+      outcome: unchanged
+      unchanged-because: The aggregator gains a line that checks the pages' contents lists, and still runs the migration check. No step here reads the new line, so the use case holds.

@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-source-repository
+    revalidated:
+      at: 2026-10-21T14:25:59Z
+      outcome: unchanged
+      unchanged-because: COR-062 keeps answers in the source repository's own answer folder, which no sync carries. A source repository is still where the originals are authored, so the definition holds.

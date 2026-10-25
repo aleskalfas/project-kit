@@ -26,10 +26,6 @@ pkit:
         - COR-004
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-25T14:34:29Z
-      outcome: unchanged
-      unchanged-because: The tests changed are those of the install pkit init prints, and a new one that upgrade's lookup of the latest release skips the tag latest. No test of a --dry-run preview changed, so the requirement holds.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

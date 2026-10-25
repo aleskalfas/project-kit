@@ -21,10 +21,6 @@ pkit:
         - ADR-063
       artefact:
         - CONTRIBUTING.md#running-checks
-    revalidated:
-      at: 2026-10-25T16:26:17Z
-      outcome: unchanged
-      unchanged-because: PRJ-004 names the tag latest as the canonical install, and Running checks now names the pages' contents lists. The operator's needs and the note on whoever holds the settings read the same, so the actor holds.
 ---
 
 # ACT-operator — Operator

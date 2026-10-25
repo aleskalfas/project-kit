@@ -36,10 +36,6 @@ pkit:
         - ACT-ai-agent
         - REQ-008
         - REQ-009
-    revalidated:
-      at: 2026-10-25T14:34:45Z
-      outcome: unchanged
-      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Registering an adapter and running its primitives are unchanged, so the use case holds.
 ---
 
 # UC-019 — Adapt the system to another harness

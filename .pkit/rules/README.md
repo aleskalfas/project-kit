@@ -10,10 +10,6 @@ pkit:
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - src/project_kit/install.py
       record: [COR-001, COR-014]
-    revalidated:
-      at: 2026-10-25T14:34:11Z
-      outcome: unchanged
-      unchanged-because: The change makes pkit init print the install of the tag latest, where it printed the install at its own version. This page describes the rules area and never names that printed command, so it holds.
 ---
 
 # Rules

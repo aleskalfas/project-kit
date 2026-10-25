@@ -47,10 +47,6 @@ pkit:
         - REQ-012
         - REQ-014
         - REQ-015
-    revalidated:
-      at: 2026-10-25T05:23:36Z
-      outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-021 — Declare my project's backbone configuration once, and have it validated

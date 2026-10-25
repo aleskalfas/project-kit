@@ -45,10 +45,6 @@ pkit:
         - UC-023
         - UC-006
         - UC-048
-    revalidated:
-      at: 2026-10-25T14:35:09Z
-      outcome: unchanged
-      unchanged-because: Its need from UC-048 is a CLI at a release, which an install of the tag latest gives as a release's own tag does. The change alters only the install command pkit init prints, so the journey holds.
 ---
 
 # JRN-001 — Adopt the system

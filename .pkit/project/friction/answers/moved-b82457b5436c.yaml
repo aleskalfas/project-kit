@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-005-anchor-document.md
+    revalidated:
+      at: 2026-10-25T00:34:20Z
+      outcome: unchanged
+      unchanged-because: An artefact received by sync now owes no answer, as an excluded one does. Anchoring a document and the faults validation fails are as this use case says.

@@ -78,10 +78,6 @@ TERM-conventions-corpus:
           - ADR-013
           - COR-001
           - COR-010
-      revalidated:
-        at: 2026-10-25T00:36:44Z
-        outcome: unchanged
-        unchanged-because: The engineer's body changes only its friction answers paragraph. The conventions corpus it reads first is unchanged.
 TERM-hand-off:
   name: hand-off
   status: active

@@ -57,10 +57,6 @@ pkit:
         - REQ-029
         - REQ-030
         - REQ-031
-    revalidated:
-      at: 2026-10-25T14:35:07Z
-      outcome: unchanged
-      unchanged-because: PRJ-004 names the tag latest as the canonical install. The router runs a version pin through uvx at that release's own tag, which the change leaves alone, so the use case holds.
 ---
 
 # UC-052 — Run each project at the version it pins

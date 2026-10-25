@@ -52,9 +52,6 @@ pkit:
         - REQ-005
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-25T14:39:29Z
-      outcome: updated
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it

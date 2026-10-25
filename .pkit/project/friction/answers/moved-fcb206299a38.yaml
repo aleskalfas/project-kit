@@ -1,0 +1,5 @@
+answers:
+  - artefact: .pkit/agents/README.md
+    revalidated:
+      at: 2026-10-25T01:42:35Z
+      outcome: updated

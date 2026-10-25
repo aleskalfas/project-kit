@@ -36,10 +36,6 @@ pkit:
         - ACT-ai-agent
         - ACT-operator
         - REQ-016
-    revalidated:
-      at: 2026-10-25T14:34:57Z
-      outcome: unchanged
-      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. The agent workspace the install creates and keeps out of commits is unchanged, so the use case holds.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

@@ -54,9 +54,6 @@ pkit:
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
         - .pkit/adapters/README.md#currently-shipped
-    revalidated:
-      at: 2026-10-25T16:27:22Z
-      outcome: updated
 ---
 
 # project-kit

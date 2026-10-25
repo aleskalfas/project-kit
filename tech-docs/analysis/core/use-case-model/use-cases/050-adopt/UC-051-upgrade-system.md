@@ -64,9 +64,6 @@ pkit:
         - REQ-029
         - REQ-030
         - REQ-031
-    revalidated:
-      at: 2026-10-25T14:39:35Z
-      outcome: updated
 ---
 
 # UC-051 — Upgrade the system like a dependency

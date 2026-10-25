@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import pytest
 
+from project_kit import answer_files as af
 from project_kit import friction_check as fc
 from project_kit import friction_move as fm
 from project_kit import friction_report as frep
 from project_kit import friction_repository as fr
+from project_kit import friction_validate as fv
 from project_kit import friction_write as fw
 from project_kit.friction_discovery import discover_artefacts
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
@@ -97,6 +99,24 @@ def test_the_writers_refuse_a_received_artefact(repo: AdopterRepo) -> None:
     ):
         with pytest.raises(fw.FrictionWriteError, match="arrives in this project by sync"):
             plan()
+
+
+def test_validation_reports_a_received_answer_in_its_block_and_never_fails_it(
+    repo: AdopterRepo,
+) -> None:
+    """The project cannot mend a file it receives by sync: an answer left in the rule's
+    block is a report. The guide's, the project's own, fails, and with no answer file
+    the one error names the move (COR-062 points 9, 10 and 11)."""
+    found = {
+        (f.location, f.kind.value, f.severity.value)
+        for f in fv.validate_friction(repo.root).findings
+        if f.kind
+        in (fv.FrictionFindingKind.ANSWER_IN_BLOCK, fv.FrictionFindingKind.ANSWERS_NOT_MOVED)
+    }
+    assert found == {
+        (RULE, "answer-in-block", "report"),
+        (af.FOLDER, "answers-not-moved", "error"),
+    }
 
 
 def test_the_move_leaves_a_received_artefact_s_answers(repo: AdopterRepo) -> None:
