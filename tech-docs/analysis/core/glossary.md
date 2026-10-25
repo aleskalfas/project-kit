@@ -565,7 +565,7 @@ TERM-place:
           - COR-050#14
 TERM-point:
   name: point
-  other-senses: [revalidation point, deferral point, extension point, extension points, entry point, entry points]
+  other-senses: [revalidation point, deferral point, extension point, entry point]
   status: active
   definition: "numbered or labelled part of a decision record's Decision, whose id names it for good once the record writes it as a heading"
   pkit:
