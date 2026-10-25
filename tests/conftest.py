@@ -13,6 +13,7 @@ import pytest
 from project_kit import (
     command_runner,
     default_branch,
+    friction_validate,
     migrations,
     project_config,
     run_cache,
@@ -89,6 +90,15 @@ def at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     this, the runner's stdin is a pipe, and such a confirmation refuses
     without reading it (#2003)."""
     monkeypatch.setattr(project_config, "stdin_is_tty", lambda: True)
+
+
+@pytest.fixture
+def answers_in_blocks(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Validation leaves out its finding on an answer in an artefact's block, for a module
+    whose fixtures still write answers there, where they lived before the move (COR-062
+    points 10 and 11). Such a module judges the other findings it tests. #2032 writes
+    those answers in answer files and removes this fixture with the last user."""
+    monkeypatch.setattr(friction_validate, "_block_answer_findings", lambda *_args: [])
 
 
 @pytest.fixture(scope="session", autouse=True)

@@ -15,6 +15,7 @@ everything about them:
   file a writer adds is named for its UTC time and eight random hexadecimal digits;
   one the move writes, `moved-` and twelve digits of the SHA-256 of its text. A
   file the working tree holds and HEAD does not is uncommitted, a writer's own.
+  The move itself is the backbone migration `MOVE_MIGRATION` (COR-062 point 11).
 - **One file** (`read_answer_file`): one mapping with an `answers` list, each
   entry one artefact's answers — its location (`artefact`), the other answer
   files it read (`read`), a revalidation and its deferrals (`revalidated`), and
@@ -185,6 +186,12 @@ NAME_TIME = "%Y%m%dT%H%M%SZ"
 
 #: The prefix of a file the move writes (ADR-068 point 1).
 MOVED_PREFIX = "moved-"
+
+#: The move (COR-062 point 11): the backbone migration that takes a project's answers out
+#: of the artefacts' blocks, which `pkit friction move-plan` plans, and how a person runs it
+#: again from the project's root.
+MOVE_MIGRATION = ".pkit/migrations/backbone/2.0.0/002-move-answers-to-files.sh"
+MOVE_COMMAND = f"ROOT=. bash {MOVE_MIGRATION}"
 
 
 def new_name(now: datetime) -> str:
@@ -1500,6 +1507,8 @@ __all__ = [
     "FILES_HOME",
     "FOLDER",
     "MOVED_PREFIX",
+    "MOVE_COMMAND",
+    "MOVE_MIGRATION",
     "NAME_TIME",
     "READ_KEY",
     "SCHEMA_KIND",
