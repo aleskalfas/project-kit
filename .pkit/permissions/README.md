@@ -29,12 +29,13 @@ pkit:
         - .pkit/adapters/claude-code/README.md#settings
         - .pkit/adapters/claude-code/README.md#the-agent-workspace
         - .pkit/adapters/claude-code/README.md#the-probe-probe-confined-runpy
+        - .pkit/adapters/README.md#currently-shipped
         - .pkit/adapters/README.md#the-agent-runner
         - .pkit/capabilities/project-management/README.md#permissions
         - .pkit/capabilities/project-management/README.md#the-rules-of-a-fixers-run
       source: [claude-code-hooks, claude-code-permission-modes]
     revalidated:
-      at: 2026-10-25T13:40:23Z
+      at: 2026-10-25T13:55:31Z
       outcome: updated
 ---
 
@@ -44,23 +45,24 @@ The permission model decides your agents' tool calls: which run without asking y
 
 ## Why it exists
 
-You want your agents to work on their own, without a stream of prompts, and to know where their limits do not hold. A harness's own permission settings make both hard. Claude Code's, for one, are one dial for the whole session ([its adapter's enforcement declaration](../adapters/claude-code/permission-enforcement.yaml)):
+A harness's own permission settings make it hard to let agents work unasked, and to know which of their limits nothing enforces. Claude Code's settings, for one, apply to the whole session, and fall short in three ways ([the adapter's README, `settings/`](../adapters/claude-code/README.md#settings)):
 
-- **One set of rules for every agent.** A rule on a command binds every agent in the session alike, and an agent's own definition gates only whole tools, such as `Bash`. So the settings cannot say that one agent may not edit an issue while another may.
-- **No single view.** What an agent may do is spread over several settings files, in the harness's own terms.
-- **No place for a fault.** When a call is wrongly allowed or refused, you cannot tell which is at fault: the rule, its translation into settings, or the harness.
+- **One set of rules for every agent.** A rule on a command binds every agent in the session alike. An agent's own list of tools names only whole tools, such as `Bash`. So the settings cannot say that one agent may not edit an issue while another may.
+- **No view of one agent.** What one agent may do is not in one place, in your own terms.
+- **No place for a fault.** When a call is wrongly allowed or refused, you cannot tell why. The rule may be wrong, it may sit in the wrong place, or the harness may not enforce it.
 
 So you either allow a command for every agent, or answer each call that no rule allows. That can mean dozens of prompts a session, approved unread, until a prompt no longer stops a dangerous command.
 
-The model is designed for any harness. The model, its privilege catalog and its decision core are harness-neutral, and `pkit permissions explain` reads the model alone. An adapter realizes the model in its harness: it enforces what the harness can, and reports the rest (COR-028 point 3, [COR-047](../decisions/core/COR-047-harness-requirement-declaration.md)). The hook, the settings and the modes this page shows are those of Claude Code, the one adapter today ([its README](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+The model is designed for any harness, through an adapter that enforces what its harness can and reports the rest (COR-028 point 3, [COR-047](../decisions/core/COR-047-harness-requirement-declaration.md)). The hook, the settings and the modes this page shows are those of Claude Code, the one adapter today ([the adapters README, "Currently shipped"](../adapters/README.md#currently-shipped)).
 
 ### What the model does instead
 
-The model answers these problems with four claims, and the commands after the list prove each one:
+The model answers these problems with five claims, and the commands after the list prove each one:
 
-- **Each agent has rules of its own, down to the command.** A grant names a subject, such as one agent, and a privilege: the commands the catalog recognizes, such as `gh issue edit`.
-- **Each deny holds in every mode, the harness's most permissive included.** The hook judges every call, and the decision core never reads the mode.
-- **Every agent's rules are in one place, in your terms, and a wrong verdict can be traced to one of three layers.** `explain`, `probe` and `diff` each check one layer.
+- **Each agent has grants of its own, down to the command.** A grant names a subject, such as one agent, and a privilege: the commands the catalog recognizes, such as `gh issue edit`.
+- **Each agent's denies hold in every mode, the harness's most permissive included.** The hook judges every call, and reads the mode only to decide whether to ask.
+- **The model's grants for every agent are in one place, in your terms.** `pkit permissions explain` lists them by privilege.
+- **A wrong verdict can be traced to one of three layers.** `explain` shows the model, `diff` and `probe` check its translation, and `diff` names what the harness cannot enforce.
 - **What the harness cannot enforce is reported, never dropped.** Nothing in Claude Code enforces network egress, for one, and the model says so (COR-028 point 3).
 
 Below, every agent may use `gh`, and the agent `researcher` may not edit an issue with it. Each `echo` passes a call to the hook by hand, as Claude Code passes it ("Common tasks" below says how). The calls run in bypass mode, Claude Code's most permissive:
@@ -99,41 +101,44 @@ $ pkit permissions probe --subject agent:researcher | grep "decision probe"
 
 What the output proves, claim by claim:
 
-- **Per agent, in bypass mode.** The hook denies `gh issue edit 7` to `researcher`, and allows the same call to `builder`, with no prompt for either. Once enforcement is on, Claude Code runs the hook before every tool call, and the hook's deny prevents the call ([its hooks reference](https://code.claude.com/docs/en/hooks)).
-- **In one place, in your terms.** `explain` lists the grants of every subject by privilege, the guardrails first.
-- **Three layers, a check for each.** A wrong verdict comes from one of these layers:
-  - **The model:** `explain` shows each rule as you wrote it, so a wrong rule shows there.
-  - **Its translation:** `diff` checks that the settings hold the rules the model projects into them. `probe` checks the verdicts the hook would give against the model.
-  - **The harness:** `diff` names what nothing in the harness enforces, here network egress, which proves the last claim.
-- **Note:** `tail` keeps the end of the report of `diff`. Its head, left out here, lists each allow rule in the settings that no grant justifies, the baseline's own included.
+- **Per agent.** The hook denies `gh issue edit 7` to `researcher`, and allows the same call to `builder`, with no prompt for either. The hook takes the agent from the call's `agent_type` ("Default-agent subject resolution" below).
+- **In every mode.** Both calls ran in bypass mode. The core never reads the mode, so its verdicts are the same in every mode ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). Once enforcement is on, Claude Code runs the hook before every tool call, and the hook's deny prevents the call ([its hooks reference](https://code.claude.com/docs/en/hooks)).
+- **In one place.** `explain` lists the grants of every subject by privilege, the guardrails first.
+- **Three layers.** Each command checks one kind of fault:
+  - **A wrong grant:** `explain` shows each grant as you wrote it.
+  - **A wrong translation:** `diff` checks that the settings hold the rules the model projects into them. `probe` has the decision core judge a fixed suite of calls, and checks each verdict against the model.
+  - **Intent the harness cannot enforce:** `diff` names it.
+- **Reported gaps.** `diff` names network egress, which nothing in Claude Code enforces.
+- **Note:** `tail` keeps the end of the report of `diff`. Its head, left out here, lists each allow rule in the settings that the model does not justify, the baseline's own included.
 
 ### Compared with the harness's own settings
 
-The table compares the model with Claude Code's own settings, used alone. The settings are better on setup and on the cost of a call:
+Claude Code's own settings, used alone, are better on setup and on the cost of a call. Both hold a deny in every mode, and the model is better on the rest. The cost is the hook, which runs for every call ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)):
 
 | What you need | Claude Code's settings alone | The permission model |
 | --- | --- | --- |
-| Rules for one agent | ❌ Whole tools only, since a rule on a command binds every agent | ✅ A grant or a deny for one agent, down to the command |
+| Allows and denies for one agent | ❌ Whole tools only, since a rule on a command binds every agent | ✅ A grant for one agent, down to the command |
 | A deny in the most permissive mode | ✅ A deny rule blocks in every mode, bypass mode included | ✅ So does each agent's deny, through the hook |
-| One view of what an agent may do | ❌ Rules spread over several settings files | ✅ `pkit permissions explain`, by privilege |
-| Where a wrong verdict comes from | ❌ No way to tell the rule, its translation and the harness apart | ✅ `explain`, `probe` and `diff`, a check for each layer |
+| One view of what an agent may do | ❌ Rules by tool and command, for the whole session | ✅ `pkit permissions explain`, by subject and privilege |
+| Where a wrong verdict comes from | ❌ No way to tell a wrong rule from one the harness cannot enforce | ✅ `explain`, `probe` and `diff` check the three layers between them |
 | What the harness cannot enforce | ❌ Nothing reports it | ✅ Reported, such as network egress |
-| Setup | ✅ None, since the settings are built in | ❌ A profile, then `pkit permissions enable` |
+| Setup | ✅ None, since the settings are built in | ❌ Grants or a profile, then `pkit permissions enable` |
 | Cost of a call | ✅ No extra process | ❌ The hook starts `python3` for every call |
 
 ### When you do not need it
 
 The model earns its setup once agents work with nobody watching each call. You do not need it in these cases:
 
-- **You watch every call yourself.** In a session you drive alone, Claude Code's own prompts and deny rules are enough, with no setup.
+- **You work alone, and few calls prompt you.** In a session you drive yourself, Claude Code's own prompts and deny rules are enough, with no setup.
 - **Every agent may do the same.** A rule in the harness's settings says it once, for the whole session.
+- **Your harness has no adapter yet.** Without an adapter, no hook brings the model's verdicts to the harness.
 
 > [!WARNING]
-> A deny is a speed bump, not a security boundary. It refuses only the forms of a command the model can tell ("A deny holds against the forms of its command" below). A command behind a wrapper, such as `uv run` or `find -exec`, can slip past it. To confine a shell, use the OS sandbox, which `pkit permissions setup autonomy` sets up ("Turning it on" below).
+> A deny is a speed bump, not a security boundary ("A deny holds against the forms of its command" below). It refuses only the forms of a command the model can tell, and a command behind a wrapper, such as `uv run`, can slip past it. In auto and bypass mode, the hook does not ask about a form the model cannot tell ("When the hook asks" below). To confine a shell, use the OS sandbox, which `pkit permissions setup autonomy` sets up ("Turning it on" below).
 
 ## How a tool call is decided
 
-Each tool call an agent makes goes through the harness's permission hook, which has the decision core decide it: allow, deny or abstain.
+Each tool call an agent makes goes through the harness's permission hook, which has the decision core decide it: allow, deny or abstain. The model, its privilege catalog and its decision core are harness-neutral, and `pkit permissions explain` reads the model alone.
 
 ```mermaid
 flowchart TD
@@ -150,7 +155,7 @@ flowchart TD
   rules -->|neither| asked["The harness may ask you"]
 ```
 
-- **The hook.** The harness passes each tool call to the hook before the call runs, once you turn enforcement on ("Turning it on" below). The hook gives the harness its verdict, and nothing for an abstain. Claude Code's hook prints the verdict as JSON ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
+- **The hook.** The harness passes each tool call to the hook before the call runs, once you turn enforcement on ("Turning it on" below). The hook gives the harness the verdict, and nothing for an abstain. Claude Code's hook prints the verdict as JSON ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)).
 - **The decision core** reads the permission model at each call, and gives one verdict. The model holds:
   - the guardrails, the privileges the catalog flags `guardrail: true`, denied to every subject, `all`: recursive deletion, `sudo` and rewriting published history
   - the active profile's grants
@@ -163,7 +168,7 @@ flowchart TD
 - **When the hook asks.** Claude Code's hook asks you rather than abstain in two cases:
   - a call that may hide a guardrail's form, outside auto and bypass mode ("A deny holds against the forms of its command" below)
   - an `Edit` or `Write` to an absolute path outside the session's repository, in every mode ([the same section](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy))
-- **The CLI decides alike.** The `pkit permissions` commands, such as `explain` and `diff`, build the model and decide through the same core. So they reach the hook's verdict.
+- **The CLI reads the same model.** The `pkit permissions` commands build the model through the same loader as the hook, and `probe` decides through the same core.
 
 ## Turning it on
 
@@ -228,7 +233,7 @@ pkit permissions setup autonomy
 
 Each task shows its commands with their output. Each fence starts from a fresh project where pkit is installed and no profile is active, so a task grants what it shows.
 
-Some tasks pass a call to the hook by hand, to show its verdict without a Claude Code session. Claude Code passes each call as a JSON document on the hook's standard input. The tool is in `tool_name`, its input is in `tool_input`, and the session's mode is in `permission_mode`. The hook prints an allow or a deny, and nothing when it abstains.
+Some tasks pass a call to the hook by hand, to show its verdict without a Claude Code session. Claude Code passes each call to the hook's standard input as a JSON document. The document holds the tool in `tool_name`, its input in `tool_input` and the session's mode in `permission_mode`. The hook prints an allow or a deny, and nothing when it abstains.
 
 ### Find out why a call prompted
 
@@ -294,7 +299,7 @@ $ echo '{"tool_name":"Bash","tool_input":{"command":"uv run pytest"}}' | .pkit/a
 - **Scope:** a privilege with a scope type, such as `docker` or `web-fetch`, takes `--scope` to narrow the grant ("Scope enforcement" below).
 - **No privilege for the command:** where the catalog lists none, two routes allow the command.
   - **A privilege, the durable route.** A capability can define one, and a grant of it then works as above ("Ship a capability's own privilege" below).
-  - **The harness's own allow rule, the quick route.** With Claude Code, add a rule such as `Bash(make test:*)` to the adapter's project settings additions ([the adapter's README, `settings/`](../adapters/claude-code/README.md#settings)). The next `pkit sync` merges it into `.claude/settings.json`. The model does not see the rule, so `pkit permissions explain` does not show it, and a strict posture denies the command first.
+  - **The harness's own allow rule, the quick route.** With Claude Code, add a rule such as `Bash(make test:*)` under `permissions.allow` in `.pkit/adapters/claude-code/settings/project/settings.json` ([the adapter's README, `settings/`](../adapters/claude-code/README.md#settings)). The next `pkit sync` merges it into `.claude/settings.json`, where it binds every agent alike. The model does not see the rule, so `explain` does not show it, and `diff` lists it as one no privilege recognizes. Under a strict posture, the hook denies the command all the same.
 - **Note:** `uv run` runs any program it is given, so this grant allows whatever that program does ("The read-only text filters and `uv run`" below).
 
 ### Deny something to one agent
