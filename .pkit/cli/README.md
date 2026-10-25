@@ -1058,7 +1058,7 @@ Where the folder holds synced copies, the command writes nothing and exits 1. It
 
 Each command stamps as before into a capability the project incubates. In the methodology's source repository, it stamps into every folder but an externally-sourced capability's.
 
-`process couple` and `process hand-off` ask too, before they edit a process definition, and in a dry run as well. Where the definition's capability holds synced copies, each writes nothing and exits 1. Each edits as before in a capability the project incubates. In the methodology's source repository, each edits a definition in any capability but an externally-sourced one.
+Before they edit a process definition, `process couple` and `process hand-off` ask whether its capability holds synced copies, in a dry run too. Where it does, each writes nothing and exits 1. Each edits as before in a capability the project incubates. In the methodology's source repository, each edits a definition in any capability but an externally-sourced one.
 
 The refusal names the folder, and a capability the project incubates as where the project's own process goes. That process may name the synced process as its upstream, since a coupling and its hand-off live in the downstream definition.
 
@@ -1934,7 +1934,7 @@ The deterministic stamp under the process-authoring skill's `new` operation (per
 
 The stamp under the skill's `couple` operation: append a `depends_on` entry ([COR-038](../decisions/core/COR-038-process-connections.md)) to the **invoker-named** definition's hosting state — coupling lives in the subscriber; the upstream is never touched (the owner-scoping COR-044 fixes by construction).
 
-- **The command refuses a definition whose capability the project receives as synced copies**, a dry run included. It names a capability the project incubates for the project's own process, which may name this one as its upstream ("Folders a sync writes" under "Authoring commands").
+- **The command refuses a definition whose capability the project receives as synced copies**, a dry run included. It names a capability the project incubates for the project's own process, which may name the synced process as its upstream ("Folders a sync writes" under "Authoring commands").
 - `--upstream` takes either form the shape contract's address grammar admits: the implementation form `<capability>:<process-id>`, or the role form `<publisher>::<role>:<point>` — the process offered at that point by the role's active provider ([COR-053](../decisions/core/COR-053-connection-points.md) point 2). An address outside the grammar refuses.
 - `--relation` / `--mode` are validated against the **closed vocabularies read from the shape contract as data** — a new relation kind is an enum value the command picks up, never a code change. `--why` is required (COR-038).
 - `--version <n>` (an integer, at least 1) writes the entry's `version`: the upstream interface version it targets, connecting only to an offered process at an equal one (COR-053 point 5). `--mandatory <reason>` writes the mark `mandatory: { reason: <reason> }` (point 6); a blank reason refuses. Each key is written only when its flag is given, after `why`.
