@@ -101,7 +101,7 @@ pkit:
         - .pkit/lifecycle/README.md#naming
         - .pkit/process/README.md#the-engine
     revalidated:
-      at: 2026-10-24T19:00:20Z
+      at: 2026-10-25T00:12:13Z
       outcome: updated
       deferred:
         - anchor:
