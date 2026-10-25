@@ -547,6 +547,108 @@ def test_new_is_one_shot(authoring_repo: Path) -> None:
     assert current == original
 
 
+# --- `process new` into a capability the project receives as a synced copy (#1988) ---
+
+
+def _as_methodology_source(root: Path) -> None:
+    """Give the tree the package source beside its `.pkit/`, which makes it the
+    methodology's source repository (`is_methodology_source` of the lifecycle)."""
+    package = root / "src" / "project_kit" / "__init__.py"
+    package.parent.mkdir(parents=True)
+    package.write_text("", encoding="utf-8")
+
+
+def _tree_outside_git(root: Path) -> dict[str, bytes | None]:
+    """Every path under `root` outside `.git`, a file's bytes or None for a dir."""
+    return {
+        p.relative_to(root).as_posix(): (p.read_bytes() if p.is_file() else None)
+        for p in sorted(root.rglob("*"))
+        if ".git" not in p.relative_to(root).parts
+    }
+
+
+def _new_ours(*extra: str) -> tuple[int, str]:
+    result = CliRunner().invoke(
+        main,
+        [
+            "--color",
+            "never",
+            "process",
+            "new",
+            "evidence:ours",
+            "--state",
+            "only=Only state.",
+            "--entry",
+            "only",
+            *extra,
+        ],
+    )
+    return result.exit_code, result.output
+
+
+@pytest.mark.parametrize("extra", [(), ("--dry-run",)], ids=["run", "dry-run"])
+def test_new_refuses_a_synced_capability_in_an_adopter_and_writes_nothing(
+    make_adopter_repo: MakeAdopterRepo, extra: tuple[str, ...]
+) -> None:
+    """In a project that receives the methodology by sync, a kit-shipped capability's
+    tree is a synced copy, and the next sync overwrites a definition, a stub or a
+    registration written there (core rule 1). The command writes nothing, a dry run
+    included, and names where the project's own process goes."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    before = _tree_outside_git(repo.root)
+
+    code, output = _new_ours(*extra)
+
+    assert code == 1, output
+    assert _tree_outside_git(repo.root) == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+    assert ".pkit/capabilities/evidence/ is not the project's" in output
+    assert "`pkit process new <capability>:ours`" in output
+
+
+def test_new_refuses_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability authored in another repository is a copy even where the
+    methodology is authored (COR-041)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_EXTERNALLY_SOURCED)
+    before = _tree_outside_git(repo.root)
+
+    code, output = _new_ours()
+
+    assert code == 1, output
+    assert _tree_outside_git(repo.root) == before
+
+
+def test_new_stamps_a_kit_shipped_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """Where the methodology is authored, its capabilities are the source, never a copy."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    _as_methodology_source(repo.root)
+
+    code, output = _new_ours()
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/schemas/ours.yaml" in output
+
+
+def test_new_stamps_an_incubated_capability_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """A capability the project incubates is its own (COR-031 D1)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+
+    code, output = _new_ours()
+
+    assert code == 0, output
+    assert "Stamped: .pkit/capabilities/evidence/schemas/ours.yaml" in output
+    assert (repo.root / ".pkit" / "capabilities" / "evidence" / "schemas" / "ours.yaml").is_file()
+
+
 # --- a run that fails part-way leaves nothing behind ------------------------
 
 

@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-25T02:54:21Z
-      outcome: unchanged
-      unchanged-because: The change has process couple and hand-off refuse a definition whose capability the project receives as a synced copy. Steps 6 and 7 edit the process step 4 stamped, in the capability its author authors, so they hold.
+      at: 2026-10-25T03:02:57Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
@@ -83,8 +82,9 @@ pkit:
 
 - **1a.** Another installed [capability](../../../glossary.md#term-capability--capability) provides one of the capability's [roles](../../../glossary.md#term-role--role). At step 10, `pkit validate` fails with ``role '<role>' is provided by <capabilities> and no provider is selected``, and names `pkit connections providers set` (COR-053 [point](../../../glossary.md#term-point--point) 1).
 - **4a.** A [process](../../../glossary.md#term-process--process) of that id exists in the capability. The [system](../../../glossary.md#term-system--system) refuses, since `process new` writes a process only once, and writes nothing. The path rejoins at step 3.
+- **4b.** The capability is one whose files the [project](../../../glossary.md#term-project--project) receives as [synced copies](../../../glossary.md#term-synced-copy--synced-copy). Such a capability is kit-shipped outside the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or externally sourced in any project. The system refuses and writes nothing, even in a dry run, and names a capability the project incubates instead (core rule 1). The use case ends.
 - **6a.** The author skips `pkit capabilities refresh`. At step 10, `pkit validate` fails with ``the generated `depends-on` list is stale``, and names the command. The path rejoins at step 6.
-- **8a.** The [project](../../../glossary.md#term-project--project) grants the `process-author` [agent definition](../../../glossary.md#term-agent-definition--agent-definition) no file, since `process-authoring-targets` ships empty in `.pkit/agents/project/overlay.yaml`. An AI agent working by it then proposes each script, and the author writes it (ADR-051 point 1).
+- **8a.** The project grants the `process-author` [agent definition](../../../glossary.md#term-agent-definition--agent-definition) no file, since `process-authoring-targets` ships empty in `.pkit/agents/project/overlay.yaml`. An AI agent working by it then proposes each script, and the author writes it (ADR-051 point 1).
 - **8b.** The [overlay](../../../glossary.md#term-overlay--overlay) has no key `process-authoring-targets`, as in a project that upgraded from before it. The [adapter](../../../glossary.md#term-adapter--adapter) deploys no `process-author` agent definition, and the author writes each script (ADR-051 point 1).
 - **10a.** A [connection point](../../../glossary.md#term-connection-point--connection-point) lies under a role the capability does not provide, or its companion schema is missing. `pkit validate` fails on it, and the path rejoins at step 1.
 - **12a.** The script behind a state still fails as stamped, or cannot run. The system prints ``couldn't evaluate <kind> predicate '<command>'``. It refuses each move with `position is indeterminate — a detection predicate could not be evaluated; refusing to move (fail-closed)` (COR-033).

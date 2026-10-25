@@ -42,7 +42,9 @@ component — the same set contract discovery walks — so a stamp can never wri
 a definition nothing watches (#713); see `_require_owned_address`. No routing
 logic lives here beyond that refusal (COR-044: walking a capability-less
 adopter through the capability-authoring path, or through `pkit capabilities
-register`, is the skill's judgment, never the stamp's).
+register`, is the skill's judgment, never the stamp's). `stamp_new_process` also
+refuses a capability whose tree the project receives as a synced copy, which the
+next sync overwrites (`_refuse_synced_capability`).
 
 Mutations round-trip through `ruamel.yaml` (comments, key order, and quoting
 preserved — the same discipline as `schemas_authoring`) and lint the result
@@ -637,6 +639,31 @@ def _require_owned_address(repo_root: Path, address: str) -> tuple[str, str, Pat
     return capability, process_id, capability_dir
 
 
+def _refuse_synced_capability(
+    repo_root: Path, capability: str, process_id: str, capability_dir: Path
+) -> None:
+    """Refuse to scaffold into *capability_dir* where it arrives in this project as a
+    synced copy.
+
+    The question is the tree's own predicate, asked through
+    `lifecycle_ownership.synced_copy_refusal`: a kit-shipped capability in a
+    project that is not the methodology's source, and an externally-sourced one
+    in any project. `process new` writes the definition, its stubs and their
+    registrations across the capability's tree, which the next sync overwrites
+    (core rule 1). The project's own process goes in a capability it incubates.
+    """
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        repo_root,
+        capability_dir,
+        f"capability {capability!r}",
+        "Stamp the project's own process in a capability the project incubates, with "
+        f"`pkit process new <capability>:{process_id}`. A capability's own processes "
+        "are authored where the capability is authored.",
+    )
+    if refusal is not None:
+        raise ProcessAuthoringError(refusal)
+
+
 def _locate_definition_file(repo_root: Path, definition: ProcessDefinition) -> Path:
     """The file a loaded definition came from, mirroring `load_definition`'s
     resolution order (convention path first, then the scan). The ambiguity
@@ -840,6 +867,7 @@ def stamp_new_process(
     transitions = transitions or []
     invariants = invariants or []
     capability, process_id, capability_dir = _require_owned_address(repo_root, address)
+    _refuse_synced_capability(repo_root, capability, process_id, capability_dir)
 
     if not _KEBAB_CASE.match(process_id):
         raise ProcessAuthoringError(
