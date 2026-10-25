@@ -22,9 +22,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-25T14:40:33Z
+      at: 2026-10-25T16:26:17Z
       outcome: unchanged
-      unchanged-because: Running checks now names the pages' contents lists among the lines the aggregator runs. The section still calls whoever holds the repository's settings the operator.
+      unchanged-because: PRJ-004 names the tag latest as the canonical install, and Running checks now names the pages' contents lists. The operator's needs and the note on whoever holds the settings read the same, so the actor holds.
 ---
 
 # ACT-operator — Operator
