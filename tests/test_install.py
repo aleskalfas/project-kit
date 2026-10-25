@@ -767,13 +767,14 @@ def test_the_readme_recommends_an_install_the_cli_reference_gives() -> None:
     }
 
 
-def test_the_dispatchers_install_advice_names_the_release_tag() -> None:
-    """`.pkit/cli/pkit` advises installing pkit in two errors. Each names the tag."""
+def test_the_dispatchers_install_advice_names_the_latest_tag() -> None:
+    """`.pkit/cli/pkit` advises installing pkit in two errors. Each gives the
+    install `init` prints, of the tag `latest`."""
     dispatcher = (install.find_source_kit() / "cli" / "pkit").read_text(encoding="utf-8")
-    advised = re.findall(r"^\s*uv tool install (\S+)$", dispatcher, re.MULTILINE)
+    advised = re.findall(r"^\s*(uv tool install \S+)$", dispatcher, re.MULTILINE)
 
     assert len(advised) == 2
-    assert all(url == f"{install.DISTRIBUTION_GIT_URL}@v{_VERSION_PLACEHOLDER}" for url in advised)
+    assert all(command == install.recommended_install_command() for command in advised)
 
 
 def test_the_cli_reference_names_the_install_from_main_the_development_install() -> None:

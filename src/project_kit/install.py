@@ -1280,18 +1280,19 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
     return tuple(lacking)
 
 
-#: The tag the release-tag workflow keeps on the newest release's commit (PRJ-004),
+#: The tag the release-tag workflow keeps on the highest release's commit (PRJ-004),
 #: through `scripts/latest_tag.py`.
 LATEST_TAG = "latest"
 
 
 def recommended_install_command() -> str:
-    """The install of pkit's newest release, the canonical form (PRJ-004).
+    """The install of pkit's highest release, the canonical form (PRJ-004).
 
-    It names the tag `latest`, which only the release-tag workflow writes, and
-    only onto a release's commit. So, like a release tag's, the install ties a
-    version to one content, and a project's recorded version names what it holds
-    (ADR-065 point 12). An install with no tag is the development install.
+    It names the tag `latest`, which by design only the release-tag workflow
+    writes, and only onto a release's commit. So, like a release tag's, the
+    install ties a version to one content, and a project's recorded version names
+    what it holds (ADR-065 point 12). An install with no tag is the development
+    install.
     """
     return f"uv tool install {DISTRIBUTION_GIT_URL}@{LATEST_TAG}"
 

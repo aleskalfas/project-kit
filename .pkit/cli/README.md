@@ -109,9 +109,8 @@ pkit:
         - .pkit/process/README.md#the-engine
         - .pkit/process/README.md#cascade--fold-one-child-processs-member-outcomes-core
     revalidated:
-      at: 2026-10-25T05:23:11Z
-      outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, which the process graph section already says. The four presets that name relations, a mode or a source add to an atomic filter of their kind, so the section holds.
+      at: 2026-10-25T14:39:25Z
+      outcome: updated
       deferred:
         - anchor:
             kind: record
@@ -147,7 +146,7 @@ The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `ca
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 ```
 
-The release-tag workflow moves `latest` to each new release's commit, and nothing else writes it. `pkit init` ends by printing this command. Only a tagged install ties pkit's version to one content. `latest` sits only on a release's commit, so the version a project records names the content it holds ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12).
+The release-tag workflow moves `latest` to each new release's commit, and by design nothing else writes it. `pkit init` ends by printing this command. Only a tagged install ties pkit's version to one content. `latest` sits only on a release's commit, so the version a project records names the content it holds ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12).
 
 To move the tool to a newer release, run the command again with `--force`. `pkit upgrade` installs the latest release by its own tag, where it runs its tool step ([`upgrade`](#upgrade)). uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
 
