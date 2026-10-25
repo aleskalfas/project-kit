@@ -31,7 +31,7 @@
     "default_branch": {
       "type": "string",
       "minLength": 1,
-      "description": "DEPRECATED — retired into the backbone's `repository.default-branch` (COR-054), which declares the default branch once for every reader; the 0.55.0 upgrade migration carries a value other than `main` over and removes this key. Until then, a value that differs from the backbone's names the branch pm cuts work from and targets pull requests at (DEC-013) only while the backbone declares none, with a warning; a declared value always wins.",
+      "description": "DEPRECATED — retired into the backbone's `repository.default-branch` (COR-054), which declares the default branch once for every reader; the capability's upgrade migration carries a value other than `main` over and removes this key. Until then, a value that differs from the backbone's names the branch pm cuts work from and targets pull requests at (DEC-013) only while the backbone declares none, with a warning; a declared value always wins.",
       "pattern": "^[^\\n\\r]+$"
     },
     "workstreams": {

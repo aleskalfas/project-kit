@@ -67,6 +67,8 @@ The footer is a methodology-managed region delimited by `<!-- pkit-provenance:st
 
 > **Short form**: every `pkit project-management <subcommand>` shown below also works as `pkit pm <subcommand>` — the capability registers `pm` as an alias via `aliases:` in its `package.yaml`. Both resolve to the same dispatch group; pick whichever reads better.
 
+**project-management needs a GitHub repository.** The capability keeps its work in a GitHub repository, as labels, issues and pull requests. Steps 1 and 2 work without one. From step 3 on, the checkout needs a remote on GitHub, and `gh`, GitHub's command-line tool, must be signed in to that host with `gh auth login`. Without both, `bootstrap` refuses at its first run, `--dry-run` included, and names what is missing.
+
 Four phases, in order:
 
 ### 1. Install
@@ -82,12 +84,10 @@ Copies the capability subtree into the adopter and registers it in the backbone 
 Create `.pkit/capabilities/project-management/project/config.yaml` declaring the adopter's specifics:
 
 ```yaml
+# project/config.yaml
 schema_version: 1
 has_projects_v2_board: false          # set true + projects_v2_board_id when a board is configured
-workstreams:                          # one entry per allowed workstream value
-  - capabilities
-  - schemas
-  - cli
+workstreams: []                       # the key stays, and the workstreams live in their own file
 # Optional:
 # projects_v2_board_id: 12
 # projects_v2_node_id: PVT_xxx        # board→node-id cache; populated at adoption
@@ -106,6 +106,19 @@ workstreams:                          # one entry per allowed workstream value
 #   default_owner: ai-platform-incubation   # spliced as `--owner` on cross-owner ops
 ```
 
+Declare the workstreams beside the config, in `.pkit/capabilities/project-management/project/workstreams.yaml` ([project-management:DEC-018-workstream-taxonomy-and-lifecycle]):
+
+```yaml
+# project/workstreams.yaml
+schema_version: 1
+workstreams:                          # one entry per allowed workstream value
+  - capabilities
+  - schemas
+  - cli
+```
+
+An entry can also carry attributes, such as a status and a deprecation reason, in the mapping form DEC-018 shows. `config.yaml`'s `workstreams:` key is the legacy place for the workstreams, and `pre-check` reports a legacy fallback where `workstreams.yaml` is absent. "Workstream lifecycle", under "Then use", says what filing does without the file.
+
 Further optional blocks are documented where the features that read them are described: `milestone_categories:` (per [project-management:DEC-016-time-bound-containers]), `review:` (the review-mode block under "Then use"), and `mesh_peers:` / `mesh_source:` (per [project-management:DEC-022-methodology-mesh]). The companion schema below is the complete enumeration.
 
 This config is adopter-owned. The capability's schemas are immutable kit-shipped content per the no-shared-files invariant; the config is the seam where adopter-specific values plug in.
@@ -116,7 +129,7 @@ The branch work is cut from, pull requests target (DEC-013), `merge-pr` and `don
 
 - **Read through the backbone.** pm asks `pkit repository base --json` and never resolves a branch itself: the default branch's name for the verbs; the commit `start-work` cuts from and `create-draft` counts commits beyond, for the default branch and an integration branch alike (COR-054 point 2 — the remote's copy, and the local branch only in a clone with no remote, which the backbone warns about); and the base `check-doc-mapping` compares with and where the branch left it — `--base`, else `$PKIT_CHECK_BASE`, else the default branch (point 3). `open-pr` and `land-work` name the pull request's base to the change check when they list the answers its change wrote — the default branch too, so `$PKIT_CHECK_BASE` in the environment never changes it — and the check resolves it as it resolves every branch named as a base (point 2); they fetch it first.
 - **Never a guess** (point 4). When the backbone cannot answer — `pkit` missing, a timeout, a failed run, a backbone older than `pkit repository base` — the verbs that act on the branch (`start-work`, `create-draft`, `open-pr`, `review-work`) refuse, naming the cause; `merge-pr` / `done-work` skip the local clean-up and say so; `pre-check` fails its default-branch check. A base that resolves to no commit refuses `start-work`, `create-draft` and `check-doc-mapping` with the backbone's reason and fix.
-- **pm's own `default_branch` is retired.** The 0.55.0 upgrade migration carries a value other than `main` over to `repository.default-branch` while the backbone declares none, and removes pm's key; only where carrying it over would need a guess (a backbone file it cannot append to, a value that is no branch name) does it keep the key and say how to declare it. Until a project upgrades, a value that differs from the backbone's still names the branch while the backbone declares none, with a warning; a declared value always wins. The schema still accepts the key, as deprecated.
+- **pm's own `default_branch` is retired.** The capability's upgrade migration carries a value other than `main` over to `repository.default-branch` while the backbone declares none, and removes pm's key; only where carrying it over would need a guess (a backbone file it cannot append to, a value that is no branch name) does it keep the key and say how to declare it. Until a project upgrades, a value that differs from the backbone's still names the branch while the backbone declares none, with a warning; a declared value always wins. The schema still accepts the key, as deprecated.
 
 #### The config has a schema — unknown keys are refused
 
@@ -128,7 +141,7 @@ pkit data validate .pkit/capabilities/project-management/project/config.yaml
 
 The schema sets **`additionalProperties: false`**, so an unknown or misspelled key is a loud refusal naming the offending key rather than a silent default. This matters because every reader gets at the file through defensive `.get()` access: before the schema existed, `has_projects_v2_boards` (trailing `s`) validated fine and left the adopter in label-fallback mode, discovered only when classification landed in the wrong substrate. `pre-check` covers value-level problems (the board id resolves, the branch matches, the host is reachable) but cannot see a key that was never read; the schema covers exactly that gap. `schemas/config.yaml` is also the shipped reference instance — a valid minimal config with every optional key listed as a comment.
 
-The schema's required set (`schema_version`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the transitional shim described below; it drops from both when the shim does.
+The schema's required set (`schema_version`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the legacy key step 2 describes, and both gates drop it when that key is retired.
 
 #### The `gh:` block (per [project-management:DEC-023-gh-host-and-owner])
 
@@ -138,8 +151,6 @@ Adopters whose GitHub host is not `github.com` (Enterprise GHE deployments such 
 - **`default_owner:`** — the owner spliced as `--owner` on cross-owner operations (board / org / cross-owner labels). Single-owner adopters whose board lives in the repo's owner omit the field.
 
 Both fields are optional and additive — an existing config without a `gh:` block continues to validate. **Config wins over ambient** per DEC-023: if both `GH_HOST` is set in the shell and `gh.host` is configured, the config value reaches `gh`. This makes the methodology reproducible from `config.yaml` alone.
-
-> At v0.5.0+ workstreams move from `config.yaml`'s bare list into a dedicated `.pkit/capabilities/project-management/project/workstreams.yaml` file with full attributes (status, deprecation reason, etc.) per [project-management:DEC-018-workstream-taxonomy-and-lifecycle]. The `config.yaml` form keeps working as a fallback during transition; the v0.5.0 PR ships a migration that bridges installed adopters.
 
 ### 3. Bootstrap
 
