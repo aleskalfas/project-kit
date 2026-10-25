@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-23T09:46:25Z
+      at: 2026-10-25T00:33:44Z
       outcome: unchanged
-      unchanged-because: Rules 14, 16 and 19 stop calling the permission model a capability, and only their wording changes. This page's account of the rules' numbers, titles and sections is as it was.
+      unchanged-because: Core rule 20 now says to commit what the friction writers write, and drops the answer owed after a conflict. The README's account of the rules files and their split holds.
 ---
 
 # Rules

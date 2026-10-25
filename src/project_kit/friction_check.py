@@ -1767,9 +1767,10 @@ def _questions(
     Each anchor the artefact kept from `before` and that resolves at head
     (`resolving`) is asked where it changed (`_anchor_question`); a changed
     anchor list, a move and a let-in each need a revalidation. An artefact
-    under an excluded path at head owes no answer, so nothing asks it anything.
+    under an excluded path at head owes no answer, so nothing asks it anything,
+    nor does one the project receives by sync (COR-062 point 9).
     """
-    if artefact.excluded:
+    if artefact.owes_no_answer:
         return [], []
     questions: list[_Question] = []
     notes: list[tuple[Anchor, str]] = []
@@ -2192,12 +2193,13 @@ def _triggers(
     A link is triggered when one of its trigger fields differs, parsed, between
     the base counterpart `before` and head — absent at one side and present at
     the other included. A source new in the diff triggers nothing, nor one under
-    an excluded path at head; a removed one is no head artefact. A triggered
+    an excluded path at head, nor one received by sync (COR-062 point 9); a
+    removed one is no head artefact. A triggered
     link asks after each target it lists at both sides that resolves at head
     (`resolving`): one it lists anew was linked against the new state, and a dead
     one is a dead anchor already.
     """
-    if before is None or artefact.excluded:
+    if before is None or artefact.owes_no_answer:
         return ()
     found: dict[Anchor, tuple[dict[str, None], dict[str, None], dict[str, None]]] = {}
     for link in links:

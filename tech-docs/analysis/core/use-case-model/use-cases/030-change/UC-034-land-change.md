@@ -41,9 +41,9 @@ pkit:
         - ACT-operator
         - REQ-012
     revalidated:
-      at: 2026-10-24T22:51:27Z
+      at: 2026-10-25T01:38:06Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
+      unchanged-because: Core rule 20 still has the reviewer check the answers of a direct commit and the person told first. The CLI gains a reading command, and pkit refs lookup takes several ids, which no step uses.
 ---
 
 # UC-034 — Land my change on the default branch

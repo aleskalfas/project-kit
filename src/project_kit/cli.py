@@ -31,6 +31,7 @@ from project_kit import (
     cli_render,
     default_branch,
     friction_check,
+    friction_move,
     friction_report,
     friction_repository,
     friction_resolve,
@@ -1758,10 +1759,11 @@ def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
     discovery finds, whether what changed since a commit lies inside
-    `revalidated` blocks and `revisited` lists — which never write, the
-    writers — revalidate, defer, revisit, record-status — which write one block,
-    only with consent, and resolve, which resolves a merge's conflicting
-    revalidations and revisit entries as text and writes no answer.
+    `revalidated` blocks and `revisited` lists, the plan of the move of the
+    answers into answer files — which never write, the writers — revalidate,
+    defer, revisit, record-status — which write one answer or status, only with
+    consent, and resolve, which resolves a merge's conflicting revalidations and
+    revisit entries as text and writes no answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -1846,10 +1848,13 @@ def friction_revalidate_command(
     """Write ARTEFACT's revalidation (COR-050 point 3): a fresh `at`, the outcome, and
     for `unchanged` a new `unchanged-because`.
 
-    Rewrites the `revalidated` block and nothing else in the file. Re-states
-    the deferrals kept — each named with --keep or confirmed at the prompt —
-    and removes the rest (point 4). ARTEFACT is a location (`path`, or
-    `path#id` for a collection entry) or an id.
+    Where ARTEFACT's block holds no answer, it writes into an answer file of this
+    change's own, which names every other answer file on ARTEFACT in `read`
+    (COR-062 points 1 and 4); where its block holds answers, it rewrites the
+    `revalidated` block and nothing else in the file. Re-states the deferrals
+    kept — each named with --keep or confirmed at the prompt — and drops the
+    rest (point 4). ARTEFACT is a location (`path`, or `path#id` for a
+    collection entry) or an id.
     """
     rerun = ["pkit", "friction", "revalidate", artefact, "--outcome", outcome]
     if because is not None:
@@ -1888,8 +1893,10 @@ def friction_defer_command(
     or reword the reason of the entry already there.
 
     Writes the `deferred` list and nothing else — never `at`: a deferral is
-    not a revalidation. The entry covers the anchor's changes up to the
-    commit that introduces it; rewording its reason does not move that.
+    not a revalidation. Where ARTEFACT's block holds no answer, the list is in an
+    answer file of this change's own (COR-062 point 1). The entry covers the
+    anchor's changes up to the commit that introduces it; rewording its reason
+    does not move that.
     """
     rerun = ["pkit", "friction", "defer", artefact, "--anchor", anchor, "--reason", reason]
 
@@ -1933,7 +1940,8 @@ def friction_revisit_command(
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
-    an entry is no revalidation of ARTEFACT.
+    an entry is no revalidation of ARTEFACT. Where ARTEFACT's block holds no
+    answer, the list is in an answer file of this change's own (COR-062 point 1).
     """
     rerun = [
         "pkit",
@@ -1973,6 +1981,30 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
         return friction_write.plan_record_status(target_root, artefact)
 
     _friction_write(plan_of, yes, dry_run, rerun, writes_answer=False)
+
+
+@friction.command("move-plan")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_move_plan_command(as_json: bool) -> None:
+    """Plan the move of the project's answers out of the artefacts' blocks (COR-062 point
+    11): each answer file the move would add, with its content, and each artefact file's
+    new text, its blocks' answers taken out. A reading command: it writes nothing.
+
+    The backbone migration that makes the move writes the plan's bytes. An artefact the
+    project receives by sync keeps its answers, and so does one whose answers would not
+    read back in the answer files' shape; each is listed with why. Over a project whose
+    blocks hold no answer it plans nothing.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    plan = friction_move.plan_move(target_root)
+    if as_json:
+        click.echo(friction_move.render_json(plan), nl=False)
+    else:
+        click.echo(friction_move.render_human(plan), nl=False)
 
 
 @friction.command("resolve")

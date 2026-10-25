@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T22:50:58Z
+      at: 2026-10-25T01:37:46Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
+      unchanged-because: This change adds pkit friction move-plan and rewords core rule 20, and pkit refs lookup takes several ids. Rule 19 and the cross-repository check this use case rests on are as they were.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

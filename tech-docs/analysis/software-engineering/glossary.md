@@ -76,9 +76,9 @@ TERM-conventions-corpus:
           - COR-001
           - COR-010
       revalidated:
-        at: 2026-10-20T01:37:23Z
+        at: 2026-10-25T00:36:44Z
         outcome: unchanged
-        unchanged-because: It moved into software-engineering's analysis, whose use case UC-001 alone uses it, with its definition, example and distinctions as they were. It gains COR-001 and COR-010, the records behind the core's term project, which its definition names.
+        unchanged-because: The engineer's body changes only its friction answers paragraph. The conventions corpus it reads first is unchanged.
 TERM-hand-off:
   name: hand-off
   status: active

@@ -30,9 +30,9 @@ pkit:
         - REQ-009
         - REQ-031
     revalidated:
-      at: 2026-10-24T22:52:33Z
+      at: 2026-10-25T01:38:52Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
+      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
 ---
 
 # UC-048 — Put the system's CLI on my machine at a release

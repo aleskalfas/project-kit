@@ -48,9 +48,9 @@ pkit:
         - REQ-014
         - REQ-015
     revalidated:
-      at: 2026-10-24T22:49:52Z
+      at: 2026-10-25T01:37:25Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
+      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
 ---
 
 # UC-021 — Declare my project's backbone configuration once, and have it validated

@@ -25,14 +25,11 @@ shortfalls:
     issue: "#1765"
     record: ADR-034#1
   - at: 7
-    issue: "#1873"
+    issue: "#2032"
     record: COR-062#1
   - at: "3b"
     issue: "#1765"
     record: ADR-034#1
-  - at: "4c"
-    issue: "#1873"
-    record: COR-062#5
 pkit:
   friction:
     anchors:
@@ -71,7 +68,7 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-24T20:57:14Z
+      at: 2026-10-25T00:35:03Z
       outcome: updated
 ---
 
@@ -112,7 +109,7 @@ pkit:
 > **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 > [!WARNING]
-> **Not built yet:** each answer is written in the artefact's own `friction` block. COR-062 point 1 decides that a change writes its answers in answer files of its own, and #1873 tracks it.
+> **Not built yet:** where the artefact's own `friction` block already holds an answer, each answer is written there instead, until those answers move out. COR-062 point 1 decides that a change writes its answers in answer files of its own, and #2032 tracks it.
 
 5. The developer lands the answers in a change of their own. Its [change check](../../../glossary.md#term-change-check--change-check) flags each answer the change was not asked for as `not asked for by this change`.
 6. The next [whole-repository check](../../../glossary.md#term-whole-repository-check--whole-repository-check) finds each answered artefact `current`, or `deferred` where the developer deferred it.
@@ -134,10 +131,7 @@ pkit:
 
 - **4a.** The artefact still describes what is wanted, and a [change](../../../glossary.md#term-change--change) broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The [change check](../../../glossary.md#term-change-check--change-check) asks for that revalidation, so it is not flagged at step 5.
-- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. The revalidation reads both, and replaces them (COR-062 points 5 and 7).
-
-> [!WARNING]
-> **Not built yet:** the writers write no answer file, so no revalidation reads another and replaces it. COR-062 point 5 decides that a revalidation replaces the revalidations it read, and #1873 tracks it.
+- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. `pkit friction revalidate` names the files of both in the new revalidation's `read`, so the new revalidation replaces the two (COR-062 points 5 and 7).
 
 - **5a.** An answer the developer gives is `updated`, so the artefact's content changed. Each artefact anchored to it owes an answer in the same change (COR-050 point 6), and the path rejoins at step 4 for each one.
 

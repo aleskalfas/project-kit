@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T23:35:33Z
+      at: 2026-10-25T01:39:18Z
       outcome: unchanged
-      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. What this README says of the commands an adapter runs is untouched."
+      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. What this README says of the commands an adapter runs holds.
 ---
 
 # Adapters

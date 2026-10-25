@@ -1722,10 +1722,11 @@ def _check_artefact(
     An artefact under an excluded path has no report and no stale or deferred
     finding — it is left out of the debt as of the measures (point 7) — and
     only what it declares is checked: dead anchors, unresolved kinds, missing
-    answers and over-broad anchors. An artefact with an anchor that cannot be
-    resolved is not judged (`ArtefactState.UNRESOLVED`): what its other
-    anchors owe is still found and reported, and its state says the reading
-    is not whole.
+    answers and over-broad anchors. So it is with an artefact the project
+    receives by sync, which owes it no answer (COR-062 point 9). An artefact
+    with an anchor that cannot be resolved is not judged
+    (`ArtefactState.UNRESOLVED`): what its other anchors owe is still found and
+    reported, and its state says the reading is not whole.
     """
 
     def finding(
@@ -1757,7 +1758,7 @@ def _check_artefact(
         shared = judge.shared_id(anchor)
         if shared is not None:
             broad.append(finding(shared.kind, shared.message, anchor))
-    if artefact.excluded:
+    if artefact.owes_no_answer:
         return None, problems + broad
 
     answers = judge.answers_of(artefact)
@@ -2255,7 +2256,7 @@ def _traced(
     artefact: Artefact, judge: _Judge, findings: Sequence[RepositoryFinding]
 ) -> tuple[TracedFinding, ...]:
     """Each finding with the commits behind it (see `TracedFinding`)."""
-    if artefact.excluded:  # only its declarations were checked: nothing lies behind them
+    if artefact.owes_no_answer:  # only its declarations were checked: nothing lies behind them
         return tuple(TracedFinding(f, ()) for f in findings)
     history = judge.history
     points = judge.points(artefact).points  # the check's own walk, kept

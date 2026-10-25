@@ -43,8 +43,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:55:38Z
-      outcome: updated
+      at: 2026-10-25T00:33:52Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 changes its words on answers. The rules a session starts with are loaded as this use case says.
 ---
 
 # UC-026 — Start every session with the project's rules loaded

@@ -25,9 +25,9 @@ pkit:
         - software-analysis:DEC-001#9
         - COR-050#3
     revalidated:
-      at: 2026-10-24T10:39:54Z
+      at: 2026-10-25T00:34:44Z
       outcome: unchanged
-      unchanged-because: The authoring skill gains a step that runs `pkit analysis link` after stamping. The links are no proposal, and an agent still proposes what a person decides.
+      unchanged-because: The resolver's body changes only in naming the answers its commands write. It still proposes, and runs no writer.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
