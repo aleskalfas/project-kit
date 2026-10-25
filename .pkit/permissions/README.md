@@ -31,9 +31,8 @@ pkit:
         - .pkit/capabilities/project-management/README.md#permissions
         - .pkit/capabilities/project-management/README.md#the-rules-of-a-fixers-run
     revalidated:
-      at: 2026-10-25T03:46:19Z
-      outcome: unchanged
-      unchanged-because: Folders a sync writes now also says process couple and hand-off refuse a definition received by sync. This page points there only for the refusal of permissions scaffold, which the change leaves as it was, so it holds.
+      at: 2026-10-25T13:23:30Z
+      outcome: updated
 ---
 
 # The permission model

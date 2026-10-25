@@ -27,9 +27,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-25T00:55:28Z
+      at: 2026-10-25T13:23:28Z
       outcome: unchanged
-      unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json, and the prose lint now counts the sentences of a paragraph. What CONTRIBUTING says of authoring and checking records, and of running the lint, is untouched by the first.
+      unchanged-because: WRITE now says that REWORK brings its rules to the pages the rework rewrote. What CONTRIBUTING cites of WRITE, the How of RS-WRITE-005, 007, 008, 013 and 017, is untouched, so it holds.
       deferred:
         - anchor:
             kind: record
