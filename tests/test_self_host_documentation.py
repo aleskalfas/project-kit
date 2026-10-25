@@ -27,6 +27,7 @@ realises, over the real repository:
 
 from __future__ import annotations
 
+import functools
 import importlib.util
 import json
 import subprocess
@@ -38,6 +39,7 @@ from click.testing import CliRunner
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
+from project_kit import answer_files
 from project_kit import config_validate as cv
 from project_kit import docs_roots as dr
 from project_kit import rule_sets as rs
@@ -325,14 +327,28 @@ def _friction(front: dict) -> dict:
     return (front.get("pkit") or {}).get("friction") or {}
 
 
+@functools.cache
+def _revalidated() -> frozenset[str]:
+    """The artefacts a revalidation in this tree's answer files names (COR-062 point 1)."""
+    return frozenset(
+        entry.location
+        for found in answer_files.working_tree_files(REPO).values()
+        for entry in found.entries
+        if entry.revalidation is not None
+        and entry.revalidation.at is not None
+        and entry.revalidation.outcome in ("updated", "unchanged")
+    )
+
+
 # Asserts what this tree's answers hold, so the short check runs it (ADR-067).
 @pytest.mark.answers
 @pytest.mark.parametrize("place", _project_places())
 def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> None:
     """A place's document is a page (living-docs DEC-001 point 4): its reader —
     the one its space serves — and a kind whose template the capability ships
-    (RS-LDOC-004), then a friction block that anchors what the page describes
-    and records its revalidation (COR-050 points 2 and 3)."""
+    (RS-LDOC-004), then a friction block that anchors what the page describes,
+    and an answer file that records its revalidation (COR-050 points 2 and 3,
+    COR-062 point 1)."""
     front = _front_matter(place)
     schema = json.loads((LIVING_DOCS / "schemas" / "page.schema.json").read_text(encoding="utf-8"))
     assert list(Draft202012Validator(schema).iter_errors(front)) == [], place
@@ -342,8 +358,7 @@ def test_every_declared_place_is_a_page_anchored_and_revalidated(place: str) -> 
     friction = _friction(front)
     anchors = friction.get("anchors") or {}
     assert any(anchors.values()), f"{place}: no anchor"
-    revalidated = friction.get("revalidated") or {}
-    assert revalidated.get("at") and revalidated.get("outcome") in ("updated", "unchanged"), place
+    assert place in _revalidated(), f"{place}: no revalidation in an answer file"
 
 
 def test_no_page_path_anchors_another_page() -> None:
