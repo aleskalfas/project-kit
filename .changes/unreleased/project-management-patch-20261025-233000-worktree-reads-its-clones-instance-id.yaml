@@ -1,0 +1,15 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  A session in a linked git worktree reads its clone's instance id (#1140), so a
+  subagent's worktree carries the id of the clone it belongs to. A worktree with
+  no `clone.json` of its own reads the main working tree's, found through git's
+  common directory. A worktree that sets its own id keeps it. Where git locates
+  no main working tree, as in a bare repository or a clone made with
+  `--separate-git-dir`, a worktree reads its own file alone. `set-instance`
+  writes and clears the worktree's own file, and `--show` says when the id it
+  prints is the clone's. DEC-035 point 1 says that a clone includes its
+  worktrees unless a worktree sets its own id. The file's location and its
+  `runtime_ignore:` declaration are unchanged.

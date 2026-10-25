@@ -16,9 +16,14 @@ This sets *which clone am I* only. It does not touch any issue — the per-issue
 ownership marker is written by the lifecycle commands (create-issue / start-work /
 handoff-issue), which read this id.
 
+A clone includes its linked git worktrees: a worktree with no id of its own
+reads the main working tree's. Setting and clearing act on the local file only,
+so a worktree can take a number of its own and clear it again.
+
 Usage:
   set-instance <N>       set this clone's instance id (positive integer)
-  set-instance --show    print the current id (or `unset`)
+  set-instance --show    print the current id (or `unset`), and where a
+                         worktree reads its clone's from
   set-instance --clear   unset (revert to the no-op default)
 
 Self-contained via PEP 723; runs via
@@ -41,6 +46,9 @@ sys.path.insert(0, str(_HERE))
 from _lib import bootstrap_gate, session_guard
 from _lib.instance_identity import (
     clear_instance_id,
+    identity_path,
+    identity_source,
+    main_work_tree_identity_path,
     read_instance_id,
     write_instance_id,
 )
@@ -49,18 +57,21 @@ from _lib.membership import CAPABILITY_NAME, resolve_capability_root
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Set this clone's instance id (opt-in, per-clone; DEC-035).",
+        description=("Set this clone's instance id, or a linked worktree's own (opt-in; DEC-035)."),
     )
     parser.add_argument(
         "instance",
         nargs="?",
         type=int,
-        help="Instance number to set for this clone (positive integer).",
+        help=(
+            "Instance number to set here (positive integer); in a linked worktree, "
+            "a number of the worktree's own."
+        ),
     )
     parser.add_argument(
         "--show", action="store_true", help="Print the current instance id and exit."
     )
-    parser.add_argument("--clear", action="store_true", help="Unset this clone's instance id.")
+    parser.add_argument("--clear", action="store_true", help="Unset the instance id set here.")
     parser.add_argument(
         "--capability-root",
         type=Path,
@@ -90,7 +101,18 @@ def main() -> int:
     if args.show:
         # Read-only — no mutation, so the foreign-repo guard does not apply.
         current = read_instance_id(capability_root)
-        print(f"instance: {current}" if current is not None else "instance: unset")
+        source = identity_source(capability_root)
+        if current is None and source is not None:
+            # A file that cannot be read fails closed to unset; say which one.
+            print(f"instance: unset (the id file cannot be read: {source})")
+            return 0
+        if current is None:
+            print("instance: unset")
+            return 0
+        if source is not None and source != identity_path(capability_root):
+            print(f"instance: {current} (the clone's, read from the main working tree: {source})")
+        else:
+            print(f"instance: {current}")
         return 0
 
     # Validate arguments before any mutation.
@@ -114,15 +136,30 @@ def main() -> int:
 
     if args.clear:
         removed = clear_instance_id(capability_root)
-        print(
-            "cleared this clone's instance id (now a non-participating clone)."
-            if removed
-            else "no instance id was set — nothing to clear."
-        )
+        # A worktree that has no id of its own reads its clone's.
+        inherited = read_instance_id(capability_root)
+        if removed and inherited is None:
+            print("cleared this clone's instance id (now a non-participating clone).")
+        elif removed:
+            print(
+                "cleared this worktree's own instance id; it reads its clone's, "
+                f"instance {inherited}, from the main working tree."
+            )
+        elif inherited is None:
+            print("no instance id was set — nothing to clear.")
+        else:
+            print(
+                "this worktree has no instance id of its own — nothing to clear. "
+                f"It reads its clone's, instance {inherited}, from the main working "
+                "tree; clear it there."
+            )
         return 0
 
     path = write_instance_id(capability_root, args.instance)
-    print(f"this clone is now instance {args.instance}.")
+    if main_work_tree_identity_path(capability_root) is not None:
+        print(f"this worktree is now instance {args.instance}, a number of its own.")
+    else:
+        print(f"this clone is now instance {args.instance}.")
     print(f"  written: {path} (git-ignored — never committed)")
     return 0
 

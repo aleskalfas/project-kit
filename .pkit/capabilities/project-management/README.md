@@ -618,6 +618,12 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 | `set-instance --show` | Print the current id, or `unset`. |
 | `set-instance --clear` | Unset — revert to the non-participating no-op default. |
 
+**A clone includes its linked git worktrees** (DEC-035 point 1). A worktree with no id file of its own reads the main working tree's file, found through git's common directory. A session in a worktree, such as a subagent's, then carries its clone's id. Where git locates no main working tree, a worktree reads its own file alone: in a bare repository, and in a clone made with `git clone --separate-git-dir`.
+
+`set-instance <N>` and `--clear` act on the file of the worktree they run in. So a worktree can take a number of its own, and clearing that number returns the worktree to its clone's id. `--show` says when the id it prints is the clone's, and names an id file it cannot read. A worktree's own file decides even then: it reads as unset, never as the clone's id.
+
+Sessions that read one id are one instance, and the clash guard does not stand between them. Give a worktree a number of its own where its work must be kept apart from its clone's.
+
 Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
