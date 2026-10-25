@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-25T01:39:18Z
+      at: 2026-10-25T05:23:15Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. What this README says of the commands an adapter runs holds.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, and the command keeps the same edges. This page says nothing of that graph, so it holds.
 ---
 
 # Adapters

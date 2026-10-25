@@ -38,9 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-25T01:37:46Z
+      at: 2026-10-25T05:23:52Z
       outcome: unchanged
-      unchanged-because: This change adds pkit friction move-plan and rewords core rule 20, and pkit refs lookup takes several ids. Rule 19 and the cross-repository check this use case rests on are as they were.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

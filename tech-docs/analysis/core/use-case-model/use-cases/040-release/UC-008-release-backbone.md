@@ -52,9 +52,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-25T01:38:38Z
+      at: 2026-10-25T05:24:18Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-008 — Release the backbone so adopters can upgrade and pin to it

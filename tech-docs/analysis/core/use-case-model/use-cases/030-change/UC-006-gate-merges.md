@@ -69,9 +69,9 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-25T01:37:54Z
+      at: 2026-10-25T05:23:56Z
       outcome: unchanged
-      unchanged-because: The change check asks nothing of an artefact received by sync, the CLI gains a reading command, and pkit refs lookup takes several ids. The gate a merge passes is as this use case says.
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-006 — Make my merges wait on the system's checks
