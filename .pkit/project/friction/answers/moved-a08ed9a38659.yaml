@@ -1,0 +1,5 @@
+answers:
+  - artefact: .pkit/permissions/README.md
+    revalidated:
+      at: 2026-10-25T13:55:31Z
+      outcome: updated

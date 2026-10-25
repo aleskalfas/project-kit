@@ -34,9 +34,6 @@ pkit:
         - .pkit/capabilities/project-management/README.md#permissions
         - .pkit/capabilities/project-management/README.md#the-rules-of-a-fixers-run
       source: [claude-code-hooks, claude-code-permission-modes]
-    revalidated:
-      at: 2026-10-25T13:55:31Z
-      outcome: updated
 ---
 
 # The permission model
