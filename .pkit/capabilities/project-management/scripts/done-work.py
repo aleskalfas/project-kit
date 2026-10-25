@@ -180,6 +180,9 @@ Side-effects, in order (#878; the merge mechanic itself lives once in
     default one, where GitHub does not auto-close), its state label is
     reconciled to done, and its closure cascade runs (DEC-006). A failure is
     a warning naming the re-run, and the run exits with it after cleanup.
+    Where this clone set an instance id, that close-issue also releases each
+    issue's instance ownership (DEC-035 point 4): done-work releases through
+    it and writes no ownership marker itself.
   - Best-effort branch cleanup, after the transition and the closes: the
     head branch deleted on GitHub by the backbone (`pkit pull-request
     delete-branch <PR> --expect <the head that merged>`), only while its tip

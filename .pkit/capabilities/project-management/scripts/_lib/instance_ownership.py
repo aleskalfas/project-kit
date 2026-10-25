@@ -40,8 +40,13 @@ Two sole-constructors, each the *only* place its write is built (ADR-041 §3):
     issue body by **full overwrite** from the folded resolution (never an append;
     the region is derived, the comment log is its regeneration spine — ADR-041 §4).
 
-The label backend's add/remove (:func:`instance_label`) is the third covered
-write, kept for the ``label`` selector (DEC-035's original mechanism).
+The label backend's add/remove (:func:`instance_label_args`) and its lazy
+creation (:func:`instance_label_create_args`) are the other covered writes, kept
+for the ``label`` selector (DEC-035's original mechanism).
+
+When each write fires — the claim at filing and at start-work, the same-instant
+back-off, the release on close — is ``_lib/instance_claims``'s, the lifecycle
+side of DEC-035.
 
 Realm-blindness (ADR-041 §6)
 ----------------------------
@@ -375,12 +380,30 @@ def instance_label_args(
     """Construct the ``gh issue edit`` add/remove argv for an ``instance:N`` label.
 
     The label backend's write constructor (the ``label`` selector). Kept for repos
-    that opt into DEC-035's original label mechanism; a comment-mode repo never
-    calls it. Label *creation* is out of scope here — a label-mode repo has the
-    labels (bootstrap/greenfield); comment-mode is precisely the label-locked case.
+    that opt into DEC-035's original label mechanism. A comment-mode repo calls it
+    only to remove a residual label left from a label-mode past (ADR-041 §2). The
+    label's creation is :func:`instance_label_create_args`.
     """
     flag = "--remove-label" if remove else "--add-label"
     return ["gh", "issue", "edit", str(issue_number), flag, instance_label(instance)]
+
+
+def instance_label_create_args(*, instance: int) -> list[str]:
+    """Construct the ``gh label create`` argv for an ``instance:N`` label.
+
+    DEC-035 point 2 creates the label lazily, on its first use, so bootstrap
+    stays untouched: a ``label``-mode claim whose add fails asks for this once,
+    then adds again. Only a repo that selected ``label`` calls it, which is the
+    adopter's word that labels are creatable there (DEC-043 point 2).
+    """
+    return [
+        "gh",
+        "label",
+        "create",
+        instance_label(instance),
+        "--description",
+        f"Owned by instance {instance} of its assignee (instance ownership)",
+    ]
 
 
 # ---- derived owner-mirror (description regenerator) ----------------------

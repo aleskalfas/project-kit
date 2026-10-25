@@ -9,6 +9,7 @@ import os
 import subprocess
 import sys
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 from types import ModuleType
 from typing import Any, cast
@@ -2718,19 +2719,26 @@ def _run_done_work_end_to_end(
     *,
     milestone: dict[str, Any] | None = None,
     merged_by_queue: bool = False,
+    claimed_by: int | None = None,
 ) -> _EndToEnd:
     """done-work on #42, carrying `primary_label`, with the REAL move-issue and
     close-issue run against the stateful fake `gh`. With `milestone` (a
     Milestone as `gh api` returns it), #42 is scheduled into it by its native
     field — the only issue in it. With `merged_by_queue`, the run is the one
     after a merge queue merged PR #496 (#1011): no open PR, the merged one from
-    the branch, and #42 closed by GitHub as it merged."""
+    the branch, and #42 closed by GitHub as it merged. With `claimed_by`, this
+    clone is that instance (DEC-035) and #42 is assigned to the fake's account
+    and claimed by it for that instance."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
     cap_root.mkdir(parents=True)
     _mark_bootstrapped(cap_root)
     shutil.copytree(CAPABILITY_ROOT_DW / "schemas", cap_root / "schemas")
+    if claimed_by is not None:
+        from _lib.instance_identity import write_instance_id
+
+        write_instance_id(cap_root, claimed_by)
 
     feature = {
         "title": "[Feature] widgets",
@@ -2747,6 +2755,17 @@ def _run_done_work_end_to_end(
     merged_at = "2026-09-30T10:00:00Z"
     if merged_by_queue:
         task = {**task, "state": "CLOSED", "closedAt": "2026-09-30T10:00:04Z"}
+    if claimed_by is not None:
+        from _lib.instance_ownership import format_event_comment
+
+        claim = format_event_comment(
+            event="claim", instance=claimed_by, ts=datetime(2026, 9, 1, tzinfo=UTC)
+        )
+        task = {
+            **task,
+            "assignees": [{"login": "octocat"}],
+            "comments": [{"body": claim, "author": {"login": "octocat"}}],
+        }
     state = {
         "issues": {"42": task, "7": feature},
         "milestones": milestones,
@@ -2876,6 +2895,27 @@ def test_an_issue_in_review_is_closed_as_before(
     ]
     assert run.calls.index(edits[0]) >= run.calls_at_merge
     assert "lead-in" not in run.out
+
+
+def test_a_merge_releases_the_issues_instance_ownership(
+    dw: ModuleType,
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capfd: pytest.CaptureFixture[str],
+) -> None:
+    """With an instance id set, the close-issue done-work runs after the merge
+    releases the issue's owner (DEC-035 point 4): done-work writes no marker
+    itself."""
+    run = _run_done_work_end_to_end(dw, tmp_path, monkeypatch, capfd, "state:review", claimed_by=2)
+    assert run.rc == 0, run.out + run.err
+    assert run.end["state"] == "CLOSED"
+    bodies = [comment["body"] for comment in run.end["comments"]]
+    assert "event=claim instance=2 " in bodies[0]
+    assert "completed by merged PR #496" in bodies[1]
+    assert "event=release instance=2 " in bodies[2]
+    assert "[ok] ownership: #42 released (instance 2)." in run.out
+    release = next(i for i, c in enumerate(run.calls) if "--body" in c and "release" in c[-1])
+    assert release > run.calls_at_merge
 
 
 # ---- a merge that finishes a Milestone (#414) ---------------------------

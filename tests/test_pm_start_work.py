@@ -11,6 +11,7 @@ from typing import Any
 import pytest
 
 from tests.pm_composed_move_support import FakeEngine, MoveIssueInProcess, status_at
+from tests.pm_ownership_support import FakeGitHub, clone_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT = REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "start-work.py"
@@ -403,10 +404,13 @@ def test_start_work_refuses_a_base_that_resolves_nowhere(
 @pytest.fixture
 def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
     """Returns `run(issue, move_rc=0, engine=None, config=None, move=None,
-    dry_run=False) -> (rc, mutations)` over stubbed seams. `engine` is the
-    process engine, a `FakeEngine` (by default one that gives no answer);
-    `config` adds to the adopter config. `move` runs the composed move-issue in
-    process; without it the move is recorded and answers `move_rc`."""
+    dry_run=False, instance=None, github=None) -> (rc, mutations)` over stubbed
+    seams. `engine` is the process engine, a `FakeEngine` (by default one that
+    gives no answer); `config` adds to the adopter config. `move` runs the
+    composed move-issue in process; without it the move is recorded and answers
+    `move_rc`. `instance` is this clone's instance id (none by default), and
+    `github` the in-memory GitHub its ownership calls reach; each ownership
+    write is recorded as `("ownership", <gh verb>)`."""
     from types import SimpleNamespace
 
     def run(
@@ -416,8 +420,19 @@ def run_main(sw: Any, monkeypatch: pytest.MonkeyPatch, backbone: Any) -> Any:
         config: dict | None = None,
         move: MoveIssueInProcess | None = None,
         dry_run: bool = False,
+        instance: int | None = None,
+        github: FakeGitHub | None = None,
     ):
         mutations: list[tuple] = []
+        fake = github if github is not None else FakeGitHub()
+
+        def ownership_gh(args: list[str], _config: dict) -> Any:
+            if args[1:3] != ["issue", "view"]:
+                mutations.append(("ownership", args[2]))
+            return fake(args)
+
+        clone_with(sw.instance_claims, monkeypatch, instance)
+        monkeypatch.setattr(sw.instance_claims, "_gh", ownership_gh)
         argv = ["start-work", "42", "--yes", *(["--dry-run"] if dry_run else [])]
         monkeypatch.setattr(sys, "argv", argv)
         monkeypatch.setattr(sw, "resolve_capability_root", lambda _e: CAP_ROOT)
@@ -599,3 +614,126 @@ def test_a_value_in_the_environment_does_not_stand_in_for_the_labels(
     assert rc == 2
     assert mutations == []
     assert "the issue is in 'todo'" in capsys.readouterr().err
+
+
+# ---- instance ownership: the commons claim (DEC-035 points 3 and 6) -----------
+#
+# With an instance id set, start-work claims an issue no instance owns once the
+# assignee is set, ahead of the move. The in-memory GitHub holds issue #42 with
+# the assignee the run writes, as GitHub would after it.
+
+
+def _assigned_42() -> FakeGitHub:
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    return github
+
+
+def _stamp(sw, event: str, instance: int) -> str:
+    from datetime import UTC, datetime
+
+    return sw.instance_claims.ownership.format_event_comment(
+        event=event, instance=instance, ts=datetime(2026, 7, 7, tzinfo=UTC)
+    )
+
+
+def test_with_no_instance_id_start_work_is_unchanged(run_main, capsys) -> None:
+    github = _assigned_42()
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), github=github)
+    assert rc == 0
+    assert mutations == [
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("move", "in-progress"),
+    ]
+    assert github.calls == []
+    captured = capsys.readouterr()
+    assert "ownership" not in captured.out + captured.err
+
+
+def test_claims_an_unowned_issue_before_the_move(run_main, capsys) -> None:
+    github = _assigned_42()
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == 0
+    assert mutations == [
+        ("branch", "fix/42-do-the-thing"),
+        ("assignee", "me"),
+        ("ownership", "comment"),
+        ("ownership", "edit"),
+        ("move", "in-progress"),
+    ]
+    out = capsys.readouterr().out
+    assert (
+        "  ownership: claimed for instance 2 (comment substrate), where no instance owns it" in out
+    )
+    assert "[ok] ownership: #42 claimed for instance 2 (comment substrate)." in out
+
+
+def test_an_issue_another_instance_owns_is_started_unclaimed(run_main, sw, capsys) -> None:
+    """Owned by another instance, the issue is not claimed. Refusing the start is
+    the clash guard's, which this does not add."""
+    github = _assigned_42()
+    github.post(42, _stamp(sw, "claim", 3))
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == 0
+    assert ("move", "in-progress") in mutations
+    assert not [m for m in mutations if m[0] == "ownership"]
+    assert "#42 is owned by instance 3" in capsys.readouterr().out
+
+
+def test_a_lost_same_instant_claim_stops_before_the_move(run_main, sw, capsys) -> None:
+    """Instance 1 claims in the same instant: this clone, instance 2, withdraws
+    its claim, does not move the issue, and names the branch it cut."""
+    github = _assigned_42()
+
+    def rival(number: int, seen: int) -> None:
+        if seen == 1:
+            github.post(number, _stamp(sw, "claim", 1))
+
+    github.on_view = rival
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == sw.EXIT_CLAIM_LOST == 2
+    assert ("move", "in-progress") not in mutations
+    assert ("ownership", "comment") in mutations
+    err = capsys.readouterr().err
+    assert "this clone, instance 2, withdrew its claim" in err
+    assert "[stopped] start-work #42: instance 1 claimed it in the same instant" in err
+    assert "git checkout main && git branch -D fix/42-do-the-thing" in err
+
+
+def test_a_lost_claim_whose_withdrawal_fails_still_stops(run_main, sw, capsys) -> None:
+    """The issue is instance 1's either way, so this clone does not move it."""
+    github = _assigned_42()
+
+    def rival(number: int, seen: int) -> None:
+        if seen == 1:
+            github.post(number, _stamp(sw, "claim", 1))
+            github.failing.add("comment")
+
+    github.on_view = rival
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == sw.EXIT_CLAIM_LOST
+    assert ("move", "in-progress") not in mutations
+    err = capsys.readouterr().err
+    assert "could not withdraw its own claim" in err
+    assert "[stopped] start-work #42: instance 1 claimed it" in err
+
+
+def test_a_failed_claim_still_starts_the_work(run_main, capsys) -> None:
+    github = _assigned_42()
+    github.failing.add("comment")
+    rc, mutations = run_main(_task(["type:bug", "state:backlog"]), instance=2, github=github)
+    assert rc == 0
+    assert ("move", "in-progress") in mutations
+    assert "[warn] ownership: the claim on #42 failed" in capsys.readouterr().err
+
+
+def test_a_dry_run_claims_nothing(run_main, capsys) -> None:
+    github = _assigned_42()
+    rc, mutations = run_main(
+        _task(["type:bug", "state:backlog"]), dry_run=True, instance=2, github=github
+    )
+    assert rc == 0
+    assert mutations == []
+    assert github.calls == []
+    assert "  ownership: claimed for instance 2" in capsys.readouterr().out

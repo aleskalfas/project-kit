@@ -20,6 +20,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from tests import pm_lifecycle_world as lw
+from tests.pm_ownership_support import FakeGitHub, clone_with
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCRIPT_PATH = (
@@ -742,10 +743,30 @@ class _Stdin:
 
 
 def _close(
-    ci, monkeypatch, argv: list[str], issue: dict, *, tty: bool, reply: str | None = None
+    ci,
+    monkeypatch,
+    argv: list[str],
+    issue: dict,
+    *,
+    tty: bool,
+    reply: str | None = None,
+    instance: int | None = None,
+    github: FakeGitHub | None = None,
 ) -> SimpleNamespace:
     """Run close-issue's main() on issue #42 with every other gate passed, and
-    record each `gh` call and each move handed to the engine."""
+    record each `gh` call and each move handed to the engine. `instance` is this
+    clone's instance id (none by default); its ownership calls reach `github`,
+    and each write among them is recorded in `calls` too."""
+    calls: list[list[str]] = []
+    fake = github if github is not None else FakeGitHub()
+
+    def ownership_gh(args: list[str], _config: dict):
+        if args[1:3] != ["issue", "view"]:
+            calls.append(args)
+        return fake(args)
+
+    clone_with(ci.instance_claims, monkeypatch, instance)
+    monkeypatch.setattr(ci.instance_claims, "_gh", ownership_gh)
     monkeypatch.setattr(sys, "argv", ["close-issue", "42", *argv, "--no-cascade"])
     monkeypatch.setattr(sys, "stdin", _Stdin(tty))
     prompts: list[str] = []
@@ -773,7 +794,6 @@ def _close(
     record = {"body": "## What\nx\n", "state": "OPEN", "milestone": None, **issue}
     monkeypatch.setattr(ci, "_gh_get_issue", lambda n, _config: record if n == 42 else None)
     monkeypatch.setattr(ci, "_gh_get_pr", lambda n, _config: MERGED_FROM_42 if n == 1042 else None)
-    calls: list[list[str]] = []
 
     def fake_gh_run(cmd, config, **kwargs):
         calls.append(cmd)
@@ -835,6 +855,86 @@ def test_held_close_dry_run_needs_no_authorisation(
     assert run.rc == 0
     assert run.calls == []
     assert "[dry-run]" in capsys.readouterr().out
+
+
+# ---- instance ownership: the release on close (DEC-035 point 4) -------------
+#
+# With an instance id set, every close releases the issue's owner once it has
+# closed it. The in-memory GitHub holds #42, claimed by this account's instance 2.
+
+#: A merge closed #42 already: the pr-merge path done-work runs for each issue.
+#: Its write is the label reconcile, so its third member is None.
+CLOSED_BY_A_MERGE = pytest.param(
+    ["--mode", "pr-merge", "--pr", "1042"],
+    {"title": "[Task] landed", "labels": [{"name": "state:review"}], "state": "CLOSED"},
+    None,
+    id="pr-merge-after-a-merge",
+)
+
+
+def _claimed_42(ci) -> FakeGitHub:
+    from datetime import UTC, datetime
+
+    github = FakeGitHub()
+    github.add(42, assignees=("me",))
+    github.post(
+        42,
+        ci.instance_claims.ownership.format_event_comment(
+            event="claim", instance=2, ts=datetime(2026, 7, 7, tzinfo=UTC)
+        ),
+    )
+    return github
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), [*HELD_CLOSES, CLOSED_BY_A_MERGE])
+def test_a_close_releases_the_owner_after_closing(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    github = _claimed_42(ci)
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, instance=2, github=github)
+    assert run.rc == 0
+    release = next(i for i, c in enumerate(run.calls) if c[2] == "comment" and "release" in c[-1])
+    reconcile = next(i for i, c in enumerate(run.calls) if "state:done" in c)
+    assert reconcile < release
+    assert close is None or run.calls.index(close) < release
+    events = [c["body"] for c in github.issues[42].comments]
+    assert "event=release instance=2 " in events[-1]
+    assert "_Unclaimed_" in github.issues[42].body
+    out = capsys.readouterr().out
+    assert "  ownership:    released on close (this clone is instance 2" in out
+    assert "[ok] ownership: #42 released (instance 2)." in out
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), [*HELD_CLOSES, CLOSED_BY_A_MERGE])
+def test_with_no_instance_id_a_close_is_unchanged(
+    ci, monkeypatch, capsys, argv, issue, close
+) -> None:
+    github = _claimed_42(ci)
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, github=github)
+    assert run.rc == 0
+    assert github.calls == []
+    captured = capsys.readouterr()
+    assert "ownership" not in captured.out + captured.err
+
+
+@pytest.mark.parametrize(("argv", "issue", "close"), [*HELD_CLOSES, CLOSED_BY_A_MERGE])
+def test_a_dry_run_releases_nothing(ci, monkeypatch, argv, issue, close) -> None:
+    github = _claimed_42(ci)
+    run = _close(ci, monkeypatch, [*argv, "--dry-run"], issue, tty=False, instance=2, github=github)
+    assert run.rc == 0
+    assert github.calls == []
+
+
+def test_a_failed_release_leaves_the_close_standing(ci, monkeypatch, capsys) -> None:
+    github = _claimed_42(ci)
+    github.failing.add("comment")
+    argv, issue, close = HELD_CLOSES[0].values
+    run = _close(ci, monkeypatch, [*argv, "--yes"], issue, tty=False, instance=2, github=github)
+    assert run.rc == 0
+    assert close in run.calls
+    assert "[warn] ownership: #42 closed, but its owner could not all be released" in (
+        capsys.readouterr().err
+    )
 
 
 # ---- #1937 end to end — an EPIC's two children close one after the other ------

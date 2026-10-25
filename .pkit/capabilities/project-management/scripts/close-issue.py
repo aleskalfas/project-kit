@@ -87,6 +87,17 @@ it) writes NO kit ``state:*`` label — the open/closed substrate carries termin
 state, so closing the issue *is* the state write (ADR-026 §5). The map is loaded
 once in :func:`main` and threaded into every reconcile call.
 
+With an instance id set (`set-instance`, DEC-035 point 1), each path releases
+the issue's instance ownership once it has closed the issue, before the
+closure cascade (DEC-035 point 4), through `_lib/instance_claims`: whichever
+instance owned it, every owner is cleared. A container that closes through
+`--mode=cascade-eligibility-close` is released here too, so the engine's fold
+stays realm-blind (DEC-035 point 8). `done-work` releases through this script,
+which it runs for each issue its merge closed. A release that fails is a
+warning, and the close stands. A dry run, and a run that finds the issue
+already closed in won't-do or cascade mode, release nothing. With no id set,
+nothing of this runs.
+
 Membership gate per DEC-021 runs at startup.
 
 Self-contained via PEP 723; runs via
@@ -125,6 +136,7 @@ from _lib import (
     bootstrap_gate,
     containment,
     engine_said,
+    instance_claims,
     issue_branch,
     session_guard,
 )
@@ -332,11 +344,17 @@ def main() -> int:
         actor=invoker.github_login,
     )
 
+    # Instance ownership (DEC-035): None unless this clone set an instance id,
+    # and then nothing below changes.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login)
+
     print(f"close-issue: #{args.issue_number}")
     print(f"  title:        {title}")
     print(f"  type:         {structural_type or '<unrecognised prefix>'}")
     print(f"  current state: {state}")
     print(f"  mode:         {args.mode}")
+    if clone is not None:
+        print(f"  ownership:    {instance_claims.release_plan(clone)}")
 
     if args.mode == "wont-do":
         if state == "closed":
@@ -566,6 +584,12 @@ def main() -> int:
             return 3
         close_move.record("cascade-eligibility close: every child closed and every checkbox ticked")
         print(f"\n[ok] closed #{args.issue_number} (cascade-eligibility, completed).")
+
+    # Release the closed issue's instance ownership (DEC-035 point 4). Every path
+    # that reaches here closed the issue, or found it closed by a merge, except
+    # a pr-merge dry run, which writes nothing.
+    if clone is not None and not args.dry_run:
+        instance_claims.say(instance_claims.release(args.issue_number, clone, config))
 
     # Closure cascade — semi-automatic per DEC-006: it reports eligibility and
     # closes nothing, over the parent issues and the Milestones alike.

@@ -199,6 +199,13 @@ def test_label_backend_constructor(io) -> None:
     assert io.instance_label_args(issue_number=7, instance=3, remove=True)[-2] == "--remove-label"
 
 
+def test_label_create_constructor(io) -> None:
+    """DEC-035 point 2 creates the label lazily; the seam builds that write too."""
+    args = io.instance_label_create_args(instance=3)
+    assert args[:4] == ["gh", "label", "create", "instance:3"]
+    assert "--description" in args
+
+
 # ---- derived mirror ------------------------------------------------------
 
 

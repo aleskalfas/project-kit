@@ -30,6 +30,14 @@ Side-effects:
   - Creates branch `<type>/<N>-<kebab-slug>` (type from issue's type:*
     label; slug from the issue title).
   - Sets assignee to the current invoker.
+  - With an instance id set (`set-instance`, DEC-035 point 1), claims the
+    issue for this clone once the assignee is set, where no instance owns it
+    (DEC-035 point 3), through `_lib/instance_claims`. The claim re-reads the
+    issue: where a lower-numbered instance claimed in the same instant, this
+    clone withdraws its claim and stops before the move, naming the branch it
+    left (DEC-035 point 6). It stops there too when the withdrawal could not
+    be written. Any other claim that fails is a warning, and the work starts
+    unclaimed. With no id set, nothing of this runs.
   - Composes over `move-issue.py --to in-progress`. If that move still fails
     after the branch / assignee were written (a network error, or a state
     that changed since the check so the move is no longer legal), the run
@@ -38,7 +46,9 @@ Side-effects:
 Exit codes:
   0  in-progress
   1  membership refusal
-  2  usage error / gate failure / illegal transition / gh failure
+  2  usage error / gate failure / illegal transition / gh failure / another
+     instance claimed the issue in the same instant and keeps it, so this
+     clone withdrew its claim and did not move the issue
   *  a failed composed move-issue passes its exit code through
 """
 
@@ -60,6 +70,7 @@ from _lib import (
     classification_rules,
     composed_move,
     default_branch,
+    instance_claims,
     issue_branch,
     issue_position,
     session_guard,
@@ -74,6 +85,10 @@ from _lib.membership import (
 )
 
 TARGET_STATE = "in-progress"
+
+#: Another instance claimed the issue in the same instant and keeps it: a gate
+#: this clone does not pass, so the exit code of a gate failure.
+EXIT_CLAIM_LOST = 2
 
 
 def main() -> int:
@@ -217,10 +232,16 @@ def main() -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
+    # Instance ownership (DEC-035): None unless this clone set an instance id,
+    # and then nothing below changes.
+    clone = instance_claims.this_clone(capability_root, invoker.github_login)
+
     print(f"start-work: #{args.issue_number}")
     print(f"  branch:    {branch_name}")
     print(f"  base:      {base}")
     print(f"  assignee:  {invoker.github_login or '(unknown invoker)'}")
+    if clone is not None:
+        print(f"  ownership: {instance_claims.claim_plan(clone)}, where no instance owns it")
 
     if args.dry_run:
         print(
@@ -261,6 +282,27 @@ def main() -> int:
                 file=sys.stderr,
             )
 
+    # Claim the issue for this clone (DEC-035 point 3), once the assignee is
+    # set: a marker counts only from the assignee's account (DEC-043 point 3).
+    # Ahead of the move, so a clone that lost a same-instant claim stops there,
+    # whether or not its withdrawal could be written.
+    if clone is not None:
+        claimed = instance_claims.claim(args.issue_number, clone, config)
+        instance_claims.say(claimed)
+        if claimed.outcome in (instance_claims.LOST, instance_claims.FAILED) and (
+            claimed.winner not in (None, clone.instance)
+        ):
+            print(
+                _claim_lost_message(
+                    args.issue_number,
+                    claimed.winner,
+                    branch_name=branch_name if branch_created else None,
+                    base=base,
+                ),
+                file=sys.stderr,
+            )
+            return EXIT_CLAIM_LOST
+
     # Compose over move-issue.
     rc = composed_move.invoke_move_issue(
         args.issue_number,
@@ -297,6 +339,25 @@ def main() -> int:
 
 def _gh_get_issue(issue_number: int, config: dict) -> dict | None:
     return gh_get_issue(issue_number, config, fields="title,labels,assignees,state,body,milestone")
+
+
+def _claim_lost_message(
+    issue_number: int, winner: int | None, *, branch_name: str | None, base: str
+) -> str:
+    """The stop after a lost same-instant claim (DEC-035 point 6): the issue is
+    the winning instance's, so this clone does not move it. The branch it cut
+    is named with its undo. The assignee stays: it is this account's, as it is
+    the winning clone's."""
+    lines = [
+        f"[stopped] start-work #{issue_number}: instance {winner} claimed it in the same "
+        "instant and keeps it, so this clone did not move it.",
+    ]
+    if branch_name is not None:
+        lines.append(
+            f"  left: branch {branch_name!r} (created and checked out); "
+            f"undo: git checkout {base} && git branch -D {branch_name}"
+        )
+    return "\n".join(lines)
 
 
 def _left_behind(

@@ -83,6 +83,33 @@ def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
 
 
+#: Where a clone of a project-management adopter keeps its instance id (DEC-035
+#: point 1), below the capability's folder.
+CLONE_ID_PARTS = ("project", "instance", "clone.json")
+
+
+@pytest.fixture(autouse=True)
+def outside_any_clone(
+    monkeypatch: pytest.MonkeyPatch, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """Every test runs as a clone with no instance id, whatever this checkout set
+    with `set-instance`. With an id set, a project-management script run against
+    this repository's own capability claims and releases issues on GitHub, which
+    no test may reach. A clone id file outside this session's temporary
+    directories reads as absent. A test that needs an id writes one in a
+    capability of its own, or stands in for the reading."""
+    base = tmp_path_factory.getbasetemp().resolve()
+    session = base.parent if os.environ.get("PYTEST_XDIST_WORKER") else base
+    is_file = Path.is_file
+
+    def outside_the_session(path: Path, **kwargs: object) -> bool:
+        if path.parts[-3:] == CLONE_ID_PARTS and not path.resolve().is_relative_to(session):
+            return False
+        return is_file(path, **kwargs)
+
+    monkeypatch.setattr(Path, "is_file", outside_the_session)
+
+
 @pytest.fixture
 def at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
     """The test's stdin counts as a terminal, so a confirmation that guards a
