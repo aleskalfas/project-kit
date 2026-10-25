@@ -355,7 +355,7 @@ A distribution is one edition of the [methodology](../glossary.md#term-methodolo
 
 **Always true:**
 
-- Only a CLI taken from a release's tag has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
+- Only a CLI taken from a tag on a release's commit, the release's own or `latest`, has a [version](../glossary.md#term-version--version) that vouches for its content (PRJ-004).
 
 ## Component origin
 

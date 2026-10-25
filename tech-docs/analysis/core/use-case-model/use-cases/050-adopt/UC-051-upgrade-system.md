@@ -81,7 +81,7 @@ pkit:
 
 **Assumptions:**
 
-- The CLI was installed from a [release](../../../glossary.md#term-release--release) tag, so its [version](../../../glossary.md#term-version--version) names one content, and the target names what the upgrade copies (ADR-065 [point](../../../glossary.md#term-point--point) 12).
+- The CLI was installed from a tag on a [release](../../../glossary.md#term-release--release)'s commit, `latest` or the release's own. So its [version](../../../glossary.md#term-version--version) names one content, and the target names what the upgrade copies (ADR-065 [point](../../../glossary.md#term-point--point) 12).
 
 **Trigger:** A newer [release](../../../glossary.md#term-release--release) of the [system](../../../glossary.md#term-system--system) ships, or the [project](../../../glossary.md#term-project--project)'s [recorded version](../../../glossary.md#term-recorded-version--recorded-version) is behind the CLI the operator runs.
 

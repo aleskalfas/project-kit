@@ -11,6 +11,7 @@ pkit:
         - .changie.yaml
         - .github/workflows/release-pr.yml
         - .github/workflows/release-tag.yml
+        - scripts/latest_tag.py
       record: [COR-010, COR-030, COR-041, PRJ-002, PRJ-004, ADR-040]
       artefact:
         - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
@@ -998,6 +999,29 @@ GitHub Release for that version via `pkit release publish-notes` (body = the
 version's tag already exists, the publish step is skipped, and the job no-ops.
 Backbone tag only (per-component tags were dropped by design, PRJ-004).
 
+On every run, tag cut or not, it then points the tag **`latest`** at the
+commit of the highest release tag, through `python3 scripts/latest_tag.py
+--push` (PRJ-004). That is what `uv tool install …@latest` installs. The script
+creates `latest` where it is missing and moves it where it lags. Where `latest`
+already points there, it pushes nothing.
+
+- **The push** is forced, since git moves no tag without force, and leased on
+  the value the run read. A run that read an older state never moves `latest`
+  back. Where its push fails, the script reads `origin` again: the run passes
+  where `latest` already points at the highest release, and fails otherwise,
+  and the next push to `main` mends it.
+- **The writer:** by design this step alone writes `latest`, and nothing on the
+  host enforces it. Outside GitHub Actions the script's `--push` refuses, and
+  without it the script says what it would do.
+- **No branch named `latest`:** uv can take a branch before a tag of the same
+  name. While such a branch exists on `origin`, the script refuses and the run
+  fails.
+- **The readers:** a release tag is `v<major>.<minor>.<patch>`, judged as `pkit
+  upgrade` judges every tag the release step cuts, so the script and every reader
+  of release tags skip `latest`.
+- **What it needs:** the standard library and git, on the runner's own
+  `python3`. Nothing is installed for it.
+
 ### One-time repo setup (enable the automation)
 
 Before the first automated release, enable one repository setting — without it
@@ -1033,8 +1057,8 @@ rule a PR it opens does **not** trigger `on: pull_request` workflows — so
 
 Workflow permissions are minimal: `release-pr.yml` gets `contents: write`
 (branch) + `pull-requests: write` (the PR); `release-tag.yml` gets `contents:
-write` (the tag **and** the notes-only Release — both are `contents`). Neither
-has merge authority.
+write` (the tag, `latest` **and** the notes-only Release — all are `contents`).
+Neither has merge authority.
 
 ### Migration-dir prediction warning (#465)
 

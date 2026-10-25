@@ -233,15 +233,17 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 
 **Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` once, globally, from the git URL at a release tag:
+Then install `pkit` once, globally, from the git URL at the tag `latest`, which marks the highest release:
 
 ```
-uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
+uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 ```
 
-Replace `<version>` with the latest release, from the [releases page](https://github.com/aleskalfas/project-kit/releases). The tag ties the version your project records to the content it holds.
+To install a given release instead, name its tag, `@v<version>`, from the [releases page](https://github.com/aleskalfas/project-kit/releases). Either tag ties the version your project records to the content it holds.
 
-*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git@v<version>`.)*
+uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
+
+*(HTTPS form if you authenticate with a token: `uv tool install git+https://github.com/aleskalfas/project-kit.git@latest`.)*
 
 Verify:
 
