@@ -87,7 +87,8 @@ Exit codes:
   0  closed, with every open child rolled forward (or dry-run / already-closed
      noop)
   1  membership refusal / session refusal / open children holding a content
-     close / no single rollforward target
+     close / no single rollforward target / a close off a terminal without
+     --yes (the close is the person's, #2015)
   2  usage error (milestone not found; --target matches no open milestone, or
      is given to a close that rolls nothing forward)
   3  gh failure
@@ -109,7 +110,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, consent, session_guard
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -359,14 +360,20 @@ def main() -> int:
             )
         return 0
 
+    # The close is the person's: closing a Milestone stays their gesture, as
+    # closing a parent issue does. Off a terminal, without --yes, nobody is there
+    # to ask, so the close is refused before anything is written (#2015).
     question = "Close this milestone? [y/N] "
     if plan is not None and plan.moves:
         question = (
             f"Close this milestone and roll {len(plan.moves)} open child issue(s) "
             f"forward to {_milestone_label(plan.target.milestone)}? [y/N] "
         )
-    if not _confirmed(args, question):
-        return 0
+    stop = consent.authorise(
+        question, yes=args.yes, step=f"Closing milestone #{number}", verb="close-milestone"
+    )
+    if stop is not None:
+        return stop
 
     if not _gh_close_milestone(number, new_description, config):
         return 3
@@ -815,8 +822,13 @@ def _gh_close_milestone(number: int, description: str, config: dict) -> bool:
 
 
 def _confirmed(args: argparse.Namespace, question: str) -> bool:
-    """The --yes / interactive confirmation gate; a non-interactive run proceeds."""
-    if args.yes or not sys.stdin.isatty():
+    """The question a re-run asks before it finishes a rollforward.
+
+    The person authorised the moves with the close, whose audit line records
+    their target, so a run off a terminal goes on without `--yes`. At a
+    terminal it asks, and `--yes` skips the question.
+    """
+    if args.yes or not consent.at_a_terminal():
         return True
     if input(question).strip().lower() in ("y", "yes"):
         return True

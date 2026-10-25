@@ -15,7 +15,9 @@ Removes a workstream. Per DEC-018:
     prefix, or the board's `Workstream` field. The count is taken with
     `--skip-label` too, and a count that cannot be read refuses as well.
     `--force` (DEC-046) passes the precondition.
-  * Type-the-slug confirmation prompt to prevent accidents.
+  * Type-the-slug confirmation prompt to prevent accidents. `--yes` skips
+    it; off a terminal, without `--yes`, nobody is there to type it, so
+    the removal is refused before anything changes (#2015).
   * Removes the entry from workstreams.yaml; deletes the GitHub label.
 
 Membership gate per DEC-021 runs at startup.
@@ -28,7 +30,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  removed
-  1  membership refusal / validation refusal / non-zero issue count
+  1  membership refusal / validation refusal / non-zero issue count / off a
+     terminal without --yes
   2  usage error (slug not found)
   3  gh failure (the issue count unreadable; the label not deleted)
 """
@@ -51,7 +54,14 @@ sys.path.insert(0, str(_HERE))
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard, workstream_sync
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    consent,
+    session_guard,
+    workstream_sync,
+)
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -214,7 +224,9 @@ def main() -> int:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
 
-    if not args.yes and sys.stdin.isatty():
+    if not args.yes:
+        if not consent.at_a_terminal():
+            return consent.refuse(f"Removing workstream {args.slug!r}", "remove-workstream")
         typed = input(f"Type the slug {args.slug!r} to confirm: ").strip()
         if typed != args.slug:
             print("[refused] slug did not match; aborted.", file=sys.stderr)

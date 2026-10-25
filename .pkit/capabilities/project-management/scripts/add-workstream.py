@@ -18,7 +18,9 @@ the axis it adds the option `<slug>` to the board's `Workstream`
 single-select field. Either happens before the file is written, so a
 failure leaves the file as it was.
 
-Membership gate per DEC-021 runs at startup.
+Membership gate per DEC-021 runs at startup. A workstream is the project's own
+configuration, which DEC-018 makes the PM's: the command asks at a terminal,
+`--yes` authorises it, and off a terminal without `--yes` it refuses (#2015).
 
 Self-contained via PEP 723; runs via
   uv run --script .pkit/capabilities/project-management/scripts/add-workstream.py <slug> [--name "..."] [--description "..."]
@@ -29,6 +31,7 @@ Or via the dispatcher (per COR-021):
 Exit codes:
   0  added (or dry-run reported)
   1  membership refusal / validation refusal / duplicate slug / no usable board field
+     / off a terminal without --yes
   2  usage error (capability not found; bad slug)
   3  gh failure (board read or write; label creation)
 """  # noqa: E501 — a usage line is a command, kept whole
@@ -44,7 +47,14 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard, workstream_sync
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    consent,
+    session_guard,
+    workstream_sync,
+)
 from _lib.gh import gh_run, load_adopter_config
 
 # Constraint-1 gate (RF-2, #265): the workstream-label MUTATORS
@@ -261,11 +271,14 @@ def main() -> int:
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    stop = consent.authorise(
+        "Proceed? [y/N] ",
+        yes=args.yes,
+        step=f"Adding workstream {args.slug!r}",
+        verb="add-workstream",
+    )
+    if stop is not None:
+        return stop
 
     # The substrate first: the label create and the option write are both
     # idempotent, so a re-run after a failed file write finds them there and
