@@ -19,8 +19,9 @@ pkit:
       record: [COR-005, COR-006, COR-011, COR-013, COR-014, COR-015, COR-016, COR-026, COR-049, COR-050, COR-057, COR-062, ADR-051, ADR-052, "ADR-065#11"]
       artefact: [.pkit/lifecycle/README.md#seed-paths, .pkit/cli/README.md#friction-checks]
     revalidated:
-      at: 2026-10-25T00:35:08Z
-      outcome: updated
+      at: 2026-10-24T22:54:28Z
+      outcome: unchanged
+      unchanged-because: pkit refs lookup now takes several ids with --json. The README names the lookup among the refs commands and says nothing of its form, so it holds.
 ---
 
 # Agents

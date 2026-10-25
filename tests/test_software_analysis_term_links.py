@@ -533,6 +533,48 @@ def test_a_mention_is_read_with_its_safeguards(text: str, linked: str) -> None:
     assert _linked(text, None, *terms) == linked
 
 
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "change",
+        "Change check",
+        "glossary's head",
+        f"n{TYPOGRAPHERS}s",
+        "a",
+        "x y",
+        "über",
+        "co-author",
+        "decision\trecords",
+    ],
+)
+def test_a_text_without_a_phrase_s_needle_is_not_searched_and_nothing_else_changes(
+    phrase: str,
+) -> None:
+    """A text is searched for a phrase only where it holds the phrase's needle: the longest
+    run of it matched as written, past its first letter, within one word and with no
+    apostrophe. The mentions found are the ones the phrase's pattern finds in any text:
+    the first letter in either case, an apostrophe of either kind, any white space
+    between the words, whole words only (#2025)."""
+    texts = [
+        "",
+        "A change; the Change check, change-checks and changes.",
+        f"The Glossary{TYPOGRAPHERS}s head and the glossary's\nhead, not glossarys head.",
+        f"N's, n{TYPOGRAPHERS}s and an's.",
+        "a x  y, X\ny and xy.",
+        "Über and über, Uber.",
+        "A co-author, Co-author and coauthor.",
+        "Decision records, decision\nrecords and decision-records.",
+    ]
+    needle = links._needle(phrase)
+    for text in texts:
+        found = [m.span() for m in links._found(phrase, text)]
+        assert found == [m.span() for m in links._pattern(phrase).finditer(text)], text
+        if needle not in text:
+            assert found == []
+    assert links._needle("glossary's head") == "lossary"
+    assert links._needle("a") == ""
+
+
 def test_a_term_is_never_linked_in_its_own_section_and_its_name_consumes_its_words() -> None:
     """The section's own term takes no link, and a shorter term inside it takes none
     either: `record` is never linked inside `decision record`."""

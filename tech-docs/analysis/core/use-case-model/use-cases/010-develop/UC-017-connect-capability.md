@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-25T00:31:24Z
+      at: 2026-10-24T22:48:38Z
       outcome: unchanged
-      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

@@ -69,9 +69,9 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-25T00:34:26Z
+      at: 2026-10-24T22:53:16Z
       outcome: unchanged
-      unchanged-because: The change check asks nothing of an artefact received by sync, and the CLI gains a reading command. The gate a merge passes is as this use case says.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-006 — Make my merges wait on the system's checks

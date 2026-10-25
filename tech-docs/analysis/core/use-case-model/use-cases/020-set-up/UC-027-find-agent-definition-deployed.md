@@ -57,9 +57,9 @@ pkit:
         - REQ-013
         - REQ-016
     revalidated:
-      at: 2026-10-25T00:34:40Z
+      at: 2026-10-24T22:50:48Z
       outcome: unchanged
-      unchanged-because: The agents README's Friction writers changes, and the CLI gains a reading command. Where an agent definition is deployed and found is unchanged.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-027 — Find my agent definition deployed, with the project's paths and my grants

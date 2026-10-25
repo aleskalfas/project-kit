@@ -23,9 +23,9 @@ pkit:
         - ACT-adopter
         - REQ-005
     revalidated:
-      at: 2026-10-25T00:31:15Z
+      at: 2026-10-24T22:48:05Z
       outcome: unchanged
-      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-053 — Re-pin an inherited rule set once I have reviewed its new major

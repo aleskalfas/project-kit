@@ -19,9 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-22T15:13:33Z
+      at: 2026-10-24T22:54:12Z
       outcome: unchanged
-      unchanged-because: "The README now rests on PRJ-011, the record of what project-kit is for. Its pitch already tells that story: a methodology installed and kept current like a dependency, so a fix made in one project reaches the others."
+      unchanged-because: The refs module gains the lookup of several ids in one document. The README names only pkit refs validate, which is untouched.
 ---
 
 # project-kit

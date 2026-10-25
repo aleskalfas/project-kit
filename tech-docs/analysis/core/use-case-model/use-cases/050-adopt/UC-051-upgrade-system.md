@@ -65,9 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-25T00:33:17Z
+      at: 2026-10-24T22:52:53Z
       outcome: unchanged
-      unchanged-because: This change adds the reading command pkit friction move-plan, and a migration whose effect the release's notes will name. The upgrade this use case runs does what it says.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-051 — Upgrade the system like a dependency
