@@ -962,3 +962,233 @@ def test_hook_keeps_the_abstain_when_the_check_faults(tmp_path):
         assert parsed is None, (tail, parsed)
         _, parsed = _invoke(root, _bash_payload(root, "git push -uf origin main"))
         assert _decision(parsed) == "deny"
+
+
+# ---- the hook reads a redirection that writes no file (#2002) ---------------
+#
+# The live hook, end to end, where git and gh are granted: an fd duplicated or
+# closed, or output discarded to `/dev/null`, is decided as the command without
+# it, so a granted command with one is allowed and a deny behind one binds.
+# Every other redirection, and each lookalike of one, still defers, and a
+# strict posture denies it (ADR-025 point 2). The system `python3` decides
+# them as the interpreter of the tests does.
+
+_HARMLESS_HOOK_ALLOWS = (
+    "git status 2>&1",
+    "gh pr list 2>/dev/null",
+    "git status 2>&1 | gh pr list",
+    "git fetch &>/dev/null && git status",
+)
+_HARMLESS_HOOK_DEFERS = (
+    "git status > out.txt",
+    "git status 2>&1t",
+    "gi2>&1t status",
+    "git status >/dev/null2",
+    "git status {fd}>/dev/null",
+    "git status &>/dev/null gh pr list",
+)
+_HARMLESS_HOOK_DENIES = (
+    "2>/dev/null git push -f origin main",
+    "git push 2>&1 --force origin main",
+)
+
+
+def test_hook_allows_a_granted_command_with_a_harmless_redirection(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in (*_HARMLESS_HOOK_ALLOWS, f"cd {root} && git log >/dev/null"):
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "allow", command
+
+
+def test_hook_defers_on_any_other_redirection(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _HARMLESS_HOOK_DEFERS:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert parsed is None, f"{command!r} must defer, not be allowed: {parsed}"
+    strict = _tree(
+        tmp_path / "strict", grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n"
+    )
+    for command in _HARMLESS_HOOK_DEFERS:
+        _, parsed = _invoke(strict, _bash_payload(strict, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_denies_behind_a_harmless_redirection(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command in _HARMLESS_HOOK_DENIES:
+        _, parsed = _invoke(root, _bash_payload(root, command))
+        assert _decision(parsed) == "deny", command
+
+
+def test_hook_reads_harmless_redirections_under_the_system_python3(tmp_path):
+    system = Path("/usr/bin/python3")
+    if not system.is_file():
+        pytest.skip("no system python3 at /usr/bin/python3")
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for command, expected in (
+        *((command, "allow") for command in _HARMLESS_HOOK_ALLOWS),
+        *((command, None) for command in _HARMLESS_HOOK_DEFERS),
+        *((command, "deny") for command in _HARMLESS_HOOK_DENIES),
+    ):
+        proc = subprocess.run(
+            [str(system), str(HOOK)],
+            input=json.dumps(_bash_payload(root, command)),
+            capture_output=True,
+            text=True,
+            env={"CLAUDE_PROJECT_DIR": str(root), "PATH": "/usr/bin:/bin"},
+        )
+        assert proc.returncode == 0, proc.stderr
+        out = proc.stdout.strip()
+        assert _decision(json.loads(out) if out else None) == expected, (command, out)
+
+
+# ---- the hook never asks where the person chose not to be asked (#2004) -----
+#
+# The live hook, end to end: Claude Code names the session's permission mode in
+# the payload's `permission_mode`. In auto mode (`auto`) and bypass mode
+# (`bypassPermissions`) the hook defers where it would ask for a hidden
+# guardrail, so the harness's own mode decides. Every other mode, a payload
+# with no mode and a mode the hook does not know keep the ask. Allow and deny
+# are the same in every mode, and so is the ask on a foreign Edit or Write.
+
+_UNATTENDED_MODES = ("auto", "bypassPermissions")
+_ASKING_MODES = ("default", "plan", "acceptEdits", "dontAsk")
+# Values the hook does not know: it reads only the exact strings above.
+_UNKNOWN_MODES = ("Auto", "bypass", "bypasspermissions", "manual", "", None, 1, ["auto"])
+
+
+def _in_mode(payload: dict, mode: object) -> dict:
+    return {**payload, "permission_mode": mode}
+
+
+def test_hook_defers_a_hidden_guardrail_in_auto_and_bypass_mode(tmp_path):
+    for grants in (_GIT_AND_GH, None):
+        root = _tree(tmp_path / str(grants is None), grants=grants)
+        for mode in _UNATTENDED_MODES:
+            for command in _UNSEEN_HOOK_FORMS:
+                _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+                assert parsed is None, (mode, command, parsed)
+
+
+def test_hook_asks_on_a_hidden_guardrail_in_every_other_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    for mode in (*_ASKING_MODES, *_UNKNOWN_MODES):
+        for command in _UNSEEN_HOOK_FORMS:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == "ask", (mode, command, parsed)
+            assert "vcs-history-rewrite" in _reason(parsed)
+
+
+def test_hook_asks_on_a_hidden_guardrail_where_the_payload_names_no_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    payload = _bash_payload(root, "git push origin --forc[e]")
+    assert "permission_mode" not in payload
+    _, parsed = _invoke(root, payload)
+    assert _decision(parsed) == "ask", parsed
+    # The model writes `tool_input`, never the payload's top level, so a mode
+    # inside it is not read.
+    for mode in _UNATTENDED_MODES:
+        inner = {**payload, "tool_input": {**payload["tool_input"], "permission_mode": mode}}
+        _, parsed = _invoke(root, inner)
+        assert _decision(parsed) == "ask", (mode, parsed)
+
+
+def test_hook_allows_and_denies_alike_in_every_mode(tmp_path):
+    root = _tree(tmp_path, grants=_GIT_AND_GH)
+    strict = _tree(
+        tmp_path / "strict", grants=_GIT_AND_GH, config="schema_version: 1\nposture: strict\n"
+    )
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, "manual", None):
+        for command in _FORCE_PUSH_FORMS:
+            _, parsed = _invoke(root, _in_mode(_bash_payload(root, command), mode))
+            assert _decision(parsed) == "deny", (mode, command, parsed)
+        _, parsed = _invoke(root, _in_mode(_bash_payload(root, "git push origin main"), mode))
+        assert _decision(parsed) == "allow", (mode, parsed)
+        _, parsed = _invoke(root, _in_mode(_bash_payload(root, "gh pr list | sh"), mode))
+        assert parsed is None, (mode, parsed)
+        for command in _UNSEEN_HOOK_FORMS:
+            _, parsed = _invoke(strict, _in_mode(_bash_payload(strict, command), mode))
+            assert _decision(parsed) == "deny", (mode, command, parsed)
+
+
+def test_hook_asks_on_a_foreign_edit_or_write_in_every_mode(tmp_path):
+    root = _tree(tmp_path)
+    foreign = tmp_path / "other-repo" / "file.py"
+    for mode in (*_UNATTENDED_MODES, *_ASKING_MODES, *_UNKNOWN_MODES):
+        for tool, tool_input in (
+            ("Edit", {"file_path": str(foreign), "old_string": "a", "new_string": "b"}),
+            ("Write", {"file_path": str(foreign), "content": "x"}),
+        ):
+            payload = {"tool_name": tool, "tool_input": tool_input, "cwd": str(root)}
+            _, parsed = _invoke(root, _in_mode(payload, mode))
+            assert _decision(parsed) == "ask", (mode, tool, parsed)
+            assert "outside this session's repo" in _reason(parsed)
+
+
+# ---- the read-only text filters and `uv run`, end to end (#2000) -------------
+#
+# The live hook, in a tree whose active profile is a shipped one and whose own
+# grants are project-kit's: a compound of text filters, `uv run` and granted
+# programs is allowed for the project manager and for a builder. A program
+# that writes a file or runs another stays uncovered, a redirection still
+# defers, and a guardrail still denies. The `pkit permissions` CLI, which
+# builds the model and decides through the same loaders, reaches the same
+# verdict on each.
+
+_BUILDER_AGENTS = ("project-manager", "software-engineer")
+_FILTER_CASES = (
+    ("grep x f | head", "allow"),
+    ("cat f | grep x", "allow"),
+    ("uv run pytest t.py -q | tail -3", "allow"),
+    ("cd {root} && uv run pkit validate | tail -1", "allow"),
+    ("cat f | sort | uniq -c | head -5", "allow"),
+    ("grep x f | sort -o out.txt", None),
+    ("grep x f | uniq in.txt out.txt", None),
+    ("diff -l a b | head", None),
+    ("grep x f | sed -i s/a/b/ g", None),
+    ("echo y | uv run pkit validate", None),
+    ("grep x f > out.txt", None),
+    ("cat f && sudo id", "deny"),
+)
+
+
+def _profile_tree(tmp_path: Path, profile: str) -> Path:
+    # As `profile activate` leaves it: the profile's posture in config.yaml,
+    # its name in the per-machine sidecar.
+    posture = "strict" if profile == "read-only" else "lenient"
+    root = _tree(
+        tmp_path,
+        grants=(REPO / ".pkit/permissions/project/grants.yaml").read_text(),
+        config=f"schema_version: 1\nposture: {posture}\n",
+    )
+    shutil.copytree(
+        REPO / ".pkit" / "permissions" / "profiles", root / ".pkit" / "permissions" / "profiles"
+    )
+    (root / ".pkit" / "permissions" / "project" / "active-profile.yaml").write_text(
+        f"schema_version: 1\nactive_profile: {profile}\n"
+    )
+    return root
+
+
+@pytest.mark.parametrize("profile", ["non-destructive", "read-only"])
+def test_hook_allows_text_filters_and_uv_run_as_the_cli_decides(tmp_path, profile):
+    from project_kit import permissions as perm
+
+    root = _profile_tree(tmp_path, profile)
+    dm = perm.decision_core(root)
+    catalog = perm._load_catalog(root)
+    model = perm._load_model(root)
+    assert model["active_profile"] == profile
+    strict = profile == "read-only"
+    for template, expected in _FILTER_CASES:
+        command = template.format(root=root)
+        if strict and expected is None:
+            expected = "deny"
+        for agent in _BUILDER_AGENTS:
+            payload = {**_bash_payload(root, command), "agent_type": agent}
+            _, parsed = _invoke(root, payload)
+            assert _decision(parsed) == expected, (profile, command, agent, parsed)
+            cli, _ = dm.hook_decide(
+                model, catalog, payload, project_root=str(root), as_subject=f"agent:{agent}"
+            )
+            assert cli == (expected or "abstain"), (profile, command, agent, cli)

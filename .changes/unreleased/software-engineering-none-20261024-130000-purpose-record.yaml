@@ -1,0 +1,3 @@
+component: software-engineering
+kind: none
+body: The new record DEC-003 states what software-engineering is for, from what its README and records already say, and decides no new behaviour. The README's answer to it is unchanged, so no adopter-facing surface moves.

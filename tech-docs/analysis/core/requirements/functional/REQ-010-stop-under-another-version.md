@@ -21,14 +21,18 @@ pkit:
         - ADR-059
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-24T20:50:52Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-010 · Functional · A command that propagates content under another version than the project records stops
 
-**Verified by:** Tests run sync under a CLI newer and older than the recorded version, and under a pin ahead of the running CLI. Others run it over an incomplete transition. Each finds that sync stops with nothing written, under `--dry-run` too, and that no flag overrides it.
+**Verified by:** Tests run [sync](../../glossary.md#term-sync--sync) under a CLI newer and older than the [recorded version](../../glossary.md#term-recorded-version--recorded-version), and under a pin ahead of the running CLI. Others run it over an incomplete transition. Each finds that sync stops with nothing written, under `--dry-run` too, and that no flag overrides it.
 
-Tests run a capability's install and upgrade in each state that stops sync. They find that each stops the same way, and names sync's remedies. Tests of the backbone's version transition find that it refuses content newer than the running CLI, and writes nothing.
+Tests run a [capability](../../glossary.md#term-capability--capability)'s [install](../../glossary.md#term-install--install) and upgrade in each state that stops sync. They find that each stops the same way, and names sync's remedies. Tests of the [backbone](../../glossary.md#term-backbone--backbone)'s [version transition](../../glossary.md#term-version-transition--version-transition) find that it refuses content newer than the running CLI, and writes nothing.
 
-**Rationale:** The adopter keeps a project at one recorded version, whose content and migrations belong together. Under another CLI, the command would copy another release's content without that release's migrations, in the words of its refusal. So COR-059 point 9 stops it before it writes, in a preview too, with no override.
+**Rationale:** The adopter keeps a [project](../../glossary.md#term-project--project) at one [recorded version](../../glossary.md#term-recorded-version--recorded-version), whose content and [migrations](../../glossary.md#term-migration--migration) belong together. Under another CLI, the command would copy another [release](../../glossary.md#term-release--release)'s content without that release's migrations, in the words of its refusal. So COR-059 [point](../../glossary.md#term-point--point) 9 stops it before it writes, in a preview too, with no override.
 
-Its message names the remedy for the state it finds. That may be a version transition to move the project on, or the project's own version of the CLI to stay (COR-059 point 9). ADR-065 point 7 has each such command run one guard before it writes anything.
+Its message names the remedy for the state it finds. That may be a [version transition](../../glossary.md#term-version-transition--version-transition) to move the project on, or the project's own [version](../../glossary.md#term-version--version) of the CLI to stay (COR-059 point 9). ADR-065 point 7 has each such command run one guard before it writes anything.

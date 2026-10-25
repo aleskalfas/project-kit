@@ -23,7 +23,8 @@ makes real commits before running a check. They cover:
   changed only in such links, and `pkit friction resolve` advises the outcome the
   change check bears out;
 - **software-analysis** — the forms its places declare are the link command's own,
-  and what `pkit analysis link` writes asks nothing of what rests on the linked
+  and what `pkit analysis link` writes, in the glossary, the views, the actors, the use
+  cases, the journeys and the requirements, asks nothing of what rests on the linked
   documents.
 """
 
@@ -61,7 +62,14 @@ from tests.friction_documents import (
     pointed_record,
 )
 from tests.test_answer_files import answer_path, answers, entry
-from tests.test_software_analysis_term_links import VIEW, _domain
+from tests.test_software_analysis_term_links import (
+    BODIES,
+    JOURNEY,
+    PLACE,
+    VIEW,
+    _domain,
+    _kinds,
+)
 
 DERIVER = "deriver"
 NOTE = "notes/source.md"
@@ -511,8 +519,9 @@ def _declared(place: str) -> list[str]:
 
 
 def test_software_analysis_declares_the_link_commands_own_form() -> None:
-    """The glossary's form is the command's target; a view's, its branch by a path, since
-    only the glossary links an entry by its anchor alone."""
+    """The glossary's form is the command's target; every other place's, its branch by a
+    path, since only the glossary links an entry by its anchor alone: the views, the actors,
+    the use cases, the journeys and the three kinds of requirement."""
     (links,) = load_lib("links")
     entry_form: str = links._ENTRY
     for place in ("glossary.md", "*/glossary.md"):
@@ -520,8 +529,16 @@ def test_software_analysis_declares_the_link_commands_own_form() -> None:
     by_path = entry_form.split("|", 1)[0]
     for place in ("domain-model", "*/domain-model/**"):
         assert _declared(place) == [by_path]
-    for place in ("use-case-model/actors", "requirements/quality"):
-        assert _declared(place) == []
+    for folder in (
+        "use-case-model/actors",
+        "use-case-model/use-cases",
+        "use-case-model/journeys",
+        "requirements/quality",
+        "requirements/functional",
+        "requirements/constraints",
+    ):
+        assert _declared(folder) == [by_path], folder
+        assert _declared(f"*/{folder}/**") == [by_path], folder
 
 
 @pytest.fixture
@@ -543,6 +560,33 @@ def test_what_the_link_command_writes_asks_nothing_of_what_rests_on_it(
     link(project)
     assert all((project.root / rel).read_text(encoding="utf-8") != before[rel] for rel in before)
     assert _friction(fc.run_change_check(project.root, "main")) == []
+
+
+@pytest.fixture
+def parted(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    repo = installed(make_adopter_repo, monkeypatch, then=_kinds)
+    repo.commit("the analysis, unlinked")
+    repo.checkout("feature", create=True)
+    return repo
+
+
+def test_links_written_in_the_four_kinds_ask_nothing_of_what_rests_on_them(
+    parted: AdopterRepo,
+) -> None:
+    """`pkit analysis link` adds links in an actor, the use cases, a journey and the
+    requirements, which rest on one another: nothing asks an answer. A word changed beside
+    a link in a use case still asks the journey through it."""
+    before = {rel: (parted.root / rel).read_text(encoding="utf-8") for rel in BODIES}
+    link(parted)
+    assert all((parted.root / rel).read_text(encoding="utf-8") != before[rel] for rel in before)
+    assert _friction(fc.run_change_check(parted.root, "main")) == []
+    text = (parted.root / PLACE).read_text(encoding="utf-8")
+    reworded = text.replace("chooses goods", "picks goods", 1)
+    assert reworded != text
+    parted.write({PLACE: reworded})
+    assert _friction(fc.run_change_check(parted.root, "main")) == [JOURNEY]
 
 
 def test_a_word_changed_in_a_linked_entry_still_asks_the_view(project: AdopterRepo) -> None:

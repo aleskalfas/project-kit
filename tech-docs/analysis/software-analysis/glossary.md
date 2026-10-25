@@ -108,6 +108,10 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
+      revalidated:
+        at: 2026-10-24T22:53:59Z
+        outcome: unchanged
+        unchanged-because: structure.py now parses the kinds' declaration once for each text of it. What a kind declares, and how a body is read against it, is untouched.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -186,9 +190,9 @@ TERM-revalidation-proposal:
         record:
           - software-analysis:DEC-001#5
       revalidated:
-        at: 2026-10-24T02:12:40Z
+        at: 2026-10-25T00:36:00Z
         outcome: unchanged
-        unchanged-because: The term still names what the agent drafts for a person to record. The change adds how the agent tells a boxed regression from one no record decides, which the term does not describe.
+        unchanged-because: The resolver's body now says the commands it hands over write the artefacts' answers, not their blocks. A proposal is still what the term says.
 TERM-revalidation-record:
   name: revalidation record
   status: active
@@ -400,7 +404,7 @@ Explained in [VIEW-revalidations](domain-model/020-revalidations.md#revalidation
 
 **Distinctions:**
 
-- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s results, and a person records each (DEC-001 point 5).
+- **Revalidation:** the review itself. The proposal drafts a [revalidation](#term-revalidation--revalidation)'s [revalidation outcomes](#term-revalidation-outcome--revalidation-outcome), and a person records each (DEC-001 point 5).
 - **A run a command starts:** project-management's run of the agent with nobody watching. There the agent writes each [answer](../core/glossary.md#term-answer--answer) as fields, never as a command (project-management DEC-056 point 6).
 
 ## TERM-revalidation-record — revalidation record
@@ -436,7 +440,7 @@ Explained in [VIEW-kinds-and-structures](domain-model/030-kinds-and-structures.m
 **Distinctions:**
 
 - **A relabel:** a new label, [hint](#term-hint--hint) or example for a shipped part. It tightens nothing, so it needs no rule (DEC-001 point 1).
-- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is a [change](../core/glossary.md#term-change--change) it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
+- **A change to a shipped part:** dropping, loosening or reordering it. No project makes one, and a part it finds wrong is an edit it proposes to the [capability](../core/glossary.md#term-capability--capability) (DEC-001 point 1).
 
 ## TERM-use-case — use case
 

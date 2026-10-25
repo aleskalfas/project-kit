@@ -21,10 +21,14 @@ pkit:
         - ADR-064#1
       artefact:
         - ACT-operator
+    revalidated:
+      at: 2026-10-24T20:51:27Z
+      outcome: unchanged
+      unchanged-because: ACT-operator's needs say the system's CLI for its tool, and its opening names the operator where it said role. What it needs is the same, so this requirement holds.
 ---
 
 # REQ-027 · Quality · The version pin holds the old one or the new one, never part, and an upgrade writes it last
 
-**Verified by:** Tests of the version pin's one writer cut a write short, at the flush or at the rename. They find the old version pin, and no temporary file. Tests find that `pkit pin` and `pkit unpin` write through that one writer. Tests of `pkit upgrade` find that a failing sync writes no version pin, and that a raise writes the version pin after the content.
+**Verified by:** Tests of the [version pin](../../../glossary.md#term-version-pin--version-pin)'s one writer cut a write short, at the flush or at the rename. They find the old version pin, and no temporary file. Tests find that `pkit pin` and `pkit unpin` write through that one writer. Tests of `pkit upgrade` find that a failing [sync](../../../glossary.md#term-sync--sync) writes no version pin, and that a raise writes the version pin after the content.
 
-**Rationale:** The router runs whatever release the version pin names, for every command in the project (ADR-049). A torn version pin would send each command to no release, and a version pin written early would name content that never landed. So ADR-049 point 1 writes the version pin last, after the content and the migrations. ADR-064 point 1 makes the write atomic, so the router never reads a torn version pin.
+**Rationale:** The router runs whatever [release](../../../glossary.md#term-release--release) the [version pin](../../../glossary.md#term-version-pin--version-pin) names, for every command in the [project](../../../glossary.md#term-project--project) (ADR-049). A torn version pin would send each command to no release, and a version pin written early would name content that never landed. So ADR-049 [point](../../../glossary.md#term-point--point) 1 writes the version pin last, after the content and the [migrations](../../../glossary.md#term-migration--migration). ADR-064 point 1 makes the write atomic, so the router never reads a torn version pin.

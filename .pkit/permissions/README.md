@@ -15,10 +15,11 @@ pkit:
         - src/project_kit/workspace.py
         - src/project_kit/run_rules.py
         - .pkit/schemas/permission-runs.schema.json
-      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
+        - .pkit/permissions/project/grants.yaml
+      record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/cli/README.md#folders-a-sync-writes, .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy]
     revalidated:
-      at: 2026-10-24T09:00:48Z
+      at: 2026-10-24T13:52:38Z
       outcome: updated
 ---
 
@@ -63,7 +64,7 @@ Every checkout of a project has one **agent workspace**: `.agent-workspace/` at 
 - **Per checkout, never committed.** `pkit init` and `pkit sync` create the folder and exclude it through the repository's local exclude file in the common git directory: each worktree has its own folder at its own root, one exclude entry covers all of them, and nothing in them reaches a commit. That entry covers the clone it was written in; `init` recommends the same line for the project's committed `.gitignore`, which covers every clone and which pkit never writes itself (CLI reference, `init` step 4). Nothing in the folder is shared between clones.
 - **Granted to every agent, for the file tools, and only there.** The catalog's `workspace` privilege is a **path-scoped allow** (`recognize.path`): it is recognized only for a file tool the privilege lists (`Read`, `Write`, `Edit`, `MultiEdit`, `NotebookEdit`) whose *target* lies inside `.agent-workspace/` of the project root or of another working tree of the same repository — never for the tool alone. It reduces prompts on the allow side, keyed on the target path; it confines nothing — shell reach is the OS sandbox's, and for the file tools, which run outside the sandbox, the recogniser's precision is the gate inside the folder (ADR-060 point 6). A grant of it can therefore neither reach nor deny a file anywhere else; outside the folder the privilege does not apply and a request is decided exactly as before. Every shipped profile grants it to `all`, `read-only` included — the folder holds nothing a commit can carry.
 - **What lies inside.** A target whose path resolves inside the folder, symlinks resolved — a link out of the folder is outside. The folder counts only as the checkout itself holds it: a symlinked `.agent-workspace` is never the workspace, a catalog folder entry that is absolute or climbs out with `..` is never recognized, and another working tree counts only when git registered it for the same repository — another repository's workspace never does. A repository or worktree nested inside the folder is not the folder: when any directory from the folder down to the target holds a `.git` entry, the target is another checkout's. Nor is an existing file with more than one link — a hard link planted in the folder would carry a write to its other name.
-- **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included (below): a remainder with a redirect still abstains. Write intermediate files with the file tools.
+- **No shell command is the workspace's.** A redirect, a here-document or an `rm` into the folder is judged like any other shell write, the leading-`cd` strip included (below): a remainder with a redirect into the folder still abstains. Write intermediate files with the file tools.
 - **Realized by the hook, never as a session-wide rule.** The projection reports a `workspace` grant as `runtime`, not as a native allow: a harness-wide `Write` or `Edit` rule would reach far beyond the folder. An adapter whose harness does not already approve the folder emits the narrowest path-scoped rule its harness offers; one whose harness does emits nothing — the Claude Code adapter's README says which it is, and its enforcement declaration names the dimension `path-scoped-allow`.
 - **A prompt there is a defect** — see the diagnostic loop above.
 
@@ -100,7 +101,7 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   The strip is deliberately conservative, and fails closed (ADR-004 decision point 4):
 
-  - **Only a bare `cd`** is stripped — a single path arg, parted from `cd` by a space or a tab, no quotes, no `$()`, no backtick, no redirection, no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
+  - **Only a bare `cd`** is stripped — a single path arg, parted from `cd` by a space or a tab, no quotes, no `$()`, no backtick, no redirection but one that writes no file (below), no flags. A `cd "/x; rm -rf ~" && …` is *not* a bare `cd`, so it is not stripped and falls through to the full-command path, where its deny still binds. Deny-wins is never weakened.
 
   - **No `cd` is stripped from a command holding an untrusted construct, a word the core cannot read as the shell does, or such a leading assignment** (all below), its `cd` included. Such a command is decided whole, so `cd {a,b} && git status` never hides what its `cd` word runs.
 
@@ -108,13 +109,26 @@ A compound Bash command reaches `decide()` as one string. The decision core spli
 
   - **A pipe is decided segment by segment.** The cd-strip does not touch pipes, and `|` is not a cd-separator. So `cd /x && gh … | sh` decides exactly as the bare `gh … | sh` does, and both abstain, since every segment needs its own allow (below).
 
-  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition), and any other widening is deferred per COR-007 — the leading-`cd` strip is the only widening taken. See ADR-025.
+  The broader "auto-approve any compound whose every segment is independently safe" widening is **rejected as unsound** (a per-segment matcher is blind to composition), and any other widening is deferred per COR-007. The widenings taken are the leading-`cd` strip and the removal of a redirection that writes no file (below). See ADR-025.
 
 **Every segment needs its own allow** (ADR-025 point 2). The core allows a compound only when an allow grant covers each segment the splitter yields. A segment that matches no privilege, or only privileges no allow grant of the subject reaches, makes the core abstain. The call then goes to the harness's own flow, and a strict posture denies it instead.
 
 So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py` abstain, as does `python3 x.py` on the line after `gh pr list`. So does a pipe into a filter no grant covers, such as `gh pr list | jq .`. A compound whose every segment is granted, such as `git diff | git apply --check`, is allowed. That is not the widening rejected above: each segment needs a grant of its own, never a judgement that it is safe.
 
-**An untrusted construct keeps every grant from allowing** (ADR-025 point 2). Where a Bash command holds a construct the dumb splitter cannot be trusted on, its segments may not be the commands the shell runs. These are a backtick, a `<` / `>` redirection, and a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code. A `$` is one too, since it opens every expansion. Its value is one the core never sees, and some forms, such as `${X@P}` and `$[…]`, evaluate it as code. The scan finds each of them inside quotes as well. Such a command, with or without a leading `cd`, makes the core abstain, and a strict posture denies it instead.
+**The read-only text filters and `uv run`** ([#2000](https://github.com/aleskalfas/project-kit/issues/2000)). Two catalog privileges cover the programs a compound most often pipes into or runs. A compound of these programs and other granted ones is then allowed, each segment still needing a grant of its own:
+
+- **`text-filter`** recognizes programs whose only effect is their standard output: they write no file, reach no network, run no other program and change no shell state. These are `cat`, `head`, `tail`, `wc`, `cut`, `tr`, `grep`, `egrep`, `fgrep`, `ls`, `cmp`, `comm`, `paste`, `basename`, `dirname`, `realpath`, `pwd`, `true`, `false`, `seq`, `sleep`, `stat`, `du` and `which`. It also recognizes `sort`, `uniq` and `diff` in a form that writes no file and runs no other program, holding no pathname pattern that could expand to one (the catalog's comments list the forms). Every shipped profile grants it to `all`, and it carries no path scope (ADR-005 point 5)
+- **`uv-run`** recognizes `uv run`, which runs any program it is given in the project's environment and confines nothing. A grant allows whatever that program does, and a deny reads the command as the wrapper `uv`, never as the program behind it (ADR-025 point 5), so no guardrail reaches `uv run rm -rf ~` ([#1990](https://github.com/aleskalfas/project-kit/issues/1990)). No shipped profile grants it, so a project that wants it grants it in its own `grants.yaml`
+
+Each recognizer of the two is a `pattern` or names a subcommand, so a grant of either writes no native allow rule: only the hook realizes them.
+
+Neither recognizes a program that writes a file or runs another, such as `sed`, `awk`, `find`, `xargs`, `tee` or `rg`. Nor does either recognize `echo`, the usual way to answer a confirmation from a pipe (`echo y | pkit …`), or `printf`, whose `-v` sets a shell variable. `jq` stays out too: its filters hold a `|`, and some of its options read files no check sees. So under a shipped profile, `grep x f | head` is allowed for every agent, and `grep x f | sed s/a/b/` defers.
+
+Leaving `echo` out does not close that path. What a granted program reads from a pipe is within its own grant, as its arguments are, so `basename y | pkit …` answers a confirmation too. Keeping a confirmation meant for a person from taking its answer from a pipe is [#2003](https://github.com/aleskalfas/project-kit/issues/2003)'s.
+
+Recognition goes by the program's name, as for every privilege. A shell alias or function under one of these names runs what it names, unasked. The privilege is sound only where its names reach the system's own programs.
+
+**An untrusted construct keeps every grant from allowing** (ADR-025 point 2). Where a Bash command holds a construct the dumb splitter cannot be trusted on, its segments may not be the commands the shell runs. These are a backtick, a `<` / `>` redirection other than one that writes no file (below), and a `(`, which opens every substitution: `$(…)`, `<(…)` / `>(…)`, zsh's `=(…)`, and zsh's glob qualifiers and parameter flags that run code. A `$` is one too, since it opens every expansion. Its value is one the core never sees, and some forms, such as `${X@P}` and `$[…]`, evaluate it as code. The scan finds each of them inside quotes as well. Such a command, with or without a leading `cd`, makes the core abstain, and a strict posture denies it instead.
 
 **So does a word the core cannot read as the shell does** (ADR-025 point 2). Its words may not be the words the shell passes on:
 
@@ -126,13 +140,24 @@ So where only `gh` is granted, `gh pr list | sh` and `gh pr list & python3 x.py`
 
 **And so does a leading assignment that changes which program runs, or one written with a quote or a backslash** (ADR-025 point 2). `PATH=/tmp/x gh pr list` runs whichever `gh` the new path finds first. Each such assignment is stripped for the denies, so `PATH=/tmp/x sudo id` is denied.
 
-- **The variables that change which program runs** are a search path, `PATH` or any other name ending in `PATH`, and the dynamic loader's `LD_*` and `DYLD_*`. So are the variables that name the startup files a shell reads first, such as `BASH_ENV`, `ENV` and `ZDOTDIR`, and the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own. The list names a family of variables, and is no boundary.
+- **The variables that change which program runs** are a search path, `PATH` or any other name ending in `PATH`, and the dynamic loader's `LD_*` and `DYLD_*`. So are the variables that name the startup files a shell reads first, such as `BASH_ENV`, `ENV` and `ZDOTDIR`, and the options of Python, Perl, Ruby, Node and Java, which load code ahead of the program's own. zsh's `NULLCMD` and `READNULLCMD` count too, since they name the program a command of redirections alone runs. The list names a family of variables, and is no boundary.
 - **A program's own setting,** such as `GIT_PAGER=cat`, is stripped and allowed: what a granted program is told to run is the grant's breadth. A `git` grant already lets `git -c core.fsmonitor=…` run any program. A setting that changes which configuration the program reads may still keep a deny from telling (below).
 - **An assignment written with a quote or a backslash** is never allowed by a grant. The core never matches an assignment's value, so removing its quotes would make no match more accurate: only a quoted argument is matched as the shell passes it on.
 
 A segment led by `export` runs no program: `export` takes each word after it as a name or an assignment, so `export git PATH=/tmp/x` sets `PATH` and runs no `git`. Its assignments are judged as above, and no grant on a program covers it. Each word after `export` must be a plain name or assignment: the shell expands any other first, so `export PAT?=bin` sets `PATH` where a file named `PATH=bin` lies in the directory, and such a word keeps every grant from allowing. A segment led by `builtin export` or `command export` stays a program no grant covers.
 
 So where `gh` and `git` are granted, `gh pr list > ~/.bashrc`, `gh pr list $(python3 x.py)` and `PATH=/tmp/x gh pr list` abstain, and the harness's own flow decides each. A quoted argument alone is none of these: `git commit -m "fix: x"` is allowed, and `git push origin main "--force"` is denied as `--force` is. For a grant, outside an `export`, a glob is read as written: it changes only arguments, from the names of files, never the program a grant names.
+
+**A redirection that writes no file is no untrusted construct** (ADR-025 point 2). The core removes it before it splits the command, and decides the command as it would without it:
+
+- an fd duplicated onto stdout or stderr, or closed, such as `2>&1`, `1>&2`, `>&2` or `2>&-`
+- output discarded to `/dev/null`: `>`, `>>`, `2>`, `2>>`, `&>` or `&>>`, with or without a space before `/dev/null`
+
+So where `git` and `gh` are granted, `git status 2>&1 | gh pr list` and `cd /x && git log >/dev/null` are allowed. A deny binds on a program behind such a redirection, so `2>/dev/null rm -rf ~` is denied. The removal ignores quotes, as the scan for untrusted constructs does: inside quotes it changes only an argument's text.
+
+Each form counts only as a whole word, with an fd number of one digit or none, and the target exactly `/dev/null`, unquoted. After `>&` or `<&` comes `1`, `2` or `-` alone, since another fd may be one the shell holds open on a file. `&>` and `&>>` count only last in their segment, since dash reads their `&` as running the command in the background. A segment left with redirections and assignments alone, or behind only a word such as `{` or `do`, keeps the command untrusted, since zsh runs such a command as the program `NULLCMD` names.
+
+A lookalike stays untrusted: `2>&1t` writes a file `1t` in zsh, `{fd}>/dev/null` sets the variable `fd`, and `>&word` writes to the file `word`. So does every other redirection, such as `> out.txt`, `< in.txt`, `>|`, `<>`, a here-string or a heredoc.
 
 A deny on any segment still wins over every allow, and over an untrusted construct. The abstain's reason names each uncovered segment's program where that is a bare word, and never its arguments, so it undoes none of the diagnostic log's redaction. The reason for an untrusted construct lists the kinds of construct, and none of the command's text.
 
@@ -157,9 +182,9 @@ The `vcs-history-rewrite` guardrail also names `--mirror`, which force-updates e
 - **A pathname pattern**, such as `--forc[e]` or `*`, which the shell expands to the names of files. A glob character counts outside quotes alone, so `git push origin '[+]main'` is read as written. For a structured recognizer, the core cannot tell where such a pattern stands for the program or the subcommand, or may open with `-` or `+`. For a regex `pattern`, it cannot tell where one stands anywhere in a segment of the program the regex opens with, or of any program where it opens with none plainly.
 - **An assignment that changes the program's configuration**, which may set a forced refspec or an alias. These are `HOME`, the XDG base directories, any name holding `CONFIG`, such as `GIT_CONFIG_GLOBAL`, and git's repository directories. Such an assignment counts in front of a command, for that command, and in a segment that only assigns or exports, `builtin export` included, for the segments after it. It keeps a deny from telling on any segment of the program the deny names, so `HOME=/tmp/x git status` defers.
 
-**Where Claude Code may allow what the core defers on a guardrail, the person is asked.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form it cannot see (`hidden_guardrails()`). An adapter may use it to ask the person rather than defer.
+**Where Claude Code may allow what the core defers on a guardrail, the person is asked, outside auto and bypass mode.** A harness's own rules may allow a command the core defers, as Claude Code's baseline allows `git push origin --forc[e]` by `Bash(git:*)`. So the core names each guardrail among the subject's denies that may bind on a deferred command in a form it cannot see (`hidden_guardrails()`). An adapter may use it to ask the person rather than defer.
 
-The Claude Code hook asks the person on such a command ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it, and where it cannot tell the deny it defers. The deny side stays a speed bump all the same (ADR-025 point 5).
+The Claude Code hook asks the person on such a command ([the adapter's README, "Live permission enforcement"](../adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy)). In auto mode and bypass mode it does not ask, since there the person chose not to be asked. A project's own deny, such as the project manager's on raw `gh` mutations, is no guardrail, so the core names none for it, and where it cannot tell the deny it defers. The deny side stays a speed bump all the same (ADR-025 point 5).
 
 What the forms leave out stays unseen, and nothing asks about it. A git alias or refspec set in a configuration git already reads, or through `git -c` or a granted `git config`, is the grant's breadth (ADR-025 point 5). A program behind a wrapper, such as `env` or `command`, is read as the wrapper. No shipped grant covers one, so the core defers, but a project's grant on a program runner, such as `xargs`, would allow what it runs.
 

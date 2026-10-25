@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T04:45:34Z
+      at: 2026-10-25T01:39:18Z
       outcome: unchanged
-      unchanged-because: The Claude Code README gains when its hook asks, a detail of that adapter. What every adapter provides, and the list of adapters, are as before.
+      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. What this README says of the commands an adapter runs holds.
 ---
 
 # Adapters

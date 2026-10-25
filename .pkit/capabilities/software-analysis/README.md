@@ -15,8 +15,9 @@ pkit:
       record: ["software-analysis:DEC-001", "software-analysis:DEC-002", "software-analysis:DEC-003", "software-analysis:DEC-004", COR-004, COR-030, COR-049, COR-050, COR-051, COR-052, COR-053, COR-057, COR-060, "project-management:DEC-032", "project-management:DEC-056", "living-docs:DEC-001#9"]
       artefact: [RS-SAN-001, RS-SAN-002, RS-SAN-003, RS-SAN-004, RS-SAN-005, RS-SAN-006, RS-SAN-007, RS-SAN-008, RS-SAN-009, RS-SAN-010, RS-SAN-011, RS-SAN-012, RS-SAN-013, ".pkit/capabilities/project-management/README.md#8-optional-grant-the-fixers-your-capabilities-declare"]
     revalidated:
-      at: 2026-10-24T03:40:37Z
-      outcome: updated
+      at: 2026-10-25T01:39:45Z
+      outcome: unchanged
+      unchanged-because: The resolver body names the answers its commands write, and the validator asks the backbone once for the records it reads. The account of the resolver and of what validation checks holds.
       deferred:
         - anchor:
             kind: record
@@ -210,20 +211,24 @@ The stamp reads the analysis through the core's reading command, `pkit friction 
 
 Where an analysis keeps a domain model, `pkit analysis link` links its terms where they are mentioned, so each concept is a click from its definition (DEC-004 point 7). An analysis keeps a domain model once its `domain-model/` folder holds a view, in force or withdrawn. An analysis without one sees no link.
 
-- **What it writes.** Each section of a view in force opens with `Defined in [<TERM-id>](<glossary>#<anchor>).`, right below its heading. In a view's opening and each of its sections, and in each glossary entry below its heading, the first mention of each term links to the term's entry. A term is never linked in its own section, nor in its own entry. A term's definition, in front matter, and the glossary's head take no link.
+- **What it writes.** Each section of a view in force opens with `Defined in [<TERM-id>](<glossary>#<anchor>).`, right below its heading. The first mention of each term in each section links to the term's entry. A term is never linked in its own section, nor in its own entry.
+- **Where it writes them.** It writes them in a view's opening and its sections, and in each glossary entry below its heading. It writes them in each part of an actor, a use case, a journey and a requirement in force too. Front matter, such as a term's definition or a requirement's statement, and the glossary's head take no link.
+- **A part of the other kinds.** In an actor, a use case, a journey and a requirement, a part opens at each heading and each label its kind declares. It runs to the next. Your own structures' labels open parts too, and a relabelled part keeps its place, whatever any rule's status.
+- **What says a datum again stays plain.** A journey's step line gives a use case's title, and an actor's first sentence gives its `summary`. A form holds each equal to that data, so each takes no link, as its data takes none, and the form still holds. A goal stays plain by choice: it states a need, which front matter keeps plain, so it reads as the need it states.
 - **The entry's anchor** is the slug of its heading, `<id> — <name>`, such as `term-sandbox--sandbox`, so it changes only when the term is renamed. A link's target is a path from the file's folder, such as `../glossary.md#term-sandbox--sandbox` from a view, or the anchor alone in the glossary.
 - **A term of another analysis.** A term the glossary's head lists from an analysis your settings list links to its entry there, at the same commit, such as `../core/glossary.md#term-change--change`. It is mentioned by the name the head lists. A term of an analysis in another repository takes no link: the head's own link leads there.
 - **What a mention is.** A term's name, or one of its `noun-forms`, whole, its first letter in either case. No letter, digit, hyphen, slash or underscore may join it, so `sandbox's` holds a mention, and `pre-sandbox` holds none.
 - **The longest first.** Of two mentions that overlap, the one that starts first wins, and of two that start together, the longer. So `payment method` wins over `payment`.
 - **What it skips:** fenced code and code spans, headings, bold labels, comments, links, autolinks, HTML tags and bare URLs.
 - **A phrase in another sense.** A phrase a term lists in `other-senses` never links that term. Another term inside the phrase may still link.
+- **An actor's name.** An actor named by its name uses no concept. So an actor's name holds no mention of a term only part of it, such as `component` in `component author`. The actors are those in force, and the actors the glossary's head lists. Where an actor's whole name is a term's name, the escape marks the actor.
 - **An escape for one mention.** `<!-- pkit:not-the-term -->` right before a mention marks it as no mention. It takes no link, and the next mention counts as the first. Use it last, where no rewording helps, such as a word in a quotation.
-- **A wrong link is a finding.** In a view, a link on a word used in another sense shows a statement `RS-SAN-008` asks you to reword. In a glossary entry, list the phrase in `other-senses`, or escape the one mention.
+- **A wrong link is a finding.** Outside the glossary, a link on a word used in another sense shows a statement `RS-SAN-008` asks you to reword. In a glossary entry, list the phrase in `other-senses`, or escape the one mention.
 - **A name two terms share** links neither. Two terms never share one: see one name, one concept, under the glossary in [The artefacts](#the-artefacts), below.
 - **Written, never by hand.** It writes a file only where a link changes, whole or not at all, with the file's own line endings, and names each file it wrote. A link to a glossary entry written by hand is rewritten as the command's.
-- **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. So run it after you add or rename a term, or reword a view or an entry.
-- **A moved link asks nothing.** The places of the glossary and of the views declare these links' form, a link to a glossary entry (DEC-004 point 7). The core's friction checks read each such link as its words alone (COR-050 point 5). So a change that only adds, removes or retargets links asks nothing of what anchors that entry's term or that section of a view. A word you change beside a link still does.
-- **A revalidation of links alone is `unchanged`.** Friction reads a moved link as no change to content, so `outcome: updated` on such a change alone is a bump. Mark it `unchanged`, with why the entry or the view still holds.
+- **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. So run it after you add or rename a term, or reword any artefact of the analysis.
+- **A moved link asks nothing.** Each place of the analysis's artefacts declares these links' form, a link to a glossary entry (DEC-004 point 7). The core's friction checks read each such link as its words alone (COR-050 point 5). So a change that only adds, removes or retargets links asks nothing of what anchors the linked artefact. A word you change beside a link still does.
+- **A revalidation of links alone is `unchanged`.** Friction reads a moved link as no change to content, so `outcome: updated` on such a change alone is a bump. Mark it `unchanged`, with why the artefact still holds.
 - **A link of that form you write by hand** is set aside too, as in the glossary of an analysis that keeps no domain model. Its words still count.
 
 A section of the example view below, linked:
@@ -853,7 +858,7 @@ While any of these stands, none of the file applies: the check holds no body to 
 
 ## Checking: `pkit analysis validate`
 
-`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree — and the evidence point, when a record copies evidence — so the same tree gets the same answer as long as the evidence fillers read the tree alone. A file your `friction.exclude` leaves out is no part of the analysis: the check reads nothing of it, and the stamp counts no number it holds — as friction neither counts such a file nor asks it for an answer (COR-050 point 7). The same goes for a revalidation record under an excluded path: the core still lists it as this capability's held document, marked as excluded, and the check neither counts nor checks it. It fails on:
+`pkit validate` runs the check as its `software-analysis:artefacts` member, so it runs wherever your check gate runs `pkit validate`; `pkit analysis validate` runs it alone, and `--json` prints the findings document it reads. It is a query: read-only, offline, and `pkit sync` provisions its dependencies. It reads the working tree, the evidence point when a record copies evidence, and a regressed artefact's revalidations at HEAD. So the same tree and HEAD get the same answer as long as the evidence fillers read the tree alone. A file your `friction.exclude` leaves out is no part of the analysis: the check reads nothing of it, and the stamp counts no number it holds — as friction neither counts such a file nor asks it for an answer (COR-050 point 7). The same goes for a revalidation record under an excluded path: the core still lists it as this capability's held document, marked as excluded, and the check neither counts nor checks it. It fails on:
 
 - **a file in a place that is not its kind's shape** — a file without front matter, or whose front matter does not parse, a glossary that is not a collection, an actor, use-case, journey or requirement file holding entries. What such a file holds can't be read, its ids included, and an id is never used again, so it is never skipped: the number a use case's, journey's or requirement's name carries still counts as held;
 - **a file under `requirements/` outside the three kinds' folders** — `requirements/` holds the three kinds' folders and is no place itself, so such a file is a requirement of no kind. The check holds it to none, and the stamp counts no number it holds (DEC-002 point 3). Move it into its kind's folder, or leave it out with `friction.exclude`. The check reads these files from `pkit friction artefacts`. An installed backbone too old to give them fails the check too, and the check says it could not look;
@@ -926,7 +931,9 @@ It says nothing of an id the point no longer holds, or of a point that does not 
 
 While no rule of `SAN` is accepted, it reports, and never fails on, **no rule of `SAN` binding on any of the analysis**, since none could bind yet.
 
-It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record — its `at` falls on no later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out from the records and the artefacts each time, never kept in a ledger.
+It reports, and never fails on, **an open regression**: a record's `code-regressed` artefact that has not been revalidated since the record. None of its live revalidations has an `at` on a later day (UTC) than the record's date. The defect the record names is still open, or its fix was never revalidated against the artefact. It is worked out each time, never kept in a ledger.
+
+The check reads the regressed artefact's live revalidations at HEAD, through the backbone (`pkit friction explain --json`), and never reads `at` from a file. So a revalidation counts once it is committed. An artefact the backbone cannot explain is still reported, with why.
 
 A time written unquoted in a record's front matter, such as a source's `version` in `reviewed-against`, is read by YAML as a time and not as the text written. The check says so, and asks you to quote it.
 

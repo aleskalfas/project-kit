@@ -74,6 +74,7 @@ sole-constructor invariant covers a field-value write however it is spelled.
 
 from __future__ import annotations
 
+import json
 import subprocess
 from dataclasses import dataclass
 from typing import Any
@@ -219,6 +220,74 @@ def write_field_value(
         config,
         ok_detail=f"set field_id={field_id} on item_id={item_id}",
         fail_prefix="gh project item-edit failed",
+    )
+
+
+# ----- field option-list write (updateProjectV2Field) ---------------------
+#
+# Not one of ADR-031's two covered substrates: this writes a single-select
+# field's OPTIONS (the board's vocabulary for an axis), not a value on a card.
+# It is constructed here because it is a non-label board write, and this module
+# is where those are built and run (DEC-018's board projection of
+# workstreams.yaml is its caller).
+
+# The colours Projects v2 accepts for a single-select option.
+OPTION_COLORS = ("GRAY", "BLUE", "GREEN", "YELLOW", "ORANGE", "RED", "PINK", "PURPLE")
+DEFAULT_OPTION_COLOR = "GRAY"
+
+
+def _graphql_string(value: str) -> str:
+    """``value`` as a GraphQL string literal (JSON's escaping is GraphQL's)."""
+    return json.dumps(value)
+
+
+def field_options_args(*, field_id: str, options: list[dict[str, str]]) -> list[str]:
+    """Construct the write that sets a single-select field's whole option list.
+
+    Each option is a mapping with `name`, and optionally `id`, `color` and
+    `description`. An option that keeps its `id` keeps the value every card
+    holds for it, renamed or not. An option left out is deleted, and the cards
+    that held it lose their value. A colour Projects v2 does not know becomes
+    gray.
+    """
+    rendered: list[str] = []
+    for option in options:
+        color = str(option.get("color") or "").upper()
+        if color not in OPTION_COLORS:
+            color = DEFAULT_OPTION_COLOR
+        parts = []
+        if option.get("id"):
+            parts.append(f"id: {_graphql_string(str(option['id']))}")
+        parts.append(f"name: {_graphql_string(str(option['name']))}")
+        parts.append(f"color: {color}")
+        parts.append(f"description: {_graphql_string(str(option.get('description') or ''))}")
+        rendered.append("{" + ", ".join(parts) + "}")
+    mutation = (
+        "mutation { updateProjectV2Field(input: {fieldId: "
+        f"{_graphql_string(field_id)}, singleSelectOptions: [{', '.join(rendered)}]"
+        "}) { projectV2Field { ... on ProjectV2SingleSelectField { id } } } }"
+    )
+    return ["gh", "api", "graphql", "-f", f"query={mutation}"]
+
+
+def write_field_options(
+    config: dict[str, Any],
+    *,
+    field_id: str,
+    options: list[dict[str, str]],
+) -> SubstrateWriteResult:
+    """Construct AND execute the option-list write; return the neutral result.
+
+    Same posture as :func:`write_field_value`: it never raises on a failed
+    write, and leaves what a failure means to the caller.
+    """
+    args = field_options_args(field_id=field_id, options=options)
+    names = ", ".join(str(o.get("name")) for o in options)
+    return _execute(
+        args,
+        config,
+        ok_detail=f"set the options of field_id={field_id} to: {names}",
+        fail_prefix="gh api graphql updateProjectV2Field failed",
     )
 
 

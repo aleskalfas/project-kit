@@ -15,8 +15,25 @@ reads back, the two others:
   takes it out. A line in another form, or in fenced code, is the writer's, and is
   left as written.
 - **A mention's link to its term.** In a view's opening and each of its sections,
-  and in each glossary entry's section below its heading, the first mention of a
-  term is linked to its entry, `[<mention>](<glossary>#<anchor>)`.
+  in each glossary entry's section below its heading, and in each part of the body
+  of an actor, a use case, a journey and a requirement in force (`document`), the
+  first mention of a term is linked to its entry, `[<mention>](<glossary>#<anchor>)`.
+
+**A part of the four kinds** (`PARTED`) opens at each heading and at each label its
+kind declares, and runs to the next, as the structure finds its marks
+(`structure.marks`). The kind is read as `parted` gives it, whatever any rule's status:
+as shipped, relabelled by the project's own structures, each label their groups add
+opening a part too, and a part found by its shipped label as well. What says a datum
+again is read for no mention, so it stays plain as the datum does, and the form that
+holds it to the datum still holds (`_quiet`):
+
+- a use case's and a journey's goal, the part whose id is `goal`, which states a need
+- each step's line in a journey's steps, the part whose id is `steps`, which gives a
+  use case's title, its hand-overs read as any text
+- the first sentence of an actor's opening, which gives its `summary` where the
+  front matter gives one (`forms.first_sentence_end`)
+
+A link to a glossary entry written there by hand is extra, and the command takes it out.
 
 **The entry's anchor** is the slug of its heading, `## <id> — <name>`, as COR-050
 point 2 makes it (`Term.anchor`), so it changes only when the term is renamed. A
@@ -42,6 +59,10 @@ pair (DEC-001 points 1 and 2). The safeguards:
   item, a label.
 - **Another sense:** a phrase a term lists in `other-senses` is never a mention of
   that term. Another term inside the phrase may still be mentioned.
+- **An actor's name:** the name of an actor in force of the analysis, or of one its
+  glossary's head lists, holds no mention of a term whose name is only part of it,
+  such as "component" in "component author". An actor named by its name uses no
+  concept. A term whose name is the actor's whole name is still mentioned by it.
 - **The escape:** `<!-- pkit:not-the-term -->`, with nothing but spaces after it,
   marks the mention that follows as no mention: it takes no link, and the next
   mention counts as the first.
@@ -55,22 +76,43 @@ written by hand is held as the command's. Another link is the writer's, and its
 text is skipped.
 
 The rewrite reads a body only to place its links, and takes its data from front
-matter alone: each term's id, name, noun forms and other senses, and each view's
-`explains` (DEC-001 point 1). It never changes the number of a body's lines, but
+matter and the declared structures alone: each term's id, name, noun forms and other
+senses, each view's `explains`, whether an actor gives a `summary`, and the labels that
+open each part (DEC-001 point 1). It never changes the number of a body's lines, but
 where it adds a section's link to its term, or takes out a line in that form.
 """
 
 from __future__ import annotations
 
 import dataclasses
+import functools
 import posixpath
 import re
 from collections import Counter
-from collections.abc import Collection, Iterable, Mapping, Sequence
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass
+from pathlib import Path
 
-from _lib import analyses, forms
-from _lib.model import EXPLAINS, TERM, VIEW, Analysis, Artefact
+from _lib import analyses, forms, project_structure, structure
+from _lib.model import (
+    ACTOR,
+    EXPLAINS,
+    JOURNEY,
+    REQUIREMENTS,
+    TERM,
+    USE_CASE,
+    VIEW,
+    Analysis,
+    Artefact,
+)
+
+#: The kinds whose bodies take the mentions' links one part at a time, beside the glossary
+#: and the views (DEC-004 point 7).
+PARTED = (ACTOR, USE_CASE, JOURNEY, *REQUIREMENTS)
+
+#: The permanent ids of the parts that say a datum again: a goal states a need, and a
+#: journey's steps give each use case's title. An actor's opening gives its summary.
+GOAL, STEPS, SUMMARY = "goal", "steps", "summary"
 
 #: A term's other noun forms, and the phrases in which its name has another sense (DEC-001
 #: point 1).
@@ -158,8 +200,14 @@ class Term:
         """Where a link to its entry leads from the file at `from_path`."""
         if from_path == self.glossary:
             return f"#{self.anchor}"
-        rel = posixpath.relpath(self.glossary, posixpath.dirname(from_path) or ".")
-        return f"{rel}#{self.anchor}"
+        return f"{_relative(self.glossary, posixpath.dirname(from_path) or '.')}#{self.anchor}"
+
+
+@functools.cache
+def _relative(path: str, start: str) -> str:
+    """`path` from the folder `start`, both in the repository, worked out once for each
+    pair: the answer does not depend on the working directory."""
+    return posixpath.relpath(path, start)
 
 
 def names(artefact: Artefact) -> list[tuple[str, str]]:
@@ -228,9 +276,21 @@ class Vocabulary:
 
     terms: tuple[Term, ...]
     matched: Mapping[str, tuple[str, ...]]
+    actors: tuple[str, ...] = ()  # the actors' names, which hold no mention of a term
 
     def term(self, term_id: str) -> Term | None:
         return next((t for t in self.terms if t.id == term_id), None)
+
+    @functools.cached_property
+    def searched(self) -> tuple[tuple[str, str, str], ...]:
+        """Each name a term is matched by, with the term's id and the name's needle
+        (`_needle`), the terms in their order and each term's names in theirs: listed once
+        for every text the vocabulary reads."""
+        return tuple(
+            (term.id, name, _needle(name))
+            for term in self.terms
+            for name in self.matched.get(term.id, ())
+        )
 
 
 def vocabulary(analysis: Analysis, listing: analyses.Listing, folder: str | None) -> Vocabulary:
@@ -238,8 +298,14 @@ def vocabulary(analysis: Analysis, listing: analyses.Listing, folder: str | None
     each term its glossary's head lists from an analysis the repository holds, while it is
     in force there. A listed term is mentioned by the name the head lists, and by the
     noun forms and the other senses its own entry declares, and links to that entry by the
-    name the entry gives it (DEC-004 point 7)."""
+    name the entry gives it (DEC-004 point 7). The actors' names are those of its actors
+    in force, and those its glossary's head lists."""
     found: list[Term] = []
+    actors: list[str] = []
+    for actor in analysis.of_kind(ACTOR):
+        name = actor.fields.get("name")
+        if actor.folder == folder and not actor.withdrawn and isinstance(name, str):
+            actors.append(name)
     for artefact in analysis.of_kind(TERM):
         if artefact.folder == folder and not artefact.withdrawn:
             term = term_of(artefact)
@@ -247,6 +313,7 @@ def vocabulary(analysis: Analysis, listing: analyses.Listing, folder: str | None
                 found.append(term)
     head = analyses.head(analysis, folder) if listing.several else None
     for taken in head.taken if head is not None else ():
+        actors += [actor.name for actor in taken.actors]
         other = listing.of_component(taken.analysis)
         if other is None:
             continue  # an analysis in another repository: no data says where its entry lies
@@ -257,7 +324,8 @@ def vocabulary(analysis: Analysis, listing: analyses.Listing, folder: str | None
             term = term_of(artefact)
             if term is not None and all(t.id != term.id for t in found):
                 found.append(dataclasses.replace(term, name=listed_name, entry_name=term.name))
-    return Vocabulary(tuple(found), matched(found))
+    named = tuple(dict.fromkeys(a for a in actors if a.strip()))
+    return Vocabulary(tuple(found), matched(found), named)
 
 
 def matched(terms: Sequence[Term]) -> dict[str, tuple[str, ...]]:
@@ -307,9 +375,11 @@ class _Wanted:
     term: str
 
 
+@functools.cache
 def _pattern(phrase: str) -> re.Pattern[str]:
     """A phrase as a mention matches it: its words as written, any white space between
-    them, its first letter in either case and an apostrophe of either kind, whole."""
+    them, its first letter in either case and an apostrophe of either kind, whole. Built
+    once for each phrase."""
     words = phrase.split()
     parts: list[str] = []
     for i, word in enumerate(words):
@@ -318,10 +388,30 @@ def _pattern(phrase: str) -> re.Pattern[str]:
     return re.compile(f"(?<!{_JOINER}){body}(?!{_JOINER})")
 
 
+@functools.cache
+def _needle(phrase: str) -> str:
+    """The longest run of a phrase's characters that its pattern matches only as written:
+    within one word, past the phrase's first letter, and holding no apostrophe. Text that
+    lacks it holds no mention of the phrase, so it is not searched."""
+    runs: list[str] = []
+    for i, word in enumerate(phrase.split()):
+        written = word[1:] if i == 0 else word
+        runs += re.split(f"[{_APOSTROPHES}]", written)
+    return max(runs, key=len, default="")
+
+
+def _found(phrase: str, text: str) -> Iterator[re.Match[str]]:
+    """Each mention of `phrase` in `text`, as its pattern finds them: none, read at the
+    cost of one substring test, where `text` lacks its needle."""
+    if _needle(phrase) not in text:
+        return iter(())
+    return _pattern(phrase).finditer(text)
+
+
 def mentions(text: str, name: str) -> bool:
     """Whether `text` holds `name` as a mention reads it: whole, its first letter in either
     case."""
-    return _pattern(name).search(text) is not None
+    return next(_found(name, text), None) is not None
 
 
 #: Any white space between a phrase's words; and an apostrophe of either kind, the
@@ -445,17 +535,23 @@ def _chosen(
     for term in vocabulary.terms:
         for phrase in term.other_senses:
             blocked.setdefault(term.id, []).extend(
-                (m.start(), m.end()) for m in _pattern(phrase).finditer(text)
+                (m.start(), m.end()) for m in _found(phrase, text)
             )
+    named = [(m.start(), m.end()) for a in vocabulary.actors for m in _found(a, text)]
     candidates: list[_Mention] = []
-    for term in vocabulary.terms:
-        for name in vocabulary.matched.get(term.id, ()):
-            for m in _pattern(name).finditer(text):
-                if _overlaps(m.start(), m.end(), skipped):
-                    continue
-                if any(s <= m.start() and m.end() <= e for s, e in blocked.get(term.id, ())):
-                    continue
-                candidates.append(_Mention(m.start(), m.end(), term.id))
+    for term_id, name, needle in vocabulary.searched:
+        if needle not in text:
+            continue  # no mention of the name, as `_found` reads it
+        for m in _pattern(name).finditer(text):
+            if _overlaps(m.start(), m.end(), skipped):
+                continue
+            if any(s <= m.start() and m.end() <= e for s, e in blocked.get(term_id, ())):
+                continue
+            if any(
+                s <= m.start() and m.end() <= e and m.end() - m.start() < e - s for s, e in named
+            ):
+                continue
+            candidates.append(_Mention(m.start(), m.end(), term_id))
     candidates.sort(key=lambda c: (c.start, -(c.end - c.start), c.term))
     chosen: list[_Mention] = []
     reached = 0
@@ -467,10 +563,16 @@ def _chosen(
 
 
 def _wanted(
-    text: str, own: str | None, vocabulary: Vocabulary, path: str, hide: Collection[int]
+    text: str,
+    own: str | None,
+    vocabulary: Vocabulary,
+    path: str,
+    hide: Collection[int],
+    plain: Sequence[tuple[int, int]] = (),
 ) -> list[_Wanted]:
     """The links the command writes in one section's `text`: the first mention of each term
-    that is not the section's own and no escape marks."""
+    that is not the section's own, no escape marks, and lies outside each span of `plain`,
+    text that stays plain."""
     mentions, escapes = _chosen(text, vocabulary, hide)
     linked: set[str] = set()
     wanted: list[_Wanted] = []
@@ -478,6 +580,8 @@ def _wanted(
         if any(
             text[end : mention.start].strip(" \t") == "" for end in escapes if end <= mention.start
         ):
+            continue
+        if _overlaps(mention.start, mention.end, plain):
             continue
         if mention.term == own or mention.term in linked:
             continue
@@ -503,14 +607,18 @@ def section(
     path: str,
     first_line: int,
     hide: Collection[int] = (),
+    quiet: Callable[[str], Sequence[tuple[int, int]]] | None = None,
 ) -> tuple[str, list[Difference]]:
     """One section's `text`, its links to terms written as the command writes them, and how
     the links it holds depart from those; `first_line` is the line `text` starts on in
     the file at `path`, `own` the id of the section's own term, and `hide` the lines of
     `text`, counted from 0, that link a view's section to a term, which are neither read
-    nor rewritten here (`with_definitions`)."""
+    nor rewritten here (`with_definitions`). `quiet` gives the spans of the text, its
+    links unwritten, that say a datum again: they are read for no mention, and a link
+    written in them is extra (`_quiet`)."""
     plain, found = _strip(text, hide)
-    wanted = _wanted(plain, own, vocabulary, path, hide)
+    still = quiet(plain) if quiet is not None else ()
+    wanted = _wanted(plain, own, vocabulary, path, hide, still)
 
     def line(offset: int) -> int:
         return first_line + plain.count("\n", 0, offset)
@@ -753,6 +861,141 @@ def _mentions(
     return found
 
 
+# --- an actor, a use case, a journey and a requirement -----------------------------------------
+
+
+def parted(root: Path) -> dict[str, structure.Kind]:
+    """The kinds of `PARTED`, each as its parts are found whatever any rule's status: as
+    shipped, relabelled by the project's own structures at `root`, each label any of their
+    groups adds opening a part too, and a part found by its shipped label as well. Where
+    the project's file cannot be read, the kinds are read as shipped, and the check's
+    findings on that file say why. Raises `structure.Unreadable` where the declaration
+    cannot be read."""
+    shipped = structure.read_kinds()
+    own = project_structure.read(root, shipped)
+    if own.problems:
+        own = project_structure.Own()
+    found: dict[str, structure.Kind] = {}
+    for name in PARTED:
+        groups = own.of(name)
+        kind = project_structure.relabelled(shipped[name], own)
+        kind = project_structure.tightened(kind, groups, (), groups)
+        found[name] = dataclasses.replace(kind, as_written=True)
+    return found
+
+
+def _texts(kind: structure.Kind, element_id: str) -> frozenset[str]:
+    """The texts the label of the part whose id is `element_id` is found by, as they are
+    compared: its label, and each label a project relabelled it from."""
+    for element in kind.sections:
+        if element.id == element_id and element.type == structure.LABEL and element.text:
+            return frozenset(structure.comparable(t) for t in (element.text, *element.aliases))
+    return frozenset()
+
+
+#: A step's line in a journey's steps: a top-level numbered item. Its line ends at a blank
+#: line, a nested item or a hand-over.
+_STEP = re.compile(r"^[0-9]{1,9}[.)](?:[ \t]|$)")
+_NESTED = re.compile(r"^[ \t]+(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)")
+_HAND_OVER = re.compile(r"^[ \t]*(?:[-+*][ \t]+)?\*\*Needs from ")
+
+
+def _step_lines(text: str) -> list[tuple[int, int]]:
+    """The spans of each step's line in a journey's steps, which gives a use case's
+    title."""
+    spans: list[tuple[int, int]] = []
+    at = 0
+    within = False
+    for line in text.split("\n"):
+        if _STEP.match(line):
+            within = True
+        elif not line.strip() or _NESTED.match(line) or _HAND_OVER.match(line):
+            within = False
+        if within:
+            spans.append((at, at + len(line)))
+        at += len(line) + 1
+    return spans
+
+
+def _first_sentence(text: str) -> list[tuple[int, int]]:
+    """The span of an opening's first sentence, below the heading that opens its part."""
+    at = 0
+    for line in text.split("\n"):
+        if line.strip() and not _HEADING.match(line):
+            break
+        at += len(line) + 1
+    if at >= len(text):
+        return []
+    return [(at, at + forms.first_sentence_end(text[at:]))]
+
+
+def _whole(text: str) -> list[tuple[int, int]]:
+    return [(0, len(text))]
+
+
+def _quiet(
+    artefact: Artefact, kind: structure.Kind, marks: Sequence[tuple[int, str, int, str] | None]
+) -> list[Callable[[str], Sequence[tuple[int, int]]] | None]:
+    """For each part of a body, opened by the mark in its place (`None` for the text above
+    the first), what in it says a datum again and stays plain: a goal whole, each step's
+    line of a journey's steps, and the first sentence of an actor's opening where the
+    actor gives a summary. The opening is the part its first heading opens, or the text
+    above the first mark, before any label."""
+    goal, steps = _texts(kind, GOAL), _texts(kind, STEPS)
+    summary = artefact.fields.get(SUMMARY)
+    opening: int | None = None
+    if kind.name == ACTOR and isinstance(summary, str) and summary.strip():
+        for k, mark in enumerate(marks):
+            if mark is not None and mark[1] == structure.LABEL:
+                break
+            if mark is None or (mark[1] == structure.HEADING and mark[2] == 1):
+                opening = k
+    found: list[Callable[[str], Sequence[tuple[int, int]]] | None] = []
+    for k, mark in enumerate(marks):
+        label = structure.comparable(mark[3]) if mark and mark[1] == structure.LABEL else None
+        if label is not None and label in goal:
+            found.append(_whole)
+        elif label is not None and label in steps and kind.name == JOURNEY:
+            found.append(_step_lines)
+        elif k == opening:
+            found.append(_first_sentence)
+        else:
+            found.append(None)
+    return found
+
+
+def document(artefact: Artefact, text: str, vocabulary: Vocabulary, kind: structure.Kind) -> Linked:
+    """An actor, a use case, a journey or a requirement in force, LF `text`, with the
+    mentions' links written in each part of its body, read as `kind` gives its parts:
+    from each heading and each label it declares to the next, the text above the first a
+    part too (`_quiet` says what stays plain)."""
+    lines = text.split("\n")
+    start = body_start(lines)
+    numbered = [(index + 1, lines[index]) for index in range(start, len(lines))]
+    opened = structure.marks(numbered, kind)
+    bounds = [start, *(start + index for index, *_rest in opened), len(lines)]
+    marks: list[tuple[int, str, int, str] | None] = [None, *opened]
+    quiet = _quiet(artefact, kind, marks)
+    linked: list[str] = list(lines[:start])
+    departures: list[Departure] = []
+    for k in range(len(bounds) - 1):
+        first, past = bounds[k], bounds[k + 1]
+        if first == past:
+            continue
+        rewritten, found = section(
+            "\n".join(lines[first:past]),
+            None,
+            vocabulary,
+            artefact.path,
+            first + 1,
+            quiet=quiet[k],
+        )
+        linked += rewritten.split("\n")
+        departures += [_departure(artefact.location, d) for d in found]
+    departures.sort(key=lambda d: (d.line, d.how))
+    return Linked(artefact.path, text, "\n".join(linked), tuple(departures))
+
+
 def body_start(lines: Sequence[str]) -> int:
     """The index of a document's first line below its front matter."""
     if lines and lines[0].rstrip() == "---":
@@ -778,10 +1021,13 @@ def plan(
     analysis: Analysis,
     listing: analyses.Listing,
     read: Mapping[str, str | None],
+    kinds: Mapping[str, structure.Kind] | None,
 ) -> list[Linked]:
-    """Each file the links reach in the analyses that keep a domain model, the glossary and
-    each view in force of each, as the command writes it. `read` gives each file's text by
-    its path, LF line ends, `None` where it cannot be read, which is left out."""
+    """Each file the links reach in the analyses that keep a domain model, as the command
+    writes it: the glossary, each view in force, and, read as `kinds` gives their parts
+    (`parted`), each actor, use case, journey and requirement in force, left out where
+    `kinds` is `None`. `read` gives each file's text by its path, LF line ends, `None`
+    where it cannot be read, which is left out."""
     folders = [a.folder for a in listing.analyses] if listing.several else [None]
     found: list[Linked] = []
     for folder in folders:
@@ -804,17 +1050,28 @@ def plan(
             text = read.get(artefact.path)
             if text is not None:
                 found.append(view(artefact, text, words))
+        for name, kind in (kinds or {}).items():
+            for artefact in sorted(analysis.of_kind(name), key=lambda a: a.path):
+                if artefact.folder != folder or artefact.withdrawn:
+                    continue
+                text = read.get(artefact.path)
+                if text is not None:
+                    found.append(document(artefact, text, words, kind))
     return found
 
 
-def files(analysis: Analysis, listing: analyses.Listing) -> list[str]:
+def files(
+    analysis: Analysis, listing: analyses.Listing, kinds: Collection[str] | None
+) -> list[str]:
     """The paths `plan` reads: each glossary and each view in force of every analysis that
-    keeps a domain model."""
+    keeps a domain model, and each artefact in force there of the kinds `kinds` names."""
     folders = [a.folder for a in listing.analyses] if listing.several else [None]
     paths: set[str] = set()
     for folder in folders:
         if not keeps_domain_model(analysis, folder):
             continue
-        paths |= {t.path for t in analysis.of_kind(TERM) if t.folder == folder and not t.withdrawn}
-        paths |= {v.path for v in analysis.of_kind(VIEW) if v.folder == folder and not v.withdrawn}
+        for kind in (TERM, VIEW, *(kinds or ())):
+            paths |= {
+                a.path for a in analysis.of_kind(kind) if a.folder == folder and not a.withdrawn
+            }
     return sorted(paths)

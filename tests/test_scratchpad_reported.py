@@ -444,6 +444,7 @@ def _write_note(kit_target: Path, text: str = "exploration body\n") -> Path:
     return note
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_report_attach_inlines_note_and_stamps_on_post(
     cli_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -468,6 +469,7 @@ def test_cli_report_attach_inlines_note_and_stamps_on_post(
     assert "  - aleskalfas/project-kit#700" in reported.read_text(encoding="utf-8")
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_report_post_stamps_context_into_frontmatter(
     cli_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -532,6 +534,7 @@ def test_cli_report_attach_yes_stages_and_never_stamps(
     assert not (cli_target / ".pkit" / "scratchpad" / "reported").exists()
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_report_attach_redaction_prompt_declines(
     cli_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -565,6 +568,7 @@ def test_cli_report_attach_redaction_warns_on_draft_path(cli_target: Path) -> No
     assert "issues/new?" in res.output  # the draft still ships, with warnings
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_report_attach_oversize_single_confirm_posts_both(
     cli_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -593,6 +597,7 @@ def test_cli_report_attach_oversize_single_confirm_posts_both(
     assert "Stamped reported:" in res.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_report_attach_partial_failure_does_not_stamp(
     cli_target: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

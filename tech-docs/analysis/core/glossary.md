@@ -11,9 +11,9 @@ TERM-acceptance-gate:
         record:
           - COR-051#4
       revalidated:
-        at: 2026-10-21T13:00:59Z
+        at: 2026-10-24T22:53:43Z
         outcome: unchanged
-        unchanged-because: The decisions README gains how pkit refs lookup prints the file a record's id names. Which records bind, and the gate on proposed ones, are untouched.
+        unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json. Which records bind, and the gate on proposed ones, are untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -66,9 +66,9 @@ TERM-agent-workspace:
           - ADR-060#3
           - ADR-060#9
       revalidated:
-        at: 2026-10-23T14:50:21Z
+        at: 2026-10-25T00:38:53Z
         outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
+        unchanged-because: Only core rule 20 changes, on answers. Rule 16 on the agent workspace says what it said.
 TERM-anchor:
   name: anchor
   status: active
@@ -82,9 +82,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-24T04:57:41Z
+        at: 2026-10-25T00:36:52Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each declared form of derived link on its own, so forms that clash when joined stop no check. What an anchor is stays as defined.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received. What an anchor declares and stands on is unchanged.
 TERM-answer:
   name: answer
   status: active
@@ -102,6 +102,10 @@ TERM-answer:
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
         deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_write.py
+            reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
           - anchor:
               kind: record
               value: COR-050#3
@@ -138,9 +142,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-24T04:57:48Z
+        at: 2026-10-25T00:37:22Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link a place declares on its own. What an artefact is stays as defined.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received, owing the project no answer. It is still an artefact found in a place.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -157,9 +161,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-24T04:57:50Z
+        at: 2026-10-25T00:37:31Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link on its own, and resolves types as before. The definition holds.
+        unchanged-because: Discovery marks a rule a synced copy holds as received, which leaves every artefact's type as it was.
 TERM-backbone:
   name: backbone
   status: active
@@ -190,9 +194,9 @@ TERM-backbone-configuration:
           - COR-048#4
           - COR-048#5
       revalidated:
-        at: 2026-10-20T01:37:11Z
+        at: 2026-10-24T19:00:26Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "As #2003 asks, project_config.py gains a helper that asks only at a terminal. The configuration file, and the consent its writer asks, are as the definition says."
 TERM-base:
   name: base
   status: active
@@ -258,9 +262,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-23T08:13:53Z
+        at: 2026-10-25T00:37:44Z
         outcome: unchanged
-        unchanged-because: The change check reads derived links as their words alone, under the head's declaration. It still compares a change's base with its head, as defined.
+        unchanged-because: The change check now asks nothing of an artefact received by sync, as of an excluded one. It still compares a head with its base and lists the answers written.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -383,9 +387,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:03Z
+        at: 2026-10-25T00:38:01Z
         outcome: unchanged
-        unchanged-because: The whole-repository check now reads a renamed placed file under the derived links its name at HEAD sets aside, at both versions. What debt is stays as defined.
+        unchanged-because: "An artefact received by sync now leaves the debt as an excluded one does, which the definition need not name. The answered-apart debt stays deferred to #1779."
         deferred:
           - anchor:
               kind: path
@@ -504,9 +508,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:05Z
+        at: 2026-10-25T00:38:14Z
         outcome: unchanged
-        unchanged-because: A renamed placed file is now read under the derived links HEAD sets aside in it, at both versions. Friction is still an anchor that changed with no answer, as defined.
+        unchanged-because: "An artefact received by sync now owes no answer, as an excluded one, which the term need not name. Where its section keeps answers in the block stays deferred to #1779."
         deferred:
           - anchor:
               kind: path
@@ -547,9 +551,9 @@ TERM-grant:
           - COR-028#2
           - ADR-005#2
       revalidated:
-        at: 2026-10-24T04:45:15Z
+        at: 2026-10-24T11:48:10Z
         outcome: unchanged
-        unchanged-because: A grant still allows or denies a subject privileges within its scope. The change adds a query that names the guardrails a deferred command may hide, and no grant matches anything otherwise.
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The core now removes a redirection that writes no file before it matches a grant, so a grant matches the words of the command it always matched.
 TERM-guardrail:
   name: guardrail
   noun-forms: [guardrails]
@@ -565,9 +569,9 @@ TERM-guardrail:
           - COR-028#2
           - ADR-021#3
       revalidated:
-        at: 2026-10-24T04:45:17Z
+        at: 2026-10-24T12:56:59Z
         outcome: unchanged
-        unchanged-because: A guardrail is still denied to every subject whatever any grant allows, and the adapter still holds its native deny. Where the core cannot tell one, the Claude Code hook asks the person, which adds a prompt and changes what a guardrail is in no way.
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The new privileges for read-only filters and uv run are allow grants, and a guardrail still binds on a program behind a redirection that writes no file.
 TERM-harness:
   name: harness
   status: active
@@ -584,6 +588,7 @@ TERM-harness:
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-head:
   name: head
+  other-senses: [head branch]
   status: active
   definition: "latest commit of the branch that carries a change, the later state a check compares with the base"
   pkit:
@@ -690,9 +695,9 @@ TERM-operational-rule:
           - COR-014
           - COR-051#1
       revalidated:
-        at: 2026-10-23T14:50:23Z
+        at: 2026-10-25T00:38:28Z
         outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
+        unchanged-because: Core rule 20's words change, and the rules file is still the one every session loads, so the term holds.
 TERM-overlay:
   name: overlay
   status: active
@@ -740,11 +745,12 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T09:00:42Z
+        at: 2026-10-24T11:48:05Z
         outcome: unchanged
-        unchanged-because: "Since #1982, the hook asks where a guardrail may hide its form, and process new and permissions scaffold now refuse a synced tree. The hook still has the decision core allow, deny or defer each call, as the term says."
+        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
 TERM-place:
   name: place
+  other-senses: [in place]
   status: active
   definition: path or glob the project or a component declares, within which the backbone looks for documents that carry anchors
   pkit:
@@ -756,9 +762,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-24T04:57:52Z
+        at: 2026-10-25T00:38:36Z
         outcome: unchanged
-        unchanged-because: Each form of derived link a place declares is now matched on its own. What a place is stays as defined.
+        unchanged-because: Discovery marks a rule a synced copy holds as received. A place is still declared and walked as the term says.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -792,9 +798,9 @@ TERM-privilege:
           - ADR-021
           - ADR-060#1
       revalidated:
-        at: 2026-10-24T04:45:19Z
+        at: 2026-10-24T12:57:01Z
         outcome: unchanged
-        unchanged-because: A privilege is still recognised from a tool call or a command, and the catalog flag guardrail is read as before. The new query only names which guardrails a deferred command may hide.
+        unchanged-because: A privilege is still recognised from a tool call or a command. The catalog gains text-filter and uv-run, each recognised by its program, and the core removes a redirection that writes no file before it recognises one.
 TERM-process:
   name: process
   noun-forms: [processes]
@@ -825,9 +831,9 @@ TERM-profile:
           - ADR-005#2
           - ADR-032
       revalidated:
-        at: 2026-10-24T06:19:14Z
+        at: 2026-10-24T12:39:08Z
         outcome: unchanged
-        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. A profile, its grants and its posture are as they were.
+        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active
@@ -966,6 +972,7 @@ TERM-release-step:
         unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-report:
   name: report
+  other-senses: [whole-repository report]
   status: active
   definition: "issue an adopter composes with the system and files on the repository of the distribution they use: a bug, a change request or feedback"
   pkit:
@@ -1275,7 +1282,7 @@ TERM-validation:
 TERM-version:
   name: version
   noun-forms: [versions]
-  other-senses: ["data point's version"]
+  other-senses: ["data point's version", schema version, schema versions]
   status: active
   definition: "number of the form major.minor.patch that names one state of a top-level part of the system, as semantic versioning reads it"
   pkit:
@@ -1340,9 +1347,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:06Z
+        at: 2026-10-25T00:38:44Z
         outcome: unchanged
-        unchanged-because: The check now reads a renamed placed file under the derived links HEAD sets aside in it, at both versions. What the check is stays as defined.
+        unchanged-because: The whole-repository check leaves an artefact received by sync out of the debt, as an excluded one. It still compares every artefact with its revalidation point, and never fails.
 ---
 
 # Glossary
@@ -1871,6 +1878,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Documentation root:** where a [project](#term-project--project) keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced copy:** a file that [propagation](#term-propagation--propagation) writes into the project, such as a core record. A folder of [synced copies](#term-synced-copy--synced-copy) is never a place, or each [sync](#term-sync--sync) would read as [friction](#term-friction--friction) (COR-050 [point](#term-point--point) 14).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents. No place reads a file in it as an [artefact](#term-artefact--artefact) (COR-050 point 1).
+- **In place:** where a file or an entry already stands, as in a record edited in place. In *in place of*, the phrase means instead of. It shares only the word.
 
 ## TERM-point — point
 
@@ -2147,7 +2155,7 @@ Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissio
 
 **Distinctions:**
 
-- **Target:** the repository a [change](#term-change--change) would land in, read from the working directory. The cross-repository guard compares it with the session anchor's repository (ADR-034 [point](#term-point--point) 1).
+- **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository (ADR-034 [point](#term-point--point) 1).
 - **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
 - **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 

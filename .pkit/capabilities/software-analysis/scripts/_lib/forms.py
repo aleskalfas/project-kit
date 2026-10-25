@@ -1246,6 +1246,22 @@ def first_sentence(text: str) -> str:
     return seen
 
 
+def first_sentence_end(text: str) -> int:
+    """Where in `text` itself the sentence `first_sentence` reads ends: past the mark that
+    ends it, or at the end of the first paragraph, white space after it left out. The
+    mentions' links keep that sentence of an actor's opening plain, since it says the
+    summary again (`_lib/links.py`)."""
+    start = len(text) - len(text.lstrip())
+    blank = re.search(r"\n[ \t]*\n", text[start:])
+    end = start + (blank.start() if blank is not None else len(text[start:].rstrip()))
+    masked = _CODE_SPAN.sub(lambda found: "x" * len(found.group(0)), text[start:end])
+    for found in _SENTENCE_END.finditer(masked):
+        following = next((c for c in masked[found.end() :] if not _ignorable(c)), None)
+        if following is not None and _capital(following):
+            return start + found.start() + 1
+    return end
+
+
 def _summary_match(part: Part, context: Context) -> list[Breach]:
     """An actor's opening against its front matter's `summary`: its first sentence is the
     summary, exactly, white space aside. Nothing is asked where the actor gives no

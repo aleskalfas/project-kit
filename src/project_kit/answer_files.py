@@ -11,6 +11,10 @@ everything about them:
   in the folder as an artefact, a path anchor and an anchor of a registered kind
   stand on no answer file, and the measures and the declared surface leave them
   out: each asks here (COR-062 point 2).
+- **The names** (`new_name`, `moved_name`, `head_names`; ADR-068 points 1 and 3). A
+  file a writer adds is named for its UTC time and eight random hexadecimal digits;
+  one the move writes, `moved-` and twelve digits of the SHA-256 of its text. A
+  file the working tree holds and HEAD does not is uncommitted, a writer's own.
 - **One file** (`read_answer_file`): one mapping with an `answers` list, each
   entry one artefact's answers — its location (`artefact`), the other answer
   files it read (`read`), a revalidation and its deferrals (`revalidated`), and
@@ -68,8 +72,11 @@ here reads history (`AnswerHistory.dormant`).
 
 from __future__ import annotations
 
+import hashlib
+import secrets
 from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path, PurePosixPath
 from typing import Any, cast
 
@@ -171,6 +178,63 @@ def location_of(artefact: Artefact, name: str | None = None) -> str:
     given, for an earlier name of the file — and, for a collection entry, `#` and its id."""
     path = artefact.path if name is None else name
     return path if artefact.kind is ArtefactKind.DOCUMENT else f"{path}#{artefact.id}"
+
+
+#: The time in the name of a file a writer adds (ADR-068 point 1).
+NAME_TIME = "%Y%m%dT%H%M%SZ"
+
+#: The prefix of a file the move writes (ADR-068 point 1).
+MOVED_PREFIX = "moved-"
+
+
+def new_name(now: datetime) -> str:
+    """The name of an answer file a writer adds (ADR-068 point 1): the UTC time it is
+    made, then eight random hexadecimal digits, so no other change uses it."""
+    return f"{now.astimezone(UTC).strftime(NAME_TIME)}-{secrets.token_hex(4)}{SUFFIX}"
+
+
+def name_time(name: str) -> datetime | None:
+    """The UTC time at the start of the name of a file a writer added (`new_name`), or
+    `None` for a name that starts with none, such as a moved file's."""
+    stamp, dash, _rest = name.partition("-")
+    if not dash:
+        return None
+    try:
+        return datetime.strptime(stamp, NAME_TIME).replace(tzinfo=UTC)
+    except ValueError:
+        return None
+
+
+def moved_name(text: str) -> str:
+    """The name of the answer file the move writes with `text`, which holds the artefact's
+    location and the answers it moves (ADR-068 point 1): the first twelve hexadecimal
+    digits of their SHA-256, so two runs over one state write one file."""
+    return f"{MOVED_PREFIX}{hashlib.sha256(text.encode('utf-8')).hexdigest()[:12]}{SUFFIX}"
+
+
+def head_names(target_root: Path, rev: str = "HEAD") -> frozenset[str]:
+    """The names of the answer files the commit `rev` names holds: none where it names no
+    commit, as before the first one. A file the working tree holds and HEAD does not is
+    uncommitted, a writer's own (ADR-068 point 3)."""
+    if rev.startswith("-"):
+        return frozenset()
+    listed = run_git(
+        target_root,
+        "ls-tree",
+        "-z",
+        "--name-only",
+        rev,
+        "--",
+        f"{FOLDER}/",
+        accept=(0, 128),
+    )
+    if listed.returncode != 0:
+        return frozenset()
+    return frozenset(
+        name_of(rel)
+        for rel in listed.stdout.decode("utf-8", "surrogateescape").split("\0")
+        if rel and is_answer_file(rel)
+    )
 
 
 # --- one file -----------------------------------------------------------------------
@@ -1435,6 +1499,8 @@ __all__ = [
     "BLOCK_HOME",
     "FILES_HOME",
     "FOLDER",
+    "MOVED_PREFIX",
+    "NAME_TIME",
     "READ_KEY",
     "SCHEMA_KIND",
     "SUFFIX",
@@ -1460,12 +1526,16 @@ __all__ = [
     "changed_files",
     "commit_files",
     "head_locations",
+    "head_names",
     "in_folder",
     "is_answer_file",
     "liveness",
     "location_of",
     "moved",
+    "moved_name",
     "name_of",
+    "name_time",
+    "new_name",
     "path_of",
     "read_answer_file",
     "working_tree_files",

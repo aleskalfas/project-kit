@@ -46,8 +46,13 @@ After closing, every path runs the closure cascade (DEC-006), which reports and
 never closes: each parent issue in this repository the close gate counts the
 issue under — its native parent and the parent its first line names, as the
 containment seam resolves them (``containment.resolve_parent``) — is checked for
-close eligibility, and so is each Milestone the issue sits in (its native
-Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref). A
+close eligibility. A parent is reported eligible only once it has no open child
+left, by the process engine's fold over its children (``pkit process cascade``,
+the reading ``--mode=cascade-eligibility-close`` takes), and its own checkboxes
+are ticked, with the command that closes it; a parent with an open child is
+reported with that child named (#1937). Each Milestone the issue sits in (its
+native Milestone field, or a ``Milestone: [#<n>](../milestone/<n>)`` body ref)
+is checked too. A
 content-based (or ``either``) Milestone whose every child issue is closed is
 reported as eligible, with the ``close-milestone`` command that closes it
 (#414); a date-based one closes on its date, so its children closing makes
@@ -932,11 +937,18 @@ def _report_parents(
 
 
 def _check_parent_eligibility(parent_num: int, config: dict) -> None:
-    """Report whether a parent is eligible to close.
+    """Report whether a parent has an open child left, and whether it is
+    eligible to close.
 
-    Eligibility per DEC-006: every open child has closed, AND parent's
-    own checkboxes are ticked. We surface the report; we do not auto-
-    close (DEC-006 explicit: closure is never auto).
+    Eligibility per DEC-006 is the conjunction DEC-034 names: the parent has no
+    open child left, AND its own checkboxes are ticked. Whether a child is open
+    is the process engine's fold over the parent's children, read as
+    ``--mode=cascade-eligibility-close`` reads it (:func:`_engine_cascade_fold`,
+    #1937), so a parent is reported eligible only where that close would close
+    it, with the command that asks the person to authorise the close. A fold
+    that did not open is said with what holds it (:func:`_report_held_parent`).
+    We surface the report; we do not auto-close (DEC-006 explicit: closure is
+    never auto).
     """
     parent = _gh_get_issue(parent_num, config)
     if parent is None:
@@ -946,15 +958,52 @@ def _check_parent_eligibility(parent_num: int, config: dict) -> None:
     if state == "closed":
         print(f"  · parent #{parent_num} already closed")
         return
-    body = str(parent.get("body") or "")
-    unticked = _unticked_boxes(body)
+    fold = _engine_cascade_fold(parent_num)
+    if fold is None or not fold.get("opened"):
+        _report_held_parent(parent_num, fold, config)
+        return
+    unticked = _unticked_boxes(str(parent.get("body") or ""))
     if unticked:
-        print(f"  · parent #{parent_num} open; not eligible ({len(unticked)} unticked box(es))")
+        print(
+            f"  · parent #{parent_num} open; no open child left, but not eligible "
+            f"({len(unticked)} unticked box(es))"
+        )
         return
     print(
-        f"  · parent #{parent_num} open; checkboxes complete — "
-        "eligible to close pending sibling check"
+        f"  · parent #{parent_num} open; no open child left and checkboxes complete — "
+        f"eligible to close: run `pkit pm close-issue {parent_num} "
+        "--mode=cascade-eligibility-close`"
     )
+
+
+def _report_held_parent(parent_num: int, fold: dict | None, config: dict) -> None:
+    """Say why a parent the engine's fold did not open is not eligible.
+
+    Its open children are named, from the containment seam's reading of them
+    (:func:`_find_open_children`), as the refusal of a held container names
+    them. Where the engine could not be run, its fold stopped on a read before
+    it counted a member (:func:`_stopped_on_a_read`), or no open child is
+    found, whether one is open is not known: the engine's reason is said, with
+    what a predicate it could not evaluate said.
+    """
+    if fold is None:
+        print(
+            f"  · parent #{parent_num} open; not eligible — the process engine could not "
+            "fold its children, so whether one is open is not known"
+        )
+        return
+    if not _stopped_on_a_read(fold):
+        children = _find_open_children(parent_num, config)
+        if children.open:
+            named = ", ".join(_child_named(child) for child in children.open)
+            print(f"  · parent #{parent_num} open; not eligible — open child(ren): {named}")
+            return
+    print(
+        f"  · parent #{parent_num} open; not eligible — whether a child is open is not "
+        f"known: {fold.get('reason') or 'the fold did not open.'}"
+    )
+    for line in engine_said.said_lines(fold.get("stderr_tail"), "      "):
+        print(line)
 
 
 def _check_milestone_eligibility(

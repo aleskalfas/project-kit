@@ -51,9 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T05:22:43Z
+      at: 2026-10-25T00:34:53Z
       outcome: unchanged
-      unchanged-because: "The derived links' fix changes how friction reads links, and #1953's refusals touch stamps outside the journey's path. Its steps and seams hold."
+      unchanged-because: UC-002 and UC-007 now say the writers write answer files, and core rule 20 says to commit them. The journey's steps through those use cases hold.
 ---
 
 # JRN-003 — Deliver a change
@@ -63,33 +63,33 @@ pkit:
 **Steps:**
 
 1. UC-037 — Record my decision beside the methodology's
-   - **Needs from UC-049 (outside this journey):** the system installed in the project and committed for the team. Where the adopter keeps the system out of the shared repository, `.pkit/` is excluded whole. Git then ignores each record of the project's own stamped under `.pkit/decisions/project/` (ADR-009 point 3).
-   - **Assumed:** the change is planned before the record, by the developer or by an installed capability that plans work, such as `project-management` (COR-017). No step of this journey reads the plan, which the change's branch names by its issue (COR-008).
+   - **Needs from UC-049 (outside this journey):** the [system](../../glossary.md#term-system--system) installed in the [project](../../glossary.md#term-project--project) and committed for the team. Where the adopter keeps the system out of the shared repository, `.pkit/` is excluded whole. Git then ignores each record of the project's own stamped under `.pkit/decisions/project/` (ADR-009 [point](../../glossary.md#term-point--point) 3).
+   - **Assumed:** the [change](../../glossary.md#term-change--change) is planned before the record, by the developer or by an installed [capability](../../glossary.md#term-capability--capability) that plans work, such as `project-management` (COR-017). No step of this journey reads the plan, which the change's branch names by its issue (COR-008).
 2. UC-002 — Answer what my change made stale
-   - **Needs from step 1 (UC-037):** the record the change adds or refines. The change check reports friction on each artefact anchored to that record, or to a point the change altered (COR-050 point 5). An artefact that a new record makes untrue raises none, since nothing anchors the new record yet. The dependants of a record the new one supersedes are flagged only once an edit marks that record `superseded` (UC-037 variant 1d).
-   - **Needs from UC-040 (outside this journey):** the record accepted before the change builds on it. No check of the backbone reads what a change builds on, save a rule's origin (COR-051 point 5). A change built on a proposed record passes those checks, though the acceptance gate forbids it (core rule 2).
+   - **Needs from step 1 (UC-037):** the record the change adds or refines. The [change check](../../glossary.md#term-change-check--change-check) reports [friction](../../glossary.md#term-friction--friction) on each [artefact](../../glossary.md#term-artefact--artefact) anchored to that record, or to a point the change altered (COR-050 point 5). An artefact that a new record makes untrue raises none, since nothing anchors the new record yet. The dependants of a record the new one supersedes are flagged only once an edit marks that record `superseded` (UC-037 variant 1d).
+   - **Needs from UC-040 (outside this journey):** the record accepted before the change builds on it. No check of the [backbone](../../glossary.md#term-backbone--backbone) reads what a change builds on, save a [rule](../../glossary.md#term-rule--rule)'s origin (COR-051 point 5). A change built on a proposed record passes those checks, though the [acceptance gate](../../glossary.md#term-acceptance-gate--acceptance-gate) forbids it (core rule 2).
    - **Assumed:** artefacts saying what the change must do are revised before the change is built, where an installed capability keeps them, such as `software-analysis` (COR-017). The change check reads them only as artefacts in their places (COR-050 point 1).
-   - **Assumed:** the change is built, and each document it makes untrue is revised in the same change. An installed capability may carry either part, such as `software-engineering` for the build and `living-docs` for the documents the change makes untrue (COR-017). The change check reads such a document as any artefact in a place, as UC-005 anchors one (COR-050 point 1).
+   - **Assumed:** the change is built, and each document it makes untrue is revised in the same change. An installed capability may carry either part, such as `software-engineering` for the build and `living-docs` for the documents the change makes untrue (COR-017). The change check reads such a document as any artefact in a [place](../../glossary.md#term-place--place), as UC-005 anchors one (COR-050 point 1).
 3. UC-003 — Declare what my change means for the next release
-   - **Needs from step 1 (UC-037):** the record, where it lies in a path the changeset guard reads, such as a core record or a capability's decision (`release.py`). One whose text changes what adopters do declares `patch` or above. One recording a feature that a later change ships declares `none` (PRJ-002). The guard reads only paths, so it cannot tell the two apart.
+   - **Needs from step 1 (UC-037):** the record, where it lies in a path the [changeset](../../glossary.md#term-changeset--changeset) guard reads, such as a core record or a capability's decision (`release.py`). One whose text changes what adopters do declares `patch` or above. One recording a feature that a later change ships declares `none` (PRJ-002). The guard reads only paths, so it cannot tell the two apart.
 4. UC-034 — Land my change on the default branch
-   - **Needs from step 2 (UC-002):** the change check's list of answers, at the head the merge authoriser authorises. The developer names that head to the landing, which merges nothing else, but derives no list and runs no check there (ADR-061 point 5). A list read at an earlier head can pass for this one, unless the developer derives it again at that head.
-   - **Needs from step 3 (UC-003):** the changesets, which the CI pipeline checks before the landing. With `--admin` on a base with no merge queue, the landing merges past every failing required check, the changeset guard included (ADR-061 point 5). The `skip-changeset` label waives the guard's surface check too (UC-003 variant 7a).
-   - **Needs from UC-006 (outside this journey):** the project's merges made to wait on the system's checks. Where the change check runs in `warning` mode, or the CI job is no required status, unanswered friction holds no merge (COR-050 point 12). That friction then lands as debt for step 5.
+   - **Needs from step 2 (UC-002):** the change check's list of answers, at the [head](../../glossary.md#term-head--head) the merge authoriser authorises. The developer names that head to the landing. The landing merges nothing else, and derives no list and runs no check there (ADR-061 point 5). A list read at an earlier head can pass for this one, unless the developer derives it again at that head.
+   - **Needs from step 3 (UC-003):** the changesets, which the CI pipeline checks before the landing. With `--admin` on a [base](../../glossary.md#term-base--base) with no merge queue, the landing merges past every failing required check, the changeset guard included (ADR-061 point 5). The `skip-changeset` label waives the guard's surface check too (UC-003 variant 7a).
+   - **Needs from UC-006 (outside this journey):** the project's merges made to wait on the system's checks. Where the change check runs in `warning` mode, or the CI job is no required status, unanswered friction holds no merge (COR-050 point 12). That friction then lands as [debt](../../glossary.md#term-debt--debt) for step 5.
 5. UC-007 — Resolve what the default branch left out of date
-   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered, is debt on the default branch (COR-050 point 9). Unless the CI pipeline runs the whole-repository check, no report brings that debt to the developer, who lists it with `pkit friction debt` (ADR-055 point 5).
+   - **Needs from step 4 (UC-034):** the landed change, from which each debt it left is dated. Friction the change deferred, or left unanswered, is debt on the [default branch](../../glossary.md#term-default-branch--default-branch) (COR-050 point 9). Unless the CI pipeline runs the [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check), no whole-repository report brings that debt to the developer, who lists it with `pkit friction debt` (ADR-055 point 5).
 
 **Variants:**
 
-- **1a.** The accepted records settle every choice the change needs. The developer records nothing, and the path goes on at step 2.
-- **3a.** The change touches no path of the backbone or of a component. The developer declares no changeset, and the path goes on at step 4 (UC-003 variant 1a).
+- **1a.** The accepted records settle every choice the [change](../../glossary.md#term-change--change) needs. The developer records nothing, and the path goes on at step 2.
+- **3a.** The change touches no path of the [backbone](../../glossary.md#term-backbone--backbone) or of a [component](../../glossary.md#term-component--component). The developer declares no [changeset](../../glossary.md#term-changeset--changeset), and the path goes on at step 4 (UC-003 variant 1a).
 - **4a.** The merge authoriser asks the developer to revise the change before authorising the merge. The developer revises it, and the path rejoins at step 2.
-- **4b.** The developer works alone, and commits the change straight to the default branch (UC-034 variant 1a). No pull request carries it, and the path goes on at step 5.
-- **5a.** The change left no debt on the default branch, and the path ends after step 4.
+- **4b.** The developer works alone, and commits the change straight to the [default branch](../../glossary.md#term-default-branch--default-branch) (UC-034 variant 1a). No [pull request](../../glossary.md#term-pull-request--pull-request) carries it, and the path goes on at step 5.
+- **5a.** The change left no [debt](../../glossary.md#term-debt--debt) on the default branch, and the path ends after step 4.
 
-**Postconditions:** The change is on the default branch, built on accepted records, with its changesets waiting for the next release step. Each artefact anchored to what the change altered carries an answer there: `updated`, `unchanged` with why, or deferred to an open follow-up.
+**Postconditions:** The [change](../../glossary.md#term-change--change) is on the [default branch](../../glossary.md#term-default-branch--default-branch), built on accepted records, with its [changesets](../../glossary.md#term-changeset--changeset) waiting for the next [release step](../../glossary.md#term-release-step--release-step). Each [artefact](../../glossary.md#term-artefact--artefact) anchored to what the change altered carries an [answer](../../glossary.md#term-answer--answer) there: `updated`, `unchanged` with why, or deferred to an open follow-up.
 
 **Minimal guarantees:**
 
-- The whole-repository check derives the debt that a stopped path leaves from git at each run, never from a ledger (COR-050 point 9 and `friction_repository.py`).
-- The landing merges nothing but the head the developer names (ADR-061 point 5).
+- The [whole-repository check](../../glossary.md#term-whole-repository-check--whole-repository-check) derives the [debt](../../glossary.md#term-debt--debt) that a stopped path leaves from git at each run, never from a ledger (COR-050 [point](../../glossary.md#term-point--point) 9 and `friction_repository.py`).
+- The landing merges nothing but the [head](../../glossary.md#term-head--head) the developer names (ADR-061 point 5).

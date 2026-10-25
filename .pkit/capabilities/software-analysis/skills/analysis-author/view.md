@@ -110,9 +110,9 @@ Leave each section's link to its term as the stamp wrote it.
 
 ## 7. Link it
 
-Run `pkit analysis link`. The first view an analysis holds turns the links on for the whole analysis, so this run links the glossary too (DEC-004 point 7).
+Run `pkit analysis link`. The first view an analysis holds turns the links on for the whole analysis. So this run links the glossary, the actors, the use cases, the journeys and the requirements too (DEC-004 point 7).
 
-- **What it links.** The first mention of each term in each section, in the views and the glossary entries, to the term's entry. A term is never linked in its own section.
+- **What it links.** The first mention of each term in each section, in the views and the glossary entries, and in each part of the other kinds, to the term's entry. A term is never linked in its own section.
 - **A wrong link** is a finding: the section uses a term's name in another sense, so reword it (`RS-SAN-008`). The escape `<!-- pkit:not-the-term -->` right before a mention serves last, such as for a word in a quotation.
 - **Each later edit** of a view or an entry may move a link, so run the command again before the checks.
 

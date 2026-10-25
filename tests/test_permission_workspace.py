@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -213,6 +214,9 @@ def test_a_redirect_behind_a_leading_cd_still_fails_closed(dm, catalog, root) ->
     for command in (
         f"cd {root} && git diff > {WS}/change.patch",
         f"cd {root} && cat > {WS}/body.md <<'EOF'\nIt's done.\nEOF",
+        # a redirection that writes no file beside it changes nothing (#2002)
+        f"cd {root} && git diff > {WS}/change.patch 2>&1",
+        f"cd {root} && git diff 2>/dev/null > {WS}/change.patch",
     ):
         verdict, reason = dm.hook_decide(
             model, catalog, _bash(command, root), project_root=str(root)
@@ -258,27 +262,72 @@ def main_dm(tmp_path_factory):
         "git status",
         "rm -rf build/",
         "python3 build.py > out.txt",
+        # a redirection that writes no file (#2002)
+        "git status 2>&1",
+        "cd src && gh pr list >/dev/null",
+        f"echo hello > {WS}/note.txt 2>&1",
+        f"cd src && git diff 2>/dev/null > ../{WS}/change.patch",
     ],
 )
 @pytest.mark.parametrize("posture", ["lenient", "strict"])
 def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, posture) -> None:
     model = _autonomous(dm, catalog, posture=posture)
-    payload = _bash(command, root)
-    ours = dm.hook_decide(model, catalog, payload, project_root=str(root))
-    mains = main_dm.hook_decide(model, catalog, payload, project_root=str(root))
-    # Deliberate, reviewed verdict change (#1960): where a pathname pattern may
-    # make a command one a deny names, such as `rm -f *`, which may expand to
-    # `rm -f -r …`, no grant allows it, so a lenient posture abstains and a
-    # strict one denies, with a reason naming the deny (ADR-025 point 2). Where
-    # main decides such a command otherwise, or gives another reason, ours is
-    # that verdict, and a deny of main's stays a deny: a deny still wins. Once
-    # this is on main, ours equals main's again, and this branch may be deleted.
-    if ours != mains and dm._deny_forms(catalog, {"type": "bash", "command": command})[1]:
-        assert ours[0] == ("deny" if posture == "strict" else "abstain"), ours
-        assert mains[0] != "deny" or ours[0] == "deny", (ours, mains)
-        assert "may bind on what the shell runs" in ours[1], ours
-        return
-    assert ours == mains
+    ours = dm.hook_decide(model, catalog, _bash(command, root), project_root=str(root))
+
+    def mains(read: str) -> Any:
+        return main_dm.hook_decide(model, catalog, _bash(read, root), project_root=str(root))
+
+    # A deliberate, reviewed verdict change names in `readings` how main must
+    # read a command for its verdict to be ours. #2002 named
+    # `dm._without_harmless_redirections`, which removes a redirection that
+    # writes no file. Main's verdict on the command as it stands is tried
+    # first, so a reading left in place once its change is on main does no
+    # harm (#2011). Delete it in any change after that one merges.
+    readings: tuple[Callable[[str], str], ...] = ()
+    assert _is_mains_judgment(ours, mains, command, readings), (ours, mains(command))
+
+
+def _is_mains_judgment(
+    ours: Any, mains: Callable[[str], Any], command: str, readings: tuple[Callable[[str], str], ...]
+) -> bool:
+    """Whether `ours` is main's verdict on `command`, as it stands or as the
+    sanctioned `readings`, applied in turn, have main read it."""
+    if ours == mains(command):
+        return True
+    read = command
+    for reading in readings:
+        read = reading(read)
+    return ours == mains(read)
+
+
+def test_the_judgment_guard_passes_a_reading_main_already_carries() -> None:
+    # Main already removes the `2>&1`, so its verdict on the command as it
+    # stands is ours: the reading does no harm, whatever it would make of it.
+    def mains(read: str) -> str:
+        return {"git status 2>&1": "allow", "git status": "allow"}.get(read, "abstain")
+
+    def stale(read: str) -> str:
+        return read + " (read again)"
+
+    assert _is_mains_judgment("allow", mains, "git status 2>&1", (stale,))
+    # It still lets no other verdict through.
+    assert not _is_mains_judgment("deny", mains, "git status 2>&1", (stale,))
+
+
+def test_the_judgment_guard_compares_a_pending_reading_as_before() -> None:
+    # Main does not yet remove the `2>&1`: ours is its verdict on the command
+    # without it, and on nothing else.
+    def mains(read: str) -> str:
+        return {"git status": "allow"}.get(read, "abstain")
+
+    def strip(read: str) -> str:
+        return read.replace(" 2>&1", "")
+
+    assert _is_mains_judgment("allow", mains, "git status 2>&1", (strip,))
+    assert _is_mains_judgment("abstain", mains, "git status > out", (strip,))
+    assert not _is_mains_judgment("allow", mains, "git status > out", (strip,))
+    assert not _is_mains_judgment("deny", mains, "git status 2>&1", (strip,))
+    assert not _is_mains_judgment("allow", mains, "git status 2>&1", ())
 
 
 # --- a worktree has its own workspace ----------------------------------------------

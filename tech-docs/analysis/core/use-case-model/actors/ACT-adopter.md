@@ -5,7 +5,7 @@ status: active
 summary: "The person who adopts the methodology for a project and keeps its setup."
 needs:
   - Install the system with one command, committed for the team or kept out of the shared repository, and see its wiring into my project.
-  - Upgrade it like a dependency, at a version pinned for the whole project, with its migrations run for me and my own files left alone.
+  - Upgrade the system like a dependency, at a version the whole project pins, with its migrations run for me and my own files left alone.
   - Add or remove a capability, one shared from another of my repositories included, and be told of a name collision instead of being overwritten.
   - Choose which installed capability provides a role.
   - Declare my project's backbone configuration once (name, default branch, documentation roots, friction mode, anchored places, declared surface, excluded paths) and have it validated.
@@ -33,12 +33,12 @@ pkit:
 The person who adopts the methodology for a project and keeps its setup.
 
 - **Setup:**
-  - what is installed, at which version
+  - what is installed, at which [version](../../glossary.md#term-version--version)
   - which of their own additions sit beside it
-  - which checks the project's merges wait on
+  - which checks the [project](../../glossary.md#term-project--project)'s merges wait on
 - **Occasions:**
   - at setup
   - at each upgrade
-  - when the project needs a discipline
-- **Context:** their project, its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
-- **Core:** the split between methodology-owned and project-owned files, and the install and upgrade lifecycle, exist for this role. Installing a capability is itself a core act.
+  - when the [project](../../glossary.md#term-project--project) needs a discipline
+- **Context:** their [project](../../glossary.md#term-project--project), its existing `CLAUDE.md` and settings, its repository settings, and the rules and grants they add.
+- **Core:** the split between methodology-owned and project-owned files, and the [install](../../glossary.md#term-install--install) and upgrade lifecycle, exist for the adopter. Installing a [capability](../../glossary.md#term-capability--capability) is itself a core act.

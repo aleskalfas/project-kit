@@ -10,7 +10,14 @@ from pathlib import Path
 
 import pytest
 
-from project_kit import command_runner, default_branch, migrations, run_cache, session_guard
+from project_kit import (
+    command_runner,
+    default_branch,
+    migrations,
+    project_config,
+    run_cache,
+    session_guard,
+)
 from tests.adopter_repo import (
     AdopterRepo,
     AdopterTemplates,
@@ -73,6 +80,15 @@ def outside_any_session(monkeypatch: pytest.MonkeyPatch) -> None:
     command runs (`session_guard`) answers the same in a session and in CI. A
     test that needs a session sets the anchor itself."""
     monkeypatch.delenv(session_guard.CLAUDE_CODE_ANCHOR, raising=False)
+
+
+@pytest.fixture
+def at_a_terminal(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The test's stdin counts as a terminal, so a confirmation that guards a
+    person's decision asks and reads the answer the test feeds it. Without
+    this, the runner's stdin is a pipe, and such a confirmation refuses
+    without reading it (#2003)."""
+    monkeypatch.setattr(project_config, "stdin_is_tty", lambda: True)
 
 
 @pytest.fixture(scope="session", autouse=True)

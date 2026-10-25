@@ -16,6 +16,10 @@ Held to software-analysis DEC-004 point 7 and DEC-001 points 1 and 2:
   never read for them;
 - **across analyses** — a term the head lists from an analysis the repository holds
   links to its entry there, by a path from the file;
+- **the four kinds** — each part of an actor's, a use case's, a journey's and a
+  requirement's body takes the links once, as the project's own structures label its
+  parts; a goal, a journey's step lines and an actor's first sentence, which say a datum
+  again, stay plain, and a link written there is extra;
 - **one name, one concept** — validation refuses two terms in force of one name, a
   plural among the names, and a name another term replaces, within an analysis and
   across the analyses it builds on, two of those included, whatever any rule's status.
@@ -33,11 +37,17 @@ import pytest
 
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.analysis_repo import (
+    ACTORS,
     ANALYSIS,
+    CONSTRAINTS,
     DOMAIN_MODEL,
+    FUNCTIONAL,
     GLOSSARY,
+    JOURNEYS,
+    QUALITY,
     SA,
     SETTINGS_TEXT,
+    USE_CASES,
     VALIDATE,
     accepting_san,
     fill,
@@ -523,12 +533,71 @@ def test_a_mention_is_read_with_its_safeguards(text: str, linked: str) -> None:
     assert _linked(text, None, *terms) == linked
 
 
+@pytest.mark.parametrize(
+    "phrase",
+    [
+        "change",
+        "Change check",
+        "glossary's head",
+        f"n{TYPOGRAPHERS}s",
+        "a",
+        "x y",
+        "über",
+        "co-author",
+        "decision\trecords",
+    ],
+)
+def test_a_text_without_a_phrase_s_needle_is_not_searched_and_nothing_else_changes(
+    phrase: str,
+) -> None:
+    """A text is searched for a phrase only where it holds the phrase's needle: the longest
+    run of it matched as written, past its first letter, within one word and with no
+    apostrophe. The mentions found are the ones the phrase's pattern finds in any text:
+    the first letter in either case, an apostrophe of either kind, any white space
+    between the words, whole words only (#2025)."""
+    texts = [
+        "",
+        "A change; the Change check, change-checks and changes.",
+        f"The Glossary{TYPOGRAPHERS}s head and the glossary's\nhead, not glossarys head.",
+        f"N's, n{TYPOGRAPHERS}s and an's.",
+        "a x  y, X\ny and xy.",
+        "Über and über, Uber.",
+        "A co-author, Co-author and coauthor.",
+        "Decision records, decision\nrecords and decision-records.",
+    ]
+    needle = links._needle(phrase)
+    for text in texts:
+        found = [m.span() for m in links._found(phrase, text)]
+        assert found == [m.span() for m in links._pattern(phrase).finditer(text)], text
+        if needle not in text:
+            assert found == []
+    assert links._needle("glossary's head") == "lossary"
+    assert links._needle("a") == ""
+
+
 def test_a_term_is_never_linked_in_its_own_section_and_its_name_consumes_its_words() -> None:
     """The section's own term takes no link, and a shorter term inside it takes none
     either: `record` is never linked inside `decision record`."""
     assert _linked(
         "A decision record is a record.", "TERM-decision-record", DECISION_RECORD, RECORD
     ) == ("A decision record is a [record](#term-record--record).")
+
+
+def test_an_actor_s_name_holds_no_mention_of_a_term_only_part_of_it() -> None:
+    """An actor named by its name uses no concept: a term whose name is only part of an
+    actor's name takes no link inside it, and its next mention counts as the first. A term
+    whose name is an actor's whole name is still mentioned by it (DEC-004 point 7)."""
+    component = links.Term("TERM-component", "component", "glossary.md")
+    vocabulary = links.Vocabulary(
+        (component, RECORD),
+        {component.id: ("component",), RECORD.id: ("record",)},
+        ("Component author", "Record"),
+    )
+    text = "The component author writes a component, and a record."
+    assert links.section(text, None, vocabulary, "glossary.md", 1)[0] == (
+        "The component author writes a [component](#term-component--component), and a "
+        "[record](#term-record--record)."
+    )
 
 
 def test_a_name_two_terms_share_links_neither() -> None:
@@ -783,3 +852,316 @@ def test_a_link_leads_by_a_path_from_the_file_that_holds_it() -> None:
     assert term.target("tech-docs/analysis/billing/glossary.md") == (
         "../core/glossary.md#term-adapter--adapter"
     )
+
+
+# --- an actor, a use case, a journey and a requirement (DEC-004 point 7) ----------------------
+
+ACTOR_FILE = f"{ACTORS}/ACT-shopper.md"
+PLACE = f"{USE_CASES}/UC-001-place-order.md"
+PAY = f"{USE_CASES}/UC-002-pay-order.md"
+JOURNEY = f"{JOURNEYS}/JRN-001-first-order.md"
+QUICK = f"{QUALITY}/REQ-001-settle-quickly.md"
+ONCE = f"{FUNCTIONAL}/REQ-002-settle-once.md"
+NETWORK = f"{CONSTRAINTS}/REQ-003-card-network.md"
+
+#: The actor's summary, the first sentence of its opening.
+SHOPPER_SUMMARY = "A customer who places an order and pays for it."
+
+
+def _bodies(linked: bool) -> dict[str, str]:
+    """Each of the four kinds' artefacts' body below its front matter, as a writer fills it
+    or, `linked`, as `pkit analysis link` writes it. Every one lies two folders below the
+    glossary. A goal, a journey's step lines and the actor's first sentence say a datum
+    again, and stay plain. Every other part links each term's first mention in it."""
+
+    def k(text: str, slug: str) -> str:
+        return f"[{text}](../../glossary.md#term-{slug}--{slug})" if linked else text
+
+    order, customer = k("order", "order"), k("customer", "customer")
+    payment, method = k("payment", "payment"), k("payment method", "payment-method")
+    return {
+        ACTOR_FILE: "\n".join(
+            [
+                "# ACT-shopper — Shopper",
+                "",
+                f"{SHOPPER_SUMMARY} Each {order} waits for a {payment}.",
+                "",
+                f"**Occasions:** Whenever the {customer} wants goods, once a {method} is chosen.",
+                "",
+                "**Context:** None.",
+                "",
+            ]
+        ),
+        PLACE: "\n".join(
+            [
+                "# UC-001 — Place an order",
+                "",
+                "**Goal:** Place an order and pay for it with my payment method.",
+                "",
+                "**Other actors:** None.",
+                "",
+                f"**Preconditions:** The {customer} holds a {method}.",
+                "",
+                "**Assumptions:** None.",
+                "",
+                f"**Trigger:** The {customer} asks to place an {order}.",
+                "",
+                "**Main path:**",
+                "",
+                f"1. The {customer} chooses goods, and the system opens an {order}.",
+                f"2. The system asks for a {payment}, and the customer's payment settles the "
+                "order.",
+                "",
+                "**Variants:**",
+                "",
+                f"- **2a.** No {payment} arrives. The system keeps the {order} open, and the use "
+                "case ends.",
+                "",
+                f"**Postconditions:** A {payment} settles the {order}.",
+                "",
+                "**Minimal guarantees:** None.",
+                "",
+            ]
+        ),
+        PAY: "\n".join(
+            [
+                "# UC-002 — Pay for an order",
+                "",
+                "**Goal:** Pay for my order.",
+                "",
+                "**Other actors:** None.",
+                "",
+                "**Preconditions:** None.",
+                "",
+                "**Assumptions:** None.",
+                "",
+                f"**Trigger:** The {customer} opens the {order}.",
+                "",
+                "**Main path:**",
+                "",
+                f"1. The system takes the {payment}.",
+                "",
+                "**Variants:** None.",
+                "",
+                f"**Postconditions:** The {order} is paid.",
+                "",
+                "**Minimal guarantees:** None.",
+                "",
+            ]
+        ),
+        JOURNEY: "\n".join(
+            [
+                "# JRN-001 — Place and pay for a first order",
+                "",
+                "**Goal:** Place my first order and pay for it.",
+                "",
+                "**Steps:**",
+                "",
+                "1. UC-001 — Place an order",
+                "2. UC-002 — Pay for an order",
+                f"   - **Needs from step 1 (UC-001):** the {order} the {customer} placed. An "
+                f"order left unplaced takes no {payment}.",
+                "",
+                "**Variants:** None.",
+                "",
+                f"**Postconditions:** The {customer}'s first {order} is settled, and no other "
+                "orders wait.",
+                "",
+                "**Minimal guarantees:** None.",
+                "",
+            ]
+        ),
+        QUICK: "\n".join(
+            [
+                "# REQ-001 · Quality · Settle a payment quickly",
+                "",
+                f"**Verified by:** A timing test pays for an {order}, and fails if the {payment} "
+                "takes over a second.",
+                "",
+                "**Rationale:** None.",
+                "",
+            ]
+        ),
+        ONCE: "\n".join(
+            [
+                "# REQ-002 · Functional · Settle each order once",
+                "",
+                "**Verified by:** None.",
+                "",
+                f"**Rationale:** A {customer} charged twice for one {order} asks for a refund.",
+                "",
+            ]
+        ),
+        NETWORK: "\n".join(
+            [
+                "# REQ-003 · Constraint · Keep each payment method on the card network",
+                "",
+                "**Verified by:** None.",
+                "",
+                f"**Imposed by:** The card network holds each {method}, and no design may copy it.",
+                "",
+            ]
+        ),
+    }
+
+
+BODIES = _bodies(linked=False)
+BODIES_LINKED = _bodies(linked=True)
+
+
+def _kinds(repo: AdopterRepo) -> None:
+    """`_domain`, then an actor, two use cases, a journey through them and a requirement of
+    each kind, their bodies as `BODIES` gives them, and not linked. Built once per session
+    (`installed`)."""
+    _domain(repo)
+    stamped(repo, "actor", "shopper", "--name", "Shopper", "--path", "src/run.py")
+    actor = ("--actor", "ACT-shopper")
+    stamped(repo, "use-case", "place-order", "--title", "Place an order", *actor)
+    stamped(repo, "use-case", "pay-order", "--title", "Pay for an order", *actor)
+    steps = ("--step", "UC-001", "--step", "UC-002")
+    title = ("--title", "Place and pay for a first order")
+    stamped(repo, "journey", "first-order", *title, *actor, *steps)
+    for kind, slug, named in (
+        ("quality-requirement", "settle-quickly", "Settle a payment quickly"),
+        ("functional-requirement", "settle-once", "Settle each order once"),
+        ("constraint", "card-network", "Keep each payment method on the card network"),
+    ):
+        stamped(repo, kind, slug, "--title", named, *actor)
+    fill(repo)
+    for rel, body in BODIES.items():
+        front = _read(repo, rel).split("\n---\n", 1)[0]
+        if rel == ACTOR_FILE:
+            front = re.sub(r"\nsummary: [^\n]*", f'\nsummary: "{SHOPPER_SUMMARY}"', front)
+        repo.write({rel: f"{front}\n---\n\n{body}"})
+
+
+@pytest.fixture
+def kinds(
+    make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> AdopterRepo:
+    return installed(make_adopter_repo, monkeypatch, then=_kinds)
+
+
+def test_the_command_links_each_part_of_an_actor_a_use_case_a_journey_and_a_requirement(
+    kinds: AdopterRepo,
+) -> None:
+    """Each part of the four kinds' bodies is a section: the first mention of each term in
+    it links to the term's entry, by a path from the file. A goal, a journey's step lines
+    and an actor's first sentence, which gives its summary, stay plain, and so does front
+    matter (DEC-004 point 7). The analysis then passes the check, the format rule accepted
+    included, and a second run writes nothing."""
+    fronts = {rel: _read(kinds, rel).split("\n---\n", 1)[0] for rel in BODIES}
+    link(kinds)
+    for rel, body in BODIES_LINKED.items():
+        assert _body(kinds, rel) == body, rel
+        assert _read(kinds, rel).split("\n---\n", 1)[0] == fronts[rel], rel
+    assert _validate(kinds) == []
+    kinds.write(accepting_san(kinds))
+    assert _validate(kinds) == []
+    assert link(kinds).stdout.strip() == "Every link is as it should be; nothing written."
+
+
+def test_the_check_holds_the_links_of_the_four_kinds_and_a_link_on_a_datum_is_extra(
+    kinds: AdopterRepo,
+) -> None:
+    """Whatever any rule's status, the check reports each first mention left unlinked in
+    the four kinds' parts, and a link written by hand on a goal, a step line or an actor's
+    first sentence is extra. The command takes each such link out (DEC-004 point 7)."""
+    missing = {where for where, m in _validate(kinds) if "is the first mention of" in m}
+    assert missing >= set(BODIES), missing
+    link(kinds)
+    hand = "[order](../../glossary.md#term-order--order)"
+    by_hand = {
+        PLACE: ("**Goal:** Place an order", f"**Goal:** Place an {hand}"),
+        JOURNEY: ("1. UC-001 — Place an order", f"1. UC-001 — Place an {hand}"),
+        ACTOR_FILE: ("an order and pays for it. Each", f"an {hand} and pays for it. Each"),
+    }
+    for rel, (old, new_text) in by_hand.items():
+        kinds.write({rel: _read(kinds, rel).replace(old, new_text, 1)})
+    found = sorted((where, m.split(" — ")[0]) for where, m in _validate(kinds))
+    assert [where for where, _m in found] == sorted(by_hand), found
+    assert all("where no link belongs" in m for _w, m in found), found
+    link(kinds)
+    for rel, body in BODIES_LINKED.items():
+        assert _body(kinds, rel) == body, rel
+    assert _validate(kinds) == []
+
+
+model, structure = load_lib("model", "structure")
+
+ORDER = links.Term("TERM-order", "order", "tech-docs/analysis/glossary.md")
+PAYMENT = links.Term("TERM-payment", "payment", "tech-docs/analysis/glossary.md")
+
+
+def _document(kind: Any, text: str, *terms: Any, **fields: Any) -> str:
+    path = "tech-docs/analysis/use-case-model/x/X-1.md"
+    artefact = model.Artefact(kind.name, "X-1", path, path, False, fields, {})
+    return links.document(artefact, text, _vocabulary(*terms), kind).linked
+
+
+def _to(term: Any) -> str:
+    return f"../../glossary.md#{term.anchor}"
+
+
+def test_a_part_opens_at_each_label_the_project_adds_and_a_relabelled_goal_stays_plain(
+    tmp_path: Path,
+) -> None:
+    """The kinds are read as the project's own structures relabel them and add to them,
+    whatever any rule's status: a label a group adds opens a part of its own, and the goal
+    stays plain under the label it is relabelled to, and under its shipped one."""
+    own = tmp_path / SA / "project" / "structures.yaml"
+    own.parent.mkdir(parents=True)
+    own.write_text(
+        "schema_version: 1\nkinds:\n  use-case:\n    relabel: {goal: {label: Aim}}\n"
+        "  actor:\n    tighten:\n      - rule: RS-LOC-001\n        add:\n"
+        "          - {id: setup, label: Setup, after: opening, hint: Its setup.,\n"
+        "             example: A lab.}\n",
+        encoding="utf-8",
+    )
+    kinds = links.parted(tmp_path)
+    assert set(kinds) == set(links.PARTED)
+    case = "# UC-1 — T\n\n**Aim:** An order.\n\n**Goal:** An order.\n\n**Trigger:** An order."
+    assert _document(kinds["use-case"], case, ORDER) == case.replace(
+        "Trigger:** An order", f"Trigger:** An [order]({_to(ORDER)})"
+    )
+    actor = "# ACT-x — X\n\nA payment. An order.\n\n- **Setup:** an order.\n"
+    assert _document(kinds["actor"], actor, ORDER, PAYMENT) == (
+        f"# ACT-x — X\n\nA [payment]({_to(PAYMENT)}). An [order]({_to(ORDER)}).\n\n"
+        f"- **Setup:** an [order]({_to(ORDER)}).\n"
+    )
+    # Its first sentence stays plain only where the actor gives a summary.
+    assert _document(kinds["actor"], actor, ORDER, PAYMENT, summary="A payment.") == (
+        f"# ACT-x — X\n\nA payment. An [order]({_to(ORDER)}).\n\n"
+        f"- **Setup:** an [order]({_to(ORDER)}).\n"
+    )
+
+
+def test_a_journey_s_step_line_stays_plain_to_its_end_and_its_hand_overs_link(
+    tmp_path: Path,
+) -> None:
+    """A step's line runs to a blank line, a nested item or a hand-over. Its title stays
+    plain, and the first mention in a hand-over or a nested item takes the link."""
+    journey = links.parted(tmp_path)["journey"]
+    text = (
+        "# JRN-1 — T\n\n**Steps:**\n\n1. UC-1 — Place an\n   order\n"
+        "   **Needs from step 1 (UC-1):** a payment.\n2. UC-2 — Pay\n   - an order paid\n"
+    )
+    assert _document(journey, text, ORDER, PAYMENT) == text.replace(
+        "a payment.", f"a [payment]({_to(PAYMENT)})."
+    ).replace("an order paid", f"an [order]({_to(ORDER)}) paid")
+
+
+@pytest.mark.parametrize(
+    ("text", "end"),
+    [
+        ("One. Two.", 4),
+        ("  One `a. B` two. Three.", 17),
+        ("One e.g. two.\n\nThree.", 13),
+        ("One\nline. Two.", 9),
+        ("One only", 8),
+    ],
+)
+def test_the_first_sentence_ends_where_the_summary_s_form_ends_it(text: str, end: int) -> None:
+    (forms,) = load_lib("forms")
+    assert forms.first_sentence_end(text) == end
+    assert " ".join(text[:end].split()) == forms.first_sentence(text)

@@ -367,6 +367,119 @@ def test_a_change_that_wrote_no_answers_has_no_section(fa: ModuleType) -> None:
     assert fa.lines(_document()) == []
 
 
+# ---- the answers as the backbone gives them (COR-062, DEC-055 point 3) ------------
+
+#: Answer files, in the folder the backbone gives (COR-062 point 2).
+ANSWERS = ".pkit/project/friction/answers"
+ANSWER_FILE = f"{ANSWERS}/20261022T090000Z-1a2b3c4d.yaml"
+TIP_FILE = f"{ANSWERS}/20261023T090000Z-5e6f7a8b.yaml"
+
+
+def test_the_list_s_words_are_in_the_file_the_check_names_for_each_answer(
+    fa: ModuleType,
+) -> None:
+    """The firm stop's files are those the change check names for each answer: an
+    answer file the change adds, or the artefact's own file for an answer in its block
+    (COR-062 point 1). An answer it names no file for, such as a target revisited by
+    changing it, counts its artefact's file. With every answer in a block these are
+    the artefacts' files, as before the answers moved."""
+    in_file = {**_entry("docs/a.md", "unchanged", "Holds."), "file": ANSWER_FILE}
+    in_block = {**_entry("docs/b.md", "unchanged", "Holds."), "file": "docs/b.md"}
+    entry = {**_entry("docs/terms.md#TERM-x", "deferred", "In #9."), "file": "docs/terms.md"}
+    by_change = _entry("docs/c.md", "revisited")
+    document = _document(in_file, in_block, entry, by_change)
+    assert fa.listed_paths(document) == {ANSWER_FILE, "docs/b.md", "docs/terms.md", "docs/c.md"}
+    assert fa.listed_paths(_document(_entry("docs/a.md#X", "unchanged", "Holds."))) == {"docs/a.md"}
+
+
+def _apart(*revalidations: dict[str, Any]) -> dict[str, Any]:
+    """A change check's document whose answer on `docs/a.md` did not read
+    `revalidations`, live on the base's tip (`answered_apart_at_tip`)."""
+    answer = {**_entry("docs/a.md", "unchanged", "Holds."), "file": ANSWER_FILE}
+    return {
+        **_document(answer),
+        "answered_apart_at_tip": [
+            {"artefact": "a", "location": "docs/a.md", "revalidations": list(revalidations)}
+        ],
+    }
+
+
+def test_each_revalidation_a_merge_would_leave_answered_apart_is_a_line(fa: ModuleType) -> None:
+    """Each live revalidation on the base's tip that the change's answer did not read
+    is a line, its words shown escaped. It is printed beside the list and never joins
+    it, in the description or at a terminal (DEC-055 point 3)."""
+    document = _apart(
+        {
+            "file": TIP_FILE,
+            "at": "2026-10-23T09:00:00Z",
+            "outcome": "unchanged",
+            "unchanged_because": "Still\x1b[2K holds.",
+        },
+        {"file": ANSWER_FILE, "at": None, "outcome": "updated", "unchanged_because": None},
+    )
+    assert fa.apart(document) == [
+        f"Answered apart once merged: docs/a.md — the base's revalidation in {TIP_FILE} of "
+        "2026-10-23T09:00:00Z, which this change's answer did not read. Still accurate: "
+        '"Still\\x1b[2K holds."',
+        f"Answered apart once merged: docs/a.md — the base's revalidation in {ANSWER_FILE}, "
+        "which this change's answer did not read. Updated in this change",
+    ]
+    section = fa.render(document, HEAD)
+    assert section is not None and fa.APART not in section
+    assert not any(fa.APART in line for line in fa.lines(document) + fa.told(document))
+    assert fa.apart(_document()) == []  # none reported, as with answers only in blocks
+
+
+def _folder_answering(proc: Any, asked: list[Any]) -> Any:
+    """A stand-in for `subprocess.run` answering the whole-repository check with `proc`:
+    a document, an exit code and a document, or an exception to raise."""
+
+    def run(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        asked.append((argv, kw.get("cwd"), (kw.get("env") or {}).get("PKIT_NO_ROUTE")))
+        if isinstance(proc, Exception):
+            raise proc
+        code, document = proc if isinstance(proc, tuple) else (0, proc)
+        text = document if isinstance(document, str) else json.dumps(document)
+        return subprocess.CompletedProcess(argv, code, text, "")
+
+    return run
+
+
+def test_where_the_backbone_keeps_the_answers_is_read_once_from_its_check(
+    fa: ModuleType, tmp_path: Path
+) -> None:
+    """The folder is the backbone's to give, in its whole-repository check's document
+    (`answers.folder`); this capability never names it. It is read once for a run,
+    unrouted, at the repository root."""
+    asked: list[Any] = []
+    whole = {"schema_version": 1, "answers": {"folder": ANSWERS, "files": 0, "prunable": []}}
+    run = _folder_answering(whole, asked)
+    assert fa.answers_folder(tmp_path, run) == ANSWERS
+    assert fa.answers_folder(tmp_path, run) == ANSWERS
+    assert asked == [(["pkit", "friction", "check", "--all", "--json"], tmp_path, "1")]
+
+
+@pytest.mark.parametrize(
+    "proc",
+    [
+        OSError("no pkit"),
+        subprocess.TimeoutExpired("pkit", 600),
+        (1, {"schema_version": 1, "answers": {"folder": ANSWERS}}),
+        "not json",
+        {"schema_version": 2, "answers": {"folder": ANSWERS}},
+        {"schema_version": 1},
+        {"schema_version": 1, "answers": {"folder": ""}},
+        {"schema_version": 1, "answers": {"folder": "/etc"}},
+    ],
+)
+def test_a_backbone_that_gives_no_folder_is_read_as_none(
+    fa: ModuleType, tmp_path: Path, proc: Any
+) -> None:
+    """Whatever stops the backbone giving the folder, there is none: a reader then sets
+    no path apart, which errs toward more review (DEC-032 D5)."""
+    assert fa.answers_folder(tmp_path, _folder_answering(proc, [])) is None
+
+
 def test_files_the_check_could_not_read_are_counted_under_the_opening(fa: ModuleType) -> None:
     one = fa.render(_document(_entry("a.md", "updated"), unreadable=["b.md"]), HEAD)
     assert one is not None

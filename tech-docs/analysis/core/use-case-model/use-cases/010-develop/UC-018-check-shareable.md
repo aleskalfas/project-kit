@@ -24,9 +24,9 @@ pkit:
         - ACT-component-author
         - REQ-005
     revalidated:
-      at: 2026-10-24T03:44:29Z
+      at: 2026-10-25T01:37:12Z
       outcome: unchanged
-      unchanged-because: The change rewords only the help of `pkit release merge` and its refusal of a pull request on a non-release head branch. This artefact describes neither.
+      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
 ---
 
 # UC-018 — Know my capability is ready to share
@@ -37,34 +37,34 @@ pkit:
 
 **Preconditions:**
 
-- **From UC-015:** The project holds the capability's subtree, with its package metadata.
+- **From UC-015:** The [project](../../../glossary.md#term-project--project) holds the [capability](../../../glossary.md#term-capability--capability)'s subtree, with its [package metadata](../../../glossary.md#term-package-metadata--package-metadata).
 
 **Assumptions:**
 
-- A project that pulls the capability takes it whole, at a ref of the repository where it is authored. That project gates the capability on the range the capability declares (COR-041 and ADR-040 point 4). The fetch that would pull it is not built yet (`manifest.py`), so this check is what the author has today.
-- The author has run the capability on each backbone version its range admits. The check reads the range's form, never that claim, which the author owns (ADR-040 point 5).
+- A [project](../../../glossary.md#term-project--project) that pulls the [capability](../../../glossary.md#term-capability--capability) takes it whole, at a ref of the repository where it is authored. That project gates the capability on the [range](../../../glossary.md#term-range--range) the capability declares (COR-041 and ADR-040 [point](../../../glossary.md#term-point--point) 4). The fetch that would pull it is not built yet (`manifest.py`), so this check is what the author has today.
+- The author has run the capability on each [backbone](../../../glossary.md#term-backbone--backbone) [version](../../../glossary.md#term-version--version) its range admits. The check reads the range's form, never that claim, which the author owns (ADR-040 point 5).
 
-**Trigger:** The author means to let other repositories pull the capability.
+**Trigger:** The author means to let other repositories pull the [capability](../../../glossary.md#term-capability--capability).
 
 **Main path:**
 
-1. The author runs `pkit release check-shareable <name>` in the project.
-2. The system finds the capability's package metadata among the components under `.pkit/`.
-3. The system checks that the package metadata holds a `component:` mapping with a `component.version`, since a project that pulls the capability pins it by version.
-4. The system checks that `requires_backbone` is a range bounded on both sides, of the form `>=LOW,<HIGH`. The gate of a project that pulls the capability can evaluate such a range (ADR-040 point 4).
+1. The author runs `pkit release check-shareable <name>` in the [project](../../../glossary.md#term-project--project).
+2. The [system](../../../glossary.md#term-system--system) finds the [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) among the [components](../../../glossary.md#term-component--component) under `.pkit/`.
+3. The system checks that the package metadata holds a `component:` mapping with a `component.version`, since a project that pulls the capability pins it by [version](../../../glossary.md#term-version--version).
+4. The system checks that `requires_backbone` is a [range](../../../glossary.md#term-range--range) bounded on both sides, of the form `>=LOW,<HIGH`. The gate of a project that pulls the capability can evaluate such a range (ADR-040 [point](../../../glossary.md#term-point--point) 4).
 5. The system looks in the package metadata for a path that only the author's machine has, such as one under `/Users/`.
 6. The system prints `shareability check: <name> is ready to be shared — ok.`, and exits 0.
 
 **Variants:**
 
-- **1a.** The author names the backbone. The system refuses with `'backbone' is the backbone tier, not a shareable component. Pass an adapter or capability name.`, and the use case ends.
-- **2a.** No package metadata under `.pkit/` names the capability. The system refuses with `unknown component '<name>'.`, lists the components it knows, and the use case ends.
+- **1a.** The author names the [backbone](../../../glossary.md#term-backbone--backbone). The [system](../../../glossary.md#term-system--system) refuses with `'backbone' is the backbone tier, not a shareable component. Pass an adapter or capability name.`, and the use case ends.
+- **2a.** No [package metadata](../../../glossary.md#term-package-metadata--package-metadata) under `.pkit/` names the [capability](../../../glossary.md#term-capability--capability). The system refuses with `unknown component '<name>'.`, lists the [components](../../../glossary.md#term-component--component) it knows, and the use case ends.
 - **3a.** A check of step 3 or step 4 fails, such as for `requires_backbone: "*"`. The system prints `<name> is not ready to be consumed externally-sourced:` and one line for each gap. It ends with `Fix the gaps above, then re-run. See COR-041 / .pkit/release/README.md.`, and exits 1. The author mends each gap, and the path rejoins at step 1.
 - **5a.** The package metadata names a path that only the author's machine has. The system warns `manifest references what looks like a local-only path ('<path>') — a consumer will not have it.`, and the path goes on at step 6.
 
-**Postconditions:** The capability's package metadata declares a version, and a range on the backbone bounded on both sides. So a project that pulls the capability can pin it by version, and gate it against its own backbone.
+**Postconditions:** The [capability](../../../glossary.md#term-capability--capability)'s [package metadata](../../../glossary.md#term-package-metadata--package-metadata) declares a [version](../../../glossary.md#term-version--version), and a [range](../../../glossary.md#term-range--range) on the [backbone](../../../glossary.md#term-backbone--backbone) bounded on both sides. So a [project](../../../glossary.md#term-project--project) that pulls the capability can pin it by version, and gate it against its own backbone.
 
 **Minimal guarantees:**
 
 - The check writes nothing (`release.py`).
-- A capability whose range has no upper bound never passes the check (`release.py`).
+- A [capability](../../../glossary.md#term-capability--capability) whose [range](../../../glossary.md#term-range--range) has no upper bound never passes the check (`release.py`).

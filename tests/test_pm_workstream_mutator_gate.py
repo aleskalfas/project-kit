@@ -25,6 +25,7 @@ This file pins:
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 import sys
 from pathlib import Path
 
@@ -300,9 +301,15 @@ def test_remove_workstream_deletes_no_kit_label_for_a_label_bound_board_adopter(
         encoding="utf-8",
     )
 
+    counted: list[list[str]] = []
+
     def fail_on_gh_label(cmd, config, *, check=True, **kwargs):
         if "label" in cmd:
             raise AssertionError(f"gh label op on a label-bound axis: {cmd}")
+        if cmd[:3] == ["gh", "issue", "list"]:
+            # The zero-issues count (DEC-018), read from the adopter's OWN label.
+            counted.append(cmd)
+            return subprocess.CompletedProcess(cmd, 0, stdout="[]", stderr="")
         raise AssertionError(f"unexpected gh_run call: {cmd}")
 
     monkeypatch.setattr(rw, "gh_run", fail_on_gh_label)
@@ -318,6 +325,8 @@ def test_remove_workstream_deletes_no_kit_label_for_a_label_bound_board_adopter(
         ],
     )
     assert rw.main() == 0
+    # The count read the label the adopter's remap names, never the kit's.
+    assert counted and counted[0][counted[0].index("--label") + 1] == "area/cli"
     # The vocabulary edit still happened — the mutator ran, it just did not touch
     # a label substrate it does not own.
     assert "cli" not in (tmp_path / "project" / "workstreams.yaml").read_text(encoding="utf-8")

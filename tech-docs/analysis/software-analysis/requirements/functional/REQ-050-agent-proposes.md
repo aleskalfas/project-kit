@@ -25,13 +25,13 @@ pkit:
         - software-analysis:DEC-001#9
         - COR-050#3
     revalidated:
-      at: 2026-10-24T03:40:39Z
+      at: 2026-10-25T00:34:44Z
       outcome: unchanged
-      unchanged-because: The proposal now gives a regressed step a record decides its box and the updated answer, and onboarding starts from the declared surface. An agent still proposes each outcome and candidate, and a person decides each, as the requirement states.
+      unchanged-because: The resolver's body changes only in naming the answers its commands write. It still proposes, and runs no writer.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
 
-**Verified by:** Tests of the agent definition find that it grants Read, Glob, Grep, Bash and Write alone, and owns no path. They find that it gives each writer as a command for the person, with no consent flag. Nothing confines its Write or its Bash at run time. No test holds what the skill asks of an agent, and no test runs an agent.
+**Verified by:** Tests of the [agent definition](../../../core/glossary.md#term-agent-definition--agent-definition) find that it grants Read, Glob, Grep, Bash and Write alone, and owns no path. They find that it gives each writer as a command for the person, with no consent flag. Nothing confines its Write or its Bash at run time. No test holds what the [skill](../../../core/glossary.md#term-skill--skill) asks of an agent, and no test runs an agent.
 
-**Rationale:** Whether a change was meant is a question of intent, and where intent is unclear only a person knows (DEC-001 point 5). On a brownfield project, a person confirms the candidates (DEC-001 point 9). Only the project frees an id, and no tool infers one (DEC-001 point 3). A kind's parts are the project's own choice as it adopts the capability (DEC-001 point 1).
+**Rationale:** Whether a [change](../../../core/glossary.md#term-change--change) was meant is a question of intent, and where intent is unclear only a person knows (DEC-001 point 5). On a brownfield [project](../../../core/glossary.md#term-project--project), a person confirms the [candidates](../../glossary.md#term-candidate--candidate) (DEC-001 point 9). Only the project frees an id, and no tool infers one (DEC-001 point 3). A kind's parts are the project's own choice as it adopts the [capability](../../../core/glossary.md#term-capability--capability) (DEC-001 point 1).

@@ -69,6 +69,24 @@ Body.
 
 GUIDE = HEAD + REVALIDATED + TAIL
 
+RULE_SET_PATH = "docs/rule-sets/cmn.md"
+
+#: A rule set whose one rule's block holds a revalidation, so the writers write in it.
+RULE_SET = (
+    "---\n"
+    "name: cmn\n"
+    "rules:\n"
+    "  RS-CMN-001:\n"
+    "    title: Name things\n"
+    "    pkit:\n"
+    "      friction:\n"
+    "        anchors: {record: [COR-050]}\n"
+    "        revalidated:\n"
+    "          at: 2026-10-01T09:00:00Z\n"
+    "          outcome: updated\n"
+    "---\n\n## RS-CMN-001 — Name things\n\nUse names.\n"
+)
+
 
 @pytest.fixture
 def repo(make_adopter_repo: MakeAdopterRepo) -> AdopterRepo:
@@ -303,25 +321,6 @@ def test_defer_adds_a_sorted_entry_and_leaves_at_byte_for_byte(repo: AdopterRepo
     )
     assert plan.target == "pkit.friction.revalidated.deferred"
     assert "at: not changed — a deferral is not a revalidation" in plan.items
-    assert _validation_errors(repo) == []
-
-
-def test_defer_on_an_artefact_never_revalidated_writes_deferred_alone(repo: AdopterRepo) -> None:
-    _put(repo, HEAD + TAIL)
-    fw.write(fw.plan_defer(repo.root, "guide", anchor="src/core/**", reason="later"))
-    assert (
-        _read(repo)
-        == HEAD
-        + (
-            "    revalidated:\n"
-            "      deferred:\n"
-            "        - anchor:\n"
-            "            kind: path\n"
-            "            value: src/core/**\n"
-            "          reason: later\n"
-        )
-        + TAIL
-    )
     assert _validation_errors(repo) == []
 
 
@@ -561,11 +560,17 @@ alpha:
   pkit:
     friction:
       anchors: {path: [src/cli/**]}
+      revalidated:
+        at: 2026-10-01T09:00:00Z
+        outcome: updated
 beta:
   title: Beta
   pkit:
     friction:
       anchors: {path: [src/core/**]}
+      revalidated:
+        at: 2026-10-01T09:00:00Z
+        outcome: updated
 ---
 
 ## alpha
@@ -582,9 +587,14 @@ def test_an_entry_is_written_alone_in_its_collection(repo: AdopterRepo) -> None:
     _put(repo, COLLECTION, "docs/rules.md")
     fw.write(fw.plan_defer(repo.root, "docs/rules.md#alpha", anchor="src/cli/**", reason="x"))
     assert _read(repo, "docs/rules.md") == COLLECTION.replace(
-        "      anchors: {path: [src/cli/**]}\n",
         "      anchors: {path: [src/cli/**]}\n"
         "      revalidated:\n"
+        "        at: 2026-10-01T09:00:00Z\n"
+        "        outcome: updated\n",
+        "      anchors: {path: [src/cli/**]}\n"
+        "      revalidated:\n"
+        "        at: 2026-10-01T09:00:00Z\n"
+        "        outcome: updated\n"
         "        deferred:\n"
         "          - anchor:\n"
         "              kind: path\n"
@@ -595,25 +605,13 @@ def test_an_entry_is_written_alone_in_its_collection(repo: AdopterRepo) -> None:
 
 
 def test_a_rule_is_written_inside_its_rule_set(repo: AdopterRepo) -> None:
-    rule_set = (
-        "---\n"
-        "name: cmn\n"
-        "rules:\n"
-        "  RS-CMN-001:\n"
-        "    title: Name things\n"
-        "    pkit:\n"
-        "      friction:\n"
-        "        anchors: {record: [COR-050]}\n"
-        "---\n\n## RS-CMN-001 — Name things\n\nUse names.\n"
-    )
-    _put(repo, rule_set, "docs/rule-sets/cmn.md")
+    _put(repo, RULE_SET, RULE_SET_PATH)
     plan = fw.plan_defer(repo.root, "RS-CMN-001", anchor="COR-050", reason="being amended")
     assert plan.artefact == "docs/rule-sets/cmn.md#RS-CMN-001"
     fw.write(plan)
-    assert _read(repo, "docs/rule-sets/cmn.md") == rule_set.replace(
-        "        anchors: {record: [COR-050]}\n",
-        "        anchors: {record: [COR-050]}\n"
-        "        revalidated:\n"
+    assert _read(repo, RULE_SET_PATH) == RULE_SET.replace(
+        "          outcome: updated\n",
+        "          outcome: updated\n"
         "          deferred:\n"
         "            - anchor:\n"
         "                kind: record\n"
@@ -657,20 +655,6 @@ def test_a_reason_for_no_anchors_beside_anchors_is_not_written_over(repo: Adopte
 
 
 # --- line endings ------------------------------------------------------------------------------
-
-RULE_SET_PATH = "docs/rule-sets/cmn.md"
-
-RULE_SET = (
-    "---\n"
-    "name: cmn\n"
-    "rules:\n"
-    "  RS-CMN-001:\n"
-    "    title: Name things\n"
-    "    pkit:\n"
-    "      friction:\n"
-    "        anchors: {record: [COR-050]}\n"
-    "---\n\n## RS-CMN-001 — Name things\n\nUse names.\n"
-)
 
 
 def _crlf(text: str) -> str:
@@ -762,6 +746,22 @@ def test_a_crlf_file_is_written_back_with_crlf_byte_for_byte(
     assert _validation_errors(repo) == []
 
 
+def test_a_link_planted_beside_the_file_takes_no_write(repo: AdopterRepo, tmp_path: Path) -> None:
+    """The rewrite goes through a temporary file of a fresh name: a link a branch plants
+    where an older writer put its temporary file leads nowhere."""
+    _put(repo, GUIDE)
+    outside = tmp_path / "outside.txt"
+    (repo.root / f"{GUIDE_PATH}.pkit-tmp").symlink_to(outside)
+    fw.write(fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW))
+    assert not outside.exists()
+    assert not (repo.root / GUIDE_PATH).is_symlink()
+    assert "outcome: updated" in _read(repo)
+    assert sorted(p.name for p in (repo.root / "docs").iterdir()) == [
+        "guide.md",
+        "guide.md.pkit-tmp",
+    ]
+
+
 def test_a_file_mixing_line_endings_is_refused_and_left_as_it_is(repo: AdopterRepo) -> None:
     mixed = _crlf(GUIDE).replace("\r\n", "\n", 1)
     _put(repo, mixed)
@@ -837,13 +837,14 @@ def _random_block(rng: random.Random) -> dict[str, Any]:
         if revalidated["outcome"] == "unchanged":
             revalidated["unchanged-because"] = rng.choice(AWKWARD)
     carried = [(k, v) for k, values in anchors.items() for v in values]
-    if rng.random() < 0.5:
+    # The block always holds an answer, so the writers write in it: one that holds none
+    # gets its answers in an answer file (COR-062 point 1; `test_friction_write_answer_files`).
+    if not revalidated or rng.random() < 0.5:
         chosen = rng.sample(carried, rng.randint(1, len(carried)))
         revalidated["deferred"] = [
             {"anchor": {"kind": k, "value": v}, "reason": rng.choice(AWKWARD)} for k, v in chosen
         ]
-    if revalidated:
-        block["revalidated"] = revalidated
+    block["revalidated"] = revalidated
     if rng.random() < 0.3:
         block["last-check"] = {"state": "current", "as-of": "abc123"}
     return block

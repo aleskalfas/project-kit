@@ -1,0 +1,9 @@
+component: project-management
+kind: patch
+custom:
+  category: Fixed
+body: >
+  When the merge gate finds no standing approval, `done-work`'s refusal names
+  `review-pr` with the issue's number, the number that command takes (#1935).
+  It named the pull request's number, so `review-pr <PR> --force` found no
+  branch, or reviewed another issue's pull request.

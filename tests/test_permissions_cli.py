@@ -2861,13 +2861,44 @@ def _extract_func_source(source: str, name: str) -> str:
     raise AssertionError(f"function or assignment {name!r} not found in module source")
 
 
+def _verdict_path_divergences(
+    base: str,
+    working: str,
+    frozen: tuple[str, ...],
+    sanctioned: dict[str, tuple[tuple[str, str], ...]],
+    introduced: tuple[str, ...] = (),
+) -> list[str]:
+    """The names in `frozen` whose source in `working` is neither main's
+    (`base`) as it stands nor main's after the name's sanctioned rewrite.
+
+    A rewrite pair that inserts text main's side already carries is skipped,
+    since applied again it would insert the text twice (#2011). Any other pair
+    whose change main carries finds no old text left to replace."""
+    import re
+
+    diverged = []
+    for fn in frozen:
+        if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
+            continue  # compared once main defines it
+        ours = _extract_func_source(working, fn)
+        expected = _extract_func_source(base, fn)
+        if ours == expected:
+            continue  # main as it stands
+        for old, new in sanctioned.get(fn, ()):
+            if old in new and new in expected:
+                continue  # an insertion main already carries
+            expected = expected.replace(old, new)
+        if ours != expected:
+            diverged.append(fn)
+    return diverged
+
+
 def test_decide_verdict_path_byte_identical_to_main():
     # ADR-032: `load_model` gains an additive edit to read
     # `active_profile` from its per-machine home, so decide.py is NOT frozen
     # whole-file. What MUST stay byte-identical is the `decide()` VERDICT path —
     # the verdict logic, not the model-loader. Guard exactly that function (and
     # the pure helpers it composes) against `main`, not the whole file.
-    import re
     import subprocess
 
     root = Path(__file__).resolve().parent.parent
@@ -2938,13 +2969,17 @@ def test_decide_verdict_path_byte_identical_to_main():
     #                   (+ _UNSEEN_KIND)
     #   hook_decide   → _read_default_agent, decide
     #   recognized_privileges → segments, _segment_privileges
-    #   segments      → _segment_words, _assignments (+ _SEP/_UNTRUSTED)
+    #   segments      → _without_harmless_redirections, _segment_words,
+    #                   _assignments (+ _SEP/_UNTRUSTED)
+    #   _without_harmless_redirections → _segment_words, _assignments
+    #                   (+ _HARMLESS_REDIRECTION/_SEP/_SHELL_KEYWORDS)
     #   _segment_words        → _words
     #   _assignments          → (+ _ENVVAR)
-    #   _doubts       → _words, _assignments (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/
-    #                   _ODD_SPACE/_PROGRAM_VAR/_QUOTED/_EXPORT_OPERAND), _brace_expansion
-    #   _deny_forms   → _segment_words, _assignments, _export_prefix, _rule_form
-    #                   (+ _SEP/_CONFIG_VAR)
+    #   _doubts       → _without_harmless_redirections, _words, _assignments
+    #                   (+ _SEP/_UNTRUSTED/_UNTRUSTED_KIND/_ODD_SPACE/_PROGRAM_VAR/
+    #                   _QUOTED/_EXPORT_OPERAND), _brace_expansion
+    #   _deny_forms   → _without_harmless_redirections, _segment_words, _assignments,
+    #                   _export_prefix, _rule_form (+ _SEP/_CONFIG_VAR)
     #   _rule_form    → _structured_form, _pattern_form
     #   _structured_form      → _program_name, _globbed, _glob_head, _may_open_flag,
     #                           _subcommand_candidates, _flag_form
@@ -3002,6 +3037,7 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_may_open_flag",
         "_globbed",
         "_glob_head",
+        "_without_harmless_redirections",
         # module-level verdict regexes the above close over
         "_TOKEN",
         "_SEP",
@@ -3021,126 +3057,102 @@ def test_decide_verdict_path_byte_identical_to_main():
         "_CONFIG_VAR",
         "_PATTERN_PROGRAM",
         "_UNSEEN_KIND",
+        "_HARMLESS_REDIRECTION",
+        "_SHELL_KEYWORDS",
     )
     # A deliberate, reviewed change to a function above names here the rewrite
     # that turns main's side into the change, as (old, new) pairs, so the rest
-    # is compared byte for byte. Once the change is on main, its entry is
-    # deleted (#1973): main then carries the new text, and the guard compares
-    # main as it stands.
-    #
-    # Pending (#1960): a deny binds on the forms of the command it names
-    # (`_deny_forms` and the helpers it calls), and where a pathname pattern
-    # or a configuration assignment may make the command one a deny names,
-    # `decide` keeps every grant from allowing and names the kind in its
-    # reason (ADR-025 points 2 and 5). `_matches_bash` reads a recognizer's
-    # `word_prefix_any`.
-    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {
-        "_matches_bash": (
-            (
-                '            if not any(f in toks for f in rule["flag_any"]):\n'
-                "                return False\n"
-                "        return True\n",
-                '            if not any(f in toks for f in rule["flag_any"]):\n'
-                "                return False\n"
-                '        if "word_prefix_any" in rule:\n'
-                "            if not any(t.startswith(p) for t in toks[1:] "
-                'for p in rule["word_prefix_any"]):\n'
-                "                return False\n"
-                "        return True\n",
-            ),
-        ),
-        "decide": (
-            (
-                "    hits = recognized_privileges(catalog, request)\n"
-                '    privileges_catalog = catalog.get("privileges", {})\n'
-                "    allowed: set[str] = set()\n"
-                "    for g in _effective_grants(model, subject):\n"
-                '        privs = _privilege_ids(g.get("privilege"))\n'
-                "        overlap = hits & privs\n"
-                "        if not overlap:\n"
-                "            continue\n"
-                '        if g.get("effect", "allow") == "deny":\n'
-                '            return "deny", f"deny grant for {subject} on {sorted(overlap)}"\n',
-                "    hits = recognized_privileges(catalog, request)\n"
-                "    # A deny binds on the forms of the command it names (ADR-025 point 5), and\n"
-                "    # where a form may be one the core cannot see, the deny keeps every grant\n"
-                "    # from allowing (#1960, ADR-025 point 2). A grant still matches the command\n"
-                "    # as written.\n"
-                "    forms, unseen = _deny_forms(catalog, request)\n"
-                '    privileges_catalog = catalog.get("privileges", {})\n'
-                "    allowed: set[str] = set()\n"
-                "    undecided: set[str] = set()\n"
-                "    for g in _effective_grants(model, subject):\n"
-                '        privs = _privilege_ids(g.get("privilege"))\n'
-                '        if g.get("effect", "allow") == "deny":\n'
-                "            overlap = (hits | forms) & privs\n"
-                "            if overlap:\n"
-                '                return "deny", f"deny grant for {subject} on {sorted(overlap)}"\n'
-                "            undecided |= set(unseen) & privs\n"
-                "            continue\n"
-                "        overlap = hits & privs\n"
-                "        if not overlap:\n"
-                "            continue\n",
-            ),
-            (
-                '            f"defer to the harness\'s normal flow"\n        )\n    if allowed:\n',
-                '            f"defer to the harness\'s normal flow"\n'
-                "        )\n"
-                "    # A deny that may bind on a form the core cannot see keeps every grant from\n"
-                "    # allowing (#1960): a pathname pattern may expand to a flag the deny names,\n"
-                "    # and a configuration may set one. The reason names the privileges and the\n"
-                "    # kinds of form, never the command's text.\n"
-                "    if undecided:\n"
-                '        kinds = " / ".join(\n'
-                "            sorted({_UNSEEN_KIND[kind] for name in undecided "
-                "for kind in unseen[name]})\n"
-                "        )\n"
-                '        if posture == "strict":\n'
-                '            return "deny", (\n'
-                '                f"strict posture: a deny on {sorted(undecided)} '
-                'may bind on what the "\n'
-                '                f"shell runs ({kinds})"\n'
-                "            )\n"
-                '        return "abstain", (\n'
-                '            f"a deny on {sorted(undecided)} may bind on what the shell runs '
-                '({kinds}) "\n'
-                '            f"— fail closed, defer to the harness\'s normal flow"\n'
-                "        )\n"
-                "    if allowed:\n",
-            ),
-        ),
-    }
-    introduced = (
-        "_export_prefix",
-        "_deny_forms",
-        "_rule_form",
-        "_structured_form",
-        "_pattern_form",
-        "_program_name",
-        "_flag_form",
-        "_subcommand_candidates",
-        "_may_open_flag",
-        "_globbed",
-        "_glob_head",
-        "_GLOB",
-        "_FLAG_OPENERS",
-        "_BUNDLE",
-        "_CONFIG_VAR",
-        "_PATTERN_PROGRAM",
-        "_UNSEEN_KIND",
+    # is compared byte for byte. A function as main has it always passes, and a
+    # pair that inserts text main already carries is skipped (#2011). So an
+    # entry left in place once its change is on main does no harm, even beside
+    # a later change to the same function. Delete it in any change after that
+    # one merges. A name in `introduced` is new to the change, and is compared
+    # once main defines it.
+    sanctioned: dict[str, tuple[tuple[str, str], ...]] = {}
+    introduced: tuple[str, ...] = ()
+    diverged = _verdict_path_divergences(base, working, frozen, sanctioned, introduced)
+    named = ", ".join(
+        f"`{fn}`" + (" (after its sanctioned rewrite)" if fn in sanctioned else "")
+        for fn in diverged
     )
-    for fn in frozen:
-        if fn in introduced and not re.search(rf"^(def {fn}\(|{fn} = )", base, re.M):
-            continue  # #1960: compared once main defines it
-        base_source = _extract_func_source(base, fn)
-        for old, new in sanctioned.get(fn, ()):
-            base_source = base_source.replace(old, new)
-        rewritten = " (after its sanctioned rewrite)" if fn in sanctioned else ""
-        assert _extract_func_source(working, fn) == base_source, (
-            f"the `{fn}` verdict path diverged from main{rewritten} — ADR-032 "
-            f"requires it byte-identical (only `load_model` / `active_profile` / "
-            f"`_active_profile_grants` may change)"
+    assert not diverged, (
+        f"the verdict path diverged from main in {named} — ADR-032 requires it "
+        f"byte-identical (only `load_model` / `active_profile` / "
+        f"`_active_profile_grants` may change)"
+    )
+
+
+# A small module standing in for decide.py, and a sanctioned change to it: an
+# insertion into a function, and a replacement in a module-level pattern.
+_GUARDED_MAIN = "\n".join(
+    (
+        "def verdict(command):",
+        "    # the anchor",
+        "    return command",
+        "",
+        "",
+        'PATTERN = r"a|b"',
+        "",
+    )
+)
+_GUARDED_CHANGE = {
+    "verdict": (("    # the anchor\n", "    # the anchor\n    command = command.strip()\n"),),
+    "PATTERN": (('r"a|b"', 'r"a|b|c"'),),
+}
+_GUARDED_FROZEN = ("verdict", "PATTERN")
+
+
+def _changed(source: str, *pairs: tuple[str, str]) -> str:
+    for old, new in pairs:
+        assert old in source, old
+        source = source.replace(old, new)
+    return source
+
+
+_GUARDED_CHANGED = _changed(_GUARDED_MAIN, *_GUARDED_CHANGE["verdict"], *_GUARDED_CHANGE["PATTERN"])
+
+
+def test_the_verdict_guard_passes_an_entry_main_already_carries():
+    # Once the sanctioned change merges, main carries its text: the insertion
+    # is not made a second time, and the replacement finds nothing to replace.
+    assert (
+        _verdict_path_divergences(
+            _GUARDED_CHANGED, _GUARDED_CHANGED, _GUARDED_FROZEN, _GUARDED_CHANGE
         )
+        == []
+    )
+    # A later change to the same function, sanctioned beside the stale entry.
+    later = ("return command", "return command.lower()")
+    sanctioned = {**_GUARDED_CHANGE, "verdict": (*_GUARDED_CHANGE["verdict"], later)}
+    working = _changed(_GUARDED_CHANGED, later)
+    assert _verdict_path_divergences(_GUARDED_CHANGED, working, _GUARDED_FROZEN, sanctioned) == []
+    # The stale entry still lets no other edit through.
+    edited = _changed(working, ("command.lower()", "command.upper()"))
+    assert _verdict_path_divergences(_GUARDED_CHANGED, edited, _GUARDED_FROZEN, sanctioned) == [
+        "verdict"
+    ]
+
+
+def test_the_verdict_guard_compares_a_pending_entry_as_before():
+    def diverged(working: str) -> list[str]:
+        return _verdict_path_divergences(_GUARDED_MAIN, working, _GUARDED_FROZEN, _GUARDED_CHANGE)
+
+    assert diverged(_GUARDED_CHANGED) == []
+    # Each name is compared on its own: one as main has it passes.
+    assert diverged(_GUARDED_MAIN) == []
+    assert diverged(_changed(_GUARDED_MAIN, *_GUARDED_CHANGE["verdict"])) == []
+    # Any other edit of a guarded name fails, beside the sanctioned change or
+    # in place of it.
+    assert diverged(_changed(_GUARDED_CHANGED, ("return command", "return None"))) == ["verdict"]
+    assert diverged(_changed(_GUARDED_MAIN, ("return command", "return None"))) == ["verdict"]
+    assert diverged(_changed(_GUARDED_CHANGED, ('r"a|b|c"', 'r"a|b|c|d"'))) == ["PATTERN"]
+    other = _changed(_GUARDED_MAIN, ("    # the anchor\n", "    # the anchor\n    command = 1\n"))
+    assert diverged(other) == ["verdict"]
+
+
+def test_the_verdict_guard_fails_an_unsanctioned_edit():
+    working = _changed(_GUARDED_MAIN, ("return command", "return None"))
+    assert _verdict_path_divergences(_GUARDED_MAIN, working, _GUARDED_FROZEN, {}) == ["verdict"]
 
 
 def test_setup_autonomy_seeds_profile_recommendations(tmp_path, monkeypatch):
@@ -4489,6 +4501,33 @@ def test_setup_autonomy_cli_unseal_warned_then_reconciled_by_seal_reassert(tmp_p
     assert "allowUnsandboxedCommands: true" in out  # named the override
     assert "already reconciled" in out  # seal re-assert resolved it
     assert _sb_local(proj)["allowUnsandboxedCommands"] is False  # ends SEALED
+
+
+def _removal_answers(proj: Path, monkeypatch) -> list[bool]:
+    """Run `setup autonomy` with a `y` piped in, recording what its removal
+    question answers; the setup itself is stubbed to ask once."""
+    answers: list[bool] = []
+
+    def setup(target_root, *, profile, confirm):
+        answers.append(confirm("Remove these overrides?"))
+        return "Result: stubbed\n", True
+
+    monkeypatch.setattr(_perm, "setup_autonomy", setup)
+    monkeypatch.chdir(proj)
+    result = CliRunner().invoke(main, ["permissions", "setup", "autonomy"], input="y\n")
+    assert result.exit_code == 0, result.output
+    return answers
+
+
+def test_setup_autonomy_a_piped_yes_does_not_remove_overrides(tmp_path, monkeypatch):
+    # Off a terminal the removal question is never asked, so a `y` piped in is not
+    # read as consent: the overrides are warned of only (#2003).
+    assert _removal_answers(_with_adapter(_setup(tmp_path)), monkeypatch) == [False]
+
+
+@pytest.mark.usefixtures("at_a_terminal")
+def test_setup_autonomy_asks_about_removal_at_a_terminal(tmp_path, monkeypatch):
+    assert _removal_answers(_with_adapter(_setup(tmp_path)), monkeypatch) == [True]
 
 
 def test_setup_autonomy_cli_warns_only_without_consent(tmp_path, monkeypatch):

@@ -24,14 +24,18 @@ pkit:
         - ADR-065#4
       artefact:
         - ACT-adopter
+    revalidated:
+      at: 2026-10-24T20:51:14Z
+      outcome: unchanged
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it
 
-**Verified by:** A test stops an upgrade on a failing migration, and finds the completion behind and no version pin written. It then finds that the next upgrade runs the migrations again and records the completion last. Tests find that an upgrade records the target before its copy, and records the completion before the version pin. A test finds that first install records the target first, and records the completion last.
+**Verified by:** A test stops an upgrade on a failing [migration](../../../glossary.md#term-migration--migration), and finds the completion behind and no [version pin](../../../glossary.md#term-version-pin--version-pin) written. It then finds that the next upgrade runs the migrations again and records the completion last. Tests find that an upgrade records the target before its copy, and records the completion before the version pin. A test finds that first [install](../../../glossary.md#term-install--install) records the target first, and records the completion last.
 
-Tests find that a missing completion runs every backbone migration once, and that a completion ahead of the target reads as incomplete. A test of status finds that it shows an incomplete transition beside the backbone's line. Tests of `pkit capabilities upgrade` find that a failing migration stops it, and that the capability's manifest moves before the copy.
+Tests find that a missing completion runs every [backbone](../../../glossary.md#term-backbone--backbone) migration once, and that a completion ahead of the target reads as incomplete. A test of status finds that it shows an incomplete transition beside the backbone's line. Tests of `pkit capabilities upgrade` find that a failing migration stops it, and that the [capability](../../../glossary.md#term-capability--capability)'s [manifest](../../../glossary.md#term-manifest--manifest) moves before the copy.
 
-**Rationale:** The adopter upgrades the system like a dependency, with its migrations run. A transition cut short in its migrations would otherwise read as done, so the next upgrade would find nothing to do. Those migrations would then never run (COR-059's context).
+**Rationale:** The adopter upgrades the [system](../../../glossary.md#term-system--system) like a dependency, with its [migrations](../../../glossary.md#term-migration--migration) run. A transition cut short in its migrations would otherwise read as done, so the next upgrade would find nothing to do. Those migrations would then never run (COR-059's context).
 
-So COR-059 point 6 records the target before anything else, and records the completion last. A project is at a version only when both name it. The next transition finishes an incomplete one, and runs every backbone migration once where no completion is recorded.
+So COR-059 [point](../../../glossary.md#term-point--point) 6 records the target before anything else, and records the completion last. A [project](../../../glossary.md#term-project--project) is at a [version](../../../glossary.md#term-version--version) only when both name it. The next transition finishes an incomplete one, and runs every [backbone](../../../glossary.md#term-backbone--backbone) migration once where no completion is recorded.

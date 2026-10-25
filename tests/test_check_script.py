@@ -15,7 +15,8 @@ checks, after the friction change check; a finding fails the run.
 
 The deployed agents' check (#1559) runs `scripts/check_deployed_agents.py`
 right after `pkit validate`, before the diff-scoped checks; a finding fails the
-run.
+run. The pages' console fences (#1807) run `scripts/console_fences.py` right
+after it; a failure fails the run.
 
 The test step (#1182):
 
@@ -37,9 +38,9 @@ refused before a check runs.
 runs the suite or pyright: the stub records every command it is handed; its
 `pytest` records its arguments and, on the parallel pass, holds until the test
 lets it go; its `python` is this interpreter, so a slot is taken with a real
-lock, except for the ratchet, the prose lint and the deployed agents' check,
-which exit as the test says; the numbering check exits as the test says too;
-every other command passes.
+lock, except for the ratchet, the prose lint, the deployed agents' check and the
+console fences, which exit as the test says; the numbering check exits as the
+test says too; every other command passes.
 """
 
 from __future__ import annotations
@@ -60,8 +61,9 @@ CHECK = REPO / "scripts" / "check.sh"
 
 # The stand-in for `uv run [--flag ...] <command> [arg ...]`: it logs each
 # command; `python` is this interpreter, but for the ratchet, which exits with
-# $STUB_TYPES_STATUS, the prose lint, which exits with $STUB_PROSE_STATUS, and the
-# deployed agents' check, which exits with $STUB_AGENTS_STATUS;
+# $STUB_TYPES_STATUS, the prose lint, which exits with $STUB_PROSE_STATUS, the
+# deployed agents' check, which exits with $STUB_AGENTS_STATUS, and the console
+# fences, which exit with $STUB_CONSOLE_STATUS;
 # `pkit decisions check-diff` exits with $STUB_NUMBERING_STATUS; `pytest` logs its
 # arguments and, on the parallel pass, holds until the release file exists;
 # anything else passes.
@@ -76,6 +78,7 @@ case "$1" in
       scripts/pyright_ratchet.py) exit "${{STUB_TYPES_STATUS:-0}}" ;;
       scripts/prose_lint.py) exit "${{STUB_PROSE_STATUS:-0}}" ;;
       scripts/check_deployed_agents.py) exit "${{STUB_AGENTS_STATUS:-0}}" ;;
+      scripts/console_fences.py) exit "${{STUB_CONSOLE_STATUS:-0}}" ;;
     esac
     exec "{python}" "$@" ;;
   pkit)
@@ -248,6 +251,20 @@ def test_the_deployed_agents_check_runs_after_validate_and_a_finding_fails_the_r
     check = steps.index("python scripts/check_deployed_agents.py")
     assert check == steps.index("pkit validate") + 1
     assert check < steps.index("pkit migrations check-diff")
+
+
+def test_the_console_fences_run_after_the_deployed_agents_and_a_failure_fails_the_run(
+    checkout: Checkout,
+) -> None:
+    done = checkout.check(STUB_CONSOLE_STATUS="1")
+
+    assert done.returncode == 1
+    assert "-- console fences: FAILED" in done.stdout
+    assert "-- changelog lint: ok" in done.stdout
+    steps = checkout.steps.read_text().splitlines()
+    fences = steps.index("python scripts/console_fences.py")
+    assert fences == steps.index("python scripts/check_deployed_agents.py") + 1
+    assert fences < steps.index("pkit migrations check-diff")
 
 
 @pytest.mark.parametrize(("workers", "expected"), [(None, "-n auto"), ("3", "-n 3"), ("0", "-n 0")])

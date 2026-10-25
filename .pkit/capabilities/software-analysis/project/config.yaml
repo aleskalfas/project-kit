@@ -40,6 +40,9 @@ analyses:
       - analysis: core
   - component: software-engineering
     folder: software-engineering
+    # The record that states what software-engineering is for
+    # (software-analysis DEC-003 point 8).
+    purpose: software-engineering:DEC-003
     builds-on:
       - analysis: core
       - analysis: project-management

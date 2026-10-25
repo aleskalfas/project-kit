@@ -30,12 +30,12 @@ Someone who extends the system with a component (a capability or an adapter) rat
 
 - **Role holders:**
   - an adopter growing a discipline in their own repository
-  - an organisation that keeps private methodology in one repository for its others
-  - whoever adapts the system to a new harness
+  - an organisation that keeps private [methodology](../../glossary.md#term-methodology--methodology) in one repository for its others
+  - whoever adapts the [system](../../glossary.md#term-system--system) to a new [harness](../../glossary.md#term-harness--harness)
 - **Occasions:**
   - when a pattern recurs often enough to package
-  - at each release of their component
-  - when a new harness arrives
-- **Context:** the component's decisions, schemas, skills, agents and process definitions. They own its compatibility claim.
-- **Core:** the capability pattern, its origins, connection points, the process engine and the harness requirements are the extension points this role uses. They exist before any capability is installed.
-- **Note:** in project-kit's source repository the methodology maintainer plays this part for the capabilities and the adapter project-kit ships.
+  - at each new [version](../../glossary.md#term-version--version) of their [component](../../glossary.md#term-component--component)
+  - when a new [harness](../../glossary.md#term-harness--harness) arrives
+- **Context:** the [component](../../glossary.md#term-component--component)'s decisions, schemas, [skills](../../glossary.md#term-skill--skill), agents and [process](../../glossary.md#term-process--process) definitions. They own its compatibility claim.
+- **Core:** the [capability](../../glossary.md#term-capability--capability) pattern, its origins, [connection points](../../glossary.md#term-connection-point--connection-point), the [process](../../glossary.md#term-process--process) engine and the [harness](../../glossary.md#term-harness--harness) requirements are the extension points the component author uses. They exist before any capability is installed.
+- **Note:** in project-kit's [source repository](../../glossary.md#term-source-repository--source-repository) the methodology maintainer plays this part for the [capabilities](../../glossary.md#term-capability--capability) and the [adapter](../../glossary.md#term-adapter--adapter) project-kit ships.

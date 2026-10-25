@@ -25,15 +25,15 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-23T08:53:51Z
+      at: 2026-10-24T20:51:02Z
       outcome: unchanged
-      unchanged-because: The adopter's needs that only a capability meets moved to its analysis, and two needs were reworded to their terms. A migration run again still changes nothing in the adopter's project.
+      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-001 · Quality · A migration run again changes nothing
 
-**Verified by:** A test replays every backbone migration over a newly installed project, which already holds what each one leaves. It finds no file and no index entry changed. Tests run most of the components' migrations a second time, or over a project they already carried across. Three have no such test, one of evidence's and two of project-management's.
+**Verified by:** A test replays every [backbone](../../../glossary.md#term-backbone--backbone) [migration](../../../glossary.md#term-migration--migration) over a newly installed [project](../../../glossary.md#term-project--project), which already holds what each one leaves. It finds no file and no index entry changed. Tests run most of the [components](../../../glossary.md#term-component--component)' migrations a second time, or over a project they already carried across. Three have no such test, one of evidence's and two of project-management's.
 
-**Rationale:** A version transition records its completion only once every migration has run. So when one stops, the next runs again each backbone migration the stopped one ran (COR-059 point 6).
+**Rationale:** A [version transition](../../../glossary.md#term-version-transition--version-transition) records its completion only once every [migration](../../../glossary.md#term-migration--migration) has run. So when one stops, the next runs again each [backbone](../../../glossary.md#term-backbone--backbone) migration the stopped one ran (COR-059 [point](../../../glossary.md#term-point--point) 6).
 
-COR-010 makes each migration idempotent, "so adopters can re-run safely". So an adopter whose version transition stopped runs it again, and each migration that already ran changes nothing the second time. A run after the project changed that state may do more: a backbone migration may restore a default the project removed (COR-010).
+COR-010 makes each migration idempotent, "so adopters can re-run safely". So an adopter whose version transition stopped runs it again, and each migration that already ran changes nothing the second time. A run after the [project](../../../glossary.md#term-project--project) changed that state may do more: a backbone migration may restore a default the project removed (COR-010).
