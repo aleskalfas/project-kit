@@ -23,9 +23,9 @@ pkit:
         - ACT-adopter
         - REQ-005
     revalidated:
-      at: 2026-10-24T19:01:30Z
+      at: 2026-10-25T05:24:37Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-053 — Re-pin an inherited rule set once I have reviewed its new major
@@ -50,14 +50,14 @@ pkit:
 3. The adopter runs `pkit validate`. Its `versions` member fails on the inheriting set, naming the new major and the same fix (COR-051 [point](../../../glossary.md#term-point--point) 7).
 4. The adopter reviews what the inherited set's new major changed, such as a [rule](../../../glossary.md#term-rule--rule) added, withdrawn, superseded or tightened.
 5. The adopter edits the pin in the set's `inherits` to the new major, such as `software-analysis:SAN@2`. No command writes it.
-6. The adopter gives the set a new major [version](../../../glossary.md#term-version--version) of its own. A pin moved to another major changes the rules the set passes on (COR-051 point 7).
+6. The adopter raises the major of the set's own `version`. A pin moved to another major changes the rules the set passes on (COR-051 point 7).
 7. The adopter runs `pkit validate` again, and its `versions` member passes the set.
 8. The adopter runs `pkit rule-sets reach`. The system shows the inherited set's accepted rules binding again through the set, and writes nothing (UC-038 and REQ-005).
 
 **Variants:**
 
 - **2a.** No pin is behind its set. The [system](../../../glossary.md#term-system--system) shows `<n> checked, all current`, and the use case ends.
-- **4a.** The adopter finds a [rule](../../../glossary.md#term-rule--rule) of the new major that the [project](../../../glossary.md#term-project--project) will not follow. The adopter keeps the old pin, or stops inheriting the set, and proposes the [change](../../../glossary.md#term-change--change) to the set's owner (COR-051 [point](../../../glossary.md#term-point--point) 7). While the pin is behind, [validation](../../../glossary.md#term-validation--validation) keeps failing, and the use case ends.
+- **4a.** The adopter finds a [rule](../../../glossary.md#term-rule--rule) of the new major that the [project](../../../glossary.md#term-project--project) will not follow. The adopter keeps the old pin, or stops inheriting the set, and proposes the edit to the set's owner (COR-051 [point](../../../glossary.md#term-point--point) 7). While the pin is behind, [validation](../../../glossary.md#term-validation--validation) keeps failing, and the use case ends.
 - **6a.** Another set of the project's own inherits this set. The other set's pin now falls behind in turn, and the path repeats for the other set from step 1.
 - **7a.** Two routes to one [artefact](../../../glossary.md#term-artefact--artefact) pin the set at different majors. Validation fails on the artefact, naming both routes, and the path rejoins at step 5 (COR-051 point 7).
 

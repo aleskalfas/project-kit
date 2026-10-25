@@ -224,6 +224,37 @@ def test_reader_review_takes_the_reader_s_paths_from_the_point(agent, storyboard
     assert "follow each of the reader's paths that passes through the page" in story
 
 
+#: The command a reader-review resolves the reading-evidence point with.
+READING_EVIDENCE = "pkit connections resolve pkit::documentation:reading-evidence --json"
+
+
+def test_reader_review_reads_the_reading_evidence_as_advice(agent, storyboard):
+    """A reader-review resolves the reading-evidence point, reads the page's entries
+    as advice, and names in its record each entry it read. Where the point holds no
+    entry for the page, or does not resolve, it reads the page without evidence
+    (#2047; DEC-001 points 6 and 7)."""
+    _, body = agent
+    review = _reader_review(body)
+    assert f"`{READING_EVIDENCE}`" in review
+    assert "take its entries for the page" in review
+    assert "Read them as advice, never as findings" in review
+    assert "no result replaces your own reading" in review
+    assert "read the page without evidence" in review
+    # The resolve comes before the reading it advises.
+    assert review.index(READING_EVIDENCE) < review.index("Then read the page as that reader")
+    record = review.split("**Leave a record only when something was found**", 1)[1]
+    assert "each reading-evidence entry you read, by its `id`, or that you read none" in record
+    assert "naming any entry you read" in record
+    (row,) = [line for line in body.splitlines() if line.startswith(f"| `{READING_EVIDENCE}`")]
+    assert "advice for a reader-review" in row
+    _, story = storyboard
+    scenario = story.split("## Scenario 2: ", 1)[1].split("\n## ", 1)[0]
+    behind = scenario.split("### Behind the scenes", 1)[1]
+    assert f"`{READING_EVIDENCE}`" in behind
+    assert "read them as advice, never as findings" in behind
+    assert "each reading-evidence entry read, by its `id`" in behind
+
+
 # --- the fixer run -------------------------------------------------------------
 
 #: The agent's name on its result lines (project-management DEC-056 point 3).

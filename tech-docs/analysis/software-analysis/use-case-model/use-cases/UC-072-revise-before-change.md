@@ -57,10 +57,10 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in [place](../../../core/glossary.md#term-place--place) where software-analysis is developed (COR-017 and COR-031). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
+- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed (COR-017 and COR-031). The [adapter](../../../core/glossary.md#term-adapter--adapter) deploys the `analysis-author` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
 - The [change](../../../core/glossary.md#term-change--change)'s design lies in [decision records](../../../core/glossary.md#term-decision-record--decision-record) and notes in this repository, or in an issue in a tracker (DEC-001 point 6).
 - The [answer](../../../core/glossary.md#term-answer--answer) each revised [artefact](../../../core/glossary.md#term-artefact--artefact) carries is recorded with the core's writers, as `core:UC-002` describes (COR-050 point 3).
-- The [backbone](../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../core/glossary.md#term-default-branch--default-branch), on which the [stamp](../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-pointers` place each commit (COR-054 point 5).
+- The [backbone](../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../core/glossary.md#term-default-branch--default-branch), on which the [stamp](../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-pointers` locate each commit (COR-054 point 5).
 
 **Trigger:** A [change](../../../core/glossary.md#term-change--change) is proposed and its design written before its code, and the change touches what the [analysis](../../glossary.md#term-analysis--analysis) describes.
 
@@ -87,7 +87,7 @@ pkit:
 
 - **1a.** A [design source](../../glossary.md#term-design-source--design-source) lies in this repository and lands with the [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record), such as a design note. Its pointer is `this change`, and the commit that adds the revalidation record pins it (DEC-001 point 6).
 - **1b.** A design source lies outside this repository, such as an issue's body. The revalidation record names it with its link, and its pointer is the time its text was read, in UTC (DEC-001 point 6).
-- **1c.** On the path of 1b, the design source lies in another repository. Its pointer may be a commit's full id there, in [place](../../../core/glossary.md#term-place--place) of a time (DEC-001 point 6).
+- **1c.** On the path of 1b, the design source lies in another repository. Its pointer may be a commit's full id there, in place of a time (DEC-001 point 6).
 - **3a.** Every [artefact](../../../core/glossary.md#term-artefact--artefact) the [change](../../../core/glossary.md#term-change--change) touches holds against the design. The revalidation record is written all the same, since a planned [revalidation](../../glossary.md#term-revalidation--revalidation) always leaves one (DEC-001 point 6).
 - **4a.** No accepted [decision record](../../../core/glossary.md#term-decision-record--decision-record) decides the changed step yet, such as a design still under review. The developer revises no [use case](../../glossary.md#term-use-case--use-case) ahead of its code. The revalidation record still reviews the design, and each gap names what will resolve it (DEC-001 point 5).
 - **6a.** The [analysis](../../glossary.md#term-analysis--analysis) keeps a domain model, and a revised term or view moved a link between terms. The developer runs `pkit analysis link` first, as `UC-071` describes in its variant 3b.
@@ -104,5 +104,5 @@ pkit:
 
 - A refused [stamp](../../../core/glossary.md#term-stamp--stamp) leaves every file as it was (`stamp.py`).
 - A planned [revalidation record](../../glossary.md#term-revalidation-record--revalidation-record) never lacks its [design sources](../../glossary.md#term-design-source--design-source), and one of any other trigger names none (DEC-001 point 6).
-- A commit that `pkit analysis check-pointers` cannot [place](../../../core/glossary.md#term-place--place) is reported as unknown, never as a failure (DEC-001 point 6).
-- `pkit analysis check-pointers` and `pkit analysis check-numbers` are queries, which [change](../../../core/glossary.md#term-change--change) no file of the [project](../../../core/glossary.md#term-project--project) (core:REQ-005).
+- A commit that `pkit analysis check-pointers` cannot locate is reported as unknown, never as a failure (DEC-001 point 6).
+- `pkit analysis check-pointers` and `pkit analysis check-numbers` are queries, which edit no file of the [project](../../../core/glossary.md#term-project--project) (core:REQ-005).

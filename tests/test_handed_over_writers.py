@@ -166,7 +166,10 @@ def test_a_friction_writer_bound_here_refuses_without_consent(
     argv = _bound(shlex.split(command))
     result = _off_a_terminal(argv)
     assert result.exit_code != 0, result.output
-    assert f"refusing to write {ARTEFACT} without consent" in result.output
+    # The use case's block holds no answer, so the answer goes to an answer file of
+    # the change's own, which the refusal names with the artefact (COR-062 point 1).
+    assert f", the answer on {ARTEFACT}, without consent" in result.output
+    assert "refusing to write .pkit/project/friction/answers/" in result.output
     assert "Nothing was written." in result.output
     assert analysed.git("status", "--porcelain").stdout == ""
 

@@ -27,9 +27,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T19:00:41Z
+      at: 2026-10-25T05:23:26Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, --purge and the unregister now ask only at a terminal, and refuse off one without --yes. A reply at a terminal, or --yes, still confirms."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository

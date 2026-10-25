@@ -38,9 +38,9 @@ pkit:
         - REQ-005
         - REQ-021
     revalidated:
-      at: 2026-10-24T19:01:43Z
+      at: 2026-10-25T05:24:16Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-042 — Have my draft challenged and my diff checked against the conventions
@@ -60,7 +60,7 @@ pkit:
 
 - The [harness](../../../glossary.md#term-harness--harness) hands each [reviewer](../../../glossary.md#term-reviewer--reviewer)'s whole result back to the session that dispatched it, as UC-029 describes. It does so at the cost the [adapter](../../../glossary.md#term-adapter--adapter)'s support declaration names (COR-047 [point](../../../glossary.md#term-point--point) 2).
 - A reviewer keeps to the remit its [agent definition](../../../glossary.md#term-agent-definition--agent-definition) gives it, read-only included. Nothing at run time checks what a reviewer changed, beyond the tools the harness grants it (COR-024 and COR-057 point 1).
-- The rule-set reviewer judges under no [rule](../../../glossary.md#term-rule--rule) but those the [backbone](../../../glossary.md#term-backbone--backbone)'s one [answer](../../../glossary.md#term-answer--answer) gives. It approves no [change](../../../glossary.md#term-change--change) it could not judge, nor one in which it found a settled break. Nothing checks its verdict against the rules (COR-057 points 1 and 3).
+- The rule-set reviewer judges under no [rule](../../../glossary.md#term-rule--rule) but those the [backbone](../../../glossary.md#term-backbone--backbone)'s one <!-- pkit:not-the-term -->answer gives. It approves no [change](../../../glossary.md#term-change--change) it could not judge, nor one in which it found a settled break. Nothing checks its verdict against the rules (COR-057 points 1 and 3).
 
 **Trigger:** The developer, or the agent making the [change](../../../glossary.md#term-change--change), has a substantive draft to adopt, or a diff to commit.
 
@@ -86,16 +86,16 @@ pkit:
 
 **Variants:**
 
-- **1a.** The draft is trivia, such as an [answer](../../../glossary.md#term-answer--answer) to a question, an edit of one file or a decision of one line. Nobody dispatches the critic (COR-024), and the path goes on at step 5.
-- **1b.** The developer asks for a contrary view of an answer that feels settled, or sweeps an open question. The critic runs on it as steps 2 and 3 say (COR-024).
-- **4a.** The draft touches the big picture, such as a new abstraction, a [change](../../../glossary.md#term-change--change) to a foundational record or a concern across [components](../../../glossary.md#term-component--component). Where the architect's [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed, the developer dispatches it after the critic, and the architect flags where an authorisation is needed. It advises, and refuses nothing. It edits only the architecture documents and [decision records](../../../glossary.md#term-decision-record--decision-record) that the [overlay](../../../glossary.md#term-overlay--overlay) gives it (COR-024).
+- **1a.** The draft is trivia, such as a reply to a question, an edit of one file or a decision of one line. Nobody dispatches the critic (COR-024), and the path goes on at step 5.
+- **1b.** The developer asks for a contrary view of a conclusion that feels settled, or sweeps an open question. The critic runs on it as steps 2 and 3 say (COR-024).
+- **4a.** The draft touches the big picture, such as a new abstraction, an edit to a foundational record or a concern across [components](../../../glossary.md#term-component--component). Where the architect's [agent definition](../../../glossary.md#term-agent-definition--agent-definition) is deployed, the developer dispatches it after the critic, and the architect flags where an authorisation is needed. It advises, and refuses nothing. It edits only the architecture documents and [decision records](../../../glossary.md#term-decision-record--decision-record) that the [overlay](../../../glossary.md#term-overlay--overlay) gives it (COR-024).
 - **4b.** The draft is an [artefact](../../../glossary.md#term-artefact--artefact) once written, such as a decision record, a [skill](../../../glossary.md#term-skill--skill) or an agent definition. The developer dispatches the `methodology-reviewer` on it, as UC-041 does for a core record.
-- **5a.** The developer has committed the change already, and dispatches the [reviewer](../../../glossary.md#term-reviewer--reviewer) before pushing it. The reviewer walks the branch's commits as step 6 says.
+- **5a.** The developer has committed the [change](../../../glossary.md#term-change--change) already, and dispatches the [reviewer](../../../glossary.md#term-reviewer--reviewer) before pushing it. The reviewer walks the branch's commits as step 6 says.
 - **7a.** The reviewer finds a violation. The developer mends it, and the path rejoins at step 5.
 - **8a.** Nobody names the form. The reviewer states its verdict, and each [finding](../../../glossary.md#term-finding--finding)'s kind, in plain words (COR-057 [point](../../../glossary.md#term-point--point) 3).
-- **9a.** The command cannot answer, such as where the [base](../../../glossary.md#term-base--base) resolves to no commit. The reviewer cannot judge the change, so it does not approve, and says why (COR-057 point 3).
+- **9a.** The command gives no result, such as where the [base](../../../glossary.md#term-base--base) resolves to no commit. The reviewer cannot judge the change, so it does not approve, and says why (COR-057 point 3).
 - **10a.** The change brings an artefact under a [rule](../../../glossary.md#term-rule--rule) without altering it, such as by accepting the rule or widening a set's scope. For that rule, the change owns the whole artefact, and a settled break there withholds approval (COR-060 point 1).
-- **10b.** A rule reaches the artefact only through a pin behind its set, so it binds nothing. The reviewer may [report](../../../glossary.md#term-report--report) a break of it as a finding that informs (COR-057 point 3).
+- **10b.** A rule reaches the artefact only through a pin behind its set, so it binds nothing. The reviewer may name a break of it as a finding that informs (COR-057 point 3).
 - **11a.** A finding needs a reading the rule does not settle, or a fact the rule does not name. It is a passage for a person, which withholds no approval and waits for a person's judgement (COR-057 point 3).
 - **11b.** A gate requires the reviewer, such as one a component contributes it to. Its verdict holds the change only as that gate says. Elsewhere the reviewer advises, and holds nothing (COR-057 point 5).
 

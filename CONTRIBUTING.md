@@ -9,6 +9,7 @@ pkit:
         - scripts/pyright_ratchet.py
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
+        - tech-docs/rule-sets/writing.md
         - scripts/check_deployed_agents.py
         - scripts/console_fences.py
         - scripts/short_check.py
@@ -26,8 +27,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-24T20:08:10Z
-      outcome: updated
+      at: 2026-10-25T00:55:28Z
+      outcome: unchanged
+      unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json, and the prose lint now counts the sentences of a paragraph. What CONTRIBUTING says of authoring and checking records, and of running the lint, is untouched by the first.
       deferred:
         - anchor:
             kind: record
@@ -120,7 +122,7 @@ Answer what it reports in a pull request like any friction (the friction gate, a
 **The prose lint** (#1415). The aggregator's `prose lint` line, `uv run python scripts/prose_lint.py`, checks the mechanical parts of the writing rules in the text a change adds or moves. It exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run. A finding names the file, the line, the rule's id and, for a collection entry, the entry. It shows each control or format character as `<U+XXXX>`, so the report shows what the file holds.
 
 - **Where it looks:** in each artefact the change altered, where an accepted rule binds that declares the lint. It reads those artefacts, their rules and the base from `pkit rule-sets altered` (the CLI reference, "Rule-set commands"), and keeps no list of paths. Its base is the friction check's, and `--base REF` compares with another.
-- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For a nesting entry, a list item that holds such text in any of its blocks. An item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
+- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves, in any of the paragraph's blocks. For a nesting entry, a list item that holds such text in any of its blocks. A nesting entry's item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
   - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
   - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
   - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter. An entry that reads the whole file reads the lines of the entry's data there.
@@ -132,12 +134,17 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - A code span's own spaces split no token. So the text joined to a code span up to a space is part of its word, as in `` `pkit`'s ``.
   - Each block ends a sentence: a paragraph, a list item, a table cell and a front-matter value.
   - A line inside a block's text that opens with a number other than 1, as `2026.` does, goes on from the block. In CommonMark, such a list cannot interrupt a paragraph.
-  - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
+  - A bold label is bold text that opens a block and ends in a colon or a full stop, such as `**2a.**`. RS-WRITE-005's *How* counts no bold label, so a label holds no sentence, and a block that is only a label holds none at all.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
   - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
   - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it. A fence opened in a block quote closes there, or where the quote ends.
   - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
   - An HTML comment is not read, and a setext heading is a heading. For a count, a bare URL and an HTML entity are tokens like any other. A link's target is part of its link's last token. No pattern searches them, so a URL holds no semicolon.
+- **How it counts a paragraph:** RS-WRITE-007's at most four sentences, in a paragraph as that rule's *How* reads one. That *How* counts a list item as one paragraph, and exempts table cells. Where the *How* is silent, the lint reads as follows:
+  - A list item is one paragraph with every block indented to its text.
+  - A nested item is a paragraph of its own, and so is each paragraph of a block quote, inside an item too.
+  - Any other block is one paragraph alone, a front-matter value included.
+  - A paragraph's finding names the line of its first word.
 - **How it counts levels:** a list's levels as RS-WRITE-017's *How* counts them. Where the *How* is silent, it counts as follows:
   - An item is inside another while it is indented to that item's text. The text starts after the marker and the spaces that follow it. Where more than four columns follow, or nothing else on the line, it starts one column after the marker. A tab reaches the next multiple of four columns.
   - A line that starts a block closes each item it is not indented to. So a paragraph, a heading, a table or a fence at the margin closes every item. A line that goes on from the line before it closes none, even at the margin.

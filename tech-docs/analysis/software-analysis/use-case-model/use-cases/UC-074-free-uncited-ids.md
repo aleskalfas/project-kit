@@ -43,7 +43,7 @@ pkit:
 
 **Assumptions:**
 
-- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in [place](../../../core/glossary.md#term-place--place) where software-analysis is developed (COR-017 and COR-031).
+- The [project](../../../core/glossary.md#term-project--project) has software-analysis installed, or registered in place where software-analysis is developed (COR-017 and COR-031).
 - What may cite an id is open-ended, such as other repositories, trackers and code, so no tool can check it all. A person judges that nothing cites the ids (DEC-001 point 3).
 - The [backbone](../../../core/glossary.md#term-backbone--backbone) resolves the [default branch](../../../core/glossary.md#term-default-branch--default-branch), whose history the [stamp](../../../core/glossary.md#term-stamp--stamp) and `pkit analysis check-numbers` read, and the [base](../../../core/glossary.md#term-base--base) that `check-numbers` compares with (COR-054 points 3 and 5).
 

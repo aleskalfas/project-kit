@@ -319,10 +319,10 @@ ANYWHERE = "*"
 #: names the sources of the design it reviewed (point 6).
 PLANNED = "planned"
 
-#: The methodology's front-matter container, and the friction block's keys that
-#: lead to an artefact's revalidation marker (COR-050 points 1 and 3).
+#: The methodology's front-matter container (COR-050 point 1). An artefact's
+#: revalidation is read through the backbone's explanation, never from its file
+#: (COR-062 Implications).
 CONTAINER = "pkit"
-REVALIDATED_AT = ("friction", "revalidated", "at")
 
 #: The key an actor or a term nothing embodies carries in its friction block
 #: instead of anchors: the reason onboarding accepts it unanchored (DEC-001

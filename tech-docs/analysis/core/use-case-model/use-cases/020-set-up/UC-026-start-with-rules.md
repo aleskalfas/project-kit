@@ -43,9 +43,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T10:39:42Z
+      at: 2026-10-25T00:33:52Z
       outcome: unchanged
-      unchanged-because: ACT-adopter's need says "Upgrade the system" for "Upgrade it", and "a version the whole project pins" for "a version pinned for the whole project". The need is the same, so this artefact holds.
+      unchanged-because: Core rule 20 changes its words on answers. The rules a session starts with are loaded as this use case says.
 ---
 
 # UC-026 — Start every session with the project's rules loaded
@@ -71,7 +71,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit sync`.
-2. At its entry, before it reads anything, each writing command of this use case checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Those are `pkit sync`, and `pkit init` and `pkit upgrade` in variant 1a. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, each writing command of this use case checks that the repository it writes in is the session's own. Those are `pkit sync`, and `pkit init` and `pkit upgrade` in variant 1a. Where the repository is another, the [system](../../../glossary.md#term-system--system) asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** none of those three commands runs such a check, and each writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.

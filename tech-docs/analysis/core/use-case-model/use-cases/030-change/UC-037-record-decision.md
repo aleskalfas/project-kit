@@ -63,9 +63,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:02:02Z
+      at: 2026-10-25T05:24:06Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-037 — Record my decision beside the methodology's
@@ -92,7 +92,7 @@ pkit:
 
 1. The developer picks the record's namespace by its scope (COR-025). The namespace is `project` for how the [project](../../../glossary.md#term-project--project) works, and it is `adr` for what the project builds and why. It is a [capability](../../../glossary.md#term-capability--capability)'s name for a decision inside a capability the project authors.
 2. The developer runs `pkit new decision <namespace> <slug>`, or an AI agent runs it through the `decision-author` [skill](../../../glossary.md#term-skill--skill).
-3. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+3. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit new decision` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -101,13 +101,13 @@ pkit:
 5. The system stamps `<PREFIX>-<NNN>-<slug>.md` with `status: proposed`, today's date and the author git names. It writes the four sections, with a first point heading under the Decision, `### 1. Point title` (COR-058 point 1). It prints `Stamped: <path>`.
 6. The developer writes the title, the context, each point under a heading of its own, the rationale and the implications. Each point keeps its id for good (COR-058 point 3).
 7. The developer runs `pkit decisions validate`. The system checks that no two records of one namespace share an id, and that each record's id matches its file name. It checks each record's points, retired ids and stubs too (COR-058 point 7).
-8. The developer runs `pkit decisions check-diff`. The system compares each record the change touches with where the branch left its [base](../../../glossary.md#term-base--base). It also compares the ids the change takes with those the base took since (COR-058 point 8).
+8. The developer runs `pkit decisions check-diff`. The system compares each record the [change](../../../glossary.md#term-change--change) touches with where the branch left its [base](../../../glossary.md#term-base--base). It also compares the ids the change takes with those the base took since (COR-058 point 8).
 9. The developer commits the record as `proposed`. Work that builds on it waits until the merge authoriser accepts it (UC-040).
 
 **Variants:**
 
 - **1a.** In the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), the namespace may be `core`, for a principle that fits any [project](../../../glossary.md#term-project--project). The [system](../../../glossary.md#term-system--system) stamps a core record in `.pkit/decisions/core/`, which UC-041 keeps fit for any project.
-- **1b.** The decision refines an accepted record, and overturns nothing it decides. The developer edits the record in [place](../../../glossary.md#term-place--place), with no revision marker, and stamps nothing. A new [point](../../../glossary.md#term-point--point) takes the next unused number, and no point is renumbered (COR-058 point 3). The path goes on at step 7.
+- **1b.** The decision refines an accepted record, and overturns nothing it decides. The developer edits the record in place, with no revision marker, and stamps nothing. A new [point](../../../glossary.md#term-point--point) takes the next unused number, and no point is renumbered (COR-058 point 3). The path goes on at step 7.
 - **1c.** On the path of 1b, a point is dropped, split or merged so that no point continues its claim. Its id goes into `retired-points`, with the points that took its text, and a one-line stub stays where it stood (COR-058 point 4).
 - **1d.** The decision overturns an accepted record. The new record sets `supersedes:` to the old record's id, and the path goes on at step 2. Once the new record is accepted, an edit of its own marks the old one `superseded`, as the decision-record specification says. A record overturned only in part stays accepted, its top line reading *Partially superseded by …*.
 - **2a.** The namespace is `adr`, and the [overlay](../../../glossary.md#term-overlay--overlay) names a folder in `adr-records`. The system stamps the record there. It refuses a folder that does not exist, naming `mkdir -p <folder>`, and a folder inside `.pkit/` (COR-025).

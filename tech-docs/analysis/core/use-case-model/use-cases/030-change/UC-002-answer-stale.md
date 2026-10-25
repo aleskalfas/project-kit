@@ -27,10 +27,10 @@ shortfalls:
     issue: "#1765"
     record: ADR-034#1
   - at: 6
-    issue: "#1873"
+    issue: "#2032"
     record: COR-062#1
   - at: "5e"
-    issue: "#1873"
+    issue: "#2032"
     record: COR-062#5
   - at: "9b"
     issue: "#1765"
@@ -80,9 +80,8 @@ pkit:
         - REQ-020
         - REQ-021
     revalidated:
-      at: 2026-10-23T14:50:29Z
-      outcome: unchanged
-      unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this use case rests on in the rules holds.
+      at: 2026-10-25T00:34:58Z
+      outcome: updated
 ---
 
 # UC-002 — Answer what my change made stale
@@ -121,7 +120,7 @@ pkit:
 6. Once `--yes` or a prompt at a terminal gives [consent](../../../glossary.md#term-consent--consent), the system writes the answer to an answer file of the change's own. The answer names, in `read`, every other answer file on that artefact. The artefact's own file stays as it was (COR-062 points 1 and 4).
 
 > [!WARNING]
-> **Not built yet:** the system writes the answer as the `revalidated` key of the artefact's `friction` block. COR-062 point 1 decides that a change writes its answers in answer files of its own, never in the artefact, and #1873 tracks it.
+> **Not built yet:** where the artefact's `friction` block already holds an answer, the system writes the answer there instead, until those answers move out. COR-062 point 1 decides that a change writes its answers in answer files of its own, never in the artefact, and #2032 tracks it.
 
 7. The developer runs `pkit friction check` again. It reports no [friction](../../../glossary.md#term-friction--friction), and lists every answer the change wrote, word for word, under "Answers written in this change".
 8. For each artefact revalidated as `updated`, whoever made the change says in one sentence what changed in it, in the [pull request](../../../glossary.md#term-pull-request--pull-request).
@@ -143,7 +142,7 @@ pkit:
 - **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them (COR-062 point 5). The revalidation itself then answers what each replaced deferral had put off (COR-050 point 4).
 
 > [!WARNING]
-> **Not built yet:** the revalidation removes the rest from the artefact's block. COR-062 point 5 decides that it replaces each deferral it read and does not re-state, which stays in the deferral's own answer file. #1873 tracks it.
+> **Not built yet:** where the artefact's block already holds an answer, the revalidation removes the rest from the block. COR-062 point 5 decides that it replaces each deferral it read and does not re-state, which stays in the deferral's own answer file. #2032 tracks it.
 
 - **6a.** The run has no terminal, and neither `--yes` nor `--dry-run` is given. The system refuses and writes nothing. It names the command to run with `--dry-run`, and the path rejoins at step 5.
 - **6b.** The artefact's block would not pass [validation](../../../glossary.md#term-validation--validation) once written. The system refuses and writes nothing. The developer mends the block that `pkit validate` names, and the path rejoins at step 5.

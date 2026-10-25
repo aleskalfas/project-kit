@@ -131,10 +131,20 @@ universal_body_rules:
       outcomes, not how to build them. Implementation belongs in the
       PR or a separate design doc.
     severity: "[validation-severity:warning]"
-  - rule: |
-      No predicted decision IDs (e.g., references to DEC-NNN that
-      haven't been authored yet). Reference only IDs that already
-      exist.
+  - id: body.predicted-decision-id
+    rule: |
+      No predicted decision IDs (e.g., a `COR-NNN`, or a capability's
+      `DEC-NNN`, that hasn't been authored yet). Reference only IDs that
+      already exist. A core, project or architecture record's id
+      (`COR-NNN`, `PRJ-NNN`, `ADR-NNN`) and a capability's decision
+      named with its capability (`[<capability>:DEC-NNN-<slug>]`, or
+      `<capability>:DEC-NNN`) are looked up through `pkit refs lookup`,
+      and each one no record holds is reported. A bare `DEC-NNN` names
+      no record until its capability is named, so it is not checked. An
+      id in a fenced code block, an HTML comment or a struck-through
+      span is not read. A report, never a refusal, at the severity
+      below. When the records cannot be read, one notice says which ids
+      were not checked, and why, at the same severity.
     severity: "[validation-severity:warning]"
   - id: body.use-case-citation
     rule: |

@@ -66,8 +66,9 @@ pkit:
         - REQ-041
         - REQ-042
     revalidated:
-      at: 2026-10-24T06:23:42Z
-      outcome: updated
+      at: 2026-10-25T08:01:41Z
+      outcome: unchanged
+      unchanged-because: "As #2015 asks, the skill's close-milestone entry now says the close needs --yes off a terminal. Moving and closing an issue, as the steps say, is unchanged."
 ---
 
 # UC-061 — Move my issue through its lifecycle, each move checked
@@ -91,7 +92,7 @@ pkit:
 **Main path:**
 
 1. The developer schedules the [issue](../../glossary.md#term-issue--issue): `pkit pm promote-issue <N> --reason "<R>"`, with `--milestone <M>` where the [project](../../../core/glossary.md#term-project--project) uses [Milestones](../../glossary.md#term-milestone--milestone) (DEC-006 and DEC-026).
-2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would [change](../../../core/glossary.md#term-change--change) is the session's own, and asks the operator where it is another (core:REQ-012).
+2. At its entry, the system checks the project's prerequisites, and the developer's membership where the team keeps a list (REQ-041). It then checks that the repository it would write in is the session's own, and asks the operator where it is another (core:REQ-012).
 3. The system checks that the [issue lifecycle](../../glossary.md#term-issue-lifecycle--issue-lifecycle) declares the move from Todo to Backlog for the issue's type. It checks too that the issue's body holds no placeholder of its template (DEC-006 and DEC-031).
 4. Unless the project turns [audit comments](../../glossary.md#term-audit-comment--audit-comment) off, the system posts the reason in an audit comment that names the move, before the move (DEC-014). It then moves the issue to Backlog, and attaches the Milestone. Where the project keeps a journal, the move goes into it with its reason (DEC-049).
 
@@ -100,7 +101,7 @@ pkit:
 
 5. The system runs the [cascade](../../glossary.md#term-cascade--cascade). Each issue above that is behind is brought forward, one declared move at a time (DEC-006). Where a journal is kept, each move goes into it with its cause.
 6. The developer starts the work: `pkit pm start-work <N>`. The system cuts the issue's branch, assigns the developer, and moves the issue to In Progress, a move the issue lifecycle leaves to the agent. The cascade runs as in step 5 (DEC-006 and DEC-026).
-7. Once the change is ready, the developer runs `pkit pm review-work <N>`. The system checks the [pull request](../../../core/glossary.md#term-pull-request--pull-request)'s title against its conventions, and opens the pull request or marks a draft ready (DEC-013). It moves the [Task](../../glossary.md#term-task--task) to Review (DEC-026).
+7. Once the [change](../../../core/glossary.md#term-change--change) is ready, the developer runs `pkit pm review-work <N>`. The system checks the [pull request](../../../core/glossary.md#term-pull-request--pull-request)'s title against its conventions, and opens the pull request or marks a draft ready (DEC-013). It moves the [Task](../../glossary.md#term-task--task) to Review (DEC-026).
 
 > [!WARNING]
 > **Not built yet:** `review-work` checks no title. DEC-013 decides that the title is checked as the pull request opens, and #1761 tracks it.

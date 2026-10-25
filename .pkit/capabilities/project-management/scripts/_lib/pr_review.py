@@ -38,7 +38,7 @@ the round trip.
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +52,7 @@ try:
         pr_changed_files,
         pr_closing_issue_numbers,
     )
+    from _lib.friction_answers import answers_folder
     from _lib.required_reviewers import (
         Resolution,
         _Unresolvable,
@@ -72,6 +73,7 @@ except ImportError:  # pragma: no cover - exercised via spec-loaded fallback
         pr_changed_files,
         pr_closing_issue_numbers,
     )
+    from friction_answers import answers_folder  # type: ignore[no-redef]
     from required_reviewers import (  # type: ignore[no-redef]
         Resolution,
         _Unresolvable,
@@ -136,6 +138,7 @@ def resolve_pr_review(
     author_delta: Callable[..., AuthorDelta],
     base_kept: Callable[..., BaseCheck],
     ruled_altered: Callable[..., RuledAlteration] = ruled_altered,
+    folder_of: Callable[[Path], str | None] = answers_folder,
 ) -> PrReview:
     """Resolve PR `pr_number`'s required reviewers, with their freshness rule.
 
@@ -143,7 +146,8 @@ def resolve_pr_review(
     `review.agents.local_registered:` united with every contributed reviewer
     the PR's closing issues or its diff require, less the opt-outs, the diff
     read through the not-code list — all read from `config`, the adopter's pm
-    config. `repo_root` is the directory holding `.pkit/`, where
+    config — and with the backbone's folder of friction answers left out of
+    the code floor. `repo_root` is the directory holding `.pkit/`, where
     `collect_contributions` finds the installed contributions.
 
     `gh_run` and `gh_get_issue` (`_lib.gh`'s) feed the closing-issue, label,
@@ -153,7 +157,9 @@ def resolve_pr_review(
     ruled artefacts a change altered, for the `touches-ruled-artefact` floor:
     the resolver asks it about the PR's base and head, and the freshness rule
     about each stretch of the author's own change since a reviewed head
-    (#1386).
+    (#1386). `folder_of` (`_lib.friction_answers.answers_folder`) reads where
+    the backbone keeps the friction answers at `repo_root`, asked only where
+    the code floor turns on it.
     """
     resolution = resolve_required_local_reviewers(
         pr_number,
@@ -163,7 +169,7 @@ def resolve_pr_review(
         issue_labels=lambda n: issue_labels(n, config, gh_get_issue=gh_get_issue),
         changed_files=lambda n: pr_changed_files(n, config, gh_run=gh_run),
         opt_outs=read_opt_outs(config),
-        not_code=read_not_code(config),
+        not_code=replace(read_not_code(config), answers_folder=lambda: folder_of(repo_root)),
         collect_contributions=collect_contributions,
         ruled_artefacts=lambda n: _ruled_artefacts(
             n, config, gh_run=gh_run, ruled_altered=ruled_altered

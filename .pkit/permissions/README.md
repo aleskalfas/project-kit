@@ -20,6 +20,7 @@ pkit:
       record: [COR-007, COR-019, COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-007, ADR-009, ADR-032, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact:
         - .pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json
+        - .pkit/cli/README.md#folders-a-sync-writes
         - .pkit/cli/README.md#init
         - .pkit/cli/README.md#schemas-validate-path
         - .pkit/cli/README.md#standard-flags
@@ -30,8 +31,9 @@ pkit:
         - .pkit/capabilities/project-management/README.md#permissions
         - .pkit/capabilities/project-management/README.md#the-rules-of-a-fixers-run
     revalidated:
-      at: 2026-10-24T22:32:02Z
-      outcome: updated
+      at: 2026-10-25T03:46:19Z
+      outcome: unchanged
+      unchanged-because: Folders a sync writes now also says process couple and hand-off refuse a definition received by sync. This page points there only for the refusal of permissions scaffold, which the change leaves as it was, so it holds.
 ---
 
 # The permission model
@@ -532,7 +534,7 @@ A capability may define privileges of its own, beside the denies it ships ("Wher
 
 #### Authoring a fragment (`pkit permissions scaffold <cap>`)
 
-Run `pkit permissions scaffold <cap>` to stamp the skeleton of both fragment files, with the correct shapes and inline guidance on their footguns. The command stamps `privilege-catalog.yaml` and `grants.yaml` into the capability's `permissions/` folder. It refuses an unknown capability, and refuses to clobber an existing fragment. Both files are hand-authored.
+Run `pkit permissions scaffold <cap>` to stamp the skeleton of both hand-authored fragment files, with the correct shapes and inline guidance on their footguns. The command stamps `privilege-catalog.yaml` and `grants.yaml` into the capability's `permissions/` folder. It refuses an unknown capability, and refuses to clobber an existing fragment. It also refuses a capability whose files the project receives as synced copies ([the CLI reference, "Folders a sync writes"](../cli/README.md#folders-a-sync-writes)).
 
 The scaffold's guidance captures two footguns:
 

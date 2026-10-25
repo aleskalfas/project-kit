@@ -1,6 +1,6 @@
 ---
 rule-set: WRITE
-version: 2.0.0
+version: 2.1.0
 rules:
   RS-WRITE-001:
     status: accepted
@@ -60,6 +60,9 @@ checks:
   RS-WRITE-005:
     - check: prose-lint
       part: A sentence that holds text a change adds or moves has at most 25 words, counted as the How counts them, outside the `pkit` container.
+  RS-WRITE-007:
+    - check: prose-lint
+      part: A paragraph that holds text a change adds or moves has at most four sentences, outside table cells and the `pkit` container. A list item counts as one paragraph, with every block of it. Sentences are counted as RS-WRITE-005's How counts them.
   RS-WRITE-008:
     - check: prose-lint
       part: Text a change adds or moves holds no semicolon outside code, quotation marks and the `pkit` container.

@@ -34,8 +34,8 @@ Someone who extends the system with a component (a capability or an adapter) rat
   - whoever adapts the [system](../../glossary.md#term-system--system) to a new [harness](../../glossary.md#term-harness--harness)
 - **Occasions:**
   - when a pattern recurs often enough to package
-  - at each [release](../../glossary.md#term-release--release) of their [component](../../glossary.md#term-component--component)
+  - at each new [version](../../glossary.md#term-version--version) of their [component](../../glossary.md#term-component--component)
   - when a new [harness](../../glossary.md#term-harness--harness) arrives
 - **Context:** the [component](../../glossary.md#term-component--component)'s decisions, schemas, [skills](../../glossary.md#term-skill--skill), agents and [process](../../glossary.md#term-process--process) definitions. They own its compatibility claim.
-- **Core:** the [capability](../../glossary.md#term-capability--capability) pattern, its origins, [connection points](../../glossary.md#term-connection-point--connection-point), the [process](../../glossary.md#term-process--process) engine and the [harness](../../glossary.md#term-harness--harness) requirements are the extension points this [role](../../glossary.md#term-role--role) uses. They exist before any capability is installed.
+- **Core:** the [capability](../../glossary.md#term-capability--capability) pattern, its origins, [connection points](../../glossary.md#term-connection-point--connection-point), the [process](../../glossary.md#term-process--process) engine and the [harness](../../glossary.md#term-harness--harness) requirements are the extension points the component author uses. They exist before any capability is installed.
 - **Note:** in project-kit's [source repository](../../glossary.md#term-source-repository--source-repository) the methodology maintainer plays this part for the [capabilities](../../glossary.md#term-capability--capability) and the [adapter](../../glossary.md#term-adapter--adapter) project-kit ships.

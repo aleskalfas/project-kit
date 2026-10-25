@@ -58,14 +58,14 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-24T19:02:10Z
+      at: 2026-10-25T05:24:35Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations of release, reports, uninstall, visibility and collisions now refuse an answer piped in off a terminal. No step here asks one of them."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-052 — Run each project at the version it pins
 
-**Goal:** Run each project at the version it pins, and be told plainly when the system falls back to my installed tool.
+**Goal:** Run each project at the version it pins, and be told plainly when the system falls back to my installed CLI.
 
 **Other actors:** None.
 
@@ -83,7 +83,7 @@ pkit:
 **Main path:**
 
 1. The operator runs `pkit pin` in the [project](../../../glossary.md#term-project--project).
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit pin` runs no such check, and writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.

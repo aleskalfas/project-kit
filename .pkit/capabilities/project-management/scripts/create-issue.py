@@ -29,6 +29,10 @@ A Feature or Task body given with `--body-file` that cites use cases in its
 use case the point does not hold is reported, and so is a point that could not
 be read; neither refuses the filing nor changes the exit code.
 
+The decision ids any body cites are asked of the backbone, through `pkit refs
+lookup` (DEC-010): one that no record holds is reported, and so are ids that
+could not be checked. Neither refuses the filing nor changes the exit code.
+
 For board-substrate adopters (per DEC-019 +
 `schemas/mandatory-issue-state.yaml`), the new issue is also added to
 the configured Projects v2 board as the final step of filing. The
@@ -85,6 +89,7 @@ from _lib import (
     bootstrap_gate,
     classification_rules,
     containment,
+    decision_ids,
     provenance,
     session_guard,
     title_rules,
@@ -659,6 +664,10 @@ def main() -> int:
     if args.body_file is not None:
         _warn_use_case_citations(body, args.type, body_format)
 
+    # The decision ids the body cites that no record holds (DEC-010): reported,
+    # never refused. The backbone is asked only for a body that cites one.
+    _warn_decision_ids(body, body_format)
+
     # Resolve assignee.
     assignee = args.assignee or invoker.github_login
     if not assignee:
@@ -968,6 +977,14 @@ def _warn_use_case_citations(body: str, structural_type: str, body_format: dict)
     for severity, label, detail in use_case_citations.findings(
         body, structural_type, body_format, use_case_citations.read_point
     ):
+        print(f"[{severity}] {label}: {detail}", file=sys.stderr)
+
+
+def _warn_decision_ids(body: str, body_format: dict) -> None:
+    """Report on stderr the decision ids *body* cites that no record holds, or that
+    they could not be checked (DEC-010), at the severity the body-format schema
+    gives the rule. Filing is not blocked: the rule is a report."""
+    for severity, label, detail in decision_ids.findings(body, body_format, decision_ids.lookup):
         print(f"[{severity}] {label}: {detail}", file=sys.stderr)
 
 

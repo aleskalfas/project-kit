@@ -27,9 +27,9 @@ pkit:
       artefact:
         - ACT-adopter
     revalidated:
-      at: 2026-10-24T19:00:28Z
+      at: 2026-10-24T22:53:50Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the tests gain cases that refuse an answer piped in off a terminal. Their dry runs still write nothing, as the measure says."
+      unchanged-because: Two tests now hold pkit refs lookup --json. The lookup reads and writes nothing, so it needs no --dry-run, and the commands that change content offer one as before.
 ---
 
 # REQ-009 · Quality · A command whose effect reaches past what the person named offers `--dry-run`

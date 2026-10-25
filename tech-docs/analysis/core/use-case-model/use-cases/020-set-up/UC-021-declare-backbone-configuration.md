@@ -48,9 +48,9 @@ pkit:
         - REQ-014
         - REQ-015
     revalidated:
-      at: 2026-10-24T19:00:45Z
+      at: 2026-10-25T05:23:36Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, a helper beside the writer asks other commands' questions only at a terminal. The writer's consent, and variant 5a, are unchanged."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-021 — Declare my project's backbone configuration once, and have it validated
@@ -70,7 +70,7 @@ pkit:
 **Main path:**
 
 1. The adopter runs `pkit config set <key> <value>` for each key that holds one value, such as `pkit config set repository.default-branch trunk`. Such keys include `name`, `repository.default-branch`, `docs.internal`, `docs.user` and `friction.mode` (COR-048, COR-049 [point](../../../glossary.md#term-point--point) 1 and COR-054 point 1).
-2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+2. At its entry, before it reads anything, the [system](../../../glossary.md#term-system--system) checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit config set` runs no such check, and writes in whatever repository holds its working directory. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -82,7 +82,7 @@ pkit:
 7. The system prints `set <key> = <value>  (.pkit/project/config.yaml)`. It renders `.pkit/.gitignore` again, since that render reads the configuration.
 8. The adopter writes the keys that hold a list in the file by hand, since `pkit config set` sets single values only. They are the places, `friction.places`, the declared surface, `friction.surface`, and the excluded paths, `friction.exclude` (COR-050 point 14).
 9. The adopter runs `pkit validate`. Its member `configuration` checks the whole file against the schema and against the records that own its keys, and changes no file (REQ-005).
-10. The system checks each [documentation root](../../../glossary.md#term-documentation-root--documentation-root) against COR-049 point 1: its resolved [place](../../../glossary.md#term-place--place) lies inside the repository and outside the [methodology](../../../glossary.md#term-methodology--methodology)'s tree, `.pkit/`.
+10. The system checks each [documentation root](../../../glossary.md#term-documentation-root--documentation-root) against COR-049 point 1: its resolved path lies inside the repository and outside the [methodology](../../../glossary.md#term-methodology--methodology)'s tree, `.pkit/`.
 11. The system prints `.pkit/project/config.yaml: valid.`, and the check passes.
 
 **Variants:**
@@ -118,4 +118,4 @@ pkit:
 
 - A value that would make the file break its schema is never written (COR-048 [point](../../../glossary.md#term-point--point) 4 and `project_config.py`).
 - With nobody to ask and no `--yes`, nothing is written (COR-048 point 5 and `project_config.py`).
-- A [change](../../../glossary.md#term-change--change) of [documentation root](../../../glossary.md#term-documentation-root--documentation-root) moves no document (COR-049 point 6 and `docs_roots.py`).
+- An edit of a [documentation root](../../../glossary.md#term-documentation-root--documentation-root) moves no document (COR-049 point 6 and `docs_roots.py`).

@@ -47,9 +47,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T19:01:04Z
+      at: 2026-10-25T05:24:20Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, pkit release apply now confirms only at a terminal, and refuses off one without --yes. The author confirms at a terminal, as step 3 says."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-009 — Release my component on its own version
@@ -59,27 +59,27 @@ pkit:
 **Other actors:**
 
 - **CI pipeline** (`ACT-ci-pipeline`): in project-kit, opens the [release](../../../glossary.md#term-release--release) [pull request](../../../glossary.md#term-pull-request--pull-request) that carries the [component](../../../glossary.md#term-component--component)'s new [version](../../../glossary.md#term-version--version). That pull request carries the new versions of the [backbone](../../../glossary.md#term-backbone--backbone) and of other components too (UC-008).
-- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such [change](../../../glossary.md#term-change--change) happens silently (REQ-012).
+- **Operator** (`ACT-operator`): is asked before `pkit release apply` changes a repository other than the session's own. So no such write happens silently (REQ-012).
 
 **Preconditions:**
 
-- **From UC-003:** Changes to the [component](../../../glossary.md#term-component--component) declare, in [changesets](../../../glossary.md#term-changeset--changeset) naming it, what each means for its [release](../../../glossary.md#term-release--release).
+- **From UC-003:** Changes to the [component](../../../glossary.md#term-component--component) declare, in [changesets](../../../glossary.md#term-changeset--changeset) naming it, what each means for the component's next [version](../../../glossary.md#term-version--version).
 - **From UC-034:** The component's changes landed on the [default branch](../../../glossary.md#term-default-branch--default-branch), so their changesets wait under `.changes/unreleased/`.
-- **From UC-009, UC-015 or UC-019:** The component's `package.yaml` gives its `version` and a `requires_backbone` [range](../../../glossary.md#term-range--range). The component's last release wrote them, or its author did when packaging it as a [capability](../../../glossary.md#term-capability--capability) or writing it as an [adapter](../../../glossary.md#term-adapter--adapter).
+- **From UC-009, UC-015 or UC-019:** The component's `package.yaml` gives its `version` and a `requires_backbone` [range](../../../glossary.md#term-range--range). The component's last [release step](../../../glossary.md#term-release-step--release-step) wrote them, or its author did when packaging it as a [capability](../../../glossary.md#term-capability--capability) or writing it as an [adapter](../../../glossary.md#term-adapter--adapter).
 
 **Assumptions:**
 
 - The [component](../../../glossary.md#term-component--component)'s repository declares, in [changesets](../../../glossary.md#term-changeset--changeset) under `.changes/unreleased/`, what each [change](../../../glossary.md#term-change--change) means for its [release step](../../../glossary.md#term-release-step--release-step), as project-kit does (PRJ-002 D1).
 - The author has run the component on the [backbone](../../../glossary.md#term-backbone--backbone) the repository carries. The new [version](../../../glossary.md#term-version--version) claims that the component works with that backbone, and the author owns that claim (COR-041).
 
-**Trigger:** The component author decides to [release](../../../glossary.md#term-release--release) what the [component](../../../glossary.md#term-component--component)'s [changesets](../../../glossary.md#term-changeset--changeset) declare.
+**Trigger:** The component author decides to ship, as a new [version](../../../glossary.md#term-version--version), what the [component](../../../glossary.md#term-component--component)'s [changesets](../../../glossary.md#term-changeset--changeset) declare.
 
 **Main path:**
 
 1. The component author runs `pkit release plan`.
 2. The [system](../../../glossary.md#term-system--system) groups the pending [changesets](../../../glossary.md#term-changeset--changeset) by what each names, and takes the highest segment for each. It prints the [component](../../../glossary.md#term-component--component)'s move as `<component>: <old> -> <new> (<segment>)`, with each floor and upper bound a changeset declares for the component.
 3. The author runs `pkit release apply` on a [release](../../../glossary.md#term-release--release) branch, and confirms `Write these versions and consume the changesets?`.
-10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would [change](../../../glossary.md#term-change--change) is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
+10. At its entry, before it prints its plan, `pkit release apply` checks that the repository it would write in is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
 > **Not built yet:** `pkit release apply` runs the check only when `--tag --push` asks it to push a tag. Without them, it writes in whatever repository holds its working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
@@ -112,7 +112,7 @@ pkit:
 
 - The [component](../../../glossary.md#term-component--component)'s `package.yaml` carries its new [version](../../../glossary.md#term-version--version). The component's `requires_backbone` [range](../../../glossary.md#term-range--range) admits the [backbone](../../../glossary.md#term-backbone--backbone) it was released under, unless the author kept the upper bound.
 - The changelog entry says what changed in the component, and what the component now requires.
-- A repository that pulls the component whole receives the new version through a transition of the component. The transition moves the component to a ref holding that version (COR-041 and COR-059 [point](../../../glossary.md#term-point--point) 3). In project-kit, a [release step](../../../glossary.md#term-release-step--release-step) that moves only components reaches a tagged [install](../../../glossary.md#term-install--install) with the next [release](../../../glossary.md#term-release--release) (PRJ-004).
+- A repository that pulls the component whole receives the new version through a transition of the component. The transition moves the component to a ref holding that version (COR-041 and COR-059 [point](../../../glossary.md#term-point--point) 3). In project-kit, a [release step](../../../glossary.md#term-release-step--release-step) that moves only components reaches a CLI taken from a tag with the next [release](../../../glossary.md#term-release--release) (PRJ-004).
 
 **Minimal guarantees:**
 

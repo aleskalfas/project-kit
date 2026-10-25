@@ -126,9 +126,9 @@ TERM-checkbox:
           - project-management:DEC-007
           - project-management:DEC-038
       revalidated:
-        at: 2026-10-24T01:41:56Z
+        at: 2026-10-25T02:59:21Z
         outcome: unchanged
-        unchanged-because: The checkbox rules of body-format.yaml are untouched. The change gives three universal body rules an id, so the body check reads each one's severity from the schema.
+        unchanged-because: The change gives the predicted-decision-id rule of body-format.yaml its id and the forms of id it reads. The checkbox rules the term describes are untouched.
 TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]
@@ -273,6 +273,10 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
+      revalidated:
+        at: 2026-10-24T21:24:42Z
+        outcome: unchanged
+        unchanged-because: This change keeps an answer file from meeting the condition touches-code, as DEC-032 point D1 says. A required reviewer is still one the settings name, or one a capability contributes whose condition the change meets.
 TERM-task:
   name: Task
   status: active

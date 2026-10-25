@@ -41,9 +41,9 @@ pkit:
         - TERM-changeset
         - TERM-release-step
     revalidated:
-      at: 2026-10-23T08:13:46Z
+      at: 2026-10-25T04:04:00Z
       outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. A check still compares a change from its base to its head, as the view says.
+      unchanged-because: TERM-finding's example now names the link target, the glossary's term for what a revisit entry answers for. What a finding is, and the view's account of changes, reviews and releases, are as they were.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

@@ -31,9 +31,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-24T19:00:43Z
+      at: 2026-10-25T05:23:23Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the unregister in the source now refuses an answer piped in, unless --yes is given. Its question, and the refusal of --purge, are as variant 2d says."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-014 — Develop the methodology in its source repository
@@ -52,7 +52,7 @@ pkit:
 - The methodology's tree holds an [adapter](../../../glossary.md#term-adapter--adapter) for the [harness](../../../glossary.md#term-harness--harness) the maintainer works in, under `.pkit/adapters/`, such as `claude-code` (COR-005).
 - Python 3.11 or later and `uv` are installed on the machine. The dispatcher `.pkit/cli/pkit` runs the package with them (PRJ-003).
 
-**Trigger:** The maintainer sets out to [change](../../../glossary.md#term-change--change) the [methodology](../../../glossary.md#term-methodology--methodology), such as a core record, a [skill](../../../glossary.md#term-skill--skill) or the [backbone](../../../glossary.md#term-backbone--backbone)'s code.
+**Trigger:** The maintainer sets out to edit the [methodology](../../../glossary.md#term-methodology--methodology), such as a core record, a [skill](../../../glossary.md#term-skill--skill) or the [backbone](../../../glossary.md#term-backbone--backbone)'s code.
 
 **Main path:**
 

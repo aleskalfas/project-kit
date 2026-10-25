@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-24T19:01:26Z
+      at: 2026-10-25T05:24:08Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the uninstall's confirmations now refuse an answer piped in off a terminal. Uninstall still never writes a project rule set."
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-038 — Author and extend my project's own rule sets
@@ -65,29 +65,29 @@ pkit:
 **Main path:**
 
 1. The developer writes a [rule set](../../../glossary.md#term-rule-set--rule-set) of the [project](../../../glossary.md#term-project--project)'s own, a Markdown file in `rule-sets/` under the internal [documentation root](../../../glossary.md#term-documentation-root--documentation-root), such as `docs/rule-sets/`. No [stamp](../../../glossary.md#term-stamp--stamp) writes one, and the folder alone makes the file a rule set (ADR-056 [point](../../../glossary.md#term-point--point) 2).
-2. In its front matter, the developer gives the set's name and its own [version](../../../glossary.md#term-version--version). Its scope selects the [artefacts](../../../glossary.md#term-artefact--artefact) for its rules, by their paths or their types (COR-051 point 2).
+2. In its front matter, the developer gives the set's name and its own `version`. Its scope selects the [artefacts](../../../glossary.md#term-artefact--artefact) for its rules, by their paths or their types (COR-051 point 2).
 3. The developer writes each [rule](../../../glossary.md#term-rule--rule) as a section headed by its id, `RS-<SET>-NNN`, and its title, holding the statement. Each rule has an entry in `rules` too (COR-051 points 2 and 3).
 4. A new rule takes no status, so it is proposed and binds nothing (COR-051 point 4).
 5. The developer names in `inherits` each method rule set the set extends, pinned to its major, as `<component>:<SET>@<major>` writes it. The developer never edits the method rule set to extend it, since its [component](../../../glossary.md#term-component--component) owns it (COR-051 points 6 and 7).
 6. The developer runs `pkit validate`. Its `rule-sets` pass checks each set's schema and the join between its data and its sections. It checks the ids, the origins, the successors and what each set inherits too (COR-051 points 2, 3, 5 and 7).
 7. The developer runs `pkit rule-sets reach`. The [system](../../../glossary.md#term-system--system) answers which accepted rules bind on each artefact, and through which sets. It names each rule that a pin behind its set holds back (COR-051 point 7).
-8. The developer runs `pkit rule-sets reach --preview`, which answers as if every proposed rule were accepted. It marks what holds only under the preview, and [validation](../../../glossary.md#term-validation--validation) never reads that [answer](../../../glossary.md#term-answer--answer).
+8. The developer runs `pkit rule-sets reach --preview`, which answers as if every proposed rule were accepted. It marks what holds only under the preview, and [validation](../../../glossary.md#term-validation--validation) never reads that output.
 9. The developer commits the rule set. Its rules stay proposed until the merge authoriser accepts them (UC-040).
 
 **Variants:**
 
 - **1a.** A [capability](../../../glossary.md#term-capability--capability)'s [install](../../../glossary.md#term-install--install) created the set, inheriting the capability's method [rule set](../../../glossary.md#term-rule-set--rule-set) (UC-023). The developer runs `pkit capabilities project-rule-set <name>`, which shows that set and each set of the [project](../../../glossary.md#term-project--project)'s own that inherits the method set. It writes nothing (REQ-005). The developer edits that set, and the path goes on at step 3.
 - **1b.** The project keeps rule sets in a [place](../../../glossary.md#term-place--place) of its own whose path has a `rule-sets` segment, declared in `friction.places`. The developer writes the set there, and the path goes on at step 2.
-- **1c.** The developer would [change](../../../glossary.md#term-change--change) a [rule](../../../glossary.md#term-rule--rule) a method rule set ships. That change belongs to the [component](../../../glossary.md#term-component--component) that ships the set, so the developer proposes it there, or does not inherit the set (COR-051 [point](../../../glossary.md#term-point--point) 7). The use case ends.
+- **1c.** The developer would edit a [rule](../../../glossary.md#term-rule--rule) a method rule set ships. That edit belongs to the [component](../../../glossary.md#term-component--component) that ships the set, so the developer proposes it there, or does not inherit the set (COR-051 [point](../../../glossary.md#term-point--point) 7). The use case ends.
 - **2a.** A scope holds an empty list, names neither paths nor types, or names a type that no owner declares. [Validation](../../../glossary.md#term-validation--validation) fails on it, and the path rejoins at step 2.
 - **5a.** The set would inherit a set that does not exist under the address written, or the inheriting would close a cycle. Validation fails, naming the set, and the path rejoins at step 5.
-- **5b.** An inherited rule offers an extension point, and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so a change there flags the fill (COR-051 point 7).
+- **5b.** An inherited rule offers an extension point, and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill (COR-051 point 7).
 - **6a.** Validation fails on a rule or a set's name, naming each, and the path rejoins at step 3. It fails on each of these:
   - a rule's id that carries another set's name, or redefines an inherited id
   - a rule and a section that do not match
   - two rule sets that share a name
 - **6b.** An accepted rule has no complete origin, or its origin cites a [decision record](../../../glossary.md#term-decision-record--decision-record) that is not accepted. Validation fails, naming the rule (COR-051 point 5).
-- **6c.** A rule's origin cites a source of a kind a capability registers. Validation resolves it through that kind's command, offline as REQ-007 asks, and stops the command after thirty seconds (REQ-006). A command that gives no [answer](../../../glossary.md#term-answer--answer) fails validation as `unanswered-source`, and is never passed (REQ-004). A kind no installed component resolves is reported, without failing (COR-051 point 5).
+- **6c.** A rule's origin cites a source of a kind a capability registers. Validation resolves it through that kind's command, offline as REQ-007 asks, and stops the command after thirty seconds (REQ-006). A command that gives no result fails validation as `unanswered-source`, and is never passed (REQ-004). A kind no installed component resolves is reported, without failing (COR-051 point 5).
 - **6d.** Validation fails at a fill, and the path rejoins at step 5. It fails on each of these:
   - a fill of an extension point that no inherited rule offers
   - a second fill of one extension point along the chain

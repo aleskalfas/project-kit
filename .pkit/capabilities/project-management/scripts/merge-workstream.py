@@ -33,7 +33,9 @@ all move stays in the file, with its label or option, so a re-run
 finishes it.
 
 Per-change confirmation; per-file and per-object confirmation for the
-references; --yes opts into batch.
+references; --yes opts into batch. Off a terminal, without `--yes`, nobody
+is there to confirm the merge, so it is refused before anything changes, as
+with `--skip-references` (#2015).
 
 Membership gate per DEC-021 runs at startup.
 
@@ -45,7 +47,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  merged
-  1  membership refusal / validation refusal / no usable board field
+  1  membership refusal / validation refusal / no usable board field / off a
+     terminal without --yes
   2  usage error
   3  gh failure (an issue count unreadable; a move, a delete or a rewrite failed)
 """  # noqa: E501 — a usage line is a command, kept whole
@@ -72,6 +75,7 @@ from _lib import (
     axis_carriage,
     axis_labels,
     bootstrap_gate,
+    consent,
     provenance,
     session_guard,
     workstream_sync,
@@ -282,15 +286,14 @@ def main() -> int:
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = (
-            input(f"Merge {len(args.losers)} loser(s) into {args.survivor!r}? [y/N] ")
-            .strip()
-            .lower()
-        )
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    stop = consent.authorise(
+        f"Merge {len(args.losers)} loser(s) into {args.survivor!r}? [y/N] ",
+        yes=args.yes,
+        step=f"Merging {', '.join(repr(loser) for loser in args.losers)} into {args.survivor!r}",
+        verb="merge-workstream",
+    )
+    if stop is not None:
+        return stop
 
     failures: list[str] = []
     merged = set(args.losers)
