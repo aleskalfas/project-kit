@@ -37,8 +37,9 @@ pkit:
         - ACT-operator
         - REQ-016
     revalidated:
-      at: 2026-10-24T20:55:51Z
-      outcome: updated
+      at: 2026-10-25T00:33:56Z
+      outcome: unchanged
+      unchanged-because: Only core rule 20 changes, on answers. Rule 16, which this use case follows, says what it said.
 ---
 
 # UC-028 — Keep my intermediate files in a workspace no commit carries

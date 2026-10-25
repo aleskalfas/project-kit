@@ -27,9 +27,9 @@ pkit:
         - ACT-ai-agent
         - REQ-009
     revalidated:
-      at: 2026-10-24T21:20:15Z
+      at: 2026-10-25T00:31:09Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent keeps its words and drops only its links on role, and ACT-component-author names a new version and the author. Their needs are the same, so this use case holds.
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-015 — Package a recurring discipline as a capability

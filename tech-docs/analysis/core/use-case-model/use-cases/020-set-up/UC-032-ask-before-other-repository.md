@@ -38,8 +38,9 @@ pkit:
         - ACT-ai-agent
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:56:40Z
-      outcome: updated
+      at: 2026-10-25T00:34:00Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and rewords core rule 20 on answers. Rule 19 and the cross-repository check this use case rests on are as they were.
 ---
 
 # UC-032 — Be asked before an agent changes another repository

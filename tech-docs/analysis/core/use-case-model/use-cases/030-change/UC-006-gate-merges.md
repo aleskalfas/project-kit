@@ -69,8 +69,9 @@ pkit:
         - REQ-019
         - REQ-020
     revalidated:
-      at: 2026-10-24T20:57:08Z
-      outcome: updated
+      at: 2026-10-25T00:34:26Z
+      outcome: unchanged
+      unchanged-because: The change check asks nothing of an artefact received by sync, and the CLI gains a reading command. The gate a merge passes is as this use case says.
 ---
 
 # UC-006 — Make my merges wait on the system's checks

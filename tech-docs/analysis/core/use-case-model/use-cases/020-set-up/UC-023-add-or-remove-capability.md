@@ -52,8 +52,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:55:21Z
-      outcome: updated
+      at: 2026-10-25T00:32:14Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-023 — Add or remove a capability, and be told of a name collision

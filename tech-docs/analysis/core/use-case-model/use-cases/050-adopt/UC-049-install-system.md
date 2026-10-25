@@ -53,8 +53,9 @@ pkit:
         - REQ-026
         - REQ-031
     revalidated:
-      at: 2026-10-24T20:58:15Z
-      outcome: updated
+      at: 2026-10-25T00:33:09Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-049 — Install the system into my project with one command

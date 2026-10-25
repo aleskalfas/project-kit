@@ -23,8 +23,9 @@ pkit:
         - ACT-adopter
         - REQ-005
     revalidated:
-      at: 2026-10-24T20:58:28Z
-      outcome: updated
+      at: 2026-10-25T00:31:15Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-053 — Re-pin an inherited rule set once I have reviewed its new major

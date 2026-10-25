@@ -27,9 +27,9 @@ pkit:
         - REQ-002
         - REQ-009
     revalidated:
-      at: 2026-10-24T20:51:57Z
+      at: 2026-10-25T00:31:29Z
       outcome: unchanged
-      unchanged-because: ACT-component-author says each new version of their component where it said release, and names the author where it said role. Its needs are the same, so this use case holds.
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-016 — Keep a capability I wrote in my own repository

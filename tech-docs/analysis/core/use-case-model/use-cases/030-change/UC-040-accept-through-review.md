@@ -32,8 +32,9 @@ pkit:
         - ACT-ai-agent
         - REQ-005
     revalidated:
-      at: 2026-10-24T20:57:47Z
-      outcome: updated
+      at: 2026-10-25T00:34:04Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 changes only on answers, and the CLI gains a reading command. Acceptance through review and rule 2 stay as this use case says.
 ---
 
 # UC-040 — Have a drafted record or rule become binding only through my own review

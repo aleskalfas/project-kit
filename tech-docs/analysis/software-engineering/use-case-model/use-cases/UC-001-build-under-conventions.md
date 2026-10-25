@@ -30,8 +30,9 @@ pkit:
       artefact:
         - REQ-060
     revalidated:
-      at: 2026-10-24T01:51:41Z
-      outcome: updated
+      at: 2026-10-25T00:36:09Z
+      outcome: unchanged
+      unchanged-because: The engineer's body and core rule 20 now say to commit what the writers write. Building under the conventions is as this use case says.
 ---
 
 # UC-001 — Build my change under my project's conventions

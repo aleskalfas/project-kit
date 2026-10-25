@@ -46,8 +46,9 @@ pkit:
         - UC-006
         - UC-048
     revalidated:
-      at: 2026-10-24T20:54:57Z
-      outcome: updated
+      at: 2026-10-25T00:34:31Z
+      outcome: unchanged
+      unchanged-because: The change check asks nothing of an artefact received by sync. The journey's steps through adopting the system hold.
 ---
 
 # JRN-001 — Adopt the system

@@ -66,9 +66,9 @@ TERM-agent-workspace:
           - ADR-060#3
           - ADR-060#9
       revalidated:
-        at: 2026-10-23T14:50:21Z
+        at: 2026-10-25T00:38:53Z
         outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
+        unchanged-because: Only core rule 20 changes, on answers. Rule 16 on the agent workspace says what it said.
 TERM-anchor:
   name: anchor
   status: active
@@ -82,9 +82,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-24T04:57:41Z
+        at: 2026-10-25T00:36:52Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each declared form of derived link on its own, so forms that clash when joined stop no check. What an anchor is stays as defined.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received. What an anchor declares and stands on is unchanged.
 TERM-answer:
   name: answer
   status: active
@@ -102,6 +102,10 @@ TERM-answer:
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
         deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_write.py
+            reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
           - anchor:
               kind: record
               value: COR-050#3
@@ -138,9 +142,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-24T04:57:48Z
+        at: 2026-10-25T00:37:22Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link a place declares on its own. What an artefact is stays as defined.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received, owing the project no answer. It is still an artefact found in a place.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -157,9 +161,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-24T04:57:50Z
+        at: 2026-10-25T00:37:31Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link on its own, and resolves types as before. The definition holds.
+        unchanged-because: Discovery marks a rule a synced copy holds as received, which leaves every artefact's type as it was.
 TERM-backbone:
   name: backbone
   status: active
@@ -258,9 +262,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-23T08:13:53Z
+        at: 2026-10-25T00:37:44Z
         outcome: unchanged
-        unchanged-because: The change check reads derived links as their words alone, under the head's declaration. It still compares a change's base with its head, as defined.
+        unchanged-because: The change check now asks nothing of an artefact received by sync, as of an excluded one. It still compares a head with its base and lists the answers written.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -383,9 +387,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:03Z
+        at: 2026-10-25T00:38:01Z
         outcome: unchanged
-        unchanged-because: The whole-repository check now reads a renamed placed file under the derived links its name at HEAD sets aside, at both versions. What debt is stays as defined.
+        unchanged-because: "An artefact received by sync now leaves the debt as an excluded one does, which the definition need not name. The answered-apart debt stays deferred to #1779."
         deferred:
           - anchor:
               kind: path
@@ -504,9 +508,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:05Z
+        at: 2026-10-25T00:38:14Z
         outcome: unchanged
-        unchanged-because: A renamed placed file is now read under the derived links HEAD sets aside in it, at both versions. Friction is still an anchor that changed with no answer, as defined.
+        unchanged-because: "An artefact received by sync now owes no answer, as an excluded one, which the term need not name. Where its section keeps answers in the block stays deferred to #1779."
         deferred:
           - anchor:
               kind: path
@@ -691,9 +695,9 @@ TERM-operational-rule:
           - COR-014
           - COR-051#1
       revalidated:
-        at: 2026-10-23T14:50:23Z
+        at: 2026-10-25T00:38:28Z
         outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
+        unchanged-because: Core rule 20's words change, and the rules file is still the one every session loads, so the term holds.
 TERM-overlay:
   name: overlay
   status: active
@@ -758,9 +762,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-24T04:57:52Z
+        at: 2026-10-25T00:38:36Z
         outcome: unchanged
-        unchanged-because: Each form of derived link a place declares is now matched on its own. What a place is stays as defined.
+        unchanged-because: Discovery marks a rule a synced copy holds as received. A place is still declared and walked as the term says.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -1339,9 +1343,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:06Z
+        at: 2026-10-25T00:38:44Z
         outcome: unchanged
-        unchanged-because: The check now reads a renamed placed file under the derived links HEAD sets aside in it, at both versions. What the check is stays as defined.
+        unchanged-because: The whole-repository check leaves an artefact received by sync out of the debt, as an excluded one. It still compares every artefact with its revalidation point, and never fails.
 ---
 
 # Glossary

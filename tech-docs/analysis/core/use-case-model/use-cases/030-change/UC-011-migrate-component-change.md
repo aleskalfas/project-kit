@@ -44,8 +44,9 @@ pkit:
         - REQ-005
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:57:26Z
-      outcome: updated
+      at: 2026-10-25T00:32:37Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

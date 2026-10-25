@@ -41,8 +41,9 @@ pkit:
         - ACT-operator
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:57:31Z
-      outcome: updated
+      at: 2026-10-25T00:34:09Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 still has the reviewer check a direct commit's answers and the person told first. The CLI gains only a reading command.
 ---
 
 # UC-034 — Land my change on the default branch

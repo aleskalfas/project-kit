@@ -80,9 +80,8 @@ pkit:
         - REQ-020
         - REQ-021
     revalidated:
-      at: 2026-10-24T20:52:05Z
-      outcome: unchanged
-      unchanged-because: Its actors and requirements reword only words a glossary link sat on in another sense, such as a reply, a result, a write and an actor's own name. What each asks is the same, so this use case holds.
+      at: 2026-10-25T00:34:58Z
+      outcome: updated
 ---
 
 # UC-002 — Answer what my change made stale

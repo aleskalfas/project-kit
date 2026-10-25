@@ -22,8 +22,9 @@ pkit:
         - ACT-developer
         - ACT-merge-authoriser
     revalidated:
-      at: 2026-10-24T20:54:43Z
-      outcome: updated
+      at: 2026-10-25T00:34:35Z
+      outcome: unchanged
+      unchanged-because: The agents README's Friction writers now says where the writers write and drops the answer owed after a conflict. A reviewer still writes nothing on what it judges.
 ---
 
 # REQ-021 · Functional · A reviewer agent never changes the work it judges

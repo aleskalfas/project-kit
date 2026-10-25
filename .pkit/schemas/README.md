@@ -24,9 +24,9 @@ pkit:
       record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
     revalidated:
-      at: 2026-10-24T05:22:41Z
+      at: 2026-10-25T00:35:49Z
       outcome: unchanged
-      unchanged-because: Friction now matches each derived-link form on its own, so a clash between forms no longer changes what one means. What the README says of a place's derived links, and of the rest of the schemas, still holds.
+      unchanged-because: "Discovery marks a rule a synced copy holds as received, which the README's account of the friction block need not name. Its account of answer files stays deferred to #1779."
       deferred:
         - anchor:
             kind: path

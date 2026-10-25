@@ -51,8 +51,9 @@ pkit:
         - UC-040
         - UC-006
     revalidated:
-      at: 2026-10-24T20:55:04Z
-      outcome: updated
+      at: 2026-10-25T00:34:53Z
+      outcome: unchanged
+      unchanged-because: UC-002 and UC-007 now say the writers write answer files, and core rule 20 says to commit them. The journey's steps through those use cases hold.
 ---
 
 # JRN-003 — Deliver a change

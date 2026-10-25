@@ -190,9 +190,9 @@ TERM-revalidation-proposal:
         record:
           - software-analysis:DEC-001#5
       revalidated:
-        at: 2026-10-24T02:12:40Z
+        at: 2026-10-25T00:36:00Z
         outcome: unchanged
-        unchanged-because: The term still names what the agent drafts for a person to record. The change adds how the agent tells a boxed regression from one no record decides, which the term does not describe.
+        unchanged-because: The resolver's body now says the commands it hands over write the artefacts' answers, not their blocks. A proposal is still what the term says.
 TERM-revalidation-record:
   name: revalidation record
   status: active

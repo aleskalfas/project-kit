@@ -63,8 +63,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:57:35Z
-      outcome: updated
+      at: 2026-10-25T00:34:15Z
+      outcome: unchanged
+      unchanged-because: Core rule 20 changes only on answers, and the CLI gains a reading command. Recording a decision is as this use case says.
 ---
 
 # UC-037 — Record my decision beside the methodology's

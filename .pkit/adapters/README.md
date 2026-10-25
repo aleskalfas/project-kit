@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-24T19:00:53Z
+      at: 2026-10-25T00:33:39Z
       outcome: unchanged
-      unchanged-because: "As #2003 asks, the confirmations in cli.py now refuse an answer piped in off a terminal. What each adapter's primitives do on install and uninstall is unchanged."
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. Nothing the adapters README says of the CLI moves.
 ---
 
 # Adapters

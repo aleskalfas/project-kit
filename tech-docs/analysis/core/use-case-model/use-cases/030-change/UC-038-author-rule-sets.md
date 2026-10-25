@@ -40,8 +40,9 @@ pkit:
         - REQ-006
         - REQ-007
     revalidated:
-      at: 2026-10-24T20:57:39Z
-      outcome: updated
+      at: 2026-10-25T00:31:52Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-038 — Author and extend my project's own rule sets

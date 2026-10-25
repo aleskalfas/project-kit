@@ -31,8 +31,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-24T20:55:07Z
-      outcome: updated
+      at: 2026-10-25T00:31:57Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-014 — Develop the methodology in its source repository

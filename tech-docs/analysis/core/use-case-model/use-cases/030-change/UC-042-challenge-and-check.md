@@ -38,8 +38,9 @@ pkit:
         - REQ-005
         - REQ-021
     revalidated:
-      at: 2026-10-24T20:57:57Z
-      outcome: updated
+      at: 2026-10-25T00:33:32Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-042 — Have my draft challenged and my diff checked against the conventions

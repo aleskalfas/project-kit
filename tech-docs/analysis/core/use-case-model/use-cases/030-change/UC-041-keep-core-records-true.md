@@ -35,8 +35,9 @@ pkit:
         - REQ-021
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-24T20:57:52Z
-      outcome: updated
+      at: 2026-10-25T00:32:45Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-041 — Keep each core record true for any project that adopts it

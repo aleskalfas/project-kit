@@ -65,8 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-24T20:58:23Z
-      outcome: updated
+      at: 2026-10-25T00:33:17Z
+      outcome: unchanged
+      unchanged-because: This change adds the reading command pkit friction move-plan, and a migration whose effect the release's notes will name. The upgrade this use case runs does what it says.
 ---
 
 # UC-051 — Upgrade the system like a dependency

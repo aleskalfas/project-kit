@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-24T21:20:20Z
+      at: 2026-10-25T00:31:24Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent drops only its links on role. ACT-component-author names a new version and the author where it said release or role, and REQ-006 says a command gives no result. What each asks is the same, so this use case holds.
+      unchanged-because: This change adds the reading command pkit friction move-plan and says in the friction writers' help where they write. The commands this use case runs do what it says.
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
