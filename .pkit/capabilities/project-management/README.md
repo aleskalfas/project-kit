@@ -117,7 +117,7 @@ workstreams:                          # one entry per allowed workstream value
   - cli
 ```
 
-An entry can also carry attributes, such as a status and a deprecation reason, in the mapping form DEC-018 shows. `config.yaml`'s `workstreams:` key is the legacy place for the workstreams. Where `workstreams.yaml` is absent, the commands that read the workstreams fall back to that key, and `pre-check` says so.
+An entry can also carry attributes, such as a status and a deprecation reason, in the mapping form DEC-018 shows. `config.yaml`'s `workstreams:` key is the legacy place for the workstreams, and `pre-check` reports a legacy fallback where `workstreams.yaml` is absent. "Workstream lifecycle", under "Then use", says what filing does without the file.
 
 Further optional blocks are documented where the features that read them are described: `milestone_categories:` (per [project-management:DEC-016-time-bound-containers]), `review:` (the review-mode block under "Then use"), and `mesh_peers:` / `mesh_source:` (per [project-management:DEC-022-methodology-mesh]). The companion schema below is the complete enumeration.
 
