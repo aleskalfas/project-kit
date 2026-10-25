@@ -1,0 +1,61 @@
+answers:
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-cascade
+    read:
+      - moved-47fd5e32fb8d.yaml
+    revalidated:
+      at: 2026-10-25T23:13:37Z
+      outcome: unchanged
+      unchanged-because: The change to close-issue adds the release of instance ownership once an issue has closed. The release moves no issue and brings no issue above forward, so the cascade is as defined.
+  - artefact: tech-docs/analysis/project-management/glossary.md#TERM-merge-gate
+    read:
+      - moved-fb7c9f0a260e.yaml
+    revalidated:
+      at: 2026-10-25T23:13:39Z
+      outcome: unchanged
+      unchanged-because: The change to done-work is a note in its docstring that the close-issue it runs releases instance ownership. The merge gate's conditions are as defined.
+  - artefact: tech-docs/analysis/project-management/requirements/functional/REQ-042-held-moves-authorised.md
+    read:
+      - moved-c1c76fd062d5.yaml
+    revalidated:
+      at: 2026-10-25T23:13:41Z
+      outcome: unchanged
+      unchanged-because: The tests of done-work and close-issue gain tests of the release of instance ownership. The tests the requirement names are unchanged, and a held close still needs the person's authorisation.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-060-file-task.md
+    read:
+      - moved-a3323ce78e42.yaml
+    revalidated:
+      at: 2026-10-25T23:13:43Z
+      outcome: unchanged
+      unchanged-because: create-issue now claims the filed Task for the clone, only where the clone set an instance id, after step 12. No step, variant, postcondition or guarantee the use case states changes.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-061-move-issue.md
+    read:
+      - moved-6e104fbc48be.yaml
+    revalidated:
+      at: 2026-10-25T23:13:45Z
+      outcome: unchanged
+      unchanged-because: start-work now claims an unowned issue and close-issue releases its owner, only where the clone set an instance id. Each step and variant the use case states holds as written.
+  - artefact: tech-docs/analysis/project-management/use-case-model/use-cases/UC-062-review-and-land.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-a808f0db0388.yaml
+    revalidated:
+      at: 2026-10-25T23:13:48Z
+      outcome: unchanged
+      unchanged-because: The change to done-work is a note in its docstring. The close-issue it runs releases instance ownership where the clone set an instance id, and step 14 holds as written.
+  - artefact: .pkit/capabilities/project-management/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T220801Z-d7fabd5e.yaml
+      - moved-d6149a5e477e.yaml
+    revalidated:
+      at: 2026-10-25T23:13:51Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: path
+            value: .pkit/capabilities/project-management/decisions/**
+          reason: "DEC-055 point 3 now has the landing command read answer files for its cover and firm stop, and print answers made apart. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: COR-050#16
+          reason: "Revisit entries move from the source's block to answer files (COR-062). #1779 builds it and rewrites what the README says of them."
