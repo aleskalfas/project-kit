@@ -1,9 +1,17 @@
 ---
 rule-set: ANA
-version: 4.0.0
+version: 4.1.1
 inherits: [WRITE@2, software-analysis:SAN@1]
 scope:
-  types: [software-analysis:actor, software-analysis:term, software-analysis:domain-model-view, software-analysis:use-case, software-analysis:journey]
+  types:
+    - software-analysis:actor
+    - software-analysis:term
+    - software-analysis:domain-model-view
+    - software-analysis:use-case
+    - software-analysis:journey
+    - software-analysis:quality-requirement
+    - software-analysis:functional-requirement
+    - software-analysis:constraint
 rules:
   RS-ANA-001:
     status: proposed
@@ -13,9 +21,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T15:09:02Z
+          at: 2026-10-22T16:24:46Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, a sentence that says who the actor is. The actor's voice in needs and goals, which this rule asks for, is untouched.
   RS-ANA-002:
     status: proposed
     origin: {why: "A kind's labels already have one home, which the check reads: its declared structure, with project-kit's additions to it as data (software-analysis DEC-001 point 1). A copy of the list here would drift from them."}
@@ -43,9 +51,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
         revalidated:
-          at: 2026-10-20T21:11:19Z
+          at: 2026-10-24T10:40:00Z
           outcome: unchanged
-          unchanged-because: The change adds a flow to a view's opening. The number a view's file opens with, and what it means, are as before.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Points 4 and 6 read as they did, so a view's number holds as this rule says.
   RS-ANA-004:
     status: proposed
     origin: {why: "Each component owns its analysis, as it owns its decision records. A capability may move to a repository of its own (software-analysis DEC-001 point 2). On 19 October the maintainer decided that project-kit keeps one analysis for its core and one for each capability. The maintainer's delegate decided that an adapter keeps one once it needs one. The design note on analysis concepts and order records both (PR #1808)."}
@@ -85,7 +93,7 @@ rules:
 
 These are the rules project-kit's analysis follows: seven rules of its own, and the rules of the two sets it inherits.
 
-- **What it selects:** every actor, glossary term, domain-model view, use case and journey, by the five types software-analysis declares (software-analysis DEC-001 point 2, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
+- **What it selects:** every actor, glossary term, domain-model view, use case, journey and requirement, by the eight types software-analysis declares (software-analysis DEC-001 point 2, DEC-002 point 3, DEC-004 point 4). The scope names no paths, so it selects the analysis wherever software-analysis places it.
 - **What it does not select:** a revalidation record. A revalidation record is a held document, never an artefact, so no scope selects it. Whoever writes one still follows `WRITE`, through project-kit's operational rules (`.pkit/rules/project.md`).
 - **What it inherits:** the accepted rules of both sets bind on the analysis through this set (COR-051 point 7).
   - `WRITE`, project-kit's general writing rules, pinned at `WRITE@2`.
@@ -116,8 +124,8 @@ Write each need and each goal as an imperative that starts with its verb, in its
   - A need is an item of an actor's `needs`. A goal is the *Goal* of a use case or a journey, and its actor is the use case's or the journey's `actor`.
   - A need is also one that a glossary's head states beside an actor it lists from another analysis. This holds wherever this rule binds on a term of that glossary.
   - *Never* may come before the verb.
-- **Breaks the rule:** "Find the agent's role definition deployed, …" (the first ASD-STE100 run, where the AI agent names itself)
-- **Keeps the rule:** "Find my role definition deployed, …" (the original)
+- **Breaks the rule:** "Find the AI agent's agent definition deployed, …" (the AI agent's need in the third person, as the first ASD-STE100 run wrote it, where the AI agent names itself)
+- **Keeps the rule:** "Find my agent definition deployed, …" (the AI agent's need)
 
 ## Labels
 

@@ -156,7 +156,8 @@ def _found(text: str, component: str | None = None) -> list[Any]:
         # A rule, bare or with its component.
         (
             "RS-WRITE-005 and software-analysis:RS-SAN-001",
-            f"[RS-WRITE-005](../rule-sets/writing.md#rs-write-005--sentences-of-25-words-at-most) and "
+            "[RS-WRITE-005](../rule-sets/writing.md#rs-write-005--sentences-of-25-words-at-most)"
+            " and "
             f"[software-analysis:RS-SAN-001]({UP}.pkit/capabilities/software-analysis/rule-sets/"
             "san.md#rs-san-001--format)",
         ),
@@ -254,6 +255,36 @@ def test_a_link_written_by_hand_is_held_as_the_command_s() -> None:
 def test_each_part_of_an_artefact_with_labels_is_a_section() -> None:
     lines = ["# UC-001 — Run", "", "**Goal:** a.", "", "- **1a.** b.", "  - **x:** c.", "d."]
     assert links.part_sections(lines, 0) == [(0, 0), (0, 2), (2, 4), (4, 7)]
+
+
+def test_a_use_case_takes_both_kinds_of_link_each_in_its_own_sections(tmp_path: Path) -> None:
+    """Where the analysis keeps a domain model, a use case takes the links of its terms
+    part by part, as its kind declares its parts (DEC-004 point 7), and the links of its
+    citations in each section a heading or a bold label opens, such as each variant
+    (DEC-001 point 13). A citation in its goal takes its link while a term there stays
+    plain, and the word `point` inside a citation links no term."""
+    (model,) = load_lib("model")
+    kind = links.parted(tmp_path)["use-case"]
+    term = links.Term("TERM-point", "point", "tech-docs/analysis/glossary.md")
+    vocabulary = links.Vocabulary((term,), {term.id: ("point",)})
+    path = "tech-docs/analysis/use-case-model/use-cases/UC-001-run.md"
+    artefact = model.Artefact("use-case", "UC-001", path, path, False, {}, {})
+    text = (
+        "# UC-001 — Run\n\n"
+        "**Goal:** Sign at a point, per PRJ-001 point 1.\n\n"
+        "**Variants:**\n\n"
+        "- **1a.** A point fails, per PRJ-001 point 1.\n"
+        "- **1b.** Another point fails, per PRJ-001 point 1.\n"
+    )
+    found = links.document(artefact, text, vocabulary, kind, links.Cites(LOOKUPS, None))
+    cited = f"[PRJ-001 point 1](../../../../{P1}#1-sign-each-export)"
+    assert found.linked == (
+        "# UC-001 — Run\n\n"
+        f"**Goal:** Sign at a point, per {cited}.\n\n"
+        "**Variants:**\n\n"
+        f"- **1a.** A [point](../../glossary.md#term-point--point) fails, per {cited}.\n"
+        f"- **1b.** Another point fails, per {cited}.\n"
+    )
 
 
 # --- the command and the check, in an adopter ------------------------------------------------
@@ -361,7 +392,7 @@ def test_the_command_links_each_citation_and_the_check_holds_them(project: Adopt
     assert (
         "error",
         ACTOR,
-        "line 16: `PRJ-001 point 1` is the first citation of what it cites in its section, "
+        "line 17: `PRJ-001 point 1` is the first citation of what it cites in its section, "
         "and takes a link to it, `../../../../.pkit/decisions/project/PRJ-001-exports.md"
         "#1-sign-each-export` — run `pkit analysis link`, which writes the links (DEC-001 "
         "point 13)",
@@ -384,7 +415,7 @@ def test_a_reworded_point_heading_stales_its_link_and_the_command_mends_it(
     ((severity, where, message),) = _validate(project)
     assert (severity, where) == ("error", ACTOR)
     assert message.startswith(
-        "line 16: `PRJ-001 point 1` links to `../../../../.pkit/decisions/project/"
+        "line 17: `PRJ-001 point 1` links to `../../../../.pkit/decisions/project/"
         "PRJ-001-exports.md#1-sign-each-export`, and what it cites lies at "
         "`../../../../.pkit/decisions/project/PRJ-001-exports.md#1-sign-every-export`"
     ), message
@@ -415,7 +446,7 @@ def test_a_decision_that_names_no_capability_is_warned_of(project: AdopterRepo) 
     assert "(DEC-003)" in _body(project)
     warned = [m for s, _l, m in _validate(project) if s == "warning"]
     assert warned == [
-        "line 18: `DEC-003` takes no link, since it names no capability whose decision the "
+        "line 19: `DEC-003` takes no link, since it names no capability whose decision the "
         "lookup finds: write its capability's name before it, as in `<capability> DEC-NNN` — "
         "mend the citation, or mark one that is no citation with `<!-- pkit:not-a-citation "
         "-->` (DEC-001 point 13)"

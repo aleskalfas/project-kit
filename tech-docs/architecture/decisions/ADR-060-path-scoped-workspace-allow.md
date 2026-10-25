@@ -12,7 +12,7 @@ Agents need one place for their intermediate files where writing never makes the
 
 ## Context
 
-Issue #1043 recorded the cost: an agent keeps intermediate files somewhere — pull-request and issue bodies, scripts, captured output — and every write outside the working directory asks the operator, one file at a time, for the whole session, until the operator approves harmless confirmations without reading them. That is the confirmation fatigue the permission model exists to prevent ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). The harness's own per-session scratch directory did not help: it lies outside a subagent's working directory, and absolute allow rules written for it did not stop the prompts. The answer the issue settled on is one git-excluded folder per checkout that the permission model grants to every agent; the backbone declares and creates it (a rule in `rules/core.md`, `pkit init` / `sync` / `status`), the permission capability grants it, and each adapter translates the grant.
+Issue #1043 recorded the cost: an agent keeps intermediate files somewhere — pull-request and issue bodies, scripts, captured output — and every write outside the working directory asks the operator, one file at a time, for the whole session, until the operator approves harmless confirmations without reading them. That is the confirmation fatigue the permission model exists to prevent ([COR-028](../../../.pkit/decisions/core/COR-028-permission-model-realization.md)). The harness's own per-session scratch directory did not help: it lies outside a subagent's working directory, and absolute allow rules written for it did not stop the prompts. The answer the issue settled on is one git-excluded folder per checkout that the permission model grants to every agent; the backbone declares and creates it (a rule in `rules/core.md`, `pkit init` / `sync` / `status`), the backbone's permission code grants it, and each adapter translates the grant.
 
 Granting it needed something the catalog did not have. Privileges were recognised by the tool named (`recognize.tool`) or by the command's leading words (`recognize.bash`), and a grant's `directory` scope matches the request's *cwd* — and a scoped allow **denies** the privilege outside its scope. A `Write` / `Edit` grant scoped to the folder would therefore have denied every write elsewhere. The workspace needs the opposite: a privilege that exists only inside the folder and has no opinion outside it.
 
@@ -38,7 +38,7 @@ The project root, and another working tree of the same repository: the main one,
 
 ### 4. No Bash exception
 
-ADR-025 stands unchanged. A shell write into the workspace fails closed like any other: after a stripped leading `cd`, a redirect or a quote in the remainder abstains; without a `cd`, the command is decided on its own grants, and nothing about the folder grants it.
+ADR-025 stands unchanged. A shell write into the workspace fails closed like any other: after a stripped leading `cd`, a redirect into the folder or any other untrusted construct in the remainder abstains (ADR-025 point 2); without a `cd`, the command is decided on its own grants, and nothing about the folder grants it.
 
 ### 5. Granted to `all` by every shipped profile
 

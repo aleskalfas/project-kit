@@ -1,0 +1,8 @@
+component: backbone
+kind: none
+body: >
+  The new core record COR-062, proposed, says a change writes its answers to
+  friction in files of its own, and partially supersedes COR-050. COR-050 and
+  COR-051 are refined beside it. The records decide ahead of the build, #1779,
+  so nothing you run changes yet. The documents that describe answers in the
+  front matter are deferred to that build.

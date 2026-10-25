@@ -25,12 +25,14 @@ from project_kit.cli import main
 from project_kit.friction_discovery import Anchor
 from project_kit.friction_git import BlobReader, TreeReader
 from tests.adopter_repo import HISTORY_EPOCH, Author, GitRepo, MakeAdopterRepo
+from tests.anchor_kind_capabilities import register_kinds
 from tests.friction_documents import (
     ADR,
     ADR_OVERLAY,
     CONFIG,
     NOTES,
     NOTES_HOLD,
+    SOURCE,
     T1,
     T2,
     Timeline,
@@ -40,6 +42,9 @@ from tests.friction_documents import (
     guide,
     notes,
 )
+from tests.test_friction_anchor_kinds import ANSWERING
+from tests.test_friction_derived_links import LINKS_MOVED, declare_deriver, note, note_body
+from tests.test_friction_derived_links import NOTE as PLACED_NOTE
 
 ALICE = Author("Alice", "alice@example.com")
 BOB = Author("Bob", "bob@example.com")
@@ -383,6 +388,39 @@ def test_collection_entries_have_their_own_points(timeline: Timeline) -> None:
         "docs/rules.md#RS-1": fr.ArtefactState.STALE,
         "docs/rules.md#RS-2": fr.ArtefactState.CURRENT,
     }
+
+
+# --- derived links, read under HEAD's name across a rename (#1912, COR-050 point 5) -------
+
+
+def test_a_placed_file_renamed_with_only_its_derived_links_moved_is_not_behind_a_deferral(
+    make_adopter_repo: MakeAdopterRepo,
+) -> None:
+    """An anchor of a registered kind on a file a place holds, deferred: `explain` lists no
+    commit that renamed the file and moved only its derived links, since both versions are
+    read under the derived links HEAD sets aside in the file. A word changed still counts."""
+    repo = make_adopter_repo()
+    declare_deriver(repo.root)
+    renamed = "notes/renamed.md"
+    resolver = ANSWERING.format({"paths": [renamed]})
+    register_kinds(repo.root, "sources", kinds={"source": "resolve"}, script_body=resolver)
+    anchors = {"path": ["src/cli/**"], "source": ["iso-8601"]}
+    files = {CONFIG: friction_config(), **SOURCE, PLACED_NOTE: note()}
+    repo.write({**files, "docs/guide.md": guide(anchors=anchors)})
+    repo.commit("base", files=None)
+    repo.git("mv", PLACED_NOTE, renamed)
+    moved = repo.commit("rename the notes, move their links", {renamed: LINKS_MOVED[PLACED_NOTE]})
+    listed = repo.git("diff-tree", "-r", "-M", "--name-status", "--no-commit-id", moved)
+    status, *names = listed.stdout.split()
+    assert status.startswith("R") and names == [PLACED_NOTE, renamed]  # git follows the file
+    edited = repo.commit("reword the notes", {renamed: note(body=note_body(lead="An order."))})
+    deferring = guide(anchors=anchors, deferred=[("source", "iso-8601", "rewrite after #1")])
+    repo.commit("defer the guide's source", {"docs/guide.md": deferring})
+
+    explained = frep.run_explain(repo.root, "docs/guide.md").findings
+    [behind] = [f for f in explained if f.finding.anchor == Anchor("source", "iso-8601")]
+    assert behind.finding.kind is fr.RepositoryFindingKind.DEFERRED
+    assert [c.commit.sha for c in behind.commits] == [edited]
 
 
 # --- deferrals ---------------------------------------------------------------------------
@@ -1397,6 +1435,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
     assert sorted(doc) == [
+        "answers",
         "artefacts",
         "check",
         "counts",
@@ -1432,6 +1471,12 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "unanchored": [],
         "uncovered_surface": [],
     }
+    # The answer folder, the files in it and those a prune would remove (COR-062 point 8).
+    assert doc["answers"] == {
+        "folder": ".pkit/project/friction/answers",
+        "files": 0,
+        "prunable": [],
+    }
     (finding,) = doc["findings"]
     assert finding == {
         "artefact": "guide",
@@ -1448,6 +1493,7 @@ def test_json_document_shape(timeline: Timeline) -> None:
     }
     (report,) = doc["artefacts"]
     assert sorted(report) == [
+        "answers",
         "artefact",
         "cut",
         "deferral_points",
@@ -1464,6 +1510,23 @@ def test_json_document_shape(timeline: Timeline) -> None:
         "date",
     ]
     assert report["revalidation_points"] == [report["revalidation_point"]]
+    # Its live answers, read from its block, each with the points it keeps (COR-062).
+    assert report["answers"] == {
+        "home": "block",
+        "folder": ".pkit/project/friction/answers",
+        "revalidations": [
+            {
+                "file": None,
+                "at": T1,
+                "outcome": "unchanged",
+                "unchanged_because": "the CLI surface is as described",
+                "points": [report["revalidation_point"]],
+            }
+        ],
+        "deferrals": [],
+        "revisits": [],
+        "answered_apart": [],
+    }
 
 
 def test_output_is_deterministic(timeline: Timeline) -> None:

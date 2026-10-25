@@ -6,6 +6,7 @@ metadata:
     - pkit analysis new
     - pkit analysis validate
     - pkit analysis check-numbers
+    - pkit analysis renumber
 composes:
   - choose-templates.md
   - build-analysis.md
@@ -89,7 +90,7 @@ The stamp does what a copied template gets wrong:
 - it writes each term's link to the view that explains it
 - it records the analysis location the first time
 
-Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. So does each front-matter field you fill: an actor's `needs`, as its one item, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`.
+Each part of the body holds its hint, a one-line comment `<!-- pkit:hint … -->` that says what goes there and gives an example. So does each front-matter field you fill: an actor's `summary`, and its `needs` as its one item, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to`.
 
 ### Several analyses
 
@@ -148,15 +149,18 @@ An actor, a term or a requirement with nothing to anchor is stamped with `--unan
 
 ### After stamping
 
-1. **Fill each part as its hint says.** Write in each hint's place what it asks for, and delete the hint. A part with nothing to say reads `None.`, where its hint says so. Fill an actor's `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to` the same way. This skill lists no kind's parts: a part's hint is its one description, in the kind's declared structure (DEC-001 point 1). Then run `pkit analysis link`: it links each record, point and rule your text cites, in every analysis, and each term where the analysis keeps a domain model (DEC-001 point 13). A `DEC-NNN` it warns of names no capability, so write the capability's name before it.
-2. **Check what you wrote** with `pkit analysis validate --preview`, and read its findings on your artefact. Then run `pkit friction check`, the core's change check. An artefact new in a change counts as revalidated, and an anchor that resolves to nothing fails.
+1. **Fill each part as its hint says.** Write in each hint's place what it asks for, and delete the hint. A part with nothing to say reads `None.`, where its hint says so. Fill an actor's `summary` and `needs`, a term's `definition`, and a requirement's `statement`, `measure` and `applies-to` the same way. This skill lists no kind's parts: a part's hint is its one description, in the kind's declared structure (DEC-001 point 1).
+2. **Link it.** Run `pkit analysis link`. It links each record, point and rule your text cites, in every analysis (DEC-001 point 13). Where the analysis keeps a domain model, it also links the first mention of each term in each part of what you wrote (DEC-004 point 7).
+   - **What stays plain.** A goal, a journey's step lines and an actor's first sentence take no link to a term, since each says a datum again.
+   - **A `DEC-NNN` it warns of** names no capability, so write the capability's name before it.
+3. **Check what you wrote** with `pkit analysis validate --preview`, and read its findings on your artefact. Then run `pkit friction check`, the core's change check. An artefact new in a change counts as revalidated, and an anchor that resolves to nothing fails.
    - **Why `--preview`.** It runs the capability's check, with its findings and its exit status. It adds what a proposed rule would report where it would bind, as reports that open `preview:` and never fail. So it shows what you wrote against its kind's structure even while the format rule is proposed. `pkit validate` runs the same check with no preview.
    - **Its structure.** The check holds the body to its kind's structure: each part present, in order, not empty, and of its form. Each message gives the part's hint and example.
      - **A revalidation record** is held to it always, whatever any rule's status: no rule binds on a record, so the capability checks it itself.
      - **An artefact** is held to it where the format rule, `RS-SAN-001`, is accepted and binds. While the rule is proposed, the preview reports what would break where the rule would bind. `SAN` binds only through a rule set of the project's own that inherits it. So an artefact no such set selects is neither checked nor previewed. The check says so: its summary counts those artefacts, and where `SAN` binds on none of the analysis, it reports it, or warns once a rule of `SAN` is accepted. The README's "Where `SAN` binds" says how to write the set.
    - **The project's own parts.** A project may relabel a kind's parts and add its own, in the capability's `project/structures.yaml`, as it chooses them in `choose-templates.md`. The stamp writes them, each added part's hint naming the rule that asks for it. Delete an optional one you have nothing for. The check holds an added part only where its rule binds. The preview places one whose rule is still proposed where the rule would bind, as `pkit rule-sets reach --preview` reads it. A record's kind takes no added part, since no rule binds on a record. The README's "A project's own structures" says how.
-3. **Before merging a use case, a journey or a requirement** — `pkit analysis check-numbers`: a number the default branch gave another file since your branch left it is renumbered, and the stamp gives the next free one. It also fails on a use case's step or variant renumbered or removed, which you put back (`use-case.md`, "Later").
-4. **Commit** per COR-008, one artefact or one revalidation per commit where you can.
+4. **Before merging a use case, a journey or a requirement** — `pkit analysis check-numbers`: where the default branch gave your number to another file since your branch left it, renumber yours with `pkit analysis renumber <id>`, which gives your artefact the next free number and rewrites each reference to it. It also fails on a use case's step or variant renumbered or removed, which you put back (`use-case.md`, "Later").
+5. **Commit** per COR-008, one artefact or one revalidation per commit where you can.
 
 ### Withdrawing, never deleting
 

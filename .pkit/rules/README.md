@@ -11,9 +11,9 @@ pkit:
         - src/project_kit/install.py
       record: [COR-001, COR-014]
     revalidated:
-      at: 2026-10-18T18:34:19Z
+      at: 2026-10-25T00:33:44Z
       outcome: unchanged
-      unchanged-because: Rule 20 keeps its number, its title and its section, Answers on artefacts, which this page's summary quotes. The change names revisit entries inside the rule's text only, which this page does not describe.
+      unchanged-because: Core rule 20 now says to commit what the friction writers write, and drops the answer owed after a conflict. The README's account of the rules files and their split holds.
 ---
 
 # Rules

@@ -80,7 +80,7 @@ commands:
     help: Transition an issue through the lifecycle state machine (per DEC-006). Reads workflow.yaml; cascades parents upward on forward moves.
   close-issue:
     script: scripts/close-issue.py
-    help: Close an issue per DEC-006's closure paths. Default mode is wont-do (reason + checkbox close-gate per DEC-007); pr-merge mode runs the post-close cascade, and with --pr <M> closes an open leaf as completed through merged PR M (verified merged, checkbox-gated, reference commented).
+    help: Close an issue per DEC-006's closure paths. Default mode is wont-do (reason + checkbox close-gate per DEC-007); pr-merge mode runs the post-close cascade on an issue GitHub closed and refuses an open one, and with --pr <M> closes an open leaf as completed through merged PR M (verified merged and related to the leaf by its body's closing reference or the leaf's branch, checkbox-gated, reference commented).
   reopen-issue:
     script: scripts/reopen-issue.py
     help: Reopen a closed issue and put it back into the lifecycle — its state label is removed, so it reads as backlog (milestone set) or todo; optionally records an audit reason as a comment. Also repairs an open issue still labelled done.

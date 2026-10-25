@@ -9,9 +9,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001"]}
         revalidated:
-          at: 2026-10-21T15:09:11Z
+          at: 2026-10-23T09:50:52Z
           outcome: unchanged
-          unchanged-because: DEC-001 gains point 13, the links of citations, which add no part to any kind's structure, and point 1 says the link command reads a body at a citation too. The format rule holds.
+          unchanged-because: DEC-001's rationale now says a renamed term's moved links flag nothing, since friction reads them as their words alone. The rule asks each artefact to carry its kind's structure, which this leaves as it was.
   RS-SAN-002:
     status: accepted
     origin: {decision: "software-analysis:DEC-001"}
@@ -30,9 +30,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2", "software-analysis:DEC-001#3", "software-analysis:DEC-001#4"]
         revalidated:
-          at: 2026-10-21T15:09:03Z
+          at: 2026-10-22T16:24:50Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-004:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -40,9 +40,9 @@ rules:
       friction:
         anchors: {record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]}
         revalidated:
-          at: 2026-10-21T15:09:04Z
+          at: 2026-10-22T16:24:51Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-005:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -62,8 +62,9 @@ rules:
             - "COR-050#2"
             - "COR-050#5"
         revalidated:
-          at: 2026-10-21T12:12:31Z
-          outcome: updated
+          at: 2026-10-24T10:40:01Z
+          outcome: unchanged
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 5 reads as it did, so what a view anchors holds as this rule says.
   RS-SAN-006:
     status: proposed
     origin: {decision: "software-analysis:DEC-002"}
@@ -89,9 +90,9 @@ rules:
             - "software-analysis:DEC-002#6"
             - "software-analysis:DEC-002#8"
         revalidated:
-          at: 2026-10-21T15:09:05Z
+          at: 2026-10-22T16:24:53Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-008:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -106,9 +107,9 @@ rules:
             - "software-analysis:DEC-003#10"
             - "software-analysis:DEC-004#3"
         revalidated:
-          at: 2026-10-21T15:09:06Z
+          at: 2026-10-24T10:40:02Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Point 3 reads as it did, and point 7 says an actor's name uses no concept, as this rule does.
   RS-SAN-009:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -120,9 +121,9 @@ rules:
             - "software-analysis:DEC-001#2"
             - "software-analysis:DEC-001#12"
         revalidated:
-          at: 2026-10-21T15:09:07Z
+          at: 2026-10-22T16:24:55Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-010:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -145,9 +146,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-004#4", "software-analysis:DEC-004#6"]
         revalidated:
-          at: 2026-10-20T21:11:17Z
+          at: 2026-10-24T10:40:04Z
           outcome: unchanged
-          unchanged-because: The change adds a flow to a view's opening, and changes nothing of the views' order or their numbers. The flow's labels are diagram labels, which this rule already reads.
+          unchanged-because: DEC-004's refinement changes point 7, the record's summary and its Rationale, on the term links. Points 4 and 6 read as they did, so the order of the views holds as this rule says.
   RS-SAN-012:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -156,9 +157,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#2"]
         revalidated:
-          at: 2026-10-21T15:09:09Z
+          at: 2026-10-22T16:24:56Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
   RS-SAN-013:
     status: proposed
     origin: {decision: "software-analysis:DEC-001"}
@@ -167,9 +168,9 @@ rules:
         anchors:
           record: ["software-analysis:DEC-001#1", "software-analysis:DEC-001#5"]
         revalidated:
-          at: 2026-10-21T15:09:10Z
+          at: 2026-10-22T16:24:58Z
           outcome: unchanged
-          unchanged-because: DEC-001 point 1 changes only in that the link command also places links at the citations a body makes (point 13). This rule judges nothing a link changes, so it holds.
+          unchanged-because: DEC-001 point 1 gains an actor's optional `summary`, the first sentence of its opening, which this rule does not judge apart from that opening. What the rule asks holds.
 # What this capability's checks enforce of each rule (COR-051 point 2). Of
 # the format rule, it is the structure each artefact kind ships: its parts,
 # the glossary's head and its forms (DEC-001 point 1). Of the append-only
@@ -198,7 +199,8 @@ checks:
         terms. A shipped part or front-matter field that the structure gives a
         form holds that form, save on a withdrawn artefact. The forms are
         `sentence`, `numbered-steps`, `variants`, `steps-match-front-matter`,
-        `headings-match-front-matter` and `definition`, each as the schema of
+        `headings-match-front-matter`, `summary-matches-front-matter` and
+        `definition`, each as the schema of
         the kinds' declared structure describes it.
   RS-SAN-002:
     - check: "software-analysis:check-numbers"

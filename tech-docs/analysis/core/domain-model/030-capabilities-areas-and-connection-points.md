@@ -9,6 +9,7 @@ explains:
   - TERM-connection-point
   - TERM-role
   - TERM-data-point
+  - TERM-process
 pkit:
   friction:
     anchors:
@@ -20,6 +21,8 @@ pkit:
         - COR-027
         - COR-030
         - COR-031#D3
+        - COR-033
+        - COR-044
         - COR-052
         - COR-053
         - COR-061#1
@@ -32,6 +35,10 @@ pkit:
         - TERM-connection-point
         - TERM-role
         - TERM-data-point
+        - TERM-process
+    revalidated:
+      at: 2026-10-21T19:08:58Z
+      outcome: updated
 ---
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
@@ -43,7 +50,7 @@ A [capability](../glossary.md#term-capability--capability) packages one discipli
 ```mermaid
 classDiagram
   accTitle: Capabilities, areas and connection points
-  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in.
+  accDescr: A capability is a component a project chooses to install. A component declares a range on the backbone, and a capability may declare a range on another capability. An area is a slice of a project's .pkit tree that needs no install. A capability provides roles, and under a role it defines connection points, which other components fill, depend on or subscribe to. A data point is the kind of connection point that takes data in. A capability also defines processes, and a connection point may offer one for others to depend on.
   class Component["Component"]
   class Backbone["Backbone"]
   class Project["Project"]
@@ -61,6 +68,9 @@ classDiagram
   Role : qualified name
   class DataPoint["Data point"]
   DataPoint : combination policy
+  class Process["Process"]
+  Process : states
+  Process : moves and their conditions
   Capability --|> Component
   Project o-- Capability : installs
   Project *-- Area : holds
@@ -71,6 +81,8 @@ classDiagram
   Capability "1" --> "*" ConnectionPoint : defines
   Role "1" o-- "*" ConnectionPoint : names
   DataPoint --|> ConnectionPoint
+  Capability "1" --> "*" Process : defines
+  ConnectionPoint ..> Process : offers, where its kind is a process
 ```
 
 ```mermaid
@@ -184,15 +196,15 @@ A connection point is a declared interface that one installed capability defines
 - an address, `<publisher>::<role>:<point>` (COR-053 [point](../glossary.md#term-point--point) 2)
 - a kind (COR-053 point 2):
   - a [data point](../glossary.md#term-data-point--data-point), which takes data in
-  - a process, offered for others to depend on
+  - a [process](../glossary.md#term-process--process), offered for others to depend on
   - an event, which signals that a writing command finished
-- a [version](../glossary.md#term-version--version), an integer that rises only where it breaks what connects to it (COR-053 point 5)
+- a <!-- pkit:not-the-term -->version, an integer that rises only where it breaks what connects to it (COR-053 point 5)
 - a description, in prose (COR-053 point 3)
 
 **Relations:**
 
 - The capability that provides its role defines it (COR-053 point 2).
-- Other components connect to it at a version equal to its own (COR-053 point 5).
+- Other components connect to it at a <!-- pkit:not-the-term -->version equal to its own (COR-053 point 5).
 - The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it (COR-053 point 7).
 
 **States:** None.
@@ -200,7 +212,7 @@ A connection point is a declared interface that one installed capability defines
 **Always true:**
 
 - It is optional by default. A connection to it is mandatory only with a reason (COR-053 point 6).
-- Two of its versions are compatible only when they are equal (COR-053 point 5).
+- Two of its <!-- pkit:not-the-term -->versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
 ## Role
@@ -214,7 +226,7 @@ A role is a name under which one installed capability provides [connection point
 **Attributes:**
 
 - its qualified name, `<publisher>::<role>` (COR-053 [point](../glossary.md#term-point--point) 1)
-- no [version](../glossary.md#term-version--version): a role redefined in a way that breaks takes a new name (COR-053 point 5)
+- no <!-- pkit:not-the-term -->version: a role redefined in a way that breaks takes a new name (COR-053 point 5)
 
 **Relations:**
 
@@ -239,7 +251,7 @@ A data point is a declared interface through which the [capability](../glossary.
 
 **Attributes:**
 
-- its address, its [version](../glossary.md#term-version--version) and the schema of its data (COR-052 points 1 and 5)
+- its address, its schema version and the schema of its data (COR-052 points 1 and 5)
 - a combination policy, one of these (COR-052 [point](../glossary.md#term-point--point) 3):
   - one filler alone fills it
   - entries merge by id
@@ -256,5 +268,33 @@ A data point is a declared interface through which the [capability](../glossary.
 **Always true:**
 
 - A filler that fails gives no result, which is never read as an empty one (COR-052 point 6).
-- A capability's filler counts only where its version matches the point's (COR-052 point 5).
+- A capability's filler counts only where its schema version matches the point's (COR-052 point 5).
 - A question asks only what has no recorded reply. Where nobody can reply, it records nothing (COR-061 points 1 and 5).
+
+## Process
+
+Defined in [TERM-process](../glossary.md#term-process--process).
+
+**Why:** Several disciplines move their subjects through stages, and each needs to know where a subject stands and which move it may make next (COR-033). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a subject stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
+
+A process is the course a capability declares for one kind of subject of its discipline. It gives the states the subject can be in, and the moves between them, each with its condition. The backbone's engine reads where a subject stands from what it observes, on each check. project-management's `issue-lifecycle` is one.
+
+**Attributes:**
+
+- its address, `<capability>:<id>`, and its definition, `schemas/<id>.yaml` in the capability (COR-033 P2)
+- its states, each detected by a script the engine runs, in one mode for the whole process (COR-033 P5)
+- its moves, each with a condition: a script that decides it, or an authorisation recorded by someone other than the one who moves (COR-033 P4)
+
+**Relations:**
+
+- A capability defines it, and the backbone's engine runs it (COR-033 P2).
+- A [connection point](../glossary.md#term-connection-point--connection-point) of the kind `process` offers it for other [components](../glossary.md#term-component--component) to depend on (COR-053 [point](../glossary.md#term-point--point) 2).
+- Its definition may declare that one of its states waits on another process (COR-044 point 3).
+- The `process` [skill](../glossary.md#term-skill--skill) writes its shape (COR-044 point 1). An AI agent working by the `process-author` [agent definition](../glossary.md#term-agent-definition--agent-definition) writes the scripts behind the process's states and conditions.
+
+**States:** None.
+
+**Always true:**
+
+- The engine reads a subject's state from what it observes, never from a stored label (COR-033 P3).
+- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move (COR-044 point 2 and COR-033 P5).

@@ -218,6 +218,7 @@ def test_debt_json_document_shape(timeline: Timeline) -> None:
     assert doc["schema_version"] == frep.DEBT_SCHEMA_VERSION == 1
     assert (doc["report"], doc["dormant"], doc["history"]) == ("debt", False, {"shallow": False})
     assert doc["counts"] == {
+        "answered-apart": 0,
         "deferred": 1,
         "stale": 1,
         "unanchored": 0,
@@ -302,6 +303,7 @@ def test_debt_lists_the_accepted_unanchored_apart_and_counts_only_the_forgotten(
 
     doc = json.loads(_cli("debt", "--json").output)
     assert doc["counts"] == {
+        "answered-apart": 0,
         "deferred": 0,
         "stale": 1,
         "unanchored": 1,
@@ -325,6 +327,7 @@ def test_debt_leaves_out_an_artefact_under_an_excluded_path(timeline: Timeline) 
     assert result.exit_code == 0, result.output
     doc = json.loads(result.output)
     assert doc["counts"] == {
+        "answered-apart": 0,
         "deferred": 0,
         "stale": 1,
         "unanchored": 0,
@@ -754,6 +757,8 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
     doc = json.loads(result.output)
     assert sorted(doc) == [
         "anchors",
+        "answers",
+        "answers_folder",
         "artefact",
         "body",
         "deferral_points",
@@ -780,6 +785,13 @@ def test_explain_json_document_shape(timeline: Timeline) -> None:
     assert doc["body"] == "Body.\n"
     assert doc["excluded_by"] is None and doc["unanchored_because"] is None
     assert doc["revalidation_point"]["commit"] == base and doc["deferral_points"] == []
+    # Its live answers with their points, and the answer folder's path (COR-062): a
+    # component reads `at` here, never from the file.
+    assert doc["answers_folder"] == ".pkit/project/friction/answers"
+    assert doc["answers"]["home"] == "block"
+    assert [
+        (r["at"], [p["commit"] for p in r["points"]]) for r in doc["answers"]["revalidations"]
+    ] == [(T1, [base])]
     assert doc["anchors"] == [
         {
             "kind": "path",

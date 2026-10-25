@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "package.schema.json",
   "title": "Component package metadata (`package.yaml`)",
-  "description": "A backbone file schema (ADR-056) for the `package.yaml` of a component — a capability or an adapter: every field the shipped package files use and the blocks the connection-points, documentation-roots and friction records add. STRICT ON UNKNOWN KEYS: every object here that declares its keys closes with `additionalProperties: false`, at the top level and inside every block, so a key the schema does not know is an error; `project_kit.package_validate` reports it at the key with the nearest known key suggested, through the one renderer of ADR-056 point 4. The lifecycle README records the decision and what an adopter does about such a key ('Validation: the package schema'); a tree whose schema predates it keeps its permissive copy until synced, and there an unknown key is a warning. The fields COR-017 lists among a component's required ones — `schema_version`, `component`, `description`, `requires_backbone` — are required of capabilities and adapters alike. Every part of a role name or a point address is a word, `[a-z][a-z0-9-]*`: the word the configuration schema's selection keys admit, defined once as `project_kit.refs.ADDRESS_WORD_PATTERN` and held equal here by a test. Two `schema_version` values are in use and both are accepted: version 2 marks a file that adopted the `commands:` block (COR-021 said the version bumps with it); no reader distinguishes the two, and both require the same fields. `provides` is admitted from COR-013 (hook implementations) though no shipped file uses it; no egress or privilege declaration exists in any package file — those live in the permission capability's own data.",
+  "description": "A backbone file schema (ADR-056) for the `package.yaml` of a component — a capability or an adapter: every field the shipped package files use and the blocks the connection-points, documentation-roots and friction records add. STRICT ON UNKNOWN KEYS: every object here that declares its keys closes with `additionalProperties: false`, at the top level and inside every block, so a key the schema does not know is an error; `project_kit.package_validate` reports it at the key with the nearest known key suggested, through the one renderer of ADR-056 point 4. The lifecycle README records the decision and what an adopter does about such a key ('Validation: the package schema'); a tree whose schema predates it keeps its permissive copy until synced, and there an unknown key is a warning. The fields COR-017 lists among a component's required ones — `schema_version`, `component`, `description`, `requires_backbone` — are required of capabilities and adapters alike. Every part of a role name or a point address is a word, `[a-z][a-z0-9-]*`: the word the configuration schema's selection keys admit, defined once as `project_kit.refs.ADDRESS_WORD_PATTERN` and held equal here by a test. Two `schema_version` values are in use and both are accepted: version 2 marks a file that adopted the `commands:` block (COR-021 said the version bumps with it); no reader distinguishes the two, and both require the same fields. `provides` is admitted from COR-013 (hook implementations) though no shipped file uses it; no egress or privilege declaration exists in any package file — those live in the permission model's own data.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -659,6 +659,14 @@
             "$ref": "#/$defs/friction-link"
           }
         },
+        "derived-links": {
+          "description": "The forms of the derived links a command of this component writes in the files this place holds, from data its check holds them equal to (COR-050 point 5). Wherever friction compares the body of such a file, each link of a declared form in running text is read as its words alone. Never on by default: a place without the key declares none.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/friction-derived-link"
+          }
+        },
         "description": {
           "$ref": "#/$defs/non-empty-string"
         }
@@ -709,6 +717,25 @@
         },
         "description": {
           "description": "What the link is, and why a change to its trigger fields asks after its targets.",
+          "$ref": "#/$defs/non-empty-string"
+        }
+      }
+    },
+    "friction-derived-link": {
+      "title": "One form of derived link (COR-050 point 5)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target"
+      ],
+      "properties": {
+        "target": {
+          "description": "A regular expression, in Python's dialect, that the target of an inline link `[words](target)` matches whole. It must compile (checked in Python).",
+          "type": "string",
+          "minLength": 1
+        },
+        "description": {
+          "description": "Which links the form takes, and the command that writes them.",
           "$ref": "#/$defs/non-empty-string"
         }
       }

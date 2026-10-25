@@ -130,12 +130,17 @@ QUERY_FLAG = "--json"
 OFFLINE_MARKER: Mapping[str, str] = {"PKIT_OFFLINE": "1", "UV_OFFLINE": "1"}
 
 # What a query command never inherits from its caller's environment: the base
-# override a pipeline sets for its comparisons (COR-054 point 3). A query
-# answers about the project's state, and a validator and a data point's filler
-# take no base named for one run (COR-052 point 6, ADR-058 point 7) — so every
-# validator and every filler, whichever command starts it, answers the same
-# whatever base a pipeline named. The lifecycle README's query row says so.
-QUERY_DROPPED_ENV: tuple[str, ...] = (default_branch.CHECK_BASE_ENV,)
+# override a pipeline sets for its comparisons (COR-054 point 3), and the
+# change's own head it names beside it for the change check (ADR-068 point 6).
+# A query answers about the project's state, and a validator and a data point's
+# filler take no base or head named for one run (COR-052 point 6, ADR-058
+# point 7) — so every validator and every filler, whichever command starts it,
+# answers the same whatever a pipeline named. The lifecycle README's query row
+# says so.
+QUERY_DROPPED_ENV: tuple[str, ...] = (
+    default_branch.CHECK_BASE_ENV,
+    default_branch.CHECK_HEAD_ENV,
+)
 
 # What `uv`, honouring the offline marker, prints on standard error when a
 # script's dependency is not in its cache: the resolver's hint for a registry

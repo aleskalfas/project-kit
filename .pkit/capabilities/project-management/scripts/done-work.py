@@ -56,7 +56,11 @@ predicate.
 
 CI-status gate (#498): in front of the merge, the PR's `statusCheckRollup`
 must be green — a failing or still-pending check refuses the merge (an
-APPROVED verdict is not evidence CI passed). The general `--bypass` NEVER
+APPROVED verdict is not evidence CI passed). A rollup with no checks, which
+GitHub answers for a project that runs none, passes. A rollup that cannot be
+read, or that GitHub's answer does not carry, is no answer, never one of no
+checks: the gate refuses, names why and writes nothing, and `--bypass-ci` does
+not clear it (#1946). The general `--bypass` NEVER
 clears a red or pending CI check; the CI gate is overridable only by the
 dedicated `--bypass-ci "<reason>"`, which posts a distinct CI-bypass audit
 comment to the PR before merging (bypassable-with-audit per
@@ -208,8 +212,9 @@ Exit codes:
   0  merged + done
   1  membership refusal / approval, checkbox or CI gate fails; a queue the
      run may not go around or through
-  2  usage error / gh failure; a run with no `--yes` and no terminal to ask
-     at, which merges nothing
+  2  usage error / gh failure, the PR's checks that could not be read among
+     them; a run with no `--yes` and no terminal to ask at, which merges
+     nothing
   3  the merge failed; the PR left the merge queue without merging, or was
      taken out of it because its head moved; or, called with a pinned head
      (`run(argv, pinned_head=…)`, as `land-work` calls it), the PR's head is
@@ -918,6 +923,7 @@ def run(
             mode_resolution.source,
             capability_root,
             override_reviewers=override_reviewers,
+            issue_number=args.issue_number,
         )
 
     for warning in gate_result.warnings:
@@ -1009,8 +1015,12 @@ def run(
     # The CI gate is overridable only by the dedicated `--bypass-ci`, a
     # separate deliberate act, posting a distinct CI-bypass audit comment to
     # the PR before merging (bypassable-with-audit per validation-severity).
+    # Checks that cannot be read are no answer, never an answer of no checks:
+    # the gate refuses before anything is written, `--bypass-ci` or not (#1946).
     rollup = _gh_get_status_rollup(pr_number, config)
-    ci_gate = evaluate_ci_gate(rollup)
+    if rollup.problem:
+        return _ended(UNREADABLE, 2, _ci_unreadable_refusal(pr_number, rollup.problem))
+    ci_gate = evaluate_ci_gate(list(rollup.checks))
     if not ci_gate.passing:
         if not args.bypass_ci:
             # Checks still running are a wait, which a re-run can outlast; a
@@ -1033,7 +1043,7 @@ def run(
             f"({', '.join(ci_gate.failing_checks)}); reason: {args.bypass_ci.strip()}"
         )
     else:
-        print("  ci-status: green")
+        print(f"  ci-status: green{' (no checks configured)' if ci_gate.no_checks else ''}")
 
     print(f"done-work: #{args.issue_number}")
     print(f"  PR:      #{pr_number}")
@@ -1988,6 +1998,7 @@ def _check_agent_gate(
     capability_root: Path,
     *,
     override_reviewers: tuple[str, ...] = (),
+    issue_number: int | None = None,
 ) -> _GateResult:
     """DEC-028's gate-checker, generalised by DEC-032 to a per-PR resolved set.
 
@@ -2018,6 +2029,13 @@ def _check_agent_gate(
     across-set-AND rule coincides with DEC-028's cross-path OR when the
     resolved set has one reviewer).
 
+    The set is worked out before the gate judges whether any reviewer is
+    required (#1979), so a contributed reviewer satisfies the gate in a
+    project that registers no remote or local reviewer of its own. A set
+    that holds no reviewer refuses, never passes: either nothing is
+    registered, or the entries under `review.agents.*` name no reviewer, and
+    the refusal says which.
+
     Per-reviewer override (DEC-050): `override_reviewers` names reviewers the
     operator waived this invocation with `--bypass-reviewer`. Each named
     reviewer's conjunct is ALSO satisfied by the override — a first-class
@@ -2039,32 +2057,11 @@ def _check_agent_gate(
     fresh APPROVED on a reviewer also named in `--bypass-reviewer` read APPROVED
     on the pass path and `satisfied-by-override` on the refusal path. A redundant
     override now reads as APPROVED on all three.
+
+    `issue_number` is the issue `done-work` was run for. The refusal names
+    `review-pr` with it, since that command reads its argument as an issue's
+    number (DEC-028's refusal template, #1935).
     """
-    review = config.get("review") if isinstance(config, dict) else None
-    agents_block = review.get("agents") if isinstance(review, dict) else None
-    if not isinstance(agents_block, dict):
-        agents_block = {}
-    remote_registered = agents_block.get("remote_registered") or []
-    local_registered = agents_block.get("local_registered") or []
-
-    if not remote_registered and not local_registered:
-        return _GateResult(
-            passed=False,
-            refusal_message=(
-                f"[refused] agent-mode approval gate cannot be satisfied — "
-                f"no agents configured.\n"
-                f"            → resolved mode: agent (source: {mode_source})\n"
-                f"            → review.agents.remote_registered: (none)\n"
-                f"            → review.agents.local_registered: (none)\n"
-                "            Remediation:\n"
-                "              a) Configure a registered agent in "
-                "`project/config.yaml` under `review.agents.*`.\n"
-                "              b) Set `review.mode: human` if you want "
-                "human review instead.\n"
-                '              c) Merge with `done-work --bypass "<reason>"`.'
-            ),
-        )
-
     if pr_number is None:
         return _GateResult(
             passed=False,
@@ -2097,13 +2094,28 @@ def _check_agent_gate(
     # Provenance for the refusal message: reviewer name → contributing
     # capability (baseline reviewers have no contributing capability).
     contributed_by = dict(resolution.contributed_by)
+    slot_labels = _required_slot_labels(remote_baseline, required_local, contributed_by)
+
+    # The gate never passes with no reviewer (#1979). The set is worked out
+    # above before this refusal, so a reviewer a capability contributes
+    # satisfies the gate though the project registers none of its own
+    # (DEC-032 D3). An empty set has no slot to check, and would pass.
+    if not slot_labels:
+        return _GateResult(
+            passed=False,
+            refusal_message=_no_reviewer_refusal(
+                config,
+                mode_source=mode_source,
+                opted_out=resolution.opted_out,
+                override_requested=bool(override_reviewers),
+            ),
+        )
 
     # --- DEC-050: validate the per-reviewer override against the freshly-
     # resolved required set. A name not in the set is a HARD ERROR naming the
     # set (a typo, or a name dropped by reclassification/uninstall) — never a
     # silent no-op. The set spans the remote baseline plus the resolved local
     # set (a baseline reviewer may be remote).
-    slot_labels = _required_slot_labels(remote_baseline, required_local, contributed_by)
     override_set = set(override_reviewers)
     required_set_all = {name for name, _label in slot_labels}
     unknown_overrides = [n for n in override_reviewers if n not in required_set_all]
@@ -2247,7 +2259,7 @@ def _check_agent_gate(
         return refuse(
             head_oid=head_sha(data),
             message=_agent_gate_refusal(
-                pr_number=pr_number,
+                issue_number=issue_number,
                 mode_source=mode_source,
                 slots=slots,
                 opted_out=resolution.opted_out,
@@ -2527,6 +2539,87 @@ def _contribution_error_refusal(collection) -> str:
     return "\n".join(lines)
 
 
+def _no_reviewer_refusal(
+    config: dict,
+    *,
+    mode_source: str,
+    opted_out: tuple = (),
+    override_requested: bool = False,
+) -> str:
+    """Refusal text when the PR's required set holds no reviewer (#1979).
+
+    The gate never passes with no reviewer: an empty set has no slot to
+    check. The cause is one of two, and the text names which. Either the
+    project registers no reviewer, or its entries under `review.agents.*`
+    name none, such as a `local_registered:` entry without a `name`. In both,
+    no installed capability contributes a reviewer this PR requires, and each
+    contribution the project opts out of is named with its reason.
+    """
+    review = config.get("review") if isinstance(config, dict) else None
+    agents = review.get("agents") if isinstance(review, dict) else None
+    if not isinstance(agents, dict):
+        agents = {}
+    remote = agents.get("remote_registered")
+    local = agents.get("local_registered")
+    configured = bool(remote) or bool(local)
+    if configured:
+        cause = "the entries under `review.agents.*` name no reviewer"
+    else:
+        cause = "no agents configured"
+    lines = [
+        f"[refused] agent-mode approval gate cannot be satisfied — {cause}, and "
+        "no installed capability contributes a reviewer this PR requires.",
+        f"            → resolved mode: agent (source: {mode_source})",
+        "            → review.agents.remote_registered: "
+        f"{_registered_entries(remote, 'github_login')}",
+        f"            → review.agents.local_registered: {_registered_entries(local, 'name')}",
+    ]
+    lines.extend(
+        f"            → opted out ({OPT_OUT_PATH}): {opt_out.reviewer} "
+        f"(capability `{opt_out.capability}`) — {opt_out.reason}"
+        for opt_out in opted_out
+    )
+    lines.append(
+        "            The gate never passes with no reviewer, so it refuses rather "
+        "than merge unreviewed (DEC-032 D3)."
+    )
+    lines.append("            Remediation:")
+    if configured:
+        lines.append(
+            "              a) Give each local entry its `name` and each remote one its "
+            "`github_login`: `pkit project-management pre-check` names each "
+            "malformed entry, or"
+        )
+    else:
+        lines.append(
+            "              a) Configure a registered agent in `project/config.yaml` "
+            "under `review.agents.*`, or"
+        )
+    lines.append("              b) Set `review.mode: human` if you want human review instead, or")
+    lines.append('              c) Merge with `done-work --bypass "<reason>"`.')
+    if override_requested:
+        lines.append(
+            "            Note: --bypass-reviewer cannot help here — a per-reviewer "
+            "override waives one reviewer of the required set, and this PR's set "
+            'holds none. Use the whole-gate --bypass "<reason>" (DEC-050).'
+        )
+    return "\n".join(lines)
+
+
+def _registered_entries(entries: object, key: str) -> str:
+    """What one `review.agents.*` list holds, for `_no_reviewer_refusal`.
+
+    Reached only when the required set is empty, so no entry of a list
+    names a reviewer under `key`.
+    """
+    if not entries:
+        return "(none)"
+    if not isinstance(entries, list):
+        return "not a list, so it names no reviewer"
+    count = len(entries)
+    return f"{count} {'entry' if count == 1 else 'entries'}, none with a `{key}`"
+
+
 def _opt_out_invalid_refusal(details: tuple[str, ...]) -> str:
     """Refusal text when the contribution opt-out list is invalid (#148).
 
@@ -2720,7 +2813,7 @@ def _changed_files_unresolvable_refusal(reason: str, *, too_many: bool) -> str:
 
 def _agent_gate_refusal(
     *,
-    pr_number: int | None = None,
+    issue_number: int | None = None,
     mode_source: str,
     slots: list[_Slot],
     opted_out: tuple = (),
@@ -2736,11 +2829,13 @@ def _agent_gate_refusal(
     the head it reviewed and what changed since (#1179). A local reviewer whose
     CHANGES_REQUESTED is still fresh is one `review-pr` skips, so the refusal
     names `review-pr <N> --force` as the way to have it re-review the PR as it
-    stands. Contributions the project opts out of (#148) are named after the
-    set with their reasons, so a reviewer missing from it reads as withdrawn,
-    not forgotten. `remote_uncounted` names the unsatisfied reviewers whose
-    remote verdict does not count because the PR's author could not be read
-    (#1485), so a remote approval the gate passed over is not a mystery.
+    stands. `<N>` is `issue_number`, the issue's number that `review-pr` takes,
+    never the PR's (DEC-028, #1935). Contributions the project opts out of
+    (#148) are named after the set with their reasons, so a reviewer missing
+    from it reads as withdrawn, not forgotten. `remote_uncounted` names the
+    unsatisfied reviewers whose remote verdict does not count because the PR's
+    author could not be read (#1485), so a remote approval the gate passed over
+    is not a mystery.
 
     It reads the same `_Slot` records the pass path's `passed_via` reads, which
     is what keeps the two honest with each other: a reviewer with a genuine fresh
@@ -2775,7 +2870,7 @@ def _agent_gate_refusal(
         )
     missing = ", ".join(slot.label for slot in slots if not slot.satisfied)
     lines.append(f"            → still missing a fresh APPROVED: {missing}")
-    number = pr_number if pr_number is not None else "<N>"
+    number = issue_number if issue_number is not None else "<N>"
     lines.append("            Remediation:")
     lines.append("              a) Wait for / trigger each remote agent to post APPROVED.")
     lines.append(f"              b) Run `review-pr {number}` to re-invoke the local agent(s).")
@@ -3022,28 +3117,57 @@ def _post_bypass_audit_idempotent(
     )
 
 
-def _gh_get_status_rollup(pr_number: int | None, config: dict) -> list[dict] | None:
-    """Fetch the PR's `statusCheckRollup` for the CI-status gate (#498).
+@dataclass(frozen=True)
+class _RollupReading:
+    """What `gh pr view --json statusCheckRollup` answered: the PR's checks —
+    none for a project that runs no checks — or, in `problem`, why there is no
+    answer, which is not an answer of no checks (#1946)."""
 
-    Returns the rollup list on success, or None on failure — a None rollup is
-    treated as an empty (check-free, passing) rollup by `evaluate_ci_gate`,
-    matching the release-merge gate's empty-rollup semantics.
+    checks: tuple[dict, ...] = ()
+    problem: str = ""
+
+
+def _gh_get_status_rollup(pr_number: int | None, config: dict) -> _RollupReading:
+    """Read the PR's `statusCheckRollup` for the CI-status gate (#498).
+
+    GitHub answers an empty rollup for a PR no check reported on, which the
+    gate passes as a project that runs no checks. A call that fails, an answer
+    that is not JSON, and one that carries no list of checks are no answer:
+    `problem` names which, and the gate refuses on it (#1946).
     """
     if pr_number is None:
-        return None
-    proc = gh_run(
-        ["gh", "pr", "view", str(pr_number), "--json", "statusCheckRollup"],
-        config,
-        check=False,
-    )
+        return _RollupReading(problem="the PR has no number to read its checks by")
+    try:
+        proc = gh_run(
+            ["gh", "pr", "view", str(pr_number), "--json", "statusCheckRollup"],
+            config,
+            check=False,
+        )
+    except OSError as exc:
+        return _RollupReading(problem=f"`gh` could not be run ({exc})")
     if proc.returncode != 0:
-        return None
+        return _RollupReading(
+            problem=" ".join((proc.stderr or "").split()) or f"gh exited {proc.returncode}"
+        )
     try:
         data = json.loads(proc.stdout)
-    except (ValueError, json.JSONDecodeError):
-        return None
-    rollup = data.get("statusCheckRollup")
-    return rollup if isinstance(rollup, list) else None
+    except ValueError:
+        return _RollupReading(problem="gh's answer is not JSON")
+    rollup = data.get("statusCheckRollup") if isinstance(data, dict) else None
+    if not isinstance(rollup, list) or not all(isinstance(check, dict) for check in rollup):
+        return _RollupReading(problem="gh's answer carries no statusCheckRollup")
+    return _RollupReading(tuple(rollup))
+
+
+def _ci_unreadable_refusal(pr_number: int | None, problem: str) -> str:
+    """Refusal text when the PR's checks cannot be read (#1946)."""
+    return (
+        f"[refused] CI-status gate for PR #{pr_number}: its checks could not be read "
+        f"({problem}). Nothing was changed.\n"
+        "          → no answer is not an answer of no checks: the gate refuses rather "
+        "than merge a head whose checks it never saw. Run done-work again once GitHub "
+        "answers. --bypass-ci does not clear checks that were never read."
+    )
 
 
 def _ci_bypass_audit_body(

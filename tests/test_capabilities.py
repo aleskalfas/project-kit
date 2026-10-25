@@ -956,6 +956,7 @@ def _install(kit_source: Path, monkeypatch, name: str, answers: str, *extra: str
     return CliRunner().invoke(main, ["capabilities", "install", name, *extra], input=answers)
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_replaces_the_projects_skill(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -984,6 +985,7 @@ def test_cli_install_override_replaces_the_projects_skill(
     assert "skipped" not in manifest.backend_state
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_replaces_the_projects_agent_in_both_forms(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1012,6 +1014,7 @@ def test_cli_install_override_replaces_the_projects_agent_in_both_forms(
 
 
 @pytest.mark.parametrize("state", ["untracked", "changed", "staged"])
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_is_refused_while_git_cannot_give_it_back(
     kit_target: Path, kit_source: Path, monkeypatch, state: str
 ) -> None:
@@ -1048,6 +1051,27 @@ def test_cli_install_override_is_refused_while_git_cannot_give_it_back(
     ).exists()
 
 
+def test_cli_install_refuses_a_piped_collision_answer(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Off a terminal an `override` piped in is no person's choice: the install names
+    the collision and is refused before anything is written (#2003)."""
+    project_skill = _project_skill(kit_target)
+    _commit_all(kit_target)
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("shared",))
+
+    result = _install(kit_source, monkeypatch, "evidence", "override\n")
+
+    assert result.exit_code == 1
+    assert "skill 'shared' collides with existing .pkit/skills/project/shared.md" in result.output
+    assert "refusing to resolve the naming collisions: stdin is not a terminal" in result.output
+    assert "`pkit capabilities install evidence` again at a terminal" in result.output
+    assert "[override / skip / inspect]" not in result.output
+    assert project_skill.read_text(encoding="utf-8") == _PROJECTS_SKILL
+    assert not caps.is_installed(kit_target, "evidence")
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_skip_keeps_the_projects_skill_and_records_it(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1071,6 +1095,7 @@ def test_cli_install_skip_keeps_the_projects_skill_and_records_it(
     assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_leaves_a_recorded_skip_of_another_capability(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1102,6 +1127,7 @@ def test_cli_install_override_leaves_a_recorded_skip_of_another_capability(
     assert manifest.backend_state["skipped"] == [{"kind": "skill", "name": "shared"}]
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_leaves_an_artefact_that_is_not_the_projects(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1124,6 +1150,7 @@ def test_cli_install_override_leaves_an_artefact_that_is_not_the_projects(
     assert (kit_target / ".pkit" / "capabilities" / "audit" / "skills" / "shared.md").is_file()
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_names_each_artefact_that_shares_the_name(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1157,6 +1184,7 @@ def test_cli_install_override_names_each_artefact_that_shares_the_name(
     assert _deployed_skill(kit_target, "shared") == ".pkit/skills/core/shared.md"
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_install_override_dry_run_removes_nothing(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1172,6 +1200,7 @@ def test_cli_install_override_dry_run_removes_nothing(
     assert not caps.is_installed(kit_target, "evidence")
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_upgrade_interactive_override_replaces_the_projects_skill(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1201,6 +1230,36 @@ def test_cli_upgrade_interactive_override_replaces_the_projects_skill(
     assert "skipped" not in manifest.backend_state
 
 
+def test_cli_upgrade_interactive_refuses_a_piped_collision_answer(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """`--interactive` off a terminal: an `override` piped in is not read, and the
+    upgrade is refused before anything is written (#2003)."""
+    _stage_capability_in_source(kit_source, "evidence", with_skills=("add-evidence",))
+    source_v1 = caps.find_capability_in_source(kit_source, "evidence")
+    assert source_v1 is not None
+    caps.install_capability(kit_target, source_v1)
+    project_skill = _project_skill(kit_target, "conflict")
+    _commit_all(kit_target)
+    (kit_source / "capabilities" / "evidence" / "skills" / "conflict.md").write_text(
+        "---\nname: conflict\n---\n# From evidence\n", encoding="utf-8"
+    )
+    from project_kit import cli as cli_mod
+
+    monkeypatch.setattr(cli_mod, "find_source_kit", lambda: kit_source)
+    result = CliRunner().invoke(
+        main, ["capabilities", "upgrade", "evidence", "--interactive"], input="override\n"
+    )
+
+    assert result.exit_code == 1
+    assert "refusing to resolve the naming collisions: stdin is not a terminal" in result.output
+    assert "`pkit capabilities upgrade evidence --interactive` again" in result.output
+    assert project_skill.is_file()
+    installed = kit_target / ".pkit" / "capabilities" / "evidence"
+    assert not (installed / "skills" / "conflict.md").exists()
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_upgrade_interactive_override_dry_run_removes_nothing(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1681,6 +1740,7 @@ def test_capabilities_upgrade_moves_nothing_before_its_checks_pass(
     assert not _record_path(kit_target, "evidence").exists()
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_capabilities_upgrade_records_a_skip_before_the_copy_and_never_asks_again(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -1732,6 +1792,7 @@ def test_capabilities_upgrade_refuses_a_version_whose_range_excludes_the_backbon
     assert record is not None and record.version == "0.1.0"
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_capabilities_upgrade_keeps_an_override_when_a_migration_stops_it(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -2157,6 +2218,7 @@ def test_a_dry_run_refresh_names_the_move_and_writes_nothing(
     assert _registry_path(kit_target, "evidence") == ".pkit/capabilities/evidence/manifest.yaml"
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_upgrade_keeps_a_skip_the_install_recorded(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -2260,6 +2322,7 @@ def test_cli_upgrade_capability_refuses_on_new_collisions_without_interactive(
     assert "--interactive" in result.output
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_upgrade_capability_interactive_with_skip(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -3947,6 +4010,7 @@ def test_cli_uninstall_incubated_keeps_files_and_reports(
     assert not caps.is_installed(kit_target, "homegrown")
 
 
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_uninstall_incubated_purge_confirms_then_deletes(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:
@@ -3968,6 +4032,31 @@ def test_cli_uninstall_incubated_purge_confirms_then_deletes(
     assert not caps.is_installed(kit_target, "homegrown")
 
 
+def test_cli_uninstall_incubated_purge_refuses_a_piped_yes(
+    kit_target: Path, kit_source: Path, monkeypatch
+) -> None:
+    """Off a terminal a `y` piped in does not purge: the uninstall is refused, with no
+    ready-made command for the irreversible delete, and the authored subtree and its
+    registration both stay (#2003)."""
+    cap_dir = _register_incubated_via_cli(
+        kit_target,
+        kit_source,
+        monkeypatch,
+        "homegrown",
+    )
+    result = CliRunner().invoke(
+        main, ["capabilities", "uninstall", "homegrown", "--purge"], input="y\n"
+    )
+
+    assert result.exit_code == 1
+    assert "refusing to purge .pkit/capabilities/homegrown/" in result.output
+    assert "Deleting it is a person's decision" in result.output
+    assert "pkit capabilities uninstall homegrown --purge --yes" not in result.output
+    assert cap_dir.is_dir()
+    assert caps.is_installed(kit_target, "homegrown")
+
+
+@pytest.mark.usefixtures("at_a_terminal")
 def test_cli_uninstall_incubated_purge_aborts_on_no(
     kit_target: Path, kit_source: Path, monkeypatch
 ) -> None:

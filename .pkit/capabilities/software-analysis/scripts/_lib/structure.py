@@ -104,6 +104,7 @@ that still holds its hint is never judged against the field's form here.
 from __future__ import annotations
 
 import dataclasses
+import functools
 import json
 import re
 from collections.abc import Iterator, Mapping, Sequence
@@ -302,17 +303,34 @@ class FieldDeparture:
 
 def read_kinds(path: Path = KINDS_FILE, schema: Path = KINDS_SCHEMA) -> dict[str, Kind]:
     """Each kind's declared structure, read whole from the declaration at `path`.
-    Raises `Unreadable` when the file is absent, is not YAML, or does not fit its schema."""
+    Raises `Unreadable` when the file is absent, is not YAML, or does not fit its schema.
+    Both files are read on each call, and what they declare is worked out once for each
+    pair of texts, so a check that asks again parses nothing again."""
     try:
-        data = YAML(typ="safe").load(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
     except OSError as exc:
         raise Unreadable(f"it cannot be read ({exc.strerror or exc})") from exc
     except UnicodeDecodeError as exc:
         raise Unreadable("it is not UTF-8 text") from exc
+    try:
+        schema_text: str | None = schema.read_text(encoding="utf-8")
+    except (OSError, ValueError):
+        schema_text = None
+    if schema_text is None:
+        return _kinds(text, schema, None)  # never kept, so a later read tries the schema again
+    return dict(_declared_kinds(text, schema, schema_text))
+
+
+def _kinds(text: str, schema: Path, schema_text: str | None) -> dict[str, Kind]:
+    """`read_kinds`' answer for the declaration's `text` and its schema's: a schema with
+    no text is read again, so the error says why it cannot be."""
+    try:
+        data = YAML(typ="safe").load(text)
     except YAMLError as exc:
         raise Unreadable(f"it is not YAML ({_yaml_problem(exc)})") from exc
     try:
-        validator = Draft202012Validator(json.loads(schema.read_text(encoding="utf-8")))
+        written = schema_text if schema_text is not None else schema.read_text(encoding="utf-8")
+        validator = Draft202012Validator(json.loads(written))
     except (OSError, ValueError) as exc:
         raise Unreadable(f"its schema, {schema.name}, cannot be read ({exc})") from exc
     errors = sorted(validator.iter_errors(data), key=lambda e: [str(s) for s in e.absolute_path])
@@ -321,6 +339,10 @@ def read_kinds(path: Path = KINDS_FILE, schema: Path = KINDS_SCHEMA) -> dict[str
         pointer = "".join(f"/{segment}" for segment in first.absolute_path)
         raise Unreadable(f"it does not fit {schema.name}: at `{pointer or '/'}`, {first.message}")
     return {name: _kind(name, entry) for name, entry in data["kinds"].items()}
+
+
+#: `_kinds`, kept for each pair of texts the declaration and its schema had when read.
+_declared_kinds = functools.lru_cache(maxsize=4)(_kinds)
 
 
 def _kind(name: str, entry: Mapping[str, Any]) -> Kind:
@@ -734,6 +756,16 @@ def _undeclared(
         shown = Element("", LABEL, text=text.rstrip().rstrip(":").strip(), rule=kind.closed[0])
         found.append(Departure(shown, UNDECLARED, body.numbers[k], ", ".join(kind.closed)))
     return found
+
+
+def marks(lines: Sequence[Line], kind: Kind) -> list[tuple[int, str, int, str]]:
+    """Where a body's parts open, as the structure reads its marks: each heading, and each
+    label `kind`'s `labels` holds, outside fenced code and comments, in order. Each is given
+    as the index of its line among `lines`, its type, its level and its text as written.
+    The mentions' links read an actor's, a use case's, a journey's and a requirement's
+    body one part at a time here (`_lib/links.py`)."""
+    body = _read(lines, kind.labels)
+    return [(mark.index, mark.type, mark.level, mark.text) for mark in body.marks]
 
 
 def rows(lines: Sequence[Line]) -> tuple[forms.Row, ...]:

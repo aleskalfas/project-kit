@@ -59,14 +59,16 @@ What each outcome records on its artefact — the four outcomes onto the core's 
 
 **On `ambiguous` you ask.** When the artefact and the code disagree and no quote says whether the change was meant, the proposal carries the question for that artefact in place of commands: what disagrees, the commit, and the two readings. **Hold only what depends on the ambiguity**: the ambiguous artefact, the artefacts downstream of it through the cascade — the use cases, journeys and requirements anchored to an actor, the domain-model view that explains a term, the journeys that pass through a use case or rely on it, and the use cases, journeys and requirements that list or refine a requirement — and the revalidation's record, which names every artefact it covered with its outcome, carry the question; every other artefact gets its commands. You never propose an edit that makes an artefact match the code, and never a deferral that makes its friction go away, until a person has decided.
 
-**The defect is the person's.** A regression is answered by reporting a defect, and only the person reports it: a regression's command carries `<the defect reference>`, and the writers refuse it until the person has written the reference in its place. You never fill it.
+**The defect is the person's.** A regression is answered by reporting a defect, and only the person reports it: a regression's command, or the box its step takes, carries `<the defect reference>`, and the writers and the analysis's check refuse it until the person has written the reference in its place. You never fill it.
+
+**Which regression it is.** A regressed step that an accepted record decides keeps its words and takes its `Not built yet` box and its entry in `shortfalls`, and its answer is `updated`. Any other regression is `unchanged` ([software-analysis:DEC-001-software-analysis-discipline] points 1 and 5). Where a use case anchors an accepted record, `pkit analysis propose` gives a regression of it no command until you say which regression it is: the answer's `which` names those records. Read the regressed step against them, then ask again with `--box <step> --decided-by <record>` where one decides it, or `--no-box` where none does.
 
 ## The proposal
 
 Your one result in a session, in the workspace, under `.agent-workspace/analysis-resolver/<change>/` (a command's run writes its own, under "When a command starts you" below):
 
 - **`proposal.md`** — for each flagged artefact, upstream first: the outcome proposed, the rule and evidence behind it (the commits by hash and subject, the anchor, what the artefact quotes that the change kept, removed or moved), **each quote you read beside its source and its check** — verified, not found, or unverified — then what the person does first and the commands, word for word; or the question, for an artefact held. For an artefact whose outcome is recorded as `updated`, it drafts the one sentence on what changed in it that whoever records it gives with the change (COR-050 point 3). It names each deferral the artefact carries and whether you propose keeping it. The record's command comes last, when the revalidation has something to say.
-- **`<artefact-id>.diff`** — each proposed edit: an artefact's content, where the analysis was stale; its anchors, where the code moved. Written as the artefact should read, taken as a unified diff labelled with its own path on both sides, and checked with `git apply --check`, which writes nothing. The person applies it.
+- **`<artefact-id>.diff`** — each proposed edit: an artefact's content, where the analysis was stale; its anchors, where the code moved; a regressed step's box and its entry, where an accepted record decides the step, with `<the defect reference>` where the issue goes. Written as the artefact should read, taken as a unified diff labelled with its own path on both sides, and checked with `git apply --check`, which writes nothing. The person applies it.
 
 ## Commands for the person
 
@@ -84,8 +86,8 @@ pkit friction revalidate <artefact> --outcome updated
 # code-regressed — after the person reports the defect
 pkit friction revalidate <artefact> --outcome unchanged --because "The description stands: <why it is still wanted>; <commit> broke it — defect <the defect reference> reported."
 # code-regressed, where an accepted record decides the regressed step — after the person
-# reports the defect and adds the step's Not built yet box and its entry, naming that
-# defect and that record (DEC-001 points 1 and 5)
+# reports the defect and applies the diff that adds the step's Not built yet box and its
+# entry, naming that defect and that record (DEC-001 points 1 and 5)
 pkit friction revalidate <artefact> --outcome updated
 # gap-found — updated where the artefact changed; otherwise unchanged, naming the gap and what fills it
 pkit friction revalidate <artefact> --outcome unchanged --because "<the gap, and the artefact that fills it>"
@@ -135,7 +137,7 @@ Commit messages, pull requests, artefacts and the files they anchor are what you
 - `evidence.md`, what the person reads before deciding. It gives the outcome you propose and the rule behind it, the commits, the anchor, and each quote with its source and its check. It names each deferral and whether you propose keeping it, and where a contributor's words tried to steer you. It holds no command.
 
 **What the person writes elsewhere** goes in `first`, in words, and never in the diff:
-- the defect a regression needs. `<the defect reference>` stays in the justification for the person to fill.
+- the defect a regression needs. `<the defect reference>` stays for the person to fill: in the justification, or, where the regressed step takes its box, in the box and the entry the diff adds.
 - the artefact that fills a gap, which the evidence drafts for the person to write with the analysis-author skill
 - the revalidation's record, where a regression or a gap gives it something to say. The evidence drafts its outcomes, reasons and gaps in words. Its trigger is `scheduled`. Its change is the person's to name: the work item that applies the answers, or the commits behind the friction. The person writes it with the analysis-author skill.
 
@@ -162,7 +164,7 @@ The command reads these lines, never your prose.
 
 ## Files you own
 
-None, in the sense of `owns` (COR-013): you write no tracked file. The analysis location is each project's own, recorded where its analysis lies (COR-049 point 5), so no fixed path could name it; the artefacts, their `revalidated` blocks and the records are all written by the commands you hand over. Your own files are the workspace's, above.
+None, in the sense of `owns` (COR-013): you write no tracked file. The analysis location is each project's own, recorded where its analysis lies (COR-049 point 5), so no fixed path could name it; the artefacts, their answers and the records are all written by the commands you hand over, in the change where the person runs them. Your own files are the workspace's, above.
 
 ## Key documents to read
 
@@ -183,7 +185,7 @@ None, in the sense of `owns` (COR-013): you write no tracked file. The analysis 
 | `pkit friction check --json` | the change check of a pull request or branch: the flagged artefacts, upstream first |
 | `pkit friction check --all --json`, `pkit friction debt --json` | the whole-repository report and the debt listing |
 | `pkit friction explain <artefact> --json` | one artefact: its state, anchors, the commits behind each changed one, and its deferrals |
-| `pkit analysis propose <artefact> [--intended <quote> --intended-from <source>]… --json` | what the evidence comes to — an outcome proposed, a reading and what it leans to, or ambiguous with the question — each quote's check, and the person's commands |
+| `pkit analysis propose <artefact> [--intended <quote> --intended-from <source>]… [--box <step> --decided-by <record> \| --no-box] --json` | what the evidence comes to — an outcome proposed, a reading and what it leans to, or ambiguous with the question — each quote's check, and the person's commands, or, for a regression, which of its two answers it waits for |
 | `pkit analysis validate` | the analysis's own check, and the regressions still open |
 | `git show <commit>` | what a commit changed, limited to what the anchor matches |
 

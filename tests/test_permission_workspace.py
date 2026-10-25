@@ -20,6 +20,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -166,17 +167,17 @@ def test_a_symlink_out_of_the_workspace_is_outside_it(dm, catalog, root, tmp_pat
 # Every command below writes or deletes only inside the workspace — or claims to.
 # None is granted by it: each is decided as main decides any shell command, so
 # under the widest shipped profile a lenient posture defers to the operator and a
-# strict one denies — except where a leading `cd` leaves a redirect behind it,
-# which ADR-025 abstains on in either posture. The first five are the security
-# review's proofs of concept (arbitrary execution through an emitter's
-# arguments); the `cd …/nope; …` pair is the code review's (a `;` runs the
-# remainder in the ORIGINAL directory when the `cd` fails, so "relative to the
-# `cd` directory" was never certain — `rm -f *` would empty the project root).
+# strict one denies, with or without a leading `cd` (ADR-025 point 2, #1917).
+# The first five are the security review's proofs of concept (arbitrary
+# execution through an emitter's arguments); the `cd …/nope; …` pair is the
+# code review's (a `;` runs the remainder in the ORIGINAL directory when the
+# `cd` fails, so "relative to the `cd` directory" was never certain — `rm -f *`
+# would empty the project root).
 
 _SHELL_WRITES = [  # (command, lenient verdict, strict verdict)
     # the security review's proofs of concept
     (f"echo =(touch PWNED) > {WS}/x", "abstain", "deny"),  # zsh process substitution
-    (f"cd src && echo =(touch PWNED) > ../{WS}/x", "abstain", "abstain"),  # behind a leading cd
+    (f"cd src && echo =(touch PWNED) > ../{WS}/x", "abstain", "deny"),  # behind a leading cd
     (rf"echo ${{(e)C:=\$\(touch PWNED\)}} > {WS}/x", "abstain", "deny"),  # zsh (e) flag
     (
         rf"echo ${{C:=\$\(touch PWNED\)}}${{C@P}} > {WS}/x",
@@ -186,7 +187,7 @@ _SHELL_WRITES = [  # (command, lenient verdict, strict verdict)
     (f"echo *(e:'touch PWNED':) > {WS}/x", "abstain", "deny"),  # zsh glob qualifier
     # the code review's: the `cd` fails, the remainder runs in the project root
     (f"cd {WS}/nope; rm -f *", "abstain", "deny"),
-    (f"cd {WS}/nope; echo x > f", "abstain", "abstain"),
+    (f"cd {WS}/nope; echo x > f", "abstain", "deny"),
     # the plain shapes the reverted recognizer read as the workspace's
     (f"echo hello > {WS}/note.txt", "abstain", "deny"),
     (f"printf '%s\\n' one two >> {WS}/note.txt", "abstain", "deny"),
@@ -206,13 +207,16 @@ def test_a_shell_write_into_the_workspace_is_not_granted_by_it(
 
 
 def test_a_redirect_behind_a_leading_cd_still_fails_closed(dm, catalog, root) -> None:
-    # ADR-025 unchanged: after a stripped `cd`, a redirect or a quote abstains
+    # ADR-025 point 2: after a stripped `cd`, a redirect or a quote abstains
     # even when the command in front of it is granted and the target is the
-    # workspace.
+    # workspace, as it does with no `cd` (#1917).
     model = _autonomous(dm, catalog)
     for command in (
         f"cd {root} && git diff > {WS}/change.patch",
         f"cd {root} && cat > {WS}/body.md <<'EOF'\nIt's done.\nEOF",
+        # a redirection that writes no file beside it changes nothing (#2002)
+        f"cd {root} && git diff > {WS}/change.patch 2>&1",
+        f"cd {root} && git diff 2>/dev/null > {WS}/change.patch",
     ):
         verdict, reason = dm.hook_decide(
             model, catalog, _bash(command, root), project_root=str(root)
@@ -258,15 +262,72 @@ def main_dm(tmp_path_factory):
         "git status",
         "rm -rf build/",
         "python3 build.py > out.txt",
+        # a redirection that writes no file (#2002)
+        "git status 2>&1",
+        "cd src && gh pr list >/dev/null",
+        f"echo hello > {WS}/note.txt 2>&1",
+        f"cd src && git diff 2>/dev/null > ../{WS}/change.patch",
     ],
 )
 @pytest.mark.parametrize("posture", ["lenient", "strict"])
 def test_the_shell_judgment_is_mains(dm, main_dm, catalog, root, command, posture) -> None:
     model = _autonomous(dm, catalog, posture=posture)
-    payload = _bash(command, root)
-    assert dm.hook_decide(model, catalog, payload, project_root=str(root)) == main_dm.hook_decide(
-        model, catalog, payload, project_root=str(root)
-    )
+    ours = dm.hook_decide(model, catalog, _bash(command, root), project_root=str(root))
+
+    def mains(read: str) -> Any:
+        return main_dm.hook_decide(model, catalog, _bash(read, root), project_root=str(root))
+
+    # A deliberate, reviewed verdict change names in `readings` how main must
+    # read a command for its verdict to be ours. #2002 named
+    # `dm._without_harmless_redirections`, which removes a redirection that
+    # writes no file. Main's verdict on the command as it stands is tried
+    # first, so a reading left in place once its change is on main does no
+    # harm (#2011). Delete it in any change after that one merges.
+    readings: tuple[Callable[[str], str], ...] = ()
+    assert _is_mains_judgment(ours, mains, command, readings), (ours, mains(command))
+
+
+def _is_mains_judgment(
+    ours: Any, mains: Callable[[str], Any], command: str, readings: tuple[Callable[[str], str], ...]
+) -> bool:
+    """Whether `ours` is main's verdict on `command`, as it stands or as the
+    sanctioned `readings`, applied in turn, have main read it."""
+    if ours == mains(command):
+        return True
+    read = command
+    for reading in readings:
+        read = reading(read)
+    return ours == mains(read)
+
+
+def test_the_judgment_guard_passes_a_reading_main_already_carries() -> None:
+    # Main already removes the `2>&1`, so its verdict on the command as it
+    # stands is ours: the reading does no harm, whatever it would make of it.
+    def mains(read: str) -> str:
+        return {"git status 2>&1": "allow", "git status": "allow"}.get(read, "abstain")
+
+    def stale(read: str) -> str:
+        return read + " (read again)"
+
+    assert _is_mains_judgment("allow", mains, "git status 2>&1", (stale,))
+    # It still lets no other verdict through.
+    assert not _is_mains_judgment("deny", mains, "git status 2>&1", (stale,))
+
+
+def test_the_judgment_guard_compares_a_pending_reading_as_before() -> None:
+    # Main does not yet remove the `2>&1`: ours is its verdict on the command
+    # without it, and on nothing else.
+    def mains(read: str) -> str:
+        return {"git status": "allow"}.get(read, "abstain")
+
+    def strip(read: str) -> str:
+        return read.replace(" 2>&1", "")
+
+    assert _is_mains_judgment("allow", mains, "git status 2>&1", (strip,))
+    assert _is_mains_judgment("abstain", mains, "git status > out", (strip,))
+    assert not _is_mains_judgment("allow", mains, "git status > out", (strip,))
+    assert not _is_mains_judgment("deny", mains, "git status 2>&1", (strip,))
+    assert not _is_mains_judgment("allow", mains, "git status 2>&1", ())
 
 
 # --- a worktree has its own workspace ----------------------------------------------

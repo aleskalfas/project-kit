@@ -145,6 +145,11 @@ def test_the_check_is_reached_under_the_capability_and_its_alias(
 
 #: What an actor's `needs` and a term's `definition` hold as the stamp writes them: each
 #: field's hint, as the declaration gives it, with its example (#1593).
+SUMMARY_HINT = (
+    "Who the actor is, in one sentence that a table of the actors shows. Write the "
+    "first sentence of the opening below, word for word. Example: Someone who builds "
+    "reports from their team's figures."
+)
 NEEDS_HINT = (
     "What the actor needs from the system, each in one sentence in their own voice. Start "
     "with the verb, or with *Never* and the verb, with *I* and *my* where they refer to "
@@ -193,6 +198,7 @@ def test_what_the_stamp_writes_passes_the_check_once_its_placeholders_are_filled
         (f"{GLOSSARY}#TERM-sandbox:/definition", _field_hint_left(DEFINITION_HINT)),
         (f"{GLOSSARY}#TERM-sandbox", hinted(GLOSSARY, "its section", 1)),
         (f"{actor_at('ACT-admin')}:/needs/0", _field_hint_left(NEEDS_HINT)),
+        (f"{actor_at('ACT-admin')}:/summary", _field_hint_left(SUMMARY_HINT)),
         (actor_at("ACT-admin"), hinted(actor_at("ACT-admin"), "its body", 2)),
         (export, hinted(export, "its body", 8)),
     ]

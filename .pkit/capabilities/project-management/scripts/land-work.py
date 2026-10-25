@@ -70,9 +70,11 @@ there instead, and changes nothing else.
           merge with the first line of each `[block]` finding; a reviewer
           that could not be run stops it too. The advisories of the approvals
           are printed (DEC-028's finding tags, read by
-          `_lib.agent_verdicts.findings`). In human mode, and with no local
-          reviewer registered, there is nothing to run: the approval is
-          `done-work`'s gate.
+          `_lib.agent_verdicts.findings`). `review-pr` works out the required
+          set, so a reviewer a capability contributes runs though the project
+          registers no local reviewer of its own (#1934). In human mode, and
+          where the PR requires no local reviewer, there is nothing to run:
+          the approval is `done-work`'s gate.
   findings to judge
           Each `[person]` finding, printed whole with the verdict's reviewer,
           from each reviewer's latest verdict as the merge gate selects it
@@ -107,7 +109,13 @@ there instead, and changes nothing else.
           reference or holds an HTML comment's delimiter, a list the
           description cannot hold, and — where there is a list — a base whose
           commits since the head left it changed a file the list's words are
-          on. A write the host answers with an error merges nothing.
+          on: the file the change check names for an answer, an answer file or
+          the artefact's own. A write the host answers with an error merges
+          nothing. Beside the list, never in it, the step prints each
+          revalidation on the base's tip that the change's answer on its
+          document did not read, which the check derived against the base it
+          fetched (`answered_apart_at_tip`, DEC-055 point 3): once merged,
+          each and the change's own are answered apart. It stops nothing.
           The step also prints each grant and refusal the change adds to the
           fixers' grant list or removes from it, a line each: `fixers` in this
           capability's project configuration, read where the head left its
@@ -381,6 +389,9 @@ class _AnswersEnd:
     #: the pinned head, as the `ready:` line says it, or "": the change differs from
     #: the one at the head authorised, or that one could not be read.
     grants_moved: str = ""
+    #: How many revalidations on the base's tip the merge would leave answered apart
+    #: from the change's own (`friction_answers.apart`); their lines are in `told` too.
+    apart: int = 0
 
     def phrase(self) -> str:
         """What the `ready:` line says of the lines above it —
@@ -401,6 +412,9 @@ class _AnswersEnd:
             parts.append(friction_answers.CHECKED)
         if self.grants:
             parts.append(GRANTS)
+        if self.apart:
+            noun = "revalidation" if self.apart == 1 else "revalidations"
+            parts.append(f"{self.apart} {noun} answered apart once merged")
         if not parts:
             return ""
         said = parts[0] if len(parts) == 1 else f"{', '.join(parts[:-1])} and {parts[-1]}"
@@ -1032,12 +1046,8 @@ def _review(
         )
         return _ReviewEnd(clear=True, approval="the PR is approved")
     agents = _ReviewEnd(clear=True, approval="all required verdicts approved")
-    if not review_pr._get_local_registered(config):
-        _say(
-            "review: no local reviewer is registered — done-work's gate reads the "
-            "remote reviewers' verdicts"
-        )
-        return agents
+    # review-pr works out the required set itself, a contributed reviewer
+    # included where the project registers no local reviewer of its own (#1934).
     argv = [str(issue), *_passed_through(args, review=True)]
     try:
         run = review_pr.review(argv, pinned_head=head.oid, branch_reading=reading)
@@ -1086,6 +1096,9 @@ def _review(
             EXIT_REVIEW_INCOMPLETE,
             f"review: stopped — review-pr exited {run.exit_code}, so the review is not complete",
         )
+    if not run.required:
+        _say("review: no local reviewer is required — the approval is done-work's gate")
+        return agents
     kept, ran = len(run.kept), len(run.posted)
     if args.dry_run:
         would = f"run {', '.join(run.would_run)}" if run.would_run else "run none"
@@ -1164,10 +1177,13 @@ def _answers(
         )
     grants = _grant_change(derived, head, capability_root)
     moved = _grants_moved(derived, head, capability_root, grants)
+    # Against the base's tip, which `derive` fetched for the run: printed beside the
+    # list, never in it, and stopping nothing (DEC-055 point 3).
+    apart = tuple(friction_answers.apart(document))
     body = _read_body(head, config)
     if not derived.listed:
         _warn_unread(friction_answers.strip(body))
-        return _no_answers(args, head, body, config, capability_root, grants, moved)
+        return _no_answers(args, head, body, config, capability_root, grants, moved, apart)
     if derived.outdated:
         _refuse_moved_base(derived, head)
     settings = derived.settings
@@ -1215,8 +1231,8 @@ def _answers(
     _warn_unread(body if friction_answers.current(body, section) else friction_answers.strip(body))
     for line in friction_answers.lines(document, settings, sentences):
         print(f"  {line}")
-    for change in grants:
-        print(f"  {change.said()}")
+    for line in (*apart, *(change.said() for change in grants)):
+        print(f"  {line}")
     count = friction_answers.documents(derived.answers)
     written = _with_grants(friction_answers.affected(count, settings=bool(settings)), grants)
     counted = friction_answers.counted_told(document)
@@ -1227,11 +1243,13 @@ def _answers(
         settings=len(settings),
         told=(
             *friction_answers.told(document, settings, sentences),
+            *apart,
             *(change.said() for change in grants),
         ),
         unasked=sum(1 for entry in derived.answers if entry.get("asked") is not True),
         grants=grants,
         grants_moved=moved,
+        apart=len(apart),
     )
     if friction_answers.current(body, section):
         _say(f"{STEP}: {written}, {_LISTED}")
@@ -1270,17 +1288,18 @@ def _no_answers(
     capability_root: Path,
     grants: tuple[fixers.GrantChange, ...] = (),
     moved: str = "",
+    apart: tuple[str, ...] = (),
 ) -> _AnswersEnd:
     """A change that wrote no answers and alters no friction setting: the run goes
     on as it would without the step, and a list an earlier head left in the
     description — or a section under its heading no command wrote — is removed.
-    A change to the fixers' grant list is printed all the same."""
-    for change in grants:
-        print(f"  {change.said()}")
+    A revalidation the merge would leave answered apart from one the change moved,
+    and a change to the fixers' grant list, are printed all the same."""
+    said = (*apart, *(change.said() for change in grants))
+    for line in said:
+        print(f"  {line}")
     none = _with_grants("none", grants)
-    end = _AnswersEnd(
-        told=tuple(change.said() for change in grants), grants=grants, grants_moved=moved
-    )
+    end = _AnswersEnd(told=said, grants=grants, grants_moved=moved, apart=len(apart))
     if friction_answers.current(body, None):
         _say(f"{STEP}: {none}")
         return end
@@ -1415,7 +1434,8 @@ def _grants_between(
 
 def _refuse_moved_base(derived: friction_answers.Derivation, head: _Head) -> None:
     """Where the base moved on after the head left it, refuse when its commits
-    since changed what the list's words are on — a file an answer is on, or the
+    since changed what the list's words are on — the file the change check names
+    for an answer, an answer file or the artefact's own (`listed_paths`), or the
     friction settings the list shows: the merge could then land words the list
     does not show. An outdated base that changed none of them stops nothing; one
     whose changes cannot be read is refused, never guessed."""

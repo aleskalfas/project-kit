@@ -1,0 +1,5 @@
+component: software-analysis
+kind: none
+body: >
+  Project-kit's own settings give the core analysis's areas their goals. The
+  file is project-owned, and nothing an adopter installs changes.

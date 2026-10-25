@@ -1,0 +1,7 @@
+component: living-docs
+kind: none
+body: >
+  A test now pins that the documentation check's contribution gives no
+  obligation for a page whose revalidations were answered apart, as
+  project-management DEC-053 point 4 decides (#1872). The contribution
+  already read only the pages the backbone reports stale, so no code changes.

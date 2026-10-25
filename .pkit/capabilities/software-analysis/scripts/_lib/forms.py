@@ -118,6 +118,13 @@ each with what it reads:
   opening `**From ` stand for an entry, so a list of the writer's own in the
   opening stays content. Where `builds-on` lists nothing, the form asks
   nothing.
+- **`summary-matches-front-matter`**, an actor's opening: where the actor's
+  front matter gives a `summary` (DEC-001 point 1), the opening's first
+  sentence is that summary, exactly, white space aside (`first_sentence`). The
+  first sentence ends where the `sentence` form ends one, or at the end of the
+  opening's first paragraph. Where the front matter gives no summary, or one
+  that still holds its hint, the form asks nothing: the schema and the
+  placeholder check report those.
 - **`headings-match-front-matter`**, a domain-model view's repeated section
   (DEC-004 point 2), read from the section's headings rather than from a part
   (`headings_match`): one section for each entry of the front matter's
@@ -156,6 +163,11 @@ GAPS_MATCH = "gaps-match-outcomes"
 DEFINITION = "definition"
 BUILDS_ON_MATCH = "builds-on-matches-front-matter"
 HEADINGS_MATCH = "headings-match-front-matter"
+SUMMARY_MATCH = "summary-matches-front-matter"
+
+#: An actor's front-matter field that gives the first sentence of its opening, for a tool
+#: to read (DEC-001 point 1).
+SUMMARY = "summary"
 
 #: A domain-model view's front-matter list of the terms it explains, which its sections'
 #: headings match (DEC-004 point 2).
@@ -486,6 +498,8 @@ def judge(form: str | None, part: Part, context: Context) -> list[Breach]:
         return _gaps_match(part, context)
     if form == BUILDS_ON_MATCH:
         return _builds_on_match(part, context)
+    if form == SUMMARY_MATCH:
+        return _summary_match(part, context)
     return []
 
 
@@ -1210,6 +1224,65 @@ def definition_problems(text: str, name: object) -> list[str]:
             shown = ", ".join(f"`{w}`" for w in held)
             problems.append(f"it holds {shown}, a word of the term's name")
     return problems
+
+
+# --- an actor's summary --------------------------------------------------------------------------
+
+#: A hint the stamp writes as a field's placeholder, which the placeholder check reports.
+_HINTED = re.compile(r"<!--\s*pkit:hint\b")
+
+
+def first_sentence(text: str) -> str:
+    """The first sentence of `text`'s first paragraph, white space runs read as one space:
+    it ends where the `sentence` form ends one (`one_sentence`), or at the paragraph's end.
+    A character a reader sees nothing of is read as nothing, and a mark inside a code span
+    ends no sentence."""
+    paragraph = re.split(r"\n[ \t]*\n", text.strip(), maxsplit=1)[0]
+    seen = " ".join("".join(c for c in paragraph if not _ignorable(c)).split())
+    masked = _CODE_SPAN.sub(lambda found: "x" * len(found.group(0)), seen)
+    for end in _SENTENCE_END.finditer(masked):
+        if end.end() < len(masked) and _capital(masked[end.end()]):
+            return seen[: end.start() + 1]
+    return seen
+
+
+def first_sentence_end(text: str) -> int:
+    """Where in `text` itself the sentence `first_sentence` reads ends: past the mark that
+    ends it, or at the end of the first paragraph, white space after it left out. The
+    mentions' links keep that sentence of an actor's opening plain, since it says the
+    summary again (`_lib/links.py`)."""
+    start = len(text) - len(text.lstrip())
+    blank = re.search(r"\n[ \t]*\n", text[start:])
+    end = start + (blank.start() if blank is not None else len(text[start:].rstrip()))
+    masked = _CODE_SPAN.sub(lambda found: "x" * len(found.group(0)), text[start:end])
+    for found in _SENTENCE_END.finditer(masked):
+        following = next((c for c in masked[found.end() :] if not _ignorable(c)), None)
+        if following is not None and _capital(following):
+            return start + found.start() + 1
+    return end
+
+
+def _summary_match(part: Part, context: Context) -> list[Breach]:
+    """An actor's opening against its front matter's `summary`: its first sentence is the
+    summary, exactly, white space aside. Nothing is asked where the actor gives no
+    summary, or one that still holds its hint."""
+    summary = context.fields.get(SUMMARY)
+    if not isinstance(summary, str) or not summary.strip() or _HINTED.search(summary):
+        return []
+    wanted = " ".join("".join(c for c in summary if not _ignorable(c)).split())
+    rows = ((part.lead,) if part.lead else ()) + part.rows
+    written = first_sentence("\n".join(row.text for row in rows if not row.fence))
+    if written == wanted:
+        return []
+    return [
+        Breach(
+            BREAKS_FORM,
+            part.line,
+            f"its first sentence reads `{_shown(written, 80)}`, where the front matter's "
+            f"`{SUMMARY}` reads `{_shown(wanted, 80)}`: the summary is the opening's first "
+            f"sentence, word for word, so write the two alike",
+        )
+    ]
 
 
 # --- a glossary's head ---------------------------------------------------------------------------

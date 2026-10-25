@@ -3,8 +3,9 @@
 `pkit refs lookup` resolves a point of a record, `COR-050#14`, to its record's file and
 the anchor a repository host gives its heading, reading the record's points as
 validation reads them (`record_points`). A rule resolves to its place and its heading's
-anchor. Several citations are answered in one call, and `--json` answers each as data,
-which a capability's script reads instead of looking for a record itself.
+anchor. `--json` answers several citations in one document, each with its file, its
+anchor and whether the file is a synced copy, which a capability's script reads instead
+of looking for a record itself.
 
 The host's anchor (`document_parts.host_anchors`) is GitHub's: the heading's text as it
 renders, in lower case, every character but letters, digits, underscores, spaces and
@@ -163,7 +164,7 @@ def test_a_rule_resolves_to_its_place_and_its_heading_s_anchor() -> None:
     ]
     assert found[0].anchor is not None and found[0].anchor.startswith("rs-write-005--")
     assert found[1].anchor is not None and found[1].anchor.startswith("rs-san-001--")
-    assert found[0].locations == ("tech-docs/rule-sets/writing.md#RS-WRITE-005",)
+    assert found[0].paths == ("tech-docs/rule-sets/writing.md#RS-WRITE-005",)
 
 
 def test_a_capability_s_decision_resolves_its_points_too() -> None:
@@ -182,36 +183,42 @@ def test_a_capability_s_decision_resolves_its_points_too() -> None:
     assert found[1].anchor == "1-what-it-keeps-and-in-what-shape"
 
 
-def test_the_command_answers_several_citations_and_as_data(records: Path) -> None:
-    """Plain, each location on a line, and exit 1 naming what does not resolve; with
-    `--json`, one object for each citation, in order, and exit 0."""
+def test_the_command_answers_a_point_and_several_citations_as_data(records: Path) -> None:
+    """Plain, a point's file and its heading's anchor on a line, and exit 1 naming a point
+    that does not resolve; with `--json`, each citation answered in one document, in
+    order, its file, its anchor and whether it is a synced copy among the answer, and
+    exit 0."""
     runner = CliRunner()
-    plain = runner.invoke(main, ["refs", "lookup", "COR-900", "PRJ-002#D3"])
+    plain = runner.invoke(main, ["refs", "lookup", "PRJ-002#D3"])
     assert plain.exit_code == 0, plain.output
     assert plain.output.splitlines() == [
-        ".pkit/decisions/core/COR-900-anchors.md",
         ".pkit/decisions/project/PRJ-002-versions.md#d3--release-driven",
     ]
-    failed = runner.invoke(main, ["refs", "lookup", "COR-900", "COR-900#9"])
+    failed = runner.invoke(main, ["refs", "lookup", "COR-900#9"])
     assert failed.exit_code == 1
     assert "COR-900 holds no point 9." in failed.output
     as_json = runner.invoke(main, ["refs", "lookup", "--json", "COR-900#1", "COR-999"])
     assert as_json.exit_code == 0, as_json.output
-    assert json.loads(as_json.output) == [
-        {
-            "citation": "COR-900#1",
-            "locations": [".pkit/decisions/core/COR-900-anchors.md#1-anchors-name-parts"],
-            "path": ".pkit/decisions/core/COR-900-anchors.md",
-            "anchor": "1-anchors-name-parts",
-            "problem": None,
-            "received": False,
-        },
-        {
-            "citation": "COR-999",
-            "locations": [],
-            "path": None,
-            "anchor": None,
-            "problem": "no record matches 'COR-999'",
-            "received": False,
-        },
-    ]
+    assert json.loads(as_json.output) == {
+        "schema_version": 1,
+        "lookups": [
+            {
+                "id": "COR-900#1",
+                "resolved": True,
+                "paths": [".pkit/decisions/core/COR-900-anchors.md#1-anchors-name-parts"],
+                "problem": None,
+                "path": ".pkit/decisions/core/COR-900-anchors.md",
+                "anchor": "1-anchors-name-parts",
+                "received": False,
+            },
+            {
+                "id": "COR-999",
+                "resolved": False,
+                "paths": [],
+                "problem": "no record matches 'COR-999'",
+                "path": None,
+                "anchor": None,
+                "received": False,
+            },
+        ],
+    }

@@ -40,6 +40,10 @@ pkit:
         - TERM-surface-change
         - TERM-changeset
         - TERM-release-step
+    revalidated:
+      at: 2026-10-24T21:03:29Z
+      outcome: unchanged
+      unchanged-because: TERM-head lists head branch, and TERM-report lists whole-repository report, as phrases their distinctions already told apart. Neither definition changed, so the sections on head and report hold.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

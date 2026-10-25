@@ -8,8 +8,10 @@
 """Project-management capability — edit-workstream (verb-subject per DEC-020 + DEC-018).
 
 Edits an existing workstream's name / description / status /
-deprecated_reason. Per DEC-018, status flips require explicit
-confirmation; non-status edits proceed without further prompting.
+deprecated_reason. Each value given is checked against DEC-018's rules
+(`_lib/workstreams`) before anything is written. Per DEC-018, status
+flips require explicit confirmation; non-status edits proceed without
+further prompting.
 
 Membership gate per DEC-021 runs at startup.
 
@@ -46,6 +48,7 @@ from _lib.membership import (
 )
 from _lib.workstreams import (
     parse_workstreams,
+    validate_attributes,
     workstreams_path,
 )
 
@@ -76,6 +79,17 @@ def main() -> int:
             file=sys.stderr,
         )
         return 2
+
+    errors = validate_attributes(
+        name=args.name,
+        description=args.description,
+        status=args.status,
+        deprecated_reason=args.deprecated_reason,
+    )
+    if errors:
+        for err in errors:
+            print(f"[refused] {err}", file=sys.stderr)
+        return 1
 
     capability_root = resolve_capability_root(args.capability_root)
     if capability_root is None:

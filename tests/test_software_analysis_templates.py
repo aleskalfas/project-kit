@@ -978,7 +978,7 @@ def test_a_hint_is_one_marked_comment_with_its_example() -> None:
 #: requirement's statement, measure and where it holds are a writer's, and its actors and
 #: what it refines are written from what the stamp is given (#1691).
 FIELDS_LEFT = {
-    "actor": {"needs"},
+    "actor": {"summary", "needs"},
     "glossary": {"definition"},
     "use-case": set(),
     "journey": set(),

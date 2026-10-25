@@ -11,9 +11,9 @@ TERM-acceptance-gate:
         record:
           - COR-051#4
       revalidated:
-        at: 2026-10-21T15:08:59Z
+        at: 2026-10-24T22:53:43Z
         outcome: unchanged
-        unchanged-because: The decisions README gains how pkit refs lookup answers a point of a record and answers as data. What it says of the acceptance gate is unchanged.
+        unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json. Which records bind, and the gate on proposed ones, are untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -27,9 +27,9 @@ TERM-adapter:
           - COR-028
           - COR-047
       revalidated:
-        at: 2026-10-20T01:37:01Z
+        at: 2026-10-21T15:45:07Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-005 says pkit new adapter stamps package.yaml, README.md and migrations/, and where an adapter's scripts are documented. An adapter still carries the methodology into one harness, so the definition holds.
 TERM-agent-definition:
   name: agent definition
   noun-forms: [agent definitions]
@@ -39,16 +39,36 @@ TERM-agent-definition:
     friction:
       anchors:
         path:
-          - .pkit/adapters/claude-code/deploy-agents.sh
+          - src/project_kit/agents.py
+          - .pkit/adapters/README.md
         record:
           - COR-006
           - COR-013#1
           - COR-013#2
           - COR-013#5
       revalidated:
-        at: 2026-10-20T01:37:02Z
+        at: 2026-10-24T04:34:09Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The agent stamp now refuses a core or capability folder the project receives as synced copies. An agent definition is still a deployed document with one remit, so the definition holds.
+TERM-agent-workspace:
+  name: agent workspace
+  noun-forms: [agent workspaces]
+  status: active
+  definition: "folder at the root of a checkout where AI agents keep their intermediate files, which the system excludes from version control"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/workspace.py
+          - .pkit/rules/core.md
+        record:
+          - ADR-060#1
+          - ADR-060#3
+          - ADR-060#9
+      revalidated:
+        at: 2026-10-25T00:38:53Z
+        outcome: unchanged
+        unchanged-because: Only core rule 20 changes, on answers. Rule 16 on the agent workspace says what it said.
 TERM-anchor:
   name: anchor
   status: active
@@ -62,9 +82,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-20T01:37:04Z
+        at: 2026-10-25T00:36:52Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received. What an anchor declares and stands on is unchanged.
 TERM-answer:
   name: answer
   status: active
@@ -81,6 +101,19 @@ TERM-answer:
         at: 2026-10-20T01:37:05Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_write.py
+            reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
+          - anchor:
+              kind: record
+              value: COR-050#3
+            reason: "It defines an answer as a statement in the artefact's friction block, which COR-062 moves to answer files. #1779 builds it and rewrites the definition."
+          - anchor:
+              kind: record
+              value: COR-050#4
+            reason: "A deferral moves from the block to an answer file under COR-062, so the definition's block is out of date. #1779 builds it and rewrites the definition."
 TERM-area:
   name: area
   noun-forms: [areas]
@@ -109,9 +142,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-20T01:37:07Z
+        at: 2026-10-25T00:37:22Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received, owing the project no answer. It is still an artefact found in a place.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -128,9 +161,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-20T01:37:08Z
+        at: 2026-10-25T00:37:31Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: Discovery marks a rule a synced copy holds as received, which leaves every artefact's type as it was.
 TERM-backbone:
   name: backbone
   status: active
@@ -161,9 +194,9 @@ TERM-backbone-configuration:
           - COR-048#4
           - COR-048#5
       revalidated:
-        at: 2026-10-20T01:37:11Z
+        at: 2026-10-24T19:00:26Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "As #2003 asks, project_config.py gains a helper that asks only at a terminal. The configuration file, and the consent its writer asks, are as the definition says."
 TERM-base:
   name: base
   status: active
@@ -177,9 +210,9 @@ TERM-base:
           - COR-054#2
           - COR-054#3
       revalidated:
-        at: 2026-10-20T01:37:12Z
+        at: 2026-10-22T22:12:25Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change check now reads the change's own head from PKIT_CHECK_HEAD, which a pipeline names beside the base. What a base is stays as the definition says.
 TERM-capability:
   name: capability
   noun-forms: [capabilities]
@@ -211,9 +244,9 @@ TERM-change:
           - COR-050#3
           - COR-050#6
       revalidated:
-        at: 2026-10-20T01:37:14Z
+        at: 2026-10-21T14:25:43Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-050 is partially superseded and its point 6 says where an answer is judged. A change is still a unit of work that lands on the branch it targets, so the definition holds.
 TERM-change-check:
   name: change check
   noun-forms: [change checks]
@@ -229,9 +262,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-20T01:37:16Z
+        at: 2026-10-25T00:37:44Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change check now asks nothing of an artefact received by sync, as of an excluded one. It still compares a head with its base and lists the answers written.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -354,9 +387,22 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-20T01:37:25Z
+        at: 2026-10-25T00:38:01Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "An artefact received by sync now leaves the debt as an excluded one does, which the definition need not name. The answered-apart debt stays deferred to #1779."
+        deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_report.py
+            reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_repository.py
+            reason: "The debt listing now lists debt answered apart, dormant until the answers move to answer files, which this term's definition and section do not name. #1779 builds the move and rewrites them."
+          - anchor:
+              kind: record
+              value: COR-050#9
+            reason: "COR-050 point 9 gains debt answered apart, which this term's definition and section do not name. #1779 builds it and rewrites them."
 TERM-decision-record:
   name: decision record
   noun-forms: [decision records]
@@ -372,9 +418,9 @@ TERM-decision-record:
           - COR-025
           - COR-058#1
       revalidated:
-        at: 2026-10-20T01:37:26Z
+        at: 2026-10-24T04:34:14Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The stamp now refuses the core namespace outside the methodology's source repository too. A record is still numbered in its namespace and binds once accepted, so the definition holds.
 TERM-default-branch:
   name: default branch
   status: active
@@ -390,9 +436,9 @@ TERM-default-branch:
           - COR-054#2
           - COR-054#4
       revalidated:
-        at: 2026-10-20T01:37:28Z
+        at: 2026-10-22T22:12:33Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change only names PKIT_CHECK_HEAD, the change's own head, beside the base override, and no reader of the default branch reads it. The definition holds.
 TERM-distribution:
   name: distribution
   noun-forms: [distributions]
@@ -443,9 +489,9 @@ TERM-finding:
           - COR-055#5
           - COR-057#3
       revalidated:
-        at: 2026-10-20T01:37:31Z
+        at: 2026-10-22T22:12:35Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: No query the backbone runs inherits PKIT_CHECK_HEAD now, as none inherits the base. A finding is still a statement whose severity says whether it fails, so the definition holds.
 TERM-friction:
   name: friction
   status: active
@@ -462,9 +508,70 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-20T01:37:32Z
+        at: 2026-10-25T00:38:14Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: "An artefact received by sync now owes no answer, as an excluded one, which the term need not name. Where its section keeps answers in the block stays deferred to #1779."
+        deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_check.py
+            reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_repository.py
+            reason: "The checks now read an artefact's answers from answer files where its block holds none, and the term's section still says the block holds them. #1779 builds the move and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#1
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#5
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#6
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+          - anchor:
+              kind: record
+              value: COR-050#9
+            reason: "COR-062 moves an artefact's answers from its friction block to answer files, and the term's section still says the block holds them. #1779 builds it and rewrites the section."
+TERM-grant:
+  name: grant
+  status: active
+  definition: "entry of the permission model that allows or denies a subject one or more privileges, within a scope where it names one"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/decide.py
+          - .pkit/schemas/permission-grants.schema.json
+        record:
+          - COR-028#1
+          - COR-028#2
+          - ADR-005#2
+      revalidated:
+        at: 2026-10-24T11:48:10Z
+        outcome: unchanged
+        unchanged-because: A grant still allows or denies a subject privileges within its scope. The core now removes a redirection that writes no file before it matches a grant, so a grant matches the words of the command it always matched.
+TERM-guardrail:
+  name: guardrail
+  noun-forms: [guardrails]
+  status: active
+  definition: "privilege denied to every subject whatever any grant allows, whose deny each adapter also holds where its harness fails closed"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/schemas/privilege-catalog.yaml
+          - .pkit/permissions/decide.py
+        record:
+          - COR-028#2
+          - ADR-021#3
+      revalidated:
+        at: 2026-10-24T12:56:59Z
+        outcome: unchanged
+        unchanged-because: A guardrail is still denied to every subject whatever any grant allows. The new privileges for read-only filters and uv run are allow grants, and a guardrail still binds on a program behind a redirection that writes no file.
 TERM-harness:
   name: harness
   status: active
@@ -481,6 +588,7 @@ TERM-harness:
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
 TERM-head:
   name: head
+  other-senses: [head branch]
   status: active
   definition: "latest commit of the branch that carries a change, the later state a check compares with the base"
   pkit:
@@ -490,9 +598,9 @@ TERM-head:
           - COR-050#5
           - COR-050#6
       revalidated:
-        at: 2026-10-20T01:37:35Z
+        at: 2026-10-23T08:13:57Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-050 point 5 reads derived links under the head's declaration in the change check. What the head is stays as defined.
 TERM-install:
   name: install
   status: active
@@ -566,13 +674,12 @@ TERM-migration:
       anchors:
         path:
           - src/project_kit/migrations.py
-          - .pkit/capabilities/project-management/migrations/0.55.0/001-pm-reviewer-agent-rename.sh
+          - .pkit/migrations/backbone/1.150.0/001-keep-process-journal-logging.sh
         record:
           - COR-010
       revalidated:
-        at: 2026-10-20T01:37:41Z
-        outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        at: 2026-10-23T08:53:37Z
+        outcome: updated
 TERM-operational-rule:
   name: operational rule
   noun-forms: [operational rules]
@@ -582,14 +689,27 @@ TERM-operational-rule:
     friction:
       anchors:
         path:
-          - .pkit/adapters/claude-code/merge-claude-md.sh
+          - .pkit/rules/core.md
+          - .pkit/adapters/README.md
         record:
           - COR-014
           - COR-051#1
       revalidated:
-        at: 2026-10-20T01:37:42Z
+        at: 2026-10-25T00:38:28Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: Core rule 20's words change, and the rules file is still the one every session loads, so the term holds.
+TERM-overlay:
+  name: overlay
+  status: active
+  definition: "project-owned file that gives the paths an adapter writes in place of each placeholder of an agent definition as it deploys that agent definition"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/agents_overlay.py
+        record:
+          - COR-013#5
+          - ADR-052
 TERM-package-metadata:
   name: package metadata
   status: active
@@ -605,11 +725,32 @@ TERM-package-metadata:
           - COR-053#3
           - COR-056#2
       revalidated:
-        at: 2026-10-20T01:37:44Z
+        at: 2026-10-23T08:13:59Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The package check fails a derived link whose target does not compile. What package metadata is stays as defined.
+TERM-permission-hook:
+  name: permission hook
+  noun-forms: [permission hooks]
+  status: active
+  definition: "script an adapter has its harness run before each tool call, which has the backbone's decision code allow, deny or defer the call"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/decide.py
+          - src/project_kit/permissions.py
+        record:
+          - COR-028#2
+          - COR-028#3
+          - ADR-002#4
+          - ADR-003
+      revalidated:
+        at: 2026-10-24T11:48:05Z
+        outcome: unchanged
+        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
 TERM-place:
   name: place
+  other-senses: [in place]
   status: active
   definition: path or glob the project or a component declares, within which the backbone looks for documents that carry anchors
   pkit:
@@ -621,9 +762,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-20T01:37:45Z
+        at: 2026-10-25T00:38:36Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: Discovery marks a rule a synced copy holds as received. A place is still declared and walked as the term says.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -642,6 +783,57 @@ TERM-point:
         at: 2026-10-20T01:37:46Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-privilege:
+  name: privilege
+  status: active
+  definition: "named kind of action in the permission catalog, recognised from a tool call or a command, which a grant allows or denies"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/schemas/privilege-catalog.yaml
+          - .pkit/permissions/decide.py
+        record:
+          - COR-028#1
+          - ADR-021
+          - ADR-060#1
+      revalidated:
+        at: 2026-10-24T12:57:01Z
+        outcome: unchanged
+        unchanged-because: A privilege is still recognised from a tool call or a command. The catalog gains text-filter and uv-run, each recognised by its program, and the core removes a redirection that writes no file before it recognises one.
+TERM-process:
+  name: process
+  noun-forms: [processes]
+  status: active
+  definition: "declared course of one kind of subject through states, with a condition on each move, which a capability defines and the backbone's engine checks"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/process.py
+        record:
+          - COR-033
+          - COR-044
+          - COR-053#2
+TERM-profile:
+  name: profile
+  status: active
+  definition: "named set of grants and a posture, which an operator activates on one machine under the project's own grants"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/permissions/profiles/*.yaml
+          - src/project_kit/permissions.py
+        record:
+          - COR-028#1
+          - ADR-005#1
+          - ADR-005#2
+          - ADR-032
+      revalidated:
+        at: 2026-10-24T12:39:08Z
+        outcome: unchanged
+        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active
@@ -775,11 +967,12 @@ TERM-release-step:
           - PRJ-002#D4
           - PRJ-004
       revalidated:
-        at: 2026-10-20T01:37:56Z
+        at: 2026-10-24T03:44:23Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-report:
   name: report
+  other-senses: [whole-repository report]
   status: active
   definition: "issue an adopter composes with the system and files on the repository of the distribution they use: a bug, a change request or feedback"
   pkit:
@@ -810,9 +1003,9 @@ TERM-reviewer:
           - COR-057#3
           - COR-057#5
       revalidated:
-        at: 2026-10-20T01:37:58Z
+        at: 2026-10-21T14:25:51Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 keeps who decides an answer, and that a reviewer other than its writer checks it (COR-050 point 3). A reviewer is still defined by its remit, so the definition holds.
 TERM-role:
   name: role
   noun-forms: [roles]
@@ -864,9 +1057,38 @@ TERM-rule-set:
           - COR-051#6
           - COR-051#7
       revalidated:
-        at: 2026-10-20T01:38:02Z
+        at: 2026-10-21T14:25:53Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-051 point 2 now keeps a rule's answers in answer files and asks none of a synced rule. A rule set is still a collection file of named statements with a version, inheritance and scope.
+TERM-sandbox:
+  name: sandbox
+  status: active
+  definition: "isolation layer of the operating system in which the harness runs shell commands, bounding what they can reach on the file system and network"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/permissions.py
+        record:
+          - COR-028#3
+          - ADR-004#1
+          - ADR-004#2
+          - ADR-004#5
+          - ADR-008#4
+TERM-scratchpad-note:
+  name: scratchpad note
+  noun-forms: [scratchpad notes]
+  status: active
+  definition: "working draft, binding nothing, that explores a question too large for a decision record yet, and retires once it produces other documents or is dropped"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/scratchpads.py
+          - .pkit/scratchpad/README.md
+        record:
+          - COR-012
+          - COR-043
 TERM-seeding:
   name: seeding
   status: active
@@ -885,6 +1107,19 @@ TERM-seeding:
         at: 2026-10-20T01:38:03Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-session-anchor:
+  name: session anchor
+  noun-forms: [session anchors]
+  status: active
+  definition: "directory the harness records as it starts hosting an agent, which stays put when the working directory changes"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/session_guard.py
+        record:
+          - COR-039
+          - ADR-034#1
 TERM-skill:
   name: skill
   noun-forms: [skills]
@@ -894,15 +1129,16 @@ TERM-skill:
     friction:
       anchors:
         path:
-          - .pkit/adapters/claude-code/deploy-skills.sh
+          - .pkit/skills/README.md
+          - .pkit/adapters/README.md
         record:
           - COR-005
           - COR-006
           - COR-020
       revalidated:
-        at: 2026-10-20T01:38:05Z
+        at: 2026-10-23T08:53:48Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: It anchors the skills area and the core's contract with adapters in place of the Claude Code adapter's deploy script. Its definition and its section hold.
 TERM-source-repository:
   name: source repository
   noun-forms: [source repositories]
@@ -918,9 +1154,9 @@ TERM-source-repository:
           - COR-041
           - ADR-059#1
       revalidated:
-        at: 2026-10-20T01:38:06Z
+        at: 2026-10-21T14:25:59Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 keeps answers in the source repository's own answer folder, which no sync carries. A source repository is still where the originals are authored, so the definition holds.
 TERM-stamp:
   name: stamp
   status: active
@@ -933,9 +1169,26 @@ TERM-stamp:
         record:
           - COR-005
       revalidated:
-        at: 2026-10-20T01:38:07Z
+        at: 2026-10-24T04:34:17Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The migration stamp now refuses a backbone or capability folder the project receives as synced copies. A stamp is still a command writing a new file, paired with a skill, so the definition holds.
+TERM-storyboard:
+  name: storyboard
+  noun-forms: [storyboards]
+  other-senses: [executable storyboard]
+  status: active
+  definition: "document that scripts a dialogue with a person, scenario by scenario, for the file that carries it out to follow, written before that file"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/storyboards.py
+        record:
+          - COR-016
+      revalidated:
+        at: 2026-10-24T04:34:19Z
+        outcome: unchanged
+        unchanged-because: The storyboard stamp now refuses an agent whose files the project receives as synced copies. A storyboard still scripts a dialogue for the file that carries it out, so the definition holds.
 TERM-surface-change:
   name: surface change
   noun-forms: [surface changes]
@@ -951,9 +1204,9 @@ TERM-surface-change:
           - PRJ-002#D2
           - COR-050#8
       revalidated:
-        at: 2026-10-20T01:38:08Z
+        at: 2026-10-24T03:44:24Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.
 TERM-sync:
   name: sync
   status: active
@@ -989,11 +1242,12 @@ TERM-synced-copy:
           - COR-059#2
           - COR-041
       revalidated:
-        at: 2026-10-20T01:38:11Z
+        at: 2026-10-21T14:25:56Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: COR-062 says an artefact received by sync owes no answer, its answers staying with its source. A synced copy is still a file sync writes and the project never edits, so the definition holds.
 TERM-system:
   name: system
+  other-senses: [operating system]
   status: active
   definition: software under discussion, which you install, run and extend
   pkit:
@@ -1024,7 +1278,7 @@ TERM-validation:
 TERM-version:
   name: version
   noun-forms: [versions]
-  other-senses: ["data point's version"]
+  other-senses: ["data point's version", schema version, schema versions]
   status: active
   definition: "number of the form major.minor.patch that names one state of a top-level part of the system, as semantic versioning reads it"
   pkit:
@@ -1089,9 +1343,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-20T01:38:19Z
+        at: 2026-10-25T00:38:44Z
         outcome: unchanged
-        unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+        unchanged-because: The whole-repository check leaves an artefact received by sync out of the debt, as an excluded one. It still compares every artefact with its revalidation point, and never fails.
 ---
 
 # Glossary
@@ -1133,6 +1387,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **AI agent:** the runtime that runs an agent definition, or works as the main session under none (`ACT-ai-agent`). COR-006 and COR-013 call the definition itself an agent.
 - **Skill:** a procedure an AI agent loads for a task. An agent definition sets the remit the agent works within (COR-006).
 - **Overlay:** the project-owned file whose paths fill each placeholder of an agent definition when the [adapter](#term-adapter--adapter) deploys it (COR-013 [point](#term-point--point) 5).
+
+## TERM-agent-workspace — agent workspace
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#agent-workspace).
+
+**Example:** an agent writes a [pull request](#term-pull-request--pull-request)'s body to `.agent-workspace/pr-body.md` with a file tool, and passes the file to `gh pr create --body-file`.
+
+**Distinctions:**
+
+- **The harness's scratch directory:** a folder a [harness](#term-harness--harness) may offer for temporary files, outside the repository. It is no agent workspace, and the [methodology](#term-methodology--methodology)'s [operational rules](#term-operational-rule--operational-rule) send intermediate files to the agent workspace instead (core rule 16).
+- **Held folder:** a folder a [component](#term-component--component) declares for its held documents, which a commit carries. The agent workspace holds nothing a commit carries.
+- **The harness's working directory:** the checkout's root for the main session, or a worktree's root for an agent working in a worktree. The agent workspace is one folder inside it (ADR-060 [point](#term-point--point) 3).
 
 ## TERM-anchor — anchor
 
@@ -1318,7 +1584,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
 
 - **Data point, process and event:** the three kinds of connection point (COR-053 [point](#term-point--point) 2):
   - a [data point](#term-data-point--data-point) takes data in
-  - a process is offered for others to depend on
+  - a [process](#term-process--process) is offered for others to depend on
   - an event signals that a writing command finished
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision (COR-058 point 1). It shares only the word.
 - **Extension point:** COR-053's key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into (COR-053 point 3). A [rule](#term-rule--rule)'s extension point is a part of the rule that an inheriting [rule set](#term-rule-set--rule-set) may fill, and shares only the word (COR-051 point 3).
@@ -1438,6 +1704,30 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Debt:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) reports on the [default branch](#term-default-branch--default-branch). Friction nobody answered is stale [debt](#term-debt--debt), and a deferral is deferred debt (COR-050 [point](#term-point--point) 9).
 - **The `friction` block:** the block in an [artefact](#term-artefact--artefact)'s front matter that holds its anchors and answers (COR-050 point 1). It is no [finding](#term-finding--finding).
 
+## TERM-grant — grant
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#grant).
+
+**Example:** a grant to `agent:researcher` allows the [privilege](#term-privilege--privilege) `web-fetch` with the scope `docs.python.org`, so that agent fetches pages from that host alone.
+
+**Distinctions:**
+
+- **Subject:** whom a grant is for: `all`, `operator`, or one agent as `agent:<name>`. An agent's effective grants are those to `all` and its own, and a deny wins (COR-028 [point](#term-point--point) 1).
+- **Settings rule:** an allow or a deny in the [harness](#term-harness--harness)'s settings files. `pkit permissions apply` writes one where the harness can express a grant natively (COR-028 point 2).
+- **A profile's grants:** a layer the active [profile](#term-profile--profile) adds to the [project](#term-project--project)'s own grants in `.pkit/permissions/project/grants.yaml`. Activating a profile swaps that layer and never edits the file, so a grant written by hand survives (ADR-005 point 2).
+
+## TERM-guardrail — guardrail
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#guardrail).
+
+**Example:** `git push --force` falls under the guardrail `vcs-history-rewrite`, so it is denied to every agent and to the operator, whatever their grants allow.
+
+**Distinctions:**
+
+- **Deny grant:** a [grant](#term-grant--grant) that denies one subject a [privilege](#term-privilege--privilege). A [project](#term-project--project) writes it, and can remove it. A guardrail comes from the catalog's `guardrail: true`, whatever the grants say.
+- **The double lock:** a guardrail's two layers. The [backbone](#term-backbone--backbone)'s permission code denies it, and the [adapter](#term-adapter--adapter)'s own deny in its [harness](#term-harness--harness) holds where the [permission hook](#term-permission-hook--permission-hook) fails (COR-028 [point](#term-point--point) 2).
+- **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment adds. It is never a guardrail, and the backbone refuses a fragment that marks one (ADR-021 point 3).
+
 ## TERM-harness — harness
 
 Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#harness).
@@ -1518,7 +1808,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 
 Explained in [VIEW-versions-and-copies](domain-model/040-versions-and-copies.md#migration).
 
-**Example:** project-management renamed its [reviewer](#term-reviewer--reviewer)'s [agent definition](#term-agent-definition--agent-definition) from `reviewer` to `pm-reviewer`. So the [capability](#term-capability--capability)'s migration `0.55.0/001-pm-reviewer-agent-rename.sh` makes the same rename in each [project](#term-project--project)'s own settings, which [sync](#term-sync--sync) never touches.
+**Example:** from the [backbone](#term-backbone--backbone)'s 1.150.0, its engine keeps the journal of a [process](#term-process--process) only where a [project](#term-project--project) turns it on. So the migration `1.150.0/001-keep-process-journal-logging.sh` turns it on where a project kept journals, in its [backbone configuration](#term-backbone-configuration--backbone-configuration), which [sync](#term-sync--sync) never touches.
 
 **Distinctions:**
 
@@ -1537,6 +1827,18 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Core rule and project rule:** the analysis's names for an operational rule of the [methodology](#term-methodology--methodology)'s file and of the project's, cited by number, as in *core rule 2*. Neither is a [rule](#term-rule--rule) of a rule set.
 - **Core or project:** the methodology's file holds what fits any project, and the project's file holds what fits only that project (COR-014).
 
+## TERM-overlay — overlay
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#overlay).
+
+**Example:** the overlay gives `adr-records` the folder of project-kit's architecture decisions, so the deployed `architect` [agent definition](#term-agent-definition--agent-definition) names that folder.
+
+**Distinctions:**
+
+- **Placeholder:** a `<category>` in an agent definition's source. The deploy replaces it in the front matter with the overlay's paths for that category (COR-013 [point](#term-point--point) 5). In the body it stays as written.
+- **Override:** a value under `overrides.<agent>` in the overlay. It replaces a category's value for that agent definition alone, and is never merged with it (COR-013 point 5).
+- **Optional read:** a category an agent definition reads only through `reads.patterns`. Where the overlay lacks it, the deploy drops the item rather than skipping the agent definition (ADR-052).
+
 ## TERM-package-metadata — package metadata
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#package-metadata).
@@ -1547,6 +1849,19 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Manifest:** the [project](#term-project--project)'s record of what it installed, at which [version](#term-version--version). COR-017 uses that word for the package metadata too, and the analysis keeps it for the project's record.
 - **Plan:** a dry run that reads a [capability](#term-capability--capability)'s [connection points](#term-connection-point--connection-point) from its package metadata, before the capability is installed (COR-053 [point](#term-point--point) 8).
+
+## TERM-permission-hook — permission hook
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#permission-hook).
+
+**Example:** with Claude Code's permission hook registered, an agent's `docker` command outside the folders its [grant](#term-grant--grant) names is denied before the [harness](#term-harness--harness) runs it.
+
+**Distinctions:**
+
+- **The backbone's permission code:** the code under `.pkit/permissions/` that decides each call. Every [adapter](#term-adapter--adapter)'s permission hook calls it, so a hook decides as the [system](#term-system--system)'s own commands do (ADR-003).
+- **Hook of an agent:** a name an [agent definition](#term-agent-definition--agent-definition) invokes to run an operation, which a [skill](#term-skill--skill) or a script provides (COR-013 [point](#term-point--point) 4). It decides no permission.
+- **Enforcement:** the system's word for a registered permission hook. `pkit permissions enable` registers the hook with the harness, and `pkit permissions disable` removes the registration. The adapter ships the script either way.
+- **Native rules:** the allows and denies a harness enforces itself. They hold the [guardrails](#term-guardrail--guardrail) even where the permission hook fails and defers the call (COR-028 point 2).
 
 ## TERM-place — place
 
@@ -1559,6 +1874,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Documentation root:** where a [project](#term-project--project) keeps its documents, for users or for itself. A place may lie inside a root, and a root may hold files no place reads.
 - **Synced copy:** a file that [propagation](#term-propagation--propagation) writes into the project, such as a core record. A folder of [synced copies](#term-synced-copy--synced-copy) is never a place, or each [sync](#term-sync--sync) would read as [friction](#term-friction--friction) (COR-050 [point](#term-point--point) 14).
 - **Held folder:** a folder a [component](#term-component--component) declares for its held documents. No place reads a file in it as an [artefact](#term-artefact--artefact) (COR-050 point 1).
+- **In place:** where a file or an entry already stands, as in a record edited in place. In *in place of*, the phrase means instead of. It shares only the word.
 
 ## TERM-point — point
 
@@ -1572,6 +1888,43 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **A record in list form:** a record whose points are still numbered items. Their numbers may move, so no [anchor](#term-anchor--anchor) names one (COR-058 point 9).
 - **Revalidation point and deferral point:** commits that the [friction](#term-friction--friction) checks measure from (COR-050 points 3 and 4). They share only the word.
 - **Connection point:** a [component](#term-component--component)'s declared interface under a [role](#term-role--role) (COR-053 point 2). It shares only the word.
+
+## TERM-privilege — privilege
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#privilege).
+
+**Example:** `vcs` is a privilege recognised from any `git` command, so a [grant](#term-grant--grant) of it lets an agent run `git status` with no prompt.
+
+**Distinctions:**
+
+- **Path-scoped privilege:** a privilege recognised only for a file tool whose target lies in its folders, such as `workspace` (ADR-060 [point](#term-point--point) 1).
+- **A capability's privilege:** a privilege a [capability](#term-capability--capability)'s catalog fragment defines, under an id that opens with the capability's name (ADR-021).
+- **Guardrail:** a privilege the catalog marks `guardrail: true`, which every subject is denied.
+
+## TERM-process — process
+
+Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#process).
+
+**Example:** project-management's `issue-lifecycle` process moves an issue through its states, and `pkit process status` says which state an issue is in, from a live check.
+
+**Distinctions:**
+
+- **Process definition:** the file that declares a process, `schemas/<id>.yaml` in its [capability](#term-capability--capability), addressed as `<capability>:<id>` (COR-033 P2).
+- **State machine:** the [backbone](#term-backbone--backbone)'s shape that each process binds to, which holds no discipline of its own (COR-033 P1).
+- **Process connection point:** the kind of [connection point](#term-connection-point--connection-point) through which a capability offers its process for other [components](#term-component--component) to depend on (COR-053 [point](#term-point--point) 2).
+- **Operating-system process:** a running program, such as the one a command starts. It shares only the word.
+
+## TERM-profile — profile
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#profile).
+
+**Example:** `pkit permissions setup autonomy` activates the `autonomous` profile, which adds `docker` and `web-fetch` to what `non-destructive` grants.
+
+**Distinctions:**
+
+- **Posture:** what becomes of a request no [grant](#term-grant--grant) decides. `lenient` defers it to the [harness](#term-harness--harness), and `strict` denies it. A profile sets the posture, which the [project](#term-project--project) commits as shared policy (ADR-032).
+- **The project's grants:** those in `.pkit/permissions/project/grants.yaml`. Activating a profile never edits that file, so a grant written by hand survives a switch of profile (ADR-005 [point](#term-point--point) 2). Where a profile's deny meets a project's allow, the deny wins (COR-028 point 1).
+- **Autonomy settings:** the [sandbox](#term-sandbox--sandbox)'s settings that `pkit permissions setup autonomy` writes beside a profile. A profile relies on them, and never writes them (ADR-005 point 2).
 
 ## TERM-project — project
 
@@ -1695,7 +2048,7 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 
 - **Report target:** the one repository a [distribution](#term-distribution--distribution)'s reports go to, project-kit's own for project-kit. An adopter cannot name another (ADR-047 [point](#term-point--point) 3).
 - **Tracked fix:** an issue the maintainer lists under a report's `## Tracked by` heading. One issue may fix several reports (PRJ-008).
-- **Reported note:** a scratchpad note attached to a report. Once the report is posted, the note moves to `reported/` (COR-043 point 3).
+- **Reported note:** a [scratchpad note](#term-scratchpad-note--scratchpad-note) attached to a report. Once the report is posted, the note moves to `reported/` (COR-043 point 3).
 - **The whole-repository report:** what the [whole-repository check](#term-whole-repository-check--whole-repository-check) publishes for the [default branch](#term-default-branch--default-branch), such as project-kit's tracking issue. It is no report in this sense.
 
 ## TERM-reviewer — reviewer
@@ -1751,11 +2104,37 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 - **Pin:** the major number an inheriting set names for each set it inherits, as in `WRITE@2`. No [rule](#term-rule--rule) binds through a pin behind its set until the project reviews the new major (COR-051 point 7).
 - **Version pin:** the [release](#term-release--release) a project's commands run at (ADR-049 point 1). It is no rule set's pin.
 
+## TERM-sandbox — sandbox
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#sandbox).
+
+**Example:** `pkit permissions sandbox enable` adds `~/.ssh` to the sandbox's denied reads, so a command the sandbox confines cannot read there, whatever [grant](#term-grant--grant) let the command run.
+
+**Distinctions:**
+
+- **Confinement:** the bound the sandbox puts on a command's reach. The operator's need speaks of the agents' confinement, which the sandbox alone enforces (ADR-004 [point](#term-point--point) 2).
+- **Grant:** an entry that decides what a subject may invoke. It spares a prompt, and confines nothing (ADR-004 point 1).
+- **Per-agent confinement:** none exists. The agents of a session share one sandbox, so no agent is confined apart from another (ADR-004 point 5).
+- **Exclusion:** a command carved out of the sandbox, which then runs unconfined (ADR-008 point 4).
+- **Enforcement declaration:** an [adapter](#term-adapter--adapter)'s statement of what its [harness](#term-harness--harness) enforces. A dimension the harness cannot enforce is reported as a gap to close outside it, such as at the operating system (COR-028 point 3).
+
+## TERM-scratchpad-note — scratchpad note
+
+Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-and-its-methodology.md#scratchpad-note).
+
+**Example:** `2026-05-04-inventory.md` was a scratchpad note on the walk through `example-brownfield`. It retired to `done/` once COR-001, COR-002 and COR-003 held what it found.
+
+**Distinctions:**
+
+- **Decision record:** a document that states one choice, and binds once it is accepted. A scratchpad note decides nothing, and may produce [decision records](#term-decision-record--decision-record) (COR-012).
+- **Its state:** the folder it lies in, `active/`, `done/` or `dropped/`, with no status field (COR-012). A note sent with a [report](#term-report--report) moves to `reported/`, a side state of `active/` (COR-043).
+- **Agent workspace:** the folder of an agent's intermediate files, which no commit carries. A scratchpad note is committed, and kept once it retires.
+
 ## TERM-seeding — seeding
 
 Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.md#seeding).
 
-**Example:** a [project](#term-project--project) that deleted its agents overlay gets it back from the template at its next `pkit upgrade` (COR-059 [point](#term-point--point) 8).
+**Example:** a [project](#term-project--project) that deleted its agents [overlay](#term-overlay--overlay) gets it back from the template at its next `pkit upgrade` (COR-059 [point](#term-point--point) 8).
 
 **Distinctions:**
 
@@ -1763,6 +2142,18 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 - **Merge delivery:** revisits its file on every run to add entries. Seeding never writes over a file that exists (COR-059 point 8).
 - **Sync:** creates no seed path (COR-059 point 8).
 - **Stamp:** writes a new file when a person or an agent asks for one.
+
+## TERM-session-anchor — session anchor
+
+Explained in [VIEW-agents-and-permissions](domain-model/080-agents-and-permissions.md#session-anchor).
+
+**Example:** an agent's session starts in a clone of one repository, and the agent runs `pkit pull-request merge` from a clone of another. The session anchor still names the first clone, so the cross-repository guard refuses.
+
+**Distinctions:**
+
+- **Target:** the repository a command would write in, read from the working directory. The cross-repository guard compares it with the session anchor's repository (ADR-034 [point](#term-point--point) 1).
+- **Project root:** the folder the [system](#term-system--system)'s commands find the [project](#term-project--project) in, from their working directory. For those commands, the session anchor is only the other side of the cross-repository guard's comparison (ADR-034 point 1).
+- **Anchor:** an [artefact](#term-artefact--artefact)'s link to what makes it true (`TERM-anchor`). It shares the word, and nothing else.
 
 ## TERM-skill — skill
 
@@ -1799,6 +2190,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Skill:** the procedure a stamp pairs with. The skill chooses the slug and fills the body, and the stamp writes what it can compute (COR-005).
 - **Provenance stamp:** project-management's record of the [versions](#term-version--version) an issue or a [pull request](#term-pull-request--pull-request) was filed under (project-management DEC-041). It is no command.
 - **Seeding:** creates a missing declared seed path from its template (COR-059 [point](#term-point--point) 8). A stamp writes a new file when a person or an AI agent asks for one.
+
+## TERM-storyboard — storyboard
+
+Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#storyboard).
+
+**Example:** `pkit new agent project <name> --with-storyboard` writes `storyboard.md` beside the new [agent definition](#term-agent-definition--agent-definition), which lists it in `storyboards:` and follows its scenarios at run time.
+
+**Distinctions:**
+
+- **Executable storyboard:** the demo-recording [capability](#term-capability--capability)'s document, which runs to record a demo of a command line and still reads as a document (demo-recording DEC-003). It shares only the word.
+- **Skill:** a procedure an AI agent loads for a matching task. A storyboard scripts one dialogue, and no [adapter](#term-adapter--adapter) deploys it (COR-016).
+- **Judgement-driven dialogue:** a dialogue an AI agent improvises from its context, which needs no storyboard (COR-016).
 
 ## TERM-surface-change — surface change
 
@@ -1848,6 +2251,7 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **pkit:** the product's name, kept in prose and in commands. The analysis says *the system* for the same software (PR #1374).
 - **A system:** other software, such as the hosting service or the [harness](#term-harness--harness). The analysis names it for what it is, never a system (PR #1345, question 12).
 - **A platform:** in COR-009, the hosting service a [project](#term-project--project)'s remote lives on. It is other software, never the system.
+- **Operating system:** the software a machine runs, beneath the harness and the system. It is other software, and its [sandbox](#term-sandbox--sandbox) bounds the commands the harness runs.
 - **The methodology:** the body of [decision records](#term-decision-record--decision-record), rules, [operational rules](#term-operational-rule--operational-rule) and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* refer back here.
 
 ## TERM-validation — validation

@@ -319,10 +319,10 @@ ANYWHERE = "*"
 #: names the sources of the design it reviewed (point 6).
 PLANNED = "planned"
 
-#: The methodology's front-matter container, and the friction block's keys that
-#: lead to an artefact's revalidation marker (COR-050 points 1 and 3).
+#: The methodology's front-matter container (COR-050 point 1). An artefact's
+#: revalidation is read through the backbone's explanation, never from its file
+#: (COR-062 Implications).
 CONTAINER = "pkit"
-REVALIDATED_AT = ("friction", "revalidated", "at")
 
 #: The key an actor or a term nothing embodies carries in its friction block
 #: instead of anchors: the reason onboarding accepts it unanchored (DEC-001
@@ -519,10 +519,11 @@ class Analysis:
         return found
 
     def area(self, artefact: Artefact) -> str | None:
-        """The area a use case lies in: the folder of its place that holds it, one folder
-        below the use cases' folder, such as `010-develop`; `None` for one right in that
-        folder, or one no place of this state holds (DEC-001 point 2)."""
-        for place in (self.places.get(USE_CASE), self.nested.get(USE_CASE)):
+        """The area an artefact lies in: the folder of its kind's place that holds it, one
+        folder below the place's own, such as `010-develop` for a use case, or a
+        requirement in `requirements/quality/010-develop/`; `None` for one right in that
+        folder, or one no place of this state holds (DEC-001 point 2, DEC-002 point 3)."""
+        for place in (self.places.get(artefact.kind), self.nested.get(artefact.kind)):
             if not place or not under_place(artefact.path, place):
                 continue
             below = artefact.path.split("/")[len(_folder(place).split("/")) :]

@@ -926,38 +926,57 @@ def test_main_reads_the_argv_it_is_given(dw, monkeypatch, capsys) -> None:
 # ---- CI-status gate (#498) -------------------------------------------
 
 
-def test_gh_get_status_rollup_returns_list(dw, monkeypatch) -> None:
-    """_gh_get_status_rollup returns the rollup list from the JSON response."""
-    import subprocess
+def _gh_answers(dw, monkeypatch, *, returncode: int = 0, stdout: str = "", stderr: str = ""):
+    """Make every `gh` call done-work runs answer as given."""
+    monkeypatch.setattr(
+        dw,
+        "gh_run",
+        lambda args, config, **k: subprocess.CompletedProcess(args, returncode, stdout, stderr),
+    )
 
+
+def test_gh_get_status_rollup_returns_the_checks(dw, monkeypatch) -> None:
+    """_gh_get_status_rollup returns the rollup's checks from the JSON response."""
     rollup = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
-
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=0,
-            stdout=json.dumps({"statusCheckRollup": rollup}),
-            stderr="",
-        )
-
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    assert dw._gh_get_status_rollup(496, {}) == rollup
+    _gh_answers(dw, monkeypatch, stdout=json.dumps({"statusCheckRollup": rollup}))
+    reading = dw._gh_get_status_rollup(496, {})
+    assert (reading.checks, reading.problem) == (tuple(rollup), "")
 
 
-def test_gh_get_status_rollup_none_on_failure(dw, monkeypatch) -> None:
-    """A gh failure yields None (treated as check-free / passing by the gate)."""
-    import subprocess
+def test_a_rollup_with_no_checks_is_read_as_none_configured(dw, monkeypatch) -> None:
+    """GitHub answers an empty rollup for a project that runs no checks: an
+    answer of no checks, told apart from no answer (#1946)."""
+    _gh_answers(dw, monkeypatch, stdout=json.dumps({"statusCheckRollup": []}))
+    reading = dw._gh_get_status_rollup(496, {})
+    assert (reading.checks, reading.problem) == ((), "")
 
-    def fake_gh_run(args, config, **kwargs):
-        return subprocess.CompletedProcess(
-            args=args,
-            returncode=1,
-            stdout="",
-            stderr="not found",
-        )
 
-    monkeypatch.setattr(dw, "gh_run", fake_gh_run)
-    assert dw._gh_get_status_rollup(496, {}) is None
+@pytest.mark.parametrize(
+    ("answer", "problem"),
+    [
+        ({"returncode": 1, "stderr": "HTTP 502: Bad Gateway\n"}, "HTTP 502: Bad Gateway"),
+        ({"returncode": 1}, "gh exited 1"),
+        ({"stdout": "<html>"}, "gh's answer is not JSON"),
+        ({"stdout": "[]"}, "gh's answer carries no statusCheckRollup"),
+        ({"stdout": "{}"}, "gh's answer carries no statusCheckRollup"),
+        ({"stdout": '{"statusCheckRollup": null}'}, "gh's answer carries no statusCheckRollup"),
+        ({"stdout": '{"statusCheckRollup": ["x"]}'}, "gh's answer carries no statusCheckRollup"),
+    ],
+)
+def test_a_rollup_that_cannot_be_read_names_why(dw, monkeypatch, answer, problem) -> None:
+    """A failed call, an answer that is not JSON, and one without the rollup are
+    no answer, never one of no checks (#1946)."""
+    _gh_answers(dw, monkeypatch, **answer)
+    reading = dw._gh_get_status_rollup(496, {})
+    assert (reading.checks, reading.problem) == ((), problem)
+
+
+def test_a_rollup_gh_cannot_be_run_for_names_why(dw, monkeypatch) -> None:
+    def no_gh(args, config, **kwargs):
+        raise FileNotFoundError("gh")
+
+    monkeypatch.setattr(dw, "gh_run", no_gh)
+    assert dw._gh_get_status_rollup(496, {}).problem == "`gh` could not be run (gh)"
 
 
 def test_ci_gate_refuses_failing_and_pending(dw) -> None:
@@ -1184,7 +1203,9 @@ def _wire_main_seams(
         "_check_pr_placeholder",
         lambda body, pr_number, cap_root: [],
     )
-    monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: rollup)
+    # *rollup* is the checks GitHub answers, or a `_RollupReading` as it is.
+    reading = rollup if isinstance(rollup, dw._RollupReading) else dw._RollupReading(tuple(rollup))
+    monkeypatch.setattr(dw, "_gh_get_status_rollup", lambda pr_number, config: reading)
 
     def _stub_ci_audit(pr_number, reason, invoker, checks, config, *, head=""):
         calls["ci_audit"] = True
@@ -1324,6 +1345,52 @@ def test_green_ci_needs_no_bypass_ci(dw, monkeypatch):
     assert rc == 0
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
+
+
+# ---- checks that cannot be read (#1946) --------------------------------
+#
+# A project that runs no checks gets an empty rollup back, and passes. A
+# rollup that cannot be read is no answer, never one of no checks: the gate
+# refuses, names why, and writes nothing.
+
+
+def test_a_rollup_with_no_checks_passes_and_merges(dw, monkeypatch, capsys) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=[])
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code) == (dw.MERGED, 0)
+    assert calls["merged"] is True
+    assert calls["ci_audit"] is False
+    assert "  ci-status: green (no checks configured)" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("bypass", [[], ["--bypass-ci", "flaky"]])
+def test_a_rollup_that_cannot_be_read_refuses_and_writes_nothing(
+    dw, monkeypatch, capsys, bypass
+) -> None:
+    """Refused as unreadable, exit 2 as any gh failure: nothing posted, moved or
+    merged — `--bypass-ci` included, since it overrides checks that were read."""
+    calls = _wire_main_seams(
+        dw, monkeypatch, rollup=dw._RollupReading(problem="HTTP 502: Bad Gateway")
+    )
+    run = dw.run(["42", "--yes", *bypass])
+    assert (run.kind, run.exit_code) == (dw.UNREADABLE, 2)
+    assert run.reason == (
+        "[refused] CI-status gate for PR #496: its checks could not be read "
+        "(HTTP 502: Bad Gateway). Nothing was changed."
+    )
+    assert (calls["merged"], calls["moved"], calls["ci_audit"]) == (False, False, False)
+    assert calls["order"] == []
+    err = capsys.readouterr().err
+    assert run.reason in err
+    assert "--bypass-ci does not clear checks that were never read" in err
+
+
+def test_a_failing_check_still_refuses(dw, monkeypatch) -> None:
+    calls = _wire_main_seams(dw, monkeypatch, rollup=_RED_ROLLUP)
+    run = dw.run(["42", "--yes"])
+    assert (run.kind, run.exit_code, run.retry) == (dw.REFUSED, 1, False)
+    assert run.reason.startswith("[refused] CI-status gate for PR #496: checks are")
+    assert calls["merged"] is False
 
 
 # ---- checkbox close-gate pre-flight (DEC-007, #734) ------------------
@@ -1623,6 +1690,25 @@ def test_bypass_reviewer_name_is_stripped(dw, monkeypatch):
     )
     assert rc == 0
     assert seen["override_reviewers"] == ("design-reviewer",)
+
+
+def test_agent_gate_gets_the_issue_number_for_its_refusal(dw, monkeypatch, capsys):
+    """The agent gate's refusal names `review-pr` with the issue's number, the
+    number that command takes (DEC-028, #1935), so main() hands the gate the
+    issue's number beside the pull request's."""
+    seen: dict = {}
+
+    def fake_agent_gate(pr_number, pr, config, mode_source, cap_root, **kwargs):
+        seen["pr_number"] = pr_number
+        seen["issue_number"] = kwargs.get("issue_number")
+        return dw._GateResult(passed=False, refusal_message="[refused] agent gate")
+
+    _wire_main_seams(dw, monkeypatch, rollup=_GREEN_ROLLUP, mode="agent")
+    monkeypatch.setattr(dw, "_check_agent_gate", fake_agent_gate)
+    rc = _run_main(dw, monkeypatch, ["42", "--yes"])
+    assert rc == 1
+    assert seen == {"pr_number": 496, "issue_number": 42}
+    assert "[refused] agent gate" in capsys.readouterr().err
 
 
 def test_agent_mode_override_happy_path_merges_after_audit(dw, monkeypatch):
@@ -2234,16 +2320,34 @@ sys.exit(0)
 """
 
 
+_BRANCH_42 = "whose branch `fix/42-slug` is #42's"
+
+
+@pytest.mark.parametrize(
+    ("pr_body", "relation_42"),
+    [
+        pytest.param(
+            _TWO_ISSUE_PR_BODY, f"whose body closes #42 and {_BRANCH_42}", id="both-named"
+        ),
+        pytest.param(
+            _TWO_ISSUE_PR_BODY.replace("Closes #42\n", ""), _BRANCH_42, id="primary-by-its-branch"
+        ),
+    ],
+)
 def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
     dw,
     tmp_path,
     monkeypatch,
     capfd,
+    pr_body: str,
+    relation_42: str,
 ):
     """End to end past the merge: done-work runs the real close-issue on each
     closing issue against a fake `gh`. Both issues are still open after the
     merge (a base branch GitHub does not auto-close on), so each is closed as
-    completed, and each one's closure cascade visits its parent."""
+    completed, and each one's closure cascade visits its parent. The PR was
+    merged from #42's branch, so it relates to #42 even where its body names
+    only #43 (#1968)."""
     import shutil
 
     cap_root = tmp_path / ".pkit" / "capabilities" / "project-management"
@@ -2272,7 +2376,14 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
                 "body": "## What\n\nw\n\n## Acceptance criteria\n\n- [x] shipped\n",
             },
         },
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": "2026-09-29T10:00:00Z", "url": "u"},
+        "pr": {
+            "number": 496,
+            "state": "MERGED",
+            "mergedAt": "2026-09-29T10:00:00Z",
+            "url": "u",
+            "headRefName": "fix/42-slug",
+            "body": pr_body,
+        },
     }
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
@@ -2292,7 +2403,7 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
         dw,
         monkeypatch,
         rollup=_GREEN_ROLLUP,
-        pr_body=_TWO_ISSUE_PR_BODY,
+        pr_body=pr_body,
         issues={42: _open_issue(_TICKED_BODY), 43: _open_issue(_TICKED_BODY)},
     )
     monkeypatch.setattr(dw, "_invoke_close_issue", real_close)
@@ -2305,6 +2416,8 @@ def test_both_closing_issues_are_closed_and_cascaded_by_the_real_close_issue(
     for number in ("42", "43"):
         assert ["issue", "close", number, "--reason", "completed"] in calls
         assert f"[ok] closed #{number} (pr-merge through PR #496, completed)." in out
+    assert f"completed by: PR #496 (merged), {relation_42}\n" in out
+    assert "completed by: PR #496 (merged), whose body closes #43\n" in out
     assert out.count("[cascade] parents to check for eligibility: #7") == 2
 
 
@@ -2637,7 +2750,14 @@ def _run_done_work_end_to_end(
     state = {
         "issues": {"42": task, "7": feature},
         "milestones": milestones,
-        "pr": {"number": 496, "state": "MERGED", "mergedAt": merged_at, "url": "u"},
+        "pr": {
+            "number": 496,
+            "state": "MERGED",
+            "mergedAt": merged_at,
+            "url": "u",
+            "headRefName": "fix/42-slug",
+            "body": "Closes #42\n",
+        },
         "merged_prs": [
             {
                 "number": 496,

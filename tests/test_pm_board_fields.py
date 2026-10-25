@@ -276,3 +276,107 @@ def test_resolve_item_id_includes_archived_cards_in_the_query(bf) -> None:
     )
     query = next(a for a in calls[0]["args"] if a.startswith("query="))
     assert "includeArchived: true" in query
+
+
+# --- the workstream mutators' reads (#1940) ----------------------------------
+
+
+def test_read_field_options_returns_each_option_in_full(bf) -> None:
+    payload = {
+        "data": {
+            "node": {
+                "options": [
+                    {"id": "opt_cli", "name": "cli", "color": "BLUE", "description": "The CLI."},
+                    {"id": "opt_docs", "name": "docs", "color": "GRAY", "description": ""},
+                ]
+            }
+        }
+    }
+    calls: list = []
+    read = bf.read_field_options(
+        BOARD_CONFIG, field_id="PVTSSF_ws", gh_call=_runner(json.dumps(payload), calls=calls)
+    )
+    assert read.ok is True
+    assert read.options[0] == {
+        "id": "opt_cli",
+        "name": "cli",
+        "color": "BLUE",
+        "description": "The CLI.",
+    }
+    assert [o["name"] for o in read.options] == ["cli", "docs"]
+    assert calls[0]["args"][:3] == ["gh", "api", "graphql"]
+    assert "field=PVTSSF_ws" in calls[0]["args"]
+
+
+def test_read_field_options_surfaces_stderr_verbatim(bf) -> None:
+    stderr = "your token has not been granted the required scopes: read:project"
+    read = bf.read_field_options(
+        BOARD_CONFIG, field_id="F", gh_call=_runner(returncode=1, stderr=stderr)
+    )
+    assert read.ok is False
+    assert read.error == stderr
+
+
+def test_read_field_options_refuses_a_payload_with_no_options(bf) -> None:
+    read = bf.read_field_options(
+        BOARD_CONFIG, field_id="F", gh_call=_runner(json.dumps({"data": {"node": None}}))
+    )
+    assert read.ok is False
+
+
+def _card(item_id: str, number: int | None, option_id: str | None) -> dict:
+    value = {"optionId": option_id} if option_id else None
+    content = {"number": number, "title": f"Issue {number}"} if number else {"title": "draft"}
+    return {"id": item_id, "content": content, "fieldValueByName": value}
+
+
+def _page(cards: list[dict], *, next_cursor: str | None = None) -> str:
+    return json.dumps(
+        {
+            "data": {
+                "node": {
+                    "items": {
+                        "pageInfo": {"hasNextPage": bool(next_cursor), "endCursor": next_cursor},
+                        "nodes": cards,
+                    }
+                }
+            }
+        }
+    )
+
+
+def test_read_items_with_option_keeps_the_cards_of_that_option_across_pages(bf) -> None:
+    pages = [
+        _page([_card("I1", 1, "opt_cli"), _card("I2", 2, "opt_docs")], next_cursor="c1"),
+        _page([_card("I3", None, "opt_cli"), _card("I4", 4, None)]),
+    ]
+    calls: list = []
+
+    def run(args, config, *, fallback_owner=None, check=False):
+        calls.append(list(args))
+        return subprocess.CompletedProcess(args, 0, stdout=pages[len(calls) - 1], stderr="")
+
+    read = bf.read_items_with_option(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Workstream",
+        option_id="opt_cli",
+        gh_call=run,
+    )
+    assert read.ok is True
+    assert [(i.item_id, i.number) for i in read.items] == [("I1", 1), ("I3", None)]
+    # The second page asks for the cards after the first page's cursor.
+    assert "after=c1" in calls[1]
+    assert "field=Workstream" in calls[0]
+
+
+def test_read_items_with_option_fails_rather_than_counting_in_part(bf) -> None:
+    read = bf.read_items_with_option(
+        BOARD_CONFIG,
+        project_node_id="PVT_1",
+        field_name="Workstream",
+        option_id="opt_cli",
+        gh_call=_runner(returncode=1, stderr="boom"),
+    )
+    assert read.ok is False
+    assert read.error == "boom"

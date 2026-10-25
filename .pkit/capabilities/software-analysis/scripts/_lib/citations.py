@@ -326,19 +326,25 @@ def placed(
     component: str | None,
     lookups: Mapping[str, Found],
     path: str,
+    opens: Sequence[int] = (),
 ) -> Placed:
     """The links the citations of one section's `text` take, from the file at `path`: the
     first citation of each target, none right after the escape; the notes of those that
     resolve to nothing, or name a point their record does not hold; and the span of each
     citation. `skipped` are the spans no citation is read in, and `hidden` the whole lines
-    no escape is read on."""
+    no escape is read on. Each offset of `opens` opens a new section, where each target
+    takes its link again."""
     masked = _masked(text, hidden)
     escapes = [m.end() for m in _ESCAPE.finditer(masked)]
     links: list[Wanted] = []
     notes: list[Note] = []
     spans: list[tuple[int, int]] = []
     seen: set[str] = set()
+    ahead = sorted(opens)
     for citation in found(text, skipped, component):
+        while ahead and citation.start >= ahead[0]:
+            ahead.pop(0)
+            seen.clear()
         reading = chosen(citation, lookups)
         if reading is not None and reading.labels and not _all_points(reading, lookups):
             # A label alone that is no point of its record is no part of the citation.

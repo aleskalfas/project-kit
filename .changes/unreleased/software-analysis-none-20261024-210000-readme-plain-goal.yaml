@@ -1,0 +1,7 @@
+component: software-analysis
+kind: none
+body: >
+  The README's item on what says a datum again gives each its own reason, as
+  DEC-004 point 7 does: a form holds a journey's step line and an actor's first
+  sentence equal to their data, and a goal stays plain by choice, since it
+  states a need. No command changes.

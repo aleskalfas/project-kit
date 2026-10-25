@@ -1,0 +1,12 @@
+component: software-engineering
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The code-review panel's three reviewers tag a finding `[person]`, as
+  project-management DEC-028 decides for every reviewer's verdict (#1976). Such
+  a finding judges a passage the change owns against an accepted rule of the
+  project's conventions, cited by id, that binds on what the change alters. The
+  rule needs a reading it does not settle there, or a fact it does not name. The
+  finding withholds no approval and is shown to the person who authorises the
+  merge. The README says the same.

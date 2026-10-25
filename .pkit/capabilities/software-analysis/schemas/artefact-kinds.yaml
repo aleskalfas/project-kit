@@ -66,6 +66,7 @@ kinds:
         type: opening
         hint: What this role is, and what it does with the system.
         example: Someone who builds reports from their team's figures.
+        form: summary-matches-front-matter
       - id: occasions
         type: label
         text: Occasions
@@ -79,6 +80,10 @@ kinds:
         hint: What the actor comes with, such as data, authority or a limit. Write `None.` when there is none.
         example: A spreadsheet of their team's figures, and no right to publish a template.
     front-matter:
+      summary:
+        form: sentence
+        hint: Who the actor is, in one sentence that a table of the actors shows. Write the first sentence of the opening below, word for word.
+        example: Someone who builds reports from their team's figures.
       needs:
         form: sentence
         hint: What the actor needs from the system, each in one sentence in their own voice. Start with the verb, or with *Never* and the verb, with *I* and *my* where they refer to themselves.

@@ -13,9 +13,22 @@ pkit:
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
     revalidated:
-      at: 2026-10-19T19:45:57Z
+      at: 2026-10-25T00:35:24Z
       outcome: unchanged
-      unchanged-because: COR-050 gains a warning on an anchor on a shared id, reported by both checks and never failed. The README's account of the friction answers its agents write and its reviewers check is untouched.
+      unchanged-because: The engineer's body now commits what the writers write and judges revalidations answered apart. The README's account of the panel and its checks holds.
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its account of the answers its reviewers check keeps them in the artefact, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
+        - anchor:
+            kind: record
+            value: project-management:DEC-032
+          reason: "DEC-032 D1 now leaves the answer folder out of the touches-code floor, which the README's account of that floor does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-055
+          reason: "DEC-055 now covers a later head by the answer files the change adds and prints answers made apart. #1779 builds it and rewrites the README's account of the landing."
 ---
 
 # software-engineering capability
@@ -31,6 +44,7 @@ When an adopter runs `pkit capabilities install software-engineering`:
 - `review-contributions.yaml` — registers the panel into the project-management merge gate through the reviewer-contribution socket ([project-management:DEC-032]).
 - `decisions/DEC-001-producer-agent-and-conventions-seam.md` — the producer discipline's invariant: the conventions-thin producer, the overlay-resolved seam, the producer/checker boundary, empty-tolerance.
 - `decisions/DEC-002-code-review-panel.md` — the panel decision: its three agents, its home, the per-agent block-threshold and knowledge-split disciplines, and `docs-reviewer`'s check of a change's answers.
+- `decisions/DEC-003-purpose.md` — what the capability is for: code that agents write follows the project's own conventions in every session, and code is reviewed, with its documentation, before the merge gate lets it through.
 
 It deliberately ships **no conventions content** — the conventions corpus is adopter-owned and accretes over time (see Adopter setup).
 
@@ -73,7 +87,7 @@ Where `docs-reviewer` does not review a pull request, nothing checks its answers
 
 So `code-reviewer` alone is *basic* review; the specialists alongside it make *complex* review, composable per install ([project-management:DEC-032]). A project that wants the panel without one of its reviewers opts out of that reviewer alone in pm's `review.agents.contributed_opt_out:`, with a reason — the rest of the panel keeps gating (the project-management README, "Opting out of a contributed reviewer").
 
-**Block-threshold discipline.** Each agent withholds `APPROVED` **only on objective failures of the change, in its remit** ([software-engineering:DEC-002] D3). Each finding begins with one of three tags that say what it does to the merge, as the verdict decision sets them out ([project-management:DEC-028-agent-as-approver-paths]). `[block]` marks an objective failure of the change in the agent's remit, and it withholds `APPROVED`. `[person]` marks a finding that cites by id an accepted rule of the `<project-conventions>` corpus, where judging the change needs a reading the rule does not settle, or a fact it does not name. It withholds no approval, and it is shown to the person who authorises the merge. `[advisory]` marks every other finding: everything softer, and every defect the change merely sits beside. It withholds nothing. A pre-existing defect blocks only when the change asserts it away — its PR title or body claims to fix or guard against the behaviour, or text the diff adds or edits says the case is handled — and the defect survives within its remit; the remedy is to fix it or retract the claim. This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto that trains the `--bypass` reflex.
+**Block-threshold discipline.** Each agent withholds `APPROVED` **only on objective failures of the change, in its remit** ([software-engineering:DEC-002] D3). Each finding begins with one of three tags that say what it does to the merge, as the verdict decision sets them out ([project-management:DEC-028-agent-as-approver-paths]). `[block]` marks an objective failure of the change in the agent's remit, and it withholds `APPROVED`. `[person]` marks a finding on a passage the change owns. It cites by id an accepted rule of the `<project-conventions>` corpus that binds on an artefact the change alters or brings under a rule. Judging the passage against that rule needs a reading the rule does not settle, or a fact the rule does not name. It withholds no approval, and it is shown to the person who authorises the merge. Each agent's definition says the same. `[advisory]` marks every other finding: everything softer, and every defect the change merely sits beside. It withholds nothing. A pre-existing defect blocks only when the change asserts it away — its PR title or body claims to fix or guard against the behaviour, or text the diff adds or edits says the case is handled — and the defect survives within its remit; the remedy is to fix it or retract the claim. This keeps the binary all-must-approve gate from becoming a subjective merge-blocking veto that trains the `--bypass` reflex.
 
 **Knowledge split.** Each agent body carries only *universal* review knowledge; project-specific rules are read from the overlay-resolved `<project-conventions>` corpus — the same corpus `software-engineer` produces against ([software-engineering:DEC-002] D4). An empty or absent corpus is tolerated: the agent reviews as a careful generalist and says so.
 

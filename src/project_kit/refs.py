@@ -544,31 +544,35 @@ def resolve_hook(providers: list[Provider], hook: str) -> Provider | None:
     return candidates[0]
 
 
+#: The version of the document `pkit refs lookup --json` prints.
+LOOKUP_VERSION = 1
+
+
 @dataclass(frozen=True)
 class Lookup:
-    """What one citation resolves to, as `pkit refs lookup` answers it.
+    """What `pkit refs lookup` answers for one id or citation.
 
-    - `locations`: what the command prints for it, one line each: a record's file, a
-      point's file and its heading's anchor, a rule's place, or where an installed
-      capability declares a role or a point.
+    - `paths`: what the command prints for it, one line each, repository-relative: a
+      record's file, a point's file and its heading's anchor, a rule's place in its rule
+      set, or where an installed capability declares a role or a point.
+    - `problem`: why it does not resolve, as the command says it, or `None`. A point
+      its record does not hold has its record's `path`, and a problem.
     - `path`: the file of a record, or of a rule's set, relative to the root; `None`
       for an address, and where no file is found.
     - `anchor`: the anchor a repository host gives the heading of a cited point or rule
       (`document_parts.host_anchors`); `None` for a record cited whole, an address, a
       point with no heading, such as one of a record whose points are a list, and a
       retired point whose record keeps no stub.
-    - `problem`: why it does not resolve, as the command says it, or `None`. A point
-      its record does not hold has its record's `path`, and a problem.
     - `received`: whether `path` arrives in the repository as a synced copy, which the
       project receives and does not write, as validation tells one
       (`decisions_validate.synced_record_test`, COR-055 point 1).
     """
 
-    citation: str
-    locations: tuple[str, ...] = ()
+    id: str
+    paths: tuple[str, ...] = ()
+    problem: str | None = None
     path: str | None = None
     anchor: str | None = None
-    problem: str | None = None
     received: bool = False
 
     @property
@@ -577,13 +581,28 @@ class Lookup:
 
     def as_json(self) -> dict[str, Any]:
         return {
-            "citation": self.citation,
-            "locations": list(self.locations),
+            "id": self.id,
+            "resolved": self.resolved,
+            "paths": list(self.paths),
+            "problem": self.problem,
             "path": self.path,
             "anchor": self.anchor,
-            "problem": self.problem,
             "received": self.received,
         }
+
+
+def lookup(target_root: Path, record_id: str) -> Lookup:
+    """Resolve one id or citation, as `pkit refs lookup` does (`lookup_citations`)."""
+    return lookup_citations(target_root, [record_id])[0]
+
+
+def lookup_document(target_root: Path, record_ids: Collection[str]) -> dict[str, Any]:
+    """The document `pkit refs lookup --json` prints: each id's answer, in the order the
+    ids are given, so a script reads every record it needs from one run."""
+    return {
+        "schema_version": LOOKUP_VERSION,
+        "lookups": [found.as_json() for found in lookup_citations(target_root, record_ids)],
+    }
 
 
 def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Lookup]:
@@ -639,7 +658,7 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
                     Lookup(citation, problem=f"{citation!r} does not resolve: {address.problem}")
                 )
             else:
-                found.append(Lookup(citation, locations=tuple(address.locations)))
+                found.append(Lookup(citation, tuple(address.locations)))
             continue
         if rule_sets.is_rule_citation(citation):
             if discovery is None:
@@ -659,9 +678,7 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
                 section = body.section_by_id(rule.id)
                 if section is not None and section.heading is not None:
                     anchor = anchor_of(section.heading.start, body)
-            found.append(
-                Lookup(citation, (rule.location,), rule.path, anchor),
-            )
+            found.append(Lookup(citation, (rule.location,), path=rule.path, anchor=anchor))
             continue
         record, point = record_points.split_anchor(citation)
         path = resolve_record(target_root, record)
@@ -670,7 +687,7 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
             continue
         rel = relative(path)
         if point is None:
-            found.append(Lookup(citation, (rel,), rel))
+            found.append(Lookup(citation, (rel,), path=rel))
             continue
         text = read(path)
         if text is None:
@@ -690,7 +707,8 @@ def lookup_citations(target_root: Path, citations: Collection[str]) -> list[Look
             stub = points.stub(point)
             heading = stub.extent.heading if stub is not None else None
         anchor = anchor_of(heading.start, points.body) if heading is not None else None
-        found.append(Lookup(citation, (f"{rel}#{anchor}" if anchor else rel,), rel, anchor))
+        located = f"{rel}#{anchor}" if anchor else rel
+        found.append(Lookup(citation, (located,), path=rel, anchor=anchor))
     is_synced = synced_record_test(target_root)
     return [replace(f, received=is_synced(f.path)) if f.path else f for f in found]
 

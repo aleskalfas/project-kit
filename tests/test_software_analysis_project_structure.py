@@ -123,7 +123,7 @@ def test_a_relabel_and_a_field_s_hint_replace_text_and_keep_id_place_and_form(
         before.required,
         before.allows_none,
     )
-    (needs,) = actor.fields
+    needs = next(f for f in actor.fields if f.name == "needs")
     assert (needs.hint, needs.example, needs.form) == (
         "What the role needs, in one sentence.",
         "Export the report.",

@@ -19,9 +19,9 @@ pkit:
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
     revalidated:
-      at: 2026-10-18T19:27:48Z
+      at: 2026-10-25T00:12:22Z
       outcome: unchanged
-      unchanged-because: The CLI reference's new migration section, under Authoring commands, now says how the stamp chooses a migration's version and refuses a released one. This index only points to that section for authoring an area, adapter, capability or migration, so it holds.
+      unchanged-because: The CLI reference's Authoring commands gain a section on new schema. This index still points authors of an area, adapter, capability or migration to Authoring commands as a whole, so what it says holds.
 ---
 
 # project-kit

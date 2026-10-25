@@ -71,7 +71,7 @@ project's adds whose rule is proposed or accepted, its hint naming the rule
 (`_lib/project_structure.py`). A file there that does not read refuses the
 stamp. What only a person can write the stamp leaves for them, each holding its
 hint as its placeholder (point 1): a front-matter field it does not write
-itself — an actor's needs, a term's definition, a requirement's statement,
+itself — an actor's summary and needs, a term's definition, a requirement's statement,
 measure and where it holds — and each body part. The check fails each until it
 is written.
 It writes a journey's step lines under *Steps*, each use case's id and title

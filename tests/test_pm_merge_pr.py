@@ -175,6 +175,45 @@ def test_gh_get_pr_requests_status_rollup(mp, monkeypatch) -> None:
     )
 
 
+@pytest.mark.parametrize("stdout", ["<html>", "[]", "null"])
+def test_a_pr_view_answer_that_is_no_pr_names_why(mp, monkeypatch, capsys, stdout) -> None:
+    """An answer that is not a PR's JSON is no PR to gate, said rather than
+    read as one (#1952)."""
+    monkeypatch.setattr(
+        mp,
+        "gh_run",
+        lambda args, config, **k: subprocess.CompletedProcess(args, 0, stdout, ""),
+    )
+    assert mp._gh_get_pr(496, {}) is None
+    assert capsys.readouterr().err == (
+        "error: gh pr view 496 gave an answer that is not a PR's JSON. Nothing was merged.\n"
+    )
+
+
+def test_a_rollup_with_checks_is_read(mp) -> None:
+    rollup = [{"name": "tests", "status": "COMPLETED", "conclusion": "FAILURE"}]
+    reading = mp._read_rollup({"statusCheckRollup": rollup})
+    assert (reading.checks, reading.problem) == (tuple(rollup), "")
+
+
+def test_a_rollup_with_no_checks_is_read_as_none_configured(mp) -> None:
+    """GitHub answers an empty rollup for a project that runs no checks: an
+    answer of no checks, told apart from no answer (#1952)."""
+    reading = mp._read_rollup({"statusCheckRollup": []})
+    assert (reading.checks, reading.problem) == ((), "")
+
+
+@pytest.mark.parametrize(
+    "pr",
+    [{}, {"statusCheckRollup": None}, {"statusCheckRollup": {}}, {"statusCheckRollup": ["x"]}],
+)
+def test_a_rollup_the_answer_does_not_carry_names_why(mp, pr) -> None:
+    """A rollup left out, null, or not a list of checks is no answer, never one
+    of no checks (#1952)."""
+    reading = mp._read_rollup(pr)
+    assert (reading.checks, reading.problem) == ((), "gh's answer carries no statusCheckRollup")
+
+
 def _identity(mp):
     return mp.Identity(github_login="octocat", email="octo@example.com")
 
@@ -319,6 +358,10 @@ def test_post_ci_bypass_audit_reports_gh_failure(mp, monkeypatch) -> None:
 # hard-refuses; --bypass-ci clears it, posts the audit, and merges.
 
 
+# A rollup GitHub's answer leaves out: `_wire_merge_seams` drops the field.
+_ABSENT = object()
+
+
 def _wire_merge_seams(
     mp, monkeypatch, *, rollup, head_branch="fix/42-slug", cross_repository=False, state="open"
 ):
@@ -361,20 +404,19 @@ def _wire_merge_seams(
         "_read_yaml",
         lambda path, loader: {"formats": {"pr": {"pattern": r"^fix: .+$"}}},
     )
-    monkeypatch.setattr(
-        mp,
-        "_gh_get_pr",
-        lambda pr_number, config: {
-            "title": "fix: a thing",
-            "body": "Closes #42\n## Test plan\n- [x] ok",
-            "state": state,
-            "url": "http://pr/99",
-            "headRefName": head_branch,
-            "headRefOid": "sha-head",
-            "statusCheckRollup": rollup,
-            "isCrossRepository": cross_repository,
-        },
-    )
+    pr = {
+        "title": "fix: a thing",
+        "body": "Closes #42\n## Test plan\n- [x] ok",
+        "state": state,
+        "url": "http://pr/99",
+        "headRefName": head_branch,
+        "headRefOid": "sha-head",
+        "statusCheckRollup": rollup,
+        "isCrossRepository": cross_repository,
+    }
+    if rollup is _ABSENT:
+        del pr["statusCheckRollup"]
+    monkeypatch.setattr(mp, "_gh_get_pr", lambda pr_number, config: pr)
     monkeypatch.setattr(
         mp,
         "_gather_unticked_findings",
@@ -492,6 +534,42 @@ def test_merge_green_ci_no_bypass_needed(mp, monkeypatch):
     assert rc == 0
     assert calls["merged"] is True
     assert calls["ci_audit"] is False
+
+
+# ---- checks that cannot be read (#1952) --------------------------------
+#
+# A project that runs no checks gets an empty rollup back, and passes. A
+# rollup that cannot be read is no answer, never one of no checks: the gate
+# refuses, names why, and writes nothing, as done-work's does (#1946).
+
+
+def test_a_rollup_with_no_checks_passes_and_merges(mp, monkeypatch, capsys):
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=[])
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes"])
+    assert rc == 0
+    assert calls["merged"] is True
+    assert calls["ci_audit"] is False
+    assert "  ci-status: green (no checks configured)" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("rollup", [_ABSENT, None])
+@pytest.mark.parametrize("bypass", [[], ["--bypass-ci", "flaky"]])
+def test_a_rollup_that_cannot_be_read_refuses_and_writes_nothing(
+    mp, monkeypatch, capsys, rollup, bypass
+):
+    """Refused, exit 2 as a PR view gh fails: nothing posted or merged —
+    `--bypass-ci` included, since it overrides checks that were read."""
+    calls = _wire_merge_seams(mp, monkeypatch, rollup=rollup)
+    rc = _run_merge_main(mp, monkeypatch, ["99", "--yes", *bypass])
+    assert rc == 2
+    assert (calls["merged"], calls["ci_audit"], calls["order"]) == (False, False, [])
+    assert calls["records"] == {}
+    err = capsys.readouterr().err
+    assert (
+        "[refused] CI-status gate for PR #99: its checks could not be read (gh's answer "
+        "carries no statusCheckRollup). Nothing was posted or merged."
+    ) in err
+    assert "--bypass-ci does not clear checks that were never read" in err
 
 
 # --- post-merge sequence: hooks, then best-effort cleanup (#882) --------

@@ -201,6 +201,29 @@ def test_body_carries_the_three_intents(agent):
         assert heading in body, heading
 
 
+def _reader_review(body: str) -> str:
+    return body.split("### 3. Reader-review", 1)[1].split("\n### ", 1)[0]
+
+
+def test_reader_review_takes_the_reader_s_paths_from_the_point(agent, storyboard):
+    """A reader-review takes the paths the page's reader takes from the readers
+    point, and follows those through the page where a rule asks that reader paths
+    stay unbroken (#1921; DEC-001 points 3, 6 and 7)."""
+    _, body = agent
+    review = _reader_review(body)
+    assert "take that reader's entry: what they need, and the paths they take" in review
+    assert "follow each of the reader's paths that passes through the page" in review
+    (row,) = [
+        line
+        for line in body.splitlines()
+        if line.startswith("| `pkit connections resolve pkit::documentation:readers --json`")
+    ]
+    assert "the `paths` that reader takes" in row
+    _, story = storyboard
+    assert "its description, and the paths it carries, if any" in story
+    assert "follow each of the reader's paths that passes through the page" in story
+
+
 # --- the fixer run -------------------------------------------------------------
 
 #: The agent's name on its result lines (project-management DEC-056 point 3).

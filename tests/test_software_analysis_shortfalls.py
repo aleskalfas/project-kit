@@ -10,14 +10,15 @@ Held to software-analysis DEC-001 point 1 and DEC-003 point 8:
 - **the check** — whatever any rule's status, each box is matched to an entry and each
   entry to a box, each entry's step or variant is one the body numbers, and each entry's
   record is one of the use case's record anchors, and accepted;
-- **the overview** — a last section, "Not built yet", lists each entry of a use case in
-  force, and the fingerprint reads them.
+- **the overview** — a section of its reference, "Not built yet", before the diagrams,
+  lists each entry of a use case in force, and the fingerprint reads them.
 """
 
 from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -434,6 +435,68 @@ def test_an_entry_s_record_names_a_record_the_repository_holds(project: AdopterR
     ]
 
 
+def _looked_up(asked: list[list[str]]) -> Any:
+    """A stand-in for `pkit`, answering `refs lookup --json` as the backbone does: PRJ-001
+    lies in `a.md`, and no other id names a record. Each command it is given is kept in
+    `asked`."""
+
+    def run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        asked.append(argv)
+        lookups = [
+            {
+                "id": named,
+                "resolved": named == "PRJ-001",
+                "paths": ["a.md"] if named == "PRJ-001" else [],
+                "problem": None if named == "PRJ-001" else f"no record matches {named!r}",
+            }
+            for named in argv[argv.index("--") + 1 :]
+        ]
+        document = {"schema_version": 1, "lookups": lookups}
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+def test_the_records_a_check_reads_are_asked_of_the_backbone_at_once(tmp_path: Path) -> None:
+    """The backbone is asked where each record lies once, for every record named before
+    the first is read, and again only for a record named later. Each status is read from
+    the record's own front matter, and an id that names no record has none (#2025)."""
+    backbone: Any = load_lib("backbone")[0]
+    (tmp_path / "a.md").write_text("---\nid: PRJ-001\nstatus: accepted\n---\n", encoding="utf-8")
+    asked: list[list[str]] = []
+    files = backbone.RecordFiles(tmp_path, ["PRJ-001", "PRJ-009", "PRJ-001"], _looked_up(asked))
+    assert files.status("PRJ-001") == "accepted" and files.file("PRJ-001") == "a.md"
+    assert files.file("PRJ-009") is None and files.status("PRJ-009") is None
+    assert asked == [["pkit", "refs", "lookup", "--json", "--", "PRJ-001", "PRJ-009"]]
+    assert files.status("COR-002") is None
+    assert asked[1:] == [["pkit", "refs", "lookup", "--json", "--", "COR-002"]]
+
+
+def test_a_lookup_that_fails_is_asked_again_and_an_old_backbone_is_named(tmp_path: Path) -> None:
+    """Where `pkit` gives no document, each record asked with it cannot be read, and is
+    asked again when it is read next. A backbone too old to answer several records in one
+    document is named, with the upgrade (#2025)."""
+    backbone: Any = load_lib("backbone")[0]
+    (tmp_path / "a.md").write_text("---\nstatus: proposed\n---\n", encoding="utf-8")
+    asked: list[list[str]] = []
+    answer = _looked_up(asked)
+    calls = iter([subprocess.CompletedProcess([], 1, "", "boom\n")])
+
+    def flaky(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        return next(calls, None) or answer(argv, **kw)
+
+    files = backbone.RecordFiles(tmp_path, ["PRJ-001"], flaky)
+    with pytest.raises(backbone.Unreadable, match="boom"):
+        files.status("PRJ-001")
+    assert files.status("PRJ-001") == "proposed"
+
+    def old(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 2, "", "Error: No such option: --json\n")
+
+    with pytest.raises(backbone.Unreadable, match="predates it"):
+        backbone.RecordFiles(tmp_path, run=old).file("PRJ-001")
+
+
 def test_a_withdrawn_use_case_is_history(project: AdopterRepo) -> None:
     """A withdrawn use case's boxes and entries are not read: its records may have been
     superseded since."""
@@ -447,30 +510,44 @@ def test_a_withdrawn_use_case_is_history(project: AdopterRepo) -> None:
 
 
 def _section(text: str, heading: str) -> str:
+    """The lines under `heading` up to the next heading of its level or above, or the
+    break above the page's closing line."""
+    level = len(heading.split(" ", 1)[0])
     lines = text.split("\n")
     start = lines.index(heading) + 1
-    stop = next((i for i in range(start, len(lines)) if lines[i].startswith("## ")), len(lines))
+    stop = next(
+        (
+            i
+            for i in range(start, len(lines))
+            if re.match(rf"^#{{1,{level}}} ", lines[i]) or lines[i] == "---"
+        ),
+        len(lines),
+    )
     return "\n".join(lines[start:stop]).strip("\n")
 
 
-def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> None:
-    """Under "Not built yet", the last section, each entry of a use case in force: its use
-    case, linked, its step or variant, its record and its issue. The fingerprint reads
-    the entries, so a changed entry leaves the overview stale until it is rewritten
-    (DEC-003 point 8)."""
+def test_the_overview_lists_each_open_shortfall_before_the_diagrams(project: AdopterRepo) -> None:
+    """Under "Not built yet", the last section of reference before the line that names
+    the query of its diagrams, each entry of a use case in force: its use case, linked,
+    its step or variant, its record and its issue. The fingerprint reads the entries, so
+    a changed entry leaves the overview stale until it is rewritten (DEC-003 point 8)."""
     project.write({SETTINGS: "pkit_schema: software-analysis:config\nschema_version: 1\n"})
     project.write({EXPORT: _use_case()})
     assert run_script(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
-    assert re.findall(r"^## .*$", text, re.M)[-1] == "## Not built yet"
+    assert "## Reference" in text.split("\n")
+    assert re.findall(r"^### .*$", text, re.M)[-2:] == [
+        "### Not built yet",
+        "### Diagrams",
+    ]
     link = "[UC-001 — Export the report](../use-case-model/use-cases/UC-001-export.md)"
-    assert _section(text, "## Not built yet") == (
+    assert _section(text, "### Not built yet") == (
         "What the use cases describe and the system does not do yet, each with the record "
         "that decides it and the issue that tracks it (software-analysis DEC-001 point 1):\n\n"
         f"- {link}: step 2, decided by `PRJ-001`, tracked in `#12`\n"
         f"- {link}: variant 2a, decided by `software-analysis:DEC-001#1`, tracked in `#13`"
     )
-    assert f"reads={overview.VERSION} " in text and overview.VERSION == 3
+    assert f"reads={overview.VERSION} " in text and overview.VERSION == 4
 
     entries = [ENTRIES[0], {**ENTRIES[1], "issue": "https://example.com/issues/13"}]
     project.write(
@@ -484,9 +561,11 @@ def test_the_overview_lists_each_open_shortfall_last(project: AdopterRepo) -> No
     assert [f["severity"] for f in stale] == ["error"]
     assert run_script(project, OVERVIEW).returncode == 0
     text = (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
-    assert text.rstrip("\n").endswith("tracked in <https://example.com/issues/13>")
+    assert _section(text, "### Not built yet").endswith(
+        "tracked in <https://example.com/issues/13>"
+    )
 
     plain = _use_case(main_path="1. The analyst chooses `Export`.", variants="None.", entries=None)
     project.write({EXPORT: plain})
     assert run_script(project, OVERVIEW).returncode == 0
-    assert "## Not built yet" not in (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")
+    assert "### Not built yet" not in (project.root / OVERVIEW_FILE).read_text(encoding="utf-8")

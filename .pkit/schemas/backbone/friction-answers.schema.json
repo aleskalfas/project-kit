@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "friction-answers.schema.json",
+  "title": "An answer file — a change's answers to friction",
+  "description": "A backbone file schema (ADR-056) for an answer file: a file in the answer folder, `.pkit/project/friction/answers/`, which the backbone fixes (COR-062 points 1 and 2; ADR-068 point 1). Bound by its location, never by a field. One mapping with an `answers` list; each entry holds one artefact's answers — a revalidation, deferrals and revisit entries, with the keys COR-050 names — and `read`, the other answer files on that artefact its answers read (COR-062 point 4), named by their names in the folder. An entry may hold deferrals alone, as a block may. Whether a name in `read` is honoured, whether an answer is live, and whether an entry names an artefact at all are the backbone's to judge from history, not this schema's. Backbone-owned; carries no version of its own and is migrated when it changes (COR-010), preserving the parsed value of `at` (ADR-056 point 3).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["answers"],
+  "properties": {
+    "answers": {
+      "description": "One entry per artefact the file answers on. A second entry for one artefact in one file is a validation error, as is an empty list: such a file answers nothing.",
+      "type": "array",
+      "minItems": 1,
+      "items": {"$ref": "#/$defs/entry"}
+    }
+  },
+  "$defs": {
+    "entry": {
+      "title": "One artefact's answers (COR-062 point 1)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artefact"],
+      "anyOf": [{"required": ["revalidated"]}, {"required": ["revisited"]}],
+      "properties": {
+        "artefact": {
+          "description": "The artefact's location when the answer was added: a document's path, or a collection entry's file path, `#` and its id. The checks follow it through the renames of the artefact's file since (COR-062 point 10).",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "read": {
+          "description": "The other answer files that held an answer on this artefact in the tree of the change's own head, by their names in the folder (COR-062 point 4; ADR-068 point 2). Holds for every answer in the entry.",
+          "type": "array",
+          "items": {"$ref": "#/$defs/answer-file-name"},
+          "uniqueItems": true
+        },
+        "revalidated": {"$ref": "#/$defs/revalidated"},
+        "revisited": {
+          "description": "One entry per target of a link whose source's change revisits it (COR-050 point 16). A second entry for one target within one answer is a validation error.",
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/revisit"}
+        }
+      }
+    },
+    "revalidated": {
+      "title": "A revalidation, its deferrals, or both (COR-050 points 3 and 4)",
+      "description": "`at` is the marker of a revalidation and comes with its `outcome`; `unchanged` requires `unchanged-because`. An entry that only defers carries `deferred` alone; an empty mapping is refused.",
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "at": {
+          "description": "UTC timestamp of the revalidation.",
+          "$ref": "#/$defs/utc-timestamp"
+        },
+        "outcome": {"type": "string", "enum": ["updated", "unchanged"]},
+        "unchanged-because": {
+          "description": "Why the content still holds against this change; required with `outcome: unchanged`.",
+          "$ref": "#/$defs/non-empty-string"
+        },
+        "deferred": {
+          "description": "One entry per anchor whose friction is deliberately postponed. A second entry for one anchor within one answer is a validation error.",
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/deferral"}
+        }
+      },
+      "dependentRequired": {"at": ["outcome"], "outcome": ["at"]},
+      "if": {"properties": {"outcome": {"const": "unchanged"}}, "required": ["outcome"]},
+      "then": {"required": ["unchanged-because"]}
+    },
+    "deferral": {
+      "title": "One deferral (COR-050 point 4)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor", "reason"],
+      "properties": {
+        "anchor": {"$ref": "#/$defs/anchor-reference"},
+        "reason": {"$ref": "#/$defs/non-empty-string"}
+      }
+    },
+    "revisit": {
+      "title": "One revisit entry (COR-050 point 16)",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["anchor", "outcome", "reason"],
+      "properties": {
+        "anchor": {"$ref": "#/$defs/anchor-reference"},
+        "outcome": {"type": "string", "enum": ["unchanged", "deferred"]},
+        "reason": {"$ref": "#/$defs/non-empty-string"}
+      }
+    },
+    "anchor-reference": {
+      "title": "An anchor written as its kind and value",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "value"],
+      "properties": {
+        "kind": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$"},
+        "value": {"$ref": "#/$defs/non-empty-string"}
+      }
+    },
+    "answer-file-name": {
+      "description": "An answer file's name in the folder: a YAML file directly in it, never a path.",
+      "type": "string",
+      "pattern": "^[^/\\\\]+\\.yaml$"
+    },
+    "non-empty-string": {"type": "string", "minLength": 1},
+    "utc-timestamp": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    }
+  }
+}

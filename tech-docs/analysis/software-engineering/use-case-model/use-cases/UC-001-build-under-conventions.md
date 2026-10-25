@@ -5,6 +5,8 @@ status: active
 actor: core:ACT-developer
 other-actors:
   - core:ACT-ai-agent
+requirements:
+  - REQ-060
 pkit:
   friction:
     anchors:
@@ -25,10 +27,12 @@ pkit:
         - COR-013
         - COR-017
         - COR-031
+      artefact:
+        - REQ-060
     revalidated:
-      at: 2026-10-20T10:10:43Z
+      at: 2026-10-25T00:36:09Z
       outcome: unchanged
-      unchanged-because: Project rule 2 adds that CI skips the suite on a pull request whose only changes since a passing full run are answers. The agent still runs the tests of what it changed and leaves the full suite to the pre-push hook and CI, as the use case says.
+      unchanged-because: The engineer's body and core rule 20 now say to commit what the writers write. Building under the conventions is as this use case says.
 ---
 
 # UC-001 — Build my change under my project's conventions
@@ -63,7 +67,7 @@ pkit:
 3. The agent writes the change's code, applying the corpus to each choice it settles, such as naming, layout and error handling.
 4. The agent reads its diff again against the corpus, and corrects what does not conform.
 5. The agent hands the change on for review, and invokes no reviewer itself (COR-024).
-6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032).
+6. The reviewers judge the change: COR-024's stack where the change calls for it, and the reviewers the merge gate requires (project-management DEC-032). Where the project runs the code-review panel, the panel's `security-reviewer` judges the change's code against REQ-060: a secret never goes on a command line.
 7. The agent fixes each finding its reviewer marked blocking, and records each advisory in the pull request with how it was answered. A finding marked for a person waits for that person (project-management DEC-028).
 
 **Variants:**

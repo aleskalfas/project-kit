@@ -15,13 +15,13 @@ pkit:
         - src/project_kit/refs.py
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
-      record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, ADR-049, ADR-064]
+      record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, PRJ-011, ADR-049, ADR-064]
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-21T15:09:12Z
+      at: 2026-10-24T22:54:12Z
       outcome: unchanged
-      unchanged-because: The record lookup in refs.py gains a point of a record, a rule's heading anchor and --json. The README's account of the reference-graph checks is unchanged.
+      unchanged-because: The refs module gains the lookup of several ids in one document. The README names only pkit refs validate, which is untouched.
 ---
 
 # project-kit

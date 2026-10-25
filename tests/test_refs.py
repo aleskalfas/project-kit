@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -732,6 +733,67 @@ def test_cli_refs_lookup_errors_on_missing_record(kit_target: Path) -> None:
     result = runner.invoke(main, ["refs", "lookup", "COR-999"])
     assert result.exit_code != 0
     assert "no record matches" in result.output
+
+
+def test_cli_refs_lookup_json_answers_every_id_in_one_document(kit_target: Path) -> None:
+    """`--json` answers each id given, in its order, in one document: where it lies, or why
+    it does not resolve. The exit is 0 either way, since the document says which, so a
+    script asks once for every record it reads (#2025)."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    folder = kit_target / ".pkit" / "capabilities" / "widgets" / "decisions"
+    folder.mkdir(parents=True)
+    (folder / "DEC-004-thing.md").write_text("---\nid: DEC-004\n---\n", encoding="utf-8")
+    ids = ["COR-001", "widgets:DEC-004", "COR-999", "-x"]
+    result = CliRunner().invoke(main, ["refs", "lookup", "--json", "--", *ids])
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.output)
+    # Each answer also gives its file, the anchor of a cited point's or rule's heading and
+    # whether the file is a synced copy (tests/test_refs_lookup_points.py).
+    assert [(e["path"], e["anchor"]) for e in document["lookups"]] == [
+        (".pkit/decisions/core/COR-001-thing.md", None),
+        (".pkit/capabilities/widgets/decisions/DEC-004-thing.md", None),
+        (None, None),
+        (None, None),
+    ]
+    shared = ("id", "resolved", "paths", "problem")
+    assert {
+        "schema_version": document["schema_version"],
+        "lookups": [{k: e[k] for k in shared} for e in document["lookups"]],
+    } == {
+        "schema_version": 1,
+        "lookups": [
+            {
+                "id": "COR-001",
+                "resolved": True,
+                "paths": [".pkit/decisions/core/COR-001-thing.md"],
+                "problem": None,
+            },
+            {
+                "id": "widgets:DEC-004",
+                "resolved": True,
+                "paths": [".pkit/capabilities/widgets/decisions/DEC-004-thing.md"],
+                "problem": None,
+            },
+            {
+                "id": "COR-999",
+                "resolved": False,
+                "paths": [],
+                "problem": "no record matches 'COR-999'",
+            },
+            {"id": "-x", "resolved": False, "paths": [], "problem": "no record matches '-x'"},
+        ],
+    }
+    one = CliRunner().invoke(main, ["refs", "lookup", "--json", "COR-001"])
+    assert json.loads(one.output)["lookups"] == json.loads(result.output)["lookups"][:1]
+
+
+def test_cli_refs_lookup_takes_several_ids_only_with_json(kit_target: Path) -> None:
+    """Without `--json` it prints one id's paths, so several ids are refused rather
+    than printed with nothing to tell whose line is whose."""
+    _write_decision(kit_target, "core", "COR", "001", "thing")
+    result = CliRunner().invoke(main, ["refs", "lookup", "COR-001", "COR-001"])
+    assert result.exit_code == 2
+    assert "--json" in result.output
 
 
 def test_cli_hooks_list_shows_winning_provider(kit_target: Path) -> None:

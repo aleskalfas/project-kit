@@ -31,7 +31,7 @@ schema_version: 1
 # `**/config.yaml` form the sibling schemas use. `workstreams.yaml` /
 # `substrate-map.yaml` / `instance-ownership.yaml` are distinctive names;
 # `config.yaml` is not — a bare `**/config.yaml` would also claim the
-# backbone's `.pkit/project/config.yaml`, the permission capability's
+# backbone's `.pkit/project/config.yaml`, the permission model's
 # `.pkit/permissions/project/config.yaml`, and any application config an
 # adopter happens to keep in their repo, turning correct files into loud
 # validation failures. (A cross-capability collision surfaces as an

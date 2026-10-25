@@ -23,7 +23,7 @@ import click
 if TYPE_CHECKING:
     from ruamel.yaml.comments import CommentedMap
 
-    from project_kit.capabilities import CapabilitySource, MandatoryUpstream
+    from project_kit.capabilities import CapabilitySource, CollisionFinding, MandatoryUpstream
 
 from project_kit import (
     __version__,
@@ -31,6 +31,7 @@ from project_kit import (
     cli_render,
     default_branch,
     friction_check,
+    friction_move,
     friction_report,
     friction_repository,
     friction_resolve,
@@ -858,6 +859,70 @@ def _settled_base(target_root: Path, base_ref: str | None) -> default_branch.Bas
         raise click.ClickException(found.problem or f"the base {found.ref!r} cannot be compared.")
     _warn_settled(settled)
     return found
+
+
+@main.group("harness")
+def harness() -> None:
+    """The harness that hosts the methodology (COR-047): what the methodology requires
+    of it, and how far the project's adapter says its harness meets that.
+
+    Reference: `.pkit/adapters/README.md`, "Harness requirements".
+    """
+
+
+#: `pkit harness report`'s exit when the requirements or a declaration cannot be
+#: read: apart from 1, a report with something unmet, and 2, click's usage error.
+HARNESS_UNREADABLE_EXIT = 3
+
+
+@harness.command("report")
+@click.option(
+    "--adapter",
+    "adapters",
+    metavar="NAME",
+    multiple=True,
+    help="Report for this adapter, instead of each one the manifest registers. Repeatable.",
+)
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+@click.pass_context
+def harness_report_command(ctx: click.Context, adapters: tuple[str, ...], as_json: bool) -> None:
+    """Report the harness requirements the project's harness leaves unmet (COR-047).
+
+    For each adapter the backbone manifest registers, every requirement the core
+    declares (`.pkit/schemas/harness-requirements.yaml`) resolves to one of
+    `satisfied`, `unsatisfied` or `indeterminate`, with the grade the adapter's
+    support declaration (`.pkit/adapters/<name>/harness-support.yaml`) gives and
+    whether the pass derived it (`computed`). It reads files only: it never starts
+    the harness, needs no network and writes nothing. So it confirms no answer:
+    no answer, an answer for no version or for versions it cannot check, and a
+    `supported` or `at-cost` answer are `indeterminate`, never `satisfied`; a
+    `not-achievable` answer is `unsatisfied`. Exit 0 when nothing is unmet, 1
+    when anything is, 3 when the requirements or a declaration cannot be read or
+    fail their schema.
+    """
+    from project_kit import harness_support
+
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    for name in adapters:
+        if not harness_support.is_adapter(target_root, name):
+            raise click.BadParameter(
+                f"no adapter {name!r} in .pkit/adapters/.", param_hint="--adapter"
+            )
+    try:
+        known = harness_support.requirements(target_root)
+        reports = harness_support.report(target_root, list(adapters) if adapters else None)
+    except harness_support.SupportError as exc:
+        click.echo(f"Error: {exc}", err=True)
+        ctx.exit(HARNESS_UNREADABLE_EXIT)
+    if as_json:
+        click.echo(harness_support.render_json(reports, known), nl=False)
+    else:
+        click.echo(harness_support.render_human(reports, known), nl=False)
+    ctx.exit(1 if harness_support.unmet_count(reports, known) else 0)
 
 
 @main.group("pull-request")
@@ -1694,10 +1759,11 @@ def friction() -> None:
     """Anchors and friction (COR-050): the reading commands — the checks, the
     debt listing, one artefact's explanation, the places and artefacts
     discovery finds, whether what changed since a commit lies inside
-    `revalidated` blocks and `revisited` lists — which never write, the
-    writers — revalidate, defer, revisit, record-status — which write one block,
-    only with consent, and resolve, which resolves a merge's conflicting
-    revalidations and revisit entries as text and writes no answer.
+    `revalidated` blocks and `revisited` lists, the plan of the move of the
+    answers into answer files — which never write, the writers — revalidate,
+    defer, revisit, record-status — which write one answer or status, only with
+    consent, and resolve, which resolves a merge's conflicting revalidations and
+    revisit entries as text and writes no answer.
 
     Reference: `.pkit/cli/README.md`, "Friction checks"; the block itself is
     in `.pkit/schemas/README.md`, "The friction block".
@@ -1782,10 +1848,13 @@ def friction_revalidate_command(
     """Write ARTEFACT's revalidation (COR-050 point 3): a fresh `at`, the outcome, and
     for `unchanged` a new `unchanged-because`.
 
-    Rewrites the `revalidated` block and nothing else in the file. Re-states
-    the deferrals kept — each named with --keep or confirmed at the prompt —
-    and removes the rest (point 4). ARTEFACT is a location (`path`, or
-    `path#id` for a collection entry) or an id.
+    Where ARTEFACT's block holds no answer, it writes into an answer file of this
+    change's own, which names every other answer file on ARTEFACT in `read`
+    (COR-062 points 1 and 4); where its block holds answers, it rewrites the
+    `revalidated` block and nothing else in the file. Re-states the deferrals
+    kept — each named with --keep or confirmed at the prompt — and drops the
+    rest (point 4). ARTEFACT is a location (`path`, or `path#id` for a
+    collection entry) or an id.
     """
     rerun = ["pkit", "friction", "revalidate", artefact, "--outcome", outcome]
     if because is not None:
@@ -1824,8 +1893,10 @@ def friction_defer_command(
     or reword the reason of the entry already there.
 
     Writes the `deferred` list and nothing else — never `at`: a deferral is
-    not a revalidation. The entry covers the anchor's changes up to the
-    commit that introduces it; rewording its reason does not move that.
+    not a revalidation. Where ARTEFACT's block holds no answer, the list is in an
+    answer file of this change's own (COR-062 point 1). The entry covers the
+    anchor's changes up to the commit that introduces it; rewording its reason
+    does not move that.
     """
     rerun = ["pkit", "friction", "defer", artefact, "--anchor", anchor, "--reason", reason]
 
@@ -1869,7 +1940,8 @@ def friction_revisit_command(
     change alters its trigger fields, each target changes in the same change or
     ARTEFACT says why it still stands (`unchanged`) or which follow-up revisits
     it (`deferred`). Writes the `revisited` list and nothing else — never `at`:
-    an entry is no revalidation of ARTEFACT.
+    an entry is no revalidation of ARTEFACT. Where ARTEFACT's block holds no
+    answer, the list is in an answer file of this change's own (COR-062 point 1).
     """
     rerun = [
         "pkit",
@@ -1909,6 +1981,30 @@ def friction_record_status_command(artefact: str, yes: bool, dry_run: bool) -> N
         return friction_write.plan_record_status(target_root, artefact)
 
     _friction_write(plan_of, yes, dry_run, rerun, writes_answer=False)
+
+
+@friction.command("move-plan")
+@click.option(
+    "--json", "as_json", is_flag=True, default=False, help="Emit the stable JSON document."
+)
+def friction_move_plan_command(as_json: bool) -> None:
+    """Plan the move of the project's answers out of the artefacts' blocks (COR-062 point
+    11): each answer file the move would add, with its content, and each artefact file's
+    new text, its blocks' answers taken out. A reading command: it writes nothing.
+
+    The backbone migration that makes the move writes the plan's bytes. An artefact the
+    project receives by sync keeps its answers, and so does one whose answers would not
+    read back in the answer files' shape; each is listed with why. Over a project whose
+    blocks hold no answer it plans nothing.
+    """
+    target_root = find_target_root()
+    if target_root is None:
+        raise click.ClickException("not in a project tree.")
+    plan = friction_move.plan_move(target_root)
+    if as_json:
+        click.echo(friction_move.render_json(plan), nl=False)
+    else:
+        click.echo(friction_move.render_human(plan), nl=False)
 
 
 @friction.command("resolve")
@@ -2012,6 +2108,7 @@ def friction_resolve_command(
     default=None,
     help="Check commit REV instead of the working tree: its files read from git objects, "
     "nothing checked out, the merge-base taken against REV. Uncommitted work is not read. "
+    f"REV is the change's own head too, and ${friction_check.HEAD_ENV} is not read. "
     "Not with --all.",
 )
 @click.option(
@@ -2036,6 +2133,15 @@ def friction_check_command(
     resolver's missing answer (no-answer) or a bump; an outdated base never
     fails, nor a dead anchor it cannot lay at the change (dead-unattributed),
     nor an anchor on an id two artefacts share (shared-id).
+
+    Answers in answer files (.pkit/project/friction/answers/) are read too,
+    and what each one read is judged against the change's own head: the
+    working tree's HEAD, or $PKIT_CHECK_HEAD, a parent of HEAD such as the
+    change's head where a host checks out its merge with the base. Exit 1 in
+    enforcing mode on an answer file the change rewrites, a prune mixed with
+    answers, an answer leaving out a file it had to read, or an answer on
+    what its artefact does not hold; a revalidation on the base's tip the
+    change's answer did not read is reported (answered-apart), never failed.
 
     With --all, the whole-repository check instead: every artefact at HEAD
     against its revalidation point — the commit where it first carried the
@@ -2633,7 +2739,21 @@ def release_apply(
         apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
         return
     if not yes:
-        click.confirm("Write these versions and consume the changesets?", abort=True)
+        from project_kit.project_config import confirm_at_terminal
+
+        flags = [
+            flag
+            for flag, given in (("--tag", tag), ("--push", push), ("--no-broaden", no_broaden))
+            if given
+        ]
+        rerun = shlex.join(["pkit", "release", "apply", *flags, "--yes"])
+        confirm_at_terminal(
+            "Write these versions and consume the changesets?",
+            abort=True,
+            refusal="refusing to release: stdin is not a terminal and --yes was not given, so "
+            "nobody confirmed it (#2003). Nothing was written. To release non-interactively, "
+            f"run:\n  {rerun}",
+        )
     apply_release(source_kit, plan, tag=tag, push=push, clearance=clearance, broaden=broaden)
 
 
@@ -2855,10 +2975,10 @@ def release_merge(
 ) -> None:
     """Merge a release PR — the sanctioned path for a `chore(release):` PR.
 
-    A release PR closes no issue, so the issue-PR merge gate (`pkit
-    project-management merge-pr`) legitimately refuses it. This verb is the
-    release flow's own merge: it is guarded to `release/*` heads (a non-release
-    PR is refused, pointing at the issue-PR gate), merges only when the PR is
+    A release PR closes no issue, so a merge gate that requires one refuses
+    it. This verb is the release flow's own merge: it is guarded to
+    `release/*` heads (a PR on another head is refused, pointing at
+    `pkit pull-request land`), merges only when the PR is
     open, mergeable, and its required checks are green, and lands it as one
     squash commit whose subject is the PR title — through the base's merge queue
     where it has one — deleting the head branch once GitHub reports the PR
@@ -3619,7 +3739,10 @@ def _run_inbox_resolved(target: str, *, assume_yes: bool) -> None:
     """The `--resolved` close-prompt: list fully-tracked reports, then confirm a
     comment + close **per report, interactively only**. `--yes`/non-interactive
     never closes — listing is the whole autonomous surface (the same
-    produce-don't-act asymmetry as the reporter side's --yes, ADR-047)."""
+    produce-don't-act asymmetry as the reporter side's --yes, ADR-047). Off a
+    terminal without --yes the close is refused after the listing, so an answer
+    piped in closes nothing (#2003)."""
+    from project_kit.project_config import ConsentRefused, stdin_is_tty
     from project_kit.report import close_report_as_resolved, list_resolved
 
     rows = list_resolved(target)
@@ -3638,6 +3761,11 @@ def _run_inbox_resolved(target: str, *, assume_yes: bool) -> None:
             "confirm (never autonomous)."
         )
         return
+    if not stdin_is_tty():
+        raise ConsentRefused(
+            "refusing to close the resolved reports: stdin is not a terminal, so nobody can "
+            "confirm each close (#2003). Nothing was closed. `--yes` lists them without asking."
+        )
     click.echo("")
     for r, tracked in rows:
         if not click.confirm(f"Post a closing comment on #{r.number} and close it?", default=False):
@@ -3811,8 +3939,12 @@ def _run_report(
     want_url = use_url or open_browser
     gh_ok = gh_authenticated()
     # Interactive = the path that can actually post (the prompt-once name flow
-    # runs only there; --yes / URL / no-auth paths resolve silently).
-    interactive = not assume_yes and not want_url and gh_ok
+    # runs only there; --yes / URL / no-auth paths resolve silently). Off a
+    # terminal nobody can be asked, so the name is resolved silently too, and
+    # the post itself is refused at its confirmation (#2003).
+    from project_kit.project_config import stdin_is_tty
+
+    interactive = not assume_yes and not want_url and gh_ok and stdin_is_tty()
     project, ws = _resolve_report_context(
         target_root,
         workstream_override=workstream_override,
@@ -3878,11 +4010,13 @@ def _run_report(
         )
         return
 
-    # API-primary gated path: gh authenticated, interactive.
-    if findings and not _confirm_past_redaction_findings([render_finding(f) for f in findings]):
+    # API-primary gated path: gh authenticated; asked at a terminal, refused off one.
+    if findings and not _confirm_past_redaction_findings(
+        [render_finding(f) for f in findings], refusal=_POST_REFUSAL
+    ):
         click.echo("Not posted — edit the note and re-run.")
         return
-    if _confirm_send_payload(kind, payload, current_login()):
+    if _confirm_send_payload(kind, payload, current_login(), refusal=_POST_REFUSAL):
         outcome = _post_confirmed_payload(
             target_root,
             kind=kind,
@@ -3980,11 +4114,21 @@ def _run_report_url_path(
     _echo_reported_followup(note_path)
 
 
-def _confirm_send_payload(kind: str, payload, login: str | None) -> bool:
+#: The refusal of a post nobody can confirm, off a terminal (#2003).
+_POST_REFUSAL = (
+    "refusing to post: stdin is not a terminal, so nobody can confirm the post (#2003). "
+    "Nothing was posted. Run it again at a terminal, or with --yes to stage it for "
+    "`pkit report submit <id>`, which a person runs at a terminal."
+)
+
+
+def _confirm_send_payload(kind: str, payload, login: str | None, *, refusal: str) -> bool:
     """Show the FULL send payload (body + any overflow comment) once and
     confirm it as a single gesture, naming both the target and the posting
     identity (#662 — the identity is surfaced so a CLI-vs-browser split can
-    never misattribute an API post)."""
+    never misattribute an API post). Off a terminal `refusal` is raised and no
+    answer is read (#2003)."""
+    from project_kit.project_config import confirm_at_terminal
     from project_kit.report import REPORT_TARGET
 
     who = f"@{login}" if login else "your gh CLI identity (login unresolved)"
@@ -4004,7 +4148,7 @@ def _confirm_send_payload(kind: str, payload, login: str | None) -> bool:
             "send, per ADR-047):\n"
         )
         click.echo(payload.overflow_comment)
-    return click.confirm(f"\nPost as {who} to {REPORT_TARGET}?", default=False)
+    return confirm_at_terminal(f"\nPost as {who} to {REPORT_TARGET}?", refusal=refusal)
 
 
 def _post_confirmed_payload(
@@ -4149,13 +4293,16 @@ def _echo_redaction_warnings(warnings: list[str]) -> None:
     click.echo("")
 
 
-def _confirm_past_redaction_findings(warnings: list[str]) -> bool:
+def _confirm_past_redaction_findings(warnings: list[str], *, refusal: str) -> bool:
     """Interactive form of the redaction lint: edit-or-send-anyway. Takes
-    rendered lines, same as `_echo_redaction_warnings`."""
+    rendered lines, same as `_echo_redaction_warnings`. Off a terminal
+    `refusal` is raised and no answer is read (#2003)."""
+    from project_kit.project_config import confirm_at_terminal
+
     click.echo("Possible un-redacted content in the attached note:")
     for line in warnings:
         click.echo(f"  {line}")
-    return click.confirm("\nSend anyway? (decline to edit the note first)", default=False)
+    return confirm_at_terminal("\nSend anyway? (decline to edit the note first)", refusal=refusal)
 
 
 def _echo_overflow_draft_note(payload) -> None:
@@ -4453,10 +4600,17 @@ def report_submit(draft_id: str | None, assume_yes: bool) -> None:
         )
     if not gh_authenticated():
         raise click.ClickException("submit posts via gh — authenticate first (`gh auth login`).")
-    if draft.warnings and not _confirm_past_redaction_findings(list(draft.warnings)):
+    refusal = (
+        "refusing to post: stdin is not a terminal, so nobody can confirm the post (#2003). "
+        f"Nothing was posted, and the draft is kept. Run `pkit report submit "
+        f"{draft.draft_id}` at a terminal."
+    )
+    if draft.warnings and not _confirm_past_redaction_findings(
+        list(draft.warnings), refusal=refusal
+    ):
         click.echo("Not posted — draft kept; edit the source note and restage.")
         return
-    if not _confirm_send_payload(draft.kind, draft.payload, current_login()):
+    if not _confirm_send_payload(draft.kind, draft.payload, current_login(), refusal=refusal):
         click.echo(f"\nNot posted — draft kept ({draft.draft_id}).")
         return
     note_path = (target_root / draft.note) if draft.note else None
@@ -4713,6 +4867,22 @@ def _visibility_target() -> Path:
     return target_root
 
 
+def _confirm_untrack(question: str, *, wrote_region: bool = False) -> bool:
+    """Ask before untracking the footprint; refuse off a terminal (#2003).
+
+    `wrote_region`: `visibility private` wrote its `.git/info/exclude` region
+    before asking, so the refusal says so."""
+    from project_kit.project_config import confirm_at_terminal
+
+    written = " `.git/info/exclude` now lists them, but" if wrote_region else ""
+    return confirm_at_terminal(
+        question,
+        refusal="refusing to remove the tracked footprint files from the index: stdin is not "
+        f"a terminal, so nobody can confirm it (#2003).{written} They stay tracked. Run "
+        "`pkit visibility untrack` at a terminal.",
+    )
+
+
 @visibility.command("shared")
 @click.option(
     "--dry-run",
@@ -4725,7 +4895,9 @@ def visibility_shared(dry_run: bool) -> None:
     from project_kit import visibility as vis
 
     click.echo(
-        vis.set_visibility(_visibility_target(), "shared", dry_run=dry_run, confirm=click.confirm),
+        vis.set_visibility(
+            _visibility_target(), "shared", dry_run=dry_run, confirm=_confirm_untrack
+        ),
         nl=False,
     )
 
@@ -4743,7 +4915,12 @@ def visibility_private(dry_run: bool) -> None:
     from project_kit import visibility as vis
 
     click.echo(
-        vis.set_visibility(_visibility_target(), "private", dry_run=dry_run, confirm=click.confirm),
+        vis.set_visibility(
+            _visibility_target(),
+            "private",
+            dry_run=dry_run,
+            confirm=lambda question: _confirm_untrack(question, wrote_region=True),
+        ),
         nl=False,
     )
 
@@ -4765,7 +4942,9 @@ def visibility_untrack(dry_run: bool) -> None:
     """
     from project_kit import visibility as vis
 
-    click.echo(vis.untrack(_visibility_target(), dry_run=dry_run, confirm=click.confirm), nl=False)
+    click.echo(
+        vis.untrack(_visibility_target(), dry_run=dry_run, confirm=_confirm_untrack), nl=False
+    )
 
 
 @capabilities.command("upgrade")
@@ -4992,6 +5171,11 @@ def upgrade_capability_cmd(name: str, interactive: bool, force: bool, dry_run: b
             )
             + "\n"
         )
+        _refuse_collisions_off_terminal(
+            target_root,
+            new_collisions,
+            f"pkit capabilities upgrade {shlex.quote(name)} --interactive",
+        )
         for finding in new_collisions:
             choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
             if choice == "skip":
@@ -5174,40 +5358,38 @@ def refs_who_references(target: str) -> None:
 
 
 @refs.command("lookup")
-@click.argument("citations", metavar="CITATION...", nargs=-1, required=True)
+@click.argument("record_ids", metavar="RECORD_ID...", nargs=-1, required=True)
 @click.option(
     "--json",
     "as_json",
     is_flag=True,
-    default=False,
-    help="Print one JSON object for each citation, in order — its locations, its file, "
-    "the host's anchor of a cited heading, and why it does not resolve — and exit 0.",
+    help="Print one document answering each id given, in order: where it lies, the file and "
+    "the host's anchor of a cited point's or rule's heading, whether that file arrives as a "
+    "synced copy, or why it does not resolve. Exit 0 either way.",
 )
-def refs_lookup(citations: tuple[str, ...], as_json: bool) -> None:
-    """Resolve each citation: a record ID (`COR-005`, `PRJ-002`) to its file, a point of
-    a record (`COR-050#14`, `PRJ-002#D1`) to its file and the anchor a repository host
-    gives its heading, a rule (`RS-CMN-001`, `RS-CMN-001#point`,
-    `[living-docs:RS-LDOC-001]`) to its place in its rule set, or a role or point address
-    (`[pkit::documentation]`, `[pkit::documentation:readers]`) to where an installed
-    capability declares it. Prints each location on a line of its own; exits 1 when a
-    citation does not resolve. With --json, prints a list with one object for each
-    citation, its `anchor` the host's anchor of a cited point's or rule's heading, and
-    exits 0 whatever resolves."""
+def refs_lookup(record_ids: tuple[str, ...], as_json: bool) -> None:
+    """Resolve a record ID (`COR-005`, `PRJ-002`) to its file, a point of a record
+    (`COR-050#14`, `PRJ-002#D1`) to its file and the anchor a repository host gives its
+    heading, a rule (`RS-CMN-001`, `RS-CMN-001#point`, `[living-docs:RS-LDOC-001]`) to
+    its place in its rule set, or a role or point address (`[pkit::documentation]`,
+    `[pkit::documentation:readers]`) to where an installed capability declares it. With
+    `--json`, several ids at once, answered in one document."""
     import json
 
     target_root = find_target_root()
     if target_root is None:
         raise click.ClickException("not in a project tree.")
-    found = refs_mod.lookup_citations(target_root, citations)
     if as_json:
-        click.echo(json.dumps([lookup.as_json() for lookup in found], indent=2, ensure_ascii=False))
+        document = refs_mod.lookup_document(target_root, record_ids)
+        click.echo(json.dumps(document, indent=2, ensure_ascii=False))
         return
-    for lookup in found:
-        for location in lookup.locations:
-            click.echo(location)
-    problems = [lookup.problem for lookup in found if lookup.problem is not None]
-    if problems:
-        raise click.ClickException(".\n".join(problems) + ".")
+    if len(record_ids) != 1:
+        raise click.UsageError("several ids are looked up with --json, in one document.")
+    found = refs_mod.lookup(target_root, record_ids[0])
+    if found.problem is not None:
+        raise click.ClickException(f"{found.problem}.")
+    for path in found.paths:
+        click.echo(path)
 
 
 @refs.command("rename")
@@ -5695,8 +5877,13 @@ def permissions_setup_autonomy(ctx: click.Context, profile: str, remove_override
     # (deny), not an aborted setup — an EOF/abort on the confirm is caught and
     # treated as "no" so a non-tty run still completes the posture, warning only.
     def _confirm_remove(msg: str) -> bool:
+        from project_kit.project_config import stdin_is_tty
+
         if remove_overrides:
             return True
+        if not stdin_is_tty():
+            # Nobody to ask: an answer piped in is never read (#2003).
+            return False
         try:
             return bool(click.confirm(msg))
         except click.Abort:
@@ -6519,8 +6706,16 @@ def settings_consolidate(dry_run: bool, yes: bool) -> None:
         return
 
     if not yes:
+        from project_kit.project_config import confirm_at_terminal
+
         file_list = ", ".join(str(f.relative_to(target_root)) for f in files)
-        confirmed = click.confirm(f"  Remove these entries from {file_list}?", default=False)
+        confirmed = confirm_at_terminal(
+            f"  Remove these entries from {file_list}?",
+            refusal=f"refusing to write {file_list} without consent: stdin is not a terminal "
+            "and --yes was not given (#2003). Nothing was written. To see the change first, "
+            "run:\n  pkit settings consolidate --dry-run\nTo consent non-interactively, run:\n"
+            "  pkit settings consolidate --yes",
+        )
         if not confirmed:
             click.echo("  cancelled.")
             return
@@ -6602,6 +6797,32 @@ def _plan_flags(plan: bool, as_json: bool) -> None:
     """`--json` is the machine form of a plan; alone it asks for nothing."""
     if as_json and not plan:
         raise click.UsageError("--json prints the plan: pass it with --plan.")
+
+
+def _refuse_collisions_off_terminal(
+    target_root: Path, collisions: list[CollisionFinding], command: str
+) -> None:
+    """Refuse, before anything is written, a collision prompt nobody can answer.
+
+    Override, skip or inspect is the person's choice on each collision (COR-017).
+    Off a terminal the question is never asked, so an answer piped in is never
+    read: each collision is named and the command refused (#2003).
+    """
+    from project_kit.project_config import ConsentRefused, stdin_is_tty
+
+    if stdin_is_tty():
+        return
+    for finding in collisions:
+        click.echo(
+            f"  - {finding.artifact_kind} '{finding.artifact_name}' collides with existing "
+            f"{finding.target_path.relative_to(target_root)}"
+        )
+    raise ConsentRefused(
+        "refusing to resolve the naming collisions: stdin is not a terminal, so nobody can "
+        "answer override, skip or inspect (COR-017, #2003). Nothing was written. Run "
+        f"`{command}` again at a terminal, or rename the project's artefact so the names no "
+        "longer collide."
+    )
 
 
 @capabilities.command("install")
@@ -6785,6 +7006,9 @@ def install_capability_cmd(
             "\n  "
             + cli_render.style("strong", f"{len(collisions)} naming collision(s) detected:")
             + "\n"
+        )
+        _refuse_collisions_off_terminal(
+            target_root, collisions, f"pkit capabilities install {shlex.quote(name)}"
         )
         for finding in collisions:
             choice = caps.resolve_collision_interactive(target_root, finding, capability=name)
@@ -7707,13 +7931,20 @@ def uninstall_capability_cmd(
     # --purge on an incubated capability deletes the adopter's only copy of
     # authored work — a destructive op. Confirm before proceeding (the
     # pause-before-destructive-ops discipline), unless --yes or --dry-run.
+    from project_kit.project_config import confirm_at_terminal
+
     if purge and incubated and not dry_run and not yes:
         cap_dir = target_root / ".pkit" / "capabilities" / name
-        click.confirm(
+        confirm_at_terminal(
             f"--purge will permanently delete the authored subtree at "
             f"{cap_dir.relative_to(target_root)}/ — the only copy of this "
             f"incubated capability's work. Continue?",
             abort=True,
+            refusal=f"refusing to purge {cap_dir.relative_to(target_root)}/: stdin is not a "
+            "terminal and --yes was not given, so nobody confirmed deleting the only copy of "
+            f"this capability's work (#2003). Nothing was removed. Deleting it is a "
+            "person's decision: run the command at a terminal, or add --yes once they "
+            "have agreed.",
         )
 
     # A kit-shipped registration is one whose uninstall deletes the subtree. In the
@@ -7732,7 +7963,23 @@ def uninstall_capability_cmd(
             "and deletes nothing (ADR-059)."
         )
         if not dry_run and not yes:
-            click.confirm(f"Unregister {name!r} and keep {subtree}?", abort=True)
+            rerun = shlex.join(
+                [
+                    "pkit",
+                    "capabilities",
+                    "uninstall",
+                    name,
+                    *(["--force"] if force else []),
+                    "--yes",
+                ]
+            )
+            confirm_at_terminal(
+                f"Unregister {name!r} and keep {subtree}?",
+                abort=True,
+                refusal=f"refusing to unregister {name!r}: stdin is not a terminal and --yes "
+                "was not given (#2003). Nothing was unregistered. To unregister it "
+                f"non-interactively, run:\n  {rerun}",
+            )
 
     outcome = caps.uninstall_capability(
         target_root, name, source_kit=source_kit, purge=purge, dry_run=dry_run

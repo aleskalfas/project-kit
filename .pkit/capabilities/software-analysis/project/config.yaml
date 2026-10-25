@@ -6,15 +6,64 @@ schema_version: 1
 
 # The analyses project-kit keeps, one for each component that keeps one
 # (software-analysis DEC-001 point 2; RS-ANA-004 in ANA,
-# tech-docs/rule-sets/analysis.md). The core's, and software-engineering's,
-# which builds on the core's. The other capabilities keep none yet.
+# tech-docs/rule-sets/analysis.md). The core's, and one for each capability.
+# Each capability's builds on the analyses of the components its package.yaml
+# depends on, required or optional.
 analyses:
   - component: core
     folder: core
-  - component: software-engineering
-    folder: software-engineering
+    # The record that states what project-kit is for (software-analysis
+    # DEC-003 point 8).
+    purpose: PRJ-011
+    # Each area's goal, in the order the areas build on each other
+    # (software-analysis DEC-003 point 8; RS-ANA-005 in ANA).
+    areas:
+      010-develop: "Develop the methodology in its own source repository, and extend it with capabilities, adapters, and a project's own skills and agent definitions."
+      020-set-up: "Set up a project once, so its people and AI agents work with the same backbone configuration, capabilities, rules and limits."
+      030-change: "Record a project's decisions and rules, and check, answer and land each change to it, so what the project states stays true as it changes."
+      040-release: "Release the backbone and each component on its own version, so projects can move to it and pin it."
+      050-adopt: "Put the system on a machine and into another project, run each project at the version it pins and keep it current, and report what goes wrong with it, each report linked to its fix."
+  - component: project-management
+    folder: project-management
+    # The record that states what project-management is for (software-analysis
+    # DEC-003 point 8).
+    purpose: project-management:DEC-057
     builds-on:
       - analysis: core
+  - component: evidence
+    folder: evidence
+    builds-on:
+      - analysis: core
+  - component: demo-recording
+    folder: demo-recording
+    builds-on:
+      - analysis: core
+  - component: software-engineering
+    folder: software-engineering
+    # The record that states what software-engineering is for
+    # (software-analysis DEC-003 point 8).
+    purpose: software-engineering:DEC-003
+    builds-on:
+      - analysis: core
+      - analysis: project-management
+  - component: software-analysis
+    folder: software-analysis
+    # The record that states what software-analysis is for (software-analysis
+    # DEC-003 point 8).
+    purpose: software-analysis:DEC-001
+    builds-on:
+      - analysis: core
+      - analysis: project-management
+        optional: true
+  - component: living-docs
+    folder: living-docs
+    # The record that states what living-docs is for (software-analysis DEC-003
+    # point 8).
+    purpose: living-docs:DEC-001
+    builds-on:
+      - analysis: core
+      - analysis: project-management
+        optional: true
 
 numbering:
   # Ids declared free again. An entry may list only ids that nothing cites

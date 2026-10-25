@@ -1,0 +1,5 @@
+component: claude-code
+kind: none
+body: >
+  The README is revalidated against a wording fix in ADR-060, and nothing in
+  it changes.

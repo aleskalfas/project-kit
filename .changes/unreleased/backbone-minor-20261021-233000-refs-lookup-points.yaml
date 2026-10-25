@@ -3,13 +3,12 @@ kind: minor
 custom:
   category: Added
 body: >
-  The record lookup, `pkit refs lookup`, takes several citations in one call,
-  and resolves a point of a record written as an anchor's value, such as
-  `COR-050#14` or `PRJ-002#D1`. It prints the record's file and the anchor
-  GitHub gives the point's heading, reading the record's points as validation
-  reads them. A retired point gives its stub's heading, and a record whose
-  points are still a list gives its file alone. With `--json` it answers each
-  citation as data: its file, the anchor of a cited point's or rule's
-  heading, why it does not resolve, and whether the file arrives as a synced
-  copy. It then exits 0 whatever resolves. A capability's script finds a
-  record or a rule set through it. The decisions README, "Citing", says how.
+  The record lookup, `pkit refs lookup`, resolves a point of a record written
+  as an anchor's value, such as `COR-050#14` or `PRJ-002#D1`. It prints the
+  record's file and the anchor GitHub gives the point's heading, reading the
+  record's points as validation reads them. A retired point gives its stub's
+  heading, and a record whose points are still a list gives its file alone.
+  With `--json`, each answer in its document also gives the file, the anchor
+  of a cited point's or rule's heading, and whether the file arrives as a
+  synced copy. A capability's script finds a record or a rule set through it.
+  The decisions README, "Citing", says how.

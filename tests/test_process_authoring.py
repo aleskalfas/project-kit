@@ -1610,7 +1610,7 @@ def test_handoff_reuses_registered_seam_commands(authoring_repo: Path) -> None:
     )
 
 
-# --- `--dry-run`, the universal preview flag (COR-004) ----------------------
+# --- `--dry-run`, the preview flag (COR-004) ------------------------------
 
 
 def _repo_snapshot(repo: Path) -> dict:

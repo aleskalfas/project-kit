@@ -175,6 +175,29 @@ def test_the_default_readers_fit_the_readers_schema() -> None:
     assert list(schema.iter_errors(default)) == []
 
 
+#: A path a reader takes through the pages (DEC-001 point 7): what they come to do,
+#: and the pages they read in order, each named by its path from the repository's root.
+RESTART_PATH = {
+    "description": "Restarts the service after a failure.",
+    "pages": ["README.md", "docs/runbooks/index.md", "docs/runbooks/restart.md"],
+}
+
+
+def test_the_readers_schema_takes_an_entry_with_paths_and_one_without() -> None:
+    """An entry may carry the paths its reader takes; the defaults carry none."""
+    entries = [
+        {"id": "operator", "description": "Runs the service.", "paths": [RESTART_PATH]},
+        {"id": "guest", "description": "A visitor.", "paths": []},
+        {"id": "auditor", "description": "Checks the service.", "paths": [{"pages": ["a.md"]}]},
+        {"id": "visitor", "description": "Reads the guide once."},
+    ]
+    assert list(_schema(CAPABILITY, "readers.schema.json").iter_errors(entries)) == []
+
+
+def _with_path(path: Any) -> dict[str, Any]:
+    return {"id": "operator", "description": "Runs the service.", "paths": [path]}
+
+
 @pytest.mark.parametrize(
     "entry",
     [
@@ -183,6 +206,20 @@ def test_the_default_readers_fit_the_readers_schema() -> None:
         {"id": "guest", "description": ""},
         {"id": "guest", "description": "A visitor.", "needs": "x"},
         "guest",
+        # A path is the pages a reader reads in order, never a glob of files.
+        {"id": "operator", "description": "Runs the service.", "paths": ["docs/runbooks/**"]},
+        {"id": "operator", "description": "Runs the service.", "paths": "docs/guide.md"},
+        _with_path({"description": "Restarts the service."}),
+        _with_path({"pages": []}),
+        _with_path({"pages": ["docs/runbooks/**"]}),
+        _with_path({"pages": ["docs/guide.txt"]}),
+        _with_path({"pages": ["/docs/guide.md"]}),
+        _with_path({"pages": ["../docs/guide.md"]}),
+        _with_path({"pages": ["docs/../guide.md"]}),
+        _with_path({"pages": ["docs/guide.md#install"]}),
+        _with_path({"pages": ["docs\\guide.md"]}),
+        _with_path({"pages": ["docs/guide.md"], "description": ""}),
+        _with_path({"pages": ["docs/guide.md"], "goal": "x"}),
     ],
 )
 def test_the_readers_schema_refuses_a_malformed_entry(entry: Any) -> None:
@@ -451,6 +488,27 @@ def test_a_page_unjudged_only_on_a_kind_nothing_resolves_owes_what_its_other_anc
     ]
 
 
+def test_a_page_answered_apart_owes_nothing_for_it() -> None:
+    """Two revalidations of a page made apart are debt, not staleness: the check keeps
+    the page `current`, `stale` or `deferred` and reports `answered-apart` beside it,
+    with no anchor. A page the change leaves alone owes nothing for it, and a stale
+    page owes only its changed anchors (project-management DEC-053 point 4, COR-062
+    point 7). The filler reads the check's own result, as the backbone gives it."""
+    apart = {"location": "docs/current.md", "kind": "answered-apart", "anchor": None}
+    stale = {"location": "docs/guide.md", "kind": "answered-apart", "anchor": None}
+    deferred = {"location": "docs/deferred.md", "kind": "answered-apart", "anchor": None}
+    report = {**REPORT, "findings": [*REPORT["findings"], apart, stale, deferred]}
+    read = doc_check_lib.read_friction(".", _check_answering(report))
+    assert doc_check_lib.obligations(read, PAGES) == doc_check_lib.obligations(REPORT, PAGES)
+    alone = {
+        **REPORT,
+        "artefacts": [{"location": "docs/current.md", "state": "current"}],
+        "findings": [apart],
+    }
+    assert [o.get("document") for o in doc_check_lib.obligations(alone, PAGES)] == [None, None]
+    assert doc_check_lib.unresolved_kinds(report, PAGES) == []
+
+
 def test_a_dormant_check_owes_nothing() -> None:
     assert doc_check_lib.obligations({"dormant": True, "artefacts": []}, PAGES) == []
 
@@ -669,6 +727,62 @@ def test_the_project_filler_adds_a_reader(docs_project: AdopterRepo) -> None:
     document = _validate(docs_project)
     assert _errors(document) == []
     assert "guest, maintainer, user" in _readers_line(document)
+
+
+def test_the_point_resolves_an_entry_that_carries_paths_and_one_that_carries_none(
+    docs_project: AdopterRepo,
+) -> None:
+    """The paths an entry carries reach whoever reads the point, the agent's
+    reader-review among them (DEC-001 points 6 and 7)."""
+    docs_project.write(
+        {
+            "docs/guide.md": _page("operator"),
+            "tech-docs/README.md": _page("guest"),
+            READERS_FILLER: (
+                "schema_version: 1\nvalue:\n"
+                "  - id: operator\n"
+                "    description: Runs the service in production.\n"
+                "    paths:\n"
+                "      - description: Restarts the service after a failure.\n"
+                "        pages: [README.md, docs/runbooks/index.md, docs/runbooks/restart.md]\n"
+                "  - {id: guest, description: A visitor who reads the guide once.}\n"
+            ),
+        }
+    )
+    result = CliRunner().invoke(main, ["connections", "resolve", READERS, "--json"])
+    assert result.exit_code == 0, result.output
+    document = json.loads(result.output)
+    assert document["resolved"] is True
+    values = {entry["id"]: entry["value"] for entry in document["entries"]}
+    assert values["operator"]["paths"] == [RESTART_PATH]
+    assert "paths" not in values["guest"]
+    assert "paths" not in values["user"]
+    validated = _validate(docs_project)
+    assert _errors(validated) == []
+    assert "guest, maintainer, operator, user" in _readers_line(validated)
+
+
+def test_an_entry_whose_path_is_a_glob_leaves_the_point_unresolved(
+    docs_project: AdopterRepo,
+) -> None:
+    """A path names the pages a reader reads, so a glob fits no path, and under
+    `fail` the project's filler is inert and the whole point unresolved."""
+    docs_project.write(
+        {
+            READERS_FILLER: (
+                "schema_version: 1\nvalue:\n"
+                "  - id: operator\n"
+                "    description: Runs the service in production.\n"
+                '    paths: ["docs/runbooks/**"]\n'
+            ),
+        }
+    )
+    result = CliRunner().invoke(main, ["connections", "resolve", READERS, "--json"])
+    assert result.exit_code == 1, result.output
+    document = json.loads(result.output)
+    assert document["resolved"] is False
+    (inert,) = [filler for filler in document["fillers"] if filler.get("state") == "inert"]
+    assert "does not fit the point" in inert["reason"]
 
 
 def test_a_capability_s_readers_are_added_beside_the_defaults(docs_project: AdopterRepo) -> None:

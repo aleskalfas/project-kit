@@ -27,6 +27,7 @@ import json
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -1376,7 +1377,8 @@ def test_any_change_stales_a_floor_reviewers_rejection(dw, rc, monkeypatch) -> N
 
 def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> None:
     """review-pr skips a reviewer whose CHANGES_REQUESTED is fresh, so the
-    refusal names the way to have it re-review the PR as it stands."""
+    refusal names the way to have it re-review the PR as it stands: review-pr
+    with the issue's number, the number that command takes (DEC-028, #1935)."""
     _wire(
         dw,
         monkeypatch,
@@ -1385,14 +1387,47 @@ def test_a_fresh_rejection_names_the_forced_re_review(dw, rc, monkeypatch) -> No
         pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
     )
     _author_changed(dw, monkeypatch)
-    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT)
+    result = dw._check_agent_gate(99, {}, _config(), "resolved", CAP_ROOT, issue_number=1712)
     assert result.passed is False
     assert "local agent (reviewer): CHANGES_REQUESTED" in result.refusal_message
     assert (
         "It skips a fresh CHANGES_REQUESTED (local agent (reviewer)): push the fix "
         "it asks for, or have it re-review the PR as it stands with "
-        "`review-pr 99 --force`."
+        "`review-pr 1712 --force`."
     ) in result.refusal_message
+
+
+def test_the_refusal_names_review_pr_with_the_issue_not_the_pr(dw, rc, monkeypatch) -> None:
+    """review-pr reads its argument as an issue's number, so the refusal names
+    it with the issue's number. The pull request's number would find no branch,
+    or another issue's (#1935)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[_pinned_verdict_comment("reviewer", "CHANGES_REQUESTED")],
+        pr_view={"headRefOid": _REVIEWED, "baseRefOid": _BASE},
+    )
+    _author_changed(dw, monkeypatch)
+    result = dw._check_agent_gate(1801, {}, _config(), "resolved", CAP_ROOT, issue_number=1712)
+    assert result.passed is False
+    assert "b) Run `review-pr 1712` to re-invoke the local agent(s)." in result.refusal_message
+    assert "`review-pr 1712 --force`" in result.refusal_message
+    assert "review-pr 1801" not in result.refusal_message
+
+
+def test_the_refusal_without_an_issue_names_the_placeholder(dw) -> None:
+    """With no issue's number to give, the refusal names review-pr's argument as
+    `<N>` rather than another number."""
+    slot = dw._Slot(
+        reviewer="reviewer",
+        label="local agent (reviewer)",
+        approved=False,
+        overridden=False,
+        verdict=None,
+    )
+    message = dw._agent_gate_refusal(mode_source="resolved", slots=[slot])
+    assert "b) Run `review-pr <N>` to re-invoke the local agent(s)." in message
 
 
 def test_a_verdict_over_a_base_the_pr_left_is_stale(dw, rc, monkeypatch) -> None:
@@ -1498,3 +1533,160 @@ def test_unreadable_ruled_artefacts_refuse_with_the_reason(dw) -> None:
     )
     assert "has no `pkit rule-sets altered` command" in result.refusal_message
     assert 'done-work --bypass "<reason>"' in result.refusal_message
+
+
+# ---- the required set is worked out before the gate refuses (#1979) -------
+
+
+def test_a_contributed_reviewer_alone_satisfies_the_gate(dw, rc, monkeypatch) -> None:
+    """With no remote or local reviewer registered, the gate still works out
+    the required set, and merges on the approval of the reviewer a capability
+    contributes (DEC-032 D3)."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_design_collection(rc),
+        comments=[_local_verdict_comment("design-reviewer", "APPROVED")],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(99, {}, _config(local=(), remote=()), "resolved", CAP_ROOT)
+    assert result.passed is True, result.refusal_message
+    assert "design-reviewer" in result.passed_via
+    assert "ux-ui-design" in result.passed_via
+
+
+def test_a_contributed_reviewer_alone_is_required(dw, rc, monkeypatch) -> None:
+    """Without its approval the gate refuses naming the contributed reviewer,
+    not a project with no reviewer configured."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_design_collection(rc),
+        comments=[],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(99, {}, _config(local=(), remote=()), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "still missing a fresh APPROVED" in result.refusal_message
+    assert "design-reviewer" in result.refusal_message
+    assert "no agents configured" not in result.refusal_message
+
+
+def test_an_unresolvable_set_refuses_with_its_own_cause(dw, rc, monkeypatch) -> None:
+    """With nothing registered, a set that cannot be worked out refuses with
+    its own cause: no reviewer is known to be missing until it is worked out."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_design_collection(rc, deployed=False),
+        comments=[],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    result = dw._check_agent_gate(99, {}, _config(local=(), remote=()), "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "unsatisfiable" in result.refusal_message
+    assert "no agents configured" not in result.refusal_message
+
+
+def test_no_reviewer_configured_and_none_contributed_refuses(dw, rc, monkeypatch) -> None:
+    """A set with no reviewer in it refuses, saying none is configured and no
+    contribution requires one, though no verdict is missing."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_design_collection(rc),
+        comments=[],
+        closing_issue_labels={42: ["workstream:backend"]},
+    )
+    result = dw._check_agent_gate(99, {}, _config(local=(), remote=()), "resolved", CAP_ROOT)
+    assert result.passed is False
+    message = result.refusal_message
+    assert "no agents configured" in message
+    assert "review.agents.remote_registered: (none)" in message
+    assert "review.agents.local_registered: (none)" in message
+    assert "no installed capability contributes a reviewer this PR requires" in message
+    assert "review.mode: human" in message
+    assert 'done-work --bypass "<reason>"' in message
+
+
+@pytest.mark.parametrize(
+    ("agents", "named"),
+    [
+        (
+            {"local_registered": [{"agent": "pm-reviewer"}, {"name": ""}]},
+            "review.agents.local_registered: 2 entries, none with a `name`",
+        ),
+        (
+            {"remote_registered": [{"login": "review-bot"}]},
+            "review.agents.remote_registered: 1 entry, none with a `github_login`",
+        ),
+        (
+            {"local_registered": {"name": "pm-reviewer"}},
+            "review.agents.local_registered: not a list",
+        ),
+    ],
+)
+def test_entries_that_name_no_reviewer_refuse_naming_them(
+    dw, rc, monkeypatch, agents, named
+) -> None:
+    """Entries that resolve to no reviewer, with no contribution the PR
+    requires, used to pass the gate with no reviewer at all. It now refuses,
+    naming the entries as the cause."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[],
+    )
+    config = {"review": {"agents": agents}}
+    result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert result.passed is False
+    message = result.refusal_message
+    assert "name no reviewer" in message
+    assert named in message
+    assert "pre-check" in message
+
+
+def test_no_reviewer_refusal_names_the_contributions_opted_out(dw, rc, monkeypatch) -> None:
+    """Where an opt-out withdrew the only reviewer the PR requires, the
+    refusal names it with its reason."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=_design_collection(rc),
+        comments=[],
+        closing_issue_labels={42: ["workstream:design"]},
+    )
+    config: dict[str, Any] = _config(local=(), remote=())
+    config["review"]["agents"]["contributed_opt_out"] = [_DESIGN_OPT_OUT]
+    result = dw._check_agent_gate(99, {}, config, "resolved", CAP_ROOT)
+    assert result.passed is False
+    assert "no agents configured" in result.refusal_message
+    assert (
+        "opted out (review.agents.contributed_opt_out): design-reviewer "
+        "(capability `ux-ui-design`) — This project has no UI."
+    ) in result.refusal_message
+
+
+def test_no_reviewer_refusal_steers_an_override_to_the_whole_gate_bypass(
+    dw, rc, monkeypatch
+) -> None:
+    """A per-reviewer override has no reviewer to waive in an empty set, so
+    the refusal says the whole-gate `--bypass` is the tool."""
+    _wire(
+        dw,
+        monkeypatch,
+        collection=rc.ContributionCollection(rules=()),
+        comments=[],
+    )
+    result = dw._check_agent_gate(
+        99,
+        {},
+        _config(local=(), remote=()),
+        "resolved",
+        CAP_ROOT,
+        override_reviewers=("pm-reviewer",),
+    )
+    assert result.passed is False
+    assert "no agents configured" in result.refusal_message
+    assert "--bypass-reviewer cannot help here" in result.refusal_message

@@ -4,7 +4,8 @@ Over the artefacts `friction_discovery` finds in the declared places, and the
 settings that declare them, this pass reports:
 
 - **a capability place the walk does not follow** — one discovery could not
-  read in the package schema's shape `{path, location?, type?, revisits?, description?}`
+  read in the package schema's shape
+  `{path, location?, type?, revisits?, derived-links?, description?}`
   (plain text, no `path`, a location `docs.locations` does not declare, or
   declares in another shape with nothing recorded), or one that leaves the
   repository, through a link included; reported whenever it is declared,
@@ -99,7 +100,21 @@ settings that declare them, this pass reports:
   point 2 refuses, a section or the lead of a collection file, a collection
   entry or a record, naming the anchor to use (COR-050 points 2, 7 and 12).
   Read from the working tree's discovery through `artefact_parts`, the one
-  reading of an artefact anchor's part.
+  reading of an artefact anchor's part;
+- **the answer files** (`_answer_file_findings`; COR-062 point 10), read from
+  the working tree through `answer_files`, the one reader of them: an answer file
+  that cannot be read, or that departs from the answer files' schema, which its
+  location binds it to — no `answers`, an entry naming no artefact, an unknown
+  key (ADR-056 point 2); a second entry for one artefact in one file; a second
+  deferral of one anchor, or a second revisit entry for one target, within one
+  answer; and two answers on one artefact that each name the other's file, which
+  have read neither (COR-062 point 4). Each an error. An answer on what is gone —
+  a location that, followed through the renames of its file, holds no artefact,
+  a deferral of an anchor its artefact no longer declares, a revisit entry for a
+  target no link of it takes — answers nothing and is reported, never failed: a
+  landed answer file is never rewritten, so no change could mend it, and a prune
+  removes it (COR-062 points 5 and 10). Checked whenever an answer file exists,
+  dormant or not.
 
 These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
@@ -139,8 +154,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, cast
 
+from project_kit import answer_files, connections, validators
 from project_kit import backbone_schemas as bs
-from project_kit import connections, validators
 from project_kit.artefact_parts import PartState, anchored_part
 from project_kit.friction_check import (
     Upstream,
@@ -228,6 +243,14 @@ class FrictionFindingKind(Enum):
     )
     CONTAINER_REPORT = "container-report"  # an orphaned role block, an inert point block
     SCHEMA_UNAVAILABLE = "schema-unavailable"  # the tree ships no readable container schema
+    # The answer files (COR-062 point 10).
+    UNREADABLE_ANSWER_FILE = "unreadable-answer-file"  # does not read as a YAML mapping
+    MALFORMED_ANSWER_FILE = "malformed-answer-file"  # departs from the answer files' schema
+    DUPLICATE_ANSWER_ENTRY = "duplicate-answer-entry"  # a second entry for one artefact
+    DUPLICATE_ANSWER_DEFERRAL = "duplicate-answer-deferral"  # one anchor deferred twice
+    DUPLICATE_ANSWER_REVISIT = "duplicate-answer-revisit"  # one target revisited twice
+    MUTUAL_READ = "mutual-read"  # two answers that each name the other's file
+    ANSWER_ON_WHAT_IS_GONE = "answer-on-what-is-gone"  # answers nothing: a report
 
 
 @dataclass(frozen=True)
@@ -294,6 +317,7 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     if not discovery.is_dormant:
         findings.extend(_mixed_line_endings_findings(discovery))
         findings.extend(_artefact_findings(target_root, discovery))
+    findings.extend(_answer_file_findings(target_root, discovery))
     return FrictionValidation(discovery=discovery, findings=tuple(findings))
 
 
@@ -324,7 +348,8 @@ def _capability_place_findings(
             kind=FrictionFindingKind.MALFORMED_PLACE,
             message=(
                 f"{place.reason}, so friction discovery walks nothing under it; a capability "
-                f"place is `{{path, location?, type?, revisits?, description?}}`, its `location` "
+                f"place is `{{path, location?, type?, revisits?, derived-links?, description?}}`, "
+                f"its `location` "
                 f"naming a `docs.locations` entry written `{{path, root?}}` (COR-050 point 7)."
             ),
         )
@@ -1214,6 +1239,190 @@ def _cycle_finding(
     )
 
 
+# --- the answer files ----------------------------------------------------
+
+#: The findings about the answer files (COR-062 point 10).
+ANSWER_KINDS = frozenset(
+    {
+        FrictionFindingKind.UNREADABLE_ANSWER_FILE,
+        FrictionFindingKind.MALFORMED_ANSWER_FILE,
+        FrictionFindingKind.DUPLICATE_ANSWER_ENTRY,
+        FrictionFindingKind.DUPLICATE_ANSWER_DEFERRAL,
+        FrictionFindingKind.DUPLICATE_ANSWER_REVISIT,
+        FrictionFindingKind.MUTUAL_READ,
+        FrictionFindingKind.ANSWER_ON_WHAT_IS_GONE,
+    }
+)
+
+
+def _answer_file_findings(target_root: Path, discovery: Discovery) -> list[FrictionFinding]:
+    """What validation finds in the working tree's answer files (COR-062 point 10; see the
+    module docstring). Nothing where there is none."""
+    files = answer_files.working_tree_files(target_root)
+    if not files:
+        return []
+    findings: list[FrictionFinding] = []
+    schema, why = answer_files.load_schema(target_root)
+    if schema is None:
+        findings.append(
+            FrictionFinding(
+                location=str(bs.BACKBONE_SCHEMAS_DIR / f"{answer_files.SCHEMA_KIND}.schema.json"),
+                pointer="",
+                severity=Severity.REPORT,
+                kind=FrictionFindingKind.SCHEMA_UNAVAILABLE,
+                message=why or "no answer-file schema",
+            )
+        )
+    locate = answer_files.working_locator(discovery, target_root)
+    keyed: dict[str, list[answer_files.Entry]] = {}
+    for name in sorted(files):
+        answer_file = files[name]
+        rel = answer_files.path_of(name)
+        if answer_file.document is None:
+            findings.append(
+                FrictionFinding(
+                    rel,
+                    "",
+                    Severity.ERROR,
+                    FrictionFindingKind.UNREADABLE_ANSWER_FILE,
+                    f"the answer file {answer_file.problem or 'cannot be read'}, so it answers "
+                    f"nothing — mend it, or remove it if no change has landed it (COR-062 "
+                    f"point 10)",
+                )
+            )
+            continue
+        if schema is not None:
+            findings.extend(
+                FrictionFinding(
+                    rel, pointer, Severity.ERROR, FrictionFindingKind.MALFORMED_ANSWER_FILE, message
+                )
+                for pointer, message in answer_files.shape_findings(answer_file, schema)
+            )
+        seen: dict[str, int] = {}
+        for entry in answer_file.entries:
+            artefact = locate(entry.location)
+            key = entry.location if artefact is None else artefact.location
+            keyed.setdefault(key, []).append(entry)
+            earlier = seen.setdefault(key, entry.index)
+            if earlier != entry.index:
+                findings.append(
+                    FrictionFinding(
+                        rel,
+                        f"/{answer_files.ANSWERS_KEY}/{entry.index}",
+                        Severity.ERROR,
+                        FrictionFindingKind.DUPLICATE_ANSWER_ENTRY,
+                        f"a second entry for {key}: entry {earlier} answers it already, and a "
+                        f"file holds one entry per artefact (COR-062 point 10)",
+                    )
+                )
+            findings.extend(_repeated_in_answer(rel, entry))
+            findings.extend(_gone(rel, entry, artefact, discovery))
+    findings.extend(_mutual_reads(keyed))
+    return findings
+
+
+def _repeated_in_answer(rel: str, entry: answer_files.Entry) -> Iterable[FrictionFinding]:
+    """A second deferral of one anchor, and a second revisit entry for one target, within
+    one answer (COR-050 points 4 and 16, COR-062 point 10)."""
+    base = f"/{answer_files.ANSWERS_KEY}/{entry.index}"
+    deferred: dict[Anchor, int] = {}
+    for deferral in entry.deferrals:
+        earlier = deferred.setdefault(deferral.anchor, deferral.index)
+        if earlier != deferral.index:
+            yield FrictionFinding(
+                rel,
+                f"{base}/revalidated/deferred/{deferral.index}/anchor",
+                Severity.ERROR,
+                FrictionFindingKind.DUPLICATE_ANSWER_DEFERRAL,
+                f"{deferral.anchor.kind} anchor {deferral.anchor.value!r} is deferred again: "
+                f"entry {earlier} defers it already, and an answer holds one deferral per "
+                f"anchor (COR-050 point 4)",
+            )
+    revisited: dict[Anchor, int] = {}
+    for revisit in entry.revisits:
+        earlier = revisited.setdefault(revisit.anchor, revisit.index)
+        if earlier != revisit.index:
+            yield FrictionFinding(
+                rel,
+                f"{base}/{REVISITED_KEY}/{revisit.index}/anchor",
+                Severity.ERROR,
+                FrictionFindingKind.DUPLICATE_ANSWER_REVISIT,
+                f"{revisit.anchor.kind} target {revisit.anchor.value!r} is revisited again: "
+                f"entry {earlier} names it already, and an answer holds one entry per target "
+                f"(COR-062 point 10)",
+            )
+
+
+def _gone(
+    rel: str, entry: answer_files.Entry, artefact: Artefact | None, discovery: Discovery
+) -> Iterable[FrictionFinding]:
+    """An answer on what is gone answers nothing: reported, never failed (COR-062 points 5
+    and 10)."""
+    base = f"/{answer_files.ANSWERS_KEY}/{entry.index}"
+
+    def report(pointer: str, message: str) -> FrictionFinding:
+        return FrictionFinding(
+            rel,
+            pointer,
+            Severity.REPORT,
+            FrictionFindingKind.ANSWER_ON_WHAT_IS_GONE,
+            f"{message}, so it answers nothing; a prune removes it once no answer in the file "
+            f"is live (COR-062 points 5 and 8)",
+        )
+
+    if artefact is None:
+        yield report(
+            f"{base}/{answer_files.ARTEFACT_KEY}",
+            f"{entry.location} holds no artefact, followed through the renames of its file",
+        )
+        return
+    declared = {
+        Anchor(kind, value) for kind, values in artefact.anchors.items() for value in values
+    }
+    for deferral in entry.deferrals:
+        if deferral.anchor not in declared:
+            yield report(
+                f"{base}/revalidated/deferred/{deferral.index}/anchor",
+                f"the deferral names {deferral.anchor.kind} anchor {deferral.anchor.value!r}, "
+                f"which {artefact.location} no longer declares",
+            )
+    if not entry.revisits:
+        return
+    # An artefact no link reads takes no target: each revisit entry on it answers nothing,
+    # as the reading of a state judges it (`StateAnswers.liveness`).
+    links = discovery.links(artefact)
+    targets = {anchor for link in links for anchor in link_targets(artefact, link)}
+    for revisit in entry.revisits:
+        if revisit.anchor not in targets:
+            yield report(
+                f"{base}/{REVISITED_KEY}/{revisit.index}/anchor",
+                f"the revisit entry names {revisit.anchor.kind} target "
+                f"{revisit.anchor.value!r}, which no link of {artefact.location} takes",
+            )
+
+
+def _mutual_reads(keyed: Mapping[str, list[answer_files.Entry]]) -> Iterable[FrictionFinding]:
+    """Two answers on one artefact that each name the other's file have read neither:
+    validation fails the pair, once at each file (COR-062 point 4)."""
+    for key, entries in sorted(keyed.items()):
+        for position, first in enumerate(entries):
+            for second in entries[position + 1 :]:
+                if first.file == second.file:
+                    continue
+                if second.file in first.read and first.file in second.read:
+                    for entry, other in ((first, second), (second, first)):
+                        yield FrictionFinding(
+                            answer_files.path_of(entry.file),
+                            f"/{answer_files.ANSWERS_KEY}/{entry.index}/{answer_files.READ_KEY}",
+                            Severity.ERROR,
+                            FrictionFindingKind.MUTUAL_READ,
+                            f"its answer on {key} names {other.file}, whose answer on it names "
+                            f"this file back: two answers that each name the other have read "
+                            f"neither (COR-062 point 4) — the later one names the earlier, "
+                            f"never both",
+                        )
+
+
 # --- the `friction` member of `pkit validate` -----------------------------
 
 
@@ -1233,6 +1442,7 @@ def summary_lines(result: FrictionValidation) -> list[str]:
     synced = sum(1 for f in result.findings if f.kind in SYNCED_KINDS)
     unread = sum(1 for f in result.findings if f.kind in SURFACE_KINDS)
     held = sum(1 for f in result.findings if f.kind in HELD_KINDS)
+    answers = sum(1 for f in result.findings if f.kind in ANSWER_KINDS)
     not_walked = f"; {unfollowed} capability place(s) not walked" if unfollowed else ""
     if synced:
         not_walked += f"; {synced} place(s) matching a synced copy"
@@ -1240,7 +1450,9 @@ def summary_lines(result: FrictionValidation) -> list[str]:
         not_walked += f"; {unread} capability surface entr{'y' if unread == 1 else 'ies'} not read"
     if held:
         not_walked += f"; {held} finding(s) on held folders and documents"
-    if not d.places and not unfollowed and not unread and not held:
+    if answers:
+        not_walked += f"; {answers} finding(s) on answer files"
+    if not d.places and not unfollowed and not unread and not held and not answers:
         counts = "no places declared; dormant."
     elif d.is_dormant:
         counts = (

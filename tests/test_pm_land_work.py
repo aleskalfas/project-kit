@@ -21,7 +21,7 @@ import sys
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from pathlib import Path
-from types import ModuleType
+from types import MappingProxyType, ModuleType
 from typing import Any
 
 import pytest
@@ -333,6 +333,9 @@ class _Run:
     #: not be read.
     written: list[dict[str, Any]] = field(default_factory=list)
     settings: list[Any] = field(default_factory=list)
+    #: The check's `answered_apart_at_tip`: each revalidation on the base's tip the
+    #: change's answer did not read.
+    apart: list[dict[str, Any]] = field(default_factory=list)
     outdated: bool = False
     tip: str = ""
     unreadable: list[str] = field(default_factory=list)
@@ -373,6 +376,7 @@ class _Run:
             },
             "findings": [],
             "answers": self.written,
+            "answered_apart_at_tip": self.apart,
             "unreadable": self.unreadable,
         }
         return fa.Derivation(
@@ -414,13 +418,15 @@ class _Run:
         return self.run("--yes", "--expect-head", self.github.head, *argv, capsys=capsys)
 
 
-def _stage_project(work: Path, *, mode: str, remote: tuple[str, ...] = ()) -> Path:
+def _stage_project(
+    work: Path, *, mode: str, remote: tuple[str, ...] = (), local: tuple[str, ...] = PANEL
+) -> Path:
     capability = work / ".pkit" / "capabilities" / "project-management"
     project = capability / "project"
     project.mkdir(parents=True)
     shutil.copytree(CAPABILITY / "schemas", capability / "schemas")
     shutil.copytree(CAPABILITY / "templates", capability / "templates")
-    reviewers = "".join(f"      - name: {name}\n" for name in PANEL)
+    reviewers = "".join(f"      - name: {name}\n" for name in local)
     remotes = "".join(f"      - github_login: {login}\n" for login in remote)
     (project / "config.yaml").write_text(
         "schema_version: 1\n"
@@ -430,8 +436,7 @@ def _stage_project(work: Path, *, mode: str, remote: tuple[str, ...] = ()) -> Pa
         f"  mode: {mode}\n"
         "  agents:\n"
         + (f"    remote_registered:\n{remotes}" if remote else "")
-        + "    local_registered:\n"
-        + reviewers,
+        + (f"    local_registered:\n{reviewers}" if local else ""),
         encoding="utf-8",
     )
     (project / "bootstrap-stamp.yaml").write_text(
@@ -492,10 +497,11 @@ def world(land, clone, tmp_path, monkeypatch) -> Callable[..., _Run]:
         mode: str = "agent",
         checks: list[list[dict[str, Any]]] | None = None,
         remote: tuple[str, ...] = (),
+        local: tuple[str, ...] = PANEL,
     ) -> _Run:
         shutil.copytree(clone.root, tmp_path / "clone", symlinks=True)
         work = tmp_path / "clone" / "work"
-        _stage_project(work, mode=mode, remote=remote)
+        _stage_project(work, mode=mode, remote=remote, local=local)
         monkeypatch.chdir(work)
         monkeypatch.setenv("PM_INVOKER_LOGIN", "octocat")
         monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
@@ -910,6 +916,60 @@ def test_human_review_mode_runs_no_reviewer_and_done_work_gates(world, capsys) -
         "approval is done-work's gate"
     )
     assert steps[4] == f"merge: refused — [refused] approval gate not satisfied for PR #{PR}."
+
+
+# ---- no local reviewer of the project's own (#1934) ---------------------------
+
+
+def _contribute(run: _Run, monkeypatch: pytest.MonkeyPatch, reviewer: str) -> None:
+    """An installed capability contributes `reviewer` to a PR that closes an
+    issue in the `design` workstream (DEC-032 point D2), and the agent is
+    deployed. review-pr and done-work collect it alike."""
+    rc = sys.modules["_lib.review_contributions"]
+    rule = rc.ContributionRule(
+        capability="ux-ui-design",
+        predicate=MappingProxyType({"workstream": ("design",)}),
+        reviewer=reviewer,
+    )
+    collection = rc.ContributionCollection(rules=(rule,))
+    for module in (run.land.review_pr, run.land.done_work):
+        monkeypatch.setattr(module, "collect_contributions", lambda _root: collection)
+    (run.work / ".claude" / "agents" / f"{reviewer}.md").write_text(
+        f"# {reviewer}\n", encoding="utf-8"
+    )
+    run.github.labels.append("workstream:design")
+
+
+def test_a_contributed_reviewer_reviews_where_the_project_registers_none_of_its_own(
+    world, capsys, monkeypatch
+) -> None:
+    """Only a remote reviewer is registered, and a capability contributes one the
+    PR requires: the review step runs it, and the PR lands on its approval and
+    the remote one (DEC-032 point D4). It used to skip the review."""
+    run = world(remote=("review-bot",), local=())
+    _contribute(run, monkeypatch, "design-reviewer")
+    head = run.github.head
+    run.github.comments.append(_remote_verdict(run, "review-bot", "Fine.", sha=head))
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == [("design-reviewer", head)]
+    assert "review: 0 kept fresh, 1 re-run — all approved" in _steps(out)
+    assert [merge[-1] for merge in run.github.merges] == [head]
+
+
+def test_a_pr_that_requires_no_local_reviewer_leaves_the_approval_to_the_gate(
+    world, capsys
+) -> None:
+    """Only a remote reviewer is registered, and no capability contributes one:
+    the review step runs nothing, says so, and the gate reads the remote verdict."""
+    run = world(remote=("review-bot",), local=())
+    head = run.github.head
+    run.github.comments.append(_remote_verdict(run, "review-bot", "Fine.", sha=head))
+    rc, out, err = run.authorised(capsys=capsys)
+    assert rc == 0, out + err
+    assert run.invoked == []
+    assert "review: no local reviewer is required — the approval is done-work's gate" in _steps(out)
+    assert [merge[-1] for merge in run.github.merges] == [head]
 
 
 # ---- the merge ----------------------------------------------------------------
@@ -1463,6 +1523,21 @@ def test_checks_that_cannot_be_read_stop_unreadable(world, capsys) -> None:
         f"`land-work {ISSUE}` again"
     )
     assert run.invoked == []
+
+
+def test_checks_done_work_cannot_read_stop_the_merge_unreadable(world, capsys) -> None:
+    """The checks passed on land-work's reading; done-work's own reading of them
+    gets no answer, and its gate refuses rather than read none as green (#1946)."""
+    run = world()
+    run.github.fails.append(lambda a: a[:2] == ["pr", "view"] and a[-1] == "statusCheckRollup")
+    rc, out, _err = run.authorised(capsys=capsys)
+    assert rc == run.land.EXIT_UNREADABLE == 2
+    assert out.splitlines()[-1] == (
+        f"merge: stopped — [refused] CI-status gate for PR #{PR}: its checks could not be "
+        "read (HTTP 502: Bad Gateway). Nothing was changed."
+    )
+    assert run.github.merges == []
+    assert run.after_merge == []
 
 
 def test_checks_unreadable_once_are_read_again_while_waiting(world, capsys) -> None:
@@ -2174,6 +2249,101 @@ def test_a_base_whose_changes_cannot_be_read_is_refused(world, capsys) -> None:
     run.github.body = _PR_BODY
     rc, out, err = run.authorised(capsys=capsys)
     assert rc == 0, out + err
+
+
+#: An answer file the change adds, as the change check names it (COR-062 point 1). This
+#: world's repository ignores `.pkit/`, and land-work reads the path as the check gives
+#: it, wherever it lies.
+_ANSWER_FILE = "friction/answers/20261022T090000Z-1a2b3c4d.yaml"
+
+
+def _answered_in_a_file(world: Callable[..., _Run]) -> _Run:
+    """`_answers_world`, the change's answer on docs/install.md written in an answer
+    file, as the change check names it (`file`)."""
+    run = world()
+    run.written = [{**INSTALL, "file": _ANSWER_FILE}, {**DEFERRED, "file": "docs/cli.md"}]
+    run.github.body = f"{_PR_BODY}\n{run.section()}\n"
+    return run
+
+
+def test_a_base_that_changed_the_answer_file_a_listed_answer_is_in_is_refused(
+    world, capsys
+) -> None:
+    """The list's words sit in the file the change check names for each answer: a base
+    that changed that answer file since the head left it could land words the list does
+    not show (DEC-055 point 3)."""
+    run = _answered_in_a_file(world)
+    _main_moves_on(run, _ANSWER_FILE)
+    rc, out, _err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == run.land.EXIT_NEEDS_CHANGE
+    assert f"changed 1 file ({_ANSWER_FILE}) the list's words are on" in out.splitlines()[-1]
+    assert run.github.merges == []
+
+
+def test_a_base_that_changed_only_the_document_an_answer_file_answers_stops_nothing(
+    world, capsys
+) -> None:
+    """An answer in an answer file leaves its words out of the document it answers on:
+    a base that changed only that document lands no word the list does not show."""
+    run = _answered_in_a_file(world)
+    _main_moves_on(run, "docs/install.md")
+    rc, out, err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == 0, out + err
+    assert run.github.merges[-1][-1] == run.github.head
+
+
+#: A revalidation on the base's tip that the change's answer on docs/install.md did not
+#: read, as the change check reports it (`answered_apart_at_tip`).
+_APART = {
+    "artefact": "install",
+    "location": "docs/install.md",
+    "revalidations": [
+        {
+            "file": ".pkit/project/friction/answers/20261023T090000Z-5e6f7a8b.yaml",
+            "at": "2026-10-23T09:00:00Z",
+            "outcome": "unchanged",
+            "unchanged_because": "The new flag leaves the steps as written.",
+        }
+    ],
+}
+_APART_LINE = (
+    "  Answered apart once merged: docs/install.md — the base's revalidation in "
+    ".pkit/project/friction/answers/20261023T090000Z-5e6f7a8b.yaml of 2026-10-23T09:00:00Z, "
+    "which this change's answer did not read. Still accurate: \"The new flag leaves the "
+    'steps as written."'
+)
+
+
+def test_a_revalidation_the_merge_would_leave_answered_apart_is_printed_and_stops_nothing(
+    world, capsys
+) -> None:
+    """Before it stops ready, the run prints each revalidation on the base's tip that the
+    change's answer did not read, beside the list and never in the description, and the
+    `ready:` line counts it, as information (DEC-055 point 3)."""
+    run = _answers_world(world)
+    run.apart = [_APART]
+    rc, out, _err = run.run(capsys=capsys)
+    assert rc == run.land.EXIT_READY
+    lines = out.splitlines()
+    step = next(i for i, line in enumerate(lines) if line.startswith(f"{_STEP}:"))
+    assert lines.index(_APART_LINE) < step  # printed with the list, before the step's line
+    assert lines.count(_APART_LINE) == 2  # and told again above the `ready:` line
+    assert lines[-1] == _ready_line(
+        run,
+        ", 1 document left out of date and 1 revalidation answered apart once merged above, "
+        "for information",
+    )
+    (written,) = run.github.bodies
+    assert "Answered apart" not in written
+
+
+def test_a_revalidation_answered_apart_never_holds_an_authorised_merge(world, capsys) -> None:
+    run = _answers_world(world, listed=True)
+    run.apart = [_APART]
+    rc, out, err = run.run("--yes", "--expect-head", run.github.head, capsys=capsys)
+    assert rc == 0, out + err
+    assert _APART_LINE in out.splitlines()
+    assert run.github.merges[-1][-1] == run.github.head
 
 
 def test_a_file_the_change_did_not_touch_that_cannot_be_read_is_no_reason_to_stop(

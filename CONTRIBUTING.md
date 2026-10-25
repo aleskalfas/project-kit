@@ -9,7 +9,9 @@ pkit:
         - scripts/pyright_ratchet.py
         - scripts/prose_lint.py
         - scripts/prose-lint.yaml
+        - tech-docs/rule-sets/writing.md
         - scripts/check_deployed_agents.py
+        - scripts/console_fences.py
         - scripts/short_check.py
         - .githooks/pre-push
         - .github/workflows/checks.yml
@@ -19,15 +21,32 @@ pkit:
         - mise.toml
         - tests/README.md
         - src/project_kit/router.py
-      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053"]
+      record: [COR-003, COR-004, COR-013, COR-014, COR-050, PRJ-001, PRJ-010, ADR-019, ADR-039, ADR-055, ADR-067, "project-management:DEC-053", "living-docs:DEC-002"]
       artefact:
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-21T15:09:14Z
+      at: 2026-10-25T00:55:28Z
       outcome: unchanged
-      unchanged-because: The decisions README gains how pkit refs lookup answers a point of a record. CONTRIBUTING's guidance on authoring and citing records holds.
+      unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json, and the prose lint now counts the sentences of a paragraph. What CONTRIBUTING says of authoring and checking records, and of running the lint, is untouched by the first.
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-055
+          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: ADR-067
+          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
+        - anchor:
+            kind: record
+            value: project-management:DEC-053
+          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
 ---
 
 # Contributing to project-kit
@@ -40,7 +59,7 @@ If you have a project that has *adopted* project-kit and you want to record deci
 
 ## Running checks
 
-There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`, "The deployed agents' check" below). Run it any time:
+There is one source of truth for "what must pass before this lands": **`scripts/check.sh`** — the check aggregator. It runs ruff's lint and format check (`uv run ruff check .`, `uv run ruff format --check .`), the type check (`uv run python scripts/pyright_ratchet.py`), the test suite, `pkit validate` (the one umbrella over every registered check of the tree's state — the CLI reference's "validate" section lists the members), and the diff-scoped checks: `pkit migrations check-diff`, the numbering check of decision records (`pkit decisions check-diff` — a point renumbered, reused or dropped without being retired, or a point or record id the base took first: [the decisions README, "Checking a change's numbering"](.pkit/decisions/README.md#checking-a-changes-numbering)), the friction change check (`pkit friction check`), the prose lint (`uv run python scripts/prose_lint.py`, "The prose lint" below), software-analysis' number check (`pkit analysis check-numbers` — a use case or journey number the base took first, or a use case's step or variant renumbered or removed), software-analysis' pointer check (`pkit analysis check-pointers` — a commit the default branch does not hold, named by a planned revalidation record the change adds), the documentation check (`pkit pm check-doc-mapping`) and `pkit release lint`. Between `pkit validate` and the diff-scoped checks, it runs the deployed agents' check (`uv run python scripts/check_deployed_agents.py`) and the pages' console fences (`uv run python scripts/console_fences.py`), each described below. Run it any time:
 
 ```
 ./scripts/check.sh
@@ -103,7 +122,7 @@ Answer what it reports in a pull request like any friction (the friction gate, a
 **The prose lint** (#1415). The aggregator's `prose lint` line, `uv run python scripts/prose_lint.py`, checks the mechanical parts of the writing rules in the text a change adds or moves. It exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run. A finding names the file, the line, the rule's id and, for a collection entry, the entry. It shows each control or format character as `<U+XXXX>`, so the report shows what the file holds.
 
 - **Where it looks:** in each artefact the change altered, where an accepted rule binds that declares the lint. It reads those artefacts, their rules and the base from `pkit rule-sets altered` (the CLI reference, "Rule-set commands"), and keeps no list of paths. Its base is the friction check's, and `--base REF` compares with another.
-- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves. For a nesting entry, a list item that holds such text in any of its blocks. An item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
+- **What is the change's:** for a count, a sentence or a paragraph that holds text the change adds or moves, in any of the paragraph's blocks. For a nesting entry, a list item that holds such text in any of its blocks. A nesting entry's item is the change's too when the change alters its marker's line, as an indent alone does. For the other types, the match itself. A break the change only sits beside is left alone, so a page not yet rewritten does not fail the gate.
   - **Moved text:** text the diff deletes in one place and inserts in another is the change's where it is inserted. Where two blocks of a file swap places, the diff keeps one in place, and only the other is the change's.
   - **A moved file:** a file moved with its content alters nothing in `pkit rule-sets altered`, so the lint does not read it. A file moved with edits is compared with its old self, so only the edits are the change's.
   - **An entry:** the span `pkit rule-sets altered` gives holds the entry's section only. The lint also reads the entry's values from its file's front matter. An entry that reads the whole file reads the lines of the entry's data there.
@@ -115,12 +134,17 @@ Answer what it reports in a pull request like any friction (the friction gate, a
   - A code span's own spaces split no token. So the text joined to a code span up to a space is part of its word, as in `` `pkit`'s ``.
   - Each block ends a sentence: a paragraph, a list item, a table cell and a front-matter value.
   - A line inside a block's text that opens with a number other than 1, as `2026.` does, goes on from the block. In CommonMark, such a list cannot interrupt a paragraph.
-  - A bold label is bold text that opens a block and ends in a colon. A block that is only a label holds no sentence.
+  - A bold label is bold text that opens a block and ends in a colon or a full stop, such as `**2a.**`. RS-WRITE-005's *How* counts no bold label, so a label holds no sentence, and a block that is only a label holds none at all.
   - A quoted example of a broken rule runs from the first quotation mark to the last, in a block labelled "Breaks the rule".
   - Every text value of the front matter is read, except inside the methodology's `pkit` container. Its answers are never rewritten for style (RS-WRITE-013).
   - Only fenced code is a code block. A fence closes on a bare fence of its own character, at least as long as the one that opened it. A fence opened in a block quote closes there, or where the quote ends.
   - A block quote's words count, and its text is quoted, so RS-WRITE-008 exempts its semicolons.
   - An HTML comment is not read, and a setext heading is a heading. For a count, a bare URL and an HTML entity are tokens like any other. A link's target is part of its link's last token. No pattern searches them, so a URL holds no semicolon.
+- **How it counts a paragraph:** RS-WRITE-007's at most four sentences, in a paragraph as that rule's *How* reads one. That *How* counts a list item as one paragraph, and exempts table cells. Where the *How* is silent, the lint reads as follows:
+  - A list item is one paragraph with every block indented to its text.
+  - A nested item is a paragraph of its own, and so is each paragraph of a block quote, inside an item too.
+  - Any other block is one paragraph alone, a front-matter value included.
+  - A paragraph's finding names the line of its first word.
 - **How it counts levels:** a list's levels as RS-WRITE-017's *How* counts them. Where the *How* is silent, it counts as follows:
   - An item is inside another while it is indented to that item's text. The text starts after the marker and the spaces that follow it. Where more than four columns follow, or nothing else on the line, it starts one column after the marker. A tab reaches the next multiple of four columns.
   - A line that starts a block closes each item it is not indented to. So a paragraph, a heading, a table or a fence at the margin closes every item. A line that goes on from the line before it closes none, even at the margin.
@@ -146,6 +170,24 @@ Each mechanical part of a rule is an entry in `scripts/prose-lint.yaml`, of one 
 - the deploy skips the agent, for the reason it prints.
 
 To fix a copy, run `.pkit/adapters/claude-code/deploy-agents.sh` and commit what it changes in `.claude/agents/`. A rerun skips a skipped agent again, so its finding carries the remediation the deploy prints. Follow it, then run the deploy and commit what it changes. The check exits 0 when it finds nothing, 1 on a finding, and 2 when it cannot run.
+
+**The pages' console fences** (#1807). A page shows a command and its output in a `console` fence, each command after the prompt `$ ` ([living-docs:DEC-002](.pkit/capabilities/living-docs/decisions/DEC-002-visual-elements.md) point 6). The aggregator's `console fences` line, `uv run python scripts/console_fences.py`, runs each such fence as a test. The line reads each artefact that the backbone's discovery gives living-docs' page type, `living-docs:page`, wherever the artefact lies.
+
+- **Which fences:** a fence whose info string opens with the word `console`. A fence in another language is never run. So a command that cannot run as a test goes in a `sh` fence, with no output.
+- **Where a command runs:** in `/bin/sh`, in the fence's own copy of a scratch project outside the repository, with a home and a temporary folder of its own. The run builds that project once, with `pkit init` from your checkout, and gives uv a cache of its own, which fills from the network. The command's environment holds your `PATH`, with the checkout's `pkit` first, and nothing else of yours. Git in the copy reads only the scratch home's configuration, which signs nothing and allows no SSH.
+- **The limits:** a command is stopped when it runs longer than `--timeout`, 60 seconds by default, or prints more than 1 MiB. The run then kills every process left in the command's process group, and the command fails its fence. Interrupting the run stops the command the same way.
+- **What is compared:** what a command prints, its standard output and error together, with the fence's output, but not the command's exit status. The run writes `<project>`, `<home>`, `<tmp>`, `<scratch>`, `<repository>` and `<version>` for the paths and the version that vary between runs. `<scratch>` stands for the run's scratch folder, which holds the scratch project, each fence's folders and uv's cache. In the page, `<any>` stands for any text within one line.
+- **A write in the repository:** before and after each command, the run lists each file by its size, times, mode and inode, and each folder by its mode. A path added, removed or changed fails the test, and stops the run. The listing leaves out the git directory, `.git`, and each folder that holds a repository of its own, such as a linked worktree. A write by another process elsewhere in the repository during the command is taken for the command's.
+- **What the run cannot detect:**
+  - a write outside the repository, such as in your home folder by an absolute path, or in the git directory a linked worktree shares
+  - a write in the repository's git directory, `.git`, which every session sharing the repository writes in at any time
+  - a write the command undoes before it ends
+  - a write by a process that left the command's process group
+  - anything done over the network
+- **What the run confines:** nothing. A command runs as you, and can read whatever you can, such as your SSH keys. On Linux, that includes the environment of the processes that started the run. The run detects writes in the repository, and prevents none.
+- **New output:** `uv run python scripts/console_fences.py --update` writes each command's new output into its page, and keeps each line that still matches. The update writes no output in which a line the command printed would read as a command, close the fence or hold `<any>`. It writes no page at all when a command of the run wrote in the repository. Review the new output as any change to the page.
+
+Name pages to run only those, such as `uv run python scripts/console_fences.py README.md`. The script exits 0 when every fence matches, when no page holds one, or when `--update` wrote every output that differed. It exits 1 on any other failure, and 2 when it cannot start.
 
 **Optional task runner.** A [`mise.toml`](mise.toml) provides convenience aliases over the underlying `uv run ...` commands — `mise tasks` lists them, `mise run check` runs the lint/format/typecheck/test bundle. After cloning, run `mise trust` once to enable the task runner: mise gates untrusted config by design, so a fresh clone prints a "not trusted" error on every shell until you do. Not using mise? Run the `uv run ...` commands (or `./scripts/check.sh`) directly — mise is sugar, not a requirement.
 

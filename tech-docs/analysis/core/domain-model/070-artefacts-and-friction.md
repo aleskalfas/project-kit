@@ -39,6 +39,18 @@ pkit:
         - TERM-rule-set
         - TERM-artefact-type
         - TERM-package-metadata
+    revalidated:
+      at: 2026-10-24T20:54:31Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "The view has an artefact carry its answers, which COR-062 moves to answer files, and names no debt answered apart. #1779 builds it and rewrites the view."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the view shows them carried by the artefact. #1779 builds it and rewrites the view."
 ---
 
 # VIEW-artefacts-and-friction — Artefacts and friction
@@ -315,12 +327,12 @@ Defined in [TERM-rule-set](../glossary.md#term-rule-set--rule-set).
 
 **Why:** Rules need the discovery, anchoring and drift detection that [artefacts](../glossary.md#term-artefact--artefact) already have (COR-051). Kept as a collection of artefacts, a rule set reuses that machinery, with no second copy of it (COR-051). A shared set says what to require, and each set that inherits it says where (COR-051).
 
-A rule set is a collection file of rules that artefacts must satisfy. It has its own [version](../glossary.md#term-version--version), the rule sets it inherits, and any scope that selects the artefacts its rules bind on. `ANA` is project-kit's rule set for its analysis.
+A rule set is a collection file of rules that artefacts must satisfy. It has its own `version`, the rule sets it inherits, and any scope that selects the artefacts its rules bind on. `ANA` is project-kit's rule set for its analysis.
 
 **Attributes:**
 
-- its name and its version (COR-051 [point](../glossary.md#term-point--point) 2)
-- the rule sets it inherits, each pinned at a major version, as in `WRITE@2` (COR-051 point 7)
+- its name and its `version` (COR-051 [point](../glossary.md#term-point--point) 2)
+- the rule sets it inherits, each pinned at a major, as in `WRITE@2` (COR-051 point 7)
 - a scope, by path or by [artefact type](../glossary.md#term-artefact-type--artefact-type), on a set of the [project](../glossary.md#term-project--project)'s own (COR-051 points 2 and 6)
 
 **Relations:**
@@ -335,7 +347,7 @@ A rule set is a collection file of rules that artefacts must satisfy. It has its
 
 - A project never edits a rule set the backbone or a component ships, and extends one by inheriting it (COR-051 point 6).
 - A set takes every [rule](../glossary.md#term-rule--rule) of the sets it inherits unchanged (COR-051 point 7).
-- While a pin is behind its set's version, no rule binds through it (COR-051 point 7).
+- While a pin is behind its set's current major, no rule binds through it (COR-051 point 7).
 
 ## Artefact type
 
