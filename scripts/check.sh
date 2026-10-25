@@ -44,7 +44,7 @@
 #     not the tree. They are not validators and stay their own lines; a
 #     capability's line is here because that capability is installed here.
 #
-# Two more lines are project-kit's own and neither kind:
+# Three more lines are project-kit's own and neither kind:
 #
 #   - the deployed agents' check (`scripts/check_deployed_agents.py`, #1559).
 #     Each tracked copy under `.claude/agents/` must be what `deploy-agents.sh`
@@ -55,6 +55,9 @@
 #     `console` fence of a living-docs page is run as a test, in a scratch
 #     project outside the repository, and its output compared with the page's
 #     (living-docs DEC-002 point 6).
+#   - the pages' contents lists (`scripts/page_contents.py`, #2053). A page that
+#     holds the contents markers lists its second-level sections between them,
+#     and a stale list fails; `--update` writes it.
 #
 # Runs every check (does not stop at the first failure) and reports a summary,
 # so one run surfaces all problems. Exits non-zero if any check failed.
@@ -204,6 +207,7 @@ fi
 run "validate"           uv run pkit validate
 run "deployed agents"    uv run python scripts/check_deployed_agents.py
 run "console fences"     uv run python scripts/console_fences.py
+run "contents lists"     uv run python scripts/page_contents.py
 run "migrations check"   uv run pkit migrations check-diff
 run "record numbering"   uv run pkit decisions check-diff
 run "friction check"     uv run pkit friction check

@@ -22,9 +22,9 @@ pkit:
       artefact:
         - CONTRIBUTING.md#running-checks
     revalidated:
-      at: 2026-10-25T14:35:11Z
+      at: 2026-10-25T14:40:33Z
       outcome: unchanged
-      unchanged-because: PRJ-004 names the tag latest as the canonical install. The operator's needs, to put the CLI on a machine and run each project at its pin, read the same, so the actor holds.
+      unchanged-because: Running checks now names the pages' contents lists among the lines the aggregator runs. The section still calls whoever holds the repository's settings the operator.
 ---
 
 # ACT-operator — Operator
