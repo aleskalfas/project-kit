@@ -158,9 +158,9 @@ TERM-reader:
         record:
           - living-docs:DEC-001#7
       revalidated:
-        at: 2026-10-24T00:21:47Z
+        at: 2026-10-25T04:40:42Z
         outcome: unchanged
-        unchanged-because: An entry of the readers point may now carry the paths its reader takes. The term names a reader's id and needs, and its view lists the paths, so it holds.
+        unchanged-because: DEC-001 point 7 changed only on who reads the reading-evidence entries, the capability's validation or its agent. The term defines a reader and what they need, which that leaves as it was.
 TERM-reader-review:
   name: reader-review
   noun-forms: [reader-reviews]
