@@ -14,6 +14,7 @@ import shlex
 import shutil
 import stat
 import subprocess
+import sysconfig
 from collections.abc import Iterable
 from contextlib import ExitStack
 from dataclasses import dataclass
@@ -691,14 +692,14 @@ def install_kit(target_root: Path, dry_run: bool = False) -> None:
         click.echo("  would register each adapter at the version it ships (.pkit/manifest.yaml)")
     else:
         register_adapters(target_root)
-    _backup_existing_claude_settings(ctx)
+    settings_backed_up = _backup_existing_claude_settings(ctx)
     run_installed_adapter_primitives(ctx)
 
     _render_runtime_ignore(ctx)
     ensure_agent_workspace(ctx)
     provision_query_commands(ctx)
     _record_install_completion(ctx)
-    _print_next_steps()
+    _print_next_steps(ctx, settings_backed_up=settings_backed_up, pkit_found=pkit_on_path())
 
 
 def ensure_agent_workspace(ctx: InstallContext) -> None:
@@ -1176,12 +1177,17 @@ def _install_adapter(src: Path, dst: Path, ctx: InstallContext, *, overwrite: bo
     click.echo(f"  {verb:<12} .pkit/adapters/{adapter_name}/")
 
 
-def _backup_existing_claude_settings(ctx: InstallContext) -> None:
+def _backup_existing_claude_settings(ctx: InstallContext) -> bool:
+    """Back up a `.claude/settings.json` that predates the install, before the
+    merge writes it. True when there was one to back up, so the closing next
+    steps name the backup only where it exists (#2083)."""
     settings = ctx.target_root / ".claude" / "settings.json"
-    if settings.is_file():
-        backup = settings.with_suffix(".json.pre-pkit")
-        _copy_file(settings, backup, ctx)
-        click.echo(f"  {'backed-up':<12} .claude/settings.json -> .claude/settings.json.pre-pkit")
+    if not settings.is_file():
+        return False
+    backup = settings.with_suffix(".json.pre-pkit")
+    _copy_file(settings, backup, ctx)
+    click.echo(f"  {'backed-up':<12} .claude/settings.json -> .claude/settings.json.pre-pkit")
+    return True
 
 
 def _run_adapter_primitive(script: Path, ctx: InstallContext, *args: str) -> None:
@@ -1297,46 +1303,130 @@ def recommended_install_command() -> str:
     return f"uv tool install {DISTRIBUTION_GIT_URL}@{LATEST_TAG}"
 
 
-def _print_next_steps() -> None:
+def _running_scripts_folder() -> Path:
+    """The scripts folder of the environment this pkit runs from."""
+    return Path(sysconfig.get_path("scripts"))
+
+
+def _same_folder(a: Path, b: Path) -> bool:
+    try:
+        return a.resolve() == b.resolve()
+    except (OSError, RuntimeError):
+        return a.absolute() == b.absolute()
+
+
+def pkit_on_path() -> bool:
+    """True when a `pkit` is installed on the PATH, so `init` leaves out its
+    step that installs one (#2083).
+
+    The running environment's own scripts folder does not count. `uv run`, which
+    the source dispatcher's bootstrap uses, and `uvx` put it first on the PATH
+    for one run, and the next shell has no `pkit` from it. Folders are compared,
+    not files: the `pkit` that `uv tool install` puts on the PATH is a link into
+    the tool's environment, from a folder of its own.
+    """
+    own = _running_scripts_folder()
+    for entry in os.get_exec_path():
+        if not entry or _same_folder(Path(entry), own):
+            continue
+        if shutil.which("pkit", path=entry) is not None:
+            return True
+    return False
+
+
+def _adapter_project_settings(ctx: InstallContext) -> list[str]:
+    """Each adapter's project settings file, as the seeding step writes it."""
+    adapters = ctx.source_kit / "adapters"
+    if not adapters.is_dir():
+        return []
+    return [
+        f".pkit/adapters/{adapter.name}/settings/project/settings.json"
+        for adapter in sorted(p for p in adapters.iterdir() if p.is_dir())
+        if (adapter / "settings" / "project").is_dir()
+    ]
+
+
+def _print_next_steps(ctx: InstallContext, *, settings_backed_up: bool, pkit_found: bool) -> None:
+    """Print the next steps that hold for the project `init` set up (#2083).
+
+    Each step is a title and its further lines. The install of pkit is left out
+    where a `pkit` is installed on the PATH already (*pkit_found*), and the settings
+    backup is named only where `init` made one (*settings_backed_up*). No step
+    names a capability's configuration, since first install installs none.
+    """
+    steps: list[tuple[str, list[str]]] = []
+    if not pkit_found:
+        # The install the CLI reference recommends ("Installing pkit on PATH"), of
+        # the highest release. A test holds the two to the same command (#1376).
+        steps.append(
+            (
+                "(Once per machine) Install pkit on PATH:",
+                [
+                    "",
+                    f"       {recommended_install_command()}",
+                    "",
+                    "     One install serves every project on this machine that uses",
+                    "     project-kit. pkit finds the current project from the folder you",
+                    f"     run it in. The tag `{LATEST_TAG}` names the highest release.",
+                    f"     uv fetches `{LATEST_TAG}` afresh, while a git clone that holds an",
+                    f"     old `{LATEST_TAG}` must force-fetch it. For another release, see",
+                    '     .pkit/cli/README.md, section "Installing pkit on PATH".',
+                ],
+            )
+        )
+    settings_files = _adapter_project_settings(ctx)
+    if settings_files:
+        steps.append(
+            (
+                "Add your project's own allows and denies, if any, to:",
+                [f"       {path}" for path in settings_files],
+            )
+        )
+    if settings_backed_up:
+        steps.append(
+            (
+                "Review .claude/settings.json — kit baseline merged with prior content.",
+                ["     Backup at .claude/settings.json.pre-pkit if you need to compare or revert."],
+            )
+        )
+    else:
+        steps.append(
+            (
+                "Review .claude/settings.json, which init created with the kit baseline.",
+                [],
+            )
+        )
+    private_step = len(steps) + 2
+    steps.append(
+        (
+            "Add to your .gitignore (if not already):",
+            [
+                "       .claude/settings.local.json",
+                "       .claude/worktrees/",
+                "       !.claude/skills/",
+                f"       {workspace.EXCLUDE_ENTRY}",
+                "     init leaves these lines to you: your .gitignore is your project's own",
+                "     file, which pkit never writes (ADR-009). The agent workspace is",
+                "     already excluded in this clone's local exclude file; the .gitignore",
+                "     line covers every clone, including one that never runs `pkit sync`.",
+                f"     Skip it if you keep pkit private (step {private_step}).",
+            ],
+        )
+    )
+    steps.append(
+        (
+            "To keep pkit private — invisible to a shared repo whose team",
+            ["     hasn't adopted it — run `pkit visibility private` (per ADR-009)."],
+        )
+    )
+
     click.echo()
     click.echo("Install complete. Recommended next steps:")
-    click.echo()
-    # The install the CLI reference recommends ("Installing pkit on PATH"), of the
-    # highest release. A test holds the two to the same command (#1376).
-    click.echo("  1. (Once per machine, skip if already done) Install pkit on PATH:")
-    click.echo()
-    click.echo(f"       {recommended_install_command()}")
-    click.echo()
-    click.echo("     One install serves every project on this machine that uses")
-    click.echo("     project-kit. pkit finds the current project from the folder you")
-    click.echo(f"     run it in. The tag `{LATEST_TAG}` names the highest release.")
-    click.echo(f"     uv fetches `{LATEST_TAG}` afresh, while a git clone that holds an")
-    click.echo(f"     old `{LATEST_TAG}` must force-fetch it. For another release, see")
-    click.echo('     .pkit/cli/README.md, section "Installing pkit on PATH".')
-    click.echo()
-    click.echo("  2. Fill in adopter-side configs as needed:")
-    click.echo(
-        "       .pkit/capabilities/<name>/project/config.yaml        (per installed capability)"
-    )
-    click.echo("       .pkit/adapters/claude-code/settings/project/settings.json")
-    click.echo(
-        "                                                          (project-specific allows)"
-    )
-    click.echo()
-    click.echo("  3. Review .claude/settings.json — kit baseline merged with prior content.")
-    click.echo("     Backup at .claude/settings.json.pre-pkit if you need to compare or revert.")
-    click.echo()
-    click.echo("  4. Add to your .gitignore (if not already):")
-    click.echo("       .claude/settings.local.json")
-    click.echo("       .claude/worktrees/")
-    click.echo("       !.claude/skills/")
-    click.echo(f"       {workspace.EXCLUDE_ENTRY}")
-    click.echo("     The agent workspace is already excluded in this clone's local exclude")
-    click.echo("     file; the .gitignore line covers every clone, including one that never")
-    click.echo("     runs `pkit sync`. Skip it if you keep pkit private (step 5).")
-    click.echo()
-    click.echo("  5. To keep pkit private — invisible to a shared repo whose team")
-    click.echo("     hasn't adopted it — run `pkit visibility private` (per ADR-009).")
+    for number, (title, lines) in enumerate(steps, start=1):
+        click.echo()
+        click.echo(f"  {number}. {title}")
+        for line in lines:
+            click.echo(line)
 
 
 # --- Filesystem primitives (each respects ctx.dry_run) -------------------

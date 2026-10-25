@@ -22,6 +22,11 @@ five lifecycle state labels (`state:todo`, `state:backlog`,
 `workflow.yaml`'s `states[].id` list. These labels are the substrate
 for the `move-issue` state machine on label-fallback adopters.
 
+The capability works on a GitHub repository. Where `gh` resolves none for
+the checkout (no remote on GitHub, `gh` not signed in, `gh` missing), bootstrap
+refuses before it plans, a dry run included, naming what is missing and how
+to add it (#2087).
+
 On a clean completion it writes the **bootstrap stamp**
 (`project/bootstrap-stamp.yaml`) that the prerequisite gate every other pm
 verb calls reads (#747). No stamp is written for a dry run, an aborted
@@ -38,14 +43,15 @@ Self-contained via PEP 723 inline metadata: run via
 Exit codes:
   0  success (including "everything already exists")
   1  one or more creation operations failed
-  2  usage error (capability not found; config unparseable; no PM
-     authorisation for --with-starter-epic)
+  2  usage error (capability not found; config unparseable; no GitHub
+     repository resolves; no PM authorisation for --with-starter-epic)
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import subprocess
 import sys
 from dataclasses import dataclass
@@ -175,7 +181,13 @@ def main() -> int:
         print(f"error: {class_err}", file=sys.stderr)
         return 2
 
-    repo = _resolve_repo_name_with_owner()
+    # The repository the labels go to. With none, there is nothing to plan
+    # against: refuse in plain words, a dry run included (#2087).
+    lookup = _resolve_repo()
+    if lookup.name is None:
+        print(f"error: {_no_repository_message(lookup)}", file=sys.stderr)
+        return 2
+    repo = lookup.name
     _print_context_header(repo, capability_root)
 
     # ---- compute the plan (read-only) ----
@@ -689,8 +701,8 @@ def _resolve_board_owner(config: dict[str, Any]) -> str | None:
         owner = gh_block.get("default_owner")
         if isinstance(owner, str) and owner:
             return owner
-    repo = _resolve_repo_name_with_owner()
-    if repo != "<unresolved>" and "/" in repo:
+    repo = _resolve_repo().name
+    if repo and "/" in repo:
         return repo.split("/", 1)[0]
     return None
 
@@ -853,8 +865,9 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     absence is equivalent to delegating to ambient state. When `gh.host`
     is configured, this function runs `gh auth status -h <host>` and
     fails fast with a `gh auth login -h <host>` remediation hint if the
-    host isn't authenticated. Returns None on success, or an error
-    message string on failure.
+    host isn't authenticated. `gh` missing from PATH gets the refusal the
+    repository lookup gives for it (#2087). Returns None on success, or an
+    error message string on failure.
     """
     raw = config.get("gh")
     if raw is None:
@@ -888,12 +901,15 @@ def _check_gh_block_and_auth(config: dict[str, Any]) -> str | None:
     if not isinstance(host, str) or not host:
         return None  # no host pinning; nothing further to verify
 
-    proc = subprocess.run(
-        ["gh", "auth", "status", "-h", host],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            ["gh", "auth", "status", "-h", host],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return _no_repository_message(_GH_MISSING)
     if proc.returncode != 0:
         return (
             f"`gh auth status -h {host}` reports no active authentication. "
@@ -998,25 +1014,82 @@ def _print_context_header(repo: str, capability_root: Path) -> None:
     print()
 
 
-def _resolve_repo_name_with_owner() -> str:
-    """Best-effort `<owner>/<repo>` for the current working tree.
+@dataclass(frozen=True)
+class RepoLookup:
+    """The GitHub repository `gh` resolves for this checkout, or why none does.
 
-    Returns `<unresolved>` when `gh repo view` fails — the calling code
-    surfaces that to the user as part of the header so they can abort
-    before any mutation.
+    ``name`` is ``<owner>/<repo>`` when one resolves. When none does it is
+    ``None``, ``why`` says why none resolves and ``fix`` how to add one.
     """
-    proc = subprocess.run(
-        ["gh", "repo", "view", "--json", "nameWithOwner"],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if proc.returncode != 0:
-        return "<unresolved>"
+
+    name: str | None
+    why: str = ""
+    fix: str = ""
+
+
+_FIX_REMOTE = (
+    "give this checkout a remote on GitHub (`git remote add origin <url>`) "
+    "and sign `gh` in to its host (`gh auth login`)"
+)
+_FIX_GH = (
+    "install `gh`, GitHub's command-line tool (https://cli.github.com), sign it "
+    "in (`gh auth login`) and give this checkout a remote on GitHub "
+    "(`git remote add origin <url>`)"
+)
+_GH_MISSING = RepoLookup(None, "`gh`, GitHub's command-line tool, is not on PATH", _FIX_GH)
+
+# A terminal control sequence such as a colour change, dropped whole from what
+# `gh` says before it is quoted.
+_CONTROL_SEQUENCE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
+
+
+def _resolve_repo() -> RepoLookup:
+    """Ask `gh repo view` which GitHub repository this checkout belongs to (#2087).
+
+    A read, never a mutation. `gh` missing from PATH, a failed `gh repo view`
+    (no remote, a remote on no GitHub host, `gh` not signed in) and an answer
+    naming no repository each come back as a lookup with no name, carrying
+    `gh`'s own reason where it gave one.
+    """
     try:
-        return json.loads(proc.stdout).get("nameWithOwner", "<unresolved>")
-    except json.JSONDecodeError:
-        return "<unresolved>"
+        proc = subprocess.run(
+            ["gh", "repo", "view", "--json", "nameWithOwner"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        return _GH_MISSING
+    if proc.returncode != 0:
+        # One line, and no control character reaches the terminal.
+        stderr = _CONTROL_SEQUENCE.sub("", proc.stderr or "")
+        printable = "".join(c for c in stderr if c.isprintable() or c.isspace())
+        said = " ".join(printable.split()) or f"it exited {proc.returncode}"
+        return RepoLookup(None, f"`gh repo view` says: {said}", _FIX_REMOTE)
+    try:
+        name = json.loads(proc.stdout).get("nameWithOwner")
+    except (json.JSONDecodeError, AttributeError):
+        name = None
+    if not isinstance(name, str) or not name:
+        return RepoLookup(None, "`gh repo view` named no repository", _FIX_REMOTE)
+    return RepoLookup(name)
+
+
+def _no_repository_message(lookup: RepoLookup) -> str:
+    """The refusal when no GitHub repository resolves: what is missing, why, the fix.
+
+    Printed after `error: `, as every refusal of `main()` is.
+    """
+    return (
+        "project-management needs a GitHub repository, and none resolves "
+        "for this checkout.\n"
+        f"  Why: {lookup.why}\n"
+        "  bootstrap creates the capability's labels in that repository, and the "
+        "other pm commands work on its issues and pull requests, so bootstrap "
+        "stops here, a dry run included. Nothing was created.\n"
+        f"  To fix: {lookup.fix}, then run "
+        f"`pkit {CAPABILITY_NAME} bootstrap --dry-run` again."
+    )
 
 
 def _read_capability_version(capability_root: Path) -> str:
