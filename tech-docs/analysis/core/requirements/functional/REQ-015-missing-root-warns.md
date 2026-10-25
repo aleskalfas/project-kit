@@ -17,10 +17,6 @@ pkit:
         - COR-049#7
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:50:57Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-015 · Functional · A declared documentation root that does not exist yet warns rather than fails

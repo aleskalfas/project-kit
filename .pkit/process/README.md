@@ -14,10 +14,6 @@ pkit:
         - src/project_kit/process_journal.py
         - .pkit/schemas/_defs/process.schema.json
       record: [COR-033, COR-034, COR-035, COR-036, COR-037, COR-038, COR-040, COR-042, COR-044, COR-053, ADR-020, ADR-036, ADR-048, ADR-051, ADR-062]
-    revalidated:
-      at: 2026-10-25T05:23:13Z
-      outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, and the command keeps the same edges. This page leaves the graph's filters and presets to the CLI reference, so what it says of the render holds.
 ---
 
 # Process

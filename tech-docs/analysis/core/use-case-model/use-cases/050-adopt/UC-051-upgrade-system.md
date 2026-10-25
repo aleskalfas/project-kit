@@ -64,10 +64,6 @@ pkit:
         - REQ-029
         - REQ-030
         - REQ-031
-    revalidated:
-      at: 2026-10-25T05:24:33Z
-      outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-051 — Upgrade the system like a dependency

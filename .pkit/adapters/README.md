@@ -25,10 +25,6 @@ pkit:
         - .pkit/adapters/claude-code/README.md#harness-support-harness-supportyaml
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
-    revalidated:
-      at: 2026-10-25T05:23:15Z
-      outcome: unchanged
-      unchanged-because: The change makes the help of pkit process graph say how its presets combine, and the command keeps the same edges. This page says nothing of that graph, so it holds.
 ---
 
 # Adapters

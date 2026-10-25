@@ -17,10 +17,6 @@ pkit:
       record:
         - software-analysis:DEC-001#5
         - software-analysis:DEC-001#6
-    revalidated:
-      at: 2026-10-24T21:25:09Z
-      outcome: unchanged
-      unchanged-because: The tests this change adds or alters read an open regression's revalidations at HEAD through the backbone. The tests of what the stamp records and refuses are as they were, so the requirement holds.
 ---
 
 # REQ-052 · Functional · A revalidation record is written only where its revalidation has something to say

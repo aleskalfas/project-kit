@@ -31,10 +31,6 @@ TERM-after-record-hook:
           - COR-001
           - COR-003
           - COR-059#2
-      revalidated:
-        at: 2026-10-24T01:18:34Z
-        outcome: unchanged
-        unchanged-because: The change says that a run with --no-recording runs no hook, and drops the claim that DCR_VIDEO_PATH can be empty. The term already says a hook runs once a recording's video is saved, with that video's path, so it holds.
 TERM-demo-bundle:
   name: demo bundle
   status: active
@@ -50,10 +46,6 @@ TERM-demo-bundle:
           - COR-001
           - COR-003
           - COR-059#2
-      revalidated:
-        at: 2026-10-24T01:18:37Z
-        outcome: unchanged
-        unchanged-because: The change to record.sh rewords a comment on when after-record hooks run, and the code is the same. What a demo bundle holds has not changed, so the term holds.
 TERM-directive:
   name: directive
   noun-forms: [directives]
@@ -69,10 +61,6 @@ TERM-directive:
         record:
           - demo-recording:DEC-001
           - demo-recording:DEC-002
-      revalidated:
-        at: 2026-10-24T01:18:40Z
-        outcome: unchanged
-        unchanged-because: The change makes a fenced block whose tag no loaded plugin provides a warning rather than an error, and rewords the docstring of a ready timeout. Every fenced block in a step is still read as a directive, and its tag still selects what is done, so the term holds.
 TERM-executable-storyboard:
   name: executable storyboard
   noun-forms: [executable storyboards]

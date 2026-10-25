@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-documentation-space
+    revalidated:
+      at: 2026-10-24T03:53:04Z
+      outcome: unchanged
+      unchanged-because: A space's entry may now name its audience in the configuration. A space is still a collection of pages for one audience, in the places declared for it.

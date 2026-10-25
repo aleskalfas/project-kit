@@ -18,10 +18,6 @@ pkit:
         - COR-054
         - COR-050
         - PRJ-002
-    revalidated:
-      at: 2026-10-23T08:14:03Z
-      outcome: unchanged
-      unchanged-because: COR-050 adds derived links, which friction reads as their words alone. The pipeline still runs the checks unattended against one named base, so the actor holds.
 ---
 
 # ACT-ci-pipeline — CI pipeline

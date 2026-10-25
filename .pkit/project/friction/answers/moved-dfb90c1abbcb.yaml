@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/living-docs/glossary.md#TERM-reader
+    revalidated:
+      at: 2026-10-25T04:40:42Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 7 changed only on who reads the reading-evidence entries, the capability's validation or its agent. The term defines a reader and what they need, which that leaves as it was.

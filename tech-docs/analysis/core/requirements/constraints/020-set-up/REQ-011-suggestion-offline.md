@@ -17,9 +17,6 @@ pkit:
         - COR-053#8
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:54:33Z
-      outcome: updated
 ---
 
 # REQ-011 · Constraint · A suggestion of what to install never uses the network

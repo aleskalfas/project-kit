@@ -20,10 +20,6 @@ pkit:
         - COR-050#12
       artefact:
         - ACT-developer
-    revalidated:
-      at: 2026-10-24T20:51:37Z
-      outcome: unchanged
-      unchanged-because: ACT-developer's note says the developer where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-020 · Functional · A dead anchor is an error, never silence

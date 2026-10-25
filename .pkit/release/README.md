@@ -16,9 +16,6 @@ pkit:
         - .pkit/lifecycle/README.md#backbone-manifest-projectpkitmanifestyaml
         - .pkit/lifecycle/README.md#the-replay-a-missing-completion
       source: [common-changelog, keep-a-changelog]
-    revalidated:
-      at: 2026-10-24T03:44:42Z
-      outcome: updated
 ---
 
 # Release flow — changesets + the release step

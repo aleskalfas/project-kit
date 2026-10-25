@@ -33,10 +33,6 @@ TERM-citation:
         record:
           - evidence:DEC-001
           - evidence:DEC-003
-      revalidated:
-        at: 2026-10-24T01:22:31Z
-        outcome: unchanged
-        unchanged-because: The check now finds a fence indented in a list item or set in a block quote, and leaves nested scopes out. A citation is still the token that names a record by its id. The check still skips a fenced code block, an HTML comment and the scope's evidence.yaml.
 TERM-evidence-record:
   name: evidence record
   noun-forms: [evidence records]
@@ -62,10 +58,6 @@ TERM-evidence-scope:
           - .pkit/capabilities/evidence/scripts/validate.py
         record:
           - evidence:DEC-002
-      revalidated:
-        at: 2026-10-24T01:21:55Z
-        outcome: unchanged
-        unchanged-because: The check now leaves out each directory below a scope that holds an evidence.yaml of its own, so a scope ends at the next such file, as the definition already said.
 TERM-outside-fact:
   name: outside fact
   noun-forms: [outside facts]
@@ -80,10 +72,6 @@ TERM-outside-fact:
           - .pkit/capabilities/evidence/skills/evidence/add.md
         record:
           - evidence:DEC-001
-      revalidated:
-        at: 2026-10-24T01:21:57Z
-        outcome: unchanged
-        unchanged-because: The add operation now says that a nested directory with its own evidence.yaml is validated separately. It says nothing new of which facts lie beyond the project.
 ---
 
 # Glossary

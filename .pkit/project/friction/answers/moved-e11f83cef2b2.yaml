@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/functional/030-change/REQ-020-dead-anchor-error.md
+    revalidated:
+      at: 2026-10-24T20:51:37Z
+      outcome: unchanged
+      unchanged-because: ACT-developer's note says the developer where it said this role. Its needs are the same, so this requirement holds.

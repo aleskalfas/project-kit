@@ -67,9 +67,6 @@ pkit:
       artefact:
         - REQ-040
         - REQ-041
-    revalidated:
-      at: 2026-10-25T02:59:03Z
-      outcome: updated
 ---
 
 # UC-060 — File a Task under its parent, its title and body checked as it is filed

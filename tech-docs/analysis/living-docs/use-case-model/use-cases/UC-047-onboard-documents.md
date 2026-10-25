@@ -30,10 +30,6 @@ pkit:
         - COR-050#14
       artefact:
         - REQ-022
-    revalidated:
-      at: 2026-10-25T05:30:50Z
-      outcome: unchanged
-      unchanged-because: The agent and its storyboard changed only in reader-review, which now reads the reading-evidence point. Bringing existing documents into the spaces is as it was.
 ---
 
 # UC-047 — Bring my existing documents into documentation spaces

@@ -48,10 +48,6 @@ pkit:
         - REQ-015
         - REQ-018
         - REQ-019
-    revalidated:
-      at: 2026-10-25T14:40:35Z
-      outcome: unchanged
-      unchanged-because: The aggregator gains a line that checks the pages' contents lists. It still runs every check without stopping at a failure, and the hook and CI run it as the steps say.
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

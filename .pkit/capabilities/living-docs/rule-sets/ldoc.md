@@ -8,60 +8,36 @@ rules:
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
-        revalidated:
-          at: 2026-10-19T16:10:31Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its paragraph on what grounds a statement is as it was, only what a page anchors grounds one, so this rule holds.
   RS-LDOC-002:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
-        revalidated:
-          at: 2026-10-19T16:10:32Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its passage on a fact's home is as it was until that major, which supersedes this rule, so this rule holds as written meanwhile.
   RS-LDOC-003:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
-        revalidated:
-          at: 2026-10-19T16:10:33Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its bullet that each page names its reader and says only what that reader needs is as it was, so this rule holds.
   RS-LDOC-004:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001#3", "living-docs:DEC-001#4"]}
-        revalidated:
-          at: 2026-10-19T16:10:34Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its bullet that pages of a kind follow one format, with a template per kind, and its paragraph on a kind's structure are as they were, so this rule holds.
   RS-LDOC-005:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
-        revalidated:
-          at: 2026-10-19T16:10:35Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its bullet that an index-like file is a signpost to what a folder holds, never a summary of its contents, is as it was, so this rule holds.
   RS-LDOC-006:
     status: accepted
     origin: {decision: "living-docs:DEC-001"}
     pkit:
       friction:
         anchors: {record: ["living-docs:DEC-001#3"]}
-        revalidated:
-          at: 2026-10-19T16:10:36Z
-          outcome: unchanged
-          unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its bullet that nothing is created ahead of the need for it is as it was, so this rule holds.
   RS-LDOC-007:
     status: proposed
     origin: {decision: "living-docs:DEC-002"}

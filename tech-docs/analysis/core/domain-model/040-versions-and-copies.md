@@ -40,10 +40,6 @@ pkit:
         - TERM-source-repository
         - TERM-distribution
         - TERM-component-origin
-    revalidated:
-      at: 2026-10-23T08:54:14Z
-      outcome: unchanged
-      unchanged-because: TERM-migration's example now names a backbone migration, and its definition is as it was. The view's section on migration holds.
 ---
 
 # VIEW-versions-and-copies — Versions and copies

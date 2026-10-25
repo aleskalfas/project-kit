@@ -34,9 +34,6 @@ pkit:
         - COR-052
       artefact:
         - REQ-022
-    revalidated:
-      at: 2026-10-25T05:30:55Z
-      outcome: updated
 ---
 
 # UC-046 — Have a page read as its declared reader would read it

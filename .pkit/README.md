@@ -18,10 +18,6 @@ pkit:
         - .pkit/process/README.md#
         - .pkit/scratchpad/README.md#
       record: [COR-011, COR-017]
-    revalidated:
-      at: 2026-10-25T03:46:27Z
-      outcome: unchanged
-      unchanged-because: The CLI reference's Authoring commands now say process couple and hand-off refuse a definition received by sync, beside process new. This index still points authors to Authoring commands as a whole, so what it says holds.
 ---
 
 # project-kit

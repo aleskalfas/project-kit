@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    revalidated:
+      at: 2026-10-24T22:53:50Z
+      outcome: unchanged
+      unchanged-because: Two tests now hold pkit refs lookup --json. The lookup reads and writes nothing, so it needs no --dry-run, and the commands that change content offer one as before.

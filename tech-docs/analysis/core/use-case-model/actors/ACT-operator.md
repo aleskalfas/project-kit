@@ -21,10 +21,6 @@ pkit:
         - ADR-063
       artefact:
         - CONTRIBUTING.md#running-checks
-    revalidated:
-      at: 2026-10-25T14:40:33Z
-      outcome: unchanged
-      unchanged-because: Running checks now names the pages' contents lists among the lines the aggregator runs. The section still calls whoever holds the repository's settings the operator.
 ---
 
 # ACT-operator — Operator

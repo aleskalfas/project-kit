@@ -18,10 +18,6 @@ pkit:
       record: [COR-001, COR-002, COR-017, COR-061, PRJ-001, PRJ-004, PRJ-011, ADR-049, ADR-064]
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
-    revalidated:
-      at: 2026-10-24T22:54:12Z
-      outcome: unchanged
-      unchanged-because: The refs module gains the lookup of several ids in one document. The README names only pkit refs validate, which is untouched.
 ---
 
 # project-kit

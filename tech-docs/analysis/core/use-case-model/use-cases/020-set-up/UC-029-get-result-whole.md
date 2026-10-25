@@ -21,9 +21,6 @@ pkit:
       artefact:
         - ACT-ai-agent
         - ACT-operator
-    revalidated:
-      at: 2026-10-24T20:56:05Z
-      outcome: updated
 ---
 
 # UC-029 — Get a delegated agent's result back whole

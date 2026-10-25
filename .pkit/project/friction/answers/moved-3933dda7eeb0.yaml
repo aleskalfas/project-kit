@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact
+    revalidated:
+      at: 2026-10-25T00:37:22Z
+      outcome: unchanged
+      unchanged-because: Discovery now marks a rule a synced copy holds as received, owing the project no answer. It is still an artefact found in a place.

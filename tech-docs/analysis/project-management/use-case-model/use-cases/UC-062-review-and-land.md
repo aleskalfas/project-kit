@@ -68,9 +68,6 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
-    revalidated:
-      at: 2026-10-24T22:00:52Z
-      outcome: updated
 ---
 
 # UC-062 — Have the reviewers my change requires review my pull request, and land it

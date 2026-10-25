@@ -22,10 +22,6 @@ pkit:
         - project-management:DEC-021
       artefact:
         - ACT-planner
-    revalidated:
-      at: 2026-10-25T08:01:39Z
-      outcome: unchanged
-      unchanged-because: "As #2015 asks, the membership tests gain cases where add-member and remove-member refuse off a terminal without --yes. The tests of the membership check itself are unchanged."
 ---
 
 # REQ-041 · Functional · A command that writes checks the project's prerequisites and the person's membership first

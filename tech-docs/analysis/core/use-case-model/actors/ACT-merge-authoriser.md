@@ -13,9 +13,6 @@ pkit:
     anchors:
       record:
         - COR-050#3
-    revalidated:
-      at: 2026-10-23T08:53:40Z
-      outcome: updated
 ---
 
 # ACT-merge-authoriser — Merge authoriser
