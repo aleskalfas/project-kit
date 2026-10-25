@@ -1036,7 +1036,7 @@ TERM-revisit-link:
   name: revisit link
   noun-forms: [revisit links]
   status: active
-  definition: "declaration a component makes on a place, that editing chosen fields of an artefact there asks whether what its chosen anchors name still stands"
+  definition: "declaration a component makes on a place, that editing chosen fields of an artefact there asks whether what the artefact's chosen anchors name still stands"
   pkit:
     friction:
       anchors:
@@ -1476,7 +1476,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Revalidation:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds (COR-050 [point](#term-point--point) 3).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it (COR-050 point 4).
-- **Revisit entry:** an answer on a link's source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it (COR-050 point 16).
+- **Revisit entry:** an answer on a [revisit link](#term-revisit-link--revisit-link)'s source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it (COR-050 point 16).
 - **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live on the artefacts.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 

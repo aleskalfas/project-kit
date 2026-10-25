@@ -230,7 +230,7 @@ Defined in [TERM-answer](../glossary.md#term-answer--answer).
 
 **Why:** Whether an [artefact](../glossary.md#term-artefact--artefact) still holds after what it rests on changed is a judgement no tool can make (COR-050). Kept in the artefact, not in one tool's pull-request description, that judgement needs nothing but the repository (COR-050).
 
-An answer is a statement in an artefact's `friction` block. It settles an edit to what the artefact rests on, or a [revisit](../glossary.md#term-revisit--revisit) its links ask for. It is a revalidation, a deferral or a revisit entry.
+An answer is a statement in an artefact's `friction` block. It settles an edit to what the artefact rests on, or a [revisit](../glossary.md#term-revisit--revisit) its [revisit links](../glossary.md#term-revisit-link--revisit-link) ask for. It is a revalidation, a deferral or a revisit entry.
 
 **Attributes:**
 
