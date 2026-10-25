@@ -14,7 +14,7 @@ rules:
         anchors: {record: ["ADR-069#4", "living-docs:DEC-001#7"]}
   RS-GUIDE-002:
     status: proposed
-    origin: {why: "The research found that the strongest pages prove each claim in a way the reader can check. uv and ripgrep give benchmarks, each with its method. The weakest give labels with no proof, such as Vite's README and Rust's three pillars. The pilot's second pass stated five claims, and proved each by a command's real output (PR #2018)."}
+    origin: {why: "The research found that the strongest pages prove each claim in a way the reader can check. uv and ripgrep give benchmarks, each with its method. The weakest give labels with no proof, such as Vite's README and Rust's three pillars. The pilot's second pass stated five claims, and proved each by a command's real output (PR #2018). On 26 October the maintainer, Aleš Kalfas, set what comes first for a claim with no proof: \"We should not just reword our decisions when we see that they are not truth we should first have to care whether we have a gap in our implementation first.\" (#1928)."}
     pkit:
       friction:
         anchors: {record: ["ADR-069#4"]}
@@ -111,10 +111,14 @@ State each advantage a page claims as one sentence in bold, and give a proof its
   - The proof follows the claim, or the claim links to it. It is one of these:
     - a command and its output, in a `console` fence (RS-GUIDE-007)
     - a measured number, with how it was measured: what, on what, and how many times
-  - A claim with no proof is cut, or proved. A record that decides the behaviour proves nothing, since it says what was decided, not what the software does.
+  - A claim with no proof is first checked against what the thing does, before its words change:
+    - **The thing falls short of the claim:** file the gap as an issue. Narrow the claim to what holds, and restore it once the gap is closed.
+    - **The thing does what the claim says:** add the proof, and keep the claim.
+    - **The thing is not meant to do what the claim says:** cut the claim, or narrow it.
+  - A record that decides the behaviour proves nothing, since it says what was decided, not what the software does.
   - Table cells are exempt, since a cell holds no sentence of its own.
-- **Breaks the rule:** the entry README at commit `26199137` of PR #2030. Its mental model says "That's *why* a sync can't conflict with your edits, and why you keep everything you write." The claim is not in bold, and neither proves it nor links to a proof.
-- **Keeps the rule:** the fence after the guide's list of claims runs two calls in bypass mode, and the hook denies one and allows the other. It proves the claim "**Each agent's denies hold in every mode, the harness's most permissive included.**"
+- **Breaks the rule:** the entry README at commit `26199137` of PR #2030. Its mental model says "That's *why* a sync can't conflict with your edits, and why you keep everything you write." The claim is not in bold, and neither proves it nor links to a proof. At commit `922f8077` the README drops "in one step", though the upgrade takes one step and only the proof was missing.
+- **Keeps the rule:** the fence after the guide's list of claims runs two calls in bypass mode, and the hook denies one and allows the other. It proves the claim "**Each agent's denies hold in every mode, the harness's most permissive included.**" The entry README's "in one step" is back, proved by a fence that upgrades a project made by release 1.134.0.
 
 ## RS-GUIDE-003 — Compare with the alternative, and credit it
 
