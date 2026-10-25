@@ -24,6 +24,21 @@ commands, each naming what it writes and writing only with consent (point 13):
   (point 10): `as-of` moving on alone is no change, so a status that holds is
   never rewritten.
 
+**Where an answer is written** (COR-062 points 1, 4 and 10; ADR-068 point 3). An
+artefact whose block holds no answer — no `revalidated` block and no `revisited`
+list — gets `revalidate`'s, `defer`'s and `revisit`'s answer in an answer file of
+the change's own (`_OwnFile`): the one answer file in the working tree that no
+commit of the checkout holds, else a new one named for its UTC time and eight
+random hexadecimal digits. Its entry for the artefact names, in `read`, every
+other answer file present that answers the artefact. Two such uncommitted files
+that each answer the artefact refuse the write, naming both. A revalidation
+re-states the deferrals it keeps in its own entry. An artefact whose block holds
+an answer gets it in the block, as below, until the move takes every answer out of
+the blocks (`friction_move`): an artefact is read from one home, and written in
+it. `record-status` always writes the block: `last-check` is status, not an
+answer. An artefact the project receives by sync is refused: it owes the project
+no answer (point 9).
+
 **Only the block changes.** Each writer replaces one key of the artefact's
 `friction` block — the lines from that key through the end of its value, or,
 in a block written in flow style, that key's characters — and leaves every
@@ -60,10 +75,10 @@ import os
 import re
 import shlex
 import stat
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, NamedTuple, cast
 
 import click
@@ -71,9 +86,11 @@ from ruamel.yaml import YAML
 from ruamel.yaml.error import YAMLError
 from ruamel.yaml.nodes import MappingNode, Node, ScalarNode, SequenceNode
 
+from project_kit import answer_files as af
 from project_kit import backbone_schemas as bs
 from project_kit import cli_render
 from project_kit import friction_repository as fr
+from project_kit.answer_files import block_holds_answers
 from project_kit.document_parts import split_front_matter
 from project_kit.friction_check import REVISIT_OUTCOMES, anchors_of, parsed_at
 from project_kit.friction_discovery import (
@@ -84,6 +101,7 @@ from project_kit.friction_discovery import (
     Anchor,
     Artefact,
     ArtefactKind,
+    Discovery,
     RevisitLink,
     discover_artefacts,
     held_message,
@@ -166,6 +184,14 @@ def locate_artefact(target_root: Path, reference: str) -> tuple[Artefact, tuple[
     naming a document a component holds says whose it is: a held document is
     no artefact, and carries no block to write (COR-050 point 1).
     """
+    found, links, _discovery = _locate(target_root, reference)
+    return found, links
+
+
+def _locate(
+    target_root: Path, reference: str
+) -> tuple[Artefact, tuple[RevisitLink, ...], Discovery]:
+    """`locate_artefact`, with the discovery it read."""
     discovery = discover_artefacts(target_root)
     held = discovery.holding(reference.split("#", 1)[0])
     if held is not None:
@@ -198,7 +224,7 @@ def locate_artefact(target_root: Path, reference: str) -> tuple[Artefact, tuple[
             f"no artefact in the declared places is named {reference!r} — give its location "
             f"(`path`, or `path#id` for a collection entry) or its id.{hint} Nothing was written."
         )
-    return matches[0], discovery.links(matches[0])
+    return matches[0], discovery.links(matches[0]), discovery
 
 
 @dataclass(frozen=True)
@@ -347,7 +373,7 @@ DEFERRAL_KEYS: tuple[str, ...] = ("anchor", "reason")
 REVISIT_KEYS: tuple[str, ...] = ("anchor", "outcome", "reason")
 
 
-def _in_order(entry: Mapping[str, Any], keys: tuple[str, ...] = DEFERRAL_KEYS) -> dict[str, Any]:
+def in_order(entry: Mapping[str, Any], keys: tuple[str, ...] = DEFERRAL_KEYS) -> dict[str, Any]:
     """A deferral entry — or, with `REVISIT_KEYS`, a revisit entry — with its keys in the
     schema's order, `anchor` (`kind`, `value`) first, and nothing dropped: a key the
     schema refuses stays, for validation to name."""
@@ -381,7 +407,7 @@ class Plan:
 
     command: str
     artefact: str  # its location
-    target: str  # what is written, as a dotted path inside the carrier
+    target: str  # what is written: a dotted path inside the carrier, or the answer's entry
     rel: str
     path: Path
     before: str
@@ -391,6 +417,10 @@ class Plan:
     last_line: int = 0
     unchanged: str | None = None
     notes: tuple[str, ...] = ()  # said before the write, never about it
+    # Written into an answer file of the change's own (COR-062; ADR-068 point 3), which
+    # the write adds where `creates`.
+    answer_file: bool = False
+    creates: bool = False
 
     @property
     def changes(self) -> bool:
@@ -435,9 +465,18 @@ def plan_revalidate(
     if justification:
         _filled(justification, "--because")
 
-    source = _read_source(target_root, *locate_artefact(target_root, reference))
+    source, discovery = _source(target_root, reference)
     artefact = source.artefact
     _friction_block(artefact)
+    if not block_holds_answers(artefact):
+        own = _own_file(target_root, source, discovery)
+        return own.revalidate(
+            outcome=outcome,
+            justification=justification,
+            keep=keep,
+            confirm_keep=confirm_keep,
+            now=now or datetime.now(UTC),
+        )
     previous = artefact.revalidated if isinstance(artefact.revalidated, Mapping) else {}
     if outcome == UNCHANGED and _fold(justification) == _fold(previous.get(BECAUSE)):
         raise FrictionWriteError(
@@ -524,14 +563,21 @@ def _kept_deferrals(
                 f"removes deferral {label}   (the artefact no longer declares that anchor)"
             )
         elif anchor in named or (confirm_keep is not None and confirm_keep(anchor, reason)):
-            kept.append(_in_order(entry))
+            kept.append(in_order(entry))
             items.append(f"keeps deferral {label}   ({reason})")
         else:
             items.append(f"removes deferral {label}   ({reason})")
     return kept, items
 
 
-def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -> Plan:
+def plan_defer(
+    target_root: Path,
+    reference: str,
+    *,
+    anchor: str,
+    reason: str,
+    now: datetime | None = None,
+) -> Plan:
     """The write of `pkit friction defer` (COR-050 point 4).
 
     Adds one entry to `deferred` — or rewords the reason of the entry already
@@ -540,7 +586,8 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
     byte: a deferral is not a revalidation, and an artefact never revalidated
     gets a `revalidated` block holding `deferred` alone. Refused: an empty
     anchor or reason, a reason with a placeholder left unfilled, and an anchor
-    the artefact does not carry.
+    the artefact does not carry. An artefact whose block holds no answer gets
+    its deferral in an answer file of the change's own (`_OwnFile.defer`).
     """
     anchor_text = anchor.strip()
     text = reason.strip()
@@ -555,7 +602,7 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
         )
     _filled(text, "--reason")
 
-    source = _read_source(target_root, *locate_artefact(target_root, reference))
+    source, discovery = _source(target_root, reference)
     artefact = source.artefact
     block = _friction_block(artefact)
     carried = anchors_of(artefact)
@@ -566,6 +613,9 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
             f"{_anchor_list(carried)}); a deferral must name one of them (COR-050 point 4). "
             f"Nothing was written."
         )
+    if not block_holds_answers(artefact):
+        own = _own_file(target_root, source, discovery)
+        return own.defer(named, text, now=now or datetime.now(UTC))
 
     revalidated = block.get(REVALIDATED)
     if revalidated is not None and not isinstance(revalidated, Mapping):
@@ -591,7 +641,7 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
             f"{label} is already deferred with this reason",
         )
     others = [
-        _in_order(e) if isinstance(e, Mapping) else e for e in entries if _entry_anchor(e) != named
+        in_order(e) if isinstance(e, Mapping) else e for e in entries if _entry_anchor(e) != named
     ]
     value = sorted([*others, new_entry], key=_sort_key)
     if existing:
@@ -609,7 +659,13 @@ def plan_defer(target_root: Path, reference: str, *, anchor: str, reason: str) -
 
 
 def plan_revisit(
-    target_root: Path, reference: str, *, target: str, outcome: str, reason: str
+    target_root: Path,
+    reference: str,
+    *,
+    target: str,
+    outcome: str,
+    reason: str,
+    now: datetime | None = None,
 ) -> Plan:
     """The write of `pkit friction revisit` (COR-050 point 16).
 
@@ -621,6 +677,8 @@ def plan_revisit(
     placeholder left unfilled, and a target no link of the artefact takes. An
     entry already written with this outcome and reason writes nothing: an entry
     answers only the change that writes it, so a later change needs new words.
+    An artefact whose block holds no answer gets its entry in an answer file of
+    the change's own (`_OwnFile.revisit`).
     """
     if outcome not in REVISIT_OUTCOMES:
         raise FrictionWriteError(
@@ -640,7 +698,7 @@ def plan_revisit(
         )
     _filled(text, "--reason")
 
-    source = _read_source(target_root, *locate_artefact(target_root, reference))
+    source, discovery = _source(target_root, reference)
     artefact = source.artefact
     block = _friction_block(artefact)
     targets = list(dict.fromkeys(a for link in source.links for a in link_targets(artefact, link)))
@@ -656,6 +714,9 @@ def plan_revisit(
             f"{links_said(source.links)} (its targets: {_anchor_list(targets)}) (COR-050 "
             f"point 16). Nothing was written."
         )
+    if not block_holds_answers(artefact):
+        own = _own_file(target_root, source, discovery)
+        return own.revisit(named, outcome, text, now=now or datetime.now(UTC))
 
     raw = block.get(REVISITED_KEY)
     if raw is not None and not isinstance(raw, list):
@@ -679,7 +740,7 @@ def plan_revisit(
             f"the change that writes it, so a later change needs new words",
         )
     others = [
-        _in_order(cast(Mapping[str, Any], e), REVISIT_KEYS) if isinstance(e, Mapping) else e
+        in_order(cast(Mapping[str, Any], e), REVISIT_KEYS) if isinstance(e, Mapping) else e
         for e in entries
         if _entry_anchor(e) != named
     ]
@@ -717,7 +778,7 @@ def plan_record_status(target_root: Path, reference: str) -> Plan:
     lie beyond a shallow clone's history, or an anchor of it cannot be
     resolved: a status is a judgment, and neither is one.
     """
-    source = _read_source(target_root, *locate_artefact(target_root, reference))
+    source, _discovery = _source(target_root, reference)
     artefact = source.artefact
     block = _friction_block(artefact)
     if not anchors_of(artefact) and not artefact.deferrals:
@@ -871,6 +932,453 @@ def _plan(
     )
 
 
+# --- answers in an answer file of the change's own -----------------------------------
+#
+# An artefact whose block holds no answer gets its answers in an answer file (COR-062
+# points 1 and 4; ADR-068 point 3): the one answer file in the working tree that no
+# commit of the checkout holds, a new one where there is none. Until the move, an
+# artefact whose block holds an answer keeps getting them there (`block_holds_answers`),
+# as the reading of a state reads it from one home.
+
+#: The commits whose answer files a writer never writes into: HEAD's, and those of a
+#: merge, a cherry-pick or a revert in progress, which another line of work added
+#: (COR-062 point 10).
+_NOT_OWN = ("HEAD", "MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD")
+
+# The keys of an entry, in the schema's order (ADR-068 point 2).
+_ENTRY_ORDER = (af.ARTEFACT_KEY, af.READ_KEY, REVALIDATED, REVISITED_KEY)
+
+
+def _source(target_root: Path, reference: str) -> tuple[_Source, Discovery]:
+    """The artefact `reference` names, its file read for the write, and the discovery
+    that found it. An artefact the project receives by sync is refused: it owes the
+    project no answer, and its answers are its source's (COR-062 point 9)."""
+    found, links, discovery = _locate(target_root, reference)
+    if found.received:
+        raise FrictionWriteError(
+            f"{found.location} arrives in this project by sync, so it owes the project no "
+            f"answer: its answers are written where it is authored (COR-062 point 9). Nothing "
+            f"was written."
+        )
+    return _read_source(target_root, found, links), discovery
+
+
+def _own_file(target_root: Path, source: _Source, discovery: Discovery) -> _OwnFile:
+    """Where the artefact's answers are written: the answer file of the change's own, and
+    every other answer file present that answers the artefact, which the answer reads.
+
+    The change's own file is one the working tree holds and no commit of `_NOT_OWN`
+    holds: the one of them that answers the artefact already, else the newest, else a
+    new one. Two that each answer the artefact refuse the write, naming both: each
+    would have to name the other (COR-062 point 10).
+    """
+    artefact = source.artefact
+    present = af.working_tree_files(target_root)
+    at_head = af.head_names(target_root)
+    held = at_head.union(*(af.head_names(target_root, ref) for ref in _NOT_OWN[1:]))
+    locate = af.working_locator(discovery, target_root)
+
+    def names_it(entry: af.Entry) -> bool:
+        found = locate(entry.location)
+        return found is not None and found.location == artefact.location
+
+    answering = sorted(n for n, f in present.items() if any(names_it(e) for e in f.entries))
+    uncommitted = sorted(n for n in present if n not in held)
+    own = [n for n in answering if n not in held]
+    if len(own) > 1:
+        listed = ", ".join(af.path_of(n) for n in own)
+        raise FrictionWriteError(
+            f"{artefact.location} is answered in {len(own)} answer files no commit holds yet "
+            f"({listed}). A writer writes into the one answer file of this change's own, and "
+            f"two would each have to name the other (COR-062 point 10): move this artefact's "
+            f"entries into one of them, or commit one, and run the command again. Nothing was "
+            f"written."
+        )
+    name = own[0] if own else (uncommitted[-1] if uncommitted else None)
+    before = ""
+    entries: list[dict[str, Any]] = []
+    index: int | None = None
+    if name is not None:
+        before, entries, index = _own_entries(target_root, present[name], artefact, names_it)
+    locations = {artefact.location} | {
+        e.location for f in present.values() for e in f.entries if names_it(e)
+    }
+    state = af.StateAnswers(
+        present,
+        # An uncommitted entry honours a name of a file HEAD holds (COR-062 point 5). A
+        # name a committed entry carries is read as honoured too: telling it needs the
+        # history the checks read, and a writer only offers what it may keep with it.
+        lambda _reader, named: named in at_head,
+        lambda a: tuple(locations) if a.location == artefact.location else (a.location,),
+    )
+    return _OwnFile(
+        target_root=target_root,
+        source=source,
+        name=name,
+        present=present,
+        entries=entries,
+        index=index,
+        before=before,
+        read=tuple(n for n in answering if n != name),
+        judged=state.liveness(artefact, discovery),
+    )
+
+
+def _own_entries(
+    target_root: Path,
+    answer_file: af.AnswerFile,
+    artefact: Artefact,
+    names_it: Callable[[af.Entry], bool],
+) -> tuple[str, list[dict[str, Any]], int | None]:
+    """The change's own answer file as written: its text, its entries, and the position of
+    the one naming the artefact. Refused where it does not read, departs from the answer
+    files' schema, or names the artefact twice: `pkit validate` reports each."""
+    rel = af.path_of(answer_file.name)
+    path = target_root / rel
+    if path.is_symlink() or answer_file.document is None:
+        problem = "is a link" if path.is_symlink() else answer_file.problem or "cannot be read"
+        raise FrictionWriteError(
+            f"{rel}, this change's answer file, {problem}; mend it or remove it first — `pkit "
+            f"validate` reports it. Nothing was written."
+        )
+    try:
+        before = path.read_bytes().decode("utf-8")
+    except (OSError, UnicodeDecodeError) as exc:
+        raise FrictionWriteError(f"cannot read {rel}: {exc}. Nothing was written.") from exc
+    schema, _why = af.load_schema(target_root)
+    if schema is not None and af.shape_findings(answer_file, schema):
+        raise FrictionWriteError(
+            f"{rel}, this change's answer file, departs from the answer files' schema; mend "
+            f"it first — `pkit validate` reports it. Nothing was written."
+        )
+    document = cast(Mapping[str, Any], answer_file.document)
+    entries = [dict(cast(Mapping[str, Any], e)) for e in document[af.ANSWERS_KEY]]
+    positions = [e.index for e in answer_file.entries if names_it(e)]
+    if len(positions) > 1:
+        raise FrictionWriteError(
+            f"{rel} answers {artefact.location} in {len(positions)} entries; a file holds one "
+            f"entry per artefact — mend it first (`pkit validate` reports it). Nothing was "
+            f"written."
+        )
+    return before, entries, positions[0] if positions else None
+
+
+@dataclass(frozen=True)
+class _OwnFile:
+    """An artefact's answers as the change's own answer file holds them, and what an answer
+    written there reads (COR-062 point 4; ADR-068 point 3).
+
+    `name` is the file written into, `None` where the write adds one; `entries` its
+    entries as written, `index` the one naming the artefact. `read` names every other
+    answer file present that answers the artefact. `judged` is the artefact's answers in
+    the answer files present, its own entry's among them.
+    """
+
+    target_root: Path
+    source: _Source
+    name: str | None
+    present: Mapping[str, af.AnswerFile]
+    entries: list[dict[str, Any]]
+    index: int | None
+    before: str
+    read: tuple[str, ...]
+    judged: af.Liveness
+
+    @property
+    def artefact(self) -> Artefact:
+        return self.source.artefact
+
+    @property
+    def own(self) -> Mapping[str, Any]:
+        """The artefact's entry in the change's own file, empty where it has none."""
+        return {} if self.index is None else self.entries[self.index]
+
+    # --- the three answers ---------------------------------------------------------
+
+    def revalidate(
+        self,
+        *,
+        outcome: str,
+        justification: str | None,
+        keep: Sequence[str],
+        confirm_keep: Callable[[Anchor, str], bool] | None,
+        now: datetime,
+    ) -> Plan:
+        """The revalidation in the change's own entry (COR-050 point 3, COR-062 point 5):
+        a fresh `at`, the outcome and its justification, and the deferrals it keeps,
+        re-stated. It replaces every revalidation it reads, and each deferral it reads
+        that it does not re-state."""
+        read = [e.revalidation for e in self.judged.entries if e.revalidation is not None]
+        if outcome == UNCHANGED and any(_fold(justification) == r.because for r in read):
+            raise FrictionWriteError(
+                "the justification is one a revalidation this answer reads gives already; "
+                "`unchanged-because` must differ from that of each revalidation it reads — "
+                "say why the content holds against *this* change (COR-050 point 3, COR-062 "
+                "point 5). Nothing was written."
+            )
+        stamp = now.astimezone(UTC).replace(microsecond=0)
+        while any(r.at == stamp for r in read):
+            stamp += timedelta(seconds=1)
+        at = stamp.strftime(_AT_FORMAT)
+        kept, items = self._kept(keep, confirm_keep)
+        revalidated: dict[str, Any] = {AT: at, OUTCOME: outcome}
+        if outcome == UNCHANGED:
+            revalidated[BECAUSE] = justification
+        if kept:
+            revalidated[DEFERRED] = kept
+        lines = [f"at: {at}", f"outcome: {outcome}"]
+        if outcome == UNCHANGED:
+            lines.append(f"unchanged-because: {justification}")
+        lines.extend(items)
+        entry = self._entry(revalidated, self.own.get(REVISITED_KEY))
+        return self._plan("revalidate", REVALIDATED, entry, tuple(lines), now)
+
+    def defer(self, anchor: Anchor, reason: str, *, now: datetime) -> Plan:
+        """One deferral in the change's own entry (COR-050 point 4, COR-062 point 5): it
+        replaces the deferral of its anchor it reads, keeping that one's point."""
+        label = f"{anchor.kind}:{anchor.value}"
+        live = [d for _e, d in self.judged.deferrals if d.anchor == anchor]
+        if live and all(d.reason == _fold(reason) for d in live):
+            return _unchanged(
+                "defer",
+                self.source,
+                self._target(f"{REVALIDATED}.{DEFERRED}"),
+                f"{label} is already deferred with this reason",
+            )
+        revalidated = dict(cast(Mapping[str, Any], self.own.get(REVALIDATED) or {}))
+        others = [
+            in_order(cast(Mapping[str, Any], e)) if isinstance(e, Mapping) else e
+            for e in cast(list[Any], revalidated.get(DEFERRED) or [])
+            if _entry_anchor(e) != anchor
+        ]
+        new_entry = {"anchor": {"kind": anchor.kind, "value": anchor.value}, "reason": reason}
+        revalidated[DEFERRED] = sorted(
+            [*others, *self._newly_read(revalidated, {anchor}), new_entry], key=_sort_key
+        )
+        if live:
+            item = (
+                f"rewords the deferral of {label}: {reason}   (it replaces the deferral it "
+                f"reads, and keeps its deferral point)"
+            )
+        else:
+            item = f"adds deferral {label}: {reason}"
+        items = (item, "at: not changed — a deferral is not a revalidation")
+        entry = self._entry(ordered_revalidation(revalidated), self.own.get(REVISITED_KEY))
+        return self._plan("defer", f"{REVALIDATED}.{DEFERRED}", entry, items, now)
+
+    def revisit(self, target: Anchor, outcome: str, reason: str, *, now: datetime) -> Plan:
+        """One revisit entry in the change's own entry (COR-050 point 16, COR-062 point 5):
+        it replaces the entry for its target it reads."""
+        label = f"{target.kind}:{target.value}"
+        live = [r for _e, r in self.judged.revisits if r.anchor == target]
+        if live and all((r.outcome, r.reason) == (outcome, _fold(reason)) for r in live):
+            return _unchanged(
+                "revisit",
+                self.source,
+                self._target(REVISITED_KEY),
+                f"{label} is already revisited `{outcome}` with this reason; an entry answers "
+                f"only the change that writes it, so a later change needs new words",
+            )
+        others = [
+            in_order(cast(Mapping[str, Any], e), REVISIT_KEYS) if isinstance(e, Mapping) else e
+            for e in cast(list[Any], self.own.get(REVISITED_KEY) or [])
+            if _entry_anchor(e) != target
+        ]
+        new_entry = {
+            "anchor": {"kind": target.kind, "value": target.value},
+            "outcome": outcome,
+            "reason": reason,
+        }
+        revalidated: Any = self.own.get(REVALIDATED)
+        if isinstance(revalidated, Mapping) and AT in revalidated:
+            held = cast(Mapping[str, Any], revalidated)
+            restated = self._newly_read(held, set())
+            if restated:
+                kept = [*cast(list[Any], held.get(DEFERRED) or []), *restated]
+                revalidated = ordered_revalidation({**held, DEFERRED: sorted(kept, key=_sort_key)})
+        verb = "rewrites the revisit entry of" if live else "adds revisit entry"
+        items = (
+            f"{verb} {label}: {outcome} — {reason}",
+            "at: not changed — an entry is no revalidation of the source",
+        )
+        entry = self._entry(revalidated, sorted([*others, new_entry], key=_sort_key))
+        return self._plan("revisit", REVISITED_KEY, entry, items, now)
+
+    # --- what the answers keep -----------------------------------------------------
+
+    def _kept(
+        self, keep: Sequence[str], confirm_keep: Callable[[Anchor, str], bool] | None
+    ) -> tuple[list[dict[str, Any]], list[str]]:
+        """The live deferrals a revalidation re-states, sorted, and a line for each kept or
+        dropped (COR-050 point 4, COR-062 point 5)."""
+        reasons = self._live_reasons()
+        named: set[Anchor] = set()
+        for text in keep:
+            anchor = _named_anchor(text, list(reasons), "deferral")
+            if anchor is None:
+                raise FrictionWriteError(
+                    f"{self.artefact.location} has no live deferral of {text!r} to keep (its "
+                    f"deferrals: {_anchor_list(list(reasons))}); a deferral of an anchor it no "
+                    f"longer declares answers nothing (COR-062 point 5). Nothing was written."
+                )
+            named.add(anchor)
+        kept: list[dict[str, Any]] = []
+        items: list[str] = []
+        for anchor in sorted(reasons, key=lambda a: (a.kind, a.value)):
+            reason = reasons[anchor]
+            label = f"{anchor.kind}:{anchor.value}"
+            if anchor in named or (confirm_keep is not None and confirm_keep(anchor, reason)):
+                kept.append(
+                    {"anchor": {"kind": anchor.kind, "value": anchor.value}, "reason": reason}
+                )
+                items.append(f"keeps deferral {label}   ({reason})")
+            else:
+                items.append(f"drops deferral {label}   ({reason})")
+        return kept, items
+
+    def _live_reasons(self, files: Collection[str] | None = None) -> dict[Anchor, str]:
+        """Each live deferral's anchor, with its reason as written — of `files` only, where
+        given. Of two deferrals of one anchor made apart, the newer file's reason."""
+        found: dict[Anchor, str] = {}
+        for entry, deferral in sorted(self.judged.deferrals, key=lambda p: (p[0].file, p[1].index)):
+            if files is None or entry.file in files:
+                found[deferral.anchor] = self._reason(entry, deferral)
+        return found
+
+    def _reason(self, entry: af.Entry, deferral: af.Deferment) -> str:
+        """A deferral's reason as its answer file writes it, its words folded where that
+        cannot be read."""
+        document = self.present[entry.file].document
+        try:
+            written = document[af.ANSWERS_KEY][entry.index][REVALIDATED][DEFERRED][deferral.index]
+            reason = written["reason"]
+        except (KeyError, IndexError, TypeError):
+            reason = None
+        return reason if isinstance(reason, str) else deferral.reason or ""
+
+    def _newly_read(
+        self, revalidated: Mapping[str, Any], written: Collection[Anchor]
+    ) -> list[dict[str, Any]]:
+        """Where the change's own entry holds a revalidation, the live deferrals of the
+        files its `read` gains, re-stated unless it keeps their anchor already or
+        `written` names it: a deferral or a revisit entry is no revalidation, so writing
+        one never lets the revalidation drop a deferral it never read (COR-062 point 5)."""
+        if AT not in revalidated:
+            return []
+        gained = set(self.read) - set(cast(list[str], self.own.get(af.READ_KEY) or []))
+        if not gained:
+            return []
+        held = {_entry_anchor(e) for e in cast(list[Any], revalidated.get(DEFERRED) or [])}
+        return [
+            {"anchor": {"kind": anchor.kind, "value": anchor.value}, "reason": reason}
+            for anchor, reason in self._live_reasons(gained).items()
+            if anchor not in held and anchor not in written
+        ]
+
+    # --- the file ------------------------------------------------------------------
+
+    def _entry(self, revalidated: Any, revisited: Any) -> dict[str, Any]:
+        """The artefact's entry: its location, what it read, and its answers."""
+        entry: dict[str, Any] = {af.ARTEFACT_KEY: self.artefact.location}
+        if self.read:
+            entry[af.READ_KEY] = list(self.read)
+        if revalidated:
+            entry[REVALIDATED] = revalidated
+        if revisited:
+            entry[REVISITED_KEY] = revisited
+        return {key: entry[key] for key in _ENTRY_ORDER if key in entry}
+
+    def _target(self, key: str) -> str:
+        return f"{af.ANSWERS_KEY}[{self.artefact.location}].{key}"
+
+    def _plan(
+        self, command: str, key: str, entry: dict[str, Any], items: tuple[str, ...], now: datetime
+    ) -> Plan:
+        """The file with the artefact's entry in it, read back, and what the write says."""
+        entries = list(self.entries)
+        position = len(entries) if self.index is None else self.index
+        if self.index is None:
+            entries.append(entry)
+        else:
+            entries[position] = entry
+        name = self.name
+        if name is None:
+            _answer_folder(self.target_root)
+        while name is None or (self.name is None and name in self.present):
+            name = af.new_name(now)
+        text, first, last = answer_file_text(entries, position)
+        self._read_back(name, text, entries)
+        rel = af.path_of(name)
+        read = ", ".join(self.read) if self.read else "no other answer file answers it"
+        return Plan(
+            command=command,
+            artefact=self.artefact.location,
+            target=self._target(key),
+            rel=rel,
+            path=self.target_root / rel,
+            before=self.before,
+            after=text,
+            items=(*items, f"read: {read}"),
+            first_line=first,
+            last_line=last,
+            answer_file=True,
+            creates=self.name is None,
+        )
+
+    def _read_back(self, name: str, text: str, entries: list[dict[str, Any]]) -> None:
+        """Refuse unless `text` reads back as exactly `entries`, in the answer files' shape."""
+        read = af.read_answer_file(name, text.encode("utf-8"))
+        schema, _why = af.load_schema(self.target_root)
+        findings = [] if schema is None else af.shape_findings(read, schema)
+        raw: Any = read.document
+        document: Mapping[str, Any] = (
+            cast(Mapping[str, Any], raw) if isinstance(raw, Mapping) else {}
+        )
+        if read.problem is not None or findings or document.get(af.ANSWERS_KEY) != entries:
+            detail = "; ".join(f"{p or '(file)'}: {m}" for p, m in findings) or read.problem
+            raise FrictionWriteError(
+                f"{af.path_of(name)}: the answer would not read back as written"
+                f"{f' — {detail}' if detail else ''}. Nothing was written."
+            )
+
+
+def _answer_folder(target_root: Path) -> None:
+    """Refuse to add an answer file unless the answer folder, and each folder above it, is
+    a folder of the repository's own or not there yet: never a link, which would write the
+    answer elsewhere (COR-062 point 2)."""
+    current = target_root
+    for part in PurePosixPath(af.FOLDER).parts:
+        current = current / part
+        if current.is_symlink() or (current.exists() and not current.is_dir()):
+            raise FrictionWriteError(
+                f"{current.relative_to(target_root).as_posix()} is a link or a file, so no "
+                f"answer file can be added in {af.FOLDER}: the answer folder is a folder of "
+                f"the project's own (COR-062 point 2). Nothing was written."
+            )
+
+
+def ordered_revalidation(revalidated: Mapping[str, Any]) -> dict[str, Any]:
+    """A `revalidated` mapping with its keys in the schema's order."""
+    order = _KEY_ORDER[REVALIDATED]
+    head = {k: revalidated[k] for k in order if k in revalidated}
+    return head | {k: v for k, v in revalidated.items() if k not in order}
+
+
+def answer_file_text(
+    entries: Sequence[Mapping[str, Any]], position: int = -1
+) -> tuple[str, int, int]:
+    """An answer file holding `entries`, in block style as the writers write it, and the
+    lines entry `position` occupies (1-based; `0, 0` where it names none)."""
+    lines = [f"{af.ANSWERS_KEY}:"]
+    first = last = 0
+    for index, entry in enumerate(entries):
+        item = _item_lines(entry, 2)
+        if index == position:
+            first, last = len(lines) + 1, len(lines) + len(item)
+        lines.extend(item)
+    return "\n".join(lines) + "\n", first, last
+
+
 # --- the edit ----------------------------------------------------------------------
 
 
@@ -910,6 +1418,47 @@ def _splice(source: _Source, keys: Sequence[str], key: str, value: Any) -> _Spli
     if _in_flow(parent):
         return _flow_splice(parent, existing, keys[-1], key, value)
     return _block_splice(fm, parent, existing, keys[-1], key, value, source)
+
+
+def without_key(front_matter: str, keys: Sequence[str], key: str) -> str | None:
+    """`front_matter` with `key` and its value taken out of the mapping `keys` lead to, every
+    other character kept; `None` where that cannot be done exactly — the mapping not written
+    directly, the key not starting its line, or the mapping left with no key.
+
+    In a block mapping the key's lines go, from the key through the line its value ends
+    on. In a flow mapping (`{…}`) its characters go, with the comma beside them.
+    """
+    parent = _node_at(_composed(front_matter), keys)
+    if not isinstance(parent, MappingNode):
+        return None
+    existing = _pair(parent, key)
+    if existing is None:
+        return front_matter
+    held: Any = getattr(parent, "value", ())  # ruamel's nodes are untyped
+    pairs = cast("list[tuple[Node, Node]]", held)
+    if len(pairs) < 2:
+        return None
+    key_node, value_node = existing
+    if _in_flow(parent):
+        position = next(i for i, pair in enumerate(pairs) if pair[0] is key_node)
+        start, end = _pair_span(key_node, value_node)
+        if position + 1 < len(pairs):
+            end = _first_index(pairs[position + 1][0])
+        else:
+            start = _pair_end(*pairs[position - 1])
+        return front_matter[:start] + front_matter[end:]
+    first = _first_index(key_node)
+    start = _line_start(front_matter, first)
+    if front_matter[start:first].strip():
+        return None
+    end = _through_line(front_matter, start, _pair_end(key_node, value_node))
+    return front_matter[:start] + front_matter[end:]
+
+
+def _first_index(node: Node) -> int:
+    """Where a node's text starts in the front matter."""
+    mark: Any = getattr(node, "start_mark", None)  # ruamel's nodes are untyped
+    return cast(int, mark.index)
 
 
 def _composed(front_matter: str) -> Node | None:
@@ -1317,17 +1866,23 @@ def render_plan(plan: Plan) -> str:
         if plan.first_line == plan.last_line
         else f"lines {plan.first_line}-{plan.last_line}"
     )
-    lines.append(f"  Writes {plan.target} in {plan.rel}   ({span}; nothing else in the file)")
+    if plan.creates:
+        where = "a new answer file of this change"
+    elif plan.answer_file:
+        where = "this change's answer file, not yet committed; its other entries kept"
+    else:
+        where = "nothing else in the file"
+    lines.append(f"  Writes {plan.target} in {plan.rel}   ({span}; {where})")
     lines.extend(f"    {item}" for item in plan.items)
     return "\n".join(lines) + "\n"
 
 
 def render_diff(plan: Plan) -> str:
-    """The write as a unified diff of the file."""
+    """The write as a unified diff of the file — from nothing, for a file it adds."""
     diff = difflib.unified_diff(
         plan.before.splitlines(keepends=True),
         plan.after.splitlines(keepends=True),
-        fromfile=f"a/{plan.rel}",
+        fromfile="/dev/null" if plan.creates else f"a/{plan.rel}",
         tofile=f"b/{plan.rel}",
     )
     return "".join(diff)
@@ -1369,8 +1924,9 @@ def apply(
                 if writes_answer
                 else f"To consent non-interactively, run:\n  {command_line(*rerun, '--yes')}"
             )
+            what = f"{plan.rel}, the answer on {plan.artefact}," if plan.answer_file else plan.rel
             raise ConsentRefused(
-                f"refusing to write {plan.rel} without consent: stdin is not a terminal and "
+                f"refusing to write {what} without consent: stdin is not a terminal and "
                 f"--yes was not given (COR-050 point 13). Nothing was written.\n"
                 f"To see the change first, run:\n  {command_line(*rerun, '--dry-run')}\n"
                 f"{consent}"
@@ -1384,8 +1940,27 @@ def apply(
 
 
 def write(plan: Plan) -> None:
-    """Write the plan's file atomically, keeping its mode; refuse if it changed since read."""
-    replace_file(plan.path, plan.rel, plan.before, plan.after)
+    """Write the plan's file atomically, keeping its mode; refuse if it changed since read.
+    A file the plan adds is created, never written over one that appeared since."""
+    if plan.creates:
+        create_file(plan.path, plan.rel, plan.after)
+    else:
+        replace_file(plan.path, plan.rel, plan.before, plan.after)
+
+
+def create_file(path: Path, rel: str, text: str) -> None:
+    """Create the file at `path` (`rel` names it) holding `text`, its folders with it;
+    refuse, writing nothing, where anything is at the path already."""
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("x", encoding="utf-8", newline="") as handle:
+            handle.write(text)
+    except FileExistsError as exc:
+        raise FileNotReplaced(
+            f"{rel} appeared since it was planned; run the command again."
+        ) from exc
+    except OSError as exc:
+        raise FileNotReplaced(f"cannot write {rel}: {exc}.") from exc
 
 
 def replace_file(path: Path, rel: str, before: str, after: str) -> None:
@@ -1408,21 +1983,27 @@ def replace_file(path: Path, rel: str, before: str, after: str) -> None:
 
 
 __all__ = [
+    "DEFERRAL_KEYS",
     "OUTCOMES",
+    "REVISIT_KEYS",
     "REVISIT_OUTCOMES",
     "ConsentRefused",
     "FileNotReplaced",
     "FrictionWriteError",
     "KeySpan",
     "Plan",
+    "answer_file_text",
     "apply",
     "ask_keep",
     "carrier_keys",
     "command_line",
+    "create_file",
     "find_artefact",
+    "in_order",
     "interactive",
     "key_span",
     "locate_artefact",
+    "ordered_revalidation",
     "plan_defer",
     "plan_record_status",
     "plan_revalidate",
@@ -1430,6 +2011,7 @@ __all__ = [
     "render_diff",
     "render_plan",
     "replace_file",
+    "without_key",
     "write",
     "written_key",
 ]

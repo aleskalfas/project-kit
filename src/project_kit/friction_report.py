@@ -98,6 +98,10 @@ UNANCHORED = "unanchored"
 #: point 7), has this state here, whatever it declares.
 EXCLUDED = "excluded"
 
+#: An artefact the project receives by sync, which owes it no answer and is never judged
+#: stale or deferred there (COR-062 point 9), has this state here, whatever it declares.
+RECEIVED = "received"
+
 
 class FrictionReportError(click.ClickException):
     """A reading command could not answer: the artefact is not named, or not at HEAD."""
@@ -499,6 +503,8 @@ class Explanation:
     def state(self) -> str:
         if self.artefact.excluded:
             return EXCLUDED
+        if self.artefact.received:
+            return RECEIVED
         return UNANCHORED if self.report is None else self.report.state.value
 
     @property
@@ -536,6 +542,8 @@ def run_explain(
     unjudged: str | None = None  # what an anchor with no finding shows, when not judged
     if check.artefact.excluded:
         unjudged = EXCLUDED
+    elif check.artefact.received:
+        unjudged = RECEIVED
     elif check.report is not None and check.report.state is fr.ArtefactState.UNREACHABLE:
         unjudged = fr.ArtefactState.UNREACHABLE.value
     anchors = tuple(
@@ -785,6 +793,7 @@ _STATE_GLOSS = {
     "unresolved": "not judged: an anchor cannot be resolved; its other anchors' findings stand",
     UNANCHORED: "no anchors and no deferrals: nothing to judge",
     EXCLUDED: "under an excluded path: left out of the measures and the debt",
+    RECEIVED: "arrives by sync: it owes this project no answer, and is left out of the debt",
 }
 
 # What the commits under a finding are, by its kind.
@@ -800,6 +809,7 @@ _ANCHOR_GLOSS = {
     "deferred": "deferred; nothing after its deferral point",
     "unreachable": "not judged: a point lies beyond this shallow clone",
     EXCLUDED: "not judged: the artefact is under an excluded path",
+    RECEIVED: "not judged: the artefact arrives by sync",
 }
 
 
@@ -966,6 +976,7 @@ __all__ = [
     "EXCLUDED",
     "EXPLAIN_SCHEMA_VERSION",
     "REASON",
+    "RECEIVED",
     "UNANCHORED",
     "Answer",
     "DebtEntry",
