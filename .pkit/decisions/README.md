@@ -9,6 +9,7 @@ pkit:
         - src/project_kit/decisions.py
         - src/project_kit/decisions_check_diff.py
         - src/project_kit/decisions_validate.py
+        - src/project_kit/document_parts.py
         - src/project_kit/record_points.py
         - src/project_kit/refs.py
         - src/project_kit/rule_sets.py
