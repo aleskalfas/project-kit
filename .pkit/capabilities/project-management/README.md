@@ -385,7 +385,7 @@ For the standard development flow, seven verb-subject commands compose over `mov
 | Command | Issue transition | Side-effects |
 |---|---|---|
 | `promote-issue <N> [--milestone "<M>"] --reason "<R>"` | Todo → Backlog | Audit comment; milestone attach only when `--milestone` is given (omit to promote on `--reason` alone — per DEC-026 #61 amendment) |
-| `start-work <N>` | Backlog → In Progress | Branch `<type>/<N>-<slug>` + assignee. **Precondition:** the issue's current state must be able to move to In Progress under `workflow.yaml` (or already be there). Otherwise it refuses before creating a branch or writing an assignee, and names the move to make first. From Todo, that is `move-issue <N> --to backlog` (`promote-issue` carries the audit). The state is read from the issue's labels and milestone (no state label and no milestone reads as Todo), the same reading `review-work` checks its move with; `move-issue` reads the state itself when it moves (#1242). If the composed `move-issue` still fails after the branch is cut (for instance because the state changed since the check and the move is no longer legal), the run ends on a failure naming the branch and any assignee it left behind (#942). |
+| `start-work <N>` | Backlog → In Progress | Branch `<type>/<N>-<slug>` + assignee. **Precondition:** the issue's current state must be able to move to In Progress under `workflow.yaml` (or already be there). Otherwise it refuses before creating a branch or writing an assignee, and names the move to make first. From Todo, that is `move-issue <N> --to backlog` (`promote-issue` carries the audit). The state is read from the issue's labels and milestone (no state label and no milestone reads as Todo), the same reading `review-work` checks its move with; `move-issue` reads the state itself when it moves (#1242). If the composed `move-issue` still fails after the branch is cut (for instance because the state changed since the check and the move is no longer legal), the run ends on a failure naming the branch and any assignee it left behind (#942). With an instance id set, it claims an issue no instance owns for this clone, ahead of the move (see "What the lifecycle commands write for an instance" below). |
 | `create-draft <N>` | (none — issue stays In Progress) | Opens draft PR via `gh pr create --draft` |
 | `review-work <N> [--reviewer @<u>]` | In Progress → Review | Opens ready PR or flips draft→ready; assigns reviewers. **Precondition:** the issue's current state must be able to move to Review under `workflow.yaml`, or already be there, so a re-run (after `back-to-draft`, say) flips the PR ready again. Otherwise it refuses before opening or flipping a PR or requesting reviewers, and names the moves to make first. From Backlog, that is `move-issue <N> --to in-progress`; from Todo, `--to backlog` comes first. The state is read as for `start-work`, and the two verbs share one implementation of the refusal and of the late-failure message (#1242). A `gh` failure opening the PR or making it ready exits 3. If the composed `move-issue` still fails after the PR was opened or made ready, the run ends on a failure naming what it left behind: the PR, its ready state and the reviewers it requested (#947). The closing line, `[ok] PR ready; #<N> in Review`, claims no move; `move-issue`'s own output above it says whether it moved the issue or found it in Review already. |
 | `back-to-draft <N>` | (none — issue stays in Review) | Flips PR to draft; dismisses prior APPROVED reviews |
@@ -607,7 +607,23 @@ All three accept `--dry-run` (validate + show the plan, write nothing) and `--ye
 | `set-instance --show` | Print the current id, or `unset`. |
 | `set-instance --clear` | Unset — revert to the non-participating no-op default. |
 
-Setting the id touches no issue — the per-issue ownership *marker* is written by the lifecycle commands (`create-issue` / `start-work` / `handoff-issue`), which read this id. That marker's substrate is selectable (`comment` default, or `label`) per [project-management:DEC-043-ownership-substrate-selection]; the identity here is orthogonal to that choice.
+Setting the id touches no issue. The lifecycle commands read it and write each issue's ownership *marker*, as the next section says.
+
+#### What the lifecycle commands write for an instance (per [project-management:DEC-035-instance-ownership] and [project-management:DEC-043-ownership-substrate-selection])
+
+With an instance id set, three commands write the ownership marker. With none set, they write and print exactly what they did before.
+
+| Command | Ownership side effect |
+|---|---|
+| `create-issue` | Claims each issue it files for this clone, so the clone owns the arc it files from birth. An issue filed for another person with `--assignee` is not claimed. |
+| `start-work` | Claims an issue no instance owns, once it has set the assignee and before the move to In Progress. An issue another instance owns is started unclaimed. |
+| `close-issue` | Releases every owner of the issue once it has closed it, in each mode. `done-work` releases through the `close-issue --mode=pr-merge` it runs for each issue its merge closed. |
+
+The owner is the assignee paired with an instance number. So a clone claims only an issue assigned to its own account. A claim or a release that fails is a warning, and the command's own work stands. `handoff-issue` does not move the marker between clones yet.
+
+**The marker is a comment unless you choose the label.** Each claim, withdrawal and release is then an event comment, and the issue's description shows the current owner. That owner line is derived from the comments, rewritten after each event, and kept above the provenance footer. Where your repository can create labels, `substrate: label` in the capability's `project/instance-ownership.yaml` selects the `instance:N` label instead, created on first use.
+
+**Two clones can claim one issue in the same instant.** GitHub has no atomic claim, so a claim reads the issue again after writing. Where a lower-numbered instance claimed too, the higher one withdraws its claim, and `start-work` then stops before the move with exit code 2, naming the branch it cut. This catches a clash rather than preventing it: a clone whose re-read came first keeps its claim, and the owner line shows both.
 
 #### Closing, reopening and editing an issue — `close-issue` / `reopen-issue` / `edit-issue`
 
