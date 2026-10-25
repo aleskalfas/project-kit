@@ -41,9 +41,9 @@ pkit:
         - TERM-changeset
         - TERM-release-step
     revalidated:
-      at: 2026-10-24T21:03:29Z
+      at: 2026-10-25T04:04:00Z
       outcome: unchanged
-      unchanged-because: TERM-head lists head branch, and TERM-report lists whole-repository report, as phrases their distinctions already told apart. Neither definition changed, so the sections on head and report hold.
+      unchanged-because: TERM-finding's example now names the link target, the glossary's term for what a revisit entry answers for. What a finding is, and the view's account of changes, reviews and releases, are as they were.
 ---
 
 # VIEW-changes-review-and-releases — Changes, review and releases

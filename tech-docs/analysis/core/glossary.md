@@ -1472,7 +1472,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Revalidation:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds (COR-050 [point](#term-point--point) 3).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it (COR-050 point 4).
-- **Revisit entry:** an answer on a link's source, saying why a target still stands or which follow-up will [revisit](#term-revisit--revisit) it (COR-050 point 16).
+- **Revisit entry:** an answer on a link's source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it (COR-050 point 16).
 - **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live on the artefacts.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 
@@ -1734,7 +1734,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding).
 
-**Example:** [validation](#term-validation--validation) fails on a [revisit](#term-revisit--revisit) entry that names no target, and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
+**Example:** [validation](#term-validation--validation) fails on a [revisit](#term-revisit--revisit) entry that names no [link target](#term-link-target--link-target), and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
 
 **Distinctions:**
 
