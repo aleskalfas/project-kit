@@ -3,9 +3,9 @@ kind: minor
 custom:
   category: Added
 body: >
-  One install command gets the newest release:
+  One install command gets the highest release:
   `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`
-  (#2052). The tag `latest` points at the newest release's commit, and the
+  (#2052). The tag `latest` points at the highest release's commit, and the
   release workflow moves it there whenever a release lands. `pkit init` ends by
   printing that command, the errors of `.pkit/cli/pkit` that advise installing
   pkit give it, and the command reference's "Installing pkit on PATH"

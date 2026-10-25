@@ -19,26 +19,35 @@ takes the highest release tag, and makes `latest` point at that tag's commit:
   `@latest` install would get that branch's head.
 
 A release tag is `v<major>.<minor>.<patch>` in ASCII digits, no part padded by a
-leading zero, as `versioning.is_release_version` reads a release version and
-`pkit upgrade`'s `_max_released_tag` reads its tag; a test holds the two equal.
+leading zero, as `versioning.is_release_version` reads a release version.
 Pre-releases, dev releases and every other tag, `latest` itself among them, are
-skipped. A ref name is read as git prints it, never trimmed, so a name that only
-looks like a release tag is no release tag. The script needs nothing but the
-standard library and `git`, so the workflow runs it on the runner's own
-`python3` without installing the project.
+skipped. This script reads a ref name as git prints it, untrimmed, so a name
+that only looks like a release tag is no release tag.
+
+`pkit upgrade`'s `_max_released_tag` finds the highest release too, and a test
+holds the two equal on a corpus of tags. They judge alike every ref name free
+of whitespace, which is every tag the release step cuts. They are not alike in
+trimming: `_max_released_tag` trims a name and splits lines at Unicode line
+breaks. So a name git accepts with Unicode whitespace in it, such as a trailing
+no-break space, counts as a release there and not here. The script needs
+nothing but the standard library and `git`, so the workflow runs it on the
+runner's own `python3` without installing the project.
 
 `latest` is a lightweight tag on the commit itself. Its push is forced, since
 git moves no tag without force, and leased on the value this run read: it goes
 through only while `origin`'s `latest` is still that value, or still missing.
 So a run that read an older state never moves `latest` back over a newer run's
-move; it fails instead, and the next push mends it.
+move. Where the push fails, the run reads `origin` again. Where `latest` already
+points at the target, as another run or the failed push itself left it, the run
+passes; otherwise it fails, and the next push mends it.
 
 Only the workflow pushes: outside GitHub Actions (`GITHUB_ACTIONS` is not
 `true`), `--push` refuses and pushes nothing. It guards against a run by hand;
 it is not a boundary, and nothing on the host stops another writer of `latest`.
 Without `--push` it says what it would do and changes nothing. Exit 0 when
 `latest` points at the highest release, or no release tag exists; 1, saying
-why, when `git` fails, a branch shadows the tag, or the push is refused.
+why, when `git` fails, a branch shadows the tag, or the push fails and `latest`
+points elsewhere.
 """
 
 from __future__ import annotations
@@ -84,7 +93,7 @@ def release_key(tag: str) -> tuple[int, int, int] | None:
     return major, minor, patch
 
 
-def newest_release(tags: Iterable[str]) -> str | None:
+def highest_release(tags: Iterable[str]) -> str | None:
     """The release tag of the highest version among `tags`; None where none is."""
     keyed = [(key, tag) for tag in tags if (key := release_key(tag)) is not None]
     return max(keyed)[1] if keyed else None
@@ -135,7 +144,7 @@ def plan_for(ls_remote_output: str) -> Plan:
             else:
                 named[tag] = oid
     commits = {tag: peeled.get(tag, oid) for tag, oid in named.items()}
-    release = newest_release(commits)
+    release = highest_release(commits)
     return Plan(
         release=release,
         target=None if release is None else commits[release],
@@ -165,13 +174,33 @@ def read(repo: Path) -> Plan:
 
 def apply(repo: Path, plan: Plan) -> str:
     """Push `latest` to the plan's target, leased on what the plan read. Returns
-    what was done. Raises Refused where the push fails."""
+    what was done. Where the push fails, reads `origin` again, and returns where
+    `latest` already points at the target: another run put it there, or the
+    failed push reached `origin`. Raises Refused otherwise."""
     if plan.target is None or not plan.needed:
         raise ValueError("the plan moves nothing")
     lease = f"--force-with-lease={_TAG_REF}:{plan.current or ''}"
-    _git(repo, "push", lease, REMOTE, f"{plan.target}:{_TAG_REF}")
+    try:
+        _git(repo, "push", lease, REMOTE, f"{plan.target}:{_TAG_REF}")
+    except Refused:
+        if not _points_at(repo, plan.target):
+            raise
+        return (
+            f"`{LATEST}` on {REMOTE} already points at {plan.release} ({plan.target[:12]}), "
+            "though this run's push failed."
+        )
     verb = "Created" if plan.current is None else "Moved"
     return f"{verb} `{LATEST}` on {REMOTE}: it points at {plan.release} ({plan.target[:12]})."
+
+
+def _points_at(repo: Path, target: str) -> bool:
+    """Whether `origin`'s `latest` points at `target` now, with no branch shadowing
+    it. False where `origin` cannot be read."""
+    try:
+        again = read(repo)
+    except Refused:
+        return False
+    return again.current_commit == target and not again.shadowed
 
 
 def run(repo: Path, *, push: bool) -> int:

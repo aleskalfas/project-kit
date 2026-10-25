@@ -236,7 +236,7 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 
 **Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` once, globally, from the git URL at the tag `latest`, which marks the newest release:
+Then install `pkit` once, globally, from the git URL at the tag `latest`, which marks the highest release:
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest

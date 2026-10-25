@@ -1,4 +1,4 @@
-"""`scripts/latest_tag.py` keeps the tag `latest` on the newest release's commit (#2052).
+"""`scripts/latest_tag.py` keeps the tag `latest` on the highest release's commit (#2052).
 
 Each test builds a repository fixture: a bare `origin` and a clone that cuts
 annotated release tags and pushes them, as the release-tag workflow does. The
@@ -9,6 +9,8 @@ lags, and pushes nothing where it already points there (PRJ-004).
 
 from __future__ import annotations
 
+import contextlib
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -66,28 +68,28 @@ def _latest_on_origin(repo: GitRepo) -> str | None:
 
 def test_it_creates_latest_where_origin_has_none(clone: GitRepo, in_a_workflow: None) -> None:
     _release(clone, "v1.0.0")
-    newest = _release(clone, "v1.1.0")
+    highest = _release(clone, "v1.1.0")
 
     assert latest_tag.run(clone.root, push=True) == 0
 
-    assert _latest_on_origin(clone) == newest
+    assert _latest_on_origin(clone) == highest
 
 
 def test_it_moves_latest_where_it_lags(clone: GitRepo, in_a_workflow: None) -> None:
     older = _release(clone, "v1.0.0")
     _point_latest_on_origin(clone, older)
-    newest = _release(clone, "v1.1.0")
+    highest = _release(clone, "v1.1.0")
 
     assert latest_tag.run(clone.root, push=True) == 0
 
-    assert _latest_on_origin(clone) == newest
+    assert _latest_on_origin(clone) == highest
 
 
 def test_it_pushes_nothing_where_latest_already_points_there(
     clone: GitRepo, in_a_workflow: None, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    newest = _release(clone, "v1.1.0")
-    _point_latest_on_origin(clone, newest)
+    highest = _release(clone, "v1.1.0")
+    _point_latest_on_origin(clone, highest)
 
     plan = latest_tag.read(clone.root)
 
@@ -95,7 +97,7 @@ def test_it_pushes_nothing_where_latest_already_points_there(
     assert not plan.needed
     assert latest_tag.run(clone.root, push=True) == 0
     assert "already points at v1.1.0" in capsys.readouterr().out
-    assert _latest_on_origin(clone) == newest
+    assert _latest_on_origin(clone) == highest
 
 
 def test_a_second_run_finds_nothing_to_do(clone: GitRepo, in_a_workflow: None) -> None:
@@ -106,14 +108,14 @@ def test_a_second_run_finds_nothing_to_do(clone: GitRepo, in_a_workflow: None) -
     assert not latest_tag.read(clone.root).needed
 
 
-# --- Which tag is the newest release ---------------------------------------
+# --- Which tag is the highest release ---------------------------------------
 
 
 def test_it_skips_pre_releases_and_tags_that_are_no_release(
     clone: GitRepo, in_a_workflow: None
 ) -> None:
-    """A pre-release above the newest release, a padded version and a tag of
-    another name never count: `latest` goes to the newest release."""
+    """A pre-release above the highest release, a padded version and a tag of
+    another name never count: `latest` goes to the highest release."""
     release = _release(clone, "v1.0.0")
     _release(clone, "v1.1.0rc1")
     _release(clone, "v01.2.0")
@@ -197,13 +199,13 @@ def test_a_clone_holding_an_old_latest_moves_it_only_by_a_forced_fetch(
     latest_tag.run(clone.root, push=True)
     other = GitRepo(tmp_path / "other")
     GitRepo(tmp_path).git("clone", "-q", str(tmp_path / "origin.git"), str(other.root))
-    newest = _release(clone, "v1.1.0")
+    highest = _release(clone, "v1.1.0")
     latest_tag.run(clone.root, push=True)
 
     assert other.git("fetch", "-q", "origin", "tag", LATEST, check=False).returncode != 0
     other.git("fetch", "-q", "--force", "origin", "tag", LATEST)
 
-    assert other.git("rev-parse", f"{LATEST}^{{commit}}").stdout.strip() == newest
+    assert other.git("rev-parse", f"{LATEST}^{{commit}}").stdout.strip() == highest
 
 
 # --- Only the workflow pushes ----------------------------------------------
@@ -267,6 +269,72 @@ def test_a_run_that_found_latest_missing_never_overwrites_one_made_since(
     assert _latest_on_origin(clone) == newer
 
 
+def _after_each_push(monkeypatch: pytest.MonkeyPatch, then: Callable[[], None]) -> None:
+    """Each push runs as it would, then `then` runs, then the push fails."""
+    real_git = latest_tag._git
+
+    def git(repo: Path, *args: str) -> str:
+        if args[0] != "push":
+            return real_git(repo, *args)
+        with contextlib.suppress(latest_tag.Refused):
+            real_git(repo, *args)
+        then()
+        raise latest_tag.Refused("`git push` failed: the connection was reset")
+
+    monkeypatch.setattr(latest_tag, "_git", git)
+
+
+def test_a_refused_lease_passes_where_another_run_moved_latest_to_the_target(
+    clone: GitRepo, in_a_workflow: None, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The lease is refused, since `latest` moved after the run read it. By the
+    time the run reads `origin` again, another run put `latest` on the target."""
+    _point_latest_on_origin(clone, _release(clone, "v1.0.0"))
+    target = _release(clone, "v1.1.0")
+    plan = latest_tag.read(clone.root)
+    _point_latest_on_origin(clone, clone.commit("Unreleased", {"NOTES": "x\n"}))
+    clone.git("push", "-q", "origin", "main")
+    _after_each_push(monkeypatch, lambda: _point_latest_on_origin(clone, target))
+
+    assert "already points at v1.1.0" in latest_tag.apply(clone.root, plan)
+    assert _latest_on_origin(clone) == target
+
+
+def test_a_run_whose_push_fails_exits_0_where_latest_points_at_the_target(
+    clone: GitRepo,
+    in_a_workflow: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A push that reached `origin` yet reported a failure: the run reads `origin`
+    again, finds `latest` on the target, and passes."""
+    _point_latest_on_origin(clone, _release(clone, "v1.0.0"))
+    target = _release(clone, "v1.1.0")
+    _after_each_push(monkeypatch, lambda: None)
+
+    assert latest_tag.run(clone.root, push=True) == 0
+
+    assert "already points at v1.1.0" in capsys.readouterr().out
+    assert _latest_on_origin(clone) == target
+
+
+def test_a_run_whose_push_fails_exits_1_where_latest_points_elsewhere(
+    clone: GitRepo,
+    in_a_workflow: None,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    older = _release(clone, "v1.0.0")
+    _point_latest_on_origin(clone, older)
+    _release(clone, "v1.1.0")
+    _after_each_push(monkeypatch, lambda: _point_latest_on_origin(clone, older))
+
+    assert latest_tag.run(clone.root, push=True) == 1
+
+    assert "connection was reset" in capsys.readouterr().err
+    assert _latest_on_origin(clone) == older
+
+
 # --- The same judgement as `pkit upgrade` -----------------------------------
 
 _TAGS = (
@@ -295,12 +363,12 @@ def test_a_tag_is_a_release_here_exactly_where_pkit_upgrade_takes_it_for_one(tag
     """`pkit upgrade` finds the latest release with `_max_released_tag`; this
     script, which needs the standard library alone, judges each tag the same."""
     found = upgrade._max_released_tag(_ls_remote(tag))
-    assert latest_tag.newest_release([tag]) == (None if found is None else f"v{found}")
+    assert latest_tag.highest_release([tag]) == (None if found is None else f"v{found}")
 
 
-def test_the_newest_release_is_the_one_pkit_upgrade_finds() -> None:
+def test_the_highest_release_is_the_one_pkit_upgrade_finds() -> None:
     found = upgrade._max_released_tag(_ls_remote(*_TAGS))
-    assert latest_tag.newest_release(_TAGS) == f"v{found}" == "v1.10.0"
+    assert latest_tag.highest_release(_TAGS) == f"v{found}" == "v1.10.0"
 
 
 def test_the_tag_is_the_one_init_recommends() -> None:
@@ -331,6 +399,15 @@ def test_the_release_tag_workflow_points_latest_on_every_run() -> None:
 
     assert "if" not in steps[point]
     assert point > _index(steps, "pkit version tag --push")
+
+
+def test_a_failure_moving_latest_never_skips_a_releases_notes() -> None:
+    """The notes step runs only on success of the steps before it, so the step
+    that moves `latest` comes after it, last."""
+    steps = _steps()
+
+    assert _index(steps, _STEP) > _index(steps, "pkit release publish-notes")
+    assert _index(steps, _STEP) == len(steps) - 1
 
 
 def test_the_step_runs_on_the_runners_own_python_with_nothing_installed() -> None:

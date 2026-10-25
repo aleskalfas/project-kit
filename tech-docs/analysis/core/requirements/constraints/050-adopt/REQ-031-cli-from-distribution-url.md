@@ -3,7 +3,7 @@ id: REQ-031
 title: The CLI is installed with uv from the distribution's git URL
 status: active
 statement: The system's CLI is installed with `uv`, from the distribution's git URL.
-measure: The install the system prints is `uv tool install` with that URL and the tag `latest`, which points at the newest release. The one its upgrade runs names a release's own tag. A pinned release runs through `uvx` from the same URL. No registry and no other installer is supported.
+measure: The install the system prints is `uv tool install` with that URL and the tag `latest`, which points at the highest release. The one its upgrade runs names a release's own tag. A pinned release runs through `uvx` from the same URL. No registry and no other installer is supported.
 applies-to: The CLI's install and update on every machine, and the router's run of a pinned release.
 actors: []
 refines: []

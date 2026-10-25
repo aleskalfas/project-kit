@@ -1009,8 +1009,10 @@ creates `latest` where it is missing and moves it where it lags. Where `latest`
 already points there, it pushes nothing.
 
 - **The push** is forced, since git moves no tag without force, and leased on
-  the value the run read. A run that read an older state fails rather than move
-  `latest` back, and the next push to `main` mends it.
+  the value the run read. A run that read an older state never moves `latest`
+  back. Where its push fails, the script reads `origin` again: the run passes
+  where `latest` already points at the highest release, and fails otherwise,
+  and the next push to `main` mends it.
 - **The writer:** by design this step alone writes `latest`, and nothing on the
   host enforces it. Outside GitHub Actions the script's `--push` refuses, and
   without it the script says what it would do.

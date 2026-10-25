@@ -1302,14 +1302,14 @@ def _print_next_steps() -> None:
     click.echo("Install complete. Recommended next steps:")
     click.echo()
     # The install the CLI reference recommends ("Installing pkit on PATH"), of the
-    # newest release. A test holds the two to the same command (#1376).
+    # highest release. A test holds the two to the same command (#1376).
     click.echo("  1. (Once per machine, skip if already done) Install pkit on PATH:")
     click.echo()
     click.echo(f"       {recommended_install_command()}")
     click.echo()
     click.echo("     One install serves every project on this machine that uses")
     click.echo("     project-kit. pkit finds the current project from the folder you")
-    click.echo(f"     run it in. The tag `{LATEST_TAG}` names the newest release.")
+    click.echo(f"     run it in. The tag `{LATEST_TAG}` names the highest release.")
     click.echo(f"     uv fetches `{LATEST_TAG}` afresh, while a git clone that holds an")
     click.echo(f"     old `{LATEST_TAG}` must force-fetch it. For another release, see")
     click.echo('     .pkit/cli/README.md, section "Installing pkit on PATH".')

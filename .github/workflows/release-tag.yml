@@ -19,10 +19,12 @@ name: release-tag
 # `uv tool install …@latest` installs the highest release. It creates the tag
 # where it is missing, moves it where it lags, and pushes nothing where it
 # already points there; a run that failed to move it is mended by the next push.
-# It fails while a branch named `latest` exists, which uv can take first. By
-# design this step is the only writer of `latest`; nothing on the host enforces
-# it. Its push is forced, as git moves no tag without force, and leased on the
-# value the run read, so a run that read an older state never moves it back.
+# Its step runs last, after the tag and the notes, so its failure never skips
+# a release's notes. It fails while a branch named `latest` exists, which uv can
+# take first. By design this step is the only writer of `latest`; nothing on the
+# host enforces it. Its push is forced, as git moves no tag without force, and
+# leased on the value the run read, so a run that read an older state never
+# moves it back. A failed push passes where `latest` already points there.
 #
 # Token note: pushing a tag with the default GITHUB_TOKEN does not trigger
 # `on: push: tags:` workflows (loop-prevention). There are none today; add a
@@ -86,12 +88,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           uv run pkit version tag --push
 
-      # On every run, after any tag this run cut: point `latest` at the highest
-      # release's commit (see the header). Standard library and git only, on the
-      # runner's own python3, so nothing is installed for it.
-      - name: Point the tag latest at the highest release
-        run: python3 scripts/latest_tag.py --push
-
       # Only after a tag was just cut: publish a notes-only GitHub Release so
       # the release page shows what changed (body = this version's CHANGELOG.md
       # section). NO artifact — a notes overlay on the tag install path
@@ -106,3 +102,10 @@ jobs:
           set -euo pipefail
           version="$(cat .pkit/VERSION)"
           uv run pkit release publish-notes "$version"
+
+      # On every run, last: after any tag this run cut and its notes, so a
+      # failure here never skips a release's notes. Points `latest` at the highest
+      # release's commit (see the header). Standard library and git only, on the
+      # runner's own python3, so nothing is installed for it.
+      - name: Point the tag latest at the highest release
+        run: python3 scripts/latest_tag.py --push

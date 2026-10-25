@@ -1594,7 +1594,7 @@ def test_max_released_tag_skips_a_tag_the_release_step_never_writes(above: str) 
 
 @pytest.mark.parametrize("peeled", [False, True], ids=["lightweight", "annotated"])
 def test_max_released_tag_skips_the_moving_latest_tag(peeled: bool) -> None:
-    """`latest`, the tag the release-tag workflow keeps on the newest release's
+    """`latest`, the tag the release-tag workflow keeps on the highest release's
     commit (#2052), is no release tag: the lookup reads `v<version>` alone, so
     the tool step still installs and a pinned raise still writes a version."""
     latest = f"{'1' * 40}\trefs/tags/latest\n"

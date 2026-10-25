@@ -693,7 +693,7 @@ def test_init_recommends_the_install_the_cli_reference_recommends(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`init`'s closing next steps and the CLI reference recommend one install
-    (PRJ-004), so following either gives the same pkit: the newest release,
+    (PRJ-004), so following either gives the same pkit: the highest release,
     through the tag `latest`."""
     recommended = _install_the_cli_reference_recommends()
     assert recommended == f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest"
@@ -705,7 +705,7 @@ def test_init_prints_the_install_of_the_latest_tag_not_its_own_version(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """The printed install names `@latest`, the tag the release-tag workflow keeps
-    on the newest release's commit (PRJ-004, #2052), not the running pkit's
+    on the highest release's commit (PRJ-004, #2052), not the running pkit's
     version, which ages."""
     lines = _next_steps_lines(capsys)
 

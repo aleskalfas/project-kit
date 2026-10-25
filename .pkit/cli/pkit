@@ -14,7 +14,7 @@
 #      bundle, validate, new, status, version, ...).
 #
 # `uv` and Python 3.11+ are required (per PRJ-003). The recommended
-# install names the tag `latest`, on the newest release's commit,
+# install names the tag `latest`, on the highest release's commit,
 # `uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest`
 # (per PRJ-004), and puts a binary
 # on PATH that doesn't need this proxy at all. This proxy stays useful for
@@ -96,7 +96,7 @@ Error: pkit requires `uv` (per PRJ-003 + PRJ-004). Install uv via:
    curl -LsSf https://astral.sh/uv/install.sh | sh
 or:
    brew install uv
-Then either retry this command or install the newest release of pkit globally:
+Then either retry this command or install the highest release of pkit globally:
    uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 For another release, see .pkit/cli/README.md, "Installing pkit on PATH".
 EOF
@@ -108,7 +108,7 @@ if [ ! -f "$SOURCE_REPO/pyproject.toml" ]; then
 Error: source kit at $SOURCE_REPO has no pyproject.toml.
        This dispatcher needs to resolve to a project-kit source tree
        with the Python package present. If you're running from an
-       adopter project's local copy of this script, install the newest
+       adopter project's local copy of this script, install the highest
        release of pkit globally instead:
          uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
        For another release, see .pkit/cli/README.md,

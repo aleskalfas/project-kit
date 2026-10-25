@@ -103,8 +103,8 @@ pkit:
 10. The system also checks that the release pull request is open, mergeable and green in every check it shows. The system lands the release pull request as one squash commit whose subject is the pull request's title, and deletes the head branch.
 11. On the push to the default branch, the CI pipeline runs `release-tag.yml`. That workflow finds no tag for the version in `.pkit/VERSION`, and runs `pkit version tag --push`.
 12. The system tags the release commit `v<version>` with an annotated tag, and pushes the tag (PRJ-004). The CI pipeline runs in no [harness](../../../glossary.md#term-harness--harness) session, so the cross-repository guard has nothing to compare with and does not fire. Nobody is asked to confirm the push (ADR-061 point 6).
-15. The CI pipeline runs `python3 scripts/latest_tag.py --push`. The script reads the remote's tags, and points the tag `latest` at the commit of the highest release tag, the release commit. It force-pushes `latest`, leased on the value it read, so `uv tool install` with `@latest` gets the new release (PRJ-004).
 13. The CI pipeline runs `pkit release publish-notes <version>`. The system publishes a GitHub release for the tag. The GitHub release's notes are that version's section of `CHANGELOG.md`.
+15. Last, the CI pipeline runs `python3 scripts/latest_tag.py --push`. The script reads the remote's tags, and points the tag `latest` at the commit of the highest release, the release commit. It force-pushes `latest`, leased on the value it read, so `uv tool install` with `@latest` gets the new release (PRJ-004).
 
 **Variants:**
 
@@ -135,7 +135,7 @@ pkit:
 - **11b.** The run of `release-tag.yml` for the release push fails. The next push to the default branch finds the version untagged, and tags that push's commit instead of the release commit.
 - **13a.** A release step that moved only components came between this release and the previous one. That step's changelog section is headed by its date, so no GitHub release's notes carry it (`release.py`).
 - **15a.** `latest` already points at that commit, as after a push that is no release. The script pushes nothing.
-- **15b.** Another run moved `latest` after this run read it. The remote refuses the leased push, so the run fails and `latest` stays where the other run put it. The next push to the default branch runs step 15 again.
+- **15b.** Another run moved `latest` after this run read it, and the remote refuses the leased push. The script reads the remote's tags again. Where `latest` points at that commit, the run passes. Otherwise the run fails, `latest` stays where the other run put it, and the next push to the default branch runs step 15 again.
 - **15c.** The remote holds a branch named `latest`, which uv can take before the tag. The script refuses, pushes nothing, and the run fails until someone deletes the branch.
 - **14a.** The repository is another, and the operator declines. Or nobody can reply, and the maintainer passed no `--allow-foreign-repo`. The system refuses, merges nothing, and the use case ends.
 

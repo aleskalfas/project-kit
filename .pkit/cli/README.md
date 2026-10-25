@@ -140,7 +140,7 @@ The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `ca
 
 ## Installing pkit on PATH
 
-**Recommended (per PRJ-004):** install the newest release of pkit globally via `uv tool install`, naming the tag `latest`:
+**Recommended (per PRJ-004):** install the highest release of pkit globally via `uv tool install`, naming the tag `latest`:
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
@@ -150,7 +150,7 @@ The release-tag workflow moves `latest` to each new release's commit, and by des
 
 To move the tool to a newer release, run the command again with `--force`. `pkit upgrade` installs the latest release by its own tag, where it runs its tool step ([`upgrade`](#upgrade)). uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
 
-**A given release:** name its tag instead, where a project needs a release other than the newest:
+**A given release:** name its tag instead, where a project needs a release other than the highest:
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
