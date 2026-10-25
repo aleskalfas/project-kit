@@ -708,6 +708,24 @@ def test_an_anchor_edited_after_its_answer_in_the_branch_is_met_by_the_answer(
     )
 
 
+def test_an_answer_meets_only_the_page_it_is_on(paged: AdopterRepo, tmp_path: Path) -> None:
+    """An obligation on `guide.md`, at the root, is not met by an answer on
+    `docs/guide.md`: the answer's location is the page's exactly, never read as a
+    pattern that a page of the same name in another folder matches."""
+    root_guide = {**STALE_GUIDE, "id": "friction:guide.md", "document": "guide.md"}
+    _contribute(paged, [root_guide])
+    paged.commit(
+        "change a, the guide holds",
+        {"src/a.py": "A = 2\n", ANSWER: answers(entry(PAGE, at=T2, because="no value of A"))},
+    )
+    paged.commit("a fix round changes a again", {"src/a.py": "A = 3\n"})
+    run = _run(paged, tmp_path)
+    assert run.returncode == 1
+    lines = run.stdout.splitlines()
+    assert f"  ✓ [friction] {PAGE} → answered in the diff ({ANSWER})" in lines
+    assert "  ✗ [friction] guide.md → no answer in the diff (page-stale)" in lines
+
+
 @pytest.mark.parametrize(
     "answered",
     [

@@ -332,7 +332,9 @@ def main() -> int:
             continue
         if answered is None:
             answered = _answered(base.ref)
-        file = next((f for at, f in answered.items() if _matches(page, at)), None)
+        # The answer's location is the page's exactly: read as a pattern, `README.md`
+        # would take an answer on any README in the tree for the root's.
+        file = answered.get(page)
         if file is not None:
             print(f"  ✓ [{source}] {page} → answered in the diff ({file})")
             continue
