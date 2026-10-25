@@ -131,7 +131,7 @@ pkit:
 
 - **4a.** The artefact still describes what is wanted, and a [change](../../../glossary.md#term-change--change) broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
 - **4b.** An anchor is dead, such as a path whose files were removed. The developer corrects the anchor in the block, and revalidates the artefact, since its anchor list changed. The [change check](../../../glossary.md#term-change-check--change-check) asks for that revalidation, so it is not flagged at step 5.
-- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. The writer names both files in the revalidation's `read`, so it replaces them (COR-062 points 5 and 7).
+- **4c.** The debt is an artefact answered apart: two live revalidations of it, neither of which read the other. The developer revalidates it once, judging their combined state. `pkit friction revalidate` names the files of both in the new revalidation's `read`, so the new revalidation replaces the two (COR-062 points 5 and 7).
 
 - **5a.** An answer the developer gives is `updated`, so the artefact's content changed. Each artefact anchored to it owes an answer in the same change (COR-050 point 6), and the path rejoins at step 4 for each one.
 
