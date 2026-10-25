@@ -246,7 +246,7 @@ In every analysis, with a domain model or without, `pkit analysis link` also lin
 - **Held by the check.** `pkit analysis validate` reports a link missing, extra or stale, whatever any rule's status, and names the command. A missing or stale link into a file you receive as a synced copy is a warning, and every other one fails. A synced copy, such as a core record or a shipped capability's decision, changes at a version transition, which rewrites none of your text, so run the command after an upgrade. A citation that resolves to nothing is a warning too.
 - **A reworded point heading.** A point's id is permanent, and its title is not. A reworded heading gives another anchor, so the check reports each link to it as stale, and the command rewrites them.
 - **Written, never by hand.** A link whose text is a citation, or a point's id inside one, and whose target is a path in the repository, is held as the command's, and rewritten or taken out. A link to a web address is yours.
-- **Its cost.** A moved link is part of the content that holds it, as a term's link is, so it flags whatever anchors that artefact.
+- **Its cost.** A moved link is part of the content that holds it, unlike a term's link, so it flags whatever anchors that artefact. [project-kit#2064](https://github.com/aleskalfas/project-kit/issues/2064) will set these links aside too.
 
 A use case's variant, linked:
 
