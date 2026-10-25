@@ -67,7 +67,7 @@ The footer is a methodology-managed region delimited by `<!-- pkit-provenance:st
 
 > **Short form**: every `pkit project-management <subcommand>` shown below also works as `pkit pm <subcommand>` — the capability registers `pm` as an alias via `aliases:` in its `package.yaml`. Both resolve to the same dispatch group; pick whichever reads better.
 
-**It needs a GitHub repository.** project-management keeps its work in a GitHub repository, as labels, issues and pull requests. Steps 1 and 2 work without one. From step 3 on, the checkout needs a remote on GitHub, and `gh`, GitHub's command-line tool, signed in to that host with `gh auth login`. Without them, `bootstrap` refuses at its first run, `--dry-run` included, and names what is missing.
+**project-management needs a GitHub repository.** The capability keeps its work in a GitHub repository, as labels, issues and pull requests. Steps 1 and 2 work without one. From step 3 on, the checkout needs a remote on GitHub, and `gh`, GitHub's command-line tool, must be signed in to that host with `gh auth login`. Without both, `bootstrap` refuses at its first run, `--dry-run` included, and names what is missing.
 
 Four phases, in order:
 
@@ -106,7 +106,7 @@ workstreams: []                       # required and empty: the workstreams have
 #   default_owner: ai-platform-incubation   # spliced as `--owner` on cross-owner ops
 ```
 
-Declare the workstreams beside it, in `.pkit/capabilities/project-management/project/workstreams.yaml` ([project-management:DEC-018-workstream-taxonomy-and-lifecycle]):
+Declare the workstreams beside the config, in `.pkit/capabilities/project-management/project/workstreams.yaml` ([project-management:DEC-018-workstream-taxonomy-and-lifecycle]):
 
 ```yaml
 # project/workstreams.yaml
@@ -117,7 +117,7 @@ workstreams:                          # one entry per allowed workstream value
   - cli
 ```
 
-An entry can also carry attributes, such as a status and a deprecation reason, in the mapping form DEC-018 shows. `config.yaml`'s `workstreams:` key is the legacy place for the list. Where `workstreams.yaml` is absent, the readers fall back to that key, and `pre-check` says so.
+An entry can also carry attributes, such as a status and a deprecation reason, in the mapping form DEC-018 shows. `config.yaml`'s `workstreams:` key is the legacy place for the workstreams. Where `workstreams.yaml` is absent, the commands that read the workstreams fall back to that key, and `pre-check` says so.
 
 Further optional blocks are documented where the features that read them are described: `milestone_categories:` (per [project-management:DEC-016-time-bound-containers]), `review:` (the review-mode block under "Then use"), and `mesh_peers:` / `mesh_source:` (per [project-management:DEC-022-methodology-mesh]). The companion schema below is the complete enumeration.
 
