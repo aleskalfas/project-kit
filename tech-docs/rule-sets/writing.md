@@ -1,6 +1,6 @@
 ---
 rule-set: WRITE
-version: 2.1.0
+version: 2.2.0
 rules:
   RS-WRITE-001:
     status: accepted
@@ -281,6 +281,7 @@ Keep a heading or a label that other text points to, with its words and what a p
   - A pointer that gives a place, such as "below", relies on the label's place too.
   - Moving text out from under a label breaks a pointer, as renaming the label does. The pointer then leads to a label that no longer holds what the reader came for.
   - Where a pointer lies outside what the change can edit, keep the label. An example is a link into a shipped page from an adopter's repository.
+  - A heading that a link outside what the change can edit leads to may instead be renamed. The page must then keep the old address leading to the renamed heading, such as by an HTML id. For the rename, that address counts as mending the link. No address mends a pointer by words.
   - Before a rename or a move, look for the pointers by words and the links to the heading. A section anchor in a friction block needs no search, since the change check reports it dead (COR-050 point 7).
 - **Breaks the rule on a page:** a first pass of the CLI reference's try-out moved the file history out from under the label *The three answers*. *What it compares* still pointed there with ("The three answers"). That pass is on no branch.
 - **Keeps the rule on a page:** the try-out kept the file history under *The three answers*, as its item *Telling a written-back answer from a new one*.

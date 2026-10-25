@@ -48,7 +48,7 @@ checks:
 This set brings project-kit's general writing rules, `WRITE`, to each page the documentation rework has rewritten (EPIC #1928). It also holds the rules ADR-069 point 4 gives every user page, and the rule on a contents list.
 
 - **What it binds:** its own rules, and those of `WRITE` and of the shared method, `living-docs:LDOC`, on each page its scope selects. The scope selects by path and by living-docs' page type, as the space definitions do.
-- **Where its rules reach:** only the pages the scope lists, so a rule here reaches a user page once a slice of the rework adds it. ADR-069 point 4 scopes this set as `USER` is. Its scope lists the reworked pages instead, as the pilot set it up (#2012), so that accepting a rule costs only the pages already rewritten.
+- **Where its rules reach:** only the pages the scope lists, so a rule here reaches a user page once a slice of the rework adds it. The scope lists the reworked pages one by one (ADR-069 point 4), as the pilot set it up (#2012). So accepting a rule costs only the pages already rewritten.
 - **Why it inherits `LDOC`:** a set that holds a project's documentation rules inherits `LDOC` (living-docs DEC-001 point 3). It pins major 1, as `GUIDE`, `USER` and `TECH` do. One page reached through two pins of a set at different majors fails validation (COR-051 point 7).
 - **How it grows:** each slice of the rework adds the pages it rewrites or creates to the scope's paths. A page several slices rewrite joins with the last of them.
 - **The guides' set:** `GUIDE` (`guide.md` beside this one) holds the rules that only the guides and the entry README follow. Its scope selects `docs/**` and `README.md`, and keeps it however this set grows.
@@ -81,7 +81,7 @@ When a page or a section moves, mend every link to it in the same change. Keep a
   - A section that leaves a page keeps its old address there as an HTML id, before a sentence that links where the section went.
 - **Breaks the rule:** a rewrite on no branch drops the "(PRJ-006)" from the reference's heading "The permission-prompt diagnostic loop", with no HTML id. A link to `#the-permission-prompt-diagnostic-loop-prj-006` then lands at the page's top.
 - **Keeps the rule:** the permissions reference holds `<a id="the-permission-prompt-diagnostic-loop-prj-006"></a>` on the line before that heading.
-- **Note:** RS-USER-001 asks that readers' paths stay unbroken, and this rule says what a move owes them. RS-WRITE-016 keeps a heading that a pointer outside the change leads to, such as a link from an adopter's repository. Where it keeps one, this rule leaves the heading as it is.
+- **Note:** RS-USER-001 asks that readers' paths stay unbroken, and this rule says what a move owes them. RS-WRITE-016 keeps a heading that a pointer outside what the change can edit leads to, such as a link from an adopter's repository. Where that pointer is a link, the heading may be renamed if the old address still leads to it, as this rule's HTML id does.
 
 ## RS-REWORK-003 — Cite only what ships
 
@@ -94,7 +94,7 @@ Cite on a user page only the records the core and the capabilities ship, cite no
   - A page that ships is one under `.pkit/` other than the release guide, `.pkit/release/README.md`. It links its guide's README at the `latest` tag (ADR-069 point 2), and nothing else that does not ship.
 - **Breaks the rule:** the permissions README before the pilot, at commit `8f7ea252`, says "The design … is [ADR-060](../../tech-docs/architecture/decisions/ADR-060-path-scoped-workspace-allow.md)." It cites a record of project-kit's own, and links under `tech-docs/`, which never ships.
 - **Keeps the rule:** ADR-060 stands among the permissions reference's anchors, and its text states the design with no citation: "The workspace's design is a path-scoped allow …"
-- **Note:** RS-WRITE-016 keeps a heading that a link from outside the change leads to, which on a page that ships is every heading. Its *How* would have to count a kept old address as keeping the heading before such a heading can drop its citation.
+- **Note:** on a page that ships, a link from outside what the change can edit may lead to any heading. RS-WRITE-016 lets such a heading drop its citation where the old address still leads to it.
 
 ## RS-REWORK-004 — A component's page reaches a backbone page through its area's README
 
