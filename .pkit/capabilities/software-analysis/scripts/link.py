@@ -102,7 +102,7 @@ def main() -> int:
         crlf[rel] = "\r" in text
         read[rel] = text.replace("\r\n", "\n")
     try:
-        lookups = backbone.lookup(root, links.asked(analysis, listing, read))
+        lookups = backbone.lookup(root, links.asked(analysis, listing, read, kinds))
     except Unreadable as exc:
         print(
             f"error: the citations could not be looked up: {exc}; nothing is linked.",

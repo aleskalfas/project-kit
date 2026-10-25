@@ -1230,12 +1230,17 @@ def _documents(analysis: Analysis, folder: str | None) -> list[Artefact]:
 
 
 def asked(
-    analysis: Analysis, listing: analyses.Listing, read: Mapping[str, str | None]
+    analysis: Analysis,
+    listing: analyses.Listing,
+    read: Mapping[str, str | None],
+    kinds: Mapping[str, structure.Kind] | None,
 ) -> set[str]:
     """What the citations of every analysis ask the lookup: each record, point and rule
-    they may name, read as `plan` reads them."""
+    they may name, read as `plan` reads them with the same `kinds`. Read with other kinds,
+    a term link inside a citation, as on `point` in `PRJ-001 point 2`, cuts it short, and
+    its point goes unasked."""
     gathered: set[str] = set()
-    plan(analysis, listing, read, None, None, gathered)
+    plan(analysis, listing, read, kinds, None, gathered)
     return gathered
 
 

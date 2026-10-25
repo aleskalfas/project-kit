@@ -1563,7 +1563,7 @@ def _mention_links(root: Path, analysis: Analysis, listing: analyses.Listing) ->
         text = _cached(root, rel, texts)
         read[rel] = text.replace("\r\n", "\n") if text is not None else None
     try:
-        lookups = backbone.lookup(root, links.asked(analysis, listing, read))
+        lookups = backbone.lookup(root, links.asked(analysis, listing, read, kinds))
     except Unreadable as exc:
         return [
             Finding(

@@ -287,6 +287,41 @@ def test_a_use_case_takes_both_kinds_of_link_each_in_its_own_sections(tmp_path: 
     )
 
 
+def test_one_run_asks_the_point_a_term_link_inside_its_citation_hid(tmp_path: Path) -> None:
+    """What the lookup is asked is read as the links are written, so a term link on
+    `point` inside a citation, which the pass takes out, hides none of its points: one run
+    links the citation, and a second has nothing left to write."""
+    model, analyses = load_lib("model", "analyses")
+    kinds = links.parted(tmp_path)
+    path = "tech-docs/analysis/use-case-model/use-cases/UC-001-run.md"
+    analysis = model.Analysis(
+        location="tech-docs/analysis",
+        places={},
+        artefacts=(
+            model.Artefact(
+                model.TERM, "TERM-point", FROM, f"{FROM}#TERM-point", True, {"name": "point"}, {}
+            ),
+            model.Artefact(model.VIEW, "VIEW-run", "v.md", "v.md", False, {}, {}),
+            model.Artefact(model.USE_CASE, "UC-001", path, path, False, {}, {}),
+        ),
+        strays=(),
+        unreadable={},
+        files={},
+        records=(),
+    )
+    listing = analyses.Listing()
+    term_link = "[point](../../glossary.md#term-point--point)"
+    read = {path: f"# UC-001 — Run\n\nSign, per PRJ-001 {term_link} 2.\n"}
+    asked = links.asked(analysis, listing, read, kinds)
+    assert "PRJ-001#2" in asked
+    lookups = {key: LOOKUPS[key] for key in asked if key in LOOKUPS}
+    (linked,) = links.plan(analysis, listing, read, kinds, lookups)
+    assert linked.linked == (
+        f"# UC-001 — Run\n\nSign, per [PRJ-001 point 2](../../../../{P1}#2-keep-a-run_log).\n"
+    )
+    assert [d for d in linked.departures if d.how == links.UNRESOLVED] == []
+
+
 # --- the command and the check, in an adopter ------------------------------------------------
 
 ACTOR = f"{ACTORS}/ACT-tester.md"
