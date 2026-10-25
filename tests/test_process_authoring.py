@@ -29,6 +29,9 @@ These tests pin the load-bearing facts:
   registers the seam stubs, and likewise never bumps the version;
 - both mutations are idempotent on the identical declaration and refuse to
   overwrite a DIFFERENT declared edge/contract;
+- both refuse a definition whose capability the project receives as a synced
+  copy, writing nothing, a dry run included, and edit as before in the
+  methodology's source and in a capability the project incubates (#1998);
 - the interpretation-only check reports INDETERMINATES only — misses are not
   counted and do not affect its exit code — and is a CONSUMER of the existing
   health walker (COR-042 point 5's design-once rule), with the default health
@@ -53,13 +56,16 @@ from typing import Any
 import pytest
 from click.testing import CliRunner
 
+from project_kit import capabilities as caps
 from project_kit import process_authoring as pa
 from project_kit import process_dependencies as deps
 from project_kit import process_health as ph
 from project_kit import schemas_validate
 from project_kit.cli import main
+from project_kit.manifest import ORIGIN_EXTERNALLY_SOURCED, ORIGIN_INCUBATED_IN_REPO
 from project_kit.process import load_definition
 from project_kit.schemas_validate import _is_schema_definition
+from tests.adopter_repo import MakeAdopterRepo
 
 _SOURCE_ROOT = Path(__file__).resolve().parents[1]
 _SHAPE_CONTRACT = _SOURCE_ROOT / ".pkit" / "schemas" / "_defs" / "process.schema.json"
@@ -1608,6 +1614,147 @@ def test_handoff_reuses_registered_seam_commands(authoring_repo: Path) -> None:
         "pre-registered"
         in _registered_commands(authoring_repo, "delivery")["existing-candidates"]["help"]
     )
+
+
+# --- `couple` and `hand-off` on a capability received as a synced copy (#1998) ---
+
+
+def _evidence_unit(make_adopter_repo: MakeAdopterRepo, origin: str, *, source: bool) -> Path:
+    """An adopter with the capability `evidence` registered at `origin`, holding the
+    definition `evidence:unit`, whose state `building` couples to `design:screen`.
+    The definition is stamped while the capability is incubated, as a capability's
+    own processes are authored where it is authored. With `source`, the package
+    source beside `.pkit/` makes the tree the methodology's source repository
+    (`is_methodology_source` of the lifecycle)."""
+    repo = make_adopter_repo(capabilities=("evidence",))
+    caps.set_capability_origin(repo.root, "evidence", ORIGIN_INCUBATED_IN_REPO)
+    pa.stamp_new_process(
+        repo.root, "evidence:unit", states=[pa.StateSpec("building", "Building.", entry=True)]
+    )
+    pa.couple_process(
+        repo.root,
+        "evidence:unit",
+        state_id="building",
+        upstream="design:screen",
+        relation="triggered-by",
+        mode="push",
+        why="A unit builds the screen the design process readied.",
+    )
+    caps.set_capability_origin(repo.root, "evidence", origin)
+    if source:
+        package = repo.root / "src" / "project_kit" / "__init__.py"
+        package.parent.mkdir(parents=True)
+        package.write_text("", encoding="utf-8")
+    return repo.root
+
+
+# Each edit stamp's arguments on `evidence:unit`: a new coupling, and a contract on
+# the declared one.
+_EDITS = {
+    "couple": [
+        "couple",
+        "evidence:unit",
+        "--state",
+        "building",
+        "--upstream",
+        "design:sketch",
+        "--relation",
+        "informational",
+        "--mode",
+        "pull",
+        "--why",
+        "A unit reads the sketch.",
+    ],
+    "hand-off": [
+        "hand-off",
+        "evidence:unit",
+        "--upstream",
+        "design:screen",
+        "--trigger",
+        "ready",
+        "--candidates",
+        "unit-handoff-candidates",
+        "--resolve",
+        "unit-handoff-resolve",
+    ],
+}
+
+# What each edit stamp prints on a run that writes.
+_EDITED = {"couple": "Coupled: evidence:unit", "hand-off": "Contract declared: design:screen"}
+
+
+def _edit(stamp: str, *extra: str) -> tuple[int, str]:
+    result = CliRunner().invoke(main, ["--color", "never", "process", *_EDITS[stamp], *extra])
+    return result.exit_code, result.output
+
+
+@pytest.mark.parametrize("extra", [(), ("--dry-run",)], ids=["run", "dry-run"])
+@pytest.mark.parametrize("stamp", sorted(_EDITS))
+def test_edits_refuse_a_synced_capability_in_an_adopter_and_write_nothing(
+    make_adopter_repo: MakeAdopterRepo, stamp: str, extra: tuple[str, ...]
+) -> None:
+    """In a project that receives the methodology by sync, a kit-shipped capability's
+    tree is a synced copy, and the next sync overwrites an entry, a contract, a seam
+    stub or a registration written there (core rule 1). Each stamp writes nothing, a
+    dry run included, and names where the project's own process goes."""
+    root = _evidence_unit(make_adopter_repo, caps.KIT_SHIPPED, source=False)
+    before = _tree(root / ".pkit")
+
+    code, output = _edit(stamp, *extra)
+
+    assert code == 1, output
+    assert _tree(root / ".pkit") == before
+    assert "capability 'evidence' arrives in this project as a synced copy" in output
+    assert ".pkit/capabilities/evidence/ is not the project's" in output
+    assert "`pkit process new <capability>:<process-id>`" in output
+    assert "may name evidence:unit as its upstream" in output
+
+
+@pytest.mark.parametrize("stamp", sorted(_EDITS))
+def test_edits_refuse_an_externally_sourced_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo, stamp: str
+) -> None:
+    """A capability authored in another repository is a copy even where the
+    methodology is authored (COR-041)."""
+    root = _evidence_unit(make_adopter_repo, ORIGIN_EXTERNALLY_SOURCED, source=True)
+    before = _tree(root / ".pkit")
+
+    code, output = _edit(stamp)
+
+    assert code == 1, output
+    assert _tree(root / ".pkit") == before
+
+
+@pytest.mark.parametrize("stamp", sorted(_EDITS))
+def test_edits_write_a_kit_shipped_capability_in_the_methodology_s_source(
+    make_adopter_repo: MakeAdopterRepo, stamp: str
+) -> None:
+    """Where the methodology is authored, its capabilities are the source, never a copy."""
+    root = _evidence_unit(make_adopter_repo, caps.KIT_SHIPPED, source=True)
+    definition = root / ".pkit" / "capabilities" / "evidence" / "schemas" / "unit.yaml"
+    before = definition.read_bytes()
+
+    code, output = _edit(stamp)
+
+    assert code == 0, output
+    assert _EDITED[stamp] in output
+    assert definition.read_bytes() != before
+
+
+@pytest.mark.parametrize("stamp", sorted(_EDITS))
+def test_edits_write_an_incubated_capability_in_an_adopter(
+    make_adopter_repo: MakeAdopterRepo, stamp: str
+) -> None:
+    """A capability the project incubates is its own (COR-031 D1)."""
+    root = _evidence_unit(make_adopter_repo, ORIGIN_INCUBATED_IN_REPO, source=False)
+    definition = root / ".pkit" / "capabilities" / "evidence" / "schemas" / "unit.yaml"
+    before = definition.read_bytes()
+
+    code, output = _edit(stamp)
+
+    assert code == 0, output
+    assert _EDITED[stamp] in output
+    assert definition.read_bytes() != before
 
 
 # --- `--dry-run`, the preview flag (COR-004) ------------------------------

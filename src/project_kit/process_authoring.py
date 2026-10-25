@@ -33,7 +33,9 @@ the disciplines and the walkthrough, this module owns the stamp):
 Version semantics (COR-044 point 3): a `couple` or `hand-off` edit is additive
 and inert or report-only, so the definition `version` field is NEVER bumped
 here — state/transition evolution is the deferred `amend` operation's
-territory, and only it carries the bump.
+territory, and only it carries the bump. Neither edits a definition whose
+capability the project receives as a synced copy, which the next sync
+overwrites (`_refuse_synced_definition`).
 
 All three stamps require an owning capability that is REGISTERED as a manifest
 component — the same set contract discovery walks — so a stamp can never write
@@ -65,7 +67,7 @@ from typing import Any, cast
 from jsonschema import Draft202012Validator
 from ruamel.yaml import YAML
 
-from project_kit import process_dependencies
+from project_kit import lifecycle_ownership, process_dependencies
 from project_kit.process import (
     PREDICATE_STUB_MARKER,
     ProcessDefinition,
@@ -659,6 +661,35 @@ def _locate_definition_file(repo_root: Path, definition: ProcessDefinition) -> P
     )
 
 
+def _refuse_synced_definition(
+    repo_root: Path, address: str, capability: str, capability_dir: Path
+) -> None:
+    """Refuse to edit a definition of *capability_dir* where the capability's tree
+    arrives in this project as a synced copy.
+
+    `process couple` rewrites the definition, and `process hand-off` the
+    definition, its seam stubs and their registrations, all of which the next
+    sync overwrites (core rule 1). The question is the tree's own predicate,
+    asked through `lifecycle_ownership.synced_copy_refusal`: a kit-shipped
+    capability in a project that is not the methodology's source, and an
+    externally-sourced one in any project. The project's own process goes in a
+    capability it incubates, and may name the synced process as its upstream,
+    since a coupling and its hand-off contract live in the downstream
+    definition (COR-038).
+    """
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        repo_root,
+        capability_dir,
+        f"capability {capability!r}",
+        "Stamp the project's own process in a capability the project incubates, with "
+        f"`pkit process new <capability>:<process-id>`. It may name {address} as its "
+        "upstream, since a coupling and its hand-off live in the downstream definition. "
+        "A capability's own processes are coupled where the capability is authored.",
+    )
+    if refusal is not None:
+        raise ProcessAuthoringError(refusal)
+
+
 # --- `process new` ----------------------------------------------------------
 
 
@@ -1175,8 +1206,11 @@ def couple_process(
     the result names the command that regenerates it (`refresh_command`).
 
     `dry_run` runs every check and reports what would change, writing nothing.
+    Before anything else, a dry run included, it refuses a definition whose
+    capability the project receives as a synced copy (`_refuse_synced_definition`).
     """
     capability, _process_id, capability_dir = _require_owned_address(repo_root, address)
+    _refuse_synced_definition(repo_root, address, capability, capability_dir)
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:
@@ -1490,9 +1524,12 @@ def handoff_process(
     is additive and report-only, COR-044).
 
     `dry_run` runs every check and reports the contract and seam stubs it would
-    write, writing nothing.
+    write, writing nothing. Before anything else, a dry run included, it refuses
+    a definition whose capability the project receives as a synced copy
+    (`_refuse_synced_definition`).
     """
-    _require_owned_address(repo_root, address)
+    capability, _process_id, owned_dir = _require_owned_address(repo_root, address)
+    _refuse_synced_definition(repo_root, address, capability, owned_dir)
     try:
         definition = load_definition(repo_root, address)
     except ProcessError as exc:
