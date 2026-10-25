@@ -26,12 +26,6 @@ shortfalls:
   - at: 11
     issue: "#1765"
     record: ADR-034#1
-  - at: 6
-    issue: "#2032"
-    record: COR-062#1
-  - at: "5e"
-    issue: "#2032"
-    record: COR-062#5
   - at: "9b"
     issue: "#1765"
     record: ADR-034#1
@@ -116,9 +110,6 @@ pkit:
 
 6. Once `--yes` or a prompt at a terminal gives [consent](../../../glossary.md#term-consent--consent), the system writes the answer to an answer file of the change's own. The answer names, in `read`, every other answer file on that artefact. The artefact's own file stays as it was (COR-062 points 1 and 4).
 
-> [!WARNING]
-> **Not built yet:** where the artefact's `friction` block already holds an answer, the system writes the answer there instead, until those answers move out. COR-062 point 1 decides that a change writes its answers in answer files of its own, never in the artefact, and #2032 tracks it.
-
 7. The developer runs `pkit friction check` again. It reports no [friction](../../../glossary.md#term-friction--friction), and lists every answer the change wrote, word for word, under "Answers written in this change".
 8. For each artefact revalidated as `updated`, whoever made the change says in one sentence what changed in it, in the [pull request](../../../glossary.md#term-pull-request--pull-request).
 9. The CI pipeline runs `pkit friction check` on the pull request, with `PKIT_CHECK_BASE` naming the pull request's target and `PKIT_CHECK_HEAD` naming its [head](../../../glossary.md#term-head--head), and the check passes.
@@ -137,9 +128,6 @@ pkit:
 - **5c.** An artefact the change was not asked about needs an [answer](../../../glossary.md#term-answer--answer) too. That answer is a person's decision. The agent making the change writes it only once the person has seen every word and accepted it. Where it cannot ask, it names the answer and its command in its hand-off, and runs none (COR-050 [point](../../../glossary.md#term-point--point) 3 and core rule 20).
 - **5d.** `--because` repeats the justification already written, or still holds a placeholder such as `<why it still holds>`. The [system](../../../glossary.md#term-system--system) refuses it and writes nothing. The path rejoins at step 5.
 - **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them (COR-062 point 5). The revalidation itself then answers what each replaced deferral had put off (COR-050 point 4).
-
-> [!WARNING]
-> **Not built yet:** where the artefact's block already holds an answer, the revalidation removes the rest from the block. COR-062 point 5 decides that it replaces each deferral it read and does not re-state, which stays in the deferral's own answer file. #2032 tracks it.
 
 - **6a.** The run has no terminal, and neither `--yes` nor `--dry-run` is given. The system refuses and writes nothing. It names the command to run with `--dry-run`, and the path rejoins at step 5.
 - **6b.** The artefact's block would not pass [validation](../../../glossary.md#term-validation--validation) once written. The system refuses and writes nothing. The developer mends the block that `pkit validate` names, and the path rejoins at step 5.
