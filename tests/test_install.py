@@ -20,7 +20,7 @@ import click
 import pytest
 from click.testing import CliRunner
 
-from project_kit import agents_overlay, install
+from project_kit import agents_overlay, install, router
 from project_kit.cli import main
 
 
@@ -681,58 +681,90 @@ def _next_steps_lines(capsys: pytest.CaptureFixture[str]) -> list[str]:
     return [line.strip() for line in capsys.readouterr().out.splitlines()]
 
 
+def _install_of_a_release_the_cli_reference_gives() -> str:
+    """The command in the first code block after "**A given release" in the CLI
+    reference's section "Installing pkit on PATH", its placeholder as written."""
+    reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
+    section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
+    return _first_code_block_after(section, "**A given release")
+
+
 def test_init_recommends_the_install_the_cli_reference_recommends(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """`init`'s closing next steps and the CLI reference recommend one install
-    (PRJ-004), so following either gives the same pkit. The reference writes the
-    release as a placeholder, and init fills in its own version."""
+    (PRJ-004), so following either gives the same pkit: the newest release,
+    through the tag `latest`."""
     recommended = _install_the_cli_reference_recommends()
-    assert _VERSION_PLACEHOLDER in recommended
+    assert recommended == f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest"
 
+    assert recommended in _next_steps_lines(capsys)
+
+
+def test_init_prints_the_install_of_the_latest_tag_not_its_own_version(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """The printed install names `@latest`, the tag the release-tag workflow keeps
+    on the newest release's commit (PRJ-004, #2052), not the running pkit's
+    version, which ages."""
     lines = _next_steps_lines(capsys)
 
-    assert recommended.replace(_VERSION_PLACEHOLDER, install.running_version()) in lines
+    assert f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest" in lines
+    assert not any(line.endswith(f"@v{router.running_version()}") for line in lines)
 
 
-def test_init_prints_the_install_tagged_with_its_own_version(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+def test_init_says_a_clone_holding_an_old_latest_must_force_fetch_it(
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """The printed install names `@v<the running pkit's version>`, so the version
-    a project records names the content it holds (PRJ-004, ADR-065 point 12)."""
-    monkeypatch.setattr(install, "running_version", lambda: "9.8.7")
+    """git moves no tag a clone already holds, while `uv tool install` fetches
+    the ref afresh: the hint says so in one sentence."""
+    text = " ".join(_next_steps_lines(capsys))
 
-    lines = _next_steps_lines(capsys)
+    assert (
+        "uv fetches `latest` afresh, while a git clone that holds an old `latest` "
+        "must force-fetch it." in text
+    )
 
-    assert f"uv tool install {install.DISTRIBUTION_GIT_URL}@v9.8.7" in lines
 
-
-def test_init_does_not_print_the_untagged_install(
-    capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_init_does_not_print_the_untagged_install(capsys: pytest.CaptureFixture[str]) -> None:
     """The install from main is the development install, which no version vouches
-    for, so init never recommends it."""
-    monkeypatch.setattr(install, "running_version", lambda: "9.8.7")
+    for, so init never recommends it: every install it prints names a ref."""
+    installs = [line for line in _next_steps_lines(capsys) if line.startswith("uv tool install")]
 
-    lines = _next_steps_lines(capsys)
-
-    assert not any(line.startswith("uv tool install") and "@v" not in line for line in lines)
-
-
-@pytest.mark.parametrize(
-    ("version", "command"),
-    [
-        ("1.149.0", f"uv tool install {install.DISTRIBUTION_GIT_URL}@v1.149.0"),
-        ("2.0.0", f"uv tool install {install.DISTRIBUTION_GIT_URL}@v2.0.0"),
-    ],
-)
-def test_recommended_install_command_names_the_release_tag(version: str, command: str) -> None:
-    assert install.recommended_install_command(version) == command
+    assert installs
+    assert all(line.rpartition(".git")[2].startswith("@") for line in installs)
 
 
-def test_the_readme_recommends_the_install_the_cli_reference_recommends() -> None:
-    """The README's install line names the tag too, as the CLI reference does."""
-    assert _install_the_readme_recommends() == _install_the_cli_reference_recommends()
+def test_recommended_install_command_names_the_latest_tag() -> None:
+    assert (
+        install.recommended_install_command()
+        == f"uv tool install {install.DISTRIBUTION_GIT_URL}@latest"
+    )
+
+
+def test_the_cli_reference_gives_the_install_of_a_given_release() -> None:
+    """Beside the recommended `@latest`, the reference names the release tag
+    form, `@v<version>`, for a project that needs another release."""
+    assert _install_of_a_release_the_cli_reference_gives() == (
+        f"uv tool install {install.DISTRIBUTION_GIT_URL}@v{_VERSION_PLACEHOLDER}"
+    )
+
+
+def test_the_cli_reference_says_a_clone_holding_an_old_latest_must_force_fetch_it() -> None:
+    reference = (install.find_source_kit() / "cli" / "README.md").read_text(encoding="utf-8")
+    section = reference.split("\n## Installing pkit on PATH\n", 1)[1].split("\n## ", 1)[0]
+
+    assert "force-fetch" in section
+    assert "git fetch --force origin tag latest" in section
+
+
+def test_the_readme_recommends_an_install_the_cli_reference_gives() -> None:
+    """The README's install line names a tag the CLI reference gives: `@latest`,
+    the recommended one, or `@v<version>`, a given release."""
+    assert _install_the_readme_recommends() in {
+        _install_the_cli_reference_recommends(),
+        _install_of_a_release_the_cli_reference_gives(),
+    }
 
 
 def test_the_dispatchers_install_advice_names_the_release_tag() -> None:

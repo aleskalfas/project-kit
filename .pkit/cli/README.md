@@ -141,13 +141,23 @@ The full COR-004 surface is implemented: `init`, `sync`, `merge`, `upgrade`, `ca
 
 ## Installing pkit on PATH
 
-**Recommended (per PRJ-004):** install a release of pkit globally via `uv tool install`, naming its tag:
+**Recommended (per PRJ-004):** install the newest release of pkit globally via `uv tool install`, naming the tag `latest`:
+
+```
+uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
+```
+
+The release-tag workflow moves `latest` to each new release's commit, and nothing else writes it. `pkit init` ends by printing this command. Only a tagged install ties pkit's version to one content. `latest` sits only on a release's commit, so the version a project records names the content it holds ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12).
+
+To move the tool to a newer release, run the command again with `--force`. `pkit upgrade` installs the latest release by its own tag, where it runs its tool step ([`upgrade`](#upgrade)). uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
+
+**A given release:** name its tag instead, where a project needs a release other than the newest:
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@v<version>
 ```
 
-`<version>` is a release, the latest on the repository's [releases page](https://github.com/aleskalfas/project-kit/releases) unless a project needs another. `pkit init` ends by printing this command with its own version. Only a tagged install ties pkit's version to one content. So the version a project records names the content it holds, and sync's guard compares versions soundly ([ADR-065](../../tech-docs/architecture/decisions/ADR-065-upgrade-runs-the-transition.md) point 12). To move the tool to a newer release, run the command again with `--force` and the newer tag. `pkit upgrade` runs the same for the latest release, where it runs its tool step ([`upgrade`](#upgrade)).
+`<version>` is a release from the repository's [releases page](https://github.com/aleskalfas/project-kit/releases). The release tags are the versions: `latest` names none, and `pkit upgrade`'s lookup of the latest release skips it.
 
 After this, `pkit` is on PATH; the binary works against any project-kit-adopting project — the runtime resolves the current project's root from CWD at invocation time (via `git rev-parse --show-toplevel`, with a structurally-validated CWD-walk fallback that skips a broken/vestigial `.git`). Re-installing the kit into more adopter projects does **not** require additional installs of pkit. The kit-owned methodology content is **bundled in the wheel** (version-locked to the binary), so these commands work from the installed binary without a source checkout (per [ADR-033](../../tech-docs/architecture/decisions/ADR-033-official-install-bundles-content.md)). The bundle is defined by *tier ownership*, not by the propagation surface: it carries what the kit owns and withholds the *contents* of the source project's own `project/` tier, so no adopter receives another project's config, activation switches or audit journals. (The few tiers the installer gates its scaffolding on ship as empty directory markers — layout, not data.) The bundle is a *superset* of what sync propagates: it additionally carries capability source, which ships as a distribution medium and is never propagated. The one path on which the two disagreed was a bug in the sync predicate, fixed in #823. A checkout, when present, takes precedence over the bundle, so contributors' source edits stay live.
 
