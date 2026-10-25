@@ -90,7 +90,7 @@ pkit:
 
 - The [project](../../../core/glossary.md#term-project--project) has project-management installed, or registered in place where project-management is developed (COR-017 and COR-031). The CLI registers `pkit pm` and its commands from the [capability](../../../core/glossary.md#term-capability--capability)'s package metadata (COR-021). The adapter deploys the `pm` [skill](../../../core/glossary.md#term-skill--skill) (COR-005 and COR-013).
 - Where the body cites [use-case entries](../../glossary.md#term-use-case-entry--use-case-entry), the backbone resolves the [data point](../../../core/glossary.md#term-data-point--data-point) that holds them (DEC-054 point 4).
-- Where the body cites a decision id, the backbone looks up the record that holds it (DEC-010).
+- Where the body cites a decision id, the backbone looks up the decision record that holds it (DEC-010).
 
 **Trigger:** The developer has a unit of work to track, such as a bug found while working on a [Feature](../../glossary.md#term-feature--feature).
 
@@ -114,7 +114,7 @@ pkit:
 
 9. The system checks that the body holds each section a Task requires: `## What`, `## Acceptance criteria` and `## Doc impact`. It checks too that the body holds no heading of the first level, since the title is that heading. It warns of what a body should not hold, such as a reference to a line of a file (DEC-010).
 
-10. The system reports each placeholder of the template left in the body, and each [use-case entry](../../glossary.md#term-use-case-entry--use-case-entry) the body cites that the [data point](../../../core/glossary.md#term-data-point--data-point) lacks. It reports too each decision id the body cites that no record holds (DEC-010). None of these stops the filing (DEC-031 and DEC-054 point 4).
+10. The system reports each placeholder of the template left in the body, and each [use-case entry](../../glossary.md#term-use-case-entry--use-case-entry) the body cites that the [data point](../../../core/glossary.md#term-data-point--data-point) lacks. It reports too each decision id the body cites that no decision record holds (DEC-010). None of these stops the filing (DEC-031 and DEC-054 point 4).
 11. The system prints the Task it is about to file, with its title, type, kind, priority, workstream, parent and labels. At a terminal, without `--yes`, it asks before it writes.
 12. The system files the Task, with its labels and its assignee, and prints `[ok] created: <url>`. It posts a comment that records the versions it was filed under (DEC-041).
 13. The system links the Task to its parent as a GitHub sub-issue, and prints `[ok] linked #<n> as a native sub-issue of #<N>` (DEC-005 and DEC-039).
