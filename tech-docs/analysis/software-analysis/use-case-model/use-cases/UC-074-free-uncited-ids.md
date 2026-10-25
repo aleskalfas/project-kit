@@ -26,9 +26,9 @@ pkit:
         - REQ-050
         - REQ-051
     revalidated:
-      at: 2026-10-24T10:39:55Z
+      at: 2026-10-25T04:22:26Z
       outcome: unchanged
-      unchanged-because: The authoring skill gains a step that runs `pkit analysis link` after stamping. Freeing the ids nothing cites is as it was.
+      unchanged-because: The skill's step after stamping now runs pkit analysis link in every analysis, for the links of citations. Freeing the ids of artefacts nothing cites is untouched.
 ---
 
 # UC-074 — Free the ids of artefacts nothing cites

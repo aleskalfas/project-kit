@@ -65,9 +65,9 @@ pkit:
         - REQ-030
         - REQ-031
     revalidated:
-      at: 2026-10-25T01:39:04Z
+      at: 2026-10-25T04:19:43Z
       outcome: unchanged
-      unchanged-because: This change adds pkit friction move-plan and a migration whose effect the release notes will name, and pkit refs lookup takes several ids. The upgrade this use case runs does what it says.
+      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-051 — Upgrade the system like a dependency

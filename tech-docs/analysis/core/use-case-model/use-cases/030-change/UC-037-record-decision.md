@@ -63,9 +63,9 @@ pkit:
         - REQ-009
         - REQ-012
     revalidated:
-      at: 2026-10-25T01:38:13Z
+      at: 2026-10-25T04:19:14Z
       outcome: unchanged
-      unchanged-because: Core rule 20 changes only on answers, the CLI gains a reading command, and pkit refs lookup takes several ids. How a record is stamped, cited and accepted is as this use case says.
+      unchanged-because: The decisions README gains how pkit refs lookup resolves a point of a record, and cli.py changes only that command. This use case cites accepted records and names no lookup, so it holds.
 ---
 
 # UC-037 — Record my decision beside the methodology's

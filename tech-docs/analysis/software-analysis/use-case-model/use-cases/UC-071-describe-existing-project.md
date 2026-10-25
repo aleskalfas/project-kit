@@ -55,7 +55,7 @@ pkit:
         - REQ-051
         - REQ-053
     revalidated:
-      at: 2026-10-24T10:40:11Z
+      at: 2026-10-25T04:22:28Z
       outcome: updated
 ---
 
@@ -110,7 +110,8 @@ pkit:
 > [!WARNING]
 > **Not built yet:** `pkit analysis link` takes no `--dry-run`, and refuses the flag. COR-004 decides that a command whose widest effect reaches past what the person named offers one, and #1884 tracks it.
 
-- **4a.** A [candidate](../../glossary.md#term-candidate--candidate) actor, term or requirement has nothing to [anchor](../../../core/glossary.md#term-anchor--anchor), such as a word of the business that the code never names. The agent shows the developer its reason for having no anchors, word for word. It stamps the candidate with `--unanchored-because` only once the developer accepts the reason (COR-050 point 1).
+- **3d.** A [candidate](../../glossary.md#term-candidate--candidate) the agent stamps cites a [decision record](../../../core/glossary.md#term-decision-record--decision-record), a point of one or a [rule](../../../core/glossary.md#term-rule--rule), whether the analysis keeps a domain model or not. The agent runs `pkit analysis link` after it. The system links the first citation of each record, point and rule in each section to what it cites (DEC-001 point 13).
+- **4a.** A candidate actor, term or requirement has nothing to [anchor](../../../core/glossary.md#term-anchor--anchor), such as a word of the business that the code never names. The agent shows the developer its reason for having no anchors, word for word. It stamps the candidate with `--unanchored-because` only once the developer accepts the reason (COR-050 point 1).
 - **4b.** The developer asks to see what the [stamp](../../../core/glossary.md#term-stamp--stamp) would write first. The agent runs it with `--dry-run`, and the system names the file it would write and the overview it would rewrite, and writes nothing (core:REQ-009).
 
 > [!WARNING]

@@ -28,9 +28,9 @@ pkit:
         - REQ-010
         - REQ-011
     revalidated:
-      at: 2026-10-25T01:37:34Z
+      at: 2026-10-25T04:18:59Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
+      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-024 — See what a capability would connect to before I install it

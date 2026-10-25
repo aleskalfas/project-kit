@@ -26,9 +26,9 @@ pkit:
         - .pkit/adapters/claude-code/README.md#permission-enforcementyaml
         - .pkit/lifecycle/README.md#how-a-registered-command-is-run
     revalidated:
-      at: 2026-10-25T01:39:18Z
+      at: 2026-10-25T04:20:03Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. What this README says of the commands an adapter runs holds.
+      unchanged-because: cli.py changes only pkit refs lookup, which now also resolves a point of a record to its heading's anchor. What this README says of the commands an adapter runs holds.
 ---
 
 # Adapters

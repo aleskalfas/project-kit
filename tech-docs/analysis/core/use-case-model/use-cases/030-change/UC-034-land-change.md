@@ -41,9 +41,9 @@ pkit:
         - ACT-operator
         - REQ-012
     revalidated:
-      at: 2026-10-25T01:38:06Z
+      at: 2026-10-25T04:19:11Z
       outcome: unchanged
-      unchanged-because: Core rule 20 still has the reviewer check the answers of a direct commit and the person told first. The CLI gains a reading command, and pkit refs lookup takes several ids, which no step uses.
+      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-034 — Land my change on the default branch

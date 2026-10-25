@@ -91,9 +91,9 @@ TERM-candidate:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
       revalidated:
-        at: 2026-10-24T01:59:05Z
+        at: 2026-10-25T04:21:42Z
         outcome: unchanged
-        unchanged-because: The change adds where brownfield onboarding starts and ends to the build. A candidate is still an artefact or a record written but not yet committed, which a person confirms or discards.
+        unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. What a candidate is, and who confirms it, is untouched.
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -109,9 +109,9 @@ TERM-declared-structure:
         record:
           - software-analysis:DEC-001#1
       revalidated:
-        at: 2026-10-24T22:53:59Z
+        at: 2026-10-25T04:21:37Z
         outcome: unchanged
-        unchanged-because: structure.py now parses the kinds' declaration once for each text of it. What a kind declares, and how a body is read against it, is untouched.
+        unchanged-because: The kinds' declared structures change only their hints' examples, which now cite a project's own record such as PRJ-003. DEC-001 point 1 now says the link command also places a link at each citation. What a declared structure is holds.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -190,9 +190,9 @@ TERM-revalidation-proposal:
         record:
           - software-analysis:DEC-001#5
       revalidated:
-        at: 2026-10-25T00:36:00Z
+        at: 2026-10-25T04:21:52Z
         outcome: unchanged
-        unchanged-because: The resolver's body now says the commands it hands over write the artefacts' answers, not their blocks. A proposal is still what the term says.
+        unchanged-because: The analysis-resolver's list of commands now runs pkit analysis link before an updated answer in every analysis, for the links of citations. What a revalidation proposal is, and who applies it, holds.
 TERM-revalidation-record:
   name: revalidation record
   status: active

@@ -11,9 +11,9 @@ TERM-acceptance-gate:
         record:
           - COR-051#4
       revalidated:
-        at: 2026-10-24T22:53:43Z
+        at: 2026-10-25T04:17:47Z
         outcome: unchanged
-        unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json. Which records bind, and the gate on proposed ones, are untouched.
+        unchanged-because: The decisions README gains how pkit refs lookup resolves a point of a record, beside the several ids it answers under --json. What the acceptance gate is, and what it lets work build on, is untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]

@@ -50,9 +50,9 @@ pkit:
         - REQ-012
         - REQ-013
     revalidated:
-      at: 2026-10-25T03:03:27Z
+      at: 2026-10-25T04:18:51Z
       outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, the friction writers write answer files, and permissions scaffold now refuses a capability the project receives as a synced copy. No step here looks a record up or scaffolds a fragment, and the project's grants still sit beside the methodology's, where a deny still wins.
+      unchanged-because: The change edits cli.py only in pkit refs lookup, which answers several ids under --json and now also resolves a point of a record to its heading's anchor. No step of this use case looks a record up, so it holds.
 ---
 
 # UC-022 — Add my own operational rules, the harness's settings, grants and agent paths beside the methodology's

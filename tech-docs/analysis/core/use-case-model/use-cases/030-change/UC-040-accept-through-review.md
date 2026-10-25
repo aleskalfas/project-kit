@@ -32,9 +32,9 @@ pkit:
         - ACT-ai-agent
         - REQ-005
     revalidated:
-      at: 2026-10-25T01:38:24Z
+      at: 2026-10-25T04:19:25Z
       outcome: unchanged
-      unchanged-because: Core rule 20 changes only on answers, the CLI gains a reading command, and pkit refs lookup takes several ids. Acceptance through review and rule 2 stay as this use case says.
+      unchanged-because: The decisions README gains how pkit refs lookup resolves a point of a record, and cli.py changes only that command. The review and the validation of a rule's origin this use case walks are untouched.
 ---
 
 # UC-040 — Have a drafted record or rule become binding only through my own review

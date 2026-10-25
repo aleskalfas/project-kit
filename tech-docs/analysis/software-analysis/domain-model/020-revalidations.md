@@ -26,9 +26,9 @@ pkit:
         - TERM-revalidation-proposal
         - TERM-shortfall
     revalidated:
-      at: 2026-10-24T10:39:58Z
+      at: 2026-10-25T04:22:17Z
       outcome: unchanged
-      unchanged-because: TERM-revalidation-proposal's distinction says "revalidation outcomes" for "results", the words this view uses. The term's definition is the same, so its section holds.
+      unchanged-because: DEC-001 point 1 now says the command that links terms also places a link at each citation a body makes. How a revalidation, its proposal and its record move together is untouched.
 ---
 
 # VIEW-revalidations — Revalidations and what they find

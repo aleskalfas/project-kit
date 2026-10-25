@@ -19,9 +19,9 @@ pkit:
       artefact:
         - .pkit/lifecycle/README.md#a-data-points-question
     revalidated:
-      at: 2026-10-24T22:54:12Z
+      at: 2026-10-25T04:20:01Z
       outcome: unchanged
-      unchanged-because: The refs module gains the lookup of several ids in one document. The README names only pkit refs validate, which is untouched.
+      unchanged-because: refs.py's lookup now also resolves a point of a record to its heading's anchor, in the --json document that answers several ids. The README's account of the reference-graph checks is untouched.
 ---
 
 # project-kit

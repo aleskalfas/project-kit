@@ -27,9 +27,9 @@ pkit:
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
     revalidated:
-      at: 2026-10-25T00:55:28Z
+      at: 2026-10-25T04:20:09Z
       outcome: unchanged
-      unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json, and the prose lint now counts the sentences of a paragraph. What CONTRIBUTING says of authoring and checking records, and of running the lint, is untouched by the first.
+      unchanged-because: The decisions README's Citing section gains how pkit refs lookup resolves a point of a record and what its --json answers give. CONTRIBUTING's guidance on authoring and citing records holds.
       deferred:
         - anchor:
             kind: record

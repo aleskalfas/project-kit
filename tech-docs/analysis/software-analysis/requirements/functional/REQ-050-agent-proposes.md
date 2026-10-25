@@ -25,9 +25,9 @@ pkit:
         - software-analysis:DEC-001#9
         - COR-050#3
     revalidated:
-      at: 2026-10-25T00:34:44Z
+      at: 2026-10-25T04:22:21Z
       outcome: unchanged
-      unchanged-because: The resolver's body changes only in naming the answers its commands write. It still proposes, and runs no writer.
+      unchanged-because: The resolver's and the skill's link step now runs in every analysis, for the links of citations, and DEC-001 point 1 says the command places them. The agent still proposes and a person writes, as the requirement asks.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it
