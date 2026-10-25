@@ -667,6 +667,17 @@ _EVERY_EDGE = {
 }
 
 
+def _with_preset(base: pg.FilterSpec, preset: str) -> pg.FilterSpec:
+    """`expand_presets` with the one named preset on, each passed by name."""
+    return pg.expand_presets(
+        base,
+        advisory=preset == "advisory",
+        connectors=preset == "connectors",
+        declared=preset == "declared",
+        derived=preset == "derived",
+    )
+
+
 @pytest.mark.parametrize(
     ("preset", "base", "kept"),
     [
@@ -691,7 +702,7 @@ _EVERY_EDGE = {
 def test_preset_adds_to_an_atomic_filter_of_its_kind(
     graph: pg.Graph, preset: str, base: pg.FilterSpec, kept: set[tuple[str, str, str]]
 ) -> None:
-    out = pg.apply_filters(graph, pg.expand_presets(base, **{preset: True}))
+    out = pg.apply_filters(graph, _with_preset(base, preset))
     assert {(e.frm, e.to, e.relation) for e in out.edges} == kept
 
 
@@ -719,7 +730,7 @@ def test_preset_adds_to_an_atomic_filter_of_its_kind(
 def test_preset_narrows_an_atomic_filter_of_another_kind(
     graph: pg.Graph, preset: str, base: pg.FilterSpec, kept: set[str]
 ) -> None:
-    out = pg.apply_filters(graph, pg.expand_presets(base, **{preset: True}))
+    out = pg.apply_filters(graph, _with_preset(base, preset))
     assert {e.relation for e in out.edges} == kept
 
 
