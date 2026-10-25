@@ -63,7 +63,6 @@ _RECORD = re.compile(r"(?<![\w-])(?:COR|PRJ|ADR)-\d+(?!\w)")
 _DECISION = re.compile(
     r"(?<![\w-])(?P<capability>[a-z][a-z0-9-]*[a-z0-9]):(?P<number>DEC-\d+)(?!\w)"
 )
-_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _STRUCK = re.compile(r"~~[^~\n]+~~")
 
 Runner = Callable[..., subprocess.CompletedProcess[str]]
@@ -99,10 +98,27 @@ def cited(body: str) -> list[str]:
     """The decision ids `body` cites, each once, in the order first cited: a record's
     id as written, and a capability's decision as `<capability>:DEC-NNN`."""
     text = "\n".join(body_rules.lines_outside_fences(provenance.strip_footer(body)))
-    text = _STRUCK.sub(" ", _HTML_COMMENT.sub(" ", text))
+    text = _STRUCK.sub(" ", _without_comments(text))
     found: list[tuple[int, str]] = [(m.start(), m.group(0)) for m in _RECORD.finditer(text)]
     found += [(m.start(), f"{m['capability']}:{m['number']}") for m in _DECISION.finditer(text)]
     return list(dict.fromkeys(record for _start, record in sorted(found)))
+
+
+def _without_comments(text: str) -> str:
+    """`text` without its HTML comments, each from `<!--` to the next `-->`, or to the
+    end where none closes it, as a page hides it. Read once, in linear time: a body
+    file has no length limit before `create-issue` checks it."""
+    kept: list[str] = []
+    at = 0
+    while (start := text.find("<!--", at)) != -1:
+        kept.append(text[at:start])
+        end = text.find("-->", start + len("<!--"))
+        if end == -1:
+            return "".join(kept)
+        kept.append(" ")
+        at = end + len("-->")
+    kept.append(text[at:])
+    return "".join(kept)
 
 
 # --- asking the backbone -------------------------------------------------------------

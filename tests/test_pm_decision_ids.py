@@ -166,6 +166,24 @@ def test_ids_the_body_parser_skips_are_not_cited(dc: ModuleType, body: str) -> N
     assert dc.cited(body) == []
 
 
+def test_text_around_a_comment_is_read(dc: ModuleType) -> None:
+    """Text between two comments is read, and a comment never closed hides the rest,
+    as a page shows it."""
+    body = "COR-001<!-- PRJ-064 -->ADR-001 <!-- a --> PRJ-002 <!-- never closed COR-064"
+    assert dc.cited(body) == ["COR-001", "ADR-001", "PRJ-002"]
+
+
+@pytest.mark.parametrize("unit", ["<!--", "a-", "ab", "~~a", "COR-", "a:", "```\n"])
+def test_the_reading_stays_linear_on_a_long_body(dc: ModuleType, unit: str) -> None:
+    """A body file has no length limit before `create-issue` checks it, so no shape of
+    text makes the reading backtrack over it."""
+    import time
+
+    started = time.monotonic()
+    dc.cited(unit * 100_000)
+    assert time.monotonic() - started < 2
+
+
 @pytest.mark.parametrize("template", ["EPIC", "Feature", "Umbrella", "Task"])
 def test_a_template_stamped_body_cites_nothing(dc: ModuleType, template: str) -> None:
     """The issue templates cite records only in their comments, so a body stamped from
