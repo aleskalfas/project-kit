@@ -649,6 +649,90 @@ def test_presets_and_combine_with_atomics(graph: pg.Graph) -> None:
     assert {e.relation for e in out.edges} == {"triggered-by"}
 
 
+# --- the four presets that add to an atomic filter of their own kind -------
+#
+# --advisory, --connectors, --declared and --derived each name relations, a mode
+# or a source. Beside an atomic filter of the same kind they ADD their value to
+# it, so `--connectors --mode pull` keeps both modes. Beside an atomic filter of
+# another kind they narrow, as every other filter does. The help and the command
+# reference say so (#2038).
+
+_EVERY_EDGE = {
+    ("alpha:ship", "alpha:review", "composed-subprocess"),
+    ("alpha:roster", "alpha:review", "aggregates"),
+    ("alpha:ship", "beta:issue", "informational"),
+    ("alpha:ship", "beta:issue", "triggered-by"),
+    ("alpha:review", "beta:issue", "gates-on-readiness"),
+    ("alpha:roster", "alpha:ship", "constrained-with"),
+}
+
+
+@pytest.mark.parametrize(
+    ("preset", "base", "kept"),
+    [
+        # --advisory --relation gates-on-readiness: all three relations.
+        (
+            "advisory",
+            pg.FilterSpec(relations=frozenset(["gates-on-readiness"])),
+            {
+                ("alpha:ship", "beta:issue", "informational"),
+                ("alpha:ship", "beta:issue", "triggered-by"),
+                ("alpha:review", "beta:issue", "gates-on-readiness"),
+            },
+        ),
+        # --connectors --mode pull: both modes, so every edge.
+        ("connectors", pg.FilterSpec(modes=frozenset(["pull"])), _EVERY_EDGE),
+        # --declared --source derived: both sources, so every edge.
+        ("declared", pg.FilterSpec(sources=frozenset(["derived"])), _EVERY_EDGE),
+        # --derived --source annotated: both sources, so every edge.
+        ("derived", pg.FilterSpec(sources=frozenset(["annotated"])), _EVERY_EDGE),
+    ],
+)
+def test_preset_adds_to_an_atomic_filter_of_its_kind(
+    graph: pg.Graph, preset: str, base: pg.FilterSpec, kept: set[tuple[str, str, str]]
+) -> None:
+    out = pg.apply_filters(graph, pg.expand_presets(base, **{preset: True}))
+    assert {(e.frm, e.to, e.relation) for e in out.edges} == kept
+
+
+@pytest.mark.parametrize(
+    ("preset", "base", "kept"),
+    [
+        # --advisory --mode push: only the push advisory edge.
+        ("advisory", pg.FilterSpec(modes=frozenset(["push"])), {"triggered-by"}),
+        # --connectors --relation informational,triggered-by: only the push one.
+        (
+            "connectors",
+            pg.FilterSpec(relations=frozenset(["informational", "triggered-by"])),
+            {"triggered-by"},
+        ),
+        # --declared --mode pull: the annotated pull edges.
+        (
+            "declared",
+            pg.FilterSpec(modes=frozenset(["pull"])),
+            {"informational", "gates-on-readiness", "constrained-with"},
+        ),
+        # --derived --relation aggregates: the one derived aggregates edge.
+        ("derived", pg.FilterSpec(relations=frozenset(["aggregates"])), {"aggregates"}),
+    ],
+)
+def test_preset_narrows_an_atomic_filter_of_another_kind(
+    graph: pg.Graph, preset: str, base: pg.FilterSpec, kept: set[str]
+) -> None:
+    out = pg.apply_filters(graph, pg.expand_presets(base, **{preset: True}))
+    assert {e.relation for e in out.edges} == kept
+
+
+def test_help_says_how_presets_combine() -> None:
+    result = CliRunner().invoke(main, ["process", "graph", "--help"])
+    assert result.exit_code == 0
+    text = " ".join(result.output.split())
+    # The help once said every preset AND-combines, which the four above do not.
+    assert "AND-combine with any atomic filters" not in text
+    assert "The exception is --advisory, --connectors, --declared and --derived" in text
+    assert "`--connectors --mode pull` keeps both modes" in text
+
+
 # --- degradation cases -----------------------------------------------------
 
 
