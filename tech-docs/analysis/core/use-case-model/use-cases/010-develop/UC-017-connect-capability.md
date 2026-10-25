@@ -40,9 +40,9 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-24T21:20:20Z
+      at: 2026-10-24T22:48:38Z
       outcome: unchanged
-      unchanged-because: ACT-ai-agent drops only its links on role. ACT-component-author names a new version and the author where it said release or role, and REQ-006 says a command gives no result. What each asks is the same, so this use case holds.
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to

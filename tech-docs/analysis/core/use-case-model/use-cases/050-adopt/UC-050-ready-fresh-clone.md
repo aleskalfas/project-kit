@@ -45,8 +45,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:58:18Z
-      outcome: updated
+      at: 2026-10-24T22:52:47Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-050 — Get a fresh clone ready to work with one sync

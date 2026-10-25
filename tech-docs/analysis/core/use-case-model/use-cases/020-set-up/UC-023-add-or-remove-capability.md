@@ -52,8 +52,9 @@ pkit:
         - REQ-010
         - REQ-012
     revalidated:
-      at: 2026-10-24T20:55:21Z
-      outcome: updated
+      at: 2026-10-24T22:50:24Z
+      outcome: unchanged
+      unchanged-because: "As #2025 asks, pkit refs lookup now takes several ids with --json and answers them in one document. No step here looks a record up, so the steps hold."
 ---
 
 # UC-023 — Add or remove a capability, and be told of a name collision

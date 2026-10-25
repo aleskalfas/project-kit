@@ -495,6 +495,26 @@ def test_the_declaration_is_read_whole_or_not_at_all(tmp_path: Path) -> None:
         S.read_kinds(broken)
 
 
+def test_the_declaration_is_parsed_once_for_each_text_of_it(tmp_path: Path) -> None:
+    """Asked again, the kinds come from the parse of the same texts, each caller with its
+    own mapping. A changed declaration is parsed again, and a schema that cannot be read
+    is said every time it is asked (#2025)."""
+    first, again = S.read_kinds(), S.read_kinds()
+    assert first is not again and first["use-case"] is again["use-case"]
+    first.clear()
+    assert S.read_kinds() == KINDS
+    own = tmp_path / "kinds.yaml"
+    own.write_text(S.KINDS_FILE.read_text(encoding="utf-8"), encoding="utf-8")
+    assert S.read_kinds(own) == KINDS
+    own.write_text("kinds: [\n", encoding="utf-8")
+    with pytest.raises(S.Unreadable, match="it is not YAML"):
+        S.read_kinds(own)
+    missing = tmp_path / "absent.schema.json"
+    for _ in range(2):
+        with pytest.raises(S.Unreadable, match=r"its schema, absent\.schema\.json, cannot be read"):
+            S.read_kinds(schema=missing)
+
+
 # --- the gate and the preview, on the check's own ------------------------------------------
 
 
