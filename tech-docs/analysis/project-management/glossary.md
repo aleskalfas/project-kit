@@ -169,6 +169,20 @@ TERM-feature:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+TERM-instance:
+  name: instance
+  noun-forms: [instances]
+  status: active
+  definition: "clone of a project's repository with a number of its own, which tells work in it apart from work in the same person's other clones"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_identity.py
+          - .pkit/capabilities/project-management/scripts/set-instance.py
+        record:
+          - project-management:DEC-035#1
+          - project-management:DEC-045#1
 TERM-issue:
   name: issue
   status: active
@@ -234,6 +248,21 @@ TERM-milestone-category:
           - .pkit/capabilities/project-management/scripts/create-milestone.py
         record:
           - project-management:DEC-016
+TERM-owner:
+  name: owner
+  noun-forms: [owners]
+  status: active
+  definition: "instance an issue belongs to from its filing or start until its close, paired with the issue's assignee, which that person's other instances leave alone"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - .pkit/capabilities/project-management/scripts/_lib/instance_ownership.py
+          - .pkit/capabilities/project-management/schemas/instance-ownership.yaml
+        record:
+          - project-management:DEC-035#2
+          - project-management:DEC-035#6
+          - project-management:DEC-043
 TERM-parent-reference:
   name: parent reference
   status: active
@@ -261,6 +290,16 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
+TERM-scope:
+  name: scope
+  status: active
+  definition: "part of a project's work that one AI agent of a topology takes its issues from"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-045#3
+          - project-management:DEC-018
 TERM-task:
   name: Task
   status: active
@@ -272,6 +311,17 @@ TERM-task:
           - .pkit/capabilities/project-management/schemas/issue-types.yaml
         record:
           - project-management:DEC-004
+TERM-topology:
+  name: topology
+  noun-forms: [topologies]
+  status: active
+  definition: "set of AI agents a project runs at once, each with its name, its scope, and whether it plans, builds or does both"
+  pkit:
+    friction:
+      anchors:
+        record:
+          - project-management:DEC-045
+          - project-management:DEC-008
 TERM-umbrella:
   name: Umbrella
   status: active
@@ -476,6 +526,18 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **EPIC:** an issue that states an outcome spanning several quarters. A Feature sits under one or under an Umbrella, or straight under a [Milestone](#term-milestone--milestone) where the project skips the [EPIC](#term-epic--epic) (DEC-004).
 - **Capability:** the core's word for a [component](../core/glossary.md#term-component--component) a project chooses to install. project-management's records say that a Feature claims "a [capability](../core/glossary.md#term-capability--capability)", meaning a piece of functionality in any component (DEC-004).
 
+## TERM-instance — instance
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#instance).
+
+**Example:** `set-instance 2` makes a clone instance 2 of its person's instances. A session that starts in that clone after a crash works as instance 2 again.
+
+**Distinctions:**
+
+- **Session:** one run of an AI agent in a clone. A session ends or dies, and the instance keeps its number, which a file in the clone holds (DEC-035 point 1).
+- **A clone with no number:** a clone that never set one. It marks nothing and is guarded by nothing, as before instances existed (DEC-035 point 1).
+- **A linked worktree:** a further working tree of a clone. Whether it shares its clone's number, or may set one of its own, is not decided yet (#1140).
+
 ## TERM-issue — issue
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#issue).
@@ -535,6 +597,18 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **Close trigger:** the line on one [Milestone](#term-milestone--milestone) that says when it closes. The category gives a default, and the Milestone's own line overrides it (DEC-016).
 - **Workstream:** a long-lived area that classifies issues. A category classifies Milestones, by their titles (DEC-016).
 
+## TERM-owner — owner
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#owner).
+
+**Example:** [instance](#term-instance--instance) 2 starts #1712 and becomes its owner. When instance 1 then tries to start #1712, it is refused, unless a person sets the refusal aside with a reason (DEC-035 point 6).
+
+**Distinctions:**
+
+- **Assignee:** the GitHub account an [issue](#term-issue--issue) is assigned to. One person's instances all share it, so the owner pairs it with one instance (DEC-035 point 2).
+- **A lock:** a hold that no one else can take at the same moment. GitHub offers none, so two instances may both take one issue at once, and the higher-numbered one then gives it up (DEC-035 point 6).
+- **A file's owner:** the [methodology](../core/glossary.md#term-methodology--methodology) or the [project](../core/glossary.md#term-project--project), under the core's [rule](../core/glossary.md#term-rule--rule) that every file has one. It has nothing to do with an issue.
+
 ## TERM-parent-reference — parent reference
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#parent-reference).
@@ -557,6 +631,19 @@ Explained in [VIEW-reviews-and-the-merge](domain-model/040-reviews-and-the-merge
 - **Reviewer:** the core's word for any agent or person who reports on a [change](../core/glossary.md#term-change--change). A required reviewer is one whose verdict project-management waits for (DEC-032 point D1).
 - **An opted-out reviewer:** a contributed one that the [project](../core/glossary.md#term-project--project) declines in its settings, with its reason. It is not required (DEC-032 point D2).
 
+## TERM-scope — scope
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#scope).
+
+**Example:** a worker agent whose scope is the [workstream](#term-workstream--workstream) `api` takes its Tasks from `api`. A scope by stage of the work, such as testing, has no form decided yet.
+
+**Distinctions:**
+
+- **Workstream:** a long-lived area that classifies issues. A scope may name workstreams, and never changes them (DEC-045 point 3).
+- **Instance:** the clone an agent works in. The scope says which work the agent takes, and the [instance](#term-instance--instance)'s number says which clone it is.
+- **The scope of a set of rules:** what selects the artefacts its rules bind on (COR-051). It is no part of a [topology](#term-topology--topology).
+- **The scope of a grant:** where an entry of the permission model allows or denies a privilege (COR-028). It is no part of a topology either.
+
 ## TERM-task — Task
 
 Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their-hierarchy.md#task).
@@ -568,6 +655,18 @@ Explained in [VIEW-issues-and-their-hierarchy](domain-model/010-issues-and-their
 - **Sub-task:** a [checkbox](#term-checkbox--checkbox) in a Task's body, and no [issue](#term-issue--issue). Once it needs its own pull request, it becomes a Task under the parent of the Task that held it (DEC-004 and DEC-010).
 - **Feature:** an issue that claims a coherent piece of functionality, which several Tasks deliver (DEC-004).
 - **Kind of work:** the value a Task takes on the `type` [classification axis](#term-classification-axis--classification-axis), such as `bug` or `docs`. It sets the prefix of the Task's title, and a Task of any kind is still a Task (DEC-012).
+
+## TERM-topology — topology
+
+Explained in [VIEW-parallel-work](domain-model/060-parallel-work.md#topology).
+
+**Example:** one [project](../core/glossary.md#term-project--project)'s topology holds a planning agent, and two worker agents whose scopes are the [workstreams](#term-workstream--workstream) `api` and `web`. Another project's holds three lead agents, one for each of its workstreams.
+
+**Distinctions:**
+
+- **DEC-045's topology file:** one person's file, kept on one machine and never committed, that lists their [instances](#term-instance--instance) and the workstreams each handles (DEC-045 point 2). On 25 October the maintainer decided that a topology is shared through the project's committed configuration instead (#512).
+- **Instance:** one clone of the project, which an agent of the topology works in. How an instance learns which agent of the topology it is, is not decided yet.
+- **Batch plan:** the outline of the issues for one intent. A topology says who works, and a [batch plan](#term-batch-plan--batch-plan) says on what.
 
 ## TERM-umbrella — Umbrella
 
