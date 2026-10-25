@@ -7,6 +7,8 @@ pkit:
       path:
         - pyproject.toml
         - src/project_kit/router.py
+        - src/project_kit/cli.py
+        - src/project_kit/status.py
         - src/project_kit/install.py
         - src/project_kit/merge.py
         - src/project_kit/sync.py
@@ -24,6 +26,7 @@ pkit:
         - .pkit/rules/core.md
         - .pkit/adapters/claude-code/merge-claude-md.sh
         - .pkit/adapters/claude-code/merge-settings.sh
+        - .pkit/adapters/claude-code/deploy-agents.sh
         - .pkit/adapters/claude-code/settings/core/settings.json
         - .pkit/adapters/claude-code/permission-hook.py
         - .pkit/permissions/decide.py
@@ -96,6 +99,8 @@ The examples run in a fresh repository after [Install](#install) and `pkit init`
 $ grep @.pkit CLAUDE.md
 @.pkit/rules/core.md
 @.pkit/rules/project.md
+$ grep -o "Only act on .accepted. decisions" .pkit/rules/core.md
+Only act on `accepted` decisions
 $ pkit new decision project use-postgres
 warning: the default branch 'main' is read from the local branch 'main': this repository has no remote to read the shared one from, and a local branch can lag it or carry work nobody pushed (COR-054 point 2)
 Stamped: .pkit/decisions/project/PRJ-001-use-postgres.md
@@ -231,7 +236,7 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 
 ## When not to use it
 
-- **A one-off task.** Just ask Claude. project-kit is for work that repeats, that must survive a new session, or that spans projects and people.
+- **A one-off task.** Just ask Claude. project-kit is for work that repeats, must survive a new session, or spans projects and people.
 - **Another agent tool.** project-kit works with [Claude Code only](.pkit/adapters/README.md#currently-shipped), today.
 - **No room for the running cost.** Each change answers the documents whose anchors it touches, and each decision waits for acceptance. Someone also keeps the CI job.
 
@@ -260,7 +265,13 @@ $ pkit --version
 pkit, version <version>
 ```
 
-If that isn't found, run `uv tool update-shell` and reopen your shell (the command adds `uv`'s tool directory to your `PATH`). The install needs only `uv`, `jq` and that one command. `pkit` is now on your PATH, shared across all your projects.
+If your shell does not find `pkit`, this command adds `uv`'s tool directory to your `PATH`. It changes your shell's startup files, so its fence shows no output. Reopen your shell after it:
+
+```sh
+uv tool update-shell
+```
+
+The install needs only `uv`, `jq` and the one `uv tool install` command. `pkit` is now on your PATH, shared across all your projects.
 
 ### Two things named "pkit"
 
@@ -273,7 +284,7 @@ Two names look alike: the command `pkit`, and the methodology `.pkit/` that it i
 
 ## First win — stand it up
 
-In any repository, `pkit init` installs the methodology into your project. Below, `git init` makes a fresh repository to stand in for yours. `grep` keeps the three lines that say where `init` installs and that it finished:
+**In any repository, one command wires a working methodology into your project.** Below, `git init` makes a fresh repository to stand in for yours. `grep` keeps the three lines that say where `init` installs and that it finished:
 
 ```console
 $ git init -q your-project
@@ -294,11 +305,11 @@ The methodology appears as `.pkit/`, and brings:
 ```console
 $ pkit status | grep -e "Backbone version" -e deployed
   Backbone version:      <version>   (up to date)
-    skills deployed    11 kit-managed:
-    agents deployed    6 kit-managed:
+    skills deployed    <any> kit-managed:
+    agents deployed    <any> kit-managed:
 ```
 
-From your next session on, Claude Code loads the methodology's rules, as [Your rules load into every session](#your-rules-load-into-every-session) shows.
+**That's it: your next AI session already sees the methodology, as [Your rules load into every session](#your-rules-load-into-every-session) shows.**
 
 ## The mental model
 
@@ -306,7 +317,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
-3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). **So a sync keeps the lines you added, as [Your files stay yours](#your-files-stay-yours) shows.** The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
+3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). **That's *why* a sync can't conflict with your edits, as [Your files stay yours](#your-files-stay-yours) shows.** The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
    - **`CLAUDE.md` and settings:** they add what is missing, and put back a methodology entry you removed, an allow included. `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `ssh`, `find`, `Edit` and `Write`, and denies.
    - **Elsewhere:**
      - an upgrade's migrations
@@ -314,7 +325,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
      - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
 
      A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
-4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
+4. **Versioned.** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency ([The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency)). It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
 
@@ -341,7 +352,7 @@ $ pkit capabilities install project-management | grep -e "^  Installed" -e "crea
   created    .claude/agents/project-manager.md
 ```
 
-Then file issues and move them through the capability's workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares.
+Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
 
 **By role:**
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
@@ -354,7 +365,7 @@ Then file issues and move them through the capability's workflow with `pkit proj
 - reference-graph consistency (`pkit refs validate`)
 - permission-gated mutations
 
-The friction check stays dormant until you declare where your documents live. Installing `project-management` adds a merge gate on pull requests.
+The friction check stays dormant until you declare where your documents live. Installing `project-management` adds a real merge gate on pull requests.
 
 ## Go deeper
 
