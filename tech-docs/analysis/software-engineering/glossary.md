@@ -139,9 +139,9 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **The core's reviewers:** the `critic`, the `architect` and the other reviewer agents the core ships. They judge a draft or a diff against the methodology's disciplines and rules, and none judges a change's correctness or its security (COR-024).
-- **The `pm-reviewer`:** project-management's reviewer, which judges a pull request against project-management's conventions, never the pull request's code (software-engineering DEC-002).
-- **The `software-engineer` agent:** it writes the code the panel judges, and posts no verdict (software-engineering DEC-001 point 1).
+- **The core's reviewers:** the `critic`, the `architect` and the other reviewer agents the core ships. They judge a draft or a diff against the methodology's disciplines and rules, and none judges a change's correctness or its security ([COR-024](../../../.pkit/decisions/core/COR-024-critic-and-architect-agents.md)).
+- **The `pm-reviewer`:** project-management's reviewer, which judges a pull request against project-management's conventions, never the pull request's code ([software-engineering DEC-002](../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md)).
+- **The `software-engineer` agent:** it writes the code the panel judges, and posts no verdict ([software-engineering DEC-001 point 1](../../../.pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md#1-producer-agent)).
 
 ## TERM-conventions-corpus — conventions corpus
 
@@ -149,8 +149,8 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **The methodology's conventions:** conventional commits, branch names and the no-shared-files invariant, which bind every project. The `convention-compliance-reviewer` checks them, and never reads the corpus (software-engineering DEC-001 point 4).
-- **The reviewers' knowledge:** what each code-review agent knows of any project. The project's own rules come from the corpus alone (software-engineering DEC-002 point 4).
+- **The methodology's conventions:** conventional commits, branch names and the no-shared-files invariant, which bind every project. The `convention-compliance-reviewer` checks them, and never reads the corpus ([software-engineering DEC-001 point 4](../../../.pkit/capabilities/software-engineering/decisions/DEC-001-producer-agent-and-conventions-seam.md#4-producer--checker-boundary)).
+- **The reviewers' knowledge:** what each code-review agent knows of any project. The project's own rules come from the corpus alone ([software-engineering DEC-002 point 4](../../../.pkit/capabilities/software-engineering/decisions/DEC-002-code-review-panel.md#4-knowledge-split)).
 
 ## TERM-hand-off — hand-off
 
@@ -158,5 +158,5 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **A process's hand-off:** the point where one process's subject passes to another process. A connection may declare that point checkable (COR-042). A process's hand-off is no report to a person.
+- **A process's hand-off:** the point where one process's subject passes to another process. A connection may declare that point checkable ([COR-042](../../../.pkit/decisions/core/COR-042-process-health.md)). A process's hand-off is no report to a person.
 - **The pull request's description:** what the change's author writes for its reviewers and for the merge authoriser. A hand-off goes to the person the agent works for.

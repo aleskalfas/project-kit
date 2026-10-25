@@ -87,18 +87,18 @@ pkit:
 
 **Other actors:**
 
-- **AI agent** (`ACT-ai-agent`): an agent making the [change](../../../glossary.md#term-change--change) writes, without asking, the answers the change owes. A [reviewer](../../../glossary.md#term-reviewer--reviewer) agent, where the [project](../../../glossary.md#term-project--project) chose one, checks them, writes none and changes nothing it judges (COR-050 [point](../../../glossary.md#term-point--point) 3 and REQ-021).
-- **CI pipeline** (`ACT-ci-pipeline`): runs the [change check](../../../glossary.md#term-change-check--change-check) against the [pull request](../../../glossary.md#term-pull-request--pull-request)'s target, named once for every check (COR-054 point 3). It reads the pull request's [head](../../../glossary.md#term-head--head) as the change's own (COR-062 point 4). It is told when a shallow clone cut the history the check reads.
-- **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated [artefact](../../../glossary.md#term-artefact--artefact), the sentence the change's author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up (COR-050 point 3). It is told too of each revalidation on the [base](../../../glossary.md#term-base--base)'s tip that an [answer](../../../glossary.md#term-answer--answer) of the change did not read (COR-062 point 7).
+- **AI agent** (`ACT-ai-agent`): an agent making the [change](../../../glossary.md#term-change--change) writes, without asking, the answers the change owes. A [reviewer](../../../glossary.md#term-reviewer--reviewer) agent, where the [project](../../../glossary.md#term-project--project) chose one, checks them, writes none and changes nothing it judges ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and REQ-021).
+- **CI pipeline** (`ACT-ci-pipeline`): runs the [change check](../../../glossary.md#term-change-check--change-check) against the [pull request](../../../glossary.md#term-pull-request--pull-request)'s target, named once for every check ([COR-054 point 3](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#3-the-override-is-a-base-not-a-declaration)). It reads the pull request's [head](../../../glossary.md#term-head--head) as the change's own ([COR-062 point 4](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#4-each-answer-names-what-it-read)). It is told when a shallow clone cut the history the check reads.
+- **Merge authoriser** (`ACT-merge-authoriser`): is told, for each updated [artefact](../../../glossary.md#term-artefact--artefact), the sentence the change's author wrote on what changed, which a reviewer checked against the diff. From the check's own list, it is also told which artefacts wait for which follow-up ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)). It is told too of each revalidation on the [base](../../../glossary.md#term-base--base)'s tip that an [answer](../../../glossary.md#term-answer--answer) of the change did not read ([COR-062 point 7](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 - **Operator** (`ACT-operator`): is asked before a command that writes an answer changes a repository other than the session's own. So no such write happens silently (REQ-012).
 
 **Preconditions:** **From UC-014 or UC-049:** The [project](../../../glossary.md#term-project--project) runs the [system](../../../glossary.md#term-system--system): it is the [methodology](../../../glossary.md#term-methodology--methodology)'s [source repository](../../../glossary.md#term-source-repository--source-repository), or the system is installed in it.
 
 **Assumptions:**
 
-- A [reviewer](../../../glossary.md#term-reviewer--reviewer) the [project](../../../glossary.md#term-project--project) chooses, other than the agent that wrote the answers, checks them. Nothing in the check tells whether the reviewer read them (COR-050 [point](../../../glossary.md#term-point--point) 3).
+- A [reviewer](../../../glossary.md#term-reviewer--reviewer) the [project](../../../glossary.md#term-project--project) chooses, other than the agent that wrote the answers, checks them. Nothing in the check tells whether the reviewer read them ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - An agent writes no [answer](../../../glossary.md#term-answer--answer) the [change](../../../glossary.md#term-change--change) does not owe until a person accepts its words. Nothing at run time stops it (COR-050 point 3 and core rule 20).
-- The branch is up to date with its [base](../../../glossary.md#term-base--base), or a merge queue runs the check again on the merge (COR-050 point 6).
+- The branch is up to date with its [base](../../../glossary.md#term-base--base), or a merge queue runs the check again on the merge ([COR-050 point 6](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#6-friction-in-two-checks)).
 
 **Trigger:** The developer, or the agent making the [change](../../../glossary.md#term-change--change), is about to push the change's branch.
 
@@ -112,9 +112,9 @@ pkit:
 11. At its entry, before it writes, the command checks that the repository it would change is the session's own. Where it is another, the system asks the operator, and with nobody to ask it refuses (REQ-012).
 
 > [!WARNING]
-> **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check, and write in whatever repository holds their working directory. ADR-034 [point](../../../glossary.md#term-point--point) 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+> **Not built yet:** `pkit friction revalidate` and `pkit friction defer` run no such check, and write in whatever repository holds their working directory. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
-6. Once `--yes` or a prompt at a terminal gives [consent](../../../glossary.md#term-consent--consent), the system writes the answer to an answer file of the change's own. The answer names, in `read`, every other answer file on that artefact. The artefact's own file stays as it was (COR-062 points 1 and 4).
+6. Once `--yes` or a prompt at a terminal gives [consent](../../../glossary.md#term-consent--consent), the system writes the answer to an answer file of the change's own. The answer names, in `read`, every other answer file on that artefact. The artefact's own file stays as it was (COR-062 points [1](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#1-answers-live-in-answer-files) and [4](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#4-each-answer-names-what-it-read)).
 
 > [!WARNING]
 > **Not built yet:** where the artefact's `friction` block already holds an answer, the system writes the answer there instead, until those answers move out. COR-062 point 1 decides that a change writes its answers in answer files of its own, never in the artefact, and #2032 tracks it.
@@ -134,9 +134,9 @@ pkit:
 - **3c.** The change added an anchor that resolves to nothing, or removed what an anchor named. The check reports a `dead-anchor`, an error (REQ-020). The developer mends the anchor, and the path rejoins at step 1.
 - **5a.** The artefact can wait for a later change. They run `pkit friction defer <artefact> --anchor <anchor> --reason "<reason>"`, the reason naming an open follow-up issue. The path goes on at step 11.
 - **5b.** The artefact still describes what is wanted, and the change broke what it describes. A defect is reported, and the artefact is revalidated `unchanged`, its reason naming the defect.
-- **5c.** An artefact the change was not asked about needs an [answer](../../../glossary.md#term-answer--answer) too. That answer is a person's decision. The agent making the change writes it only once the person has seen every word and accepted it. Where it cannot ask, it names the answer and its command in its hand-off, and runs none (COR-050 [point](../../../glossary.md#term-point--point) 3 and core rule 20).
+- **5c.** An artefact the change was not asked about needs an [answer](../../../glossary.md#term-answer--answer) too. That answer is a person's decision. The agent making the change writes it only once the person has seen every word and accepted it. Where it cannot ask, it names the answer and its command in its hand-off, and runs none ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) and core rule 20).
 - **5d.** `--because` repeats the justification already written, or still holds a placeholder such as `<why it still holds>`. The [system](../../../glossary.md#term-system--system) refuses it and writes nothing. The path rejoins at step 5.
-- **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them (COR-062 point 5). The revalidation itself then answers what each replaced deferral had put off (COR-050 point 4).
+- **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them ([COR-062 point 5](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#5-what-an-answer-replaces)). The revalidation itself then answers what each replaced deferral had put off ([COR-050 point 4](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)).
 
 > [!WARNING]
 > **Not built yet:** where the artefact's block already holds an answer, the revalidation removes the rest from the block. COR-062 point 5 decides that it replaces each deferral it read and does not re-state, which stays in the deferral's own answer file. #2032 tracks it.
@@ -144,20 +144,20 @@ pkit:
 - **6a.** The run has no terminal, and neither `--yes` nor `--dry-run` is given. The system refuses and writes nothing. It names the command to run with `--dry-run`, and the path rejoins at step 5.
 - **6b.** The artefact's block would not pass [validation](../../../glossary.md#term-validation--validation) once written. The system refuses and writes nothing. The developer mends the block that `pkit validate` names, and the path rejoins at step 5.
 - **7a.** The check reports a `bump`: `at` changed with nothing behind it, such as `updated` while the content stayed as it was. The developer corrects the answer, and the path rejoins at step 5.
-- **7b.** The change wrote an answer file as COR-062 forbids. In enforcing mode, the check fails on each such answer file (COR-062 points 3, 4 and 10):
+- **7b.** The change wrote an answer file as [COR-062](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md) forbids. In enforcing mode, the check fails on each such answer file (COR-062 points [3](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#3-a-change-adds-answer-files-and-rewrites-none-its-base-holds), [4](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#4-each-answer-names-what-it-read) and [10](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#10-whose-file-moved-artefacts-and-what-each-finding-is)):
   - an answer file its base holds, rewritten
   - an answer file with no live answer, removed beside answers added
   - an answer whose `read` leaves out an answer file on its artefact at the change's own [head](../../../glossary.md#term-head--head)
   - an answer on what its artefact does not hold
 
   The developer mends the answer files, and the path rejoins at step 7.
-- **7c.** The change moved answers word for word out of the artefacts' blocks into answer files. The check lists them apart, under "Answers moved in this change", and nobody is asked to accept them (COR-062 point 3).
-- **7d.** An artefact the change revalidates in an answer file has a live revalidation on the base's tip that the change's answer did not read. The check reports that revalidation as `answered-apart`, and never fails on it. Once merged, the two are [debt](../../../glossary.md#term-debt--debt) until a revalidation reads both (COR-062 point 7).
+- **7c.** The change moved answers word for word out of the artefacts' blocks into answer files. The check lists them apart, under "Answers moved in this change", and nobody is asked to accept them ([COR-062 point 3](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#3-a-change-adds-answer-files-and-rewrites-none-its-base-holds)).
+- **7d.** An artefact the change revalidates in an answer file has a live revalidation on the base's tip that the change's answer did not read. The check reports that revalidation as `answered-apart`, and never fails on it. Once merged, the two are [debt](../../../glossary.md#term-debt--debt) until a revalidation reads both ([COR-062 point 7](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#7-answers-made-apart-are-debt-not-a-conflict)).
 - **9a.** The [project](../../../glossary.md#term-project--project) runs the [change check](../../../glossary.md#term-change-check--change-check) in `warning` mode. The check reports what it finds and passes, so nothing holds the merge on it.
 - **9b.** The [pull request](../../../glossary.md#term-pull-request--pull-request)'s target moved on, and merging the target into the branch conflicts inside a `revalidated` block. `pkit friction resolve` checks the repository as step 11 does. It resolves the block's text, and writes no answer of its own. It names the revalidation still owed, and the path rejoins at step 5.
 
 > [!WARNING]
-> **Not built yet:** `pkit friction resolve` runs no such check. ADR-034 point 1 decides that every `pkit` command that writes runs it, and #1765 tracks it.
+> **Not built yet:** `pkit friction resolve` runs no such check. [ADR-034 point 1](../../../../../architecture/decisions/ADR-034-foreign-repo-mutation-guard.md#1-the-pkit-self-guard-is-the-honest-reliable-lever) decides that every `pkit` command that writes runs it, and #1765 tracks it.
 
 - **10a.** The [reviewer](../../../glossary.md#term-reviewer--reviewer) finds a passage that does not hold:
   - a reason that does not hold against the change
@@ -165,17 +165,17 @@ pkit:
   - an `updated` artefact with no sentence, or one that does not match the diff
 
   The reviewer blocks the merge, and the path rejoins at step 4.
-- **10b.** The project chose no such reviewer, or a person skipped the review on record. The answers stand, checked by their writer alone, a limit the record accepts (COR-050 point 3).
-- **10c.** No gate brings the chosen reviewer to the change, such as an unclassified pull request that changes only documents. The answers stand, checked by their writer alone, a case COR-050 point 3 does not name.
+- **10b.** The project chose no such reviewer, or a person skipped the review on record. The answers stand, checked by their writer alone, a limit the record accepts ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
+- **10c.** No gate brings the chosen reviewer to the change, such as an unclassified pull request that changes only documents. The answers stand, checked by their writer alone, a case [COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) does not name.
 
 **Postconditions:** Every [artefact](../../../glossary.md#term-artefact--artefact) whose [anchor](../../../glossary.md#term-anchor--anchor) the [change](../../../glossary.md#term-change--change) modified carries an [answer](../../../glossary.md#term-answer--answer) in the change: `updated`, `unchanged` with why, or deferred to an open follow-up. The check's list names each one, word for word.
 
 **Minimal guarantees:**
 
-- The [change check](../../../glossary.md#term-change-check--change-check) writes nothing, whatever it finds (COR-050 [point](../../../glossary.md#term-point--point) 13 and `friction_check.py`).
-- A [base](../../../glossary.md#term-base--base) that resolves to no commit stops a check that has something to compare, and is never guessed (COR-054 point 4).
-- In enforcing mode, the check fails on unanswered [friction](../../../glossary.md#term-friction--friction) and on a `bump` (COR-050 point 12). It fails too on a dead [anchor](../../../glossary.md#term-anchor--anchor) the [change](../../../glossary.md#term-change--change) made, on an unresolved kind, and on an [answer](../../../glossary.md#term-answer--answer) file written as COR-062 point 10 forbids.
-- A resolver that gives no answer leaves its anchor as `no-answer`, never read as unchanged (COR-050 point 2).
+- The [change check](../../../glossary.md#term-change-check--change-check) writes nothing, whatever it finds ([COR-050 point 13](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#13-commands) and `friction_check.py`).
+- A [base](../../../glossary.md#term-base--base) that resolves to no commit stops a check that has something to compare, and is never guessed ([COR-054 point 4](../../../../../../.pkit/decisions/core/COR-054-default-branch.md#4-unresolved-report-never-guess)).
+- In enforcing mode, the check fails on unanswered [friction](../../../glossary.md#term-friction--friction) and on a `bump` ([COR-050 point 12](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#12-warning-or-enforcing-and-who-owns-which-finding)). It fails too on a dead [anchor](../../../glossary.md#term-anchor--anchor) the [change](../../../glossary.md#term-change--change) made, on an unresolved kind, and on an [answer](../../../glossary.md#term-answer--answer) file written as [COR-062 point 10](../../../../../../.pkit/decisions/core/COR-062-answers-in-own-files.md#10-whose-file-moved-artefacts-and-what-each-finding-is) forbids.
+- A resolver that gives no answer leaves its anchor as `no-answer`, never read as unchanged ([COR-050 point 2](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#2-anchors)).
 - A writer that lacks [consent](../../../glossary.md#term-consent--consent), or would leave the block invalid, writes nothing (`friction_write.py`).
-- An `at` written back to a value the [artefact](../../../glossary.md#term-artefact--artefact) carried before answers nothing, so reverting a revalidation brings back what it answered (COR-050 point 3).
+- An `at` written back to a value the [artefact](../../../glossary.md#term-artefact--artefact) carried before answers nothing, so reverting a revalidation brings back what it answered ([COR-050 point 3](../../../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation)).
 - The list of answers is read from the artefacts and the answer files, never composed. A file whose front matter does not parse is named as unread, never left out silently (COR-050 point 3 and `friction_check.py`).

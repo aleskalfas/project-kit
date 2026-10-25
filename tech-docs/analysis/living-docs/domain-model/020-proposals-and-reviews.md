@@ -19,7 +19,7 @@ pkit:
 
 # VIEW-proposals-and-reviews — Proposals and reviews
 
-An agent that rewrites pages directly will eventually rewrite them wrongly. It will misjudge an ambiguous file's audience, or fix a [page](../glossary.md#term-page--page) to match a regression. [Proposals](../glossary.md#term-proposal--proposal) that cite their evidence, reviewed by a person, keep speed without giving up judgement (DEC-001).
+An agent that rewrites pages directly will eventually rewrite them wrongly. It will misjudge an ambiguous file's audience, or fix a [page](../glossary.md#term-page--page) to match a regression. [Proposals](../glossary.md#term-proposal--proposal) that cite their evidence, reviewed by a person, keep speed without giving up judgement ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
 A proposal drafts one edit with its evidence, and nothing applies it until a person accepts it. A [reader-review](../glossary.md#term-reader-review--reader-review) judges a page as its [reader](../glossary.md#term-reader--reader) would read it, and leaves its [findings](../../core/glossary.md#term-finding--finding) for a person. An [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan) outlines how existing documents come into the spaces, and leads to proposals only once a person approves it.
 
@@ -58,19 +58,19 @@ flowchart LR
 
 Defined in [TERM-proposal](../glossary.md#term-proposal--proposal).
 
-**Why:** An agent that rewrites pages directly will eventually rewrite them wrongly, such as by fixing a [page](../glossary.md#term-page--page) to match a regression. Proposals that cite their evidence, reviewed by a person, keep the agent's speed without giving up a person's judgement (DEC-001).
+**Why:** An agent that rewrites pages directly will eventually rewrite them wrongly, such as by fixing a [page](../glossary.md#term-page--page) to match a regression. Proposals that cite their evidence, reviewed by a person, keep the agent's speed without giving up a person's judgement ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
 A proposal is an edit the living-docs agent drafts, and leaves for a person to apply or refuse. It changes a page's text or its anchors, or in onboarding the spaces' declarations too. It cites what it rests on: the change that caused it and the anchors behind each statement it changes.
 
 **Attributes:**
 
-- its diff (DEC-001 point 5)
+- its diff ([DEC-001 point 5](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#5-fixes-are-proposed-never-applied-blind))
 - its evidence: the change that caused it, and the anchors it rests on (DEC-001 point 5)
 - in a run nobody watches, the page's [answer](../../core/glossary.md#term-answer--answer) as fields, never in its diff (DEC-001 point 5)
 
 **Relations:**
 
-- It edits one page, or the pages and declarations of one step of an [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan) (DEC-001 points 5 and 8).
+- It edits one page, or the pages and declarations of one step of an [onboarding plan](../glossary.md#term-onboarding-plan--onboarding-plan) (DEC-001 points 5 and [8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation)).
 - An approved onboarding plan leads to the proposals it names (DEC-001 point 8).
 
 **States:** A proposal is drafted, then a person accepts it, or refuses it. Nothing applies it before a person accepts it (DEC-001 point 5).
@@ -84,13 +84,13 @@ A proposal is an edit the living-docs agent drafts, and leaves for a person to a
 
 Defined in [TERM-reader-review](../glossary.md#term-reader-review--reader-review).
 
-**Why:** Change review asks whether a change left documentation missing or contradicted. A reader-review asks whether the documentation serves its [reader](../glossary.md#term-reader--reader) at all. The two catch different failures, and merging them would blur both (DEC-001).
+**Why:** Change review asks whether a change left documentation missing or contradicted. A reader-review asks whether the documentation serves its [reader](../glossary.md#term-reader--reader) at all. The two catch different failures, and merging them would blur both ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
 A reader-review reads one [page](../glossary.md#term-page--page) as its reader would. It asks whether the page answers that reader's questions, only those, and in a way the reader can follow. Each of its [findings](../../core/glossary.md#term-finding--finding) cites the [rule](../../core/glossary.md#term-rule--rule) the page breaks.
 
 **Attributes:**
 
-- the page it reads, and the reader it reads as (DEC-001 point 6)
+- the page it reads, and the reader it reads as ([DEC-001 point 6](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#6-reader-review))
 - its findings, each citing the rule the page breaks (DEC-001 point 6)
 
 **Relations:**
@@ -109,13 +109,13 @@ A reader-review reads one [page](../glossary.md#term-page--page) as its reader w
 
 Defined in [TERM-onboarding-plan](../glossary.md#term-onboarding-plan--onboarding-plan).
 
-**Why:** An agent that moves a [project](../../core/glossary.md#term-project--project)'s documents itself will misjudge an ambiguous file's audience. A plan that cites its evidence, reviewed by a person, keeps the agent's speed without giving up judgement (DEC-001).
+**Why:** An agent that moves a [project](../../core/glossary.md#term-project--project)'s documents itself will misjudge an ambiguous file's audience. A plan that cites its evidence, reviewed by a person, keeps the agent's speed without giving up judgement ([DEC-001](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md)).
 
 An onboarding plan says how a project's existing documents come into its [documentation spaces](../glossary.md#term-documentation-space--documentation-space). On such a project nothing is anchored yet, so onboarding is [friction](../../core/glossary.md#term-friction--friction) work on that starting point. A person reviews the plan before anything moves.
 
 **Attributes:**
 
-- which space each existing document belongs to (DEC-001 point 8)
+- which space each existing document belongs to ([DEC-001 point 8](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#8-brownfield-onboarding-is-transformation))
 - how pages are split, merged or rewritten for their [readers](../glossary.md#term-reader--reader) (DEC-001 point 8)
 - which anchors each statement should carry (DEC-001 point 8)
 - which of the project's mappings from code to documents become [page](../glossary.md#term-page--page) anchors, where it keeps any (DEC-001 point 8)
@@ -123,7 +123,7 @@ An onboarding plan says how a project's existing documents come into its [docume
 **Relations:**
 
 - Once approved, it leads to the [proposals](../glossary.md#term-proposal--proposal) it names (DEC-001 point 8).
-- It classifies the [unclassified documents](../glossary.md#term-unclassified-document--unclassified-document) of the spaces' places (DEC-001 points 4 and 8).
+- It classifies the [unclassified documents](../glossary.md#term-unclassified-document--unclassified-document) of the spaces' places (DEC-001 points [4](../../../../.pkit/capabilities/living-docs/decisions/DEC-001-living-docs-discipline.md#4-pages-are-anchored-and-revalidated) and 8).
 
 **States:** A plan waits for a person's review. Once it is approved, its moves land as ordinary reviewable changes (DEC-001 point 8).
 

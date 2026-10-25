@@ -40,7 +40,7 @@ pkit:
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points
 
-Some disciplines suit only some projects, yet forcing them on every [project](../glossary.md#term-project--project) is wrong, and copying them into each loses their reuse (COR-017). A [component](../glossary.md#term-component--component) can also fail without a word when what it builds on changes incompatibly (COR-030). Other components must help each other without either depending on the other (COR-052, COR-053). Every project also needs fixed homes, with declared layouts, for its kinds of content (COR-011).
+Some disciplines suit only some projects, yet forcing them on every [project](../glossary.md#term-project--project) is wrong, and copying them into each loses their reuse ([COR-017](../../../../.pkit/decisions/core/COR-017-capability-pattern.md)). A [component](../glossary.md#term-component--component) can also fail without a word when what it builds on changes incompatibly ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). Other components must help each other without either depending on the other ([COR-052](../../../../.pkit/decisions/core/COR-052-slots.md), [COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). Every project also needs fixed homes, with declared layouts, for its kinds of content ([COR-011](../../../../.pkit/decisions/core/COR-011-areas-first-class.md)).
 
 A [capability](../glossary.md#term-capability--capability) packages one discipline, which each project chooses to [install](../glossary.md#term-install--install) beside the [backbone](../glossary.md#term-backbone--backbone) and its [adapters](../glossary.md#term-adapter--adapter). A component's ranges say which [versions](../glossary.md#term-version--version) of what it builds on it works with. [Areas](../glossary.md#term-area--area) are the homes every project holds, with no install. Capabilities work together through [roles](../glossary.md#term-role--role) and [connection points](../glossary.md#term-connection-point--connection-point) without naming each other, and a [data point](../glossary.md#term-data-point--data-point) is the kind that takes data in.
 
@@ -103,7 +103,7 @@ flowchart LR
 
 Defined in [TERM-capability](../glossary.md#term-capability--capability).
 
-**Why:** A discipline that suits only some projects must be one each [project](../glossary.md#term-project--project) can choose (COR-017). Otherwise it is forced on every project, or scattered through each project's own files, where it cannot be reused (COR-017).
+**Why:** A discipline that suits only some projects must be one each [project](../glossary.md#term-project--project) can choose ([COR-017](../../../../.pkit/decisions/core/COR-017-capability-pattern.md)). Otherwise it is forced on every project, or scattered through each project's own files, where it cannot be reused (COR-017).
 
 A capability is a [component](../glossary.md#term-component--component) that packages one discipline: its [decision records](../glossary.md#term-decision-record--decision-record), [skills](../glossary.md#term-skill--skill), [agent definitions](../glossary.md#term-agent-definition--agent-definition), scripts and schemas. Each project chooses whether to [install](../glossary.md#term-install--install) it. `software-analysis` is one.
 
@@ -111,14 +111,14 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 
 - its own subtree, `.pkit/capabilities/<name>/`, with its `package.yaml`, its decision records and its skills (COR-017)
 - its own namespace of decision records, DEC, cited with its name, as in `software-analysis:DEC-001` (COR-017)
-- the [roles](../glossary.md#term-role--role) it provides (COR-053 [point](../glossary.md#term-point--point) 1)
+- the [roles](../glossary.md#term-role--role) it provides ([COR-053 point 1](../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles))
 
 **Relations:**
 
-- It is a kind of component. The [adapter](../glossary.md#term-adapter--adapter) is the other kind, which carries what one [harness](../glossary.md#term-harness--harness) needs and no discipline (COR-027).
-- A project installs it, or registers it where the project authors the capability itself (COR-031 point D3).
-- It may depend on other capabilities, each through a [range](../glossary.md#term-range--range) (COR-030).
-- It ships the agent definitions its discipline needs (COR-026).
+- It is a kind of component. The [adapter](../glossary.md#term-adapter--adapter) is the other kind, which carries what one [harness](../glossary.md#term-harness--harness) needs and no discipline ([COR-027](../../../../.pkit/decisions/core/COR-027-alternative-impls-as-capability-data.md)).
+- A project installs it, or registers it where the project authors the capability itself ([COR-031 point D3](../../../../.pkit/decisions/core/COR-031-capability-origin.md#d3--registering-an-incubated-capability-does-not-copy)).
+- It may depend on other capabilities, each through a [range](../glossary.md#term-range--range) ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)).
+- It ships the agent definitions its discipline needs ([COR-026](../../../../.pkit/decisions/core/COR-026-agent-placement-by-discipline.md)).
 
 **States:** None.
 
@@ -131,7 +131,7 @@ A capability is a [component](../glossary.md#term-component--component) that pac
 
 Defined in [TERM-range](../glossary.md#term-range--range).
 
-**Why:** A [component](../glossary.md#term-component--component) whose dependency changed in a way that breaks it fails without a word when it runs (COR-030). A range turns that into a refusal when the [backbone](../glossary.md#term-backbone--backbone) or a component is installed, upgraded or removed (COR-030).
+**Why:** A [component](../glossary.md#term-component--component) whose dependency changed in a way that breaks it fails without a word when it runs ([COR-030](../../../../.pkit/decisions/core/COR-030-capability-dependencies.md)). A range turns that into a refusal when the [backbone](../glossary.md#term-backbone--backbone) or a component is installed, upgraded or removed (COR-030).
 
 A range is the set of [versions](../glossary.md#term-version--version) a component declares it works with: of the backbone, or of another [capability](../glossary.md#term-capability--capability). It runs from a floor to any upper bound, as in `>=1.149.0,<2.0.0`.
 
@@ -142,7 +142,7 @@ A range is the set of [versions](../glossary.md#term-version--version) a compone
 
 **Relations:**
 
-- Each component declares one on the backbone, its `requires_backbone` (COR-017).
+- Each component declares one on the backbone, its `requires_backbone` ([COR-017](../../../../.pkit/decisions/core/COR-017-capability-pattern.md)).
 - A capability declares one for each capability it depends on (COR-030).
 - [Install](../glossary.md#term-install--install) checks the ranges before it writes anything (COR-030).
 
@@ -151,13 +151,13 @@ A range is the set of [versions](../glossary.md#term-version--version) a compone
 **Always true:**
 
 - A capability installs only where what it depends on falls within its ranges. Install never proceeds silently past one, and never installs a dependency by itself (COR-030).
-- A floor rises only where a declaration asks for it, never by itself (PRJ-002 D4).
+- A floor rises only where a declaration asks for it, never by itself ([PRJ-002 D4](../../../../.pkit/decisions/project/PRJ-002-version-bump-policy.md#d4--the-release-step-writes-every-floor-and-upper-bound-main-only)).
 
 ## Area
 
 Defined in [TERM-area](../glossary.md#term-area--area).
 
-**Why:** Each domain of content needs a fixed home, with a layout tools can rely on (COR-011). Without one, each new home invents its own shape, and tools have nothing to work from (COR-011).
+**Why:** Each domain of content needs a fixed home, with a layout tools can rely on ([COR-011](../../../../.pkit/decisions/core/COR-011-areas-first-class.md)). Without one, each new home invents its own shape, and tools have nothing to work from (COR-011).
 
 An area is a top-level slice of a [project](../glossary.md#term-project--project)'s `.pkit/` tree, such as `.pkit/decisions/`. Its README declares its layout. Every project holds each area the [methodology](../glossary.md#term-methodology--methodology) ships, with no [install](../glossary.md#term-install--install), and may add areas of its own.
 
@@ -170,7 +170,7 @@ An area is a top-level slice of a [project](../glossary.md#term-project--project
 
 - It sits beside the [capabilities](../glossary.md#term-capability--capability) in `.pkit/`, and is no capability (COR-011).
 - The methodology's areas ship with the [backbone](../glossary.md#term-backbone--backbone).
-- Where it holds both the methodology's content and the project's, a `core/` folder and a `project/` folder keep them apart (COR-003).
+- Where it holds both the methodology's content and the project's, a `core/` folder and a `project/` folder keep them apart ([COR-003](../../../../.pkit/decisions/core/COR-003-artifact-mechanisms.md)).
 
 **States:** None.
 
@@ -184,31 +184,31 @@ An area is a top-level slice of a [project](../glossary.md#term-project--project
 
 Defined in [TERM-connection-point](../glossary.md#term-connection-point--connection-point).
 
-**Why:** [Capabilities](../glossary.md#term-capability--capability) need each other's knowledge, and need to react to each other, without depending on each other (COR-053). A connection point's address names a [role](../glossary.md#term-role--role), never a capability, so replacing one capability with another touches nothing connected to it (COR-053).
+**Why:** [Capabilities](../glossary.md#term-capability--capability) need each other's knowledge, and need to react to each other, without depending on each other ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). A connection point's address names a [role](../glossary.md#term-role--role), never a capability, so replacing one capability with another touches nothing connected to it (COR-053).
 
 A connection point is a declared interface that one installed capability defines. Other [components](../glossary.md#term-component--component) fill it, depend on it or subscribe to it, without naming that capability. Its address names its role, as in `pkit::analysis:revalidation-evidence`.
 
 **Attributes:**
 
-- an address, `<publisher>::<role>:<point>` (COR-053 [point](../glossary.md#term-point--point) 2)
+- an address, `<publisher>::<role>:<point>` ([COR-053 point 2](../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds))
 - a kind (COR-053 point 2):
   - a [data point](../glossary.md#term-data-point--data-point), which takes data in
   - a [process](../glossary.md#term-process--process), offered for others to depend on
   - an event, which signals that a writing command finished
-- a <!-- pkit:not-the-term -->version, an integer that rises only where it breaks what connects to it (COR-053 point 5)
-- a description, in prose (COR-053 point 3)
+- a <!-- pkit:not-the-term -->version, an integer that rises only where it breaks what connects to it ([COR-053 point 5](../../../../.pkit/decisions/core/COR-053-connection-points.md#5-versions-per-point-roles-unversioned))
+- a description, in prose ([COR-053 point 3](../../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality))
 
 **Relations:**
 
 - The capability that provides its role defines it (COR-053 point 2).
 - Other components connect to it at a <!-- pkit:not-the-term -->version equal to its own (COR-053 point 5).
-- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it (COR-053 point 7).
+- The [backbone](../glossary.md#term-backbone--backbone) resolves and checks every connection to it ([COR-053 point 7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 
 **States:** None.
 
 **Always true:**
 
-- It is optional by default. A connection to it is mandatory only with a reason (COR-053 point 6).
+- It is optional by default. A connection to it is mandatory only with a reason ([COR-053 point 6](../../../../.pkit/decisions/core/COR-053-connection-points.md#6-optional-by-default-mandatory-only-with-a-reason-on-the-individual-connection)).
 - Two of its <!-- pkit:not-the-term -->versions are compatible only when they are equal (COR-053 point 5).
 - The component that offers an event never names those that subscribe to it (COR-053 point 2).
 
@@ -216,82 +216,82 @@ A connection point is a declared interface that one installed capability defines
 
 Defined in [TERM-role](../glossary.md#term-role--role).
 
-**Why:** A connection that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced (COR-053). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
+**Why:** A connection that names the [capability](../glossary.md#term-capability--capability) at its other end breaks when that capability is replaced ([COR-053](../../../../.pkit/decisions/core/COR-053-connection-points.md)). A role names the job instead, and its publisher qualifies it, so no name is reserved for everyone (COR-053).
 
 A role is a name under which one installed capability provides [connection points](../glossary.md#term-connection-point--connection-point), so that others use them without naming that capability. The publisher that coined the name qualifies it, as in `pkit::documentation`.
 
 **Attributes:**
 
-- its qualified name, `<publisher>::<role>` (COR-053 [point](../glossary.md#term-point--point) 1)
-- no <!-- pkit:not-the-term -->version: a role redefined in a way that breaks takes a new name (COR-053 point 5)
+- its qualified name, `<publisher>::<role>` ([COR-053 point 1](../../../../.pkit/decisions/core/COR-053-connection-points.md#1-roles))
+- no <!-- pkit:not-the-term -->version: a role redefined in a way that breaks takes a new name ([COR-053 point 5](../../../../.pkit/decisions/core/COR-053-connection-points.md#5-versions-per-point-roles-unversioned))
 
 **Relations:**
 
 - A capability declares the roles it provides (COR-053 point 1).
-- The capability providing a role defines its connection points (COR-053 point 2).
+- The capability providing a role defines its connection points ([COR-053 point 2](../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
 - Another capability may provide the same role, and stand in for the one that coined it (COR-053 point 1).
 
 **States:** None.
 
 **Always true:**
 
-- One installed capability at most provides each role: two are an error until the [project](../glossary.md#term-project--project) selects one (COR-053 points 1 and 7).
+- One installed capability at most provides each role: two are an error until the [project](../glossary.md#term-project--project) selects one (COR-053 points 1 and [7](../../../../.pkit/decisions/core/COR-053-connection-points.md#7-one-wiring-resolver-one-graph-two-selection-keys)).
 - An installed capability the project did not select connects nothing under that role, while its own commands still run (COR-053 point 1).
 
 ## Data point
 
 Defined in [TERM-data-point](../glossary.md#term-data-point--data-point).
 
-**Why:** A [component](../glossary.md#term-component--component) often needs knowledge that another component, or the [project](../glossary.md#term-project--project), is better able to give (COR-052). The consumer must still work without that other component, and one set of rules must settle precedence, collisions and failure (COR-052).
+**Why:** A [component](../glossary.md#term-component--component) often needs knowledge that another component, or the [project](../glossary.md#term-project--project), is better able to give ([COR-052](../../../../.pkit/decisions/core/COR-052-slots.md)). The consumer must still work without that other component, and one set of rules must settle precedence, collisions and failure (COR-052).
 
 A data point is a declared interface through which the [capability](../glossary.md#term-capability--capability) providing a [role](../glossary.md#term-role--role) accepts input. A project file, installed capabilities and that capability's own default fill it, and the [backbone](../glossary.md#term-backbone--backbone) resolves what it holds. It is the kind of [connection point](../glossary.md#term-connection-point--connection-point) that takes data in.
 
 **Attributes:**
 
-- its address, its schema version and the schema of its data (COR-052 points 1 and 5)
-- a combination policy, one of these (COR-052 [point](../glossary.md#term-point--point) 3):
+- its address, its schema version and the schema of its data (COR-052 points [1](../../../../.pkit/decisions/core/COR-052-slots.md#1-the-slot-belongs-to-its-consumer) and [5](../../../../.pkit/decisions/core/COR-052-slots.md#5-schemas-and-versions))
+- a combination policy, one of these ([COR-052 point 3](../../../../.pkit/decisions/core/COR-052-slots.md#3-combination-policy-declared-per-slot)):
   - one filler alone fills it
   - entries merge by id
   - entries merge and any collision fails
-- optionally a question, which asks a person about the point and records the reply (COR-061 point 1)
+- optionally a question, which asks a person about the [point](../glossary.md#term-point--point) and records the reply ([COR-061 point 1](../../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question))
 
 **Relations:**
 
-- It is the kind of connection point that takes data in (COR-053 point 2).
-- Where fillers overlap, a project file wins over a capability, and a capability wins over the default (COR-052 point 4).
+- It is the kind of connection point that takes data in ([COR-053 point 2](../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
+- Where fillers overlap, a project file wins over a capability, and a capability wins over the default ([COR-052 point 4](../../../../.pkit/decisions/core/COR-052-slots.md#4-precedence-and-collisions)).
 
 **States:** None.
 
 **Always true:**
 
-- A filler that fails gives no result, which is never read as an empty one (COR-052 point 6).
+- A filler that fails gives no result, which is never read as an empty one ([COR-052 point 6](../../../../.pkit/decisions/core/COR-052-slots.md#6-command-fillers-and-failure)).
 - A capability's filler counts only where its schema version matches the point's (COR-052 point 5).
-- A question asks only what has no recorded reply. Where nobody can reply, it records nothing (COR-061 points 1 and 5).
+- A question asks only what has no recorded reply. Where nobody can reply, it records nothing (COR-061 points 1 and [5](../../../../.pkit/decisions/core/COR-061-point-questions.md#5-only-the-persons-answer-is-the-consent)).
 
 ## Process
 
 Defined in [TERM-process](../glossary.md#term-process--process).
 
-**Why:** Several disciplines move their subjects through stages, and each needs to know where a subject stands and which move it may make next (COR-033). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a subject stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
+**Why:** Several disciplines move their subjects through stages, and each needs to know where a subject stands and which move it may make next ([COR-033](../../../../.pkit/decisions/core/COR-033-process-substrate.md)). An engine built once in the [backbone](../glossary.md#term-backbone--backbone) tells each discipline, in one way, where a subject stands and whether it may move. Each [capability](../glossary.md#term-capability--capability) keeps its own stages (COR-033).
 
 A process is the course a capability declares for one kind of subject of its discipline. It gives the states the subject can be in, and the moves between them, each with its condition. The backbone's engine reads where a subject stands from what it observes, on each check. project-management's `issue-lifecycle` is one.
 
 **Attributes:**
 
-- its address, `<capability>:<id>`, and its definition, `schemas/<id>.yaml` in the capability (COR-033 P2)
-- its states, each detected by a script the engine runs, in one mode for the whole process (COR-033 P5)
-- its moves, each with a condition: a script that decides it, or an authorisation recorded by someone other than the one who moves (COR-033 P4)
+- its address, `<capability>:<id>`, and its definition, `schemas/<id>.yaml` in the capability ([COR-033 P2](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p2--ownership))
+- its states, each detected by a script the engine runs, in one mode for the whole process ([COR-033 P5](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p5--name-broad-ship-narrow))
+- its moves, each with a condition: a script that decides it, or an authorisation recorded by someone other than the one who moves ([COR-033 P4](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p4--gates-must-be-checkable))
 
 **Relations:**
 
 - A capability defines it, and the backbone's engine runs it (COR-033 P2).
-- A [connection point](../glossary.md#term-connection-point--connection-point) of the kind `process` offers it for other [components](../glossary.md#term-component--component) to depend on (COR-053 [point](../glossary.md#term-point--point) 2).
-- Its definition may declare that one of its states waits on another process (COR-044 point 3).
-- The `process` [skill](../glossary.md#term-skill--skill) writes its shape (COR-044 point 1). An AI agent working by the `process-author` [agent definition](../glossary.md#term-agent-definition--agent-definition) writes the scripts behind the process's states and conditions.
+- A [connection point](../glossary.md#term-connection-point--connection-point) of the kind `process` offers it for other [components](../glossary.md#term-component--component) to depend on ([COR-053 point 2](../../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)).
+- Its definition may declare that one of its states waits on another process ([COR-044 point 3](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#3-the-skills-operation-set-three-shipped-the-rest-named-deferred--each-backed-by-a-deterministic-command)).
+- The `process` [skill](../glossary.md#term-skill--skill) writes its shape ([COR-044 point 1](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#1-the-shapeteeth-boundary-is-the-carrier-boundary)). An AI agent working by the `process-author` [agent definition](../glossary.md#term-agent-definition--agent-definition) writes the scripts behind the process's states and conditions.
 
 **States:** None.
 
 **Always true:**
 
-- The engine reads a subject's state from what it observes, never from a stored label (COR-033 P3).
-- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move (COR-044 point 2 and COR-033 P5).
+- The engine reads a subject's state from what it observes, never from a stored label ([COR-033 P3](../../../../.pkit/decisions/core/COR-033-process-substrate.md#p3--the-engine-is-a-deterministic-validator-and-a-self-explaining-memory)).
+- A script that fails, or prints nothing the engine can read, never counts as a pass. The engine then cannot tell where the subject stands, and allows no move ([COR-044 point 2](../../../../.pkit/decisions/core/COR-044-process-authoring-layer.md#2-the-teeth-actor-is-a-new-core-agent-owner-scoped) and COR-033 P5).

@@ -39,13 +39,13 @@ pkit:
 
 # VIEW-the-system-and-its-methodology — The system and its methodology
 
-A way of working that only a few people know cannot be handed on, and one written as loose prose cannot be trusted (COR-007, COR-051). Each choice needs its reasons recorded, and each part that others cite needs a name that never moves (COR-025, COR-051, COR-058). Nothing should bind before a review accepts it (COR-051). The [methodology](../glossary.md#term-methodology--methodology) also works inside sessions that another tool hosts, and relies on behaviour it cannot set (COR-047).
+A way of working that only a few people know cannot be handed on, and one written as loose prose cannot be trusted ([COR-007](../../../../.pkit/decisions/core/COR-007-pattern-extraction.md), [COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Each choice needs its reasons recorded, and each part that others cite needs a name that never moves ([COR-025](../../../../.pkit/decisions/core/COR-025-adr-decision-space.md), COR-051, [COR-058](../../../../.pkit/decisions/core/COR-058-record-points.md)). Nothing should bind before a review accepts it (COR-051). The [methodology](../glossary.md#term-methodology--methodology) also works inside sessions that another tool hosts, and relies on behaviour it cannot set ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)).
 
 The methodology is that way of working, written down as [decision records](../glossary.md#term-decision-record--decision-record), rules, [operational rules](../glossary.md#term-operational-rule--operational-rule) and conventions. Decision records keep the reasons, and their points, like rules, keep names that never move. The [acceptance gate](../glossary.md#term-acceptance-gate--acceptance-gate) lets work build only on decision records and rules already accepted. Operational rules hold the instructions every session loads, and conventions are agreed ways of working.
 
 The [system](../glossary.md#term-system--system) is the software that ships the methodology and enforces it. A [harness](../glossary.md#term-harness--harness) hosts the sessions where the methodology is used.
 
-Some questions are too large for a decision record at first, and the work that maps them needs a home of its own (COR-012). A [scratchpad note](../glossary.md#term-scratchpad-note--scratchpad-note) holds that work, binding nothing, until it produces decision records or other documents, or is dropped.
+Some questions are too large for a decision record at first, and the work that maps them needs a home of its own ([COR-012](../../../../.pkit/decisions/core/COR-012-scratchpad-notes.md)). A [scratchpad note](../glossary.md#term-scratchpad-note--scratchpad-note) holds that work, binding nothing, until it produces decision records or other documents, or is dropped.
 
 ```mermaid
 classDiagram
@@ -102,7 +102,7 @@ flowchart LR
 
 Defined in [TERM-system](../glossary.md#term-system--system).
 
-**Why:** A way of working passes between people and repositories, and grows, only once tooling carries it (COR-007). Without such tooling, it stays the folklore of those who began it (COR-007).
+**Why:** A way of working passes between people and repositories, and grows, only once tooling carries it ([COR-007](../../../../.pkit/decisions/core/COR-007-pattern-extraction.md)). Without such tooling, it stays the folklore of those who began it (COR-007).
 
 The system is the software this analysis describes: the one you set up on a machine, run and extend.
 
@@ -123,7 +123,7 @@ The system is the software this analysis describes: the one you set up on a mach
 
 Defined in [TERM-harness](../glossary.md#term-harness--harness).
 
-**Why:** The [methodology](../glossary.md#term-methodology--methodology) works inside sessions that another tool hosts, and relies on behaviour it cannot set itself (COR-047). Left unnamed, that reliance stays hidden, and its failure can look like a correct result (COR-047).
+**Why:** The [methodology](../glossary.md#term-methodology--methodology) works inside sessions that another tool hosts, and relies on behaviour it cannot set itself ([COR-047](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md)). Left unnamed, that reliance stays hidden, and its failure can look like a correct result (COR-047).
 
 A harness is an external tool that hosts working sessions and runs the tool calls made in them. Claude Code is one. The methodology depends on how the harness behaves, which the methodology cannot set.
 
@@ -140,28 +140,28 @@ A harness is an external tool that hosts working sessions and runs the tool call
 
 **Always true:**
 
-- What the methodology needs of a harness is stated as behaviour one can observe, never in any harness's own vocabulary (COR-047 [point](../glossary.md#term-point--point) 1).
-- A need that no declaration covers for the harness in use is unknown, never met (COR-047 point 3).
+- What the methodology needs of a harness is stated as behaviour one can observe, never in any harness's own vocabulary ([COR-047 point 1](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#1-requirements-are-stated-as-observable-behaviour-never-in-a-harnesss-vocabulary)).
+- A need that no declaration covers for the harness in use is unknown, never met ([COR-047 point 3](../../../../.pkit/decisions/core/COR-047-harness-requirement-declaration.md#3-silence-is-indeterminate-never-satisfaction)).
 
 ## Decision record
 
 Defined in [TERM-decision-record](../glossary.md#term-decision-record--decision-record).
 
-**Why:** A choice made with no record of its reasons, or of what else was weighed, leaves later readers unable to rebuild them (COR-025). Kept apart from the steps that carry it out, the choice stays stable while those steps evolve (COR-006).
+**Why:** A choice made with no record of its reasons, or of what else was weighed, leaves later readers unable to rebuild them ([COR-025](../../../../.pkit/decisions/core/COR-025-adr-decision-space.md)). Kept apart from the steps that carry it out, the choice stays stable while those steps evolve ([COR-006](../../../../.pkit/decisions/core/COR-006-artifact-roles.md)).
 
 A decision record is a document that states one choice among alternatives, with the context that called for it and the reasons for it. It binds only once it is accepted, so work builds on it only from then.
 
 **Attributes:**
 
-- an id: its namespace's prefix and a number, such as COR-050
+- an id: its namespace's prefix and a number, such as [COR-050](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md)
 - a status: `proposed`, `accepted` or `superseded`
 - its sections: the context, the decision, the reasons and what follows from it
 
 **Relations:**
 
 - It belongs to one namespace, which numbers its records on its own. COR, the namespace of the core records, is one.
-- Its decision may hold points (COR-058 [point](../glossary.md#term-point--point) 1).
-- A [rule](../glossary.md#term-rule--rule)'s origin may cite it. The record says what was chosen and why, and the rule says what must hold (COR-051 point 1).
+- Its decision may hold points ([COR-058 point 1](../../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)).
+- A [rule](../glossary.md#term-rule--rule)'s origin may cite it. The record says what was chosen and why, and the rule says what must hold ([COR-051 point 1](../../../../.pkit/decisions/core/COR-051-rule-sets.md#1-what-a-rule-is)).
 
 **States:** A record is `proposed` until it is accepted in review, and `accepted` until a newer record supersedes it. It never moves back, and a superseded record is kept.
 
@@ -182,19 +182,19 @@ stateDiagram-v2
 
 Defined in [TERM-point](../glossary.md#term-point--point).
 
-**Why:** A [decision record](../glossary.md#term-decision-record--decision-record) often decides several things at once, and other records, rules and documents cite each one by its number (COR-058). A number that moves sends every such citation to another part, and nothing says so (COR-058). A permanent id keeps each citation on the part it names (COR-058).
+**Why:** A [decision record](../glossary.md#term-decision-record--decision-record) often decides several things at once, and other records, rules and documents cite each one by its number ([COR-058](../../../../.pkit/decisions/core/COR-058-record-points.md)). A number that moves sends every such citation to another part, and nothing says so (COR-058). A permanent id keeps each citation on the part it names (COR-058).
 
-A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as COR-050 point 3 stays true. A record that writes its points as a numbered list still works, but its numbers may move until it is converted (COR-058 point 9).
+A point is one numbered or labelled part of a decision record's Decision. Once the record writes it as a heading, its id names it for good, so a citation such as [COR-050 point 3](../../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#3-the-revalidation) stays true. A record that writes its points as a numbered list still works, but its numbers may move until it is converted ([COR-058 point 9](../../../../.pkit/decisions/core/COR-058-record-points.md#9-a-record-in-list-form-keeps-working-until-it-is-converted)).
 
 **Attributes:**
 
 - an id: a number, such as `3`, or a label, such as `D1`
-- a title of a few words, and its text, which runs to the next heading of the same or a higher level (COR-058 point 1)
+- a title of a few words, and its text, which runs to the next heading of the same or a higher level ([COR-058 point 1](../../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title))
 
 **Relations:**
 
 - It belongs to one decision record, inside that record's Decision (COR-058 point 1).
-- A retired point names the points that took its text, where any did (COR-058 points 4 and 5).
+- A retired point names the points that took its text, where any did (COR-058 points [4](../../../../.pkit/decisions/core/COR-058-record-points.md#4-a-retired-point-leaves-an-entry-and-a-stub) and [5](../../../../.pkit/decisions/core/COR-058-record-points.md#5-successors-are-points-of-the-same-record)).
 
 **States:** A point written as a heading is live until it is retired, by being dropped, split or merged. A stub then stays where it stood, and its id stays in the record's front matter (COR-058 point 4).
 
@@ -208,14 +208,14 @@ stateDiagram-v2
 
 **Always true:**
 
-- In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included (COR-058 point 3).
+- In a record whose points are headings, no point is renumbered, and no id is used again, a retired one included ([COR-058 point 3](../../../../.pkit/decisions/core/COR-058-record-points.md#3-a-new-point-takes-the-next-unused-number-and-no-point-is-renumbered)).
 - In such a record, a new point takes the next unused number (COR-058 point 3).
 
 ## Scratchpad note
 
 Defined in [TERM-scratchpad-note](../glossary.md#term-scratchpad-note--scratchpad-note).
 
-**Why:** Some questions are too large to settle in a [decision record](../glossary.md#term-decision-record--decision-record) on a first pass, since their alternatives are not mapped yet (COR-012). With no home, that exploration scatters, or is skipped, and a record comes too early (COR-012).
+**Why:** Some questions are too large to settle in a [decision record](../glossary.md#term-decision-record--decision-record) on a first pass, since their alternatives are not mapped yet ([COR-012](../../../../.pkit/decisions/core/COR-012-scratchpad-notes.md)). With no home, that exploration scatters, or is skipped, and a record comes too early (COR-012).
 
 A scratchpad note is a working draft that explores one such question, and binds nothing. Once decision records or other documents hold its content, it retires. When its line of thought fails, it is dropped. Either way, it is kept.
 
@@ -248,16 +248,16 @@ stateDiagram-v2
 
 Defined in [TERM-rule](../glossary.md#term-rule--rule).
 
-**Why:** A standard that work is held to must be written down, and loose prose is not enough to trust it (COR-051). Each rule needs a lasting name to cite, a record of its origin and a visible way to retire it (COR-051). A [decision record](../glossary.md#term-decision-record--decision-record) gives all three, at a weight too great for a statement of one sentence (COR-051).
+**Why:** A standard that work is held to must be written down, and loose prose is not enough to trust it ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)). Each rule needs a lasting name to cite, a record of its origin and a visible way to retire it (COR-051). A [decision record](../glossary.md#term-decision-record--decision-record) gives all three, at a weight too great for a statement of one sentence (COR-051).
 
-A rule is a statement that every document or collection entry it binds on must satisfy, once it is accepted. It has a permanent id, such as RS-WRITE-005, and a recorded origin that says when, by whom and why it was decided.
+A rule is a statement that every document or collection entry it binds on must satisfy, once it is accepted. It has a permanent id, such as [RS-WRITE-005](../../../rule-sets/writing.md#rs-write-005--at-most-25-words-a-sentence), and a recorded origin that says when, by whom and why it was decided.
 
 **Attributes:**
 
-- an id, such as `RS-WRITE-005` (COR-051 [point](../glossary.md#term-point--point) 3)
+- an id, such as `RS-WRITE-005` ([COR-051 point 3](../../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers))
 - its statement
-- an origin: when, by whom and why it was decided, or the decision record it cites (COR-051 point 5)
-- a status: proposed, accepted, superseded or withdrawn (COR-051 point 4)
+- an origin: when, by whom and why it was decided, or the decision record it cites ([COR-051 point 5](../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically))
+- a status: proposed, accepted, superseded or withdrawn ([COR-051 point 4](../../../../.pkit/decisions/core/COR-051-rule-sets.md#4-statuses-and-the-gate))
 
 **Relations:**
 
@@ -286,7 +286,7 @@ stateDiagram-v2
 
 Defined in [TERM-acceptance-gate](../glossary.md#term-acceptance-gate--acceptance-gate).
 
-**Why:** If a [decision record](../glossary.md#term-decision-record--decision-record) or a [rule](../glossary.md#term-rule--rule) bound as soon as it was written, any draft would take effect before anyone reviewed it (COR-051).
+**Why:** If a [decision record](../glossary.md#term-decision-record--decision-record) or a [rule](../glossary.md#term-rule--rule) bound as soon as it was written, any draft would take effect before anyone reviewed it ([COR-051](../../../../.pkit/decisions/core/COR-051-rule-sets.md)).
 
 The acceptance gate is the condition that work builds only on what is already accepted. A decision record or a rule that is still proposed is a draft. Work that would rest on it waits, or has it accepted first.
 
@@ -300,13 +300,13 @@ The acceptance gate is the condition that work builds only on what is already ac
 
 **Always true:**
 
-- An accepted rule whose origin cites a decision record cites an accepted one (COR-051 [point](../glossary.md#term-point--point) 5).
+- An accepted rule whose origin cites a decision record cites an accepted one ([COR-051 point 5](../../../../.pkit/decisions/core/COR-051-rule-sets.md#5-origins-checked-deterministically)).
 
 ## Operational rule
 
 Defined in [TERM-operational-rule](../glossary.md#term-operational-rule--operational-rule).
 
-**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere (COR-014). So a repository keeps its own instructions in a file of its own (COR-014).
+**Why:** An instruction shipped to every repository must fit any of them, since one that fits a single repository cannot apply elsewhere ([COR-014](../../../../.pkit/decisions/core/COR-014-universal-applicability.md)). So a repository keeps its own instructions in a file of its own (COR-014).
 
 An operational rule is an instruction that every session loads through the [harness](../glossary.md#term-harness--harness)'s include. It is cited by its number in its file, such as core rule 8, and carries no id, origin or status.
 
@@ -318,7 +318,7 @@ An operational rule is an instruction that every session loads through the [harn
 **Relations:**
 
 - The harness's include loads it into each session.
-- It shares only the word with a [rule](../glossary.md#term-rule--rule): it has none of a rule's id, origin or status (COR-051 [point](../glossary.md#term-point--point) 1).
+- It shares only the word with a [rule](../glossary.md#term-rule--rule): it has none of a rule's id, origin or status ([COR-051 point 1](../../../../.pkit/decisions/core/COR-051-rule-sets.md#1-what-a-rule-is)).
 
 **States:** None.
 
@@ -330,7 +330,7 @@ An operational rule is an instruction that every session loads through the [harn
 
 Defined in [TERM-methodology](../glossary.md#term-methodology--methodology).
 
-**Why:** The work of starting and running development practices recurs across repositories (COR-007). The methodology captures what is known about doing that work well, as one accumulated discipline (COR-007).
+**Why:** The work of starting and running development practices recurs across repositories ([COR-007](../../../../.pkit/decisions/core/COR-007-pattern-extraction.md)). The methodology captures what is known about doing that work well, as one accumulated discipline (COR-007).
 
 The methodology is the body of [decision records](../glossary.md#term-decision-record--decision-record), rules, [operational rules](../glossary.md#term-operational-rule--operational-rule) and conventions that the [system](../glossary.md#term-system--system) ships and enforces. Its conventions are agreed ways of working, such as how a commit's message is written. A repository keeps its own records, rules and operational rules beside the methodology's. They are no part of it, yet the [acceptance gate](../glossary.md#term-acceptance-gate--acceptance-gate) holds for them too.
 

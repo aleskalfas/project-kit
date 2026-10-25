@@ -118,7 +118,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **demo-recording's own files:** the format, the commands and the skill, which demo-recording ships. demo-recording never holds a demo bundle, which stays in the project's tree (DEC-001).
+- **demo-recording's own files:** the format, the commands and the skill, which demo-recording ships. demo-recording never holds a demo bundle, which stays in the project's tree ([DEC-001](../../../.pkit/capabilities/demo-recording/decisions/DEC-001-storyboard-as-executable-format.md)).
 
 ## TERM-directive — directive
 
@@ -126,7 +126,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Prose:** the text of a step around its directives. People read it, and nothing carries it out (DEC-001).
+- **Prose:** the text of a step around its directives. People read it, and nothing carries it out ([DEC-001](../../../.pkit/capabilities/demo-recording/decisions/DEC-001-storyboard-as-executable-format.md)).
 - **Code block:** in other Markdown, a fenced block that shows code and runs nothing. In a step of an executable storyboard, every fenced block is read as a directive. Before the first step, a fenced block is part of the opening prose (`parser.py`).
 
 ## TERM-executable-storyboard — executable storyboard
@@ -135,7 +135,7 @@ The words of the domain and what each means. A term's id is stable, and its name
 
 **Distinctions:**
 
-- **Storyboard:** the core's term for a document that scripts a dialogue with a person, which a file written after it follows. No separate file follows an executable storyboard: demo-recording's commands carry it out directly (DEC-001).
+- **Storyboard:** the core's term for a document that scripts a dialogue with a person, which a file written after it follows. No separate file follows an executable storyboard: demo-recording's commands carry it out directly ([DEC-001](../../../.pkit/capabilities/demo-recording/decisions/DEC-001-storyboard-as-executable-format.md)).
 - **Driver script:** a script written for one demo that types its keystrokes itself. DEC-001 rejected it, since a reader would have to run the script in their head to recover the demo.
 - **Data file and generator:** a structured file that a generator reads to drive a demo or to render its readable form. DEC-001 rejected it too: the executable storyboard is the one source, and nothing is generated from it.
 

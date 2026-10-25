@@ -28,4 +28,4 @@ pkit:
 
 **Verified by:** Tests of the first check find that a [project](../../../core/glossary.md#term-project--project) short of the prerequisites is refused, with the command to run. A project that meets them passes. Tests of the second find who the person is, from their login or their email. No test finds that every command that writes runs both checks first.
 
-**Rationale:** The prerequisites are a hard gate on every operation, held by the commands rather than by an agent's reading of what a check reports (DEC-017). Where a team keeps a list of its members, only a member acts on its work, and the check runs before any other work (DEC-021).
+**Rationale:** The prerequisites are a hard gate on every operation, held by the commands rather than by an agent's reading of what a check reports ([DEC-017](../../../../../.pkit/capabilities/project-management/decisions/DEC-017-prerequisites-bootstrap-migrate-discipline.md)). Where a team keeps a list of its members, only a member acts on its work, and the check runs before any other work ([DEC-021](../../../../../.pkit/capabilities/project-management/decisions/DEC-021-team-membership-gate.md)).

@@ -19,7 +19,7 @@ pkit:
 
 # VIEW-classification-of-issues — Classification of issues
 
-Issues need classification beyond their type. Classification keeps the filing of issues the same each time, and lets a board filter and plan by it. Classification also aligns a [pull request](../../core/glossary.md#term-pull-request--pull-request)'s title with the work the pull request closes (DEC-012).
+Issues need classification beyond their type. Classification keeps the filing of issues the same each time, and lets a board filter and plan by it. Classification also aligns a [pull request](../../core/glossary.md#term-pull-request--pull-request)'s title with the work the pull request closes ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 A [classification axis](../glossary.md#term-classification-axis--classification-axis) is one dimension of that classification, on which every [issue](../glossary.md#term-issue--issue) takes one value. A [workstream](../glossary.md#term-workstream--workstream) is one value of the `workstream` axis: a long-lived area of the work, which the [project](../../core/glossary.md#term-project--project) declares in a file of its own.
 
@@ -59,7 +59,7 @@ flowchart LR
 
 Defined in [TERM-classification-axis](../glossary.md#term-classification-axis--classification-axis).
 
-**Why:** Classification serves three jobs: consistent filing, a board's filters and plans, and pull-request titles aligned with their work. Each job needs every [issue](../glossary.md#term-issue--issue) to carry a value on each axis (DEC-012).
+**Why:** Classification serves three jobs: consistent filing, a board's filters and plans, and pull-request titles aligned with their work. Each job needs every [issue](../glossary.md#term-issue--issue) to carry a value on each axis ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 
 A classification axis is one dimension along which every issue is classified. There are three: `type`, the kind of work, then `priority` and `workstream`. An issue carries one value on each, on a label or on a field of a board.
 
@@ -85,7 +85,7 @@ A classification axis is one dimension along which every issue is classified. Th
 
 Defined in [TERM-workstream](../glossary.md#term-workstream--workstream).
 
-**Why:** A team invests in long-lived areas over many outcomes. Where each [project](../../core/glossary.md#term-project--project) improvises their names and their lifecycle, the names drift. One definition, kept in one file with fixed forms for the names, keeps every project's workstreams in one shape (DEC-018).
+**Why:** A team invests in long-lived areas over many outcomes. Where each [project](../../core/glossary.md#term-project--project) improvises their names and their lifecycle, the names drift. One definition, kept in one file with fixed forms for the names, keeps every project's workstreams in one shape ([DEC-018](../../../../.pkit/capabilities/project-management/decisions/DEC-018-workstream-taxonomy-and-lifecycle.md)).
 
 A workstream is a long-lived area of a project's work, such as `docs` or `cli`. It outlasts the [EPICs](../glossary.md#term-epic--epic) whose outcomes lie within it. The project declares its workstreams in a file of its own, and each one is a value of the `workstream` axis.
 
@@ -97,9 +97,9 @@ A workstream is a long-lived area of a project's work, such as `docs` or `cli`. 
 
 **Relations:**
 
-- It is one value of the `workstream` [classification axis](../glossary.md#term-classification-axis--classification-axis) (DEC-012).
+- It is one value of the `workstream` [classification axis](../glossary.md#term-classification-axis--classification-axis) ([DEC-012](../../../../.pkit/capabilities/project-management/decisions/DEC-012-classification-axes.md)).
 - An EPIC scopes one outcome within a workstream (DEC-018).
-- It groups issues, and is the parent of none (DEC-016).
+- It groups issues, and is the parent of none ([DEC-016](../../../../.pkit/capabilities/project-management/decisions/DEC-016-time-bound-containers.md)).
 
 **States:** A workstream is added as active, and may be deprecated. It may be renamed, merged into another or split into several, and the issues that carry it follow. It is removed only once no [issue](../glossary.md#term-issue--issue) carries it (DEC-018).
 
