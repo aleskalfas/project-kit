@@ -353,7 +353,7 @@ Debt is a [finding](../glossary.md#term-finding--finding) of the [whole-reposito
 
 Defined in [TERM-revisit-link](../glossary.md#term-revisit-link--revisit-link).
 
-**Why:** An [anchor](../glossary.md#term-anchor--anchor) flags only the [artefact](../glossary.md#term-artefact--artefact) that carries it (COR-050). So a relaxed requirement leaves the test that verifies it, and the [decision record](../glossary.md#term-decision-record--decision-record) made to meet it, unvisited (COR-050). Asked at every edit of an artefact, each anchor would draw a reason written blindly (COR-050). So the [component](../glossary.md#term-component--component) that defines a kind of artefact declares which of its anchors bind both ways (COR-050).
+**Why:** An [anchor](../glossary.md#term-anchor--anchor) flags only the [artefact](../glossary.md#term-artefact--artefact) that carries it (COR-050). So a relaxed requirement leaves the test that verifies it, and the [decision record](../glossary.md#term-decision-record--decision-record) made to meet it, unvisited (COR-050). Asked at every edit of an artefact, each anchor would draw a reason written blindly (COR-050). So the [component](../glossary.md#term-component--component) that defines a kind of artefact declares which anchors of those artefacts bind both ways (COR-050).
 
 A revisit link is a declaration a component makes on a [place](../glossary.md#term-place--place), in its [package metadata](../glossary.md#term-package-metadata--package-metadata). Editing chosen fields of an artefact there asks whether what chosen anchors of the artefact name still stands. software-analysis declares one on each of its requirement places, under `revisits`.
 
