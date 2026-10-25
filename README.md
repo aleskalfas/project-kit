@@ -71,31 +71,28 @@ Every project that works with AI coding agents builds a way of working for them.
 - **Your agent forgets what the project decided.** Each session starts from the project's files, and last week's chat is not among them.
 - **The agent asks about every harmless command, or may run one it never should.** You approve prompts without reading them, or turn them off.
 - **Documentation goes stale silently.** The code changes, and the page that describes it still reads as true.
-- **Nobody but the agent checks the agent's work.** The project's rules live in someone's head, and a change merges without the checks the project decided on.
-- **Each project's setup is a hand-made copy.** An improvement made in one never reaches the others.
+- **Nobody but the agent checks the agent's work.** The project's rules live in someone's head, and a change merges unchecked.
+- **Each project's setup is a hand-made copy.** An improvement to the shared part has to be copied into every project by hand.
 - **Taking an update could overwrite your own edits.** So nobody takes one, and the copies drift apart.
 
-project-kit writes that way of working once, as a methodology. Your project installs it like a dependency and upgrades it like one.
+project-kit writes the shared part once, as a methodology. Your project installs it like a dependency and upgrades it like one.
 
 ## Highlights
 
-- **[Your rules load into every session](#your-rules-load-into-every-session),** and an agent's draft decision binds nothing until you accept it.
-- **[Routine commands run unasked, and the guardrails are denied](#routine-commands-run-unasked-and-the-guardrails-are-denied)** to every agent.
-- **[No change leaves a document stale without saying so](#no-change-leaves-a-document-stale-without-saying-so),** once the document lists what it rests on.
-- **[Reviewers that never change the work they judge](#reviewers-that-never-change-the-work-they-judge)** come with the methodology.
-- **[One command upgrades the methodology](#one-command-upgrades-the-methodology),** with the migrations a breaking change needs.
-- **[Your files stay yours](#your-files-stay-yours):** a sync refreshes the methodology's files and keeps what you wrote.
+- **[Your rules load into every session](#your-rules-load-into-every-session),** and tell agents to build only on accepted decisions.
+- **[Routine commands run unasked, and dangerous ones are denied](#routine-commands-run-unasked-and-dangerous-ones-are-denied)** in their common forms.
+- **[No change leaves a document stale without saying so](#no-change-leaves-a-document-stale-without-saying-so),** once the document is anchored and your CI runs the check.
+- **[Reviewer agents come ready to call](#reviewer-agents-come-ready-to-call),** defined never to change the work they judge.
+- **[The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency):** one command, then a pinned version.
+- **[Your files stay yours](#your-files-stay-yours):** a sync keeps what you wrote.
 
 ## How project-kit answers each problem
 
-> [!NOTE]
-> The examples run in a fresh repository after [Install](#install) and `pkit init`. It has no remote, so some commands warn that they read the local default branch.
-
-Each answer names the record in `.pkit/decisions/` that decides it.
+The examples run in a fresh repository after [Install](#install) and `pkit init`, with no remote, so some commands warn that they read the local branch. An id such as COR-028 names the record in `.pkit/decisions/` that decides the answer.
 
 ### Your rules load into every session
 
-**Each session works from what your repository records, not from a chat that is gone.** `pkit init` adds two include lines to your `CLAUDE.md`, so Claude Code loads the methodology's rules, and yours, whenever a session starts. Those rules tell every agent to build only on accepted decisions, and a draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
+**Your decisions live in the repository, not in a chat that is gone.** `pkit init` adds two include lines to your `CLAUDE.md`, so Claude Code loads the methodology's rules and yours whenever a session starts. Those rules tell every agent to build only on accepted decisions, and an agent's draft starts as `proposed` ([the decisions README, "The acceptance gate"](.pkit/decisions/README.md#the-acceptance-gate)):
 
 ```console
 $ grep @.pkit CLAUDE.md
@@ -108,9 +105,9 @@ $ grep status: .pkit/decisions/project/PRJ-001-use-postgres.md
 status: proposed
 ```
 
-### Routine commands run unasked, and the guardrails are denied
+### Routine commands run unasked, and dangerous ones are denied
 
-**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile and turns on the hook that enforces it in Claude Code (COR-028). Commands such as `git`, `gh` and `pkit` then run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. Before the hook is on, the probe shows what it will decide, asking as you, the operator:
+**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile, and turns on the hook that enforces it in Claude Code and, except on macOS, the OS sandbox (COR-028). Then `git`, `gh` and `pkit` run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. Before the hook is on, the probe shows what it will decide, asking as you, the operator:
 
 ```console
 $ pkit permissions profile activate autonomous | grep "^profile"
@@ -127,14 +124,14 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 ```
 
 > [!WARNING]
-> A deny is a speed bump, not a boundary. A wrapper such as `uv run` slips past it ([the permissions README](.pkit/permissions/README.md#compound-commands-segment-splitting--leading-cd-strip)).
+> A deny is a speed bump, not a boundary. Until the hook is on, Claude Code's own deny matches only a command's start, so `git push origin main --force` runs. With the hook on, a command behind an allowed wrapper, such as `find . -exec rm -rf {} +`, still runs ([the permissions README](.pkit/permissions/README.md#a-deny-holds-against-the-forms-of-its-command)).
 
 ### No change leaves a document stale without saying so
 
-**A change to what a document rests on asks for an answer, so no anchored page goes stale unnoticed.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up. Here a page rests on `app.py`, and the check is set to fail rather than warn, its default:
+**A change to what a document rests on asks for an answer, so no anchored page goes stale unnoticed.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. Here `docs/` holds documents, a page there rests on `app.py`, and the check fails (`enforcing`) where by default it warns:
 
 ```console
-$ mkdir -p .pkit/project && printf 'friction:\n  mode: enforcing\n  places: [docs/**]\n' > .pkit/project/config.yaml
+$ mkdir -p .pkit/project && printf 'friction:\n  mode: enforcing\n  places: [docs/**]\n' >> .pkit/project/config.yaml
 $ mkdir docs && printf -- '---\npkit:\n  friction:\n    anchors:\n      path: [app.py]\n---\n# Starting the app\n' > docs/start.md
 $ cat docs/start.md
 ---
@@ -164,24 +161,23 @@ FINDINGS — upstream first along the anchors between artefacts
 Result: passed   (enforcing)
 ```
 
-### Reviewers that never change the work they judge
+### Reviewer agents come ready to call
 
-**A reviewer other than the author checks the work, and is defined never to change what it judges (COR-024).** The `critic` challenges a draft before you see it, and the `rule-set-reviewer` judges a change against the accepted rules in your *rule sets* (COR-057). They advise until a merge gate requires them, such as the project-management capability's. Three definitions say so in those words, the critic has no tool that writes, and your CI can run `pkit validate`, which asks nobody anything:
+**Four reviewer agents ship with the methodology, each defined to judge the work and never to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as the project-management capability's. Three definitions say "never change the work under review", and only the critic is also held to it by its tools:
 
 ```console
 $ grep -l "never change the work under review" .claude/agents/*.md
 .claude/agents/convention-compliance-reviewer.md
 .claude/agents/methodology-reviewer.md
 .claude/agents/rule-set-reviewer.md
-$ grep "^tools:" .claude/agents/critic.md
-tools: [Read, Glob, Grep, WebFetch]
-$ pkit validate | tail -n 1
-  All checks passed.
+$ grep "^tools:" .claude/agents/critic.md .claude/agents/rule-set-reviewer.md
+.claude/agents/critic.md:tools: [Read, Glob, Grep, WebFetch]
+.claude/agents/rule-set-reviewer.md:tools: [Read, Glob, Grep, Bash, Write]
 ```
 
-### One command upgrades the methodology
+### The methodology upgrades like a dependency
 
-**An improvement made once at the methodology's source reaches your project at its next upgrade.** Your project stays at its recorded version until `pkit upgrade` moves it, running each migration a breaking change needs (COR-059 and COR-010). The upgrade then pins that version, which every clone runs, or tells you when it falls back to the installed pkit. A fresh project is already current, so here the upgrade only pins:
+**Your project runs the version it records, until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached. At a terminal, when a newer `pkit` is out, it first installs it on your machine, so every project not yet pinned runs it too. A fresh project is already current, so here the upgrade only pins:
 
 ```console
 $ grep backbone_version .pkit/manifest.yaml
@@ -193,7 +189,7 @@ Pinned project-kit to <version> (.pkit/version-pin).
 
 ### Your files stay yours
 
-**Taking an update keeps what you wrote.** Every file has one owner, the methodology or you, and `pkit sync` rewrites only the methodology's files ([the decisions README, "The no-shared-files invariant"](.pkit/decisions/README.md#the-no-shared-files-invariant), COR-001). Into `CLAUDE.md` and `.claude/settings.json` it only adds what is missing (COR-002). Here your own line in `CLAUDE.md` survives a sync:
+**A sync refreshes the methodology's files and keeps what you wrote.** Every file has one owner, the methodology or you ([the decisions README, "The no-shared-files invariant"](.pkit/decisions/README.md#the-no-shared-files-invariant), COR-001). Into `CLAUDE.md` and `.claude/settings.json`, a sync only adds what is missing (COR-002). Here your own line in `CLAUDE.md` survives a sync:
 
 ```console
 $ echo "Answer in English." >> CLAUDE.md
@@ -204,7 +200,10 @@ $ tail -n 1 CLAUDE.md
 Answer in English.
 ```
 
-Put your own rules in `.pkit/rules/project.md`, since an edit to a methodology file is lost at the next sync. The few other ways the lifecycle writes a file of yours are listed under [The mental model](#the-mental-model).
+> [!WARNING]
+> `pkit init` adds broad allows to `.claude/settings.json`, such as `Bash(ssh:*)`, `Bash(find:*)` and `Bash(mv:*)`, and each sync puts back one you delete.
+
+An upgrade's migrations may also write a file of yours, and a starter file you deleted comes back (COR-059). [The mental model](#the-mental-model) lists every such way. Put your own rules in `.pkit/rules/project.md`, since an edit to a methodology file is lost at the next sync.
 
 ## Compared with a hand-kept setup
 
@@ -213,19 +212,21 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 | | Hand-kept `CLAUDE.md` and agent files | project-kit |
 |---|---|---|
 | Nothing to install or learn | ✅ | ❌ `uv`, `jq`, a CLI and its conventions |
-| Any shape you like | ✅ | ❌ its own files are synced, yours sit beside them |
+| No running cost on each change | ✅ | ❌ answers, acceptances and a CI job |
+| Works with other agent tools | ✅ you write each tool's files | ❌ Claude Code only, today |
+| You choose every line and every allow | ✅ | ❌ its files are synced, and its allows return |
 | Rules load into every session | ✅ | ✅ |
-| A fix made once reaches every project | ❌ copied by hand | ✅ at each project's next upgrade |
-| An update keeps your own edits | ❌ merged by hand | ✅ one owner for every file |
-| Permissions checked by a probe | ❌ | ✅ |
+| An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ at each project's next upgrade |
+| Taking an update keeps your own files | ❌ merged by hand | ✅ one owner for every file |
+| A deny catches other forms of its command | ❌ the start of a command only | ✅ once the hook is on |
 | Stale documents flagged on the change | ❌ | ✅ once anchored |
-| Reviewer agents ready to use | ❌ written by you | ✅ shipped |
+| Reviewer agents ready to call | ❌ written by you | ✅ four shipped |
 
 ## When not to use it
 
 - **A one-off task.** Just ask Claude. project-kit pays off when work repeats, must survive a new session, or spans projects and people.
-- **A harness other than Claude Code.** Claude Code's adapter is the only one built today.
-- **No room for its running cost.** Each change answers the anchored documents it touches, each decision waits for acceptance, and someone keeps the CI job.
+- **Another harness.** Claude Code's adapter is the only one built today.
+- **No room for the running cost.** Each change answers the documents it touches, each decision waits for acceptance, and someone keeps the CI job.
 
 ## Install
 
@@ -247,7 +248,7 @@ Verify:
 pkit --help
 ```
 
-If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole cost: `uv`, `jq` and one command. `pkit` is now on your PATH, shared across all your projects.
+If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole install: `uv`, `jq` and one command. `pkit` is now on your PATH, shared across all your projects.
 
 ### Two things named "pkit"
 
@@ -279,8 +280,8 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 
 1. **The tool vs. the install.** `pkit` (the CLI) manages `.pkit/` (the methodology in your repo) — exactly like a package manager and the packages it installs.
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
-3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). That's *why* updates can't conflict, and why you keep everything you write. The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
-   - **`CLAUDE.md` and settings:** they add what is missing, and put back a methodology entry you removed. `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `Edit` and `Write`, and denies.
+3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). That's *why* a sync can't conflict with your edits, and why you keep everything you write. The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
+   - **`CLAUDE.md` and settings:** they add what is missing, and put back a methodology entry you removed, an allow included. `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `ssh`, `find`, `Edit` and `Write`, and denies.
    - **Elsewhere:** an upgrade's migrations, the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant)), and a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares)). A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
 4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
 
