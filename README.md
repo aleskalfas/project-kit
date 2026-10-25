@@ -64,7 +64,7 @@ project-kit installs a way of working with AI coding agents into your project, a
 
 ## Why
 
-Every project that works with AI coding agents builds a way of working for them. It says where decisions are written down, which rules the agents follow and what they may run. Built by hand in each project, it tends to break in six places:
+Every project that works with AI coding agents builds a way of working for them. It says where decisions are written down and which rules the agents follow. It also says what the agents may run. Built by hand in each project, it tends to break in six places:
 
 - **Your agent forgets what the project decided.** Each session starts from the project's files, and last week's chat is not among them.
 - **The agent asks about every harmless command, or may run one it never should.** You approve prompts without reading them, or turn them off.
@@ -161,7 +161,7 @@ Result: passed   (enforcing)
 
 ### Reviewer agents come ready to call
 
-**Four reviewer agents ship with the methodology, each defined to judge the work, not to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as the one in [project-management](.pkit/capabilities/project-management/README.md), a capability you can install on top. Their definitions say so, and only the critic is also held to it by its tools:
+**Four reviewer agents ship with the methodology, each defined to judge the work, not to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as [project-management](.pkit/capabilities/project-management/README.md)'s, an optional capability. Their definitions say so, and only the critic is also held to it by its tools:
 
 ```console
 $ grep -l -e "never change the work under review" -e "never modify any artifact" .claude/agents/*.md
@@ -178,7 +178,9 @@ $ grep "^tools:" .claude/agents/critic.md .claude/agents/*-reviewer.md
 
 ### The methodology upgrades like a dependency
 
-**Your project stays at the methodology version it records until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached, for every clone. At a terminal, when a newer `pkit` is out, it first installs it on your machine, where every project without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
+**Your project stays at the methodology version it records until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, and runs each migration a breaking change needs (COR-010). It then pins the version it reached, for every clone.
+
+At a terminal, when a newer `pkit` is out, the upgrade first installs that `pkit` on your machine. Every project there without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
 
 ```console
 $ grep backbone_version .pkit/manifest.yaml
@@ -225,21 +227,23 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 
 ## When not to use it
 
-- **A one-off task.** Just ask Claude. project-kit pays off when work repeats, must survive a new session, or spans projects and people.
+- **A one-off task.** Just ask Claude. project-kit pays off when work repeats or must survive a new session. It also pays off when work spans projects and people.
 - **Another agent tool.** project-kit works with [Claude Code only](.pkit/adapters/README.md#currently-shipped), today.
-- **No room for the running cost.** Each change answers the documents whose anchors it touches, each decision waits for acceptance, and someone keeps the CI job.
+- **No room for the running cost.** Each change answers the documents whose anchors it touches, and each decision waits for acceptance. Someone also keeps the CI job.
 
 ## Install
 
+Install `pkit` once, globally, and it serves every project on your machine.
+
 **Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` once, globally, from the git URL at the tag `latest`, which marks the highest release:
+Then install `pkit` from the git URL at the tag `latest`, which marks the highest release:
 
 ```
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
 ```
 
-To install a given release instead, name its tag, `@v<version>`, from the [releases page](https://github.com/aleskalfas/project-kit/releases). Either tag ties the version your project records to the content it holds.
+To install a given release instead, name its tag, `@v<version>`, from the [releases page](https://github.com/aleskalfas/project-kit/releases). Either tag ties the version your project records to the content that tag holds.
 
 uv fetches `latest` afresh on each install, while a git clone that holds an old `latest` must force-fetch it: `git fetch --force origin tag latest`.
 
@@ -251,7 +255,7 @@ Verify:
 pkit --help
 ```
 
-If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `uv`'s tool directory to your `PATH`). That's the whole install: `uv`, `jq` and one command. `pkit` is now on your PATH, shared across all your projects.
+If that isn't found, run `uv tool update-shell` and reopen your shell (the command adds `uv`'s tool directory to your `PATH`). That's the whole install: `uv`, `jq` and one command. `pkit` is now on your PATH, shared across all your projects.
 
 ### Two things named "pkit"
 
@@ -262,14 +266,20 @@ If that isn't found, run `uv tool update-shell` and reopen your shell (it adds `
 
 ## First win — stand it up
 
-In any repo:
+In any repository, one command wires a working methodology into your project:
 
 ```
 cd your-project
 pkit init
 ```
 
-One command, and a `.pkit/` appears: a working methodology wired into your project. It brings decision records, hard rules loaded into your `CLAUDE.md`, and agents deployed into Claude Code. `init` announces where it will install before writing anything, and asks first if that target isn't your current folder. See how it's wired:
+The methodology appears as `.pkit/`, and brings:
+
+- decision records
+- hard rules, loaded into your `CLAUDE.md`
+- agents, deployed into Claude Code
+
+`init` announces where it will install before writing anything, and asks first if that target isn't your current folder. See how it's wired:
 
 ```
 pkit status
@@ -285,7 +295,12 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
 2. **Capabilities are packages.** A small always-there **backbone**, plus **opt-in capabilities** — disciplines you install only if you want them (issue-tracking, code-review, citations). Add what you need, ignore the rest.
 3. **Two owners, never shared.** Every file belongs to *either* the kit (synced — don't edit) *or* you (yours — never touched, apart from the ways below). That's *why* a sync can't conflict with your edits, and why you keep everything you write. The lifecycle's commands, `init`, `sync`, `upgrade` and a capability's install, write a file of yours only in these ways:
    - **`CLAUDE.md` and settings:** they add what is missing, and put back a methodology entry you removed, an allow included. `pkit init` first backs up an existing `.claude/settings.json` to `.claude/settings.json.pre-pkit`. The merge adds allows, such as `git`, `ssh`, `find`, `Edit` and `Write`, and denies.
-   - **Elsewhere:** an upgrade's migrations, the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant)), and a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares)). A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+   - **Elsewhere:**
+     - an upgrade's migrations
+     - the starter files `init` creates and an upgrade puts back ([the decisions README](.pkit/decisions/README.md#the-no-shared-files-invariant))
+     - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
+
+     A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
 4. **Versioned, upgrades cleanly.** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
@@ -316,7 +331,14 @@ pkit capabilities install project-management
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
 - **Developers** → [`software-engineering`](.pkit/capabilities/software-engineering/README.md): an agent that writes code to *your* conventions, plus a code-review panel on your PRs. And when a pattern recurs, you can grow your own capability without re-erecting the framework — the primitives (decisions, schemas, skills, agents) are already there.
 
-**What actually gates on day one,** with the defaults (honestly — no more than this): the structural checks your CI can run. They are decision-id uniqueness (`pkit decisions validate`), migration coverage (`pkit migrations check-diff`), reference-graph consistency (`pkit refs validate`), and permission-gated mutations. The friction check stays dormant until you declare where your documents live. Install `project-management` and you additionally get a real PR merge gate.
+**What actually gates on day one,** with the defaults (honestly — no more than this), is the structural checks your CI can run:
+
+- decision-id uniqueness (`pkit decisions validate`)
+- migration coverage (`pkit migrations check-diff`)
+- reference-graph consistency (`pkit refs validate`)
+- permission-gated mutations
+
+The friction check stays dormant until you declare where your documents live. Install `project-management` and you additionally get a real PR merge gate.
 
 ## Go deeper
 
@@ -327,4 +349,4 @@ pkit capabilities install project-management
 
 ---
 
-*Not a library (nothing imports from it), not a registry package (it installs from the git URL), and not a substitute for thinking. It's opinionated scaffolding you still steer.*
+*project-kit is opinionated scaffolding you still steer, and no substitute for thinking. It is no library, since nothing imports from it, and no registry package, since it installs from the git URL.*
