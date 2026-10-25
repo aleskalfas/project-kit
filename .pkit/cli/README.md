@@ -104,6 +104,7 @@ pkit:
         - .pkit/lifecycle/README.md#which-version-a-migration-targets
         - .pkit/lifecycle/README.md#naming
         - .pkit/process/README.md#the-engine
+        - .pkit/process/README.md#cascade--fold-one-child-processs-member-outcomes-core
     revalidated:
       at: 2026-10-25T01:34:15Z
       outcome: updated
