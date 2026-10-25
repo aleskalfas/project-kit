@@ -74,7 +74,7 @@ Some anchors matter the other way too. A requirement anchors the test that verif
 ```mermaid
 classDiagram
   accTitle: Artefacts and friction
-  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors and its answers. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. Package metadata declares revisit links on places. A revisit link names trigger fields and takes link targets, which are anchors. The change check asks for a revisit of each link target, and an answer may record it. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
+  accDescr: A place holds artefacts, and gives most of them their artefact type. An artefact carries its anchors and its answers. Friction is a finding on an artefact, and a revalidation or a deferral, which are answers, settles it. The change check finds friction. The whole-repository check reports debt, which is a finding too. Package metadata declares revisit links on places. A revisit link names trigger fields and takes link targets, which are anchors. The change check asks for a revisit of each link target, and an answer may record that revisit. A rule set holds rules, and selects artefacts by artefact type. A component ships package metadata, which declares its places and its artefact types.
   class Place["Place"]
   class Artefact["Artefact"]
   class Anchor["Anchor"]
@@ -126,7 +126,7 @@ classDiagram
 ```mermaid
 flowchart LR
   accTitle: How an edit leaves an artefact or a link target behind, and how each is answered
-  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. The whole-repository check reports both kinds of debt, and never fails. A change that edits a trigger field owes a revisit of each link target, which the change check asks for. A change to what the link target stands on, or a revisit entry, unchanged or deferred, meets it. Otherwise it is a finding of the change check.
+  accDescr: A change edits what an anchor names, or an artefact's list of anchors, and the artefact has friction. The change check finds it. A revalidation in the change, updated or unchanged, clears the friction. A deferral clears it too, and leaves deferred debt on the default branch. Friction nobody answered stays on the default branch as stale debt. The whole-repository check reports both kinds of debt, and never fails. A change that edits a trigger field owes a revisit of each link target, which the change check asks for. A change to what the link target stands on, or a revisit entry, unchanged or deferred, meets the revisit. Otherwise the revisit stays unmet, and the link target is a finding of the change check.
   E([A change edits what an anchor names, or the list of anchors]) --> F[Friction on the artefact]
   F -->|the change check finds it| A{Answer in the change?}
   A -->|revalidation, updated or unchanged| CL[Friction cleared]
@@ -138,7 +138,7 @@ flowchart LR
   RO -->|the change check asks for it| M{Met in the change?}
   M -->|what the link target stands on changed| RM[Revisit met]
   M -->|revisit entry, unchanged or deferred| RM
-  M -->|neither| RF[Finding of the change check]
+  M -->|neither| RF[Revisit unmet, the link target a finding of the change check]
 ```
 
 ## Anchor
@@ -240,7 +240,7 @@ An answer is a statement in an artefact's `friction` block. It settles an edit t
 
 - It lives on its artefact, never in a [pull request](../glossary.md#term-pull-request--pull-request)'s description (COR-050 point 6).
 - A revalidation or a deferral clears friction (COR-050 point 5).
-- A revisit entry records a revisit of one link target (COR-050 point 16).
+- A revisit entry answers for one link target (COR-050 point 16).
 - The [change check](../glossary.md#term-change-check--change-check) lists every answer a [change](../glossary.md#term-change--change) wrote, word for word, and a [reviewer](../glossary.md#term-reviewer--reviewer) works from that list (COR-050 point 3).
 
 **States:** None.
@@ -377,7 +377,7 @@ A revisit link is a declaration a component makes on a [place](../glossary.md#te
 
 Defined in [TERM-link-target](../glossary.md#term-link-target--link-target).
 
-**Why:** A field says which anchors a [revisit link](../glossary.md#term-revisit-link--revisit-link) takes, where every [anchor](../glossary.md#term-anchor--anchor) of one kind would not (COR-050). A requirement's record anchors may hold both the decisions it rests on and those made to meet it (COR-050).
+**Why:** A field says which anchors a [revisit link](../glossary.md#term-revisit-link--revisit-link) takes (COR-050). Taking every [anchor](../glossary.md#term-anchor--anchor) of one kind could not tell those anchors apart from the rest (COR-050). A requirement's record anchors may hold both the decisions it rests on and those made to meet it (COR-050).
 
 A link target is an anchor of an [artefact](../glossary.md#term-artefact--artefact) that a revisit link takes. A requirement's anchor on the test that verifies it is a link target of the revisit link on its [place](../glossary.md#term-place--place).
 
@@ -389,7 +389,7 @@ A link target is an anchor of an [artefact](../glossary.md#term-artefact--artefa
 
 - It is an anchor of the revisit link's source (COR-050 point 16).
 - A value in a field that lists link targets names every anchor of the source that has it (COR-050 point 16).
-- A revisit is owed for it when an edit triggers its revisit link (COR-050 point 16). The revisit link must take it at the [base](../glossary.md#term-base--base) and at the [head](../glossary.md#term-head--head), and it must resolve at the head.
+- A revisit is owed for it when an edit triggers its revisit link (COR-050 point 16). The revisit link must take it at the [base](../glossary.md#term-base--base) and at the [head](../glossary.md#term-head--head), and the link target must resolve at the head.
 
 **States:** None.
 
@@ -419,7 +419,7 @@ A trigger field is an own field of an [artefact](../glossary.md#term-artefact--a
 **Always true:**
 
 - A field absent at one state and present at the other differs (COR-050 point 16).
-- A source new in the [change](../glossary.md#term-change--change) or removed by it, or under an excluded path at the head, triggers nothing. Nor does a move alone (COR-050 point 16).
+- A source new in the [change](../glossary.md#term-change--change) or removed by it, or under an excluded path at the head, triggers nothing. A move alone triggers nothing either (COR-050 point 16).
 
 ## Revisit
 
@@ -440,15 +440,15 @@ A revisit is the judgement a change owes, once it edits a [trigger field](../glo
 - A revisit entry, an [answer](../glossary.md#term-answer--answer), records it among the source's answers (COR-050 point 16).
 - The change check lists each link target the change revisited by changing what it names. A [reviewer](../glossary.md#term-reviewer--reviewer) checks that this edit meets the edit to the source (COR-050 points 3 and 16).
 
-**States:** A revisit is owed once the change edits a trigger field. It is met where what the link target stands on differs between the [base](../glossary.md#term-base--base) and the [head](../glossary.md#term-head--head). It is met too where a revisit entry the change wrote names it. Otherwise the change check reports it as a [finding](../glossary.md#term-finding--finding), and fails on it in enforcing mode (COR-050 points 12 and 16).
+**States:** A revisit is owed once the change edits a trigger field. It is met where what the link target stands on differs between the [base](../glossary.md#term-base--base) and the [head](../glossary.md#term-head--head). It is met too where a revisit entry the change wrote names the link target. Otherwise the revisit stays unmet, and the change check reports the link target as a [finding](../glossary.md#term-finding--finding) (COR-050 points 12 and 16).
 
 ```mermaid
 stateDiagram-v2
   accTitle: The states of a revisit
-  accDescr: A change that edits a trigger field owes a revisit of a link target. A change to what the link target stands on, or a revisit entry the change wrote, meets it. With neither, the change check reports it as a finding.
+  accDescr: A change that edits a trigger field owes a revisit of a link target. A change to what the link target stands on, or a revisit entry the change wrote, meets the revisit. With neither, the revisit stays unmet, and the change check reports the link target as a finding.
   [*] --> owed : the change edits a trigger field
-  owed --> met : what the link target stands on changes, or a revisit entry names it
-  owed --> finding : the change check finds neither
+  owed --> met : what the link target stands on changes, or a revisit entry names the link target
+  owed --> unmet : the change check finds neither
 ```
 
 **Always true:**

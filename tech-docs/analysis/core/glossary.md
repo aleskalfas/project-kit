@@ -1820,7 +1820,7 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 
 Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#link-target).
 
-**Example:** a requirement anchors the test that verifies it, outside its `actors` and `refines`. So that [anchor](#term-anchor--anchor) is a link target of the [revisit link](#term-revisit-link--revisit-link) on the requirement's [place](#term-place--place). A [change](#term-change--change) that relaxes the requirement's `measure` owes it a [revisit](#term-revisit--revisit).
+**Example:** a requirement anchors the test that verifies it, outside its `actors` and `refines`. So that [anchor](#term-anchor--anchor) is a link target of the [revisit link](#term-revisit-link--revisit-link) on the requirement's [place](#term-place--place). A [change](#term-change--change) that relaxes the requirement's `measure` owes that anchor a [revisit](#term-revisit--revisit).
 
 **Distinctions:**
 
