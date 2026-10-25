@@ -181,7 +181,7 @@ $ grep "^tools:" .claude/agents/critic.md .claude/agents/*-reviewer.md
 
 ### The methodology upgrades like a dependency
 
-**Your project stays at the version it records until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached, for every clone. At a terminal, when a newer `pkit` is out, it first installs it on your machine, where every project without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
+**Your project stays at the methodology version it records until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached, for every clone. At a terminal, when a newer `pkit` is out, it first installs it on your machine, where every project without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
 
 ```console
 $ grep backbone_version .pkit/manifest.yaml
