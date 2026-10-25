@@ -413,7 +413,9 @@ def written(base: str) -> Derivation:
     as the project's gate runs the check: from the working directory, with no
     `--head`, so the backbone reads HEAD and `$PKIT_CHECK_HEAD` as that line does
     (ADR-068 point 6). Nothing is fetched: the base is read as it stands. A failure
-    is kept as it is, never a pass; the head is named `HEAD`."""
+    is kept as it is, never a pass; the head is named `HEAD`. Unlike `derive`, it
+    makes no second run from a temporary checkout: run at the head, the check has no
+    cause to refuse an anchor's resolver away from it, and a refusal is a failure."""
     found = _run_check(None, base, cwd=None)
     if isinstance(found, _NoDocument):
         return Derivation("HEAD", problem=found.why)
