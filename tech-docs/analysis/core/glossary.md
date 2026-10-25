@@ -1825,7 +1825,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Anchor's value:** how an anchor is written, such as `COR-058#4`. A value in a revisit link's field names every anchor of the [artefact](#term-artefact--artefact) that has it. A revisit entry names its link target by the anchor's kind and value (COR-050 [point](#term-point--point) 16).
-- **An anchor's target:** what an anchor names, such as the files a path anchor matches. A link target is the anchor itself, and it changed where what it stands on differs (COR-050 points 5 and 16).
+- **An anchor's target:** what an anchor names, such as the files a path anchor matches. What the anchor stands on is what the checks compare of that target, such as those files' content and mode (COR-050 point 5). A link target is the anchor itself, and it changed where what it stands on differs (COR-050 point 16).
 - **A version transition's target and a pull request's target:** the [release](#term-release--release) or [version](#term-version--version) a transition moves to, and the branch a [pull request](#term-pull-request--pull-request) lands on. They share the word only.
 
 ## TERM-manifest — manifest
@@ -2135,7 +2135,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 **Distinctions:**
 
 - **Revalidation:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors (COR-050 [point](#term-point--point) 3). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no revalidation point (COR-050 point 16).
-- **Revisit entry:** the answer that records a revisit among the source's answers (COR-062 point 1). Its outcome is `unchanged`, with why the link target still stands, or `deferred`, with the open follow-up that will revisit it (COR-050 point 16). It replaces only the entry for its own link target that it read, and its reason differs from each entry it replaces (COR-062 point 5). A revisit met by changing what the link target names needs no entry.
+- **Revisit entry:** the answer that records a revisit among the source's answers (COR-062 point 1). Its outcome is `unchanged`, with why the link target still stands, or `deferred`, with the open follow-up that will revisit it (COR-050 point 16). It replaces only the entry for its own link target that it read, and its reason differs from each entry it replaces (COR-062 point 5). A revisit met by changing what the link target stands on needs no entry.
 - **Friction:** a [finding](#term-finding--finding) that something an artefact rests on changed. A link target left unrevisited is a finding of the [change check](#term-change-check--change-check) instead, and no other check reports it (COR-050 points 12 and 16).
 - **Revisiting a file:** [merge delivery](#term-merge-delivery--merge-delivery) revisits its file on each run, in the word's everyday sense. That asks nothing of a change.
 

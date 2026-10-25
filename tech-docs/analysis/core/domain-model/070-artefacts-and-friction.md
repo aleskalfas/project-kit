@@ -67,6 +67,8 @@ A document is true only against something, such as the code it explains or a dec
 
 An artefact in a [place](../glossary.md#term-place--place) declares its anchors, the things that make it true. When one of them changes, the artefact has [friction](../glossary.md#term-friction--friction) until an [answer](../glossary.md#term-answer--answer) stands for the edit. The [change check](../glossary.md#term-change-check--change-check) finds the friction a [change](../glossary.md#term-change--change) brings, and the [whole-repository check](../glossary.md#term-whole-repository-check--whole-repository-check) reports the [debt](../glossary.md#term-debt--debt) left on the [default branch](../glossary.md#term-default-branch--default-branch).
 
+What an [anchor](../glossary.md#term-anchor--anchor) names is a path, a record or an artefact, or a part of one. What it stands on is what the checks compare between two states to tell whether the anchor changed (COR-050 [point](../glossary.md#term-point--point) 5). An anchor on a record's point names the point, but stands on the point's section and on what says whether and how the record binds.
+
 Some anchors matter the other way too. A requirement anchors the test that verifies it, and a changed threshold can leave the test checking the old value, unflagged (COR-050). So a [component](../glossary.md#term-component--component) may declare a [revisit link](../glossary.md#term-revisit-link--revisit-link) on a place. An edit to an artefact's [trigger fields](../glossary.md#term-trigger-field--trigger-field) there then asks the change for a [revisit](../glossary.md#term-revisit--revisit) of each [link target](../glossary.md#term-link-target--link-target).
 
 [Rule sets](../glossary.md#term-rule-set--rule-set) hold the rules artefacts must satisfy, and select the artefacts their rules bind on, by path or by [artefact type](../glossary.md#term-artefact-type--artefact-type). A component's [package metadata](../glossary.md#term-package-metadata--package-metadata) declares its places and its artefact types.
@@ -405,7 +407,7 @@ Defined in [TERM-trigger-field](../glossary.md#term-trigger-field--trigger-field
 
 **Why:** Only what matters should ask for a [revisit](../glossary.md#term-revisit--revisit), such as a requirement's statement and its threshold, never the wording of its rationale (COR-050). A field keeps its name, while a [project](../glossary.md#term-project--project) may reword the labels and headings of a body (COR-050).
 
-A trigger field is an own field of an [artefact](../glossary.md#term-artefact--artefact) that a [revisit link](../glossary.md#term-revisit-link--revisit-link) names. Where it differs between the [base](../glossary.md#term-base--base) and the [head](../glossary.md#term-head--head), compared parsed, the revisit link is triggered. A requirement's `statement`, `measure` and `applies-to` are its trigger fields.
+A trigger field is one of an [artefact](../glossary.md#term-artefact--artefact)'s own keys, an own field that a [revisit link](../glossary.md#term-revisit-link--revisit-link) names. Where it differs between the [base](../glossary.md#term-base--base) and the [head](../glossary.md#term-head--head), compared parsed, the revisit link is triggered. A requirement's `statement`, `measure` and `applies-to` are its trigger fields.
 
 **Attributes:** None.
 
@@ -419,7 +421,11 @@ A trigger field is an own field of an [artefact](../glossary.md#term-artefact--a
 **Always true:**
 
 - A field absent at one state and present at the other differs (COR-050 point 16).
-- A source new in the [change](../glossary.md#term-change--change) or removed by it, or under an excluded path at the head, triggers nothing. A move alone triggers nothing either (COR-050 point 16).
+- These sources trigger nothing (COR-050 point 16):
+  - a source new in the [change](../glossary.md#term-change--change)
+  - a source the change removes
+  - a source under an excluded path at the head
+- A move alone triggers nothing either (COR-050 point 16).
 
 ## Revisit
 
@@ -427,18 +433,18 @@ Defined in [TERM-revisit](../glossary.md#term-revisit--revisit).
 
 **Why:** The question belongs to the [change](../glossary.md#term-change--change) that alters the source, so the [change check](../glossary.md#term-change-check--change-check) asks it (COR-050). What a [link target](../glossary.md#term-link-target--link-target) names may be no [artefact](../glossary.md#term-artefact--artefact), such as a test file, so the source records the reason (COR-050).
 
-A revisit is the judgement a change owes, once it edits a [trigger field](../glossary.md#term-trigger-field--trigger-field), of whether one link target still stands. The change meets it by changing what the link target names, or by a revisit entry among the source's answers. `pkit friction revisit` writes the entry.
+A revisit is the judgement a change owes, once it edits a [trigger field](../glossary.md#term-trigger-field--trigger-field), of whether one link target still stands. The change meets it by changing what the link target stands on, or by a revisit entry among the source's answers. `pkit friction revisit` writes the entry.
 
 **Attributes:**
 
 - the link target it is owed for (COR-050 [point](../glossary.md#term-point--point) 16)
-- how the change met it: by changing what the link target names, or by a revisit entry, `unchanged` or `deferred` (COR-050 point 16)
+- how the change met it: by changing what the link target stands on, or by a revisit entry, `unchanged` or `deferred` (COR-050 point 16)
 
 **Relations:**
 
 - A change that edits a trigger field owes it, for each link target of that [revisit link](../glossary.md#term-revisit-link--revisit-link) (COR-050 point 16).
 - A revisit entry, an [answer](../glossary.md#term-answer--answer), records it among the source's answers (COR-050 point 16).
-- The change check lists each link target the change revisited by changing what it names. A [reviewer](../glossary.md#term-reviewer--reviewer) checks that this edit meets the edit to the source (COR-050 points 3 and 16).
+- The change check lists each link target the change revisited by changing what it stands on. A [reviewer](../glossary.md#term-reviewer--reviewer) checks that this edit meets the edit to the source (COR-050 points 3 and 16).
 
 **States:** A revisit is owed once the change edits a trigger field. It is met where what the link target stands on differs between the [base](../glossary.md#term-base--base) and the [head](../glossary.md#term-head--head). It is met too where a revisit entry the change wrote names the link target. Otherwise the revisit stays unmet, and the change check reports the link target as a [finding](../glossary.md#term-finding--finding) (COR-050 points 12 and 16).
 
