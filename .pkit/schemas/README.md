@@ -19,9 +19,12 @@ pkit:
         - src/project_kit/backbone_schemas.py
         - src/project_kit/friction_discovery.py
         - src/project_kit/friction_validate.py
+        - src/project_kit/friction_write.py
+        - src/project_kit/friction_check.py
+        - src/project_kit/answer_files.py
         - src/project_kit/rule_sets.py
         - src/project_kit/working_tree.py
-      record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, ADR-056, ADR-057]
+      record: [COR-018, COR-019, COR-020, COR-023, COR-029, COR-041, COR-048, "COR-049#5", COR-050, COR-051, COR-052, COR-053, COR-055, "COR-062#1", ADR-056, ADR-057]
       artefact: [.pkit/cli/README.md#friction-artefacts---at-rev---json]
 ---
 

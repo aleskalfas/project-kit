@@ -130,7 +130,7 @@ pkit:
 - **5e.** The artefact carries deferrals. The revalidation re-states only those `--keep` names, or those a prompt at a terminal keeps. It reads the rest and replaces them (COR-062 point 5). The revalidation itself then answers what each replaced deferral had put off (COR-050 point 4).
 
 - **6a.** The run has no terminal, and neither `--yes` nor `--dry-run` is given. The system refuses and writes nothing. It names the command to run with `--dry-run`, and the path rejoins at step 5.
-- **6b.** The artefact's block would not pass [validation](../../../glossary.md#term-validation--validation) once written. The system refuses and writes nothing. The developer mends the block that `pkit validate` names, and the path rejoins at step 5.
+- **6b.** The artefact's own block still holds answers, which [validation](../../../glossary.md#term-validation--validation) fails (COR-062 point 10). The system refuses and writes nothing. It names the move, which takes those answers out into an answer file (COR-062 point 11). The developer runs the move, and the path rejoins at step 5.
 - **7a.** The check reports a `bump`: `at` changed with nothing behind it, such as `updated` while the content stayed as it was. The developer corrects the answer, and the path rejoins at step 5.
 - **7b.** The change wrote an answer file as COR-062 forbids. In enforcing mode, the check fails on each such answer file (COR-062 points 3, 4 and 10):
   - an answer file its base holds, rewritten
@@ -164,6 +164,6 @@ pkit:
 - A [base](../../../glossary.md#term-base--base) that resolves to no commit stops a check that has something to compare, and is never guessed (COR-054 point 4).
 - In enforcing mode, the check fails on unanswered [friction](../../../glossary.md#term-friction--friction) and on a `bump` (COR-050 point 12). It fails too on a dead [anchor](../../../glossary.md#term-anchor--anchor) the [change](../../../glossary.md#term-change--change) made, on an unresolved kind, and on an [answer](../../../glossary.md#term-answer--answer) file written as COR-062 point 10 forbids.
 - A resolver that gives no answer leaves its anchor as `no-answer`, never read as unchanged (COR-050 point 2).
-- A writer that lacks [consent](../../../glossary.md#term-consent--consent), or would leave the block invalid, writes nothing (`friction_write.py`).
+- A writer that lacks [consent](../../../glossary.md#term-consent--consent) writes nothing. `record-status`, the one writer that still writes the block, writes nothing where the block would then be invalid (`friction_write.py`).
 - An `at` written back to a value the [artefact](../../../glossary.md#term-artefact--artefact) carried before answers nothing, so reverting a revalidation brings back what it answered (COR-050 point 3).
 - The list of answers is read from the artefacts and the answer files, never composed. A file whose front matter does not parse is named as unread, never left out silently (COR-050 point 3 and `friction_check.py`).
