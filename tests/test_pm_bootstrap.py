@@ -1,23 +1,25 @@
-"""Tests for project-management's bootstrap script's pure logic.
+"""Tests for project-management's bootstrap script.
 
 Covers plan computation — what would be created vs already exists,
-with a focus on the state-label additions in label-fallback mode.
-The gh subprocess layer is not tested here; those wrappers are thin
-pass-throughs covered by integration-level validation.
+with a focus on the state-label additions in label-fallback mode — and
+the refusal when no GitHub repository resolves (#2087), driven through
+`main()` with `gh` stood in for, so no test reaches GitHub.
 """
 
 from __future__ import annotations
 
 import importlib.util
+import json
+import shutil
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SCRIPT_PATH = (
-    REPO_ROOT / ".pkit" / "capabilities" / "project-management" / "scripts" / "bootstrap.py"
-)
+CAP_SRC = REPO_ROOT / ".pkit" / "capabilities" / "project-management"
+SCRIPT_PATH = CAP_SRC / "scripts" / "bootstrap.py"
 
 
 @pytest.fixture(scope="module")
@@ -381,3 +383,147 @@ def test_persist_project_node_id_is_idempotent(bs, tmp_path) -> None:
     bs._persist_project_node_id(tmp_path, "PVT_xyz")
     text = config_path.read_text(encoding="utf-8")
     assert text.count("projects_v2_node_id:") == 1
+
+
+# --- no GitHub repository: bootstrap refuses before it plans (#2087) ----------
+# project-management works on a GitHub repository. Where `gh` resolves none for
+# the checkout, bootstrap says so in plain words at its first run, a dry run
+# included, rather than printing `target repo: <unresolved>` and exiting 0.
+
+NO_REMOTES = "no git remotes found\n"
+
+
+class _FakeGh:
+    """Stands in for `gh`, so no test reaches GitHub.
+
+    Answers `gh repo view` as told, an empty label list, and refuses any other
+    `gh` call. Any other program runs as it would. Every `gh` call is recorded.
+    """
+
+    def __init__(self, real_run, *, repo_view) -> None:
+        self._real_run = real_run
+        self._repo_view = repo_view
+        self.calls: list[list[str]] = []
+
+    def __call__(self, cmd, *args, **kwargs):
+        if not cmd or cmd[0] != "gh":
+            return self._real_run(cmd, *args, **kwargs)
+        self.calls.append(list(cmd))
+        if cmd[1:3] == ["repo", "view"]:
+            return self._repo_view(cmd)
+        if cmd[1:3] == ["label", "list"]:
+            return subprocess.CompletedProcess(cmd, 0, stdout="[]", stderr="")
+        raise AssertionError(f"unexpected gh call: {cmd}")
+
+
+def _repo_view_fails(stderr: str):
+    def answer(cmd):
+        return subprocess.CompletedProcess(cmd, 1, stdout="", stderr=stderr)
+
+    return answer
+
+
+def _repo_view_resolves(name: str):
+    def answer(cmd):
+        return subprocess.CompletedProcess(
+            cmd, 0, stdout=json.dumps({"nameWithOwner": name}), stderr=""
+        )
+
+    return answer
+
+
+def _gh_not_on_path(cmd):
+    raise FileNotFoundError(2, "No such file or directory", "gh")
+
+
+@pytest.fixture
+def installed(tmp_path, monkeypatch) -> Path:
+    """An installed capability with its real schemas and a valid config.
+
+    The cross-repo guard is given no session anchor, so it stays silent.
+    """
+    cap = tmp_path / ".pkit" / "capabilities" / "project-management"
+    shutil.copytree(CAP_SRC / "schemas", cap / "schemas")
+    shutil.copy(CAP_SRC / "package.yaml", cap / "package.yaml")
+    (cap / "project").mkdir()
+    (cap / "project" / "config.yaml").write_text(
+        "schema_version: 1\nworkstreams: []\n", encoding="utf-8"
+    )
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    monkeypatch.chdir(tmp_path)
+    return cap
+
+
+def _fake_gh(bs, monkeypatch, repo_view) -> _FakeGh:
+    fake = _FakeGh(subprocess.run, repo_view=repo_view)
+    monkeypatch.setattr(bs.subprocess, "run", fake)
+    return fake
+
+
+def _main(bs, monkeypatch, cap: Path, *args: str) -> int:
+    monkeypatch.setattr(sys, "argv", ["bootstrap.py", *args, "--capability-root", str(cap)])
+    return bs.main()
+
+
+def test_resolve_repo_names_the_repository(bs, monkeypatch) -> None:
+    _fake_gh(bs, monkeypatch, _repo_view_resolves("acme/widget"))
+    lookup = bs._resolve_repo()
+    assert lookup.name == "acme/widget"
+    assert lookup.why == ""
+
+
+def test_resolve_repo_gives_gh_s_own_reason_when_none_resolves(bs, monkeypatch) -> None:
+    _fake_gh(bs, monkeypatch, _repo_view_fails(NO_REMOTES))
+    lookup = bs._resolve_repo()
+    assert lookup.name is None
+    assert "no git remotes found" in lookup.why
+    assert "git remote add origin" in lookup.fix
+
+
+def test_resolve_repo_says_gh_is_missing(bs, monkeypatch) -> None:
+    _fake_gh(bs, monkeypatch, _gh_not_on_path)
+    lookup = bs._resolve_repo()
+    assert lookup.name is None
+    assert "`gh`" in lookup.why and "not on PATH" in lookup.why
+    assert "cli.github.com" in lookup.fix
+
+
+@pytest.mark.parametrize("mode", [["--dry-run"], ["--yes"], []])
+def test_bootstrap_refuses_when_no_repository_resolves(
+    bs, installed, monkeypatch, capsys, mode
+) -> None:
+    """A dry run, a confirmed run and a plain run all refuse, before any plan."""
+    fake = _fake_gh(bs, monkeypatch, _repo_view_fails(NO_REMOTES))
+    code = _main(bs, monkeypatch, installed, *mode)
+    out, err = capsys.readouterr()
+    assert code == 2
+    assert "needs a GitHub repository" in err
+    assert "no git remotes found" in err
+    assert "git remote add origin" in err
+    assert "gh auth login" in err
+    assert "Plan:" not in out
+    assert "<unresolved>" not in out + err
+    assert [c[1:3] for c in fake.calls] == [["repo", "view"]]
+
+
+def test_bootstrap_refuses_when_gh_is_missing(bs, installed, monkeypatch, capsys) -> None:
+    _fake_gh(bs, monkeypatch, _gh_not_on_path)
+    code = _main(bs, monkeypatch, installed, "--dry-run")
+    out, err = capsys.readouterr()
+    assert code == 2
+    assert "needs a GitHub repository" in err
+    assert "not on PATH" in err
+    assert "Plan:" not in out
+
+
+def test_dry_run_plans_when_the_repository_resolves(bs, installed, monkeypatch, capsys) -> None:
+    """The refusal costs a resolving checkout nothing: its dry run plans as before."""
+    fake = _fake_gh(bs, monkeypatch, _repo_view_resolves("acme/widget"))
+    code = _main(bs, monkeypatch, installed, "--dry-run")
+    out, err = capsys.readouterr()
+    assert code == 0, err
+    assert "target repo: acme/widget" in out
+    assert "Plan:" in out
+    assert "+ create label `type:bug`" in out
+    assert "no GitHub mutations" in out
+    assert all(c[1] in {"repo", "label"} for c in fake.calls)
