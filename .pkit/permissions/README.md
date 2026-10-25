@@ -19,7 +19,7 @@ pkit:
       record: [COR-028, PRJ-006, ADR-002, ADR-003, ADR-004, ADR-005, ADR-009, ADR-014, ADR-016, ADR-021, ADR-025, ADR-060, ADR-066]
       artefact: [.pkit/cli/README.md#agents-rules-capabilitycommand---agent-agent---json, .pkit/cli/README.md#folders-a-sync-writes, .pkit/adapters/claude-code/README.md#live-permission-enforcement-permission-hookpy]
     revalidated:
-      at: 2026-10-24T13:52:38Z
+      at: 2026-10-25T03:03:49Z
       outcome: updated
 ---
 

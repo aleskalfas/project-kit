@@ -40,9 +40,8 @@ pkit:
         - REQ-006
         - REQ-009
     revalidated:
-      at: 2026-10-25T01:37:09Z
-      outcome: unchanged
-      unchanged-because: pkit refs lookup now takes several ids, and this change adds pkit friction move-plan and says in the help of the writers where they write. No step here looks a record up, and the commands this use case runs do what it says.
+      at: 2026-10-25T03:02:57Z
+      outcome: updated
 ---
 
 # UC-017 — Give my capability roles, data points and processes others connect to
