@@ -87,7 +87,7 @@ Create `.pkit/capabilities/project-management/project/config.yaml` declaring the
 # project/config.yaml
 schema_version: 1
 has_projects_v2_board: false          # set true + projects_v2_board_id when a board is configured
-workstreams: []                       # required and empty: the workstreams have their own file
+workstreams: []                       # the key stays, and the workstreams live in their own file
 # Optional:
 # projects_v2_board_id: 12
 # projects_v2_node_id: PVT_xxx        # board→node-id cache; populated at adoption
@@ -141,7 +141,7 @@ pkit data validate .pkit/capabilities/project-management/project/config.yaml
 
 The schema sets **`additionalProperties: false`**, so an unknown or misspelled key is a loud refusal naming the offending key rather than a silent default. This matters because every reader gets at the file through defensive `.get()` access: before the schema existed, `has_projects_v2_boards` (trailing `s`) validated fine and left the adopter in label-fallback mode, discovered only when classification landed in the wrong substrate. `pre-check` covers value-level problems (the board id resolves, the branch matches, the host is reachable) but cannot see a key that was never read; the schema covers exactly that gap. `schemas/config.yaml` is also the shipped reference instance — a valid minimal config with every optional key listed as a comment.
 
-The schema's required set (`schema_version`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the transitional shim described above; it drops from both when the shim does.
+The schema's required set (`schema_version`, `workstreams`) mirrors `pre-check`'s, so the two gates agree. `workstreams:` is required only as the legacy key step 2 describes, and both gates drop it when that key is retired.
 
 #### The `gh:` block (per [project-management:DEC-023-gh-host-and-owner])
 
