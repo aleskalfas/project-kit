@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-010
+    revalidated:
+      at: 2026-10-20T22:11:37Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 2 calls the overview the reader's entry point, kept in each analysis's folder. Which analyses an analysis builds on, and what it names of them, are untouched.

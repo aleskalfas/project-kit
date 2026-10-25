@@ -483,7 +483,7 @@ A project may create its own area at `.pkit/<name>/` (COR-011). A later release 
   - that upgrade stops on a `.pkit/` with no manifest (ADR-063 point 5). It writes the manifest at its target instead (point 2).
   - that `pkit pin` refuses with the seed-the-manifest posture `upgrade` uses (ADR-049 point 3). Pin still refuses there, and names `pkit upgrade`.
 - **PRJ-007 is refined in place** (#1459): the release step writes both keys. Its sentence that install and upgrade write `backbone_version` when an adopter syncs names the transition instead.
-- **PRJ-004 is refined in place** (#1465): its canonical install names a release tag, `@v<version>` (point 12). `pkit init` ends by printing that install with its own version.
+- **PRJ-004 is refined in place** (#1465): its canonical install names a tag the release-tag workflow keeps on the highest release's commit (point 12). `pkit init` ends by printing that install.
 - **Where COR-011 and COR-001 do not hold, until #1600 settles them:**
   - COR-011 says an adopter cannot create an area under a name core already ships, so no project's area collides with a core one. COR-001 says an extension's names do not collide with core's. `lifecycle` collided when a later release shipped it. Point 13 stops on that clash, and its hold keeps a release from adding another.
   - COR-011 says sync never touches a project's own area, and a transition copies through sync's propagation step (point 1). COR-001 lets the core layer write a project-owned path only through a writer a record names. In the two cases point 13's test cannot tell apart, a transition's copy writes over a project's own area. No record names that copy as their writer.

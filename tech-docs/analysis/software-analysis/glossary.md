@@ -90,10 +90,6 @@ TERM-candidate:
         record:
           - software-analysis:DEC-001#1
           - software-analysis:DEC-001#9
-      revalidated:
-        at: 2026-10-24T01:59:05Z
-        outcome: unchanged
-        unchanged-because: The change adds where brownfield onboarding starts and ends to the build. A candidate is still an artefact or a record written but not yet committed, which a person confirms or discards.
 TERM-declared-structure:
   name: declared structure
   noun-forms: [declared structures]
@@ -108,10 +104,6 @@ TERM-declared-structure:
           - .pkit/capabilities/software-analysis/scripts/_lib/structure.py
         record:
           - software-analysis:DEC-001#1
-      revalidated:
-        at: 2026-10-24T22:53:59Z
-        outcome: unchanged
-        unchanged-because: structure.py now parses the kinds' declaration once for each text of it. What a kind declares, and how a body is read against it, is untouched.
 TERM-design-source:
   name: design source
   noun-forms: [design sources]
@@ -173,10 +165,6 @@ TERM-revalidation-outcome:
           - .pkit/capabilities/software-analysis/scripts/_lib/answers.py
         record:
           - software-analysis:DEC-001#5
-      revalidated:
-        at: 2026-10-24T02:12:38Z
-        outcome: unchanged
-        unchanged-because: The term still names the four outcomes and how they map onto the two answers. The change makes pkit analysis propose answer a boxed regression updated, as its distinctions already say.
 TERM-revalidation-proposal:
   name: revalidation proposal
   noun-forms: [revalidation proposals]
@@ -189,10 +177,6 @@ TERM-revalidation-proposal:
           - .pkit/capabilities/software-analysis/agents/analysis-resolver/analysis-resolver.md
         record:
           - software-analysis:DEC-001#5
-      revalidated:
-        at: 2026-10-25T00:36:00Z
-        outcome: unchanged
-        unchanged-because: The resolver's body now says the commands it hands over write the artefacts' answers, not their blocks. A proposal is still what the term says.
 TERM-revalidation-record:
   name: revalidation record
   status: active

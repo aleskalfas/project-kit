@@ -61,10 +61,6 @@ pkit:
         - REQ-023
         - REQ-024
         - REQ-025
-    revalidated:
-      at: 2026-10-25T04:40:37Z
-      outcome: unchanged
-      unchanged-because: DEC-001 point 7 changed only on who reads the reading-evidence entries. The use case relies on point 7 for the readers point alone, which is as it was.
 ---
 
 # UC-044 — Write a page for the reader it names

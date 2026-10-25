@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/evidence/glossary.md#TERM-evidence-scope
+    revalidated:
+      at: 2026-10-24T01:21:55Z
+      outcome: unchanged
+      unchanged-because: The check now leaves out each directory below a scope that holds an evidence.yaml of its own, so a scope ends at the next such file, as the definition already said.

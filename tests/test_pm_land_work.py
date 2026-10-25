@@ -1645,8 +1645,8 @@ def test_an_authorisation_for_another_head_stops_before_anything(world, capsys) 
     assert out.splitlines()[-1] == (
         f"head: stopped — PR #{PR}'s head is {_short(head)}, not "
         f"{authorised[:7]}, the head the merge was authorised for: an authorisation covers a "
-        "later head only where every change since lies inside `revalidated` blocks or "
-        "`revisited` lists, a clean merge of main counting as none, and these changes do "
+        "later head only where every change since lies inside answer files the change "
+        "adds, a clean merge of main counting as none, and these changes do "
         f"not: after.txt ({head[:7]}: added). "
         f"Nothing was done; `land-work {ISSUE}` checks and reviews the new one"
     )
@@ -1707,7 +1707,7 @@ def test_a_later_head_whose_base_cannot_be_read_stops_before_anything(world, cap
 def _covered(authorised: str) -> str:
     return (
         f"the authorisation for {_short(authorised)} covers it, since every change after "
-        f"{_short(authorised)} lies inside `revalidated` blocks or `revisited` lists, a "
+        f"{_short(authorised)} lies inside answer files the change adds, a "
         "clean merge of main counting as none"
     )
 

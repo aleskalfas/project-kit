@@ -1,0 +1,287 @@
+answers:
+  - artefact: .pkit/rules/README.md
+    read:
+      - moved-eceee50c8cfd.yaml
+    revalidated:
+      at: 2026-10-25T17:10:20Z
+      outcome: unchanged
+      unchanged-because: The change makes pkit init print the install of the tag latest, where it printed the install at its own version. This page describes the rules area and never names that printed command, so it holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-install
+    read:
+      - moved-ab1260400a3e.yaml
+    revalidated:
+      at: 2026-10-25T17:10:21Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Adding the backbone or a component to a repository after checking name collisions is unchanged, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-release
+    read:
+      - moved-d4155623fb63.yaml
+    revalidated:
+      at: 2026-10-25T17:10:23Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 makes the tag latest, on the highest release's commit, the canonical install. A release is still a set of versions named by its backbone version, with its own annotated tag, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-release-step
+    read:
+      - moved-d74f55c40d3f.yaml
+    revalidated:
+      at: 2026-10-25T17:10:24Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. The release step writes the same versions, floors, bounds and changelog entries, and the release-tag workflow moves latest, so the definition holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-seeding
+    read:
+      - moved-c9236b22e28d.yaml
+    revalidated:
+      at: 2026-10-25T17:10:26Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end. Seed paths and the templates they are created from are unchanged, so the definition holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/REQ-009-preview-before-change.md
+    read:
+      - moved-bcae90c061e0.yaml
+    revalidated:
+      at: 2026-10-25T17:10:27Z
+      outcome: unchanged
+      unchanged-because: The tests changed are those of the install pkit init prints, and a new one that upgrade's lookup of the latest release skips the tag latest. No test of a --dry-run preview changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-distribution
+    read:
+      - moved-18d7526b948a.yaml
+    revalidated:
+      at: 2026-10-25T17:10:28Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 names the tag latest as the canonical install, from the same repository through the same git URL. A distribution still releases from one source repository through one channel, so the definition holds.
+  - artefact: tech-docs/analysis/core/domain-model/060-changes-review-and-releases.md
+    read:
+      - moved-fb33f94647c6.yaml
+    revalidated:
+      at: 2026-10-25T17:10:30Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. This view's statements on releases, such as a release step that moves only components making no release, are unchanged, so it holds.
+  - artefact: tech-docs/analysis/core/domain-model/040-versions-and-copies.md
+    read:
+      - moved-e4acc05dec63.yaml
+    revalidated:
+      at: 2026-10-25T17:10:31Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-029-compatibility-before-write.md
+    read:
+      - moved-9c7c53a9c949.yaml
+    revalidated:
+      at: 2026-10-25T17:10:32Z
+      outcome: unchanged
+      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of compatibility resolved before a write changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/050-adopt/REQ-030-person-choice-never-silent.md
+    read:
+      - moved-92f8888ee58b.yaml
+    revalidated:
+      at: 2026-10-25T17:10:34Z
+      outcome: unchanged
+      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of a choice that needs a person changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/functional/REQ-010-stop-under-another-version.md
+    read:
+      - moved-20fbe2c12f23.yaml
+    revalidated:
+      at: 2026-10-25T17:10:35Z
+      outcome: unchanged
+      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of the stop under another version changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-026-interrupted-transition-completes.md
+    read:
+      - moved-70ec17efc0cd.yaml
+    revalidated:
+      at: 2026-10-25T17:10:37Z
+      outcome: unchanged
+      unchanged-because: The tests changed are those of the install pkit init prints, and a new one that upgrade's lookup of the latest release skips the tag latest. No test of an interrupted transition changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-019-adapt-harness.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-f13c9b0b08f5.yaml
+    revalidated:
+      at: 2026-10-25T17:10:38Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Registering an adapter and running its primitives are unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-020-own-skill-or-agent.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-bf75f5ef5635.yaml
+    revalidated:
+      at: 2026-10-25T17:10:39Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Deploying the project's own skills and agent definitions is unchanged, so the use case holds.
+  - artefact: .pkit/lifecycle/README.md
+    read:
+      - moved-e20d8eb259bb.yaml
+    revalidated:
+      at: 2026-10-25T17:10:41Z
+      outcome: unchanged
+      unchanged-because: pkit init prints the install of the tag latest, and ADR-065 says PRJ-004's canonical install names a tag kept on the highest release's commit. This README calls the recommended install a tagged one, which latest is, so it holds.
+  - artefact: .pkit/release/README.md
+    read:
+      - moved-9dcf3fafafed.yaml
+    revalidated:
+      at: 2026-10-25T17:10:42Z
+      outcome: updated
+  - artefact: .pkit/adapters/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-ff7f7cafea74.yaml
+    revalidated:
+      at: 2026-10-25T17:10:43Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Registering adapters and running their primitives are unchanged, so the README holds.
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - 20261025T161906Z-06f8050c.yaml
+      - moved-09637e9d2b39.yaml
+    revalidated:
+      at: 2026-10-25T17:10:45Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. The operator's needs, to put the CLI on a machine and run each project at its pin, read the same, so the actor holds.
+  - artefact: tech-docs/analysis/core/requirements/quality/050-adopt/REQ-027-pin-whole-written-last.md
+    read:
+      - moved-8ac526d6eecc.yaml
+    revalidated:
+      at: 2026-10-25T17:10:46Z
+      outcome: unchanged
+      unchanged-because: tests/test_upgrade.py gains only a test that upgrade's lookup of the latest release skips the tag latest. No test of how the version pin is written changed, so the requirement holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/010-develop/UC-014-develop-methodology.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-863d2120a84e.yaml
+    revalidated:
+      at: 2026-10-25T17:10:48Z
+      outcome: unchanged
+      unchanged-because: The change makes pkit init and the dispatcher's two install errors name the install of the tag latest. The dispatcher still runs the checkout's working tree through uv, so developing the methodology in its source repository holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-022-add-own-additions.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-584f4319317a.yaml
+    revalidated:
+      at: 2026-10-25T17:10:49Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. The project's own rules, settings, grants and agent paths beside the methodology's are unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-026-start-with-rules.md
+    read:
+      - moved-a4cb7bc0b417.yaml
+    revalidated:
+      at: 2026-10-25T17:10:50Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. The include lines the install writes into CLAUDE.md are unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-027-find-agent-definition-deployed.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-f6d0acdf7905.yaml
+    revalidated:
+      at: 2026-10-25T17:10:52Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Deploying an agent definition with the project's paths and grants is unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-028-keep-intermediate-files.md
+    read:
+      - moved-808bb37fbee5.yaml
+    revalidated:
+      at: 2026-10-25T17:10:53Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. The agent workspace the install creates and keeps out of commits is unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md
+    read:
+      - moved-484839f37921.yaml
+    revalidated:
+      at: 2026-10-25T17:10:54Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. What the install keeps out of the project's commits is unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-008-release-backbone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-5f19baa7e5e5.yaml
+    revalidated:
+      at: 2026-10-25T17:10:56Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/040-release/UC-009-release-component.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-6f054c5e641d.yaml
+    revalidated:
+      at: 2026-10-25T17:10:57Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. A release step that moves only components cuts no tag, so the highest release tag and latest stay where they were, and the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-048-install-cli.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-6f7d516c3c81.yaml
+    revalidated:
+      at: 2026-10-25T17:10:59Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-049-install-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-3c42621ce2ed.yaml
+    revalidated:
+      at: 2026-10-25T17:11:00Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-050-ready-fresh-clone.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-2c7587c72eb1.yaml
+    revalidated:
+      at: 2026-10-25T17:11:01Z
+      outcome: unchanged
+      unchanged-because: The change alters only the install command pkit init prints at its end, to the tag latest. Readying a fresh clone with one sync is unchanged, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-051-upgrade-system.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-203f03bc9c96.yaml
+    revalidated:
+      at: 2026-10-25T17:11:03Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-002-upgrade-system.md
+    read:
+      - moved-1849fdf40a4b.yaml
+    revalidated:
+      at: 2026-10-25T17:11:04Z
+      outcome: updated
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/050-adopt/UC-052-run-at-pin.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-0fa0e5e94473.yaml
+    revalidated:
+      at: 2026-10-25T17:11:05Z
+      outcome: unchanged
+      unchanged-because: PRJ-004 names the tag latest as the canonical install. The router runs a version pin through uvx at that release's own tag, which the change leaves alone, so the use case holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-001-adopt-system.md
+    read:
+      - moved-40743155218d.yaml
+    revalidated:
+      at: 2026-10-25T17:11:07Z
+      outcome: unchanged
+      unchanged-because: Its need from UC-048 is a CLI at a release, which an install of the tag latest gives as a release's own tag does. The change alters only the install command pkit init prints, so the journey holds.
+  - artefact: tech-docs/analysis/core/use-case-model/journeys/JRN-003-deliver-change.md
+    read:
+      - moved-ae8fedaca13d.yaml
+    revalidated:
+      at: 2026-10-25T17:11:08Z
+      outcome: unchanged
+      unchanged-because: UC-049's printed next steps name the install of the tag latest in place of the install at its own version. This journey needs from UC-049 only the system installed and committed for the team, so it holds.
+  - artefact: .pkit/cli/README.md
+    read:
+      - 20261025T160417Z-d8718ac0.yaml
+      - moved-65d082fdefb8.yaml
+    revalidated:
+      at: 2026-10-25T17:11:10Z
+      outcome: updated
+      deferred:
+        - anchor:
+            kind: record
+            value: ADR-057
+          reason: "ADR-057 point 2 gains the answer reader, one home for every artefact's answers. #1779 builds it and rewrites the reference's account of the friction commands."
+        - anchor:
+            kind: record
+            value: COR-050
+          reason: "Its friction commands write and read answers in the artefact's block, and friction resolve merges them, which COR-062 moves to answer files. #1779 builds it and rewrites the reference."
+        - anchor:
+            kind: record
+            value: COR-051
+          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), which the reference keeps in the block. #1779 builds it and rewrites it."
+  - artefact: README.md
+    read:
+      - moved-9a1edb7ccd81.yaml
+    revalidated:
+      at: 2026-10-25T17:11:11Z
+      outcome: updated

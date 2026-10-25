@@ -1,0 +1,5 @@
+answers:
+  - artefact: .pkit/release/README.md
+    revalidated:
+      at: 2026-10-24T03:44:42Z
+      outcome: updated

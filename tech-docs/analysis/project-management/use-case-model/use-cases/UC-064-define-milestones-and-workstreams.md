@@ -51,9 +51,6 @@ pkit:
         - ACT-planner
         - REQ-040
         - REQ-041
-    revalidated:
-      at: 2026-10-25T08:01:37Z
-      outcome: updated
 ---
 
 # UC-064 — Define the Milestones and workstreams the work falls into, and roll a date-based Milestone forward

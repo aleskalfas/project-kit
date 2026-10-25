@@ -57,10 +57,11 @@ updated document's sentence from the change's author:
   its whole-repository check gives it, read once for a run: no path in it
   counts as code for a floor (DEC-032 D1).
 - `covers(since, head, base)` asks the backbone whether every change from one
-  head of a pull request to a later one lies inside `revalidated` blocks, a
-  clean merge of the base counting as none (`pkit friction since`): where it does, an
-  authorisation for the earlier head covers the later one (DEC-055 point 3).
-  An answer that cannot be read is never a pass.
+  head of a pull request to a later one lies inside answer files the change
+  adds, a clean merge of the base counting as none (`pkit friction since`, its
+  document's version 2): where it does, an authorisation for the earlier head
+  covers the later one (DEC-055 point 3). An answer that cannot be read is
+  never a pass.
 - `stamp`, `strip`, `find` and `current` place, remove, find and compare the
   section — strip-then-place-exactly-one, as `provenance.stamp` keeps the
   footer. The section sits last, before the provenance footer. A section
@@ -161,13 +162,15 @@ RESOLVER_REFUSAL = "Run from a checkout at"
 #: reading of the friction settings a capability's script makes, which never
 #: re-reads the configuration itself (the CLI README, "friction artefacts").
 ARTEFACTS = ("friction", "artefacts", "--json", "--at")
-#: Whether what changed between two heads lies inside `revalidated` blocks, a clean
-#: merge of the base counting as none, as the backbone answers it (`pkit friction since`, the CLI
-#: README, "friction since"): the one reading of the blocks this capability makes.
+#: Whether what changed between two heads lies inside answer files the change adds, a
+#: clean merge of the base counting as none, as the backbone answers it (`pkit friction
+#: since`, the CLI README, "friction since"): this capability never reads an answer itself.
 SINCE = ("friction", "since")
 #: The version of `pkit friction since --json` this module reads, versioned apart from
 #: the change check's document; a document of another is no answer, never misread.
-SINCE_SCHEMA_VERSION = 1
+#: Version 2 counts answer files the change adds, where version 1 counted the
+#: artefacts' blocks (ADR-068 point 5).
+SINCE_SCHEMA_VERSION = 2
 #: Where a friction setting's change is said to be, in a refusal.
 SETTINGS_WHERE = "the friction settings"
 
@@ -451,26 +454,26 @@ def _run_check(head: str, base: str, *, cwd: Path | None) -> Mapping[str, Any] |
 @dataclass(frozen=True)
 class Coverage:
     """The backbone's answer for two heads of a pull request: whether every change from
-    `since` to `head` lies inside `revalidated` blocks, a clean merge of the base
-    counting as none (DEC-055 point 3). `outside` names each change that does not, a line each, and
-    `problem` why the answer could not be read, which is never a pass."""
+    `since` to `head` lies inside answer files the change adds, a clean merge of the
+    base counting as none (DEC-055 point 3). `outside` names each change that does not,
+    a line each, and `problem` why the answer could not be read, which is never a pass."""
 
     since: str = ""
     head: str = ""
     covered: bool = False
-    #: How many files changed only inside `revalidated` blocks.
+    #: How many answer files the change adds changed.
     inside: int = 0
     outside: tuple[str, ...] = ()
     problem: str | None = None
 
 
 def covers(since: str, head: str, base: str) -> Coverage:
-    """Whether the changes from commit `since` to commit `head` lie only inside
-    `revalidated` blocks, a clean merge of the branch `base` counting as none, as the
+    """Whether the changes from commit `since` to commit `head` lie only inside answer
+    files the change adds, a clean merge of the branch `base` counting as none, as the
     backbone answers it (`pkit friction since <since> --head <head> --base <base>
     --json`, run unrouted as the change check is). The base is fetched first where it
     is a remote's, so a merge of it is told from the author's own commits. This
-    capability never reads a friction block itself (DEC-055 point 3)."""
+    capability never reads an answer itself (DEC-055 point 3)."""
     problem = _refresh_base(base)
     if problem is not None:
         return Coverage(problem=problem)

@@ -47,18 +47,6 @@ pkit:
         - TERM-rule-set
         - TERM-artefact-type
         - TERM-package-metadata
-    revalidated:
-      at: 2026-10-25T03:06:07Z
-      outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "The view has an artefact carry its answers, which COR-062 moves to answer files, and names no debt answered apart. #1779 builds it and rewrites the view."
-        - anchor:
-            kind: record
-            value: COR-051
-          reason: "A rule's answers move with every artefact's to answer files (COR-051 point 2), and the view shows them carried by the artefact. #1779 builds it and rewrites the view."
 ---
 
 # VIEW-artefacts-and-friction — Artefacts and friction

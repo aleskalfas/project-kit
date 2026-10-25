@@ -21,10 +21,6 @@ pkit:
       artefact:
         - ACT-adopter
         - REQ-001
-    revalidated:
-      at: 2026-10-25T00:33:48Z
-      outcome: unchanged
-      unchanged-because: Only core rule 20 changes, on answers. Rule 5, which this requirement rests on, says what it said.
 ---
 
 # REQ-017 · Quality · A backbone migration is safe over any state

@@ -12,23 +12,6 @@ pkit:
         - .pkit/capabilities/software-engineering/schemas/**
         - .pkit/capabilities/software-engineering/skills/**
       record: [COR-013, COR-024, COR-026, COR-030, COR-050, COR-057, ADR-013, ADR-052, "project-management:DEC-015", "project-management:DEC-028", "project-management:DEC-032", "project-management:DEC-055"]
-    revalidated:
-      at: 2026-10-25T00:35:24Z
-      outcome: unchanged
-      unchanged-because: The engineer's body now commits what the writers write and judges revalidations answered apart. The README's account of the panel and its checks holds.
-      deferred:
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "Its account of the answers its reviewers check keeps them in the artefact, which COR-062 moves to answer files. #1779 builds it and rewrites the README."
-        - anchor:
-            kind: record
-            value: project-management:DEC-032
-          reason: "DEC-032 D1 now leaves the answer folder out of the touches-code floor, which the README's account of that floor does not say. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: project-management:DEC-055
-          reason: "DEC-055 now covers a later head by the answer files the change adds and prints answers made apart. #1779 builds it and rewrites the README's account of the landing."
 ---
 
 # software-engineering capability

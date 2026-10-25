@@ -425,7 +425,7 @@ def test_a_rewritten_branch_makes_the_run_full(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "document",
     [
-        _since_document(version=2),
+        _since_document(version=1),
         _since_document(since=OLDER),
         _since_document(head=OLDER),
         {**_since_document(), "all_inside": "yes"},
@@ -746,6 +746,16 @@ def test_the_summary_escapes_control_characters(tmp_path: Path) -> None:
 
 # --- end to end, over a real history ------------------------------------------------
 
+#: An answer file the branch adds (COR-062 point 1), and its text revalidating the page.
+ANSWER = ".pkit/project/friction/answers/20261002T094012Z-0a1b2c3d.yaml"
+
+
+def _answer_file(at: str, because: str) -> str:
+    return (
+        f"answers:\n  - artefact: {PAGE}\n    revalidated:\n      at: {at}\n"
+        f"      outcome: unchanged\n      unchanged-because: {because}\n"
+    )
+
 
 @pytest.fixture
 def history(make_adopter_repo: MakeAdopterRepo, pkit_on_path: Path) -> AdopterRepo:
@@ -773,9 +783,14 @@ def test_over_a_real_history_answers_are_short_and_code_is_full(
     history: AdopterRepo, tmp_path: Path
 ) -> None:
     basis = history.commit("the change", {"src/cli/main.py": "print('cli, renamed')\n"})
-    answered = history.commit("answer again", {PAGE: guide(at=T2, because="renamed, still true")})
+    answered = history.commit("answer again", {ANSWER: _answer_file(T2, "renamed, still true")})
 
     assert _decide_over(history, tmp_path, basis, answered).mode == sc.SHORT
+
+    in_block = history.commit("answer in the block", {PAGE: guide(at=T2, because="in a block")})
+    decision = _decide_over(history, tmp_path, basis, in_block)
+    assert decision.mode == sc.FULL
+    assert PAGE in decision.why
 
     coded = history.commit("a fix", {"src/core/engine.py": "ENGINE = 2\n"})
     decision = _decide_over(history, tmp_path, basis, coded)

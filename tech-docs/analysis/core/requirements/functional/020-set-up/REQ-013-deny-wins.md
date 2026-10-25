@@ -20,9 +20,6 @@ pkit:
       artefact:
         - ACT-adopter
         - ACT-operator
-    revalidated:
-      at: 2026-10-24T20:54:37Z
-      outcome: updated
 ---
 
 # REQ-013 · Functional · Where an allow and a deny conflict, the deny wins

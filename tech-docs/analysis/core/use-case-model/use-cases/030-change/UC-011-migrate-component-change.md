@@ -43,10 +43,6 @@ pkit:
         - REQ-004
         - REQ-005
         - REQ-012
-    revalidated:
-      at: 2026-10-25T14:40:39Z
-      outcome: unchanged
-      unchanged-because: The aggregator gains a line that checks the pages' contents lists, and still runs the migration check. No step here reads the new line, so the use case holds.
 ---
 
 # UC-011 — Carry the projects that installed my component across a breaking change of it

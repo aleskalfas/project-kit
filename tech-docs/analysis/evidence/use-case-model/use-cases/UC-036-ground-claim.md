@@ -24,9 +24,6 @@ pkit:
         - COR-017
         - COR-021
         - COR-031
-    revalidated:
-      at: 2026-10-24T01:21:51Z
-      outcome: updated
 ---
 
 # UC-036 — Ground a claim in its source

@@ -33,7 +33,6 @@ from project_kit.router import (
     is_routed_child,
     is_source_checkout,
     looks_like_pkit_install,
-    running_version,
     source_dispatcher,
     source_dispatcher_missing,
 )
@@ -1281,31 +1280,39 @@ def undeploy_capability_from_adapters(ctx: InstallContext, capability: str) -> t
     return tuple(lacking)
 
 
-def recommended_install_command(version: str) -> str:
-    """The install of pkit's release `version`, the canonical form (PRJ-004).
+#: The tag the release-tag workflow keeps on the highest release's commit (PRJ-004),
+#: through `scripts/latest_tag.py`.
+LATEST_TAG = "latest"
 
-    It names the release tag, `@v<version>`. Only a tagged install ties a version
-    to one content, so a project's recorded version names what it holds (ADR-065
-    point 12). An install with no tag is the development install.
+
+def recommended_install_command() -> str:
+    """The install of pkit's highest release, the canonical form (PRJ-004).
+
+    It names the tag `latest`, which by design only the release-tag workflow
+    writes, and only onto a release's commit. So, like a release tag's, the
+    install ties a version to one content, and a project's recorded version names
+    what it holds (ADR-065 point 12). An install with no tag is the development
+    install.
     """
-    return f"uv tool install {DISTRIBUTION_GIT_URL}@v{version}"
+    return f"uv tool install {DISTRIBUTION_GIT_URL}@{LATEST_TAG}"
 
 
 def _print_next_steps() -> None:
     click.echo()
     click.echo("Install complete. Recommended next steps:")
     click.echo()
-    # The install the CLI reference recommends ("Installing pkit on PATH"), at this
-    # pkit's own release. A test holds the two to the same command (#1376).
+    # The install the CLI reference recommends ("Installing pkit on PATH"), of the
+    # highest release. A test holds the two to the same command (#1376).
     click.echo("  1. (Once per machine, skip if already done) Install pkit on PATH:")
     click.echo()
-    click.echo(f"       {recommended_install_command(running_version())}")
+    click.echo(f"       {recommended_install_command()}")
     click.echo()
     click.echo("     One install serves every project on this machine that uses")
     click.echo("     project-kit. pkit finds the current project from the folder you")
-    click.echo("     run it in. The tag names this pkit's version. For another")
-    click.echo("     release, see .pkit/cli/README.md, section")
-    click.echo('     "Installing pkit on PATH".')
+    click.echo(f"     run it in. The tag `{LATEST_TAG}` names the highest release.")
+    click.echo(f"     uv fetches `{LATEST_TAG}` afresh, while a git clone that holds an")
+    click.echo(f"     old `{LATEST_TAG}` must force-fetch it. For another release, see")
+    click.echo('     .pkit/cli/README.md, section "Installing pkit on PATH".')
     click.echo()
     click.echo("  2. Fill in adopter-side configs as needed:")
     click.echo(

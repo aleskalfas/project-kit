@@ -38,6 +38,9 @@ from tests.friction_documents import (
     pointed_record,
 )
 
+#: The fixtures here still write answers in blocks, until #2032 moves them.
+pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+
 CONFIG = ".pkit/project/config.yaml"
 
 VALID_DOCUMENT = """---

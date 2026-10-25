@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/living-docs/rule-sets/ldoc.md#RS-LDOC-002
+    revalidated:
+      at: 2026-10-19T16:10:32Z
+      outcome: unchanged
+      unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its passage on a fact's home is as it was until that major, which supersedes this rule, so this rule holds as written meanwhile.

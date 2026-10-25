@@ -25,10 +25,6 @@ pkit:
         - TERM-design-source
         - TERM-revalidation-proposal
         - TERM-shortfall
-    revalidated:
-      at: 2026-10-24T10:39:58Z
-      outcome: unchanged
-      unchanged-because: TERM-revalidation-proposal's distinction says "revalidation outcomes" for "results", the words this view uses. The term's definition is the same, so its section holds.
 ---
 
 # VIEW-revalidations — Revalidations and what they find

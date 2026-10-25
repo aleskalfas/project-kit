@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/software-analysis/domain-model/020-revalidations.md
+    revalidated:
+      at: 2026-10-24T10:39:58Z
+      outcome: unchanged
+      unchanged-because: TERM-revalidation-proposal's distinction says "revalidation outcomes" for "results", the words this view uses. The term's definition is the same, so its section holds.

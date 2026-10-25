@@ -24,10 +24,6 @@ pkit:
         - ADR-065#4
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:51:14Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-026 · Quality · An interrupted version transition never reads as finished, and the next one completes it

@@ -114,7 +114,15 @@ settings that declare them, this pass reports:
   target no link of it takes — answers nothing and is reported, never failed: a
   landed answer file is never rewritten, so no change could mend it, and a prune
   removes it (COR-062 points 5 and 10). Checked whenever an answer file exists,
-  dormant or not.
+  dormant or not;
+- **an answer left in an artefact's own block** (`_block_answer_findings`; COR-062
+  points 10 and 11) — a `revalidated` block or a `revisited` list, whatever it
+  holds, since the reading of a state still reads such an artefact wholly from its
+  block. An error naming the move, the backbone migration that takes it out into a
+  new answer file. Where no answer file exists, the project's answers have not
+  moved: one error says so and names the move, never one per artefact. In a file
+  the project receives by sync, a report, never an error: the project cannot mend
+  it there, and its source moves it (point 9).
 
 These fail validation in either mode, because the project can fix them. A
 rule-set file is claimed before the container rule (ADR-056 point 2): its
@@ -251,6 +259,8 @@ class FrictionFindingKind(Enum):
     DUPLICATE_ANSWER_REVISIT = "duplicate-answer-revisit"  # one target revisited twice
     MUTUAL_READ = "mutual-read"  # two answers that each name the other's file
     ANSWER_ON_WHAT_IS_GONE = "answer-on-what-is-gone"  # answers nothing: a report
+    ANSWER_IN_BLOCK = "answer-in-block"  # an answer left in an artefact's own block
+    ANSWERS_NOT_MOVED = "answers-not-moved"  # blocks hold answers, and no answer file exists
 
 
 @dataclass(frozen=True)
@@ -317,7 +327,9 @@ def validate_friction(target_root: Path) -> FrictionValidation:
     if not discovery.is_dormant:
         findings.extend(_mixed_line_endings_findings(discovery))
         findings.extend(_artefact_findings(target_root, discovery))
-    findings.extend(_answer_file_findings(target_root, discovery))
+    files = answer_files.working_tree_files(target_root)
+    findings.extend(_block_answer_findings(discovery, files))
+    findings.extend(_answer_file_findings(target_root, discovery, files))
     return FrictionValidation(discovery=discovery, findings=tuple(findings))
 
 
@@ -1255,10 +1267,88 @@ ANSWER_KINDS = frozenset(
 )
 
 
-def _answer_file_findings(target_root: Path, discovery: Discovery) -> list[FrictionFinding]:
-    """What validation finds in the working tree's answer files (COR-062 point 10; see the
-    module docstring). Nothing where there is none."""
-    files = answer_files.working_tree_files(target_root)
+#: The answer keys a block may no longer hold (COR-062 point 1), in the order named.
+_BLOCK_ANSWER_KEYS = (answer_files.REVALIDATED_KEY, REVISITED_KEY)
+
+
+def _block_answer_findings(
+    discovery: Discovery, files: Mapping[str, answer_files.AnswerFile]
+) -> list[FrictionFinding]:
+    """Each answer left in an artefact's own block (COR-062 points 10 and 11; see the
+    module docstring): an error, naming the move. Where no answer file exists, the
+    project's answers have not moved, so one error says so and names the move, never one
+    per artefact. In a file the project receives by sync, a report: the project cannot
+    mend it there, and its source moves it (point 9)."""
+    findings: list[FrictionFinding] = []
+    own: list[Artefact] = []
+    for artefact in discovery.artefacts:
+        if not answer_files.block_holds_answers(artefact):
+            continue
+        if not artefact.received:
+            own.append(artefact)
+            continue
+        findings.append(
+            FrictionFinding(
+                artefact.location,
+                _block_pointer(artefact),
+                Severity.REPORT,
+                FrictionFindingKind.ANSWER_IN_BLOCK,
+                f"its block holds {_held_keys(artefact)}, an answer the project receives by "
+                f"sync: its source moves it into answer files, and the project cannot mend it "
+                f"here (COR-062 points 9 and 10)",
+            )
+        )
+    if not own:
+        return findings
+    move = f"run the move from the project's root, `{answer_files.MOVE_COMMAND}`"
+    if not files:
+        count = len(own)
+        findings.append(
+            FrictionFinding(
+                answer_files.FOLDER,
+                "",
+                Severity.ERROR,
+                FrictionFindingKind.ANSWERS_NOT_MOVED,
+                f"{count} artefact{'' if count == 1 else 's'} hold{'s' if count == 1 else ''} "
+                f"answers in {'its' if count == 1 else 'their'} own block, and no answer file "
+                f"exists, so the project's answers have not moved into answer files: {move}, "
+                f"which takes them out (COR-062 points 10 and 11). `pkit friction move-plan` "
+                f"shows what it writes.",
+            )
+        )
+        return findings
+    findings.extend(
+        FrictionFinding(
+            artefact.location,
+            _block_pointer(artefact),
+            Severity.ERROR,
+            FrictionFindingKind.ANSWER_IN_BLOCK,
+            f"its block holds {_held_keys(artefact)}, and answers live in answer files: "
+            f"{move}, which takes it out into a new answer file (COR-062 points 10 and 11)",
+        )
+        for artefact in own
+    )
+    return findings
+
+
+def _block_keys(artefact: Artefact) -> list[str]:
+    block = cast(Mapping[str, Any], artefact.friction)
+    return [key for key in _BLOCK_ANSWER_KEYS if key in block]
+
+
+def _held_keys(artefact: Artefact) -> str:
+    return " and ".join(f"`{key}`" for key in _block_keys(artefact))
+
+
+def _block_pointer(artefact: Artefact) -> str:
+    return f"/{bs.CONTAINER_KEY}/{FRICTION_KEY}/{_block_keys(artefact)[0]}"
+
+
+def _answer_file_findings(
+    target_root: Path, discovery: Discovery, files: Mapping[str, answer_files.AnswerFile]
+) -> list[FrictionFinding]:
+    """What validation finds in the working tree's answer files `files` (COR-062 point 10;
+    see the module docstring). Nothing where there is none."""
     if not files:
         return []
     findings: list[FrictionFinding] = []

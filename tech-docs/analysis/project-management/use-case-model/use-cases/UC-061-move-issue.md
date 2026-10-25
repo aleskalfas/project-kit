@@ -65,10 +65,6 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
-    revalidated:
-      at: 2026-10-25T08:01:41Z
-      outcome: unchanged
-      unchanged-because: "As #2015 asks, the skill's close-milestone entry now says the close needs --yes off a terminal. Moving and closing an issue, as the steps say, is unchanged."
 ---
 
 # UC-061 — Move my issue through its lifecycle, each move checked
