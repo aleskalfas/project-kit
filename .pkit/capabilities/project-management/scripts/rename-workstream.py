@@ -23,7 +23,8 @@ The label or the board is changed before the file, so a re-run after a
 failure finds the substrate renamed and writes the file.
 
 Per-change confirmation: the script narrates the plan and prompts
-unless `--yes` is set.
+unless `--yes` is set. Off a terminal, without `--yes`, nobody is there to
+confirm it, so the rename is refused before anything changes (#2015).
 
 Membership gate per DEC-021 runs at startup.
 
@@ -35,7 +36,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  renamed (or dry-run reported)
-  1  membership refusal / validation refusal / both old and new exist
+  1  membership refusal / validation refusal / both old and new exist / off a
+     terminal without --yes
   2  usage error
   3  gh failure (labels or board unreadable; label or board not changed)
 """
@@ -58,7 +60,14 @@ sys.path.insert(0, str(_HERE))
 # `axis_labels.workstream_mutator_refusal(...)` after the membership check and
 # REFUSES before any `gh label` op when it trips. Greenfield is unchanged; the
 # richer present-map behaviour stays the adopt-existing Feature #264.
-from _lib import axis_carriage, axis_labels, bootstrap_gate, session_guard, workstream_sync
+from _lib import (
+    axis_carriage,
+    axis_labels,
+    bootstrap_gate,
+    consent,
+    session_guard,
+    workstream_sync,
+)
 from _lib.gh import gh_run, load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -232,11 +241,14 @@ def main() -> int:
     if args.dry_run:
         print("\n[dry-run] nothing written; no gh invocation.")
         return 0
-    if not args.yes and sys.stdin.isatty():
-        reply = input("Proceed? [y/N] ").strip().lower()
-        if reply not in ("y", "yes"):
-            print("aborted.", file=sys.stderr)
-            return 0
+    stop = consent.authorise(
+        "Proceed? [y/N] ",
+        yes=args.yes,
+        step=f"Renaming workstream {args.old!r} to {args.new!r}",
+        verb="rename-workstream",
+    )
+    if stop is not None:
+        return stop
 
     # The substrate first, then the file: a failure here leaves the file as it
     # was, and a re-run finds the renamed substrate and only writes the file.

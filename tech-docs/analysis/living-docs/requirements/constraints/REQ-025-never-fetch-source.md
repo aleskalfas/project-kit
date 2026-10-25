@@ -20,9 +20,9 @@ pkit:
         - living-docs:DEC-001#4
         - COR-050#2
     revalidated:
-      at: 2026-10-24T03:53:17Z
+      at: 2026-10-25T05:30:36Z
       outcome: unchanged
-      unchanged-because: The agent changed only how reader-review falls back to a space's audience, read from a file of the repository. It still never fetches a source.
+      unchanged-because: The agent's reader-review now reads the reading-evidence point through the backbone. Nothing in living-docs fetches a captured source's text, as before.
 ---
 
 # REQ-025 · Constraint · Nothing in living-docs fetches the text a captured source names

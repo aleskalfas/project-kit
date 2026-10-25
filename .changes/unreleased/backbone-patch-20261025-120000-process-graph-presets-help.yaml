@@ -1,0 +1,12 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The help of `pkit process graph` now says how its presets combine, as the
+  command does it (#2038). It said every preset AND-combines with the atomic
+  filters. But `--advisory`, `--connectors`, `--declared` and `--derived` each
+  add the relations, mode or source they name to those `--relation`, `--mode`,
+  `--source` or another of them names, so `--connectors --mode pull` keeps
+  both modes. The command reference already said so. What the command keeps
+  is unchanged.

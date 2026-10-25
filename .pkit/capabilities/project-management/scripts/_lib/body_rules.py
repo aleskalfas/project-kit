@@ -17,8 +17,9 @@ on any of them, and reports the rest.
 
 What this module does not check is checked elsewhere: each command checks the
 parent-ref first line itself, `placeholder_detection` checks the template's
-leftovers, and `use_case_citations` checks the use cases a body cites. No
-command checks a body for a predicted decision id.
+leftovers, `use_case_citations` checks the use cases a body cites, and
+`decision_ids` checks the decision ids it cites, through the backbone. Each of
+those that reads a universal rule's severity reads it through `rule_severity`.
 """
 
 from __future__ import annotations
@@ -89,11 +90,11 @@ def required_sections(
 def universal(body: str, body_format: Mapping[str, Any]) -> list[Finding]:
     """The universal rules *body* breaks, each at its severity in *body_format*."""
     findings: list[Finding] = []
-    headings = list(_lines_outside_fences(body))
+    headings = list(lines_outside_fences(body))
     if any(_H1.match(line) for line in headings):
         findings.append(
             (
-                _rule_severity(body_format, H1),
+                rule_severity(body_format, H1),
                 H1,
                 "body contains an h1 (`# ...`) heading; the issue title "
                 "is the h1. Use `## Title` for sections.",
@@ -102,7 +103,7 @@ def universal(body: str, body_format: Mapping[str, Any]) -> list[Finding]:
     if _FILE_LINE.search(body):
         findings.append(
             (
-                _rule_severity(body_format, FILE_LINE),
+                rule_severity(body_format, FILE_LINE),
                 FILE_LINE,
                 "body contains file:line references; line numbers go stale.",
             )
@@ -111,7 +112,7 @@ def universal(body: str, body_format: Mapping[str, Any]) -> list[Finding]:
     if recipes:
         findings.append(
             (
-                _rule_severity(body_format, RECIPE),
+                rule_severity(body_format, RECIPE),
                 RECIPE,
                 f"body holds a {recipes[0]!r} section: a body describes the outcome, "
                 "and how to build it belongs in the PR or a design doc.",
@@ -120,14 +121,15 @@ def universal(body: str, body_format: Mapping[str, Any]) -> list[Finding]:
     return findings
 
 
-def _rule_severity(body_format: Mapping[str, Any], rule_id: str) -> str:
-    """The severity of the universal rule whose `id` is *rule_id*, or its default."""
+def rule_severity(body_format: Mapping[str, Any], rule_id: str, default: str | None = None) -> str:
+    """The severity of the universal rule whose `id` is *rule_id*, as its entry in
+    *body_format* gives it; else *default*, else this module's default for the rule."""
     for rule in body_format.get("universal_body_rules") or []:
         if isinstance(rule, Mapping) and rule.get("id") == rule_id:
             severity = _severity(rule.get("severity"))
             if severity is not None:
                 return severity
-    return _DEFAULTS[rule_id]
+    return default if default is not None else _DEFAULTS[rule_id]
 
 
 def _severity(token: Any) -> str | None:
@@ -136,7 +138,7 @@ def _severity(token: Any) -> str | None:
     return match.group(1) if match else None
 
 
-def _lines_outside_fences(body: str) -> Iterator[str]:
+def lines_outside_fences(body: str) -> Iterator[str]:
     """The lines of *body* outside fenced code blocks, fences' own lines left out.
 
     A fence closes on a line of the same character, at least as long, with

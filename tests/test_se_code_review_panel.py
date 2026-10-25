@@ -655,14 +655,18 @@ def _friction_answers() -> str:
 def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
     """The producer may run `pkit friction revisit` for what its own change owes, as
     the agents README's "Friction writers" lets an agent making a change (COR-050
-    points 3 and 16), and leaves any other entry to the person."""
+    points 3 and 16), and leaves any other entry to the person. It commits what the
+    writers write, and judges the combined state of revalidations answered apart where
+    the check flags it (COR-062 points 1 and 7); no answer is owed for a conflict, a
+    rule COR-062 overturns."""
     section = _friction_answers()
     for words in (
         "`pkit friction revalidate`, `pkit friction defer` or `pkit friction revisit`",
-        "The third writes an entry in its `revisited` list",
-        "the revalidation of a combined state after you resolved a conflict (COR-050 point 3)",
-        "After you resolve a conflict in a `revisited` list, write the entry again for the"
-        " combined state (COR-050 point 16)",
+        "The third writes a revisit entry, the answer for a target the artefact links to",
+        "You run them only for what your own change owes: the answers the check asks of it.",
+        "Where the check flags one of your revalidations as replacing revalidations answered"
+        " apart, make that revalidation's reason judge their combined state (COR-062 point 7).",
+        "Commit what the writers write with your change, a new answer file among it",
         "against the change, and each target you revisited by changing it.",
         "Each deferral, and each `deferred` revisit entry, you write names an open follow-up",
         "told those sentences and what is left out of date",
@@ -675,6 +679,7 @@ def test_the_software_engineer_writes_the_revisit_entries_its_change_owes():
         "Changing only an entry's outcome answers nothing, and is not yours to write.",
     ):
         assert words in section, words
+    assert "after you resolved a conflict" not in section
 
 
 def test_dec_002_and_the_readme_name_the_same_revisit_blocks():

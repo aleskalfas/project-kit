@@ -16,7 +16,7 @@ pkit:
         - .pkit/capabilities/project-management/package.yaml
       record: [COR-017, COR-020, COR-021, COR-023, COR-030, COR-039, "COR-050#16", COR-053, COR-057, COR-061, ADR-004, ADR-016, ADR-019, ADR-026, ADR-031, ADR-035, ADR-037, ADR-038, ADR-042, ADR-050, ADR-066]
     revalidated:
-      at: 2026-10-24T21:24:56Z
+      at: 2026-10-25T08:01:35Z
       outcome: updated
       deferred:
         - anchor:
@@ -300,11 +300,25 @@ pkit pm link-parent 1101 1102 --yes          # link two issues without the promp
 `create-issue` checks the body against `schemas/body-format.yaml` before it writes anything, `--dry-run` included. It checks a body file and a body stamped from the template alike, since the schema is the contract and the template is not.
 
 - **Refused:** a body that lacks a section its issue type requires, such as a Task's `## Doc impact`, or that holds a heading of the first level (`# ...`). The refusal names what is wrong, and nothing is filed.
-- **Warned of:** a `file:line` reference, and a `## Implementation` or `## How` section. The warning is printed, and filing goes on.
+- **Warned of:** a `file:line` reference, a `## Implementation` or `## How` section, and a predicted decision id. The warning is printed, and filing goes on.
 
-Each type's required sections, and their severity, come from its entry under `bodies`. Each universal rule's severity comes from the entry of `universal_body_rules` whose `id` is the finding's label. A `# ` line inside a fenced code block is no heading.
+Each type's required sections, and their severity, come from its entry under `bodies`. Each universal rule's severity comes from the entry of `universal_body_rules` whose `id` is the finding's label. The two lists above give the severities as shipped. A `# ` line inside a fenced code block is no heading.
 
-`validate-issue` and `edit-issue` run the same checks, through `scripts/_lib/body_rules.py`. No command checks a body for a predicted decision id yet.
+A predicted decision id is an id that no record holds, written as if one did. The check reads two forms of id, outside fenced code blocks, HTML comments and struck-through text:
+
+- a core, project or architecture record's id: `COR-NNN`, `PRJ-NNN` or `ADR-NNN`
+- a capability's decision named with its capability: `[<capability>:DEC-NNN-<slug>]` or `<capability>:DEC-NNN`, looked up by its capability and its number alone
+
+A bare `DEC-NNN` is not checked. Each capability numbers its own decisions, so a bare id names no record until its capability is named.
+
+Each id the check reads is looked up through `pkit`, and one that no record holds is reported as `body.predicted-decision-id`, naming it. Where `pkit` gives no answer for an id, one notice, `body.decision-ids-unchecked`, names the ids not checked and why, at the rule's severity:
+
+```
+[warning] body.predicted-decision-id: cites COR-064, which no record holds. Cite a decision only once its record exists, and describe one not yet written without an id.
+[warning] body.decision-ids-unchecked: decision ids not checked (COR-064): the records could not be read — `pkit` is not on PATH. None is reported as predicted on that ground.
+```
+
+`validate-issue` and `edit-issue` run the same checks.
 
 #### Issue body validation — residual placeholder detection (per [project-management:DEC-031-reject-unauthored-placeholder-bodies])
 
@@ -690,6 +704,8 @@ pkit pm open-pr 1017 --scope pm --summary "take the issue number positionally" -
 
 Both run the DEC-021 membership gate and the COR-039 foreign-repo guard at startup, route every `gh` call through the shared host/owner seam (DEC-023), and accept `--dry-run` (preview, write nothing) and `--yes` (skip the confirmation prompt).
 
+**The close is the person's** (#2015). At a terminal `close-milestone` asks before it closes, and `--yes` authorises the close. Off a terminal, without `--yes`, it refuses with exit 1 before anything is written, and names the command to run with `--yes`. A re-run that finishes a rollforward goes on without `--yes`, since the close it finishes authorised the moves.
+
 `close-milestone` respects the Milestone's **close-trigger**, read from the `Close trigger:` first line of the description (inferred for an inherited Milestone with no marker: a native due date ⇒ `date-based`, none ⇒ `content-based`, per `time-containers.yaml`):
 
 - **content-based** — closes only when every child issue is closed. An open child **holds** the close (refused) unless you pass `--force`, which closes it with the open children left on it.
@@ -744,6 +760,8 @@ pkit pm edit-issue 1044 --milestone "Milestone 6: …" --reason "filed into the 
 | `merge-workstream --survivor <S> <L>...` | Moves each loser's issues to the survivor, deletes the loser's label or option, and drops the loser from the file. It rewrites the references to each loser. |
 | `split-workstream --source <S> --into <A> --into <B>...` | Asks of each issue of the source which new workstream it moves to, then moves it. |
 | `remove-workstream <slug>` | Refuses while any issue carries the workstream, then asks you to type the slug. |
+
+**Each change is the person's**, since a workstream is the project's own configuration, which DEC-018 gives the PM to change (#2015). At a terminal each command asks before it changes anything, and `--yes` authorises the change. Off a terminal, without `--yes`, it shows the plan, then refuses with exit 1 and names the command to run with `--yes`. `edit-workstream` asks only before a status flip, so its other edits go on as before.
 
 **The checks.** A slug has 2 to 40 characters, matches `^[a-z][a-z0-9-]*[a-z0-9]$` and holds no consecutive hyphens. A name is one line of at most 64 characters. A description or a deprecation reason is one line of at most 200. Each command refuses a value outside these rules before it writes anything.
 
@@ -1500,6 +1518,8 @@ Every mutating verb-subject script checks a project-side **`members.yaml`** befo
 - **Closed mode** — `members.yaml` lists ≥1 member. Only listed members pass; non-members get a structured refusal with a remediation hint pointing at `add-member.py`.
 
 Bootstrap is **self-add by the first member while open mode applies**. From the moment the first entry lands on main, the repo is closed; subsequent additions require an existing member's PR review.
+
+`add-member` and `remove-member` write `members.yaml` in the working tree, and the change is the person's (#2015). At a terminal each asks before it writes, and `--yes` authorises the change. Off a terminal, without `--yes`, each refuses with exit 1 before the file is written, and names the command to run with `--yes`.
 
 This refines [project-management:DEC-008-pm-and-implementer-roles] — the PM / Implementer role distinction continues to apply *within* the membership; the gate is what restricts entry.
 

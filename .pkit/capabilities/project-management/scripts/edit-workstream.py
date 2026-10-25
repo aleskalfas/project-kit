@@ -11,7 +11,8 @@ Edits an existing workstream's name / description / status /
 deprecated_reason. Each value given is checked against DEC-018's rules
 (`_lib/workstreams`) before anything is written. Per DEC-018, status
 flips require explicit confirmation; non-status edits proceed without
-further prompting.
+further prompting. The flip asks at a terminal, `--yes` confirms it, and off
+a terminal without `--yes` it is refused (#2015).
 
 Membership gate per DEC-021 runs at startup.
 
@@ -23,7 +24,8 @@ Or via the dispatcher (per COR-021):
 
 Exit codes:
   0  edited (or dry-run reported)
-  1  membership refusal / validation refusal
+  1  membership refusal / validation refusal / a status flip off a terminal
+     without --yes
   2  usage error (slug not found)
 """  # noqa: E501 — a usage line is a command, kept whole
 
@@ -38,7 +40,7 @@ from ruamel.yaml.error import YAMLError
 
 _HERE = Path(__file__).parent
 sys.path.insert(0, str(_HERE))
-from _lib import bootstrap_gate, session_guard
+from _lib import bootstrap_gate, consent, session_guard
 from _lib.gh import load_adopter_config
 from _lib.membership import (
     CAPABILITY_NAME,
@@ -192,18 +194,14 @@ def main() -> int:
         print("\n[dry-run] nothing written.")
         return 0
     if args.status is not None and current.get("status") != entry["status"]:
-        if not args.yes and sys.stdin.isatty():
-            reply = (
-                input(
-                    f"Flip status {current.get('status', '<unset>')!r} → "
-                    f"{entry['status']!r}? [y/N] "
-                )
-                .strip()
-                .lower()
-            )
-            if reply not in ("y", "yes"):
-                print("aborted.", file=sys.stderr)
-                return 0
+        stop = consent.authorise(
+            f"Flip status {current.get('status', '<unset>')!r} → {entry['status']!r}? [y/N] ",
+            yes=args.yes,
+            step=f"Flipping workstream {args.slug!r} to {entry['status']!r}",
+            verb="edit-workstream",
+        )
+        if stop is not None:
+            return stop
 
     try:
         with path.open("w", encoding="utf-8") as f:

@@ -1,0 +1,15 @@
+component: backbone
+kind: patch
+custom:
+  category: Fixed
+body: >
+  The commands `pkit process new` and `pkit permissions scaffold` now refuse
+  a capability whose files the project receives as synced copies, as every
+  `pkit new` command does. Each asks the lifecycle's ownership predicate
+  (`is_synced_copy`) before it writes anything, `process new` in a dry run
+  too. Where the capability's folder holds synced copies, the next sync would
+  overwrite what the project writes there, so the command writes nothing,
+  exits 1, and names the folder and where the project's own artefact goes: a
+  capability incubated in the project, and for a grant of the project's own,
+  `pkit permissions grant`. In the methodology's source repository, and for a
+  capability incubated in the project, each writes as before.

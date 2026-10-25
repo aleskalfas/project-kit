@@ -37,8 +37,9 @@ pkit:
         - REQ-008
         - REQ-009
     revalidated:
-      at: 2026-10-24T20:55:11Z
-      outcome: updated
+      at: 2026-10-25T05:23:32Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-019 — Adapt the system to another harness

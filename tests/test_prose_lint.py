@@ -13,9 +13,8 @@
   declares the lint, and every declaration has an entry.
 
 The change tests run on the shared adopter-repository fixture. A rule set named
-`WRITE`, scoped to `docs/guides/`, declares the lint for RS-WRITE-005,
-RS-WRITE-008, RS-WRITE-017 and RS-WRITE-018, so the project's own entries apply
-there.
+`WRITE`, scoped to `docs/guides/`, declares the lint for each rule the project's
+own entries name, so they apply there.
 
 No test here writes a control or bidirectional character as an escape in its
 source: each is built with `chr`, so the source holds none (RS-WRITE-018).
@@ -68,10 +67,17 @@ def test_the_data_file_holds_its_entries() -> None:
     entries = pl.load_entries()
     assert [(e.rule, e.type, e.whole_file) for e in entries] == [
         ("RS-WRITE-005", "count", False),
+        ("RS-WRITE-007", "count", False),
         ("RS-WRITE-008", "forbid", False),
         ("RS-WRITE-017", "nesting", False),
         ("RS-WRITE-018", "forbid", True),
     ]
+
+
+def entry_of(rule: str) -> pl.Entry:
+    """The data file's entry for `rule`."""
+    (chosen,) = [e for e in pl.load_entries() if e.rule == rule]
+    return chosen
 
 
 def test_count_words_in_a_sentence_is_an_entry() -> None:
@@ -84,21 +90,43 @@ def test_count_words_in_a_sentence_is_an_entry() -> None:
 
 
 def test_count_sentences_in_a_paragraph_is_an_entry() -> None:
-    """RS-WRITE-007's count, an entry alone: a list item counts as a paragraph, and table
-    cells are exempt."""
-    four = pl.entry(
-        {
-            "rule": "RS-WRITE-007",
-            "type": "count",
-            "count": "sentences",
-            "in": "paragraph",
-            "max": 4,
-            "except": ["cells"],
-        }
-    )
+    """RS-WRITE-007: a paragraph over four sentences, a list item counting as one, and
+    table cells exempt."""
     text = "One. Two. Three. Four.\n\n- One. Two. Three. Four. Five.\n\n| A. B. C. D. E. |\n"
-    assert found(text, [four]) == [
+    assert found(text, [entry_of("RS-WRITE-007")]) == [
         '3 RS-WRITE-007: a paragraph of 5 sentences, over 4: "One. Two. Three. Four. Five."'
+    ]
+
+
+def test_a_list_item_with_every_block_of_it_is_one_paragraph() -> None:
+    """A step and a variant are list items too. An item's later blocks count with its
+    first, a nested item is a paragraph of its own, and a variant's bold letter is a
+    label, no sentence. The finding names the item's first line."""
+    text = (
+        "1. One. Two. Three.\n\n"
+        "   Four. Five.\n"
+        "2. One. Two.\n"
+        "   - One. Two. Three. Four.\n\n"
+        "   Three. Four.\n\n"
+        "- **2a.** One. Two. Three. Four.\n"
+        "- **2b.** One. Two. Three. Four. Five.\n"
+        "- **Label.** One.\n\n"
+        "  - Nested. Two.\n\n"
+        "  Two. Three. Four.\n"
+    )
+    assert found(text, [entry_of("RS-WRITE-007")]) == [
+        '1 RS-WRITE-007: a paragraph of 5 sentences, over 4: "One. Two. Three."',
+        '10 RS-WRITE-007: a paragraph of 5 sentences, over 4: "One. Two. Three. Four. Five."',
+    ]
+
+
+def test_a_paragraph_s_words_are_those_of_every_block_of_its_item() -> None:
+    """A `count` of words in a paragraph reads a list item whole too."""
+    words = pl.entry(
+        {"rule": "RS-X-001", "type": "count", "count": "words", "in": "paragraph", "max": 3}
+    )
+    assert found("- One two.\n\n  Three four.\n\nOne two three.\n", [words]) == [
+        '1 RS-X-001: a paragraph of 4 words, over 3: "One two."'
     ]
 
 
@@ -171,7 +199,7 @@ def test_a_finding_shows_a_control_character_as_its_code_point() -> None:
     finding quotes, a word to replace and a link's target. No pattern searches a link's
     target, so the forbid finds the one in the prose alone."""
     rlo = chr(0x202E)
-    assert found(f"Plain{rlo}; one.\n", [pl.load_entries()[1]]) == [
+    assert found(f"Plain{rlo}; one.\n", [entry_of("RS-WRITE-008")]) == [
         '1 RS-WRITE-008: a semicolon: "Plain<U+202E>; one."'
     ]
     unnamed = pl.entry({"rule": "RS-X-001", "type": "forbid", "pattern": rlo})
@@ -377,8 +405,11 @@ def test_the_level_of_each_list_item(text: str, levels: list[int]) -> None:
         ("Such as e.g. this, by A. Person.\n", [3, 3, 1]),
         # A full stop before a closing quotation mark or bracket ends nothing.
         ('He said "go." Then (it ended.) Then more.\n', [8]),
-        # Bold marks are removed, so a full stop inside them ends a sentence.
-        ("**Bold.** Then more.\n", [1, 2]),
+        # Bold marks are removed, so a full stop inside them ends a sentence. Bold text
+        # that opens a block and ends in a full stop is a label, and holds none.
+        ("Then **bold.** More.\n", [2, 1]),
+        ("**Bold.** Then more.\n", [2]),
+        ("**Bold**. Then more.\n", [2]),
         # A full stop inside a code span ends nothing, and the span is one word.
         ("Run `a. b` now. Then stop.\n", [3, 2]),
     ],
@@ -394,16 +425,20 @@ def test_each_block_ends_a_sentence() -> None:
 
 
 def test_headings_bold_labels_and_code_blocks_are_not_read() -> None:
-    """A list item that is only a label is no sentence."""
+    """A bold label ends in a colon or a full stop, and a list item that is only a label
+    is no sentence."""
     text = (
         "# A heading of several words\n\n"
         "- **Can be:**\n"
         "- **A label:** two words.\n"
+        "- **A label too.** Two words.\n"
+        "- **2a.** A variant's letter.\n"
+        "- **Done.**\n"
         "- **A bold opening** is read.\n\n"
         "```\nnot read at all\n```\n\n"
         "<!-- nor a comment -->\n"
     )
-    assert counted(text) == [2, 5]
+    assert counted(text) == [2, 2, 3, 5]
 
 
 def test_markup_and_markdown_that_holds_no_prose_are_not_read() -> None:
@@ -556,7 +591,7 @@ def test_a_change_adds_the_tokens_the_diff_inserts_word_by_word() -> None:
 
 
 #: The rules the project's own entries name, each declaring the lint in `write_set`.
-LINTED = ("RS-WRITE-005", "RS-WRITE-008", "RS-WRITE-017", "RS-WRITE-018")
+LINTED = ("RS-WRITE-005", "RS-WRITE-007", "RS-WRITE-008", "RS-WRITE-017", "RS-WRITE-018")
 
 
 def write_set(*, checks: bool = True) -> str:
@@ -691,6 +726,20 @@ def test_an_item_is_the_change_s_when_it_holds_added_text_or_its_line_changed(
     assert lint(repo) == [f"{A}:10 RS-WRITE-017"]
     repo.write({A: page(f"{THREE}    - three b\n\nGap.\n\n{THREE}      - four words\n")})
     assert lint(repo) == [f"{A}:17 RS-WRITE-017"]
+
+
+#: A list item of five sentences, over two blocks.
+ITEM = "- One. Two. Three.\n\n  Four. Five.\n"
+
+
+def test_an_item_is_the_change_s_when_any_of_its_blocks_holds_added_text(
+    repo: AdopterRepo,
+) -> None:
+    """Text added to its later block makes the whole item the change's, and the finding
+    names its first line. An item the change only sits beside is not the change's."""
+    start(repo, {A: page(f"- One. Two. Three.\n\n  Four.\n\nGap.\n\n{ITEM}")})
+    repo.write({A: page(f"{ITEM}\nGap, added to.\n\n{ITEM}")})
+    assert lint(repo) == [f"{A}:7 RS-WRITE-007"]
 
 
 def test_a_control_character_the_change_adds_anywhere_is_the_change_s(

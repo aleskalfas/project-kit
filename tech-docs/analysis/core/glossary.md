@@ -11,9 +11,9 @@ TERM-acceptance-gate:
         record:
           - COR-051#4
       revalidated:
-        at: 2026-10-21T13:00:59Z
+        at: 2026-10-24T22:53:43Z
         outcome: unchanged
-        unchanged-because: The decisions README gains how pkit refs lookup prints the file a record's id names. Which records bind, and the gate on proposed ones, are untouched.
+        unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json. Which records bind, and the gate on proposed ones, are untouched.
 TERM-adapter:
   name: adapter
   noun-forms: [adapters]
@@ -66,9 +66,9 @@ TERM-agent-workspace:
           - ADR-060#3
           - ADR-060#9
       revalidated:
-        at: 2026-10-23T14:50:21Z
+        at: 2026-10-25T00:38:53Z
         outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
+        unchanged-because: Only core rule 20 changes, on answers. Rule 16 on the agent workspace says what it said.
 TERM-anchor:
   name: anchor
   status: active
@@ -82,9 +82,9 @@ TERM-anchor:
           - COR-050#2
           - COR-050#7
       revalidated:
-        at: 2026-10-24T04:57:41Z
+        at: 2026-10-25T00:36:52Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each declared form of derived link on its own, so forms that clash when joined stop no check. What an anchor is stays as defined.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received. What an anchor declares and stands on is unchanged.
 TERM-answer:
   name: answer
   status: active
@@ -102,6 +102,10 @@ TERM-answer:
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
         deferred:
+          - anchor:
+              kind: path
+              value: src/project_kit/friction_write.py
+            reason: "The writers now write an answer into an answer file of the change's own where the block holds none, and the definition still puts every answer in the block. #1779 rewrites the term once the move lands."
           - anchor:
               kind: record
               value: COR-050#3
@@ -138,9 +142,9 @@ TERM-artefact:
         record:
           - COR-050#1
       revalidated:
-        at: 2026-10-24T04:57:48Z
+        at: 2026-10-25T00:37:22Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link a place declares on its own. What an artefact is stays as defined.
+        unchanged-because: Discovery now marks a rule a synced copy holds as received, owing the project no answer. It is still an artefact found in a place.
 TERM-artefact-type:
   name: artefact type
   noun-forms: [artefact types]
@@ -157,9 +161,9 @@ TERM-artefact-type:
           - COR-056#3
           - COR-056#5
       revalidated:
-        at: 2026-10-24T04:57:50Z
+        at: 2026-10-25T00:37:31Z
         outcome: unchanged
-        unchanged-because: Discovery now matches each form of derived link on its own, and resolves types as before. The definition holds.
+        unchanged-because: Discovery marks a rule a synced copy holds as received, which leaves every artefact's type as it was.
 TERM-backbone:
   name: backbone
   status: active
@@ -258,9 +262,9 @@ TERM-change-check:
           - COR-050#12
           - COR-054#3
       revalidated:
-        at: 2026-10-23T08:13:53Z
+        at: 2026-10-25T00:37:44Z
         outcome: unchanged
-        unchanged-because: The change check reads derived links as their words alone, under the head's declaration. It still compares a change's base with its head, as defined.
+        unchanged-because: The change check now asks nothing of an artefact received by sync, as of an excluded one. It still compares a head with its base and lists the answers written.
 TERM-changeset:
   name: changeset
   noun-forms: [changesets]
@@ -383,9 +387,9 @@ TERM-debt:
         record:
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:03Z
+        at: 2026-10-25T00:38:01Z
         outcome: unchanged
-        unchanged-because: The whole-repository check now reads a renamed placed file under the derived links its name at HEAD sets aside, at both versions. What debt is stays as defined.
+        unchanged-because: "An artefact received by sync now leaves the debt as an excluded one does, which the definition need not name. The answered-apart debt stays deferred to #1779."
         deferred:
           - anchor:
               kind: path
@@ -504,9 +508,9 @@ TERM-friction:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:05Z
+        at: 2026-10-25T00:38:14Z
         outcome: unchanged
-        unchanged-because: A renamed placed file is now read under the derived links HEAD sets aside in it, at both versions. Friction is still an anchor that changed with no answer, as defined.
+        unchanged-because: "An artefact received by sync now owes no answer, as an excluded one, which the term need not name. Where its section keeps answers in the block stays deferred to #1779."
         deferred:
           - anchor:
               kind: path
@@ -615,6 +619,18 @@ TERM-install:
         at: 2026-10-20T01:37:36Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-link-target:
+  name: link target
+  noun-forms: [link targets]
+  status: active
+  definition: "anchor of an artefact, taken by a component's declaration on the artefact's place, for which an edit to the artefact's trigger fields asks a revisit"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+        record:
+          - COR-050#16
 TERM-manifest:
   name: manifest
   status: active
@@ -691,9 +707,9 @@ TERM-operational-rule:
           - COR-014
           - COR-051#1
       revalidated:
-        at: 2026-10-23T14:50:23Z
+        at: 2026-10-25T00:38:28Z
         outcome: unchanged
-        unchanged-because: Core rules 14, 16 and 19 stop calling the permission model's code a capability, and change nothing else they say. What this term rests on in the rules holds.
+        unchanged-because: Core rule 20's words change, and the rules file is still the one every session loads, so the term holds.
 TERM-overlay:
   name: overlay
   status: active
@@ -741,9 +757,9 @@ TERM-permission-hook:
           - ADR-002#4
           - ADR-003
       revalidated:
-        at: 2026-10-24T11:48:05Z
+        at: 2026-10-25T03:02:47Z
         outcome: unchanged
-        unchanged-because: The backbone code still allows, denies or defers each call. It now removes a redirection that writes no file before it reads a Bash command, which changes some verdicts and leaves what the hook is as it was.
+        unchanged-because: The hook now removes a redirection that writes no file before it reads a Bash command, and permissions scaffold now refuses a capability the project receives as a synced copy. The backbone code still allows, denies or defers each call, so what the hook is holds.
 TERM-place:
   name: place
   other-senses: [in place]
@@ -758,9 +774,9 @@ TERM-place:
           - COR-050#1
           - COR-050#14
       revalidated:
-        at: 2026-10-24T04:57:52Z
+        at: 2026-10-25T00:38:36Z
         outcome: unchanged
-        unchanged-because: Each form of derived link a place declares is now matched on its own. What a place is stays as defined.
+        unchanged-because: Discovery marks a rule a synced copy holds as received. A place is still declared and walked as the term says.
 TERM-point:
   name: point
   other-senses: [revalidation point, deferral point]
@@ -827,9 +843,9 @@ TERM-profile:
           - ADR-005#2
           - ADR-032
       revalidated:
-        at: 2026-10-24T12:39:08Z
+        at: 2026-10-25T03:02:52Z
         outcome: unchanged
-        unchanged-because: Every shipped profile now grants text-filter too, and a profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
+        unchanged-because: Every shipped profile now grants text-filter, and permissions scaffold now refuses a capability the project receives as a synced copy. A profile is still a named set of grants and a posture that an operator activates on one machine, beneath the project's own grants.
 TERM-project:
   name: project
   status: active
@@ -1002,6 +1018,32 @@ TERM-reviewer:
         at: 2026-10-21T14:25:51Z
         outcome: unchanged
         unchanged-because: COR-062 keeps who decides an answer, and that a reviewer other than its writer checks it (COR-050 point 3). A reviewer is still defined by its remit, so the definition holds.
+TERM-revisit:
+  name: revisit
+  status: active
+  definition: "judgement, owed by a change that edits a trigger field, of whether one link target that field asks about still stands against the change"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_check.py
+          - src/project_kit/friction_write.py
+        record:
+          - COR-050#16
+          - COR-062#1
+          - COR-062#5
+TERM-revisit-link:
+  name: revisit link
+  noun-forms: [revisit links]
+  status: active
+  definition: "declaration a component makes on a place, that editing chosen fields of an artefact there asks whether what the artefact's chosen anchors name still stands"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_discovery.py
+        record:
+          - COR-050#16
 TERM-role:
   name: role
   noun-forms: [roles]
@@ -1071,6 +1113,10 @@ TERM-sandbox:
           - ADR-004#2
           - ADR-004#5
           - ADR-008#4
+      revalidated:
+        at: 2026-10-24T06:19:12Z
+        outcome: unchanged
+        unchanged-because: The change has permissions scaffold refuse a capability the project receives as a synced copy. The sandbox, and what it bounds, are as they were.
 TERM-scratchpad-note:
   name: scratchpad note
   noun-forms: [scratchpad notes]
@@ -1253,6 +1299,18 @@ TERM-system:
         at: 2026-10-20T01:38:12Z
         outcome: unchanged
         unchanged-because: It moved into the core's analysis, tech-docs/analysis/core/glossary.md, with its entry and its section as they were, so its definition still holds.
+TERM-trigger-field:
+  name: trigger field
+  noun-forms: [trigger fields]
+  status: active
+  definition: "own key of an artefact that a revisit link names, whose edit asks for a revisit of every link target of that revisit link"
+  pkit:
+    friction:
+      anchors:
+        path:
+          - src/project_kit/friction_check.py
+        record:
+          - COR-050#16
 TERM-validation:
   name: validation
   status: active
@@ -1339,9 +1397,9 @@ TERM-whole-repository-check:
           - COR-050#6
           - COR-050#9
       revalidated:
-        at: 2026-10-24T04:58:06Z
+        at: 2026-10-25T00:38:44Z
         outcome: unchanged
-        unchanged-because: The check now reads a renamed placed file under the derived links HEAD sets aside in it, at both versions. What the check is stays as defined.
+        unchanged-because: The whole-repository check leaves an artefact received by sync out of the debt, as an excluded one. It still compares every artefact with its revalidation point, and never fails.
 ---
 
 # Glossary
@@ -1418,7 +1476,7 @@ Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-fricti
 
 - **Revalidation:** an answer saying the [artefact](#term-artefact--artefact) was reviewed against the change. It is `updated`, its content changed with it, or `unchanged`, with why it still holds (COR-050 [point](#term-point--point) 3).
 - **Deferral:** an answer that puts off one [anchor](#term-anchor--anchor)'s [friction](#term-friction--friction), with a reason naming the follow-up that will answer it (COR-050 point 4).
-- **Revisit entry:** an answer on a link's source, saying why a target still stands or which follow-up will revisit it (COR-050 point 16).
+- **Revisit entry:** an answer on a [revisit link](#term-revisit-link--revisit-link)'s source, saying why a [link target](#term-link-target--link-target) still stands or which follow-up will [revisit](#term-revisit--revisit) it (COR-050 point 16).
 - **The list of answers:** the [change check](#term-change-check--change-check)'s list of every answer a change wrote, word for word, which a [reviewer](#term-reviewer--reviewer) works from (COR-050 point 3). The answers themselves live on the artefacts.
 - **A command's answer:** what a resolver or a validator returns to the check that runs it. A missing one fails that check, and is no artefact's answer.
 
@@ -1680,7 +1738,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
 
 Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-and-releases.md#finding).
 
-**Example:** [validation](#term-validation--validation) fails on a revisit entry that names no target, and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
+**Example:** [validation](#term-validation--validation) fails on a [revisit](#term-revisit--revisit) entry that names no [link target](#term-link-target--link-target), and only warns of an [anchor](#term-anchor--anchor) on a retired [point](#term-point--point).
 
 **Distinctions:**
 
@@ -1761,6 +1819,18 @@ Explained in [VIEW-parts-of-the-system](domain-model/020-parts-of-the-system.md#
 - **Installing the CLI:** puts the [system](#term-system--system)'s command on a machine (PRJ-004). It acts on no project (COR-059 [point](#term-point--point) 5).
 - **Version transition:** moves what is installed to another [version](#term-version--version). Install adds what was not there.
 - **Registration:** how a project adds a capability it authors itself. Registration copies nothing (COR-031 point D3).
+
+## TERM-link-target — link target
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#link-target).
+
+**Example:** a requirement anchors the test that verifies it, outside its `actors` and `refines`. So that [anchor](#term-anchor--anchor) is a link target of the [revisit link](#term-revisit-link--revisit-link) on the requirement's [place](#term-place--place). A [change](#term-change--change) that relaxes the requirement's `measure` owes that anchor a [revisit](#term-revisit--revisit).
+
+**Distinctions:**
+
+- **Anchor's value:** how an anchor is written, such as `COR-058#4`. A value in a revisit link's field names every anchor of the [artefact](#term-artefact--artefact) that has it. A revisit entry names its link target by the anchor's kind and value (COR-050 [point](#term-point--point) 16).
+- **An anchor's target:** what an anchor names, such as the files a path anchor matches. What the anchor stands on is what the checks compare of that target, such as those files' content and mode (COR-050 point 5). A link target is the anchor itself, and it changed where what it stands on differs (COR-050 point 16).
+- **A version transition's target and a pull request's target:** the [release](#term-release--release) or [version](#term-version--version) a transition moves to, and the branch a [pull request](#term-pull-request--pull-request) lands on. They share the word only.
 
 ## TERM-manifest — manifest
 
@@ -2060,6 +2130,30 @@ Explained in [VIEW-changes-review-and-releases](domain-model/060-changes-review-
 - **The answers' reviewer:** the reviewer the [project](#term-project--project) chooses to check the answers an agent wrote for its own change (COR-050 [point](#term-point--point) 3).
 - **Merge authoriser:** the person who authorises a merge (`ACT-merge-authoriser`). A reviewer's approval is never that authorisation (project-management DEC-055 point 3).
 
+## TERM-revisit — revisit
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revisit).
+
+**Example:** a [change](#term-change--change) relaxes a requirement's `measure`. The change then owes a revisit of the requirement's [anchor](#term-anchor--anchor) on the test that verifies the requirement. The change updates the test, or records with `pkit friction revisit` why the test still stands.
+
+**Distinctions:**
+
+- **Revalidation:** an [answer](#term-answer--answer) on the [artefact](#term-artefact--artefact) itself, saying it still holds against what changed under its anchors (COR-050 [point](#term-point--point) 3). A revisit judges a [link target](#term-link-target--link-target) instead, and moves no revalidation point (COR-050 point 16).
+- **Revisit entry:** the answer that records a revisit among the source's answers (COR-062 point 1). Its outcome is `unchanged`, with why the link target still stands, or `deferred`, with the open follow-up that will revisit it (COR-050 point 16). It replaces only the entry for its own link target that it read, and its reason differs from each entry it replaces (COR-062 point 5). A revisit met by changing what the link target stands on needs no entry.
+- **Friction:** a [finding](#term-finding--finding) that something an artefact rests on changed. A link target left unrevisited is a finding of the [change check](#term-change-check--change-check) instead, and no other check reports it (COR-050 points 12 and 16).
+- **Revisiting a file:** [merge delivery](#term-merge-delivery--merge-delivery) revisits its file on each run, in the word's everyday sense. That asks nothing of a change.
+
+## TERM-revisit-link — revisit link
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#revisit-link).
+
+**Example:** software-analysis declares a revisit link on each of its requirement places, under `revisits` in its [package metadata](#term-package-metadata--package-metadata). Editing a requirement's `statement`, `measure` or `applies-to` asks for a [revisit](#term-revisit--revisit) of every [anchor](#term-anchor--anchor) outside its `actors` and `refines` (software-analysis DEC-002 [point](#term-point--point) 4).
+
+**Distinctions:**
+
+- **Anchor:** the declared link from an [artefact](#term-artefact--artefact) to what makes it true, which flags the artefact when what the anchor names changes (COR-050 point 2). A revisit link makes chosen anchors ask the other way too, when chosen fields of the artefact are edited (COR-050 point 16).
+- **Derived link:** markup in a body that leads a reader elsewhere, written by a command from data, such as a mention's link to its glossary entry. It asks for no revisit (COR-050 point 5).
+
 ## TERM-role — role
 
 Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-capabilities-areas-and-connection-points.md#role).
@@ -2249,6 +2343,18 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **A platform:** in COR-009, the hosting service a [project](#term-project--project)'s remote lives on. It is other software, never the system.
 - **Operating system:** the software a machine runs, beneath the harness and the system. It is other software, and its [sandbox](#term-sandbox--sandbox) bounds the commands the harness runs.
 - **The methodology:** the body of [decision records](#term-decision-record--decision-record), rules, [operational rules](#term-operational-rule--operational-rule) and conventions the system ships and enforces. It is a term of its own, whose *Distinctions* refer back here.
+
+## TERM-trigger-field — trigger field
+
+Explained in [VIEW-artefacts-and-friction](domain-model/070-artefacts-and-friction.md#trigger-field).
+
+**Example:** a requirement's `statement`, `measure` and `applies-to` are its trigger fields. A [change](#term-change--change) that relaxes the requirement's `measure` owes a [revisit](#term-revisit--revisit) of each of the requirement's [link targets](#term-link-target--link-target), such as its [anchor](#term-anchor--anchor) on a test.
+
+**Distinctions:**
+
+- **The fields that choose the link targets:** the own fields a [revisit link](#term-revisit-link--revisit-link) reads to choose them, such as a requirement's `actors` and `refines`, which list the anchors that stay out. An edit to them asks for no revisit, unless the revisit link names them as trigger fields too (COR-050 [point](#term-point--point) 16).
+- **The anchor list:** a change to an [artefact](#term-artefact--artefact)'s own anchors asks for its revalidation (COR-050 point 6), never a revisit.
+- **The body:** its text is no field, so rewording it, such as a requirement's rationale, asks for no revisit (COR-050 point 16).
 
 ## TERM-validation — validation
 

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -432,6 +433,68 @@ def test_an_entry_s_record_names_a_record_the_repository_holds(project: AdopterR
     assert [(where, message.split(":", 1)[0]) for _s, where, message in found] == [
         (f"{EXPORT}:/shortfalls/0/record", "`PRJ-009` names no record the repository holds")
     ]
+
+
+def _looked_up(asked: list[list[str]]) -> Any:
+    """A stand-in for `pkit`, answering `refs lookup --json` as the backbone does: PRJ-001
+    lies in `a.md`, and no other id names a record. Each command it is given is kept in
+    `asked`."""
+
+    def run(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        asked.append(argv)
+        lookups = [
+            {
+                "id": named,
+                "resolved": named == "PRJ-001",
+                "paths": ["a.md"] if named == "PRJ-001" else [],
+                "problem": None if named == "PRJ-001" else f"no record matches {named!r}",
+            }
+            for named in argv[argv.index("--") + 1 :]
+        ]
+        document = {"schema_version": 1, "lookups": lookups}
+        return subprocess.CompletedProcess(argv, 0, json.dumps(document), "")
+
+    return run
+
+
+def test_the_records_a_check_reads_are_asked_of_the_backbone_at_once(tmp_path: Path) -> None:
+    """The backbone is asked where each record lies once, for every record named before
+    the first is read, and again only for a record named later. Each status is read from
+    the record's own front matter, and an id that names no record has none (#2025)."""
+    backbone: Any = load_lib("backbone")[0]
+    (tmp_path / "a.md").write_text("---\nid: PRJ-001\nstatus: accepted\n---\n", encoding="utf-8")
+    asked: list[list[str]] = []
+    files = backbone.RecordFiles(tmp_path, ["PRJ-001", "PRJ-009", "PRJ-001"], _looked_up(asked))
+    assert files.status("PRJ-001") == "accepted" and files.file("PRJ-001") == "a.md"
+    assert files.file("PRJ-009") is None and files.status("PRJ-009") is None
+    assert asked == [["pkit", "refs", "lookup", "--json", "--", "PRJ-001", "PRJ-009"]]
+    assert files.status("COR-002") is None
+    assert asked[1:] == [["pkit", "refs", "lookup", "--json", "--", "COR-002"]]
+
+
+def test_a_lookup_that_fails_is_asked_again_and_an_old_backbone_is_named(tmp_path: Path) -> None:
+    """Where `pkit` gives no document, each record asked with it cannot be read, and is
+    asked again when it is read next. A backbone too old to answer several records in one
+    document is named, with the upgrade (#2025)."""
+    backbone: Any = load_lib("backbone")[0]
+    (tmp_path / "a.md").write_text("---\nstatus: proposed\n---\n", encoding="utf-8")
+    asked: list[list[str]] = []
+    answer = _looked_up(asked)
+    calls = iter([subprocess.CompletedProcess([], 1, "", "boom\n")])
+
+    def flaky(argv: list[str], **kw: Any) -> subprocess.CompletedProcess[str]:
+        return next(calls, None) or answer(argv, **kw)
+
+    files = backbone.RecordFiles(tmp_path, ["PRJ-001"], flaky)
+    with pytest.raises(backbone.Unreadable, match="boom"):
+        files.status("PRJ-001")
+    assert files.status("PRJ-001") == "proposed"
+
+    def old(argv: list[str], **_kw: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(argv, 2, "", "Error: No such option: --json\n")
+
+    with pytest.raises(backbone.Unreadable, match="predates it"):
+        backbone.RecordFiles(tmp_path, run=old).file("PRJ-001")
 
 
 def test_a_withdrawn_use_case_is_history(project: AdopterRepo) -> None:

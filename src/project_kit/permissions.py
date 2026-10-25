@@ -34,7 +34,7 @@ from typing import TYPE_CHECKING, Any
 
 from ruamel.yaml import YAML
 
-from project_kit import cli_render
+from project_kit import cli_render, lifecycle_ownership
 
 if TYPE_CHECKING:
     from packaging.version import Version
@@ -904,8 +904,10 @@ def scaffold_fragment(target_root: Path, capability: str) -> list[Path]:
 
     Refuses an unknown capability (no `package.yaml`) and refuses to clobber an
     existing fragment file — the same no-overwrite discipline the other
-    `new`/scaffold commands hold. Returns the paths stamped (a subset of the
-    two, since an already-present file is left untouched).
+    `new`/scaffold commands hold. Refuses, before it writes anything, a
+    capability whose `permissions/` the project receives as a synced copy, which
+    the next sync overwrites (core rule 1). Returns the paths stamped (a subset
+    of the two, since an already-present file is left untouched).
     """
     if not _PRIV_ID.match(capability) or ":" in capability:
         raise PermissionsError(f"invalid capability name {capability!r}; expected kebab-case.")
@@ -918,6 +920,17 @@ def scaffold_fragment(target_root: Path, capability: str) -> list[Path]:
             f"the name."
         )
     perms_dir = cap_dir / "permissions"
+    refusal = lifecycle_ownership.synced_copy_refusal(
+        target_root,
+        perms_dir,
+        f"capability {capability!r}",
+        "Scaffold the project's own fragment in a capability the project incubates, with "
+        "`pkit permissions scaffold <capability>`, or record the project's own grant with "
+        "`pkit permissions grant`. A capability's own fragment is authored where the "
+        "capability is authored.",
+    )
+    if refusal is not None:
+        raise PermissionsError(refusal)
     perms_dir.mkdir(parents=True, exist_ok=True)
     stamped: list[Path] = []
     for filename, template in (

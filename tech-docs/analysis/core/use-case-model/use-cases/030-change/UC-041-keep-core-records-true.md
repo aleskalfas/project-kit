@@ -35,8 +35,9 @@ pkit:
         - REQ-021
         - CONTRIBUTING.md#adding-a-core-record-cor
     revalidated:
-      at: 2026-10-24T20:57:52Z
-      outcome: updated
+      at: 2026-10-25T05:24:14Z
+      outcome: unchanged
+      unchanged-because: The change makes the help of pkit process graph say how its presets combine, as the command does it, and the command keeps the same edges. No step here filters that graph, so the use case holds.
 ---
 
 # UC-041 — Keep each core record true for any project that adopts it
