@@ -62,7 +62,10 @@ The model answers these problems with five claims, and the commands after the li
 - **Each agent has grants of its own, down to the command.** A grant names a subject, such as one agent, and a privilege: the commands the catalog recognizes, such as `gh issue edit`.
 - **Each agent's denies hold in every mode, the harness's most permissive included.** The hook judges every call, and reads the mode only to decide whether to ask.
 - **The model's grants for every agent are in one place, in your terms.** `pkit permissions explain` lists them by privilege.
-- **A wrong verdict can be traced to one of three layers.** `explain` shows the model, `diff` and `probe` check its translation, and `diff` names what the harness cannot enforce.
+- **A wrong verdict can be traced to one of three layers:**
+  - the model, which `explain` shows
+  - its translation into the harness's rules, which `diff` and `probe` check
+  - what the harness cannot enforce, which `diff` names
 - **What the harness cannot enforce is reported, never dropped.** Nothing in Claude Code enforces network egress, for one, and the model says so (COR-028 point 3).
 
 Below, every agent may use `gh`, and the agent `researcher` may not edit an issue with it. Each `echo` passes a call to the hook by hand, as Claude Code passes it ("Common tasks" below says how). The calls run in bypass mode, Claude Code's most permissive:
