@@ -39,6 +39,7 @@ pkit:
         - software-analysis:DEC-001#1
         - software-analysis:DEC-001#9
         - software-analysis:DEC-001#12
+        - software-analysis:DEC-001#13
         - software-analysis:DEC-004#7
         - ADR-034#1
         - COR-004

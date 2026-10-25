@@ -1332,7 +1332,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
   - `union`: entries merge by id
   - `additive`: entries merge, and any collision fails
 - **Inert filler:** a filler that cannot give a result, such as one out of step with the data point's version. Its failure is never read as an empty result ([COR-052 point 6](../../../.pkit/decisions/core/COR-052-slots.md#6-command-fillers-and-failure)).
-- **Question:** a command of the data point's definer that asks the person about it, and records each reply. It runs after an [install](#term-install--install), an upgrade or a [backbone](#term-backbone--backbone) transition (COR-061 points [1](../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question) and [2](../../../.pkit/decisions/core/COR-061-point-questions.md#2-it-runs-after-an-install-and-after-a-transition)).
+- **Question:** a command of the data point's definer that asks the person about the data point, and records each reply. It runs after an [install](#term-install--install), an upgrade or a [backbone](#term-backbone--backbone) transition (COR-061 points [1](../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question) and [2](../../../.pkit/decisions/core/COR-061-point-questions.md#2-it-runs-after-an-install-and-after-a-transition)).
 
 ## TERM-debt — debt
 
