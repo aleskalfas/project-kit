@@ -54,6 +54,7 @@ pkit:
         - .pkit/lifecycle/README.md#a-data-points-question
         - .pkit/cli/README.md#the-project-rule-set-a-capability-declares
         - .pkit/capabilities/project-management/README.md#
+        - .pkit/capabilities/project-management/README.md#issue-body-validation--required-sections-and-universal-rules-per-project-managementdec-010-issue-body-minimum-structure
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
         - .pkit/adapters/README.md#currently-shipped
@@ -82,7 +83,7 @@ project-kit writes the shared part once, as a methodology. Your project installs
 
 - **[Your rules load into every session, and tell agents to build only on accepted decisions](#your-rules-load-into-every-session).**
 - **[Routine commands run unasked, and dangerous ones are denied in their common forms](#routine-commands-run-unasked-and-dangerous-ones-are-denied).**
-- **[No change leaves a document stale without saying so, once the document is anchored in a declared place and your CI runs the check](#no-change-leaves-a-document-stale-without-saying-so).**
+- **[A change to what a page rests on can't merge until someone says whether the page still holds, once your CI enforces the check](#no-change-leaves-a-document-stale-without-saying-so).**
 - **[Reviewer agents come ready to call, each defined never to change the work it judges](#reviewer-agents-come-ready-to-call).**
 - **[The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency):** one command, then a pinned version.
 - **[Your files stay yours](#your-files-stay-yours):** a sync keeps the lines you added.
@@ -131,7 +132,7 @@ $ pkit permissions probe | grep -e "^\[" -e "ED —" | head -n 8
 
 ### No change leaves a document stale without saying so
 
-**With the check in your CI, no change leaves a document anchored in a declared place stale without saying so.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. In the example:
+**A change to what a page rests on can't merge until someone says whether the page still holds, once your CI enforces the check.** A document lists its anchors in its front matter, and `pkit friction check` flags each document whose anchors a change touched (COR-050). The change answers each one: updated, unchanged with a reason, or deferred to a follow-up, and a reviewer your project chooses checks each reason. In the example:
 
 - `docs/` holds documents
 - a page there rests on `app.py`
@@ -187,17 +188,29 @@ $ grep "^tools:" .claude/agents/critic.md .claude/agents/*-reviewer.md
 
 ### The methodology upgrades like a dependency
 
-**Your project stays at the methodology version it records until `pkit upgrade` moves it (COR-059).** The upgrade moves your project to the newer version, and runs each migration a breaking change needs (COR-010). It then pins the version it reached, for every clone.
+**Your project stays at the methodology version it records until `pkit upgrade` moves it (COR-059).** **The upgrade brings the source's improvements in one step, and runs each migration a breaking change needs (COR-010).** It then pins the version it reached, for every clone.
 
-At a terminal, when a newer `pkit` is out, the upgrade first installs that `pkit` on your machine. Every project there without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
+At a terminal, when a newer `pkit` is out, the upgrade first installs that `pkit` on your machine. Every project there without a pin uses it.
+
+Below, `uvx`, which comes with uv, fetches release 1.134.0 from GitHub and sets up a project with it. Your newer `pkit` leaves that project at 1.134.0 until the upgrade moves it:
 
 ```console
-$ grep backbone_version .pkit/manifest.yaml
-backbone_version: <version>
-$ pkit upgrade
-Already at backbone v<version>; nothing to upgrade.
+$ git init -q older-project
+$ cd older-project && uvx -q --from git+https://github.com/aleskalfas/project-kit.git@v1.134.0 pkit init | grep "^  stamped"
+  stamped      .pkit/manifest.yaml (backbone v1.134.0; 1 adapter(s) registered)
+$ cd older-project && pkit status | grep "Backbone version"
+  Backbone version:      1.134.0   (source <version> — run `pkit upgrade --dry-run` to preview)
+$ cd older-project && pkit upgrade | grep -e "^Upgrading" -e "^  running" -e 1.140.0 -e rule-set-reviewer -e "^Pinned"
+Upgrading backbone: 1.134.0 -> <version>
+  running <any> backbone migration(s), the replay (no completed transition -> v<version>)
+    • 1.140.0/001-retire-pkit-router-shim.sh
+  created    .claude/agents/rule-set-reviewer.md
 Pinned project-kit to <version> (.pkit/version-pin).
+$ cd older-project && pkit status | grep "Backbone version"
+  Backbone version:      <version>   (up to date)
 ```
+
+The upgrade ran the migrations up to the newer version, release 1.140.0's among them, and deployed the `rule-set-reviewer`, an agent 1.134.0 lacked.
 
 ### Your files stay yours
 
@@ -246,7 +259,7 @@ Install `pkit` once, globally, and it serves every project on your machine.
 
 **Prerequisites:** [`uv`](https://docs.astral.sh/uv/) (the Python tool installer), and [`jq`](https://jqlang.org/), which the merge of Claude Code's settings needs.
 
-Then install `pkit` from the git URL at the tag `latest`, which marks the highest release. The install needs the network, so the fence below shows no output:
+Then install `pkit` from the git URL at the tag `latest`, which marks the highest release. The install fetches over SSH with your key, so the fence below shows no output:
 
 ```sh
 uv tool install git+ssh://git@github.com/aleskalfas/project-kit.git@latest
@@ -325,7 +338,7 @@ Think of pkit as a **package manager for your project's methodology**. Four idea
      - a capability's rule set ([the CLI README](.pkit/cli/README.md#the-project-rule-set-a-capability-declares))
 
      A name collision, or a capability's question, waits for your answer ([the lifecycle README](.pkit/lifecycle/README.md#a-new-collision), and [on questions](.pkit/lifecycle/README.md#a-data-points-question)).
-4. **Versioned.** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency ([The methodology upgrades like a dependency](#the-methodology-upgrades-like-a-dependency)). It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
+4. **[Versioned, upgrades in one command](#the-methodology-upgrades-like-a-dependency).** `pkit upgrade` pulls new versions and runs any migrations automatically, like upgrading a dependency. It then pins the project to the version it reached, which it keeps when the installed pkit moves on (`--no-pin` skips the pin).
 
 The shape of `.pkit/`:
 
@@ -352,7 +365,7 @@ $ pkit capabilities install project-management | grep -e "^  Installed" -e "crea
   created    .claude/agents/project-manager.md
 ```
 
-Then file issues and move them through the capability's governed workflow with `pkit project-management …`. At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
+Then file issues and move them through the capability's governed workflow with `pkit project-management …`. **The tool enforces the process, so you need not remember it: `create-issue` refuses a body missing a required section ([the capability's README](.pkit/capabilities/project-management/README.md#issue-body-validation--required-sections-and-universal-rules-per-project-managementdec-010-issue-body-minimum-structure)).** At a terminal, the install also asks you the questions the capability declares ([the lifecycle README, on questions](.pkit/lifecycle/README.md#a-data-points-question)).
 
 **By role:**
 - **Project managers** → the `project-management` capability: issue hierarchy, a state machine, branch/PR conventions, a merge gate. Start at [`.pkit/capabilities/project-management/README.md`](.pkit/capabilities/project-management/README.md).
