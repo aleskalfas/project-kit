@@ -8,10 +8,6 @@ pkit:
       path:
         - src/project_kit/scratchpads.py
       record: [COR-006, COR-012, COR-043]
-    revalidated:
-      at: 2026-10-13T20:06:20Z
-      outcome: unchanged
-      unchanged-because: COR-043's points are now headings carrying the same numbers, word for word. No point's text, number or citation changed, so the reported state this page describes holds.
 ---
 
 # Scratchpad notes

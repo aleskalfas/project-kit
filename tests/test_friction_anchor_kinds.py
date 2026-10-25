@@ -61,6 +61,9 @@ from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.anchor_kind_capabilities import ASKED, HANGING, RESOLVER, RESOLVING, register_kinds
 from tests.friction_documents import CONFIG, SOURCE, T1, T2, document, friction_config, guide
 
+#: The fixtures here still write answers in blocks, until #2032 moves them.
+pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+
 # One whose source may be kept in two files: `sources/<value>.md` and an annex.
 SEVERAL = (
     ASKED

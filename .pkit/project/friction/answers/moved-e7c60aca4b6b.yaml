@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/living-docs/rule-sets/ldoc.md#RS-LDOC-005
+    revalidated:
+      at: 2026-10-19T16:10:35Z
+      outcome: unchanged
+      unchanged-because: living-docs DEC-001 point 3 names the two rules a later major of LDOC brings, a successor of the rule on one home and a rule on text alternatives, and adds diagrams' text alternatives to what validation checks where its rule binds. Its bullet that an index-like file is a signpost to what a folder holds, never a summary of its contents, is as it was, so this rule holds.

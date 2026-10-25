@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-privilege
+    revalidated:
+      at: 2026-10-24T12:57:01Z
+      outcome: unchanged
+      unchanged-because: A privilege is still recognised from a tool call or a command. The catalog gains text-filter and uv-run, each recognised by its program, and the core removes a redirection that writes no file before it recognises one.

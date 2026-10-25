@@ -57,11 +57,11 @@ from typing import Any
 import pytest
 from ruamel.yaml import YAML
 
-from project_kit import document_parts
+from project_kit import answer_files, document_parts
 from project_kit import rule_set_reading as reading
 from project_kit import rule_sets as rs
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
-from tests.analysis_repo import CAPABILITY, SA, actor_at, installed, with_status
+from tests.analysis_repo import CAPABILITY, REPO, SA, actor_at, installed, with_status
 from tests.test_rule_sets import rule_set_text
 
 Kind = rs.RuleSetFindingKind
@@ -414,6 +414,14 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
     1.0.0."""
     data, body = _shipped()
     assert data["version"] == "1.0.0"
+    # Each rule's answers live in this tree's answer files (COR-062 point 1).
+    location = SAN.relative_to(REPO).as_posix()
+    deferred = {
+        entry.location.removeprefix(f"{location}#")
+        for found in answer_files.working_tree_files(REPO).values()
+        for entry in found.entries
+        if entry.location.startswith(f"{location}#") and entry.deferrals
+    }
     assert set(ORIGINS) | {SOURCE_RULE} == set(JUDGEMENT_RULES)
     assert [rule_id for rule_id in JUDGEMENT_RULES if rule_id in data["checks"]] == [LOGIC_RULE]
     for rule_id, (statement, anchors) in JUDGEMENT_RULES.items():
@@ -428,6 +436,7 @@ def test_the_judgement_rules_ship_proposed_declaring_no_check() -> None:
         revalidated = entry["pkit"]["friction"].get("revalidated", {})
         assert isinstance(revalidated, dict), rule_id
         assert "deferred" not in revalidated, rule_id
+        assert rule_id not in deferred, rule_id
         assert "checks" not in entry, rule_id
         section = _section(body, rule_id)
         assert section.split("\n\n")[1] == statement, rule_id

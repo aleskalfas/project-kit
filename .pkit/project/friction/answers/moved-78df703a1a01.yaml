@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-artefact-type
+    revalidated:
+      at: 2026-10-25T00:37:31Z
+      outcome: unchanged
+      unchanged-because: Discovery marks a rule a synced copy holds as received, which leaves every artefact's type as it was.

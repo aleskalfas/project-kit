@@ -18,10 +18,6 @@ pkit:
         - ADR-014#1
       artefact:
         - ACT-operator
-    revalidated:
-      at: 2026-10-24T20:51:23Z
-      outcome: unchanged
-      unchanged-because: ACT-operator's needs say the system's CLI for its tool, and its opening names the operator where it said role. What it needs is the same, so this requirement holds.
 ---
 
 # REQ-016 · Constraint · The permission model's code needs only the system `python3` and its standard library

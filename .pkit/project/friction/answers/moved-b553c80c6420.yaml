@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-rule-set
+    revalidated:
+      at: 2026-10-21T14:25:53Z
+      outcome: unchanged
+      unchanged-because: COR-051 point 2 now keeps a rule's answers in answer files and asks none of a synced rule. A rule set is still a collection file of named statements with a version, inheritance and scope.

@@ -48,9 +48,6 @@ pkit:
         - REQ-015
         - REQ-018
         - REQ-019
-    revalidated:
-      at: 2026-10-24T20:56:57Z
-      outcome: updated
 ---
 
 # UC-004 — Know before I push that my change passes my project's checks

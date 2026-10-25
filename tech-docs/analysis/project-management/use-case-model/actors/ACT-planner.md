@@ -15,10 +15,6 @@ pkit:
         - project-management:DEC-054#5
         - project-management:DEC-016
         - project-management:DEC-018
-    revalidated:
-      at: 2026-10-23T08:53:49Z
-      outcome: unchanged
-      unchanged-because: It moved into project-management's analysis with its id, its anchors and every word, since only project-management meets its needs. The role and its needs hold.
 ---
 
 # ACT-planner — Planner

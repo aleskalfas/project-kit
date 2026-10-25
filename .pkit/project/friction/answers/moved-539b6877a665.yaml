@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-change-check
+    revalidated:
+      at: 2026-10-25T00:37:44Z
+      outcome: unchanged
+      unchanged-because: The change check now asks nothing of an artefact received by sync, as of an excluded one. It still compares a head with its base and lists the answers written.

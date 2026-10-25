@@ -17,12 +17,12 @@ without its test suite. A run takes it only on a pull request, and only where:
   decision does not rest on the order GitHub lists runs in.
 - **only answers changed since.** `pkit friction since <basis> --head <head>
   --base origin/<base> --json` says every change from the basis to the pull
-  request's head lies inside `revalidated` blocks and `revisited` lists, a merge
-  of the base counting only for what differs from git's merge of it. That
-  command is the one home of the question (ADR-057 point 2), so this script
-  reads no answer itself. GitHub lists a run for every pull request of its
-  branch, so the basis is this pull request's only because `friction since`
-  finds it on the head's own line of commits.
+  request's head lies inside answer files the change adds, a merge of the base
+  counting only for what differs from git's merge of it (its document's version
+  2, ADR-068 point 5). That command is the one home of the question (ADR-057
+  point 2), so this script reads no answer itself. GitHub lists a run for every
+  pull request of its branch, so the basis is this pull request's only because
+  `friction since` finds it on the head's own line of commits.
 - **the commit this run tests is the merge of that head.** The checkout's
   second parent is the pull request's head, so the head judged is the head
   whose merge the aggregator runs on.
@@ -99,8 +99,9 @@ PAGE_SIZE = 100
 PAGES = 3
 
 #: The version of `pkit friction since --json` this script reads; a document of
-#: another is no answer.
-SINCE_SCHEMA_VERSION = 1
+#: another is no answer. Version 2 counts answer files the change adds, where version
+#: 1 counted the artefacts' blocks (ADR-068 point 5).
+SINCE_SCHEMA_VERSION = 2
 SINCE_TIMEOUT = 900
 API_TIMEOUT = 60
 
@@ -462,7 +463,7 @@ def decide(
     return Decision(
         SHORT,
         f"the most recent full run on this pull request, {found.named()}, passed, and every "
-        f"change since lies inside `revalidated` blocks and `revisited` lists, a merge of the "
+        f"change since lies inside answer files the change adds, a merge of the "
         f"base counting only for what differs from git's merge of it",
         found,
     )

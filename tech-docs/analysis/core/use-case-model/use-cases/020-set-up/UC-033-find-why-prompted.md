@@ -40,10 +40,6 @@ pkit:
         - REQ-005
         - REQ-012
         - REQ-016
-    revalidated:
-      at: 2026-10-25T03:03:39Z
-      outcome: unchanged
-      unchanged-because: Its variants say what main made the hook do, which does not ask in auto and bypass mode, and what its reason names. Permissions scaffold now refuses a capability the project receives as a synced copy, which prompts no one, so what it says holds.
 ---
 
 # UC-033 — Find out why a command prompted me or was blocked

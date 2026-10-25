@@ -33,9 +33,6 @@ pkit:
         - COR-050#2
         - COR-050#13
         - COR-055#3
-    revalidated:
-      at: 2026-10-24T01:18:29Z
-      outcome: updated
 ---
 
 # UC-035 — Record a demo of my command line

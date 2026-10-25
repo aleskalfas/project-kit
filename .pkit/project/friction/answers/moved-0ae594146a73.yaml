@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-place
+    revalidated:
+      at: 2026-10-25T00:38:36Z
+      outcome: unchanged
+      unchanged-because: Discovery marks a rule a synced copy holds as received. A place is still declared and walked as the term says.

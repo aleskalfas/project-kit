@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-release-step
+    revalidated:
+      at: 2026-10-24T03:44:23Z
+      outcome: unchanged
+      unchanged-because: The change rewords only the refusal `pkit release merge` gives a pull request on a non-release head branch, which this artefact does not describe.

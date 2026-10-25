@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-permission-hook
+    revalidated:
+      at: 2026-10-25T03:02:47Z
+      outcome: unchanged
+      unchanged-because: The hook now removes a redirection that writes no file before it reads a Bash command, and permissions scaffold now refuses a capability the project receives as a synced copy. The backbone code still allows, denies or defers each call, so what the hook is holds.

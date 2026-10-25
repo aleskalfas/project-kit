@@ -21,10 +21,6 @@ pkit:
         - ADR-063
       artefact:
         - CONTRIBUTING.md#running-checks
-    revalidated:
-      at: 2026-10-25T00:07:36Z
-      outcome: unchanged
-      unchanged-because: Running checks now says how the prose lint counts the sentences of a paragraph, and that a bold label may end in a full stop. The section still calls whoever holds the repository's settings the operator, as the note says.
 ---
 
 # ACT-operator — Operator

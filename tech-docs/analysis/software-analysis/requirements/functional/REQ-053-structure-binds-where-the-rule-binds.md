@@ -18,10 +18,6 @@ pkit:
       record:
         - software-analysis:DEC-001#1
         - COR-051#7
-    revalidated:
-      at: 2026-10-24T22:54:05Z
-      outcome: unchanged
-      unchanged-because: check.py now asks the backbone once for every record it reads, and reads each package metadata once. Where a body is held to its declared structure is untouched.
 ---
 
 # REQ-053 · Functional · The check holds a body to its declared structure only where the format rule binds, and holds a record's body always

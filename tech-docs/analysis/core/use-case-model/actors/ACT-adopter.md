@@ -23,9 +23,6 @@ pkit:
         - COR-010
         - COR-053#8
         - COR-059#3
-    revalidated:
-      at: 2026-10-23T08:53:39Z
-      outcome: updated
 ---
 
 # ACT-adopter — Adopter

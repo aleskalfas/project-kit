@@ -1,0 +1,16 @@
+answers:
+  - artefact: tech-docs/analysis/core/requirements/constraints/050-adopt/REQ-031-cli-from-distribution-url.md
+    revalidated:
+      at: 2026-10-25T14:39:37Z
+      outcome: updated
+    revisited:
+      - anchor:
+          kind: path
+          value: src/project_kit/router.py
+        outcome: unchanged
+        reason: The measure now names the tag latest for the install the system prints. The router's part, running a pinned release through uvx from the same URL at its own tag, is unchanged, so router.py still meets it.
+      - anchor:
+          kind: path
+          value: tests/test_router.py
+        outcome: unchanged
+        reason: The measure now names the tag latest for the install the system prints. The router's test of a pinned release run through uvx from the distribution URL at its own tag still verifies the part of the measure it covers.

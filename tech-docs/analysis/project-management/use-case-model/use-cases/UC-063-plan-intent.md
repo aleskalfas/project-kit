@@ -55,10 +55,6 @@ pkit:
         - REQ-040
         - REQ-041
         - REQ-042
-    revalidated:
-      at: 2026-10-25T02:59:28Z
-      outcome: unchanged
-      unchanged-because: edit-issue now warns of a decision id that no record holds. Step 8 says only that edit-issue checks each body it writes, which still holds.
 ---
 
 # UC-063 — Plan an intent into an EPIC and its work, filed once I approve the plan

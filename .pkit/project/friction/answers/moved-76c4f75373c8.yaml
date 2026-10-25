@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-033-find-why-prompted.md
+    revalidated:
+      at: 2026-10-25T03:03:39Z
+      outcome: unchanged
+      unchanged-because: Its variants say what main made the hook do, which does not ask in auto and bypass mode, and what its reason names. Permissions scaffold now refuses a capability the project receives as a synced copy, which prompts no one, so what it says holds.

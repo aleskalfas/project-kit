@@ -2,9 +2,9 @@
 migration that writes it (COR-062 points 3, 6 and 11; ADR-068 points 1 and 7; #1873).
 
 `pkit friction move-plan --json` plans the move and writes nothing. The migration
-`2.0.0/002-move-answers-to-files.sh` writes the plan's bytes. Nothing runs either
-over a project in this part: each is proven here, on fixtures. Each test stands up
-a real adopter repository with block answers, committed, so the checks read them.
+`2.0.0/002-move-answers-to-files.sh` writes the plan's bytes. Each test stands up a
+real adopter repository with block answers, committed, so the checks read them.
+Validation fails an answer left in a block, and names the move (#2031).
 """
 
 from __future__ import annotations
@@ -23,6 +23,7 @@ from project_kit import answer_files as af
 from project_kit import friction_check as fc
 from project_kit import friction_move as fm
 from project_kit import friction_repository as fr
+from project_kit import friction_validate as fv
 from project_kit.cli import main
 from project_kit.friction_validate import validate_friction
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
@@ -390,6 +391,65 @@ def test_the_migration_imports_no_backbone() -> None:
     script = MIGRATION.read_text(encoding="utf-8")
     assert "project_kit" not in script and "python3 -I" in script
     assert "pkit friction move-plan --json" in script
+
+
+# --- validation, before the move and after it ------------------------------------------------
+
+_BLOCK_KINDS = (fv.FrictionFindingKind.ANSWER_IN_BLOCK, fv.FrictionFindingKind.ANSWERS_NOT_MOVED)
+
+
+def _block_findings(root: Path) -> list[fv.FrictionFinding]:
+    return [f for f in validate_friction(root).findings if f.kind in _BLOCK_KINDS]
+
+
+def test_validation_names_the_move_once_where_no_answer_file_exists(repo: AdopterRepo) -> None:
+    """The guide and `TERM-a` hold answers in their blocks and no answer file exists: the
+    project's answers have not moved. One error says so and names the move, never one per
+    artefact (COR-062 point 11)."""
+    (finding,) = _block_findings(repo.root)
+    assert (finding.location, finding.kind.value, finding.severity) == (
+        af.FOLDER,
+        "answers-not-moved",
+        fv.Severity.ERROR,
+    )
+    assert "2 artefacts hold answers in their own block" in finding.message
+    assert af.MOVE_COMMAND in finding.message and "pkit friction move-plan" in finding.message
+    assert REPO_ROOT / af.MOVE_MIGRATION == MIGRATION
+
+
+def test_an_answer_written_in_a_block_beside_the_move_fails_until_the_move_runs_again(
+    repo: AdopterRepo,
+) -> None:
+    """A line of work open at the move gives the plain page its first answer in its block,
+    which held none, so it merges cleanly with the move. Validation then fails the answer
+    left in the block, naming the move. The move, run again, takes it out into a new answer
+    file and leaves every earlier one as it was (COR-062 points 10 and 11)."""
+    repo.checkout("open", create=True)
+    answered = document("plain", anchors={"path": ["src/cli/**"]}, at=T2, outcome="updated")
+    repo.commit("answer the plain page in its block", {PLAIN: answered})
+    repo.checkout("main")
+    _apply(repo, fm.plan_move(repo.root))
+    repo.commit("move the answers", files=None)
+    folder = repo.root / af.FOLDER
+    before = {p.name: p.read_bytes() for p in folder.iterdir()}
+    repo.merge("open")
+
+    (finding,) = _block_findings(repo.root)
+    assert (finding.location, finding.pointer, finding.severity) == (
+        PLAIN,
+        "/pkit/friction/revalidated",
+        fv.Severity.ERROR,
+    )
+    assert af.MOVE_COMMAND in finding.message
+
+    again = fm.plan_move(repo.root)
+    assert [f.path for f in again.files] == [PLAIN]
+    _apply(repo, again)
+    assert _block_findings(repo.root) == []
+    assert validate_friction(repo.root).errors == ()
+    after = {p.name: p.read_bytes() for p in folder.iterdir()}
+    assert {name: after[name] for name in before} == before
+    assert len(after) == len(before) + 1
 
 
 @pytest.mark.parametrize("with_pkit", [False, True], ids=["no-pkit", "no-plan"])

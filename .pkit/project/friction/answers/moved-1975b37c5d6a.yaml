@@ -1,0 +1,6 @@
+answers:
+  - artefact: .pkit/capabilities/software-analysis/rule-sets/san.md#RS-SAN-002
+    revalidated:
+      at: 2026-10-19T19:00:00Z
+      outcome: unchanged
+      unchanged-because: DEC-001 point 3 gives a domain-model view its id, VIEW- and the slug after its number. A use case's steps and variants stay append-only, so this rule holds as written.

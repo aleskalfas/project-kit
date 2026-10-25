@@ -27,6 +27,9 @@ from project_kit.friction_check import record_naming
 from tests.adopter_repo import AdopterRepo, MakeAdopterRepo
 from tests.friction_documents import CONFIG, MANUAL, Timeline, friction_config, guide, manual
 
+#: The fixtures here still write answers in blocks, until #2032 moves them.
+pytestmark = pytest.mark.usefixtures("answers_in_blocks")
+
 #: A second document with the manual's id, read after it: its path sorts after
 #: `docs/manual.md`, so the walk meets it second.
 LATER = "docs/zz-manual.md"
