@@ -53,14 +53,15 @@ pkit:
         - .pkit/capabilities/project-management/README.md#
         - .pkit/capabilities/software-engineering/README.md#
         - .pkit/capabilities/evidence/README.md#
+        - .pkit/adapters/README.md#currently-shipped
     revalidated:
-      at: 2026-10-25T13:22:25Z
+      at: 2026-10-25T14:05:53Z
       outcome: updated
 ---
 
 # project-kit
 
-project-kit installs a way of working with AI coding agents into your project, and keeps it current like a dependency. It is built for **Claude Code** today.
+project-kit installs a way of working with AI coding agents into your project, and keeps it current like a dependency. It is built for **[Claude Code](.pkit/adapters/README.md#currently-shipped)** today.
 
 <!-- TODO(c): add a "first win: the code-review gate catches a real defect" section once the comment + review format (#756/#757) lands. -->
 
@@ -107,7 +108,7 @@ status: proposed
 
 ### Routine commands run unasked, and dangerous ones are denied
 
-**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile, and turns on the hook that enforces it in Claude Code and, except on macOS, the OS sandbox (COR-028). Then `git`, `gh` and `pkit` run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. Before the hook is on, the probe shows what it will decide, asking as you, the operator:
+**You see fewer prompts, and the common forms of the dangerous commands are refused.** `pkit permissions setup autonomy` activates a permission profile, and turns on the hook that enforces it in Claude Code and, except on macOS, the OS sandbox (COR-028). Then `git`, `gh` and `pkit` run unasked, and `sudo`, a recursive `rm` and `git push --force` are denied to every agent. The example runs only its first step, activating the `autonomous` profile, and the probe shows what the hook will decide, asking as you, the operator:
 
 ```console
 $ pkit permissions profile activate autonomous | grep "^profile"
@@ -163,21 +164,24 @@ Result: passed   (enforcing)
 
 ### Reviewer agents come ready to call
 
-**Four reviewer agents ship with the methodology, each defined to judge the work and never to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as the project-management capability's. Three definitions say "never change the work under review", and only the critic is also held to it by its tools:
+**Four reviewer agents ship with the methodology, each defined to judge the work, not to change it.** The `critic` challenges a draft (COR-024), and the `rule-set-reviewer` judges a change against the rules your project writes down and accepts (COR-057). They run when you or your agent call them, or when a merge gate requires them, such as the one in [project-management](.pkit/capabilities/project-management/README.md), a capability you can install on top. Their definitions say so, and only the critic is also held to it by its tools:
 
 ```console
-$ grep -l "never change the work under review" .claude/agents/*.md
+$ grep -l -e "never change the work under review" -e "never modify any artifact" .claude/agents/*.md
 .claude/agents/convention-compliance-reviewer.md
+.claude/agents/critic.md
 .claude/agents/methodology-reviewer.md
 .claude/agents/rule-set-reviewer.md
-$ grep "^tools:" .claude/agents/critic.md .claude/agents/rule-set-reviewer.md
+$ grep "^tools:" .claude/agents/critic.md .claude/agents/*-reviewer.md
 .claude/agents/critic.md:tools: [Read, Glob, Grep, WebFetch]
+.claude/agents/convention-compliance-reviewer.md:tools: [Read, Glob, Grep, Bash, Write]
+.claude/agents/methodology-reviewer.md:tools: [Read, Glob, Grep, Bash, WebFetch, Write]
 .claude/agents/rule-set-reviewer.md:tools: [Read, Glob, Grep, Bash, Write]
 ```
 
 ### The methodology upgrades like a dependency
 
-**Your project runs the version it records, until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached. At a terminal, when a newer `pkit` is out, it first installs it on your machine, so every project not yet pinned runs it too. A fresh project is already current, so here the upgrade only pins:
+**Your project stays at the version it records until `pkit upgrade` moves it (COR-059).** The upgrade brings the source's improvements in one step, runs each migration a breaking change needs (COR-010), and pins the version it reached, for every clone. At a terminal, when a newer `pkit` is out, it first installs it on your machine, where every project without a pin uses it. A fresh project is already current and has no pin yet, so here the upgrade only writes one:
 
 ```console
 $ grep backbone_version .pkit/manifest.yaml
@@ -213,11 +217,11 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 |---|---|---|
 | Nothing to install or learn | ✅ | ❌ `uv`, `jq`, a CLI and its conventions |
 | No running cost on each change | ✅ | ❌ answers, acceptances and a CI job |
-| Works with other agent tools | ✅ you write each tool's files | ❌ Claude Code only, today |
+| Works with other agent tools | ✅ you write each tool's files | ❌ [Claude Code only](.pkit/adapters/README.md#currently-shipped), today |
 | You choose every line and every allow | ✅ | ❌ its files are synced, and its allows return |
 | Rules load into every session | ✅ | ✅ |
 | An improvement reaches every project, on any machine | ❌ copied by hand, or one machine's `~/.claude/` | ✅ at each project's next upgrade |
-| Taking an update keeps your own files | ❌ merged by hand | ✅ one owner for every file |
+| Taking an update keeps your own files | ❌ merged by hand | ✅ one owner per file, with listed exceptions |
 | A deny catches other forms of its command | ❌ the start of a command only | ✅ once the hook is on |
 | Stale documents flagged on the change | ❌ | ✅ once anchored |
 | Reviewer agents ready to call | ❌ written by you | ✅ four shipped |
@@ -225,8 +229,8 @@ Without project-kit, the usual setup is a `CLAUDE.md` and agent files you keep b
 ## When not to use it
 
 - **A one-off task.** Just ask Claude. project-kit pays off when work repeats, must survive a new session, or spans projects and people.
-- **Another harness.** Claude Code's adapter is the only one built today.
-- **No room for the running cost.** Each change answers the documents it touches, each decision waits for acceptance, and someone keeps the CI job.
+- **Another agent tool.** project-kit works with [Claude Code only](.pkit/adapters/README.md#currently-shipped), today.
+- **No room for the running cost.** Each change answers the documents whose anchors it touches, each decision waits for acceptance, and someone keeps the CI job.
 
 ## Install
 
