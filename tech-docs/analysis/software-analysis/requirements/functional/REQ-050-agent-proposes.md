@@ -24,10 +24,6 @@ pkit:
         - software-analysis:DEC-001#5
         - software-analysis:DEC-001#9
         - COR-050#3
-    revalidated:
-      at: 2026-10-25T00:34:44Z
-      outcome: unchanged
-      unchanged-because: The resolver's body changes only in naming the answers its commands write. It still proposes, and runs no writer.
 ---
 
 # REQ-050 · Functional · An agent proposes what the analysis records, and a person decides it

@@ -10,9 +10,6 @@ pkit:
         - .pkit/capabilities/evidence/skills/**
         - .pkit/capabilities/evidence/decisions/**
       record: [COR-007, COR-017, COR-020, COR-021]
-    revalidated:
-      at: 2026-10-24T01:21:49Z
-      outcome: updated
 ---
 
 # evidence capability

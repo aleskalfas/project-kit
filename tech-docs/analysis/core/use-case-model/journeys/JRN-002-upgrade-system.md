@@ -38,9 +38,6 @@ pkit:
         - UC-008
         - UC-023
         - UC-038
-    revalidated:
-      at: 2026-10-24T20:55:00Z
-      outcome: updated
 ---
 
 # JRN-002 — Upgrade the system

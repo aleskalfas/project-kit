@@ -10,9 +10,6 @@ pkit:
         - .pkit/capabilities/demo-recording/skills/**
         - .pkit/capabilities/demo-recording/decisions/**
       record: [COR-007, COR-016, COR-017, COR-020, COR-021, COR-023]
-    revalidated:
-      at: 2026-10-24T01:18:27Z
-      outcome: updated
 ---
 
 # demo-recording capability

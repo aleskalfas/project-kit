@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/020-set-up/UC-031-keep-per-machine-choices.md
+    revalidated:
+      at: 2026-10-25T03:03:37Z
+      outcome: unchanged
+      unchanged-because: Main linked its terms to the glossary and reworded variant 3b, and permissions scaffold now refuses a capability the project receives as a synced copy. No step here scaffolds a fragment, and where per-machine choices are kept, out of what the project commits, is as it was.

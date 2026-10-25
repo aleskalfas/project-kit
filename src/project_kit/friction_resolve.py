@@ -411,7 +411,7 @@ class Stamp:
 class Version:
     """One version of a file, read with `\\n` line breaks: its artefacts, where each
     `revalidated` block is written in it (`stamps`), and where each `revisited` list is
-    (`revisits`). `pkit friction since` reads both through it too (`friction_since`)."""
+    (`revisits`)."""
 
     text: str
     artefacts: Mapping[_Key, Artefact]

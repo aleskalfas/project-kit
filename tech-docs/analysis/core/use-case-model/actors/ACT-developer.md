@@ -26,9 +26,6 @@ pkit:
         - COR-050#3
         - COR-050#6
         - COR-050#9
-    revalidated:
-      at: 2026-10-23T08:53:41Z
-      outcome: updated
 ---
 
 # ACT-developer — Developer

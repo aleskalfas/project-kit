@@ -15,10 +15,6 @@ pkit:
         - .github/workflows/checks.yml
       record:
         - PRJ-003
-    revalidated:
-      at: 2026-10-22T22:12:47Z
-      outcome: unchanged
-      unchanged-because: The workflow only names the pull request's own head to the change check. The package's Python floor and what verifies it are unchanged.
 ---
 
 # REQ-003 · Constraint · The backbone's CLI runs on Python 3.11 or later

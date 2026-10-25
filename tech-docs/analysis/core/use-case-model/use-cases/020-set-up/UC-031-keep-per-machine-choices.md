@@ -50,10 +50,6 @@ pkit:
         - REQ-002
         - REQ-009
         - REQ-012
-    revalidated:
-      at: 2026-10-25T03:03:37Z
-      outcome: unchanged
-      unchanged-because: Main linked its terms to the glossary and reworded variant 3b, and permissions scaffold now refuses a capability the project receives as a synced copy. No step here scaffolds a fragment, and where per-machine choices are kept, out of what the project commits, is as it was.
 ---
 
 # UC-031 — Keep my per-machine choices out of what the project commits

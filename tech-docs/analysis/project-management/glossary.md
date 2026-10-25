@@ -107,10 +107,6 @@ TERM-cascade:
         record:
           - project-management:DEC-006
           - project-management:DEC-034
-      revalidated:
-        at: 2026-10-24T06:23:37Z
-        outcome: unchanged
-        unchanged-because: close-issue now offers a parent for closing only once the engine finds no open child under it, as the term says. The cascade still never closes a parent.
 TERM-checkbox:
   name: checkbox
   noun-forms: [checkboxes]
@@ -125,10 +121,6 @@ TERM-checkbox:
         record:
           - project-management:DEC-007
           - project-management:DEC-038
-      revalidated:
-        at: 2026-10-25T02:59:21Z
-        outcome: unchanged
-        unchanged-because: The change gives the predicted-decision-id rule of body-format.yaml its id and the forms of id it reads. The checkbox rules the term describes are untouched.
 TERM-classification-axis:
   name: classification axis
   noun-forms: [classification axes]
@@ -216,10 +208,6 @@ TERM-merge-gate:
           - project-management:DEC-028
           - project-management:DEC-007
           - project-management:DEC-026
-      revalidated:
-        at: 2026-10-24T06:13:39Z
-        outcome: unchanged
-        unchanged-because: done-work's refusal now names review-pr with the issue's number. What a pull request must meet before it lands is the same.
 TERM-milestone:
   name: Milestone
   noun-forms: [Milestones]
@@ -273,10 +261,6 @@ TERM-required-reviewer:
           - project-management:DEC-032#D1
           - project-management:DEC-032#D2
           - project-management:DEC-027
-      revalidated:
-        at: 2026-10-24T21:24:42Z
-        outcome: unchanged
-        unchanged-because: This change keeps an answer file from meeting the condition touches-code, as DEC-032 point D1 says. A required reviewer is still one the settings name, or one a capability contributes whose condition the change meets.
 TERM-task:
   name: Task
   status: active
@@ -339,10 +323,6 @@ TERM-workstream:
         record:
           - project-management:DEC-018
           - project-management:DEC-012
-      revalidated:
-        at: 2026-10-24T10:37:33Z
-        outcome: unchanged
-        unchanged-because: The library gains the reading of the workstreams file that filing makes, to refuse a workstream the file does not hold as active. What a workstream is, and the file that declares it, are unchanged.
 ---
 
 # Glossary

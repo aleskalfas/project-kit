@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-acceptance-gate
+    revalidated:
+      at: 2026-10-24T22:53:43Z
+      outcome: unchanged
+      unchanged-because: The decisions README now says pkit refs lookup takes several ids with --json. Which records bind, and the gate on proposed ones, are untouched.

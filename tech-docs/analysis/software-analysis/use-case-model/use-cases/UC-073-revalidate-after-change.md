@@ -46,10 +46,6 @@ pkit:
       artefact:
         - REQ-050
         - REQ-052
-    revalidated:
-      at: 2026-10-25T00:34:47Z
-      outcome: unchanged
-      unchanged-because: The resolver's body names the answers its commands write instead of the blocks. The proposal and its commands are as this use case says.
 ---
 
 # UC-073 — Revalidate the analysis after a change from an agent's proposed outcomes

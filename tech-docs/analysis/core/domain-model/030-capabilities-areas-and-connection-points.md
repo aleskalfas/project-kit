@@ -36,9 +36,6 @@ pkit:
         - TERM-role
         - TERM-data-point
         - TERM-process
-    revalidated:
-      at: 2026-10-21T19:08:58Z
-      outcome: updated
 ---
 
 # VIEW-capabilities-areas-and-connection-points — Capabilities, areas and connection points

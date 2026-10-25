@@ -34,10 +34,6 @@ pkit:
         - TERM-validation
         - TERM-backbone-configuration
         - TERM-documentation-root
-    revalidated:
-      at: 2026-10-23T08:54:15Z
-      outcome: unchanged
-      unchanged-because: TERM-seeding's entry only gains a link to the new term overlay. Its section in the view holds.
 ---
 
 # VIEW-a-projects-own-files — A project's own files

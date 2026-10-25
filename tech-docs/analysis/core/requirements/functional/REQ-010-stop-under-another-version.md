@@ -21,10 +21,6 @@ pkit:
         - ADR-059
       artefact:
         - ACT-adopter
-    revalidated:
-      at: 2026-10-24T20:50:52Z
-      outcome: unchanged
-      unchanged-because: ACT-adopter's core item says the adopter where it said this role. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-010 · Functional · A command that propagates content under another version than the project records stops

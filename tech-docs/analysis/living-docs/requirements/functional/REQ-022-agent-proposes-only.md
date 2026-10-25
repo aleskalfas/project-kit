@@ -20,10 +20,6 @@ pkit:
         - living-docs:DEC-001#6
         - living-docs:DEC-001#8
         - COR-050#3
-    revalidated:
-      at: 2026-10-25T05:30:40Z
-      outcome: unchanged
-      unchanged-because: The agent's reader-review now reads the reading-evidence point, and its record still lands in the agent workspace. The agent still proposes each change, and applies none.
 ---
 
 # REQ-022 · Functional · The living-docs agent proposes each change, and applies none

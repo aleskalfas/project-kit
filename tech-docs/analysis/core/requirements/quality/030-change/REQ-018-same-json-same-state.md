@@ -18,10 +18,6 @@ pkit:
         - tests/test_friction_artefacts.py
       artefact:
         - ACT-ci-pipeline
-    revalidated:
-      at: 2026-10-24T21:03:41Z
-      outcome: unchanged
-      unchanged-because: ACT-ci-pipeline says no person to reply to a prompt where it said to answer one. Its needs are the same, so this requirement holds.
 ---
 
 # REQ-018 · Quality · A reading command of the friction group prints the same document for the same state

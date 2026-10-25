@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/glossary.md#TERM-finding
+    revalidated:
+      at: 2026-10-22T22:12:35Z
+      outcome: unchanged
+      unchanged-because: No query the backbone runs inherits PKIT_CHECK_HEAD now, as none inherits the base. A finding is still a statement whose severity says whether it fails, so the definition holds.

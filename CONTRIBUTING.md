@@ -27,26 +27,6 @@ pkit:
         - .pkit/decisions/README.md
         - .pkit/decisions/README.md#checking-a-changes-numbering
         - .pkit/lifecycle/README.md#syncs-guard-no-path-down-and-no-migration-passed-over
-    revalidated:
-      at: 2026-10-25T14:40:29Z
-      outcome: updated
-      deferred:
-        - anchor:
-            kind: record
-            value: ADR-055
-          reason: "ADR-055 point 5 now asks a merge queue to give the check each change's own head, which the paragraph on landing through the queue does not say. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: ADR-067
-          reason: "ADR-067's summary now says only answers changed when changes lie in the change's answers, and CONTRIBUTING still names the blocks. #1779 builds it and rewrites the short check's account."
-        - anchor:
-            kind: record
-            value: COR-050
-          reason: "It says only answers changed when changes lie in revalidated blocks and revisited lists, which COR-062 moves to answer files. #1779 builds it and rewrites it."
-        - anchor:
-            kind: record
-            value: project-management:DEC-053
-          reason: "DEC-053 now meets a page's obligation by its answers in answer files, and asks none for a page answered apart. #1779 builds it and rewrites the documentation check's account."
 ---
 
 # Contributing to project-kit
@@ -74,7 +54,7 @@ The same aggregator runs in two places, so the gate can't drift:
 
 **When CI runs the short check.** On a pull request, CI runs `scripts/check.sh --short` instead of the whole aggregator in one case ([ADR-067](tech-docs/architecture/decisions/ADR-067-answers-only-short-check.md)):
 - **The most recent full run on the pull request passed.** CI reads that from GitHub's own record of the workflow's runs.
-- **Only answers changed since.** `pkit friction since` says every change from that run's head lies inside `revalidated` blocks and `revisited` lists. A merge of the base counts only for what differs from git's merge of it.
+- **Only answers changed since.** `pkit friction since` says every change from that run's head lies in the change's answers to friction, as that command reads them. A merge of the base counts only for what differs from git's merge of it.
 
 The short check runs every line of the aggregator but the test suite, and of the suite only the tests marked `answers` ([`tests/README.md`](tests/README.md), "Running the suite"). The base's copy of the decider, `scripts/short_check.py`, decides, so a pull request that changes it is decided by the copy on `main`. Every other run is full, and so is every doubt, such as a re-run or a pull request whose base was changed. A merge-queue run and a push to `main` are always full. The job's summary says which form ran and why. The pre-push hook always runs the whole aggregator. The same predicate decides whether `uv run pkit pm land-work` lands a later head, with only answers changed, under the person's earlier authorisation ([project-management:DEC-055](.pkit/capabilities/project-management/decisions/DEC-055-pr-lists-answers.md) point 3). So such a head has usually passed only the short check, and the full run on `main` after the landing is the first to run the suite on it.
 

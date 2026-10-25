@@ -18,10 +18,6 @@ pkit:
         - ADR-039#D2
       artefact:
         - ACT-operator
-    revalidated:
-      at: 2026-10-24T20:51:31Z
-      outcome: unchanged
-      unchanged-because: ACT-operator's needs say the system's CLI for its tool, and its opening names the operator where it said role. What it needs is the same, so this requirement holds.
 ---
 
 # REQ-028 · Quality · The router never fails a command over a version pin it cannot resolve

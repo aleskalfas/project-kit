@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/actors/ACT-operator.md
+    revalidated:
+      at: 2026-10-25T14:40:33Z
+      outcome: unchanged
+      unchanged-because: Running checks now names the pages' contents lists among the lines the aggregator runs. The section still calls whoever holds the repository's settings the operator.

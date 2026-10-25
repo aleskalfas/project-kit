@@ -1,0 +1,6 @@
+answers:
+  - artefact: tech-docs/analysis/core/use-case-model/use-cases/030-change/UC-004-check-before-push.md
+    revalidated:
+      at: 2026-10-25T14:40:35Z
+      outcome: unchanged
+      unchanged-because: The aggregator gains a line that checks the pages' contents lists. It still runs every check without stopping at a failure, and the hook and CI run it as the steps say.

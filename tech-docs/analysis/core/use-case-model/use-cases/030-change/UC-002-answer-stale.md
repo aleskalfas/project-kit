@@ -79,9 +79,6 @@ pkit:
         - REQ-019
         - REQ-020
         - REQ-021
-    revalidated:
-      at: 2026-10-25T00:34:58Z
-      outcome: updated
 ---
 
 # UC-002 — Answer what my change made stale
