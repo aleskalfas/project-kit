@@ -77,7 +77,7 @@ pkit:
 - **1c.** The developer would edit a [rule](../../../glossary.md#term-rule--rule) a method rule set ships. That edit belongs to the [component](../../../glossary.md#term-component--component) that ships the set, so the developer proposes it there, or does not inherit the set ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)). The use case ends.
 - **2a.** A scope holds an empty list, names neither paths nor types, or names a type that no owner declares. [Validation](../../../glossary.md#term-validation--validation) fails on it, and the path rejoins at step 2.
 - **5a.** The set would inherit a set that does not exist under the address written, or the inheriting would close a cycle. Validation fails, naming the set, and the path rejoins at step 5.
-- **5b.** An inherited rule offers an extension [point](../../../glossary.md#term-point--point), and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
+- **5b.** An inherited rule offers an extension point, and a rule of the set fills it. The filling rule names the extension point in `fills`, and anchors the rule it fills, so an edit there flags the fill ([COR-051 point 7](../../../../../../.pkit/decisions/core/COR-051-rule-sets.md#7-inheritance-and-where-rules-bind)).
 - **6a.** Validation fails on a rule or a set's name, naming each, and the path rejoins at step 3. It fails on each of these:
   - a rule's id that carries another set's name, or redefines an inherited id
   - a rule and a section that do not match

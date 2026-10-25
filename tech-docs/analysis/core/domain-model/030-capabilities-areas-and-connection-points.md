@@ -253,7 +253,7 @@ A data point is a declared interface through which the [capability](../glossary.
   - one filler alone fills it
   - entries merge by id
   - entries merge and any collision fails
-- optionally a question, which asks a person about the [point](../glossary.md#term-point--point) and records the reply ([COR-061 point 1](../../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question))
+- optionally a question, which asks a person about the data point and records the reply ([COR-061 point 1](../../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question))
 
 **Relations:**
 
@@ -265,7 +265,7 @@ A data point is a declared interface through which the [capability](../glossary.
 **Always true:**
 
 - A filler that fails gives no result, which is never read as an empty one ([COR-052 point 6](../../../../.pkit/decisions/core/COR-052-slots.md#6-command-fillers-and-failure)).
-- A capability's filler counts only where its schema version matches the point's (COR-052 point 5).
+- A capability's filler counts only where its schema version matches the data point's (COR-052 point 5).
 - A question asks only what has no recorded reply. Where nobody can reply, it records nothing (COR-061 points 1 and [5](../../../../.pkit/decisions/core/COR-061-point-questions.md#5-only-the-persons-answer-is-the-consent)).
 
 ## Process

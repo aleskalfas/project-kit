@@ -565,7 +565,7 @@ TERM-place:
           - COR-050#14
 TERM-point:
   name: point
-  other-senses: [revalidation point, deferral point]
+  other-senses: [revalidation point, deferral point, extension point, extension points, entry point, entry points]
   status: active
   definition: "numbered or labelled part of a decision record's Decision, whose id names it for good once the record writes it as a heading"
   pkit:
@@ -1303,7 +1303,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
   - a [process](#term-process--process) is offered for others to depend on
   - an event signals that a writing command finished
 - **Point:** a part of a [decision record](#term-decision-record--decision-record)'s Decision ([COR-058 point 1](../../../.pkit/decisions/core/COR-058-record-points.md#1-a-point-is-a-heading-with-its-id-and-title)). It shares only the word.
-- **Extension point:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)). A [rule](#term-rule--rule)'s extension [point](#term-point--point) is a part of the rule that an inheriting [rule set](#term-rule-set--rule-set) may fill, and shares only the word ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
+- **Extension point:** [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s key in [package metadata](#term-package-metadata--package-metadata) for the connection points a capability defines, beside `extensions` for those it plugs into ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality)). A [rule](#term-rule--rule)'s extension point is a part of the rule that an inheriting [rule set](#term-rule-set--rule-set) may fill, and shares only the word ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
 - **Hook:** a named entry point that an [agent definition](#term-agent-definition--agent-definition) needs and a [skill](#term-skill--skill) or a command provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It is no connection point.
 
 ## TERM-consent — consent
@@ -1332,7 +1332,7 @@ Explained in [VIEW-capabilities-areas-and-connection-points](domain-model/030-ca
   - `union`: entries merge by id
   - `additive`: entries merge, and any collision fails
 - **Inert filler:** a filler that cannot give a result, such as one out of step with the data point's version. Its failure is never read as an empty result ([COR-052 point 6](../../../.pkit/decisions/core/COR-052-slots.md#6-command-fillers-and-failure)).
-- **Question:** a command of the [point](#term-point--point)'s definer that asks the person about the point, and records each reply. It runs after an [install](#term-install--install), an upgrade or a [backbone](#term-backbone--backbone) transition (COR-061 points [1](../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question) and [2](../../../.pkit/decisions/core/COR-061-point-questions.md#2-it-runs-after-an-install-and-after-a-transition)).
+- **Question:** a command of the data point's definer that asks the person about it, and records each reply. It runs after an [install](#term-install--install), an upgrade or a [backbone](#term-backbone--backbone) transition (COR-061 points [1](../../../.pkit/decisions/core/COR-061-point-questions.md#1-a-data-point-may-declare-a-question) and [2](../../../.pkit/decisions/core/COR-061-point-questions.md#2-it-runs-after-an-install-and-after-a-transition)).
 
 ## TERM-debt — debt
 
@@ -1615,6 +1615,8 @@ Explained in [VIEW-the-system-and-its-methodology](domain-model/010-the-system-a
 - **Retired point:** one that no other point continues. Its id stays in the record's front matter, with a stub where it stood ([COR-058 point 4](../../../.pkit/decisions/core/COR-058-record-points.md#4-a-retired-point-leaves-an-entry-and-a-stub)).
 - **A record in list form:** a record whose points are still numbered items. Their numbers may move, so no [anchor](#term-anchor--anchor) names one ([COR-058 point 9](../../../.pkit/decisions/core/COR-058-record-points.md#9-a-record-in-list-form-keeps-working-until-it-is-converted)).
 - **Revalidation point and deferral point:** commits that the [friction](#term-friction--friction) checks measure from (COR-050 points 3 and [4](../../../.pkit/decisions/core/COR-050-anchors-and-friction.md#4-deferrals)). They share only the word.
+- **Extension point:** a part of a [rule](#term-rule--rule) that an inheriting [rule set](#term-rule-set--rule-set) may fill ([COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)). It shares only the word.
+- **Entry point:** what a hook names, which an [agent definition](#term-agent-definition--agent-definition) needs and a [skill](#term-skill--skill) or a command provides ([COR-013 point 4](../../../.pkit/decisions/core/COR-013-agent-architecture.md#4-the-hook-pattern-agents-executing-in-other-areas)). It shares only the word.
 - **Connection point:** a [component](#term-component--component)'s declared interface under a [role](#term-role--role) ([COR-053 point 2](../../../.pkit/decisions/core/COR-053-connection-points.md#2-points-addressed-publisherrolepoint-in-three-kinds)). It shares only the word.
 
 ## TERM-privilege — privilege
@@ -1682,7 +1684,7 @@ Explained in [VIEW-a-projects-own-files](domain-model/050-a-projects-own-files.m
   - a [migration](#term-migration--migration), within what the records owning the written content allow
   - a [capability](#term-capability--capability)'s [install](#term-install--install), of the [rule set](#term-rule-set--rule-set) the capability declares
   - the configuration commands ([COR-048 point 5](../../../.pkit/decisions/core/COR-048-backbone-configuration.md#5-written-only-with-consent))
-- **Extension:** COR-001's name for this content. [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s `extensions` and a [rule](#term-rule--rule)'s extension [point](#term-point--point) are other things ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality) and [COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
+- **Extension:** COR-001's name for this content. [COR-053](../../../.pkit/decisions/core/COR-053-connection-points.md)'s `extensions` and a [rule](#term-rule--rule)'s extension point are other things ([COR-053 point 3](../../../.pkit/decisions/core/COR-053-connection-points.md#3-declared-in-package-metadata-in-one-block-named-for-the-functionality) and [COR-051 point 3](../../../.pkit/decisions/core/COR-051-rule-sets.md#3-identifiers)).
 - **Suspension:** project-owned content that its consumer reads instead of a synced copy of the same name. The record governing that kind of file must allow it (COR-001).
 
 ## TERM-propagation — propagation
