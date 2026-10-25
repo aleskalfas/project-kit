@@ -1247,3 +1247,18 @@ def test_off_a_terminal_a_re_run_finishes_the_rollforward_without_yes(cm, monkey
     monkeypatch.setattr(sys, "argv", ["close-milestone", "6"])
     assert cm.main() == 0
     assert attempts == [11, 12]
+
+
+def test_a_re_run_with_no_stdin_at_all_finishes_the_rollforward(cm, monkeypatch) -> None:
+    """An absent stdin is no terminal: the re-run goes on, as off any other."""
+    repo = _repo()
+    _wire(monkeypatch, cm, repo)
+    monkeypatch.setattr(cm, "_run_edit_issue", lambda issue, *a, **k: 3 if issue == 11 else 0)
+    assert _close(monkeypatch, cm) == cm.EXIT_ROLLFORWARD_INCOMPLETE
+
+    attempts: list[int] = []
+    monkeypatch.setattr(cm, "_run_edit_issue", lambda issue, *a, **k: attempts.append(issue) or 0)
+    monkeypatch.setattr(sys, "stdin", None)
+    monkeypatch.setattr(sys, "argv", ["close-milestone", "6"])
+    assert cm.main() == 0
+    assert attempts == [11, 12]

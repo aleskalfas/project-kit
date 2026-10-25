@@ -828,7 +828,7 @@ def _confirmed(args: argparse.Namespace, question: str) -> bool:
     their target, so a run off a terminal goes on without `--yes`. At a
     terminal it asks, and `--yes` skips the question.
     """
-    if args.yes or not sys.stdin.isatty():
+    if args.yes or not consent.at_a_terminal():
         return True
     if input(question).strip().lower() in ("y", "yes"):
         return True

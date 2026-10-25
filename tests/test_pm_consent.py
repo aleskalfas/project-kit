@@ -89,6 +89,15 @@ def test_an_absent_or_closed_stdin_is_no_terminal(consent, monkeypatch, stdin) -
     assert consent.authorise("?", yes=False, step="Closing", verb="close") == consent.REFUSED
 
 
+def test_the_re_run_line_escapes_what_a_terminal_would_act_on(consent, monkeypatch) -> None:
+    """A newline or an escape in an argument is shown as its escape, so the
+    printed command stays one line and holds what it shows."""
+    monkeypatch.setattr(sys, "argv", ["add-member.py", "--name", "a\nb\x1b[2Jc", "Aleš"])
+    line = consent.rerun_with_yes("add-member")
+    assert line == "pkit pm add-member --name 'a\\nb\\x1b[2Jc' 'Aleš' --yes"
+    assert line.isprintable()
+
+
 def test_refuse_alone_says_the_same_and_returns_refused(consent, capsys, argv) -> None:
     assert consent.refuse("Removing workstream 'cli'", "remove-workstream") == consent.REFUSED
     err = capsys.readouterr().err

@@ -35,8 +35,14 @@ def at_a_terminal() -> bool:
 
 
 def rerun_with_yes(verb: str) -> str:
-    """This run's command, through the dispatcher, with `--yes` added."""
-    return shlex.join(["pkit", "pm", verb, *sys.argv[1:], "--yes"])
+    """This run's command, through the dispatcher, with `--yes` added.
+
+    Each argument is quoted for a shell, and a character a terminal would act
+    on, such as a newline or an escape, is written as its escape, so the line
+    shows on one line exactly what it holds.
+    """
+    line = shlex.join(["pkit", "pm", verb, *sys.argv[1:], "--yes"])
+    return "".join(c if c.isprintable() else repr(c)[1:-1] for c in line)
 
 
 def refuse(step: str, verb: str) -> int:
