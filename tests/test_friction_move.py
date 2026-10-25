@@ -279,6 +279,29 @@ def test_the_migration_finishes_a_move_an_earlier_run_left_halfway(
     assert (repo.root / GUIDE).read_bytes() == planned.files[0].text.encode("utf-8")
 
 
+def test_the_migration_escapes_the_project_s_text_in_its_report(
+    repo: AdopterRepo, tmp_path_factory: pytest.TempPathFactory
+) -> None:
+    """A reason or a path is the project's text: a line break in it cannot forge a line
+    of the report."""
+    plan = {
+        "schema_version": 1,
+        "report": "move-plan",
+        "folder": af.FOLDER,
+        "files": [],
+        "left": [{"artefact": "evil\nDONE 9 9", "path": "evil", "reason": "\x1b[2Kgone"}],
+    }
+    bin_dir = tmp_path_factory.mktemp("bin")
+    fake = bin_dir / "pkit"
+    fake.write_text(f"#!/bin/sh\ncat <<'EOF'\n{json.dumps(plan)}\nEOF\n", encoding="utf-8")
+    fake.chmod(0o755)
+    result = _run(repo.root, f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    assert result.returncode == 0, result.stderr
+    assert "moved the answers of 9" not in result.stdout
+    assert "no block holds an answer to move" in result.stdout
+    assert "evil\\nDONE 9 9" in result.stdout and "\\x1b[2K" in result.stdout
+
+
 def test_the_migration_imports_no_backbone() -> None:
     script = MIGRATION.read_text(encoding="utf-8")
     assert "project_kit" not in script and "python3 -I" in script

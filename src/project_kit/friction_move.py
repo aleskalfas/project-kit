@@ -41,6 +41,7 @@ from ruamel.yaml.error import YAMLError
 from project_kit import answer_files as af
 from project_kit import backbone_schemas as bs
 from project_kit.document_parts import split_front_matter
+from project_kit.friction_check import printable
 from project_kit.friction_discovery import (
     FRICTION_KEY,
     REVISITED_KEY,
@@ -317,7 +318,9 @@ def render_json(plan: MovePlan) -> str:
 
 
 def render_human(plan: MovePlan) -> str:
-    """What the move would write and leave, one line each."""
+    """What the move would write and leave, one line each, escaped as the change check's
+    human view is (`printable`): a path and a reason are the project's text, so they
+    cannot move the cursor or start a line of their own."""
     lines: list[str] = []
     if not plan.files and not plan.left:
         return "No block holds an answer: the move has nothing to do.\n"
@@ -327,11 +330,11 @@ def render_human(plan: MovePlan) -> str:
         f"(COR-062 point 11). Nothing is written here."
     )
     for moved in plan.files:
-        lines.append(f"  {moved.path}")
-        lines.extend(f"    {a.artefact} → {a.path}" for a in moved.answers)
+        lines.append(f"  {printable(moved.path)}")
+        lines.extend(f"    {printable(a.artefact)} → {printable(a.path)}" for a in moved.answers)
     if plan.left:
         lines.append(f"Left in their blocks: {len(plan.left)}")
-        lines.extend(f"  {x.artefact}: {x.reason}" for x in plan.left)
+        lines.extend(f"  {printable(x.artefact)}: {printable(x.reason)}" for x in plan.left)
     return "\n".join(lines) + "\n"
 
 

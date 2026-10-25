@@ -746,6 +746,22 @@ def test_a_crlf_file_is_written_back_with_crlf_byte_for_byte(
     assert _validation_errors(repo) == []
 
 
+def test_a_link_planted_beside_the_file_takes_no_write(repo: AdopterRepo, tmp_path: Path) -> None:
+    """The rewrite goes through a temporary file of a fresh name: a link a branch plants
+    where an older writer put its temporary file leads nowhere."""
+    _put(repo, GUIDE)
+    outside = tmp_path / "outside.txt"
+    (repo.root / f"{GUIDE_PATH}.pkit-tmp").symlink_to(outside)
+    fw.write(fw.plan_revalidate(repo.root, "guide", outcome="updated", now=NOW))
+    assert not outside.exists()
+    assert not (repo.root / GUIDE_PATH).is_symlink()
+    assert "outcome: updated" in _read(repo)
+    assert sorted(p.name for p in (repo.root / "docs").iterdir()) == [
+        "guide.md",
+        "guide.md.pkit-tmp",
+    ]
+
+
 def test_a_file_mixing_line_endings_is_refused_and_left_as_it_is(repo: AdopterRepo) -> None:
     mixed = _crlf(GUIDE).replace("\r\n", "\n", 1)
     _put(repo, mixed)

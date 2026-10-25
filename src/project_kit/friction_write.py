@@ -75,6 +75,7 @@ import os
 import re
 import shlex
 import stat
+import tempfile
 from collections.abc import Callable, Collection, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
@@ -1302,8 +1303,7 @@ class _OwnFile:
         else:
             entries[position] = entry
         name = self.name
-        if name is None:
-            _answer_folder(self.target_root)
+        _answer_folder(self.target_root)
         while name is None or (self.name is None and name in self.present):
             name = af.new_name(now)
         text, first, last = answer_file_text(entries, position)
@@ -1973,10 +1973,14 @@ def replace_file(path: Path, rel: str, before: str, after: str) -> None:
     if current != before:
         raise FileNotReplaced(f"{rel} changed since it was read; run the command again.")
     mode = stat.S_IMODE(path.stat().st_mode)
-    tmp = path.with_name(path.name + ".pkit-tmp")
+    # A temporary file of a fresh name, created where nothing stood, so no link planted
+    # beside the file can take the write elsewhere.
+    descriptor, temporary = tempfile.mkstemp(dir=path.parent, prefix=f".{path.name}.")
+    tmp = Path(temporary)
     try:
-        tmp.write_bytes(after.encode("utf-8"))
-        os.chmod(tmp, mode)
+        with os.fdopen(descriptor, "wb") as handle:
+            handle.write(after.encode("utf-8"))
+            os.fchmod(handle.fileno(), mode)
         os.replace(tmp, path)
     finally:
         tmp.unlink(missing_ok=True)

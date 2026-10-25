@@ -86,6 +86,12 @@ if (
     raise SystemExit(0)
 
 
+def say(line):
+    """Print one line of the report, each character that is not printable escaped: a
+    path or a reason is the project's text, and must not start a line of its own."""
+    print("".join(ch if ch.isprintable() else ascii(ch)[1:-1] for ch in line))
+
+
 def relative(path):
     """`path` as a path inside the project, or None: relative, no `..`."""
     if not isinstance(path, str) or not path:
@@ -114,14 +120,14 @@ for file in document["files"]:
     answers = file.get("answers") or []
     text = file.get("text")
     if rel is None or not isinstance(text, str) or not isinstance(answers, list):
-        print(f"SKIP {file.get('path')!r}: the plan's entry for it cannot be read")
+        say(f"SKIP {file.get('path')!r}: the plan's entry for it cannot be read")
         continue
     target = root / rel
     if not inside(rel) or target.is_symlink() or not target.is_file():
-        print(f"SKIP {rel}: not a file of the project's own")
+        say(f"SKIP {rel}: not a file of the project's own")
         continue
     if hashlib.sha256(target.read_bytes()).hexdigest() != file.get("sha256"):
-        print(f"SKIP {rel}: it changed since the plan read it; run the migration again")
+        say(f"SKIP {rel}: it changed since the plan read it; run the migration again")
         continue
     # Every answer file first: each created, or there already as the plan gives it.
     pending = []
@@ -148,7 +154,7 @@ for file in document["files"]:
             break
         pending.append((apath, data.encode("utf-8")))
     if blocked is not None:
-        print(f"SKIP {rel}: {blocked}")
+        say(f"SKIP {rel}: {blocked}")
         continue
     try:
         for apath, data in pending:
@@ -168,13 +174,13 @@ for file in document["files"]:
             if os.path.exists(temporary):
                 os.unlink(temporary)
     except OSError as error:
-        print(f"SKIP {rel}: it could not be written ({error}); run the migration again")
+        say(f"SKIP {rel}: it could not be written ({error}); run the migration again")
         continue
     moved += 1
-    print(f"MOVED {rel}")
+    say(f"MOVED {rel}")
 for left in document.get("left") or []:
     if isinstance(left, dict):
-        print(f"LEFT {left.get('artefact')}: {left.get('reason')}")
+        say(f"LEFT {left.get('artefact')}: {left.get('reason')}")
 print(f"DONE {moved} {written}")
 PYEOF
 )
